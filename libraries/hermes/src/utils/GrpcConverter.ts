@@ -27,7 +27,10 @@ import {
 import { ConduitRoute, instanceOfConduitProxy, ProxyRoute } from '../classes/index.js';
 
 import protoLoader from '@grpc/proto-loader';
+import { fileURLToPath } from 'node:url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 function getDescriptor() {
   const protoPath = path.resolve(__dirname, '../module.proto');
   const packageDefinition = protoLoader.loadSync(protoPath, {

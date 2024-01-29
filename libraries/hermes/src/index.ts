@@ -21,7 +21,10 @@ import path from 'path';
 import { ConduitRoute, ProxyRoute } from './classes/index.js';
 import { createRouteMiddleware } from './utils/logger.js';
 import { isInstanceOfProxyRoute, ProxyRouteController } from './Proxy/index.js';
+import { fileURLToPath } from 'node:url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 export class ConduitRoutingController {
   private _restRouter?: RestController;
   private _graphQLRouter?: GraphQLController;

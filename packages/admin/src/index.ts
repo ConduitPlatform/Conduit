@@ -47,6 +47,7 @@ import metricsSchema from './metrics/index.js';
 import * as adminProxyRoutes from './routes/proxy/index.js';
 import cors from 'cors';
 import { ConfigController, GrpcServer, merge } from '@conduitplatform/module-tools';
+import { fileURLToPath } from 'node:url';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -105,6 +106,8 @@ export default class AdminModule extends IConduitAdmin {
     ConfigController.getInstance().config = await this.commons
       .getConfigManager()
       .configurePackage('admin', previousConfig, AdminConfigRawSchema);
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
     await server.addService(
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',

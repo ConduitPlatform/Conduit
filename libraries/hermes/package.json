@@ -24,6 +24,7 @@
     "@scalar/express-api-reference": "^0.2.14",
     "@socket.io/redis-adapter": "^8.2.1",
     "@types/object-hash": "^3.0.6",
+    "@types/swagger-ui-express": "^4.1.6",
     "body-parser": "^1.20.2",
     "cookie-parser": "~1.4.6",
     "cors": "^2.8.5",

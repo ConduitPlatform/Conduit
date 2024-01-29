@@ -29,15 +29,19 @@ import {
 import {
   IndexController,
   PermissionsController,
+  QueueController,
   RelationsController,
   ResourceController,
-  QueueController,
 } from './controllers/index.js';
 import { AdminHandlers } from './admin/index.js';
 import { status } from '@grpc/grpc-js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { AuthorizationRouter } from './router/index.js';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class Authorization extends ManagedModule<Config> {
   configSchema = AppConfigSchema;

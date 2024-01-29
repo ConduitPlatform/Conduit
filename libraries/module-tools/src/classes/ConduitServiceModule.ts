@@ -15,7 +15,10 @@ import ConduitGrpcSdk, {
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
 import { RoutingManager } from '../routing/index.js';
+import { fileURLToPath } from 'node:url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 export abstract class ConduitServiceModule {
   protected readonly _moduleName: string;
   protected _serviceName?: string;

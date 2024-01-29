@@ -52,6 +52,9 @@ import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter/i
 import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter/index.js';
 import { ManagedModule } from '@conduitplatform/module-tools';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
+import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;

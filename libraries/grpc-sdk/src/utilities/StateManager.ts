@@ -1,7 +1,7 @@
 import { RedisManager } from './RedisManager.js';
 import { Cluster, Redis } from 'ioredis';
-import Redlock, { Lock } from 'redlock';
 import { Indexable } from '../interfaces/index.js';
+import { Redlock, Lock } from '@sesamecare-oss/redlock';
 
 export enum KNOWN_LOCKS {
   STATE_MODIFICATION = 'state_modification',
@@ -29,7 +29,7 @@ export class StateManager {
       retryJitter: 200, // time in ms
       // The minimum remaining time on a lock before an extension is automatically
       // attempted with the `using` API.
-      // automaticExtensionThreshold: 500, // time in ms
+      automaticExtensionThreshold: 500, // time in ms
     });
 
     process.on('exit', () => {
@@ -42,7 +42,7 @@ export class StateManager {
   }
 
   async releaseLock(lock: Lock) {
-    await lock.unlock();
+    await lock.release();
   }
 
   async modifyState(modifier: (state: Indexable) => Promise<Indexable>) {

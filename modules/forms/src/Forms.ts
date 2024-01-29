@@ -11,6 +11,10 @@ import * as models from './models/index.js';
 import { runMigrations } from './migrations/index.js';
 import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import { fileURLToPath } from 'node:url';
+import path from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class Forms extends ManagedModule<Config> {
   configSchema = AppConfigSchema;

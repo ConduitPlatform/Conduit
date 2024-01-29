@@ -7,7 +7,10 @@ import winston from 'winston';
 import path from 'path';
 import { ConduitMetrics } from '../metrics/index.js';
 import { clientMiddleware } from '../metrics/clientMiddleware.js';
+import { fileURLToPath } from 'node:url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 export const initializeSdk = (
   coreUrl: string,
   moduleName: string,

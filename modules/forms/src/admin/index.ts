@@ -16,7 +16,7 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { FormsController } from '../controllers/forms.controller.js';
 import { FormReplies, Forms } from '../models/index.js';
 

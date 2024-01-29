@@ -20,7 +20,7 @@ import { SwaggerRouterMetadata } from '../types/index.js';
 import { ConduitRoute, TypeRegistry } from '../classes/index.js';
 import { apiReference } from '@scalar/express-api-reference';
 
-const swaggerUi = require('swagger-ui-express');
+import swaggerUi from 'swagger-ui-express';
 
 export class RestController extends ConduitRouter {
   private _privateHeaders: string[];

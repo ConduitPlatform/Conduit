@@ -8,7 +8,7 @@ export class messageBirdProvider implements ISmsProvider {
   private originatorName: string;
   constructor(settings: { accessKeyId: string; originatorName: string }) {
     ({ accessKeyId: this.accessKeyId, originatorName: this.originatorName } = settings);
-    this.client = require('messagebird').initClient(this.accessKeyId);
+    this.client = messagebird.initClient(this.accessKeyId);
   }
 
   async sendSms(phoneNumber: string, message: string) {

@@ -42,6 +42,9 @@ import {
 import * as adminRoutes from './admin/routes/index.js';
 import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
   configSchema = AppConfigSchema;

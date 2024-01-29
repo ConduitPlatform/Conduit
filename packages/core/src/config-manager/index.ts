@@ -26,6 +26,7 @@ import { merge } from 'lodash-es';
 import { GrpcServer } from '@conduitplatform/module-tools';
 import { RedisOptions } from 'ioredis';
 import { ServiceRegistry } from './service-discovery/ServiceRegistry.js';
+import { fileURLToPath } from 'node:url';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
@@ -61,6 +62,9 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async initialize(server: GrpcServer) {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
     await server.addService(
       path.resolve(__dirname, '../../src/core.proto'),
       'conduit.core.Config',

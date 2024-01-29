@@ -22,6 +22,9 @@ import {
 import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 import { ISendEmailParams } from './interfaces/index.js';
+import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class Email extends ManagedModule<Config> {
   configSchema = AppConfigSchema;

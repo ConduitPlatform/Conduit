@@ -37,6 +37,9 @@ import {
 import { StorageParamAdapter } from './adapter/StorageParamAdapter.js';
 import { FileResource } from './authz/index.js';
 import { AdminFileHandlers } from './admin/adminFile.js';
+import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class Storage extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
