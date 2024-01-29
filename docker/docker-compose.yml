@@ -38,8 +38,8 @@ services:
       - loki
     ports:
       - '${CORE_GRPC_PORT:-55152}:${CORE_GRPC_PORT:-55152}'
-      - '${CORE_ADMIN_HTTP_PORT:-3030}:3030'
-      - '${CORE_ADMIN_SOCKET_PORT:-3031}:3031'
+      - '${ADMIN_HTTP_PORT:-3030}:3030'
+      - '${ADMIN_SOCKET_PORT:-3031}:3031'
     environment:
       REDIS_HOST: 'conduit-redis'
       REDIS_PORT: '${REDIS_PORT:-6379}'
@@ -139,10 +139,10 @@ services:
       - prometheus
       - loki
     ports:
-      - '${AUTH_GRPC_PORT:-55162}:${AUTH_GRPC_PORT:-55162}'
+      - '${AUTHN_GRPC_PORT:-55162}:${AUTHN_GRPC_PORT:-55162}'
     environment:
       CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
-      SERVICE_URL: 'conduit-authentication:${AUTH_GRPC_PORT:-55162}'
+      SERVICE_URL: 'conduit-authentication:${AUTHN_GRPC_PORT:-55162}'
       GRPC_PORT: '55162'
       METRICS_PORT: '9094'
       LOKI_URL: 'http://conduit-loki:3100'

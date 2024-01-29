@@ -18,9 +18,21 @@ services:
       - redis
       - mongodb
     ports:
-      - '${CORE_GRPC_PORT:-55152}:${CORE_GRPC_PORT:-55152}'
-      - '${CORE_ADMIN_HTTP_PORT:-3030}:3030'
-      - '${CORE_ADMIN_SOCKET_PORT:-3031}:3031'
+      - '${CORE_GRPC_PORT:-55152}:55152'
+      - '${DB_GRPC_PORT:-55160}:55160'
+      - '${ROUTER_GRPC_PORT:-55161}:55161'
+      - '${AUTHN_GRPC_PORT:-55162}:55162'
+      - '${CHAT_GRPC_PORT:-55163}:55163'
+      - '${EMAIL_GRPC_PORT:-55164}:55164'
+      - '${FORMS_GRPC_PORT:-55165}:55165'
+      - '${PUSH_GRPC_PORT:-55166}:55166'
+      - '${SMS_GRPC_PORT:-55167}:55167'
+      - '${STORAGE_GRPC_PORT:-55168}:55168'
+      - '${AUTHZ_GRPC_PORT:-55169}:55169'
+      - '${ADMIN_HTTP_PORT:-3030}:3030'
+      - '${ADMIN_SOCKET_PORT:-3031}:3031'
+      - '${CLIENT_HTTP_PORT:-3000}:3000'
+      - '${CLIENT_SOCKET_PORT:-3001}:3001'
     environment:
       REDIS_HOST: 'conduit-redis'
       REDIS_PORT: '${REDIS_PORT:-6379}'

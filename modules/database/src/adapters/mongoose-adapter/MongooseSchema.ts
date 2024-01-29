@@ -23,7 +23,6 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isNil } from 'lodash-es';
 import { parseQuery } from './parser/index.js';
-import { EJSON } from 'bson';
 
 export class MongooseSchema extends SchemaAdapter<Model<any>> {
   model: Model<any>;
@@ -59,7 +58,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   parseStringToQuery(
     query: Query | SingleDocQuery | MultiDocQuery,
   ): ParsedQuery | ParsedQuery[] {
-    return typeof query === 'string' ? EJSON.parse(query) : query;
+    return typeof query === 'string' ? JSON.parse(query) : query;
   }
 
   async create(
