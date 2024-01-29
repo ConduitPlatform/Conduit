@@ -1,5 +1,5 @@
 import Mail from 'nodemailer/lib/mailer';
-import { Var } from '../Var';
+import { Var } from '../Var.js';
 
 export interface MandrillEmailOptions extends Mail.Options {
   mandrillOptions: {

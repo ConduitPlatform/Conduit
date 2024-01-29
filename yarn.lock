@@ -4010,6 +4010,13 @@
   dependencies:
     "@types/nodemailer" "*"
 
+"@types/nodemailer-sendgrid@^1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@types/nodemailer-sendgrid/-/nodemailer-sendgrid-1.0.3.tgz#b3959917359001435df71eb2cf88abd133d010a4"
+  integrity sha512-UpLLUyrXjcs8PIwhfY0/CqXAoJ5CcDNUs6hia9QT9+kcotCFK6siVC5dHUGpTAsodwteX2JoiQ3Na7ZbDkijgw==
+  dependencies:
+    "@types/nodemailer" "*"
+
 "@types/nodemailer@*", "@types/nodemailer@^6.4.14":
   version "6.4.14"
   resolved "https://registry.yarnpkg.com/@types/nodemailer/-/nodemailer-6.4.14.tgz#5c81a5e856db7f8ede80013e6dbad7c5fb2283e2"

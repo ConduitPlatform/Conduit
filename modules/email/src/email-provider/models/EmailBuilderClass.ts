@@ -1,6 +1,6 @@
 import Mail, { Address, Attachment } from 'nodemailer/lib/mailer';
-import { TemplateOptions } from '../interfaces/TemplateOptions';
-import { checkIfHTML } from '../utils';
+import { TemplateOptions } from '../interfaces/TemplateOptions.js';
+import { checkIfHTML } from '../utils/index.js';
 
 export abstract class EmailBuilderClass<T extends Mail.Options> {
   protected _mailOptions: T;

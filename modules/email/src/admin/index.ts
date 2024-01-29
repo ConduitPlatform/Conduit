@@ -16,16 +16,16 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import to from 'await-to-js';
-import { isNil } from 'lodash';
-import { getHandleBarsValues } from '../email-provider/utils';
-import { EmailService } from '../services/email.service';
-import { EmailTemplate } from '../models';
-import { Config } from '../config';
-import { Template } from '../email-provider/interfaces/Template';
-import { TemplateDocument } from '../email-provider/interfaces/TemplateDocument';
+import { to } from 'await-to-js';
+import { isNil } from 'lodash-es';
+import { getHandleBarsValues } from '../email-provider/utils/index.js';
+import { EmailService } from '../services/email.service.js';
+import { EmailTemplate } from '../models/index.js';
+import { Config } from '../config/index.js';
+import { Template } from '../email-provider/interfaces/Template.js';
+import { TemplateDocument } from '../email-provider/interfaces/TemplateDocument.js';
 
-const escapeStringRegexp = require('escape-string-regexp');
+import escapeStringRegexp from 'escape-string-regexp';
 
 export class AdminHandlers {
   private emailService: EmailService;
