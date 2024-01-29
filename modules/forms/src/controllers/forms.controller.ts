@@ -8,8 +8,8 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { Forms } from '../models';
-import { FormsRoutes } from '../routes';
+import { Forms } from '../models/index.js';
+import { FormsRoutes } from '../routes/index.js';
 
 export class FormsController {
   private router: FormsRoutes;

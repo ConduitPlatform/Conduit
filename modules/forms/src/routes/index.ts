@@ -10,7 +10,7 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { FormReplies, Forms } from '../models';
+import { FormReplies, Forms } from '../models/index.js';
 import axios from 'axios';
 
 export class FormsRoutes {

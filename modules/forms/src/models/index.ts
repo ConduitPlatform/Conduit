@@ -1,2 +1,2 @@
-export * from './Forms.schema';
-export * from './Replies.schema';
+export * from './Forms.schema.js';
+export * from './Replies.schema.js';

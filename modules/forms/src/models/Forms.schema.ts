@@ -45,8 +45,10 @@ const collectionName = undefined;
 export class Forms extends ConduitActiveSchema<Forms> {
   private static _instance: Forms;
   _id!: string;
-  name!: string;
-  fields!: any;
+  //todo rename
+  declare name: string;
+  //todo rename
+  declare fields: any;
   forwardTo!: string;
   emailField!: string;
   enabled!: boolean;

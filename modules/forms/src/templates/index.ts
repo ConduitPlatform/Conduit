@@ -1,1 +1,1 @@
-export * from './FormSubmission';
+export * from './FormSubmission.js';
