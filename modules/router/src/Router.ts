@@ -25,22 +25,22 @@ import {
   RouteT,
   SocketPush,
 } from '@conduitplatform/hermes';
-import { isNaN } from 'lodash';
-import AppConfigSchema, { Config } from './config';
-import * as models from './models';
-import { AppMiddleware } from './models';
-import { getSwaggerMetadata } from './hermes';
-import { runMigrations } from './migrations';
-import SecurityModule from './security';
-import { AdminHandlers } from './admin';
+import { isNaN } from 'lodash-es';
+import AppConfigSchema, { Config } from './config/index.js';
+import * as models from './models/index.js';
+import { AppMiddleware } from './models/index.js';
+import { getSwaggerMetadata } from './hermes/index.js';
+import { runMigrations } from './migrations/index.js';
+import SecurityModule from './security/index.js';
+import { AdminHandlers } from './admin/index.js';
 import {
   PatchAppRouteMiddlewaresRequest,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
   SocketData,
-} from './protoTypes/router';
-import * as adminRoutes from './admin/routes';
-import metricsSchema from './metrics';
+} from './protoTypes/router.js';
+import * as adminRoutes from './admin/routes/index.js';
+import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {

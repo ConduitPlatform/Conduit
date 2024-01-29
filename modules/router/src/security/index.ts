@@ -1,12 +1,12 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import helmet from 'helmet';
-import { RateLimiter } from './handlers/rate-limiter';
-import { ClientValidator } from './handlers/client-validation';
+import { RateLimiter } from './handlers/rate-limiter/index.js';
+import { ClientValidator } from './handlers/client-validation/index.js';
 import { NextFunction, Request, Response } from 'express';
-import ConduitDefaultRouter from '../Router';
+import ConduitDefaultRouter from '../Router.js';
 import cors from 'cors';
-import { CaptchaValidator } from './handlers/captcha-validation';
+import { CaptchaValidator } from './handlers/captcha-validation/index.js';
 
 export default class SecurityModule {
   private initialized = false;

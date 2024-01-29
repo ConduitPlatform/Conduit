@@ -1,1 +1,1 @@
-export * from './IProxyOptions';
+export * from './IProxyOptions.js';

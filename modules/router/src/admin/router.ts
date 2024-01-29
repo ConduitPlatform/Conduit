@@ -6,10 +6,10 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import ConduitDefaultRouter from '../Router';
-import { RouterProxyRoute } from '../models';
+import ConduitDefaultRouter from '../Router.js';
+import { RouterProxyRoute } from '../models/index.js';
 import { ProxyRouteT, RouteT } from '@conduitplatform/hermes';
 
 export class RouterAdmin {

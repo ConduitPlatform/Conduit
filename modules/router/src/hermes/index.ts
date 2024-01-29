@@ -1,1 +1,1 @@
-export * from './swaggerMetadata';
+export * from './swaggerMetadata.js';
