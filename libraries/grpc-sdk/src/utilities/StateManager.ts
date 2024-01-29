@@ -13,7 +13,7 @@ export class StateManager {
 
   constructor(redisManager: RedisManager, name: string) {
     this.redisClient = redisManager.getClient({ keyPrefix: name + '_' });
-    this.redLock = new Redlock([this.redisClient as any], {
+    this.redLock = new Redlock([this.redisClient], {
       // The expected clock drift; for more details see:
       // http://redis.io/topics/distlock
       driftFactor: 0.01, // multiplied by lock ttl to determine drift time
