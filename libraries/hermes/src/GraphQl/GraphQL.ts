@@ -213,7 +213,7 @@ export class GraphQLController extends ConduitRouter {
 
   shouldPopulate(args: Indexable, info: GraphQLResolveInfo) {
     const resolveInfo = parseResolveInfo(info);
-    let objs = resolveInfo!.fieldsByTypeName;
+    const objs = resolveInfo!.fieldsByTypeName;
     const reqObjs = objs[Object.keys(objs)[0]];
     const result = findPopulation(reqObjs, this._relationTypes);
     if (result) {
