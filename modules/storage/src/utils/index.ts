@@ -1,6 +1,6 @@
 import { GetUserCommand, IAMClient } from '@aws-sdk/client-iam';
-import { StorageConfig } from '../interfaces';
-import { isNil } from 'lodash';
+import { StorageConfig } from '../interfaces/index.js';
+import { isNil } from 'lodash-es';
 import path from 'path';
 
 export async function streamToBuffer(readableStream: any): Promise<Buffer> {

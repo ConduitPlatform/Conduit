@@ -1,5 +1,5 @@
 import { Indexable, UnparsedRouterResponse } from '@conduitplatform/grpc-sdk';
-import { FileByUrlResponse, FileResponse } from '../protoTypes/storage';
+import { FileByUrlResponse, FileResponse } from '../protoTypes/storage.js';
 
 export class StorageParamAdapter {
   constructor() {}

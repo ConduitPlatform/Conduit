@@ -1,4 +1,4 @@
-import { IStorageProvider, StorageConfig } from '../../interfaces';
+import { IStorageProvider, StorageConfig } from '../../interfaces/index.js';
 import {
   access,
   accessSync,

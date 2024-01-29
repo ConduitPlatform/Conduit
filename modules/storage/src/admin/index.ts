@@ -15,11 +15,10 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import { FileHandlers } from '../handlers/file';
-import { _StorageContainer, _StorageFolder, File } from '../models';
-import { normalizeFolderPath } from '../utils';
-import { AdminFileHandlers } from './adminFile';
+import { isNil } from 'lodash-es';
+import { _StorageContainer, _StorageFolder, File } from '../models/index.js';
+import { normalizeFolderPath } from '../utils/index.js';
+import { AdminFileHandlers } from './adminFile.js';
 
 export class AdminRoutes {
   private readonly routingManager: RoutingManager;
