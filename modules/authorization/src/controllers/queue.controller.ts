@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 export class QueueController {
   private static _instance: QueueController;
   private readonly redisConnection: Redis | Cluster;
@@ -49,14 +50,15 @@ export class QueueController {
       connection: this.redisConnection,
       // autorun: true,
     });
-    worker.on('active', (job: any) => {
+    worker.on('active', job => {
       ConduitGrpcSdk.Logger.info(`Job ${job.id} started`);
     });
-    worker.on('completed', (job: any) => {
+    worker.on('completed', job => {
       ConduitGrpcSdk.Logger.info(`Job ${job.id} completed`);
     });
-    worker.on('error', (error: any) => {
-      ConduitGrpcSdk.Logger.info(`Job error:`, error);
+    worker.on('error', (error: Error) => {
+      ConduitGrpcSdk.Logger.error(`Job error:`);
+      ConduitGrpcSdk.Logger.error(error);
     });
   }
 
@@ -76,14 +78,15 @@ export class QueueController {
       },
       // autorun: true,
     });
-    worker.on('active', (job: any) => {
+    worker.on('active', job => {
       ConduitGrpcSdk.Logger.info(`Job ${job.id} started`);
     });
-    worker.on('completed', (job: any) => {
+    worker.on('completed', job => {
       ConduitGrpcSdk.Logger.info(`Job ${job.id} completed`);
     });
-    worker.on('error', (error: any) => {
-      ConduitGrpcSdk.Logger.info(`Job error:`, error);
+    worker.on('error', error => {
+      ConduitGrpcSdk.Logger.error(`Job error:`);
+      ConduitGrpcSdk.Logger.error(error);
     });
   }
 
