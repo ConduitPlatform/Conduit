@@ -1,10 +1,10 @@
-import { BaseNotificationProvider } from './base.provider';
-import { IFirebaseSettings } from '../interfaces/IFirebaseSettings';
+import { BaseNotificationProvider } from './base.provider.js';
+import { IFirebaseSettings } from '../interfaces/IFirebaseSettings.js';
 import * as firebase from 'firebase-admin';
 import {
   ISendNotification,
   ISendNotificationToManyDevices,
-} from '../interfaces/ISendNotification';
+} from '../interfaces/ISendNotification.js';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class FirebaseProvider extends BaseNotificationProvider<IFirebaseSettings> {

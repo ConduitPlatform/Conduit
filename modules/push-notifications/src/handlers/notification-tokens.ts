@@ -4,8 +4,8 @@ import {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { Notification, NotificationToken } from '../models';
-import { isNil } from 'lodash';
+import { Notification, NotificationToken } from '../models/index.js';
+import { isNil } from 'lodash-es';
 
 export class NotificationTokensHandler {
   async setNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

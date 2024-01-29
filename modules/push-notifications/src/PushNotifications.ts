@@ -4,19 +4,19 @@ import {
   GrpcResponse,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema, { Config } from './config';
-import { AdminHandlers } from './admin';
-import { PushNotificationsRoutes } from './routes';
-import * as models from './models';
-import { FirebaseProvider } from './providers/Firebase.provider';
-import { BaseNotificationProvider } from './providers/base.provider';
+import AppConfigSchema, { Config } from './config/index.js';
+import { AdminHandlers } from './admin/index.js';
+import { PushNotificationsRoutes } from './routes/index.js';
+import * as models from './models/index.js';
+import { FirebaseProvider } from './providers/Firebase.provider.js';
+import { BaseNotificationProvider } from './providers/base.provider.js';
 import path from 'path';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { ISendNotification } from './interfaces/ISendNotification';
-import { runMigrations } from './migrations';
-import metricsSchema from './metrics';
-import { OneSignalProvider } from './providers/OneSignal.provider';
+import { ISendNotification } from './interfaces/ISendNotification.js';
+import { runMigrations } from './migrations/index.js';
+import metricsSchema from './metrics/index.js';
+import { OneSignalProvider } from './providers/OneSignal.provider.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 import {
   GetNotificationTokensRequest,
@@ -27,7 +27,7 @@ import {
   SendNotificationToManyDevicesRequest,
   SetNotificationTokenRequest,
   SetNotificationTokenResponse,
-} from './protoTypes/push-notifications';
+} from './protoTypes/push-notifications.js';
 
 export default class PushNotifications extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
