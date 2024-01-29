@@ -4,11 +4,11 @@ import {
   computePermissionTuple,
   getPostgresAccessListQuery,
   getSQLAccessListQuery,
-} from '../utils';
-import { IndexController } from './index.controller';
-import { RuleCache } from './cache.controller';
-import { isNil } from 'lodash';
-import { Permission } from '../models';
+} from '../utils/index.js';
+import { IndexController } from './index.controller.js';
+import { RuleCache } from './cache.controller.js';
+import { isNil } from 'lodash-es';
+import { Permission } from '../models/index.js';
 import { createHash } from 'crypto';
 
 export class PermissionsController {

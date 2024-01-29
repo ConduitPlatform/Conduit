@@ -1,8 +1,8 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { ResourceDefinition } from '../models';
-import { IndexController } from './index.controller';
-import { RelationsController } from './relations.controller';
-import { cloneDeep, isEqual, isNil } from 'lodash';
+import { ResourceDefinition } from '../models/index.js';
+import { IndexController } from './index.controller.js';
+import { RelationsController } from './relations.controller.js';
+import { cloneDeep, isEqual, isNil } from 'lodash-es';
 
 export class ResourceController {
   private static _instance: ResourceController;

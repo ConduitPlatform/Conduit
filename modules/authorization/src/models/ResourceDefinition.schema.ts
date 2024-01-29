@@ -70,7 +70,8 @@ const collectionName = undefined;
 export class ResourceDefinition extends ConduitActiveSchema<ResourceDefinition> {
   private static _instance: ResourceDefinition;
   _id: string;
-  name: string;
+  // todo rename
+  declare name: string;
   relations?: { [key: string]: string[] };
   permissions?: { [key: string]: string[] };
   version: number;

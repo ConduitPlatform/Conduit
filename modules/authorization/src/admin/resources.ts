@@ -11,10 +11,10 @@ import {
   ConduitString,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { ResourceDefinition } from '../models';
-import { isNil } from 'lodash';
+import { ResourceDefinition } from '../models/index.js';
+import { isNil } from 'lodash-es';
 import escapeStringRegexp from 'escape-string-regexp';
-import { ResourceController } from '../controllers';
+import { ResourceController } from '../controllers/index.js';
 
 export class ResourceHandler {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}

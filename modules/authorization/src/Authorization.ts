@@ -6,10 +6,10 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
-import AppConfigSchema, { Config } from './config';
-import * as models from './models';
-import { runMigrations } from './migrations';
-import metricsSchema from './metrics';
+import AppConfigSchema, { Config } from './config/index.js';
+import * as models from './models/index.js';
+import { runMigrations } from './migrations/index.js';
+import metricsSchema from './metrics/index.js';
 import {
   AllowedResourcesRequest,
   AllowedResourcesResponse,
@@ -25,19 +25,19 @@ import {
   ResourceAccessListRequest,
   ResourceModificationAcknowledgement,
   ResourceModificationAcknowledgement_Status,
-} from './protoTypes/authorization';
+} from './protoTypes/authorization.js';
 import {
   IndexController,
   PermissionsController,
   RelationsController,
   ResourceController,
   QueueController,
-} from './controllers';
-import { AdminHandlers } from './admin';
+} from './controllers/index.js';
+import { AdminHandlers } from './admin/index.js';
 import { status } from '@grpc/grpc-js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
-import { Empty } from './protoTypes/google/protobuf/empty';
-import { AuthorizationRouter } from './router';
+import { Empty } from './protoTypes/google/protobuf/empty.js';
+import { AuthorizationRouter } from './router/index.js';
 
 export default class Authorization extends ManagedModule<Config> {
   configSchema = AppConfigSchema;

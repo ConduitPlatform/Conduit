@@ -1,5 +1,5 @@
 import { Query } from '@conduitplatform/grpc-sdk';
-import { Relationship } from '../models';
+import { Relationship } from '../models/index.js';
 
 export const migrateRelationships = async () => {
   const query: Query<Relationship> = {

@@ -1,7 +1,12 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { ActorIndex, ObjectIndex, Relationship, ResourceDefinition } from '../models';
-import { constructObjectIndex } from '../utils';
-import { QueueController } from './queue.controller';
+import {
+  ActorIndex,
+  ObjectIndex,
+  Relationship,
+  ResourceDefinition,
+} from '../models/index.js';
+import { constructObjectIndex } from '../utils/index.js';
+import { QueueController } from './queue.controller.js';
 
 export class IndexController {
   private static _instance: IndexController;
