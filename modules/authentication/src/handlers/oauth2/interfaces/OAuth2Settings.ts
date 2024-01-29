@@ -1,4 +1,4 @@
-import { ProviderConfig } from './index.js';
+import { ProviderConfig } from './ProviderConfig.js';
 import { v4 as uuid } from 'uuid';
 import { isNil } from 'lodash-es';
 
