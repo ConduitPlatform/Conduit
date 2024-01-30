@@ -3,6 +3,12 @@ import { ConfigController } from '@conduitplatform/module-tools';
 import { ConduitRoute, SwaggerRouterMetadata } from '@conduitplatform/hermes';
 
 export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
+  servers: [
+    {
+      url: ConfigController.getInstance().config.hostUrl,
+      description: 'Your API url',
+    },
+  ],
   urlPrefix: '',
   securitySchemes: {
     ...(ConfigController.getInstance().config.security.clientValidation
