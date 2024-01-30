@@ -20,7 +20,6 @@ import {
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces';
 import { isNil } from 'lodash';
-import { EJSON } from 'bson';
 
 const parseSchema = require('mongodb-schema');
 
@@ -96,7 +95,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       this.views[viewName] = viewModel;
       await viewModel.model.createCollection({
         viewOn: model.originalSchema.collectionName,
-        pipeline: EJSON.parse(query.mongoQuery),
+        pipeline: JSON.parse(query.mongoQuery),
       });
     } catch (e: any) {
       if (!e.message.includes('Cannot overwrite')) {
