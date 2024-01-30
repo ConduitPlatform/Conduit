@@ -49,7 +49,7 @@
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.5",
     "ts-proto": "^1.167.1",
-    "typescript": "~5.2.2"
+    "typescript": "~5.3.3"
   },
   "peerDependencies": {
     "@grpc/grpc-js": "^1.9.7",
