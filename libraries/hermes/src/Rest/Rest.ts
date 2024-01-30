@@ -313,11 +313,11 @@ export class RestController extends ConduitRouter {
     this._expressRouter!.get('/swagger', (req, res, next) =>
       swaggerUi.setup(self._swagger!.swaggerDoc)(req, res, next),
     );
-    this._expressRouter!.use(
+    this._expressRouter!.get(
       '/reference',
       apiReference({
         spec: {
-          content: self._swagger!.swaggerDoc,
+          url: '/swagger.json',
         },
       }),
     );
