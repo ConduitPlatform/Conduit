@@ -19,6 +19,8 @@
     "@conduitplatform/grpc-sdk": "*",
     "@grpc/grpc-js": "^1.9.7",
     "@grpc/proto-loader": "^0.7.6",
+    "@scalar/api-reference": "^1.13.2",
+    "@scalar/express-api-reference": "^0.2.14",
     "@socket.io/redis-adapter": "^8.2.1",
     "@types/object-hash": "^3.0.6",
     "body-parser": "^1.20.2",
