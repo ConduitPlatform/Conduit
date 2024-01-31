@@ -3,7 +3,7 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ActorIndex, ObjectIndex, ResourceDefinition } from '../models/index.js';
 import { IndexController, QueueController } from '../controllers/index.js';
 import { constructObjectIndex } from '../utils/index.js';
-import { omit } from 'lodash';
+import { omit } from 'lodash-es';
 
 let grpcSdk: ConduitGrpcSdk | undefined = undefined;
 
