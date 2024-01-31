@@ -1,8 +1,15 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, SwaggerRouterMetadata } from '@conduitplatform/hermes';
+import { ConfigController } from '@conduitplatform/module-tools';
 
 export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
   urlPrefix: '',
+  servers: [
+    {
+      url: ConfigController.getInstance().config.hostUrl,
+      description: 'Your API url',
+    },
+  ],
   securitySchemes: {
     masterKey: {
       name: 'masterkey',
@@ -32,5 +39,8 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
         }),
       );
     }
+    swaggerRouteDoc.responses[401] = {
+      description: 'Missing Master Key/Access Token or is otherwise invalid',
+    };
   },
 });

@@ -24,6 +24,7 @@ export class SwaggerGenerator {
         version: '1.0.0',
         title: 'Conduit',
       },
+      servers: this._routerMetadata.servers ?? [],
       paths: {},
       components: {
         schemas: {
@@ -130,6 +131,16 @@ export class SwaggerGenerator {
     );
     routeDoc.responses[200].content['application/json'].schema = {
       $ref: `#/components/schemas/${route.returnTypeName}`,
+    };
+    if (!isNil(routeDoc['requestBody']) || !isNil(routeDoc['parameters'])) {
+      routeDoc.responses[400] = {
+        description:
+          'Invalid parameters provided. Check the documentation for more info.',
+      };
+    }
+
+    routeDoc.responses[500] = {
+      description: 'Internal Server Error',
     };
     if (!this._swaggerDoc.components['schemas'][route.returnTypeName]) {
       this._swaggerDoc.components['schemas'][route.returnTypeName] = returnDefinition;

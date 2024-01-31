@@ -30,6 +30,7 @@ export class RestController extends ConduitRouter {
   constructor(
     grpcSdk: ConduitGrpcSdk,
     getSwaggerRouterMetadata: () => SwaggerRouterMetadata = () => ({
+      servers: [],
       urlPrefix: '',
       securitySchemes: {},
       globalSecurityHeaders: [],
