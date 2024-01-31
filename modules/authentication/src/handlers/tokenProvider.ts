@@ -2,7 +2,7 @@ import ConduitGrpcSdk, { Indexable, Query } from '@conduitplatform/grpc-sdk';
 import { AccessToken, RefreshToken, User } from '../models/index.js';
 import moment from 'moment';
 import { AuthUtils } from '../utils/index.js';
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { SignOptions } from 'jsonwebtoken';
 import { Config } from '../config/index.js';
 import { isNil } from 'lodash-es';

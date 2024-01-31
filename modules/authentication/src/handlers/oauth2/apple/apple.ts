@@ -15,7 +15,7 @@ import {
 } from '../interfaces/index.js';
 import axios from 'axios';
 import { AppleUser } from './apple.user.js';
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { Jwt, JwtHeader, JwtPayload } from 'jsonwebtoken';
 import { TokenProvider } from '../../tokenProvider.js';
 import { Token } from '../../../models/index.js';

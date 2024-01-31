@@ -1,4 +1,4 @@
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { compare, hash } from 'bcrypt';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
