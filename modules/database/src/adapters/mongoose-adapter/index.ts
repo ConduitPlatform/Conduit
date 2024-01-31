@@ -201,6 +201,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   getSchemaModel(schemaName: string): { model: MongooseSchema } {
     if (this.models && this.models[schemaName]) {
       return { model: this.models[schemaName] };
+    } else if (this.views && this.views[schemaName]) {
+      return { model: this.views[schemaName] };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
