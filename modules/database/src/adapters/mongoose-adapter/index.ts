@@ -93,6 +93,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         true,
       );
       this.views[viewName] = viewModel;
+      this.models[viewName] = viewModel;
       await viewModel.model.createCollection({
         viewOn: model.originalSchema.collectionName,
         pipeline: JSON.parse(query.mongoQuery),
