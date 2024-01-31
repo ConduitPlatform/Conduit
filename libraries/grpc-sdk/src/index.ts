@@ -12,7 +12,7 @@ import {
   SMS,
   Storage,
 } from './modules/index.js';
-import Crypto from 'crypto';
+import crypto from 'crypto';
 import {
   EventBus,
   getJsonEnv,
@@ -81,13 +81,13 @@ export default class ConduitGrpcSdk {
     }
 
     if (!name) {
-      this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
+      this.name = 'module_' + crypto.randomBytes(16).toString('hex');
     } else {
       this.name = name;
     }
     this.instance = this.name.startsWith('module_')
       ? this.name.substring(8)
-      : Crypto.randomBytes(16).toString('hex');
+      : crypto.randomBytes(16).toString('hex');
 
     this.urlRemap = getJsonEnv<UrlRemap>(
       'URL_REMAP',

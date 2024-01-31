@@ -1,4 +1,4 @@
-import * as crypto from 'crypto';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import ConduitGrpcSdk, {
