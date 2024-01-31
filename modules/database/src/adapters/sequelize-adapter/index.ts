@@ -80,7 +80,6 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       }
     });
     this.views[viewName] = viewModel;
-    this.models[viewName] = viewModel;
     const foundView = await this.models['Views'].findOne({ name: viewName });
     if (isNil(foundView)) {
       await this.models['Views']
