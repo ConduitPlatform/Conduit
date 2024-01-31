@@ -5,7 +5,7 @@ import {
 } from '../../interfaces/index.js';
 import { status } from '@grpc/grpc-js';
 
-import * as deepdash from 'deepdash/standalone';
+import * as deepdash from 'deepdash-es/standalone';
 
 function deepFieldValidate(extFields: ConduitModel) {
   const uniqueError = new GrpcError(

@@ -1,6 +1,6 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
 
-import * as deepdash from 'deepdash/standalone';
+import * as deepdash from 'deepdash-es/standalone';
 
 function _extractNestedPopulation(path: string) {
   const paths = path.split('.');

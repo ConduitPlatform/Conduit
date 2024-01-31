@@ -28,7 +28,7 @@
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "deep-object-diff": "^1.1.9",
-    "deepdash": "^5.3.9",
+    "deepdash-es": "^5.3.9",
     "graphql-parse-resolve-info": "^4.13.0",
     "graphql-type-json": "^0.3.2",
     "hcaptcha": "^0.1.1",

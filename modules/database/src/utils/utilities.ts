@@ -16,7 +16,7 @@ import {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 
-import * as deepdash from 'deepdash/standalone';
+import * as deepdash from 'deepdash-es/standalone';
 
 type CrudOperations = {
   create?: { enabled?: boolean; authenticated?: boolean };

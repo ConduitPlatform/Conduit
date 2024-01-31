@@ -8,7 +8,7 @@ import {
 import { cloneDeep, isArray, isNil, isObject } from 'lodash-es';
 import { checkIfMongoOptions } from './utils.js';
 
-import * as deepdash from 'deepdash/standalone';
+import * as deepdash from 'deepdash-es/standalone';
 
 /**
  * This function should take as an input a JSON schema and convert it to the mongoose equivalent

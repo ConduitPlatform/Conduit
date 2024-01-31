@@ -5,7 +5,7 @@ import { ConduitDatabaseSchema, ParsedQuery } from '../../../interfaces/index.js
 import { isNil } from 'lodash-es';
 import { validateFieldChanges, validateFieldConstraints } from '../../utils/index.js';
 
-import * as deepdash from 'deepdash/standalone';
+import * as deepdash from 'deepdash-es/standalone';
 
 export const extractRelations = (
   name: string,
