@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { randomBytes } from 'crypto';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 import { Client } from '../models/index.js';
 import { isNil } from 'lodash-es';
 

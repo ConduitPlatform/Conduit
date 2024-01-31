@@ -2,7 +2,7 @@ import { ISmsProvider } from '../interfaces/ISmsProvider.js';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { SMSApi, SmsMessage, SmsMessageCollection } from 'clicksend';
 import { generateToken } from '../utils/index.js';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 export class clickSendProvider implements ISmsProvider {
   private readonly username: string;
   private readonly clicksendApiKey: string;

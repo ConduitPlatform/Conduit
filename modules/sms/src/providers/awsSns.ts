@@ -2,7 +2,7 @@ import { ISmsProvider } from '../interfaces/ISmsProvider.js';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { generateToken } from '../utils/index.js';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 
 export class AwsSnsProvider implements ISmsProvider {
   private readonly accessKeyId: string;
