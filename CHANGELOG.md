@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-rc.4](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.3...v0.16.0-rc.4) (2024-01-31)
+
+
+### Features
+
+* **hermes,admin,router:** add server and error details in swagger ([#929](https://github.com/ConduitPlatform/Conduit/issues/929)) ([88294fe](https://github.com/ConduitPlatform/Conduit/commit/88294fe16c82d1e1e772af70293073989b49cb26))
+* **hermes:** add scalar to eventually replace swagger ui ([#921](https://github.com/ConduitPlatform/Conduit/issues/921)) ([b2ee37c](https://github.com/ConduitPlatform/Conduit/commit/b2ee37c68312b32e30608459fb3441972b8c29c6))
+* standalone docker image ([#919](https://github.com/ConduitPlatform/Conduit/issues/919)) ([0accd64](https://github.com/ConduitPlatform/Conduit/commit/0accd64642431ded77cbc291f42d106758b18956))
+
+
+### Bug Fixes
+
+* build command for standalone ([bedf994](https://github.com/ConduitPlatform/Conduit/commit/bedf9940e6c37e001bae1ecd1e8baba2e4c2ec79))
+* checkRelations not finding resource definitions ([#909](https://github.com/ConduitPlatform/Conduit/issues/909)) ([7d25f4d](https://github.com/ConduitPlatform/Conduit/commit/7d25f4d8aaa56ed09dda8a8ead1c02e31239756e))
+* **database:** execRawQuery check if collection exists in views ([#932](https://github.com/ConduitPlatform/Conduit/issues/932)) ([387c296](https://github.com/ConduitPlatform/Conduit/commit/387c29695ca65563172e034a43ea6dd3913e1f09))
+* **database:** mongoose parseStringToQuery EJSON -> JSON ([#926](https://github.com/ConduitPlatform/Conduit/issues/926)) ([38d7ab0](https://github.com/ConduitPlatform/Conduit/commit/38d7ab0c6dbefe1bab3d4e15daedeb862e0e9e46))
+* **database:** views not being shared between instances ([#910](https://github.com/ConduitPlatform/Conduit/issues/910)) ([b44302d](https://github.com/ConduitPlatform/Conduit/commit/b44302db05852ec576dd5125b46703187e7dfef5))
+* **grpc-sdk:** ConduitSchemaExtension type not exported ([#908](https://github.com/ConduitPlatform/Conduit/issues/908)) ([a37bb7a](https://github.com/ConduitPlatform/Conduit/commit/a37bb7a8ddb0cecd7ce81b005ebbe1c747c877ca))
+* **hermes:** keeping previous middlewares between route updates ([9f7a785](https://github.com/ConduitPlatform/Conduit/commit/9f7a78566f9ef22a559178618fe610a474c90ded))
+* **router,admin:** register route crashing between database restarts, ([#907](https://github.com/ConduitPlatform/Conduit/issues/907)) ([9bc8cb0](https://github.com/ConduitPlatform/Conduit/commit/9bc8cb0f4f34b3c0a30878d02897cad164bcd46c))
+* standalone Docker compose port mapping ([#922](https://github.com/ConduitPlatform/Conduit/issues/922)) ([a1dd80f](https://github.com/ConduitPlatform/Conduit/commit/a1dd80f5b6b7f595e71179e39549add192f75bb2))
+
 ## [0.16.0-rc.3](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.2...v0.16.0-rc.3) (2024-01-18)
 
 
