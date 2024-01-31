@@ -1,4 +1,4 @@
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import moment from 'moment';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
@@ -8,16 +8,16 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { AccessToken, RefreshToken, User } from '../models';
-import { IAuthenticationStrategy } from '../interfaces';
-import { Config } from '../config';
-import { TokenProvider } from './tokenProvider';
+import { AccessToken, RefreshToken, User } from '../models/index.js';
+import { IAuthenticationStrategy } from '../interfaces/index.js';
+import { Config } from '../config/index.js';
+import { TokenProvider } from './tokenProvider.js';
 import {
   ConduitString,
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { AuthUtils } from '../utils';
+import { AuthUtils } from '../utils/index.js';
 import getToken = AuthUtils.getToken;
 
 export class CommonHandlers implements IAuthenticationStrategy {

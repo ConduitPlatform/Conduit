@@ -1,4 +1,4 @@
-import { DeclaredSchemaExtension, Schema } from '../interfaces';
+import { DeclaredSchemaExtension, Schema } from '../interfaces/index.js';
 import { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
 
 export async function canCreate(moduleName: string, schema: Schema) {

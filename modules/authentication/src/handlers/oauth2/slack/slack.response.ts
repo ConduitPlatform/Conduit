@@ -1,4 +1,4 @@
-import { SlackUser } from './slack.user';
+import { SlackUser } from './slack.user.js';
 
 export interface SlackResponse {
   data: {

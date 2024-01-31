@@ -1,9 +1,9 @@
-import { Cookie } from '../../interfaces';
+import { Cookie } from '../../interfaces/index.js';
 
-module.exports = {
+export default {
   requestDidStart() {
     return {
-      willSendResponse(requestContext: any) {
+      async willSendResponse(requestContext: any) {
         const { setCookie, removeCookie } = requestContext.contextValue;
         const { res } = requestContext.contextValue;
 

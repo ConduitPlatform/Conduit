@@ -1,5 +1,5 @@
-import { isEmpty, isNil } from 'lodash';
-import { TokenType } from '../constants';
+import { isEmpty, isNil } from 'lodash-es';
+import { TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
@@ -14,12 +14,12 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { Client, Token, User } from '../models';
+import { Client, Token, User } from '../models/index.js';
 import { status } from '@grpc/grpc-js';
-import { IAuthenticationStrategy } from '../interfaces';
-import { TokenProvider } from './tokenProvider';
-import { MagicLinkTemplate as magicLinkTemplate } from '../templates';
-import { AuthUtils } from '../utils';
+import { IAuthenticationStrategy } from '../interfaces/index.js';
+import { TokenProvider } from './tokenProvider.js';
+import { MagicLinkTemplate as magicLinkTemplate } from '../templates/index.js';
+import { AuthUtils } from '../utils/index.js';
 
 export class MagicLinkHandlers implements IAuthenticationStrategy {
   private emailModule: Email;

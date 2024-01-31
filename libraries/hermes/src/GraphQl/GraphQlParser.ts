@@ -4,7 +4,7 @@ import {
   Indexable,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitParser, TypeRegistry } from '../classes';
+import { ConduitParser, TypeRegistry } from '../classes/index.js';
 
 export interface ResolverDefinition {
   [key: string]: {

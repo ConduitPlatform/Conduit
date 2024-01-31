@@ -1,6 +1,6 @@
-import { Config as ConfigSchema } from '../config';
+import { Config as ConfigSchema } from '../config/index.js';
 import crypto from 'crypto';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 
 export async function generateConfigDefaults(config: ConfigSchema) {
   const tokenSecretConfig = config.auth.tokenSecret;

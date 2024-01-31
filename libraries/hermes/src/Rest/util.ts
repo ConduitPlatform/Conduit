@@ -8,7 +8,7 @@ import {
   TYPE,
   UrlParams,
 } from '@conduitplatform/grpc-sdk';
-import { isArray, isNil, isObject } from 'lodash';
+import { isArray, isNil, isObject } from 'lodash-es';
 
 type ConduitRequest = Request & { conduit?: Indexable };
 

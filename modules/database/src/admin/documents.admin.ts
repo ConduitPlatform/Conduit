@@ -5,13 +5,13 @@ import ConduitGrpcSdk, {
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import { populateArray, wrongFields } from '../utils/utilities';
-import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { ConduitDatabaseSchema, Doc } from '../interfaces';
-import { parseSortParam } from '../handlers/utils';
+import { isNil } from 'lodash-es';
+import { populateArray, wrongFields } from '../utils/utilities.js';
+import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
+import { ConduitDatabaseSchema, Doc } from '../interfaces/index.js';
+import { parseSortParam } from '../handlers/utils.js';
 
 export class DocumentsAdmin {
   constructor(

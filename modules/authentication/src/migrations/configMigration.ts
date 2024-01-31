@@ -1,5 +1,5 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 
 function sleep(ms: number) {
   return new Promise(resolve => {

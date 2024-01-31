@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import { set } from 'lodash-es';
 
 export function getHandleBarsValues(text: any) {
   const re = /{{[{]?(.*?)[}]?}}/g;
@@ -16,7 +16,7 @@ export function getHandleBarsValues(text: any) {
     // Dot Notation Breakdown
     if (variable.match(/\.*\./) && !variable.match(/\s/)) {
       const notation = variable.split('.');
-      _.set(context, notation, '');
+      set(context, notation, '');
     } else {
       context[variable.trim()] = val;
     }

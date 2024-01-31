@@ -1,15 +1,17 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
-import { BitbucketUser } from './bitbucket.user';
-import { OAuth2 } from '../OAuth2';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
-import * as bitbucketParameters from './bitbucket.json';
-import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { Payload } from '../interfaces/Payload';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
-import { isNil } from 'lodash';
-import { AuthParams } from '../interfaces/AuthParams';
-import { makeRequest } from '../utils';
+import { BitbucketUser } from './bitbucket.user.js';
+import { OAuth2 } from '../OAuth2.js';
+import {
+  AuthParams,
+  ConnectionParams,
+  OAuth2Settings,
+  Payload,
+  ProviderConfig,
+} from '../interfaces/index.js';
+import bitbucketParameters from './bitbucket.json' assert { type: 'json' };
+import { isNil } from 'lodash-es';
+import { makeRequest } from '../utils/index.js';
 
 export class BitbucketHandlers extends OAuth2<BitbucketUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { bitbucket: ProviderConfig }) {

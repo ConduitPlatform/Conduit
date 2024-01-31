@@ -1,8 +1,8 @@
 import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
-import { MongooseSchema } from './mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from './sequelize-adapter/SequelizeSchema';
-import { DatabaseAdapter } from './DatabaseAdapter';
-import { isEmpty, isNil } from 'lodash';
+import { MongooseSchema } from './mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from './sequelize-adapter/SequelizeSchema.js';
+import { DatabaseAdapter } from './DatabaseAdapter.js';
+import { isEmpty, isNil } from 'lodash-es';
 import { createHash } from 'crypto';
 import { Op } from 'sequelize';
 

@@ -1,7 +1,7 @@
 import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
-import { ChatRoom } from './ChatRoom.schema';
-import { User } from './User.model';
+import { ChatRoom } from './ChatRoom.schema.js';
+import { User } from './User.model.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,

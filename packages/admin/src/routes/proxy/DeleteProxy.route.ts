@@ -5,10 +5,10 @@ import {
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString } from '@conduitplatform/module-tools';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { ConduitRoute, ProxyRouteT } from '@conduitplatform/hermes';
-import { AdminProxyRoute } from '../../models';
-import AdminModule from '../../index';
+import { AdminProxyRoute } from '../../models/index.js';
+import AdminModule from '../../index.js';
 
 export function deleteProxyRoute(adminModule: AdminModule) {
   return new ConduitRoute(

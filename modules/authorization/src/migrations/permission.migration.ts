@@ -1,5 +1,5 @@
 import { Query } from '@conduitplatform/grpc-sdk';
-import { Permission } from '../models';
+import { Permission } from '../models/index.js';
 
 export const migratePermission = async () => {
   const query: Query<Permission> = {

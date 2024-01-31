@@ -16,12 +16,12 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { ChatMessage, ChatParticipantsLog, ChatRoom, User } from '../models';
-import { isArray, isNil } from 'lodash';
+import { ChatMessage, ChatParticipantsLog, ChatRoom, User } from '../models/index.js';
+import { isArray, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { sendInvitations, validateUsersInput } from '../utils';
-import { InvitationRoutes } from './InvitationRoutes';
-import * as templates from '../templates';
+import { sendInvitations, validateUsersInput } from '../utils/index.js';
+import { InvitationRoutes } from './InvitationRoutes.js';
+import * as templates from '../templates/index.js';
 
 export class ChatRoutes {
   private readonly _routingManager: RoutingManager;
@@ -41,7 +41,7 @@ export class ChatRoutes {
     this.grpcSdk.config
       .get('email')
       .then(() => {
-        const promises = Object.values(templates).map(template => {
+        const promises = Object.values(templates).map((template: any) => {
           return this.grpcSdk.emailProvider!.registerTemplate(template);
         });
         return Promise.all(promises);

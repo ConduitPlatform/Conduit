@@ -1,7 +1,7 @@
 import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
-import { IProxyMiddlewareOptions } from '../interfaces ';
 import { ProxyRouteActions } from '@conduitplatform/hermes';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
+import { IProxyMiddlewareOptions } from '../interfaces/index.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,

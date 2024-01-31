@@ -1,4 +1,4 @@
-import { FileHandlers } from '../handlers/file';
+import { FileHandlers } from '../handlers/file.js';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
@@ -11,7 +11,7 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { File } from '../models';
+import { File } from '../models/index.js';
 
 export class StorageRoutes {
   private _routingManager: RoutingManager;

@@ -5,23 +5,26 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
-import AppConfigSchema, { Config } from './config';
-import { AdminHandlers } from './admin';
-import { EmailService } from './services/email.service';
-import { EmailProvider } from './email-provider';
-import * as models from './models';
-import { isNil } from 'lodash';
+import AppConfigSchema, { Config } from './config/index.js';
+import { AdminHandlers } from './admin/index.js';
+import { EmailService } from './services/email.service.js';
+import { EmailProvider } from './email-provider/index.js';
+import * as models from './models/index.js';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { runMigrations } from './migrations';
+import { runMigrations } from './migrations/index.js';
 import {
   RegisterTemplateRequest,
   RegisterTemplateResponse,
   SendEmailRequest,
   SendEmailResponse,
-} from './protoTypes/email';
-import metricsSchema from './metrics';
+} from './protoTypes/email.js';
+import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
-import { ISendEmailParams } from './interfaces';
+import { ISendEmailParams } from './interfaces/index.js';
+import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class Email extends ManagedModule<Config> {
   configSchema = AppConfigSchema;

@@ -3,14 +3,14 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
-import { Doc } from '../../interfaces';
-import { findSchema, getUpdatedDocument } from './utils';
-import { constructSortObj } from '../utils';
+import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
+import { Doc } from '../../interfaces/index.js';
+import { findSchema, getUpdatedDocument } from './utils.js';
+import { constructSortObj } from '../utils.js';
 
 export class CmsHandlers {
   constructor(

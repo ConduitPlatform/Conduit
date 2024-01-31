@@ -7,10 +7,10 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { isNil, isString } from 'lodash';
-import { _StorageContainer, _StorageFolder, File } from '../models';
-import { IStorageProvider } from '../interfaces';
-import { deepPathHandler, normalizeFolderPath } from '../utils';
+import { isNil, isString } from 'lodash-es';
+import { _StorageContainer, _StorageFolder, File } from '../models/index.js';
+import { IStorageProvider } from '../interfaces/index.js';
+import { deepPathHandler, normalizeFolderPath } from '../utils/index.js';
 
 export class AdminFileHandlers {
   private readonly database: DatabaseProvider;

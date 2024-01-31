@@ -1,13 +1,17 @@
-import { ConduitModule } from '../../classes/ConduitModule';
+import { ConduitModule } from '../../classes/index.js';
 import {
   DeleteFileResponse,
   FileResponse,
   GetFileDataResponse,
   StorageDefinition,
-} from '../../protoUtils/storage';
+} from '../../protoUtils/storage.js';
 
 export class Storage extends ConduitModule<typeof StorageDefinition> {
-  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+  constructor(
+    private readonly moduleName: string,
+    url: string,
+    grpcToken?: string,
+  ) {
     super(moduleName, 'storage', url, grpcToken);
     this.initializeClient(StorageDefinition);
   }

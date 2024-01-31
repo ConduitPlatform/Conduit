@@ -1,5 +1,4 @@
-import { AuthParams } from '../interfaces/AuthParams';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
+import { AuthParams, OAuth2Settings } from '../interfaces/index.js';
 
 export function makeRequest(data: AuthParams, settings: OAuth2Settings) {
   const requestData: string = Object.keys(data)

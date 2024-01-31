@@ -14,19 +14,20 @@ import {
   Query,
   SchemaAdapter,
   SingleDocQuery,
-} from '../../interfaces';
-import { MongooseAdapter } from './index';
+} from '../../interfaces/index.js';
+import { MongooseAdapter } from './index.js';
 import ConduitGrpcSdk, {
   ConduitSchema,
   Indexable,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
-import { cloneDeep, isNil } from 'lodash';
-import { parseQuery } from './parser';
+import { cloneDeep, isNil } from 'lodash-es';
+import { parseQuery } from './parser/index.js';
 
 export class MongooseSchema extends SchemaAdapter<Model<any>> {
   model: Model<any>;
-  fieldHash: string;
+  // todo rename
+  declare fieldHash: string;
 
   constructor(
     grpcSdk: ConduitGrpcSdk,

@@ -5,7 +5,7 @@ import {
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString } from '@conduitplatform/module-tools';
-import { Admin } from '../models';
+import { Admin } from '../models/index.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
 
 export function getAdminRoute() {

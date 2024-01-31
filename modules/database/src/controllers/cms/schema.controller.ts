@@ -3,15 +3,15 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { DatabaseRoutes } from '../../routes';
-import { sortAndConstructRoutes } from './utils';
-import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
-import { CmsHandlers } from '../../handlers/cms/crud.handler';
-import { ParsedQuery } from '../../interfaces';
+import { DatabaseRoutes } from '../../routes/index.js';
+import { sortAndConstructRoutes } from './utils.js';
+import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
+import { CmsHandlers } from '../../handlers/cms/crud.handler.js';
+import { ParsedQuery } from '../../interfaces/index.js';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 
 export class SchemaController {
   private router: DatabaseRoutes;

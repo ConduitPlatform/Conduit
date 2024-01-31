@@ -1,5 +1,5 @@
-import { OAuth2Settings } from './OAuth2Settings';
-import { AppleProviderConfig } from './AppleProviderConfig';
+import { AppleProviderConfig } from './AppleProviderConfig.js';
+import { OAuth2Settings } from './OAuth2Settings.js';
 
 export class AppleOAuth2Settings extends OAuth2Settings {
   privateKey: string;

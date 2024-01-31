@@ -15,14 +15,14 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { Team, Token, User } from '../models';
-import { Config } from '../config';
-import { Team as TeamAuthz } from '../authz';
-import { TeamInviteTemplate } from '../templates';
+import { Team, Token, User } from '../models/index.js';
+import { Config } from '../config/index.js';
+import { Team as TeamAuthz } from '../authz/index.js';
+import { TeamInviteTemplate } from '../templates/index.js';
 import { status } from '@grpc/grpc-js';
-import { AuthUtils } from '../utils';
-import { IAuthenticationStrategy } from '../interfaces';
-import { TokenType } from '../constants';
+import { AuthUtils } from '../utils/index.js';
+import { IAuthenticationStrategy } from '../interfaces/index.js';
+import { TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
 
 export class TeamsHandler implements IAuthenticationStrategy {

@@ -1,4 +1,4 @@
-import { isArray, isBoolean, isNumber, isString } from 'lodash';
+import { isArray, isBoolean, isNumber, isString } from 'lodash-es';
 import ConduitGrpcSdk, {
   ConduitModelField,
   ConduitSchema,
@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
   PostgresIndexOptions,
   PostgresIndexType,
 } from '@conduitplatform/grpc-sdk';
-import { checkIfPostgresOptions } from '../sequelize-adapter/utils';
+import { checkIfPostgresOptions } from '../sequelize-adapter/utils/index.js';
 
 export function checkDefaultValue(type: string, value: string) {
   switch (type) {

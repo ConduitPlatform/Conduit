@@ -1,5 +1,5 @@
 import { Query } from '@conduitplatform/grpc-sdk';
-import { ChatRoom } from '../models';
+import { ChatRoom } from '../models/index.js';
 
 export const migrateChatRoom = async () => {
   const query: Query<ChatRoom> = {

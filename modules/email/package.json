@@ -4,6 +4,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "private": true,
+  "type": "module",
   "engines": {
     "node": ">=14"
   },
@@ -32,11 +33,12 @@
     "@grpc/grpc-js": "^1.9.7",
     "@grpc/proto-loader": "^0.7.6",
     "@sendgrid/client": "^8.0.0",
+    "@types/nodemailer-sendgrid": "^1.0.3",
     "await-to-js": "^3.0.0",
     "convict": "^6.2.4",
     "escape-string-regexp": "^4.0.0",
     "handlebars": "^4.7.8",
-    "lodash": "^4.17.21",
+    "lodash-es": "^4.17.21",
     "mailgun-js": "^0.22.0",
     "mandrill-api": "^1.0.45",
     "nodemailer": "^6.9.8",
@@ -46,7 +48,7 @@
   },
   "devDependencies": {
     "@types/convict": "^6.1.6",
-    "@types/lodash": "^4.14.200",
+    "@types/lodash-es": "^4.17.12",
     "@types/mailgun-js": "^0.22.16",
     "@types/mandrill-api": "^1.0.33",
     "@types/node": "20.10.3",
@@ -57,7 +59,7 @@
     "cross-env": "^7.0.3",
     "rimraf": "^5.0.5",
     "smtp-server": "^3.11.0",
-    "ts-proto": "^1.160.0",
-    "typescript": "~5.2.2"
+    "ts-proto": "^1.167.1",
+    "typescript": "~5.3.3"
   }
 }

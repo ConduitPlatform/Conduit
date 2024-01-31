@@ -1,7 +1,7 @@
-import { RedisManager } from './RedisManager';
+import { RedisManager } from './RedisManager.js';
 import { Cluster, Redis } from 'ioredis';
-import Redlock, { Lock } from 'redlock';
-import { Indexable } from '../interfaces';
+import { Indexable } from '../interfaces/index.js';
+import { Redlock, Lock } from '@sesamecare-oss/redlock';
 
 export enum KNOWN_LOCKS {
   STATE_MODIFICATION = 'state_modification',

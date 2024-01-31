@@ -1,13 +1,13 @@
 import { NextFunction, Response } from 'express';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import ConduitGrpcSdk, {
   ConduitError,
   DatabaseProvider,
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
-import { Client } from '../../../models';
-import { validateClient } from '../../utils';
-import { ValidationInterface } from '../../interfaces/ValidationInterface';
+import { Client } from '../../../models/index.js';
+import { validateClient } from '../../utils/index.js';
+import { ValidationInterface } from '../../interfaces/ValidationInterface.js';
 import { ConduitRequest } from '@conduitplatform/hermes';
 
 export class ClientValidator {

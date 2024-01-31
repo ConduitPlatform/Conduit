@@ -1,8 +1,11 @@
 import { ConduitModel, GrpcError } from '@conduitplatform/grpc-sdk';
-import { ConduitDatabaseSchema, DeclaredSchemaExtension } from '../../interfaces';
+import {
+  ConduitDatabaseSchema,
+  DeclaredSchemaExtension,
+} from '../../interfaces/index.js';
 import { status } from '@grpc/grpc-js';
 
-const deepdash = require('deepdash/standalone');
+import * as deepdash from 'deepdash-es/standalone';
 
 function deepFieldValidate(extFields: ConduitModel) {
   const uniqueError = new GrpcError(

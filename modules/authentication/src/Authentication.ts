@@ -5,14 +5,14 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
-import { isEmpty, isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import AppConfigSchema, { Config } from './config';
-import { AdminHandlers } from './admin';
-import { AuthenticationRoutes } from './routes';
-import * as models from './models';
-import { AuthUtils } from './utils';
-import { TokenType } from './constants';
+import AppConfigSchema, { Config } from './config/index.js';
+import { AdminHandlers } from './admin/index.js';
+import { AuthenticationRoutes } from './routes/index.js';
+import * as models from './models/index.js';
+import { AuthUtils } from './utils/index.js';
+import { TokenType } from './constants/index.js';
 import { v4 as uuid } from 'uuid';
 import {
   TeamDeleteRequest,
@@ -31,21 +31,24 @@ import {
   ValidateAccessTokenRequest,
   ValidateAccessTokenResponse,
   ValidateAccessTokenResponse_Status,
-} from './protoTypes/authentication';
-import { Empty } from './protoTypes/google/protobuf/empty';
-import { runMigrations } from './migrations';
-import metricsSchema from './metrics';
-import { TokenProvider } from './handlers/tokenProvider';
-import { configMigration } from './migrations/configMigration';
+} from './protoTypes/authentication.js';
+import { Empty } from './protoTypes/google/protobuf/empty.js';
+import { runMigrations } from './migrations/index.js';
+import metricsSchema from './metrics/index.js';
+import { TokenProvider } from './handlers/tokenProvider.js';
+import { configMigration } from './migrations/configMigration.js';
 import {
   ConduitActiveSchema,
   ConfigController,
   createParsedRouterRequest,
   ManagedModule,
 } from '@conduitplatform/module-tools';
-import { TeamsAdmin } from './admin/team';
-import { User as UserAuthz } from './authz';
-import { handleAuthentication } from './routes/middleware';
+import { TeamsAdmin } from './admin/team.js';
+import { User as UserAuthz } from './authz/index.js';
+import { handleAuthentication } from './routes/middleware.js';
+import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;

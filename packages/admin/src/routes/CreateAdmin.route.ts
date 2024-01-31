@@ -1,6 +1,6 @@
-import { Admin } from '../models';
-import { isNil } from 'lodash';
-import { hashPassword } from '../utils/auth';
+import { Admin } from '../models/index.js';
+import { isNil } from 'lodash-es';
+import { hashPassword } from '../utils/auth.js';
 import {
   ConduitError,
   ConduitRouteActions,

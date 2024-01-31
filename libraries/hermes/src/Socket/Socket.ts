@@ -3,15 +3,15 @@ import { createServer, Server as httpServer } from 'http';
 import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { Cluster, Redis } from 'ioredis';
-import { ConduitRouter } from '../Router';
-import { isNil } from 'lodash';
+import { ConduitRouter } from '../Router.js';
+import { isNil } from 'lodash-es';
 import {
   ConduitSocket,
   EventResponse,
   isInstanceOfEventResponse,
   JoinRoomResponse,
   SocketPush,
-} from '../interfaces';
+} from '../interfaces/index.js';
 import ObjectHash from 'object-hash';
 import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
 

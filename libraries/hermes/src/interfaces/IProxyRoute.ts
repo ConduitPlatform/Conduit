@@ -1,4 +1,4 @@
-import { ProxyOptions, ProxyRouteActions } from './IProxyRouteOptions';
+import { ProxyOptions, ProxyRouteActions } from './IProxyRouteOptions.js';
 
 export type ProxyRouteT = {
   options: {

@@ -1,8 +1,8 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { checkRelation, computeRelationTuple } from '../utils';
-import { Relationship, ResourceDefinition } from '../models';
-import { IndexController } from './index.controller';
-import { QueueController } from './queue.controller';
+import { checkRelation, computeRelationTuple } from '../utils/index.js';
+import { Relationship, ResourceDefinition } from '../models/index.js';
+import { IndexController } from './index.controller.js';
+import { QueueController } from './queue.controller.js';
 
 export class RelationsController {
   private static _instance: RelationsController;

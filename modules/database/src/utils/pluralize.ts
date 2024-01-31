@@ -37,7 +37,7 @@ const pluralization = [
  * @api public
  */
 
-exports.uncountables = [
+export const uncountables = [
   'advice',
   'energy',
   'excretion',
@@ -66,7 +66,6 @@ exports.uncountables = [
   'status',
   'media',
 ];
-const uncountables = exports.uncountables;
 
 /*!
  * Pluralize function.

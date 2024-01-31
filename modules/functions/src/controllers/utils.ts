@@ -6,8 +6,8 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { RouteBuilder } from '@conduitplatform/module-tools';
-import { FunctionExecutions, Functions } from '../models';
-import { isNil } from 'lodash';
+import { FunctionExecutions, Functions } from '../models/index.js';
+import { isNil } from 'lodash-es';
 import { NodeVM, VMScript } from 'vm2';
 import { status } from '@grpc/grpc-js';
 

@@ -1,18 +1,18 @@
 import { to } from 'await-to-js';
 import { createTransport } from 'nodemailer';
 import { Options } from 'nodemailer/lib/mailer';
-import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate';
-import { Template } from '../../interfaces/Template';
-import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate';
-import { EmailBuilderClass } from '../../models/EmailBuilderClass';
-import { EmailProviderClass } from '../../models/EmailProviderClass';
-import { getHandleBarsValues } from '../../utils';
-import { initialize as initializeMailgun } from './mailgun';
-import { MailgunConfig } from './mailgun.config';
-import { MailgunMailBuilder } from './mailgunMailBuilder';
+import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate.js';
+import { Template } from '../../interfaces/Template.js';
+import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
+import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
+import { EmailProviderClass } from '../../models/EmailProviderClass.js';
+import { getHandleBarsValues } from '../../utils/index.js';
+import { initialize as initializeMailgun } from './mailgun.js';
+import { MailgunConfig } from './mailgun.config.js';
+import { MailgunMailBuilder } from './mailgunMailBuilder.js';
 import mailgun, { Mailgun } from 'mailgun-js';
-import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate';
-import { MailgunTemplate } from '../../interfaces/mailgun/MailgunTemplate';
+import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate.js';
+import { MailgunTemplate } from '../../interfaces/mailgun/MailgunTemplate.js';
 
 export class MailgunProvider extends EmailProviderClass {
   protected _mailgunSdk: Mailgun;

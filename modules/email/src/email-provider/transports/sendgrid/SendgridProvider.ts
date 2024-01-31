@@ -1,18 +1,18 @@
-import { EmailProviderClass } from '../../models/EmailProviderClass';
-import { SendGridConfig } from './sendgrid.config';
+import { EmailProviderClass } from '../../models/EmailProviderClass.js';
+import { SendGridConfig } from './sendgrid.config.js';
 import { createTransport } from 'nodemailer';
 import { Client } from '@sendgrid/client';
-import { Template } from '../../interfaces/Template';
-import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate';
-import { SendgridMailBuilder } from './sendgridMailBuilder';
-import { getHandleBarsValues } from '../../utils';
-import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate';
+import { Template } from '../../interfaces/Template.js';
+import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate.js';
+import { SendgridMailBuilder } from './sendgridMailBuilder.js';
+import { getHandleBarsValues } from '../../utils/index.js';
+import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
 import {
   SendgridTemplate,
   TemplateVersion,
-} from '../../interfaces/sendgrid/SendgridTemplate';
+} from '../../interfaces/sendgrid/SendgridTemplate.js';
 
-const sgTransport = require('nodemailer-sendgrid');
+import sgTransport from 'nodemailer-sendgrid';
 
 export class SendgridProvider extends EmailProviderClass {
   private _sgClient: any;

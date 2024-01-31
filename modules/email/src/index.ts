@@ -1,4 +1,4 @@
-import EmailModule from './Email';
+import EmailModule from './Email.js';
 
 const email = new EmailModule();
 email.start();

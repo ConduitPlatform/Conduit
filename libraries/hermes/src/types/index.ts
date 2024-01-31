@@ -1,1 +1,1 @@
-export * from './swaggerRouterMetadata';
+export * from './swaggerRouterMetadata.js';

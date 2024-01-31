@@ -1,4 +1,4 @@
-import { Resource_Permission, Resource_Relation } from '../protoUtils/authorization';
+import { Resource_Permission, Resource_Relation } from '../protoUtils/index.js';
 
 export class ConduitAuthorizedResource {
   readonly name: string;

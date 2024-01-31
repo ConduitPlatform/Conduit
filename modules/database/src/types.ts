@@ -2,7 +2,7 @@ import { GrpcRequest, GrpcResponse } from '@conduitplatform/grpc-sdk';
 import {
   Schema as SchemaDto,
   SchemaExtension as SchemaExtensionDto,
-} from './protoTypes/database';
+} from './protoTypes/database.js';
 
 export type CreateSchemaRequest = GrpcRequest<SchemaDto>;
 

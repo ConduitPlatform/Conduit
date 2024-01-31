@@ -16,11 +16,11 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import { FormsController } from '../controllers/forms.controller';
-import { FormReplies, Forms } from '../models';
+import { isNil } from 'lodash-es';
+import { FormsController } from '../controllers/forms.controller.js';
+import { FormReplies, Forms } from '../models/index.js';
 
-const escapeStringRegexp = require('escape-string-regexp');
+import escapeStringRegexp from 'escape-string-regexp';
 
 export class AdminHandlers {
   private readonly routingManager: RoutingManager;

@@ -1,4 +1,4 @@
-import { SequelizeAdapter } from '../index';
+import { SequelizeAdapter } from '../index.js';
 
 export class SQLAdapter extends SequelizeAdapter {
   constructor(connectionUri: string) {

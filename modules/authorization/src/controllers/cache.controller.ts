@@ -1,5 +1,5 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 
 export namespace RuleCache {
   export function storeResolution(

@@ -2,14 +2,14 @@ import ConduitGrpcSdk, {
   DatabaseProvider,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema, { Config } from './config';
-import { FormSubmissionTemplate } from './templates';
-import { AdminHandlers } from './admin';
-import { FormsRoutes } from './routes';
-import { FormsController } from './controllers/forms.controller';
-import * as models from './models';
-import { runMigrations } from './migrations';
-import metricsSchema from './metrics';
+import AppConfigSchema, { Config } from './config/index.js';
+import { FormSubmissionTemplate } from './templates/index.js';
+import { AdminHandlers } from './admin/index.js';
+import { FormsRoutes } from './routes/index.js';
+import { FormsController } from './controllers/forms.controller.js';
+import * as models from './models/index.js';
+import { runMigrations } from './migrations/index.js';
+import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class Forms extends ManagedModule<Config> {
@@ -31,7 +31,7 @@ export default class Forms extends ManagedModule<Config> {
     this.database = this.grpcSdk.database!;
     await runMigrations(this.grpcSdk);
     await this.registerSchemas();
-    await this.grpcSdk.monitorModule('email', serving => {
+    this.grpcSdk.monitorModule('email', serving => {
       if (serving && ConfigController.getInstance().config.active) {
         this.onConfig()
           .then()

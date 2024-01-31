@@ -1,5 +1,5 @@
 //can be used both for relation checks and permission checks
-import { ObjectIndex } from '../models';
+import { ObjectIndex } from '../models/index.js';
 
 export const checkRelation = (subject: string, relation: string, object: string) => {
   if (!subject.includes(':')) {

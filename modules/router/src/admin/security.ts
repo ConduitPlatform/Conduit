@@ -5,9 +5,9 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { randomBytes } from 'crypto';
-import * as bcrypt from 'bcrypt';
-import { Client } from '../models';
-import { isNil } from 'lodash';
+import bcrypt from 'bcrypt';
+import { Client } from '../models/index.js';
+import { isNil } from 'lodash-es';
 
 export class SecurityAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}

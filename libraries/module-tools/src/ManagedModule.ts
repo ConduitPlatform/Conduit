@@ -1,19 +1,19 @@
-import { ConduitServiceModule, ConfigController, GrpcServer } from './classes';
-import { kebabCase } from 'lodash';
+import { ConduitServiceModule, ConfigController, GrpcServer } from './classes/index.js';
+import { kebabCase } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
-import { ConduitService } from './interfaces';
+import { ConduitService } from './interfaces/index.js';
 import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcResponse,
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
-import { initializeSdk, merge } from './utilities';
-import { convictConfigParser } from './utilities/convictConfigParser';
-import { RoutingManager } from './routing';
-import { RoutingController } from './routing/RoutingController';
-import { ModuleLifecycleStage } from './interfaces/ModuleLifecycleStage';
+import { initializeSdk, merge } from './utilities/index.js';
+import { convictConfigParser } from './utilities/convictConfigParser.js';
+import { RoutingManager } from './routing/index.js';
+import { RoutingController } from './routing/RoutingController.js';
+import { ModuleLifecycleStage } from './interfaces/index.js';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
   readonly config?: convict.Config<T>;

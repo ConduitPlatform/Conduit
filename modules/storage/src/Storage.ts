@@ -5,15 +5,15 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema, { Config } from './config';
-import { AdminRoutes } from './admin';
-import { FileHandlers } from './handlers/file';
-import { StorageRoutes } from './routes';
-import * as models from './models';
+import AppConfigSchema, { Config } from './config/index.js';
+import { AdminRoutes } from './admin/index.js';
+import { FileHandlers } from './handlers/file.js';
+import { StorageRoutes } from './routes/index.js';
+import * as models from './models/index.js';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
-import { isEmpty, isNil } from 'lodash';
-import { runMigrations } from './migrations';
+import { isEmpty, isNil } from 'lodash-es';
+import { runMigrations } from './migrations/index.js';
 import {
   CreateFileByUrlRequest,
   CreateFileRequest,
@@ -24,19 +24,22 @@ import {
   GetFileRequest,
   UpdateFileByUrlRequest,
   UpdateFileRequest,
-} from './protoTypes/storage';
-import MetricsSchema from './metrics';
-import { IStorageProvider } from './interfaces';
-import { createStorageProvider } from './providers';
-import { getAwsAccountId } from './utils';
+} from './protoTypes/storage.js';
+import MetricsSchema from './metrics/index.js';
+import { IStorageProvider } from './interfaces/index.js';
+import { createStorageProvider } from './providers/index.js';
+import { getAwsAccountId } from './utils/index.js';
 import {
   ConfigController,
   createParsedRouterRequest,
   ManagedModule,
 } from '@conduitplatform/module-tools';
-import { StorageParamAdapter } from './adapter/StorageParamAdapter';
-import { FileResource } from './authz';
-import { AdminFileHandlers } from './admin/adminFile';
+import { StorageParamAdapter } from './adapter/StorageParamAdapter.js';
+import { FileResource } from './authz/index.js';
+import { AdminFileHandlers } from './admin/adminFile.js';
+import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class Storage extends ManagedModule<Config> {
   configSchema = AppConfigSchema;

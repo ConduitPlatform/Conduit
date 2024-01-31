@@ -1,3 +1,4 @@
-export * from './validateFieldChanges';
-export * from './validateFieldConstraints';
-export * from './database-transform-utils';
+export * from './validateFieldChanges.js';
+export * from './validateFieldConstraints.js';
+export * from './database-transform-utils.js';
+export * from './extensions.js';

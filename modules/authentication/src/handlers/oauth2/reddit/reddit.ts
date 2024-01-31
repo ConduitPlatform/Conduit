@@ -1,13 +1,15 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
-import { RedditUser } from './reddit.user';
-import { OAuth2 } from '../OAuth2';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
-import * as redditParameters from './reddit.json';
-import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { Payload } from '../interfaces/Payload';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
-import { AuthParams } from '../interfaces/AuthParams';
+import { RedditUser } from './reddit.user.js';
+import { OAuth2 } from '../OAuth2.js';
+import {
+  AuthParams,
+  ConnectionParams,
+  OAuth2Settings,
+  Payload,
+  ProviderConfig,
+} from '../interfaces/index.js';
+import redditParameters from './reddit.json' assert { type: 'json' };
 
 export class RedditHandlers extends OAuth2<RedditUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { reddit: ProviderConfig }) {

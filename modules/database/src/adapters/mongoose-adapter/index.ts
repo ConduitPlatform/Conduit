@@ -1,6 +1,6 @@
 import { ConnectOptions, IndexOptions, Mongoose } from 'mongoose';
-import { MongooseSchema } from './MongooseSchema';
-import { schemaConverter } from './SchemaConverter';
+import { MongooseSchema } from './MongooseSchema.js';
+import { schemaConverter } from './SchemaConverter.js';
 import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
@@ -9,19 +9,20 @@ import ConduitGrpcSdk, {
   MongoIndexType,
   RawMongoQuery,
 } from '@conduitplatform/grpc-sdk';
-import { DatabaseAdapter } from '../DatabaseAdapter';
-import { validateFieldChanges, validateFieldConstraints } from '../utils';
-import pluralize from '../../utils/pluralize';
-import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
+import { DatabaseAdapter } from '../DatabaseAdapter.js';
+import { validateFieldChanges, validateFieldConstraints } from '../utils/index.js';
+import pluralize from '../../utils/pluralize.js';
+import { mongoSchemaConverter } from '../../introspection/mongoose/utils.js';
 import { status } from '@grpc/grpc-js';
-import { checkIfMongoOptions } from './utils';
+import { checkIfMongoOptions } from './utils.js';
 import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
-} from '../../interfaces';
-import { isNil } from 'lodash';
+} from '../../interfaces/index.js';
+import { isNil } from 'lodash-es';
 
-const parseSchema = require('mongodb-schema');
+// @ts-ignore
+import * as parseSchema from 'mongodb-schema';
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;

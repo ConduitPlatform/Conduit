@@ -14,11 +14,11 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import { populateArray } from '../utils';
-import { ChatMessage, ChatRoom, User } from '../models';
+import { isNil } from 'lodash-es';
+import { populateArray } from '../utils/index.js';
+import { ChatMessage, ChatRoom, User } from '../models/index.js';
 
-const escapeStringRegexp = require('escape-string-regexp');
+import escapeStringRegexp from 'escape-string-regexp';
 
 export class AdminHandlers {
   private readonly routingManager: RoutingManager;

@@ -1,7 +1,10 @@
-import { getGrpcSignedTokenInterceptor, getModuleNameInterceptor } from '../interceptors';
+import {
+  getGrpcSignedTokenInterceptor,
+  getModuleNameInterceptor,
+} from '../interceptors/index.js';
 import { createChannel, createClientFactory } from 'nice-grpc';
-import { HealthCheckResponse, HealthDefinition } from '../protoUtils';
-import ConduitGrpcSdk from '../index';
+import { HealthCheckResponse, HealthDefinition } from '../protoUtils/index.js';
+import ConduitGrpcSdk from '../index.js';
 
 export async function checkModuleHealth(
   clientName: string,

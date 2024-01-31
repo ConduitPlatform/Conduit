@@ -1,5 +1,5 @@
-import { Admin } from '../models';
-import { isNil } from 'lodash';
+import { Admin } from '../models/index.js';
+import { isNil } from 'lodash-es';
 
 export async function migrateIsSuperAdminToAdmin() {
   const originalAdmin: Admin | null = await Admin.getInstance().findOne({

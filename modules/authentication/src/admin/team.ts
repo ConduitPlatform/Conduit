@@ -7,10 +7,10 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { Team, User } from '../models';
-import { isNil } from 'lodash';
+import { Team, User } from '../models/index.js';
+import { isNil } from 'lodash-es';
 import escapeStringRegexp from 'escape-string-regexp';
-import { AuthUtils } from '../utils';
+import { AuthUtils } from '../utils/index.js';
 import {
   ConduitBoolean,
   ConduitNumber,

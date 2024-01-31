@@ -4,7 +4,7 @@ import {
   ConduitRouteReturnDefinition,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { AdminProxyRoute } from '../../models';
+import { AdminProxyRoute } from '../../models/index.js';
 
 export function getProxyRoutesRoute() {
   return new ConduitRoute(

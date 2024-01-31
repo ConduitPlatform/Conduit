@@ -1,9 +1,7 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { SequelizeSchema } from '../SequelizeSchema';
-import { ParsedQuery } from '../../../interfaces';
-import { cloneDeep, get, unset } from 'lodash';
-
-const { isArray, isObject } = require('lodash');
+import { SequelizeSchema } from '../SequelizeSchema.js';
+import { ParsedQuery } from '../../../interfaces/index.js';
+import { cloneDeep, get, isArray, isObject, unset } from 'lodash-es';
 
 function potentialNesting(field: any) {
   return (

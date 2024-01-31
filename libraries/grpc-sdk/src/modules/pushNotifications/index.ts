@@ -1,5 +1,5 @@
-import { ConduitModule } from '../../classes/ConduitModule';
-import { PushNotificationsDefinition } from '../../protoUtils/push-notifications';
+import { ConduitModule } from '../../classes/index.js';
+import { PushNotificationsDefinition } from '../../protoUtils/index.js';
 
 export class PushNotifications extends ConduitModule<typeof PushNotificationsDefinition> {
   constructor(

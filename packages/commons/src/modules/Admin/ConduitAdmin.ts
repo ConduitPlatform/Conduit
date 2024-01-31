@@ -1,5 +1,5 @@
 import { ConduitRoute } from '@conduitplatform/hermes';
-import { ConduitCommons } from '../../index';
+import { ConduitCommons } from '../../index.js';
 import convict from 'convict';
 import { GrpcServer } from '@conduitplatform/module-tools';
 

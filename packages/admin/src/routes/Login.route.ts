@@ -1,6 +1,6 @@
-import { Admin, AdminTwoFactorSecret } from '../models';
-import { isNil } from 'lodash';
-import { comparePasswords, signToken } from '../utils/auth';
+import { Admin, AdminTwoFactorSecret } from '../models/index.js';
+import { isNil } from 'lodash-es';
+import { comparePasswords, signToken } from '../utils/auth.js';
 import {
   ConduitError,
   ConduitRouteActions,

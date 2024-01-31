@@ -44,7 +44,8 @@ const collectionName = undefined;
 export class File extends ConduitActiveSchema<File> {
   private static _instance: File;
   _id!: string;
-  name!: string;
+  //todo rename
+  declare name: string;
   folder!: string;
   container!: string;
   size!: number;

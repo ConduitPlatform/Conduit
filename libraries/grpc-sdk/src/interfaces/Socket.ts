@@ -1,5 +1,5 @@
-import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
-import { TYPE } from './Model';
+import { ConduitRouteReturnDefinition } from './ConduitRouteReturn.js';
+import { TYPE } from './Model.js';
 
 export type ConduitSocketParamTypes = (TYPE | ConduitSocketParamTypes)[];
 

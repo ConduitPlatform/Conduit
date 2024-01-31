@@ -33,7 +33,8 @@ const collectionName = undefined;
 export class Team extends ConduitActiveSchema<Team> {
   private static _instance: Team;
   _id: string;
-  name: string;
+  //todo rename
+  declare name: string;
   parentTeam: string;
   isDefault: boolean;
   createdAt: Date;

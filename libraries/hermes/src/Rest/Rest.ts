@@ -6,21 +6,21 @@ import {
   Response,
   Router,
 } from 'express';
-import { SwaggerGenerator } from './Swagger';
-import { extractRequestData, validateParams } from './util';
-import { createHashKey, extractCaching } from '../cache.utils';
-import { ConduitRouter } from '../Router';
+import { SwaggerGenerator } from './Swagger.js';
+import { extractRequestData, validateParams } from './util.js';
+import { createHashKey, extractCaching } from '../cache.utils.js';
+import { ConduitRouter } from '../Router.js';
 import ConduitGrpcSdk, {
   ConduitError,
   ConduitRouteActions,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { Cookie } from '../interfaces';
-import { SwaggerRouterMetadata } from '../types';
-import { ConduitRoute, TypeRegistry } from '../classes';
+import { Cookie } from '../interfaces/index.js';
+import { SwaggerRouterMetadata } from '../types/index.js';
+import { ConduitRoute, TypeRegistry } from '../classes/index.js';
 import { apiReference } from '@scalar/express-api-reference';
 
-const swaggerUi = require('swagger-ui-express');
+import swaggerUi from 'swagger-ui-express';
 
 export class RestController extends ConduitRouter {
   private _privateHeaders: string[];

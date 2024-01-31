@@ -1,9 +1,9 @@
 import { SandboxedJob } from 'bullmq';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { ActorIndex, ObjectIndex, ResourceDefinition } from '../models';
-import { IndexController, QueueController } from '../controllers';
-import { constructObjectIndex } from '../utils';
-import _ from 'lodash';
+import { ActorIndex, ObjectIndex, ResourceDefinition } from '../models/index.js';
+import { IndexController, QueueController } from '../controllers/index.js';
+import { constructObjectIndex } from '../utils/index.js';
+import { omit } from 'lodash-es';
 
 let grpcSdk: ConduitGrpcSdk | undefined = undefined;
 
@@ -122,7 +122,7 @@ module.exports = async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => 
       entityPermission: objectPermission,
     });
     for (const childIndex of childIndexes) {
-      const copy = _.omit(childIndex, ['_id', 'createdAt', 'updatedAt', '__v']);
+      const copy = omit(childIndex, ['_id', 'createdAt', 'updatedAt', '__v']);
       for (const childObject of objectsByPermission[objectPermission]) {
         if (childObject.entityType === copy.entityType) continue;
         childObj.push({

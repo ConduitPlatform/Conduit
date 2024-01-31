@@ -1,9 +1,4 @@
-import {
-  ConduitModel,
-  ConduitModelField,
-  Indexable,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitModel, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 
 /**
  * This function should take as an input a mongo-schema object and convert it to a conduit schema

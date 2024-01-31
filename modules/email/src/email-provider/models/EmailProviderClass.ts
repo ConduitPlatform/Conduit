@@ -1,9 +1,9 @@
 import Mail from 'nodemailer/lib/mailer';
-import { CreateEmailTemplate } from '../interfaces/CreateEmailTemplate';
-import { DeleteEmailTemplate } from '../interfaces/DeleteEmailTemplate';
-import { Template } from '../interfaces/Template';
-import { UpdateEmailTemplate } from '../interfaces/UpdateEmailTemplate';
-import { EmailBuilderClass } from './EmailBuilderClass';
+import { CreateEmailTemplate } from '../interfaces/CreateEmailTemplate.js';
+import { DeleteEmailTemplate } from '../interfaces/DeleteEmailTemplate.js';
+import { Template } from '../interfaces/Template.js';
+import { UpdateEmailTemplate } from '../interfaces/UpdateEmailTemplate.js';
+import { EmailBuilderClass } from './EmailBuilderClass.js';
 
 export abstract class EmailProviderClass {
   _transport?: Mail;

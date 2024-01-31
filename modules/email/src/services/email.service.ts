@@ -1,12 +1,12 @@
-import { isEmpty, isNil } from 'lodash';
-import { EmailTemplate } from '../models';
-import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces';
+import { isEmpty, isNil } from 'lodash-es';
+import { EmailTemplate } from '../models/index.js';
+import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces/index.js';
 import handlebars from 'handlebars';
-import { EmailProvider } from '../email-provider';
-import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTemplate';
-import { UpdateEmailTemplate } from '../email-provider/interfaces/UpdateEmailTemplate';
+import { EmailProvider } from '../email-provider/index.js';
+import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTemplate.js';
+import { UpdateEmailTemplate } from '../email-provider/interfaces/UpdateEmailTemplate.js';
 import { Attachment } from 'nodemailer/lib/mailer';
-import { Template } from '../email-provider/interfaces/Template';
+import { Template } from '../email-provider/interfaces/Template.js';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class EmailService {

@@ -6,8 +6,8 @@ import ConduitGrpcSdk, {
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { ConduitMiddleware, MiddlewarePatch } from './interfaces';
-import { ConduitRoute } from './classes';
+import { ConduitMiddleware, MiddlewarePatch } from './interfaces/index.js';
+import { ConduitRoute } from './classes/index.js';
 import ObjectHash from 'object-hash';
 
 export abstract class ConduitRouter {

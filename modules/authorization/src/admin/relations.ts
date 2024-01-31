@@ -10,9 +10,9 @@ import {
   ConduitString,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { RelationsController } from '../controllers';
-import { isNil } from 'lodash';
-import { Relationship } from '../models';
+import { RelationsController } from '../controllers/index.js';
+import { isNil } from 'lodash-es';
+import { Relationship } from '../models/index.js';
 
 export class RelationHandler {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}

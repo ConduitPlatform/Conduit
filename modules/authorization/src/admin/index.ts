@@ -5,10 +5,15 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { GrpcServer, RoutingManager } from '@conduitplatform/module-tools';
-import { ResourceHandler } from './resources';
-import { RelationHandler } from './relations';
-import { ActorIndex, ObjectIndex, Relationship, ResourceDefinition } from '../models';
-import { QueueController } from '../controllers';
+import { ResourceHandler } from './resources.js';
+import { RelationHandler } from './relations.js';
+import {
+  ActorIndex,
+  ObjectIndex,
+  Relationship,
+  ResourceDefinition,
+} from '../models/index.js';
+import { QueueController } from '../controllers/index.js';
 
 export class AdminHandlers {
   private readonly resourceHandler: ResourceHandler;

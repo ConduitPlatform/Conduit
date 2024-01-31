@@ -1,7 +1,7 @@
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, { GrpcError, UntypedArray } from '@conduitplatform/grpc-sdk';
-import { ChatRoom, InvitationToken, User } from '../models';
+import { ChatRoom, InvitationToken, User } from '../models/index.js';
 import { v4 as uuid } from 'uuid';
 
 export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: UntypedArray) {

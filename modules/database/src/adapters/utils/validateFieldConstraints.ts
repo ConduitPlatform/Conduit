@@ -1,6 +1,6 @@
 import { ConduitError, ConduitModel, ConduitModelField } from '@conduitplatform/grpc-sdk';
-import { ConduitDatabaseSchema } from '../../interfaces';
-import { isObject } from 'lodash';
+import { ConduitDatabaseSchema } from '../../interfaces/index.js';
+import { isObject } from 'lodash-es';
 
 /*
  * Validates schema field constraints.

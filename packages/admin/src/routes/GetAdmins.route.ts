@@ -3,7 +3,7 @@ import {
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { Admin } from '../models';
+import { Admin } from '../models/index.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
 import { ConduitNumber, ConduitString } from '@conduitplatform/module-tools';
 

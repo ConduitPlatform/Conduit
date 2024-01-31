@@ -1,8 +1,8 @@
-import { isNil } from 'lodash';
-import { AuthUtils } from '../utils';
-import { TokenType } from '../constants';
+import { isNil } from 'lodash-es';
+import { AuthUtils } from '../utils/index.js';
+import { TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
-import { Config } from '../config';
+import { Config } from '../config/index.js';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
@@ -11,12 +11,12 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import * as templates from '../templates';
-import { Token, User } from '../models';
+import * as templates from '../templates/index.js';
+import { Token, User } from '../models/index.js';
 import { status } from '@grpc/grpc-js';
-import { IAuthenticationStrategy } from '../interfaces';
-import { TokenProvider } from './tokenProvider';
-import { TeamsHandler } from './team';
+import { IAuthenticationStrategy } from '../interfaces/index.js';
+import { TokenProvider } from './tokenProvider.js';
+import { TeamsHandler } from './team.js';
 import {
   ConduitString,
   ConfigController,

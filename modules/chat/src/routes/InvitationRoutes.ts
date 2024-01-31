@@ -10,8 +10,8 @@ import {
   ConduitString,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { ChatRoom, InvitationToken } from '../models';
-import { isNil } from 'lodash';
+import { ChatRoom, InvitationToken } from '../models/index.js';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 
 export class InvitationRoutes {

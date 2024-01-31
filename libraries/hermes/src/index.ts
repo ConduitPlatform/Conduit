@@ -1,7 +1,7 @@
 import express, { Express, NextFunction, Request, Response, Router } from 'express';
-import { RestController } from './Rest';
-import { GraphQLController } from './GraphQl/GraphQL';
-import { SocketController } from './Socket/Socket';
+import { RestController } from './Rest/index.js';
+import { GraphQLController } from './GraphQl/GraphQL.js';
+import { SocketController } from './Socket/Socket.js';
 import ConduitGrpcSdk, {
   ConduitError,
   IConduitLogger,
@@ -14,15 +14,17 @@ import {
   ConduitSocket,
   MiddlewarePatch,
   SocketPush,
-} from './interfaces';
-import { SwaggerRouterMetadata } from './types';
+} from './interfaces/index.js';
+import { SwaggerRouterMetadata } from './types/index.js';
 import cookieParser from 'cookie-parser';
 import path from 'path';
-import { ConduitRoute, ProxyRoute } from './classes';
-import { createRouteMiddleware } from './utils/logger';
-import { ProxyRouteController } from './Proxy';
-import { isInstanceOfProxyRoute } from './Proxy/utils';
+import { ConduitRoute, ProxyRoute } from './classes/index.js';
+import { createRouteMiddleware } from './utils/logger.js';
+import { isInstanceOfProxyRoute, ProxyRouteController } from './Proxy/index.js';
+import { fileURLToPath } from 'node:url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 export class ConduitRoutingController {
   private _restRouter?: RestController;
   private _graphQLRouter?: GraphQLController;
@@ -337,7 +339,7 @@ export class ConduitRoutingController {
   }
 }
 
-export * from './interfaces';
-export * from './types';
-export * from './classes';
-export * from './utils/GrpcConverter';
+export * from './interfaces/index.js';
+export * from './types/index.js';
+export * from './classes/index.js';
+export * from './utils/GrpcConverter.js';

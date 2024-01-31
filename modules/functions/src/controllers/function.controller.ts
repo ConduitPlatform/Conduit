@@ -11,8 +11,8 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 
-import { Functions } from '../models';
-import { createFunctionRoute } from './utils';
+import { Functions } from '../models/index.js';
+import { createFunctionRoute } from './utils.js';
 
 type Socket = {
   input: ConduitSocketOptions;
@@ -33,7 +33,10 @@ export class FunctionController {
 
   private _routingManager: RoutingManager;
 
-  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    readonly server: GrpcServer,
+    private readonly grpcSdk: ConduitGrpcSdk,
+  ) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.refreshRoutes();
     this.initializeState();

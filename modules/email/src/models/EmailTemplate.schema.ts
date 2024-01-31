@@ -54,7 +54,8 @@ const collectionName = undefined;
 export class EmailTemplate extends ConduitActiveSchema<EmailTemplate> {
   private static _instance: EmailTemplate;
   _id: string;
-  name: string;
+  // todo rename
+  declare name: string;
   subject?: string;
   body: string;
   variables?: string[];

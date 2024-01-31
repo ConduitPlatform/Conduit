@@ -3,7 +3,7 @@ import {
   ConduitSchema,
   ConduitSchemaOptions,
 } from '@conduitplatform/grpc-sdk';
-import { DeclaredSchemaExtension } from './DeclaredSchemaExtension';
+import { DeclaredSchemaExtension } from './DeclaredSchemaExtension.js';
 
 // @dirty-type-cast
 

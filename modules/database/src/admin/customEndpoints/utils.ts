@@ -1,8 +1,8 @@
 import { ConduitModel, GrpcError, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
-import { isNil, isPlainObject, get, has } from 'lodash';
+import { isNil, isPlainObject, get, has } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { LocationEnum, OperationsEnum } from '../../enums';
-import { ICustomEndpoint } from '../../interfaces';
+import { LocationEnum, OperationsEnum } from '../../enums/index.js';
+import { ICustomEndpoint } from '../../interfaces/index.js';
 
 /**
  * Query schema:

@@ -1,7 +1,7 @@
 import { MongoIndexOptions, PostgresIndexOptions } from '@conduitplatform/grpc-sdk';
 
-export * from './schema';
-export * from './collectionUtils';
+export * from './schema.js';
+export * from './collectionUtils.js';
 
 export function checkIfPostgresOptions(
   options: MongoIndexOptions | PostgresIndexOptions,

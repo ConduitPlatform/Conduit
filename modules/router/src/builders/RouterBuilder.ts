@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { RouteBuilder } from './RouteBuilder';
+import { RouteBuilder } from './RouteBuilder.js';
 import { ConduitRouteOptions, UntypedArray } from '@conduitplatform/grpc-sdk';
 
 export class RouterBuilder {

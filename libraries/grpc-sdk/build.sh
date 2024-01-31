@@ -13,6 +13,7 @@ protoc \
   --ts_proto_opt=esModuleInterop=true \
   --ts_proto_opt=outputServices=generic-definitions,exportCommonSymbols=false,useExactTypes=false \
   --ts_proto_out=./ \
+  --ts_proto_opt=importSuffix=.js \
   --ts_proto_opt=snakeToCamel=false \
   ./*.proto
 
@@ -25,7 +26,7 @@ for FILE in ./*.ts; do
   if [ "$FILENAME" != "index.ts" ]; then
     # Remove the file extension and create an export statement
     BASENAME="${FILENAME%.ts}"
-    EXPORT_STATEMENT="export * from './$BASENAME';"
+    EXPORT_STATEMENT="export * from './$BASENAME.js';"
 
     # Append the export statement to the index.ts content
     INDEX_CONTENT="$INDEX_CONTENT$EXPORT_STATEMENT\n"

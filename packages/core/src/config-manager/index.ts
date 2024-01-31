@@ -13,19 +13,20 @@ import {
   UpdateConfigRequest,
   UpdateConfigResponse,
 } from '@conduitplatform/commons';
-import { runMigrations } from './migrations';
-import * as adminRoutes from './admin/routes';
-import * as models from './models';
+import { runMigrations } from './migrations/index.js';
+import * as adminRoutes from './admin/routes/index.js';
+import * as models from './models/index.js';
 import path from 'path';
-import { ServiceDiscovery } from './service-discovery';
-import { ConfigStorage } from './config-storage';
-import parseConfigSchema from '../utils';
-import { IModuleConfig } from '../interfaces/IModuleConfig';
+import { ServiceDiscovery } from './service-discovery/index.js';
+import { ConfigStorage } from './config-storage/index.js';
+import parseConfigSchema from '../utils/index.js';
+import { IModuleConfig } from '../interfaces/IModuleConfig.js';
 import convict from 'convict';
-import { merge } from 'lodash';
+import { merge } from 'lodash-es';
 import { GrpcServer } from '@conduitplatform/module-tools';
 import { RedisOptions } from 'ioredis';
-import { ServiceRegistry } from './service-discovery/ServiceRegistry';
+import { ServiceRegistry } from './service-discovery/ServiceRegistry.js';
+import { fileURLToPath } from 'node:url';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
@@ -61,6 +62,9 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async initialize(server: GrpcServer) {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
     await server.addService(
       path.resolve(__dirname, '../../src/core.proto'),
       'conduit.core.Config',

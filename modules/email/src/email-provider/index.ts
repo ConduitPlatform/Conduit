@@ -1,15 +1,15 @@
 import Mail from 'nodemailer/lib/mailer';
 import { SentMessageInfo } from 'nodemailer';
-import { MailgunConfig } from './transports/mailgun/mailgun.config';
-import { isEmpty, isNil } from 'lodash';
-import { MandrillConfig } from './transports/mandrill/mandrill.config';
-import { EmailBuilderClass } from './models/EmailBuilderClass';
-import { SendGridConfig } from './transports/sendgrid/sendgrid.config';
-import { EmailProviderClass } from './models/EmailProviderClass';
-import { MailgunProvider } from './transports/mailgun/MailgunProvider';
-import { MandrillProvider } from './transports/mandrill/MandrilProvider';
-import { SendgridProvider } from './transports/sendgrid/SendgridProvider';
-import { SmtpProvider } from './transports/smtp/SmtpProvider';
+import { MailgunConfig } from './transports/mailgun/mailgun.config.js';
+import { isEmpty, isNil } from 'lodash-es';
+import { MandrillConfig } from './transports/mandrill/mandrill.config.js';
+import { EmailBuilderClass } from './models/EmailBuilderClass.js';
+import { SendGridConfig } from './transports/sendgrid/sendgrid.config.js';
+import { EmailProviderClass } from './models/EmailProviderClass.js';
+import { MailgunProvider } from './transports/mailgun/MailgunProvider.js';
+import { MandrillProvider } from './transports/mandrill/MandrilProvider.js';
+import { SendgridProvider } from './transports/sendgrid/SendgridProvider.js';
+import { SmtpProvider } from './transports/smtp/SmtpProvider.js';
 import { ConfigController } from '@conduitplatform/module-tools';
 
 export class EmailProvider {

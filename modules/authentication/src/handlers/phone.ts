@@ -12,15 +12,15 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { Token, User } from '../models';
-import { AuthUtils } from '../utils';
-import { TokenType } from '../constants/TokenType';
-import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
-import { TokenProvider } from './tokenProvider';
+import { Token, User } from '../models/index.js';
+import { AuthUtils } from '../utils/index.js';
+import { TokenType } from '../constants/index.js';
+import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy.js';
+import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
-import { TeamsHandler } from './team';
+import { TeamsHandler } from './team.js';
 
 export class PhoneHandlers implements IAuthenticationStrategy {
   private sms: SMS;

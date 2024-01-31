@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   HealthCheckResponse,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import { ServiceRegistry } from './ServiceRegistry';
+import { ServiceRegistry } from './ServiceRegistry.js';
 import { linearBackoffTimeout } from '@conduitplatform/module-tools';
 import { EventEmitter } from 'events';
 

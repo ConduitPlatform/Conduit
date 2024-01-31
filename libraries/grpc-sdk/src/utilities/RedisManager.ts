@@ -27,7 +27,7 @@ export class RedisManager {
       };
       return new IORedis.Cluster(clusterOptions.nodes, clusterOptions.options);
     } else {
-      return new IORedis({ ...(this.redisConnection as RedisOptions), ...options });
+      return new IORedis.Redis({ ...(this.redisConnection as RedisOptions), ...options });
     }
   }
 }

@@ -1,14 +1,16 @@
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios, { AxiosRequestConfig } from 'axios';
-import { OAuth2 } from '../OAuth2';
-import { FigmaUser } from './figma.user';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
-import * as figmaParameters from './figma.json';
-import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
-import { Payload } from '../interfaces/Payload';
+import { OAuth2 } from '../OAuth2.js';
+import { FigmaUser } from './figma.user.js';
+import {
+  ConnectionParams,
+  OAuth2Settings,
+  Payload,
+  ProviderConfig,
+} from '../interfaces/index.js';
+import figmaParameters from './figma.json' assert { type: 'json' };
 
 export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { figma: ProviderConfig }) {

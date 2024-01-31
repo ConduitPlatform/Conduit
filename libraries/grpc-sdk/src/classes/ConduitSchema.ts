@@ -1,4 +1,4 @@
-import { ConduitModel, ConduitSchemaOptions } from '../interfaces';
+import { ConduitModel, ConduitSchemaOptions } from '../interfaces/index.js';
 
 export class ConduitSchema {
   readonly name: string;

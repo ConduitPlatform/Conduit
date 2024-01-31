@@ -1,7 +1,7 @@
-import { ParsedQuery, Query } from '../../SchemaAdapter';
-import { isNil } from 'lodash';
-import { parseQuery } from '../parser';
-import { SequelizeSchema } from '../SequelizeSchema';
+import { ParsedQuery } from '../../SchemaAdapter.js';
+import { isNil } from 'lodash-es';
+import { parseQuery } from '../parser/index.js';
+import { SequelizeSchema } from '../SequelizeSchema.js';
 import { Model, ModelStatic, Transaction } from 'sequelize';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { Core } from '../Core';
-import { isNaN } from 'lodash';
+import { Core } from '../Core.js';
+import { isNaN } from 'lodash-es';
 
 bootstrap();
 

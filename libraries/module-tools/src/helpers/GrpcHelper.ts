@@ -5,7 +5,7 @@ import {
   UntypedServiceImplementation,
 } from '@grpc/grpc-js';
 
-const protoLoader = require('@grpc/proto-loader');
+import protoLoader from '@grpc/proto-loader';
 
 export function createServer(port: string): Promise<{ server: Server; port: number }> {
   const grpcServer: Server = new Server({

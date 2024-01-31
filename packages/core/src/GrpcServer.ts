@@ -11,13 +11,16 @@ import {
 import AdminModule from '@conduitplatform/admin';
 import { EventEmitter } from 'events';
 import path from 'path';
-import AppConfigSchema from './config';
-import CoreConfigSchema from './config/config';
+import AppConfigSchema from './config/index.js';
+import CoreConfigSchema from './config/config.js';
 import { ServerWritableStream } from '@grpc/grpc-js';
-import ConfigManager from './config-manager';
+import ConfigManager from './config-manager/index.js';
 import convict from 'convict';
+import { fileURLToPath } from 'node:url';
 
 const CORE_SERVICES = ['Config', 'Admin'];
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export class GrpcServer {
   private readonly server: ConduitGrpcServer;

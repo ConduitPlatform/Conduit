@@ -35,7 +35,8 @@ const collectionName = undefined;
 export class _StorageFolder extends ConduitActiveSchema<_StorageFolder> {
   private static _instance: _StorageFolder;
   _id!: string;
-  name!: string;
+  //todo rename
+  declare name: string;
   container!: string;
   isPublic?: boolean;
   url!: string;

@@ -1,1 +1,2 @@
-export * from './constructRelationIndex';
+export * from './constructRelationIndex.js';
+export * from './processPossibleConnections.js';

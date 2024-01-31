@@ -1,5 +1,5 @@
 import { Query } from '@conduitplatform/grpc-sdk';
-import { ObjectIndex } from '../models';
+import { ObjectIndex } from '../models/index.js';
 
 export const migrateObjectIndex = async () => {
   const query: Query<ObjectIndex> = {

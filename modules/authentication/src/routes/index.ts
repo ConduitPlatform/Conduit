@@ -1,4 +1,4 @@
-import { LocalHandlers } from '../handlers/local';
+import { LocalHandlers } from '../handlers/local.js';
 import ConduitGrpcSdk, {
   ConduitReturn,
   ConduitRouteActions,
@@ -10,18 +10,18 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { CommonHandlers } from '../handlers/common';
-import { ServiceHandler } from '../handlers/service';
-import * as oauth2 from '../handlers/oauth2';
-import { PhoneHandlers } from '../handlers/phone';
-import { OAuth2 } from '../handlers/oauth2/OAuth2';
-import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
-import { TwoFa } from '../handlers/twoFa';
-import { authMiddleware, captchaMiddleware } from './middleware';
-import { MagicLinkHandlers } from '../handlers/magicLink';
-import { Config } from '../config';
-import { TeamsHandler } from '../handlers/team';
-import { BiometricHandlers } from '../handlers/biometric';
+import { CommonHandlers } from '../handlers/common.js';
+import { ServiceHandler } from '../handlers/service.js';
+import * as oauth2 from '../handlers/oauth2/index.js';
+import { PhoneHandlers } from '../handlers/phone.js';
+import { OAuth2 } from '../handlers/oauth2/OAuth2.js';
+import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings.js';
+import { TwoFa } from '../handlers/twoFa.js';
+import { authMiddleware, captchaMiddleware } from './middleware.js';
+import { MagicLinkHandlers } from '../handlers/magicLink.js';
+import { Config } from '../config/index.js';
+import { TeamsHandler } from '../handlers/team.js';
+import { BiometricHandlers } from '../handlers/biometric.js';
 
 type OAuthHandler = typeof oauth2;
 
@@ -35,7 +35,10 @@ export class AuthenticationRoutes {
   private readonly magicLinkHandlers: MagicLinkHandlers;
   private readonly biometricHandlers: BiometricHandlers;
 
-  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    readonly server: GrpcServer,
+    private readonly grpcSdk: ConduitGrpcSdk,
+  ) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.serviceHandler = new ServiceHandler(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);

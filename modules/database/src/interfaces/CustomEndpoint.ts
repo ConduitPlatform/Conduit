@@ -1,4 +1,4 @@
-import { ConduitDatabaseSchema } from './ConduitDatabaseSchema';
+import { ConduitDatabaseSchema } from './ConduitDatabaseSchema.js';
 
 export interface ICustomEndpoint {
   _id?: any;

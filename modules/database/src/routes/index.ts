@@ -1,4 +1,4 @@
-import { CmsHandlers } from '../handlers/cms/crud.handler';
+import { CmsHandlers } from '../handlers/cms/crud.handler.js';
 import ConduitGrpcSdk, {
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
@@ -9,9 +9,9 @@ import {
   RequestHandlers,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
+import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
 
 export class DatabaseRoutes {
   private readonly handlers: CmsHandlers;

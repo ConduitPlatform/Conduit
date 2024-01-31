@@ -1,5 +1,5 @@
 import { ProxyRouteT } from '@conduitplatform/hermes';
-import { AdminProxyRoute } from '../models';
+import { AdminProxyRoute } from '../models/index.js';
 
 export async function getProxies(): Promise<ProxyRouteT[]> {
   const proxyRoutes = await AdminProxyRoute.getInstance().findMany({});

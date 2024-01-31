@@ -10,16 +10,19 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
-import { PermissionsController } from '../controllers';
-import { Permission, Relationship } from '../models';
-import { isEmpty } from 'lodash';
-import { Status } from '@grpc/grpc-js/build/src/constants';
+import { PermissionsController } from '../controllers/index.js';
+import { Permission, Relationship } from '../models/index.js';
+import { isEmpty } from 'lodash-es';
+import { Status } from '@grpc/grpc-js/build/src/constants.js';
 
 export class AuthorizationRouter {
   private _routingManager: RoutingManager;
   private _permissionsController: PermissionsController;
 
-  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    readonly server: GrpcServer,
+    private readonly grpcSdk: ConduitGrpcSdk,
+  ) {
     this._permissionsController = PermissionsController.getInstance(this.grpcSdk);
     this.registeredRoutes();
   }

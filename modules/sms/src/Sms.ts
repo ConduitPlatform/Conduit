@@ -3,15 +3,15 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema, { Config } from './config';
-import { AdminHandlers } from './admin';
-import { ISmsProvider } from './interfaces/ISmsProvider';
-import { TwilioProvider } from './providers/twilio';
-import { AwsSnsProvider } from './providers/awsSns';
-import { messageBirdProvider } from './providers/messageBird';
-import { clickSendProvider } from './providers/clickSend';
+import AppConfigSchema, { Config } from './config/index.js';
+import { AdminHandlers } from './admin/index.js';
+import { ISmsProvider } from './interfaces/ISmsProvider.js';
+import { TwilioProvider } from './providers/twilio.js';
+import { AwsSnsProvider } from './providers/awsSns.js';
+import { messageBirdProvider } from './providers/messageBird.js';
+import { clickSendProvider } from './providers/clickSend.js';
 import path from 'path';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import {
   SendSmsRequest,
@@ -20,9 +20,12 @@ import {
   SendVerificationCodeResponse,
   VerifyRequest,
   VerifyResponse,
-} from './protoTypes/sms';
-import metricsSchema from './metrics';
+} from './protoTypes/sms.js';
+import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class Sms extends ManagedModule<Config> {
   configSchema = AppConfigSchema;

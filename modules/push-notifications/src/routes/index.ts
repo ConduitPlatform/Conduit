@@ -1,4 +1,4 @@
-import { NotificationTokensHandler } from '../handlers/notification-tokens';
+import { NotificationTokensHandler } from '../handlers/notification-tokens.js';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
@@ -13,13 +13,16 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 
-import { Notification, NotificationToken } from '../models';
+import { Notification, NotificationToken } from '../models/index.js';
 
 export class PushNotificationsRoutes {
   private readonly handlers: NotificationTokensHandler;
   private _routingManager: RoutingManager;
 
-  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    readonly server: GrpcServer,
+    private readonly grpcSdk: ConduitGrpcSdk,
+  ) {
     this.handlers = new NotificationTokensHandler();
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.registeredRoutes();

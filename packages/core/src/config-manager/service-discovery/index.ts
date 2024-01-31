@@ -6,11 +6,11 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { IModuleConfig } from '../../interfaces/IModuleConfig';
+import { IModuleConfig } from '../../interfaces/IModuleConfig.js';
 import { ServerWritableStream, status } from '@grpc/grpc-js';
 import { EventEmitter } from 'events';
-import { ServiceRegistry } from './ServiceRegistry';
-import { ServiceMonitor } from './ServiceMonitor'; /*
+import { ServiceRegistry } from './ServiceRegistry.js';
+import { ServiceMonitor } from './ServiceMonitor.js';
 
 /*
  * - Multi-instance services are not handled individually (LoadBalancer)

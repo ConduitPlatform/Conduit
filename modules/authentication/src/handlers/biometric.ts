@@ -12,14 +12,14 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { Token, User } from '../models';
-import { AuthUtils } from '../utils';
-import { TokenType } from '../constants';
-import { IAuthenticationStrategy } from '../interfaces';
-import { TokenProvider } from './tokenProvider';
+import { Token, User } from '../models/index.js';
+import { AuthUtils } from '../utils/index.js';
+import { TokenType } from '../constants/index.js';
+import { IAuthenticationStrategy } from '../interfaces/index.js';
+import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
 import crypto from 'crypto';
-import { BiometricToken } from '../models/BiometricToken.schema';
+import { BiometricToken } from '../models/BiometricToken.schema.js';
 
 export class BiometricHandlers implements IAuthenticationStrategy {
   private initialized: boolean = false;

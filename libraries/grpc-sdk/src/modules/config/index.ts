@@ -1,13 +1,13 @@
 import { EventEmitter } from 'events';
-import { ConduitModule } from '../../classes';
-import { HealthCheckStatus } from '../../types';
+import { ConduitModule } from '../../classes/index.js';
+import { HealthCheckStatus } from '../../types/index.js';
 import {
   ConfigDefinition,
   ModuleHealthRequest,
   RegisterModuleRequest,
-} from '../../protoUtils';
-import { Indexable } from '../../interfaces';
-import ConduitGrpcSdk from '../../index';
+} from '../../protoUtils/index.js';
+import { Indexable } from '../../interfaces/index.js';
+import ConduitGrpcSdk from '../../index.js';
 import { ClusterOptions, RedisOptions } from 'ioredis';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {

@@ -6,6 +6,7 @@
   "engines": {
     "node": ">=14"
   },
+  "type": "module",
   "scripts": {
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
@@ -19,7 +20,7 @@
     "convict": "^6.2.4",
     "express": "^4.18.2",
     "fast-jwt": "^3.3.2",
-    "lodash": "^4.17.21",
+    "lodash-es": "^4.17.21",
     "prom-client": "^15.0.0",
     "protobufjs": "^7.2.3",
     "winston": "^3.8.2",
@@ -43,12 +44,12 @@
     "@types/express": "^4.17.21",
     "@types/fs-extra": "^11.0.4",
     "@types/google-protobuf": "^3.15.6",
-    "@types/lodash": "^4.14.200",
+    "@types/lodash-es": "^4.17.12",
     "@types/node": "20.10.3",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.5",
-    "ts-proto": "^1.160.0",
-    "typescript": "~5.2.2"
+    "ts-proto": "^1.167.1",
+    "typescript": "~5.3.3"
   },
   "peerDependencies": {
     "@grpc/grpc-js": "^1.9.7",
