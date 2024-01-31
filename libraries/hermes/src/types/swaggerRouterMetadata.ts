@@ -2,6 +2,10 @@ import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute } from '../classes/index.js';
 
 export type SwaggerRouterMetadata = {
+  readonly servers: {
+    url: string;
+    description: string;
+  }[];
   readonly urlPrefix: string;
   readonly securitySchemes: {
     [field: string]: {

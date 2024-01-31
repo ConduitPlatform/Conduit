@@ -323,10 +323,10 @@ export class ChatRoutes {
   }
 
   async getMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id } = call.request.params;
+    const { messageId } = call.request.params;
     const { user } = call.request.context;
     const message = await ChatMessage.getInstance()
-      .findOne({ _id: id, deleted: false }, undefined, ['room'])
+      .findOne({ _id: messageId, deleted: false }, undefined, ['room'])
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -580,11 +580,11 @@ export class ChatRoutes {
 
     this._routingManager.route(
       {
-        path: '/messages/:id',
+        path: '/messages/:messageId',
         action: ConduitRouteActions.GET,
         description: `Returns a message.`,
         urlParams: {
-          id: ConduitString.Required,
+          messageId: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
       },

@@ -5,26 +5,26 @@ function extractParam(param: string, required: boolean = false) {
   switch (param) {
     case TYPE.JSON:
       res.type = 'object';
-      res.required = required;
+      // res.required = required;
       break;
     case TYPE.Date:
       res.type = 'string';
       res.format = 'date-time';
-      res.required = required;
+      // res.required = required;
 
       break;
     case TYPE.ObjectId:
     case TYPE.Relation:
       res.type = 'string';
       res.format = 'uuid';
-      res.required = required;
+      // res.required = required;
 
       break;
     case 'String':
     case 'Number':
     case 'Boolean':
       res.type = param.toLowerCase();
-      res.required = required;
+      // res.required = required;
       break;
   }
   return res;

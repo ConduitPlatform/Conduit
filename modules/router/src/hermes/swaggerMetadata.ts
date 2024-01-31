@@ -3,6 +3,12 @@ import { ConfigController } from '@conduitplatform/module-tools';
 import { ConduitRoute, SwaggerRouterMetadata } from '@conduitplatform/hermes';
 
 export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
+  servers: [
+    {
+      url: ConfigController.getInstance().config.hostUrl,
+      description: 'Your API url',
+    },
+  ],
   urlPrefix: '',
   securitySchemes: {
     ...(ConfigController.getInstance().config.security.clientValidation
@@ -52,6 +58,12 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
           userToken: [],
         }),
       );
+      swaggerRouteDoc.responses[401] = {
+        description: 'Token missing/invalid or 2fa verification required',
+      };
+      swaggerRouteDoc.responses[403] = {
+        description: 'Permission denied, user may be blocked',
+      };
     } else if (route.input.middlewares?.includes('authMiddleware?')) {
       if (swaggerRouteDoc.security.length === 0) {
         swaggerRouteDoc.security.push({});

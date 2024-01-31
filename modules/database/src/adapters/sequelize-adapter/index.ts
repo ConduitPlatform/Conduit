@@ -96,6 +96,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         });
     }
   }
+
   async guaranteeView(viewName: string) {
     const view = await this.models['Views'].findOne({
       name: viewName,
@@ -320,6 +321,8 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   getSchemaModel(schemaName: string): { model: SequelizeSchema } {
     if (this.models && this.models[schemaName]) {
       return { model: this.models[schemaName] };
+    } else if (this.views && this.views[schemaName]) {
+      return { model: this.views[schemaName] };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }

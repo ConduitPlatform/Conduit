@@ -202,6 +202,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   getSchemaModel(schemaName: string): { model: MongooseSchema } {
     if (this.models && this.models[schemaName]) {
       return { model: this.models[schemaName] };
+    } else if (this.views && this.views[schemaName]) {
+      return { model: this.views[schemaName] };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
@@ -322,7 +324,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async execRawQuery(schemaName: string, rawQuery: RawMongoQuery) {
-    const collection = this.models[schemaName].model.collection;
+    let collection = this.models[schemaName]?.model.collection;
+    if (!collection) {
+      collection = this.views[schemaName]?.model.collection;
+    }
     let result;
     try {
       const queryOperation = Object.keys(rawQuery).filter(v => {
