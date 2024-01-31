@@ -138,14 +138,7 @@ export class SwaggerGenerator {
           'Invalid parameters provided. Check the documentation for more info.',
       };
     }
-    if (route.input.middlewares?.includes('authMiddleware')) {
-      routeDoc.responses[401] = {
-        description: 'Token missing/invalid or 2fa verification required',
-      };
-      routeDoc.responses[403] = {
-        description: 'Permission denied, user may be blocked',
-      };
-    }
+
     routeDoc.responses[500] = {
       description: 'Internal Server Error',
     };

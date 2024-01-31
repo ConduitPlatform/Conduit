@@ -39,5 +39,8 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
         }),
       );
     }
+    swaggerRouteDoc.responses[401] = {
+      description: 'Missing Master Key/Access Token or is otherwise invalid',
+    };
   },
 });
