@@ -29,7 +29,7 @@
   "devDependencies": {
     "@types/convict": "^6.1.6",
     "@types/google-protobuf": "^3.15.6",
-    "@types/node": "20.10.3",
+    "@types/node": "20.11.13",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.5",
     "ts-proto": "^1.167.1",
