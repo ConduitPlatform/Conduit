@@ -134,6 +134,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
   getSchema(schemaName: string): ConduitSchema {
     if (this.models && this.models[schemaName]) {
       return this.models[schemaName].originalSchema;
+    } else if (this.views && this.views[schemaName]) {
+      return this.views[schemaName].originalSchema;
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
