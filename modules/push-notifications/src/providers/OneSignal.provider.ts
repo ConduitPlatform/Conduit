@@ -4,12 +4,11 @@ import {
   ISendNotification,
   ISendNotificationToManyDevices,
 } from '../interfaces/ISendNotification.js';
-import * as OneSignal from '@onesignal/node-onesignal';
-import { Notification } from '@onesignal/node-onesignal';
+import { createConfiguration, DefaultApi, Notification } from '@onesignal/node-onesignal';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettings> {
-  private client?: OneSignal.DefaultApi;
+  private client?: DefaultApi;
   private readonly appId: string;
 
   constructor(settings: IOneSignalSettings) {
@@ -53,7 +52,7 @@ export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettin
         return settings.apiKey;
       },
     };
-    const configuration = OneSignal.createConfiguration({
+    const configuration = createConfiguration({
       authMethods: {
         app_key: {
           tokenProvider: app_key_provider,
@@ -61,7 +60,7 @@ export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettin
       },
     });
     try {
-      this.client = new OneSignal.DefaultApi(configuration);
+      this.client = new DefaultApi(configuration);
       this._initialized = true;
     } catch (e) {
       this._initialized = false;
