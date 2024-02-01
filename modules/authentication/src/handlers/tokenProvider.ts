@@ -2,8 +2,7 @@ import ConduitGrpcSdk, { Indexable, Query } from '@conduitplatform/grpc-sdk';
 import { AccessToken, RefreshToken, User } from '../models/index.js';
 import moment from 'moment';
 import { AuthUtils } from '../utils/index.js';
-import jwt from 'jsonwebtoken';
-import { SignOptions } from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { Config } from '../config/index.js';
 import { isNil } from 'lodash-es';
 import { Cookie } from '../interfaces/index.js';
@@ -168,7 +167,8 @@ export class TokenProvider {
         tokenOptions.config.accessTokens.jwtSecret,
         signTokenOptions,
       ),
-      expiresOn: moment()
+      expiresOn: moment
+        .utc()
         .add(tokenOptions.config.accessTokens.expiryPeriod as number, 'milliseconds')
         .toDate(),
     });
@@ -180,7 +180,8 @@ export class TokenProvider {
         clientId: tokenOptions.clientId,
         token: AuthUtils.randomToken(),
         accessToken: accessToken._id,
-        expiresOn: moment()
+        expiresOn: moment
+          .utc()
           .add(tokenOptions.config.refreshTokens.expiryPeriod as number, 'milliseconds')
           .toDate(),
       });

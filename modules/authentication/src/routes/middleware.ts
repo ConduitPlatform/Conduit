@@ -12,8 +12,8 @@ import { AccessToken, Client, User } from '../models/index.js';
 import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
-import getToken = AuthUtils.getToken;
 import moment from 'moment';
+import getToken = AuthUtils.getToken;
 
 /*
  * Expects access token in 'Authorization' header or 'accessToken' cookie
@@ -50,20 +50,18 @@ export async function handleAuthentication(
     ConfigController.getInstance().config.accessTokens.jwtSecret,
   );
   if (!payload || typeof payload === 'string') {
-    throw new GrpcError(status.UNAUTHENTICATED, 'Invalid token');
-  }
-  if (moment().isAfter(moment().milliseconds(payload.exp!))) {
-    // delete all expired tokens
-    AccessToken.getInstance()
-      .deleteMany({
-        expiresOn: { $lte: new Date() },
-      })
-      .catch();
     throw new GrpcError(
       status.UNAUTHENTICATED,
       'Token is expired or otherwise not valid',
     );
   }
+  // delete all expired tokens
+  AccessToken.getInstance()
+    .deleteMany({
+      expiresOn: { $lte: moment.utc().toDate() },
+    })
+    .catch();
+
   if (
     !(payload as JwtPayload).authorized &&
     path !== '/authentication/twoFa/verify' &&
@@ -80,14 +78,14 @@ export async function handleAuthentication(
     undefined,
     ['user'],
   );
-  if (!accessToken || !accessToken.user) {
+  if (!accessToken) {
     throw new GrpcError(
       status.UNAUTHENTICATED,
-      'Token is expired or otherwise not valid',
+      'Token has been revoked or there is a mismatch between the token and the client',
     );
   }
-  if (!(accessToken.user as User).active) {
-    throw new GrpcError(status.PERMISSION_DENIED, 'User is blocked');
+  if (!accessToken.user || !(accessToken.user as User).active) {
+    throw new GrpcError(status.PERMISSION_DENIED, 'User is blocked or deleted');
   }
   return { user: accessToken.user, jwtPayload: payload };
 }

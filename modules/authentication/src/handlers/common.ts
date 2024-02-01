@@ -36,9 +36,9 @@ export class CommonHandlers implements IAuthenticationStrategy {
       ['user'],
     );
     if (isNil(oldRefreshToken)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Refresh token not found');
     }
-    if (moment().isAfter(moment(oldRefreshToken.expiresOn))) {
+    if (moment.utc().isAfter(moment.utc(oldRefreshToken.expiresOn))) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
     }
     if (!oldRefreshToken.user) {
@@ -56,7 +56,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
     // delete all expired tokens
     RefreshToken.getInstance()
       .deleteMany({
-        expiresOn: { $lte: new Date() },
+        expiresOn: { $lte: moment.utc().toDate() },
       })
       .catch();
     return TokenProvider.getInstance().provideUserTokens({
