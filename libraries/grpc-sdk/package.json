@@ -29,7 +29,7 @@
     "nice-grpc": "^2.1.7",
     "nice-grpc-client-middleware-retry": "^3",
     "prom-client": "^15.0.0",
-    "protobufjs": "^7.2.4",
+    "protobufjs": "^7.2.6",
     "winston": "^3.8.2",
     "winston-loki": "^6.0.8"
   },
