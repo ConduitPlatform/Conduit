@@ -42,7 +42,7 @@ export class ServiceDiscovery {
   }
 
   async highAvailability() {
-    let state = await this.grpcSdk.state?.getState();
+    const state = await this.grpcSdk.state?.getState();
     if (state && !isEmpty(state)) {
       const parsedState = JSON.parse(state) as { modules: IModuleConfig[] };
       if (parsedState.modules) {
