@@ -1,6 +1,6 @@
 export interface IModuleConfig {
   name: string;
-  instance: string;
+  instance?: string;
   url: string;
   configSchema?: string;
 }
