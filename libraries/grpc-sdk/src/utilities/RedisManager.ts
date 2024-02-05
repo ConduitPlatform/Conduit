@@ -12,6 +12,7 @@ export class RedisManager {
   ) {
     this.redisConnection = {
       ...redisDetails,
+      maxRetriesPerRequest: null,
     };
   }
 
@@ -25,7 +26,7 @@ export class RedisManager {
         nodes: { host: string; port: number }[];
         options: ClusterOptions;
       };
-      return new IORedis.Cluster(clusterOptions.nodes, clusterOptions.options);
+      return new IORedis.Cluster(clusterOptions.nodes, { ...clusterOptions.options });
     } else {
       return new IORedis.Redis({ ...(this.redisConnection as RedisOptions), ...options });
     }
