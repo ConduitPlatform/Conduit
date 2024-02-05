@@ -87,7 +87,7 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async recoverConfigRoutes() {
-    const loadedState = await this.grpcSdk.state!.getKey('config');
+    const loadedState = await this.grpcSdk.state!.getState();
     try {
       if (!loadedState || loadedState.length === 0) return;
       const state = JSON.parse(loadedState);
