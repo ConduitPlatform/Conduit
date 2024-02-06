@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-rc.5](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.4...v0.16.0-rc.5) (2024-02-06)
+
+
+### Features
+
+* **grpc-sdk:** set maxRetriesPerRequest null in redis clients ([c260a76](https://github.com/ConduitPlatform/Conduit/commit/c260a7616475086c82061969aada22b181fd928a))
+
+
+### Bug Fixes
+
+* **core:** config manager route recovery broken ([812cfd8](https://github.com/ConduitPlatform/Conduit/commit/812cfd84739601d875cbd914f26a68960f55c12e))
+
 ## [0.16.0-rc.4](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.3...v0.16.0-rc.4) (2024-01-31)
 
 
