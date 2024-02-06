@@ -38,9 +38,9 @@ jobs:
       - name: Push image
         run: |
           docker tag ghcr.io/conduitplatform/conduit-standalone:latest ghcr.io/conduitplatform/conduit-standalone:${{ env.RELEASE_VERSION }}
-          docker tag ghcr.io/conduitplatform/conduit-standalone:latest conduit-standalone:latest
-          docker tag ghcr.io/conduitplatform/conduit-standalone:latest conduit-standalone:${{ env.RELEASE_VERSION }}
+          docker tag ghcr.io/conduitplatform/conduit-standalone:latest conduitplatform/conduit-standalone:latest
+          docker tag ghcr.io/conduitplatform/conduit-standalone:latest conduitplatform/conduit-standalone:${{ env.RELEASE_VERSION }}
           docker push ghcr.io/conduitplatform/conduit-standalone:latest
           docker push ghcr.io/conduitplatform/conduit-standalone:${{ env.RELEASE_VERSION }}
-          docker push conduit-standalone:latest
-          docker push conduit-standalone:${{ env.RELEASE_VERSION }}
+          docker push conduitplatform/conduit-standalone:latest
+          docker push conduitplatform/conduit-standalone:${{ env.RELEASE_VERSION }}
