@@ -15,7 +15,7 @@ type ConstructRelationIndexWorkerData = {
   achievedPermissions: string[];
 };
 
-module.exports = async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
+export default async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
   const {
     object,
     subject,

@@ -9,7 +9,7 @@ type ConstructRelationIndexWorkerData = {
   relation: { subject: string; relation: string; object: string };
 };
 
-module.exports = async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
+export default async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
   const { relation } = job.data;
   if (!grpcSdk) {
     if (!process.env.CONDUIT_SERVER) throw new Error('No serverUrl provided!');
