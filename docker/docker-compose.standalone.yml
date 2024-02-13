@@ -77,7 +77,6 @@ services:
       MONGO_INITDB_DATABASE: 'conduit'
       MONGO_INITDB_ROOT_USERNAME: '${DB_USER:-conduit}'
       MONGO_INITDB_ROOT_PASSWORD: '${DB_PASS:-pass}'
-    profiles: ['mongodb']
     networks:
       default:
         aliases:
