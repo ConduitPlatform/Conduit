@@ -12,6 +12,7 @@ import {
   Relation,
   Resource,
   ResourceAccessListRequest,
+  ResourceAccessListResponse,
 } from '../../protoUtils/index.js';
 import { Empty } from '../../protoUtils/google/protobuf/empty.js';
 
@@ -77,7 +78,9 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
     return this.client!.getAllowedResources(data);
   }
 
-  createResourceAccessList(data: ResourceAccessListRequest): Promise<unknown> {
+  createResourceAccessList(
+    data: ResourceAccessListRequest,
+  ): Promise<ResourceAccessListResponse> {
     return this.client!.createResourceAccessList(data);
   }
 }
