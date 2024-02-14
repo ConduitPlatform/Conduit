@@ -78,8 +78,8 @@ message AllowedResourcesResponse {
 message ResourceAccessListRequest {
   string subject = 1;
   string action = 2;
-  string resourceType = 3;
-  optional string viewName = 4;
+  optional string viewName = 3;
+  string resourceType = 5;
 }
 
 message ResourceAccessListResponse {
