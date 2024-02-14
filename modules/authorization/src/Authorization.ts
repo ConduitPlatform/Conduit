@@ -230,11 +230,12 @@ export default class Authorization extends ManagedModule<Config> {
     call: GrpcRequest<ResourceAccessListRequest>,
     callback: GrpcResponse<Empty>,
   ) {
-    const { subject, action, resourceType } = call.request;
+    const { subject, action, resourceType, viewName: requestedViewName } = call.request;
     const viewName = await this.permissionsController.createAccessList(
       subject,
       action,
       resourceType,
+      requestedViewName,
     );
     callback(null, { viewName });
   }

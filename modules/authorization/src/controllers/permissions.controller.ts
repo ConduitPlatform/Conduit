@@ -127,14 +127,19 @@ export class PermissionsController {
     return { resources: allowedIds.concat(index), count };
   }
 
-  async createAccessList(subject: string, action: string, objectType: string) {
+  async createAccessList(
+    subject: string,
+    action: string,
+    objectType: string,
+    requestedViewName?: string,
+  ) {
     const computedTuple = `${subject}#${action}@${objectType}`;
     const objectTypeCollection = await this.grpcSdk
       .database!.getSchema(objectType)
       .then(r => r.collectionName);
-    const viewName = createHash('sha256')
-      .update(`${objectType}_${subject}_${action}`)
-      .digest('hex');
+    const viewName =
+      requestedViewName ??
+      createHash('sha256').update(`${objectType}_${subject}_${action}`).digest('hex');
     const dbType = await this.grpcSdk.database!.getDatabaseType().then(r => r.result);
     await this.grpcSdk.database?.createView(
       objectType,
