@@ -78,7 +78,12 @@ message AllowedResourcesResponse {
 message ResourceAccessListRequest {
   string subject = 1;
   string action = 2;
-  string resourceType = 5;
+  string resourceType = 3;
+  optional string viewName = 4;
+}
+
+message ResourceAccessListResponse {
+  string viewName = 1;
 }
 
 message PermissionCheck {
@@ -110,5 +115,5 @@ service Authorization {
   rpc FindRelation(FindRelationRequest) returns (FindRelationResponse);
   rpc Can(PermissionCheck) returns (Decision);
   rpc GetAllowedResources(AllowedResourcesRequest) returns (AllowedResourcesResponse);
-  rpc CreateResourceAccessList(ResourceAccessListRequest) returns (google.protobuf.Empty);
+  rpc CreateResourceAccessList(ResourceAccessListRequest) returns (ResourceAccessListResponse);
 }
