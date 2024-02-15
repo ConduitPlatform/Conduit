@@ -7,7 +7,7 @@ import {
 } from '../utils/index.js';
 import { IndexController } from './index.controller.js';
 import { RuleCache } from './cache.controller.js';
-import { isNil } from 'lodash-es';
+import { isEmpty, isNil } from 'lodash-es';
 import { Permission } from '../models/index.js';
 import { createHash } from 'crypto';
 
@@ -137,9 +137,13 @@ export class PermissionsController {
     const objectTypeCollection = await this.grpcSdk
       .database!.getSchema(objectType)
       .then(r => r.collectionName);
-    const viewName =
-      requestedViewName ??
-      createHash('sha256').update(`${objectType}_${subject}_${action}`).digest('hex');
+    let viewName = requestedViewName;
+    if (!viewName || isEmpty(viewName)) {
+      viewName = createHash('sha256')
+        .update(`${objectType}_${subject}_${action}`)
+        .digest('hex');
+    }
+
     const dbType = await this.grpcSdk.database!.getDatabaseType().then(r => r.result);
     await this.grpcSdk.database?.createView(
       objectType,
