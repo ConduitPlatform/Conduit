@@ -52,7 +52,7 @@ export default async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
             permission,
             connection.entity.split('#')[1],
             connection.entity.split('#')[0],
-            [...connection.inheritanceTree, `${subject}#${relation}@${object}`],
+            [...(connection.inheritanceTree ?? []), `${subject}#${relation}@${object}`],
           ),
         );
       }

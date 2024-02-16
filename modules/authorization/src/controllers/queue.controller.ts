@@ -60,6 +60,11 @@ export class QueueController {
       ConduitGrpcSdk.Logger.error(`Job error:`);
       ConduitGrpcSdk.Logger.error(error);
     });
+
+    worker.on('failed', (job, error) => {
+      ConduitGrpcSdk.Logger.error(`Job error:`);
+      ConduitGrpcSdk.Logger.error(error);
+    });
   }
 
   addConnectionWorker() {
@@ -85,6 +90,10 @@ export class QueueController {
       ConduitGrpcSdk.Logger.info(`Job ${job.id} completed`);
     });
     worker.on('error', error => {
+      ConduitGrpcSdk.Logger.error(`Job error:`);
+      ConduitGrpcSdk.Logger.error(error);
+    });
+    worker.on('failed', (job, error) => {
       ConduitGrpcSdk.Logger.error(`Job error:`);
       ConduitGrpcSdk.Logger.error(error);
     });
