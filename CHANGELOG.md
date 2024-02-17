@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.5...v0.16.0) (2024-02-17)
+
+
+### Features
+
+* **authorization,grpc-sdk:** CreateResourceAccessList viewName ([#955](https://github.com/ConduitPlatform/Conduit/issues/955)) ([74a464e](https://github.com/ConduitPlatform/Conduit/commit/74a464ed0f96a33b9916f530813c9c28edd2b0ca))
+
+
+### Bug Fixes
+
+* **authorization:** createResourceAccessList API breakage ([#956](https://github.com/ConduitPlatform/Conduit/issues/956)) ([a12bf88](https://github.com/ConduitPlatform/Conduit/commit/a12bf88b68f688ee35a2cd1bec084ea3041f6725))
+* **authorization:** error case in index builds for older environments ([88d4ddd](https://github.com/ConduitPlatform/Conduit/commit/88d4ddde1fb07f44b7528a5e71d1c41fdd4969a3))
+* **authorization:** jobs esm ([392187c](https://github.com/ConduitPlatform/Conduit/commit/392187c735982e4a71fe8030dc08da7d6caf3cf0))
+* **authorization:** requestedViewName empty check ([e02674c](https://github.com/ConduitPlatform/Conduit/commit/e02674c5c179a4f6c5f8d914af08732074048a2c))
+* ecosystem.config.js wrong port mapping ([9ed6867](https://github.com/ConduitPlatform/Conduit/commit/9ed68672e28f23aa3314b1d1242b0333deb2c120))
+* wrong docker image  url for standalone production ([6b01555](https://github.com/ConduitPlatform/Conduit/commit/6b0155594401291e90c945c31a21845626a00dac))
+
 ## [0.16.0-rc.5](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.4...v0.16.0-rc.5) (2024-02-06)
 
 
