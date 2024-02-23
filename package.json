@@ -10,7 +10,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "yarn turbo run build",
-    "prepare": "husky install",
+    "prepare": "husky",
     "release": "standard-version"
   },
   "workspaces": [
@@ -28,7 +28,7 @@
     "@commitlint/config-lerna-scopes": "^17.4.2",
     "copyfiles": "^2.4.1",
     "cz-conventional-changelog": "^3.3.0",
-    "husky": "^8.0.3",
+    "husky": "^9.0.11",
     "lerna": "^7.3.1",
     "lint-staged": ">=13",
     "prettier": "^3.0.3",
