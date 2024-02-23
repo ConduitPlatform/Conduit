@@ -1,5 +1,5 @@
 import { Cluster, Redis } from 'ioredis';
-import { RateLimiterRedis } from 'rate-limiter-flexible';
+import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible';
 import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 
@@ -35,13 +35,18 @@ export class RateLimiter {
         req.headers['cf-connecting-ip'] ||
         req.headers['x-original-forwarded-for'] ||
         req.headers['x-forwarded-for'] ||
+        req.headers['x-real-ip'] ||
         req.ip;
       self._limiter
         .consume(ip)
         .then(() => {
           next();
         })
-        .catch(() => {
+        .catch((rateLimiterRes: RateLimiterRes) => {
+          ConduitGrpcSdk.Logger.info(
+            `RATE_LIMIT: ${ip} exceeded rate limit, ${rateLimiterRes.consumedPoints} consumed.
+             ${rateLimiterRes.msBeforeNext} before next request is allowed.`,
+          );
           next(new ConduitError('RATE_LIMIT', 429, 'Too Many Requests'));
         });
     };
