@@ -233,14 +233,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const serverConfig = await this.grpcSdk.config.get('router');
     const url = serverConfig.hostUrl;
     if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
-      const redirectUri =
-        AuthUtils.validateRedirectUri(call.request.bodyParams.redirectUri) ??
-        config.local.verification.redirect_uri;
       const verificationToken: Token = await Token.getInstance().create({
         tokenType: TokenType.VERIFICATION_TOKEN,
         user: user._id,
         token: uuid(),
-        data: { customRedirectUri: redirectUri },
+        data: {
+          customRedirectUri: AuthUtils.validateRedirectUri(
+            call.request.bodyParams.redirectUri,
+          ),
+        },
       });
       const result = { verificationToken, hostUrl: url };
       const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
@@ -465,8 +466,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async verifyEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const config = ConfigController.getInstance().config;
     const verificationTokenParam = call.request.params.verificationToken;
-
     const verificationTokenDoc: Token | null = await Token.getInstance().findOne(
       {
         tokenType: TokenType.VERIFICATION_TOKEN,
@@ -483,7 +484,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         const redirectUri = AuthUtils.validateRedirectUri(
           JSON.parse(redisToken).customRedirectUri,
         );
-        return redirectUri ? { redirect: redirectUri } : 'Email verified';
+        return { redirect: redirectUri ?? config.local.verification.redirect_uri };
       } else {
         throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
       }
@@ -491,7 +492,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const user: User = verificationTokenDoc.user as User;
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
-
     const redirectUri = AuthUtils.validateRedirectUri(
       verificationTokenDoc.data.customRedirectUri,
     );
@@ -510,7 +510,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
 
-    return redirectUri ? { redirect: redirectUri } : 'Email verified';
+    return redirectUri
+      ? { redirect: redirectUri ?? config.local.verification.redirect_uri }
+      : 'Email verified';
   }
 
   async verifyChangeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
