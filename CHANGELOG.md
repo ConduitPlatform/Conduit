@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.1](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0...v0.16.1) (2024-02-27)
+
+
+### Features
+
+* **router:** add info log for consumed limits ([#959](https://github.com/ConduitPlatform/Conduit/issues/959)) ([b8b8d9a](https://github.com/ConduitPlatform/Conduit/commit/b8b8d9ae0922c069e867ee8ddb584c265690dcc9))
+
+
+### Bug Fixes
+
+* **authentication:** admin-defined redirectUri for email verification mistakenly validated ([#966](https://github.com/ConduitPlatform/Conduit/issues/966)) ([33872dc](https://github.com/ConduitPlatform/Conduit/commit/33872dc95b38c6830bc2f9f411653fdd13ed3ce7))
+
 ## [0.16.0](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.5...v0.16.0) (2024-02-17)
 
 
