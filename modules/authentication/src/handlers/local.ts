@@ -493,7 +493,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const user: User = verificationTokenDoc.user as User;
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     const redirectUri = AuthUtils.validateRedirectUri(
-      verificationTokenDoc.data.customRedirectUri,
+      verificationTokenDoc.data ? verificationTokenDoc.data.customRedirectUri : undefined,
     );
     const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
       user._id,
@@ -510,9 +510,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
 
-    return redirectUri
-      ? { redirect: redirectUri ?? config.local.verification.redirect_uri }
-      : 'Email verified';
+    return { redirect: redirectUri ?? config.local.verification.redirect_uri };
   }
 
   async verifyChangeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
