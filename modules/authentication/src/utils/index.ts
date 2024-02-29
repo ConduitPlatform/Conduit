@@ -183,8 +183,6 @@ export namespace AuthUtils {
 
   export async function fetchUserTeams(params: FetchMembersParams) {
     const { relations, search, sort, populate } = params;
-    const skip = params.skip ?? 0;
-    const limit = params.limit ?? 25;
     const query: Indexable = {
       _id: { $in: relations.relations.map(r => r.resource.split(':')[1]) },
     };
@@ -196,7 +194,7 @@ export namespace AuthUtils {
         if (included) {
           query['_id'] = search;
         } else {
-          return { teams: [], count: relations.relations.length };
+          return { teams: [], count: relations.count };
         }
       } else {
         const searchString = escapeStringRegexp(search);
@@ -204,12 +202,12 @@ export namespace AuthUtils {
       }
     }
 
-    const count = relations.relations.length;
+    const count = relations.count;
     const teams = await Team.getInstance().findMany(
       query,
       undefined,
-      skip,
-      limit,
+      undefined,
+      undefined,
       sort,
       populate,
     );
