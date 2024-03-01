@@ -33,7 +33,7 @@
     "lint-staged": ">=13",
     "prettier": "^3.0.3",
     "standard-version": "^9.5.0",
-    "turbo": "^1.10.16"
+    "turbo": "^1.12.4"
   },
   "dependencies": {},
   "config": {
