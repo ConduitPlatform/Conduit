@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "@types/node": "20.11.13",
-    "@types/uuid": "^9.0.5",
+    "@types/uuid": "^9.0.8",
     "@types/lodash-es": "^4.17.12",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.5",
