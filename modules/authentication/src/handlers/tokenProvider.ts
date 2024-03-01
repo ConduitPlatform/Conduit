@@ -83,7 +83,7 @@ export class TokenProvider {
     const [accessToken, refreshToken] = await this.createUserTokens({
       ...tokenOptions,
       twoFaPass: true,
-      noSudo: true,
+      noSudo: false,
     });
     return {
       userId: tokenOptions.user._id.toString(),
