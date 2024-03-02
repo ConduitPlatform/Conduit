@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.2](https://github.com/ConduitPlatform/Conduit/compare/v0.16.1...v0.16.2) (2024-03-02)
+
+
+### Bug Fixes
+
+* **authentication:** missing redirect nullity check ([d292960](https://github.com/ConduitPlatform/Conduit/commit/d292960cfbec640d32bdbca079e926b98579c4bc))
+* **authentication:** team fetching pagination issues ([f70ae93](https://github.com/ConduitPlatform/Conduit/commit/f70ae9312abfa0cf691304ff0628da8ce1a44658))
+
 ### [0.16.1](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0...v0.16.1) (2024-02-27)
 
 
