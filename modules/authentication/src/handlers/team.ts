@@ -246,6 +246,30 @@ export class TeamsHandler implements IAuthenticationStrategy {
     return 'Deleted';
   }
 
+  async updateTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { teamId } = call.request.urlParams;
+    const { name } = call.request.bodyParams;
+    const existingTeam = await Team.getInstance().findOne({ _id: teamId });
+    if (!existingTeam) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Team does not exist');
+    }
+
+    const can = await this.grpcSdk.authorization!.can({
+      subject: 'User:' + user._id,
+      actions: ['edit'],
+      resource: 'Team:' + teamId,
+    });
+    if (!can.allow) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to edit this team',
+      );
+    }
+    const team = await Team.getInstance().findByIdAndUpdate(teamId, { name });
+    return team!;
+  }
+
   async removeTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { teamId, members } = call.request.params;
@@ -606,6 +630,22 @@ export class TeamsHandler implements IAuthenticationStrategy {
       },
       new ConduitRouteReturnDefinition('DeleteTeam', 'String'),
       this.deleteTeam.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/teams/:teamId',
+        description: `Updates a team. Currently only supports changing the team name.`,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          name: ConduitString.Required,
+        },
+        action: ConduitRouteActions.PATCH,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition(Team.name),
+      this.updateTeam.bind(this),
     );
     routingManager.route(
       {
