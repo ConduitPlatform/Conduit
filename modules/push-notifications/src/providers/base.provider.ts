@@ -37,23 +37,26 @@ export class BaseNotificationProvider<T> {
       });
     }
     if (this.isBaseProvider) return;
-    const notificationToken = (await this.fetchTokens(sendTo)) as NotificationToken;
-    if (isNil(notificationToken)) {
+    const notificationTokens = await this.fetchTokens(sendTo);
+    if (notificationTokens.length === 0) {
       throw new Error('No notification token found');
     }
-    return this.sendMessage(notificationToken.token, params);
+    const promises = notificationTokens.map(async notToken => {
+      await this.sendMessage(notToken.token, params);
+    });
+    return Promise.all(promises);
   }
 
-  fetchTokens(
-    users: string | string[],
-  ): Promise<NotificationToken | NotificationToken[] | null> {
+  fetchTokens(users: string | string[], platform?: string): Promise<NotificationToken[]> {
     if (Array.isArray(users)) {
       return NotificationToken.getInstance().findMany({
         userId: { $in: users },
+        ...(platform ? { platform } : {}),
       });
     }
-    return NotificationToken.getInstance().findOne({
+    return NotificationToken.getInstance().findMany({
       userId: users as string,
+      ...(platform ? { platform } : {}),
     });
   }
 
@@ -115,6 +118,7 @@ export class BaseNotificationProvider<T> {
     if (this.isBaseProvider) return;
     const notificationTokens = (await this.fetchTokens(
       params.sendTo,
+      params.platform,
     )) as NotificationToken[];
 
     if (notificationTokens.length === 0) throw new Error('Could not find tokens');

@@ -7,6 +7,7 @@ import {
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { getMessaging, Message, Messaging } from 'firebase-admin/messaging';
 import { cert, initializeApp, ServiceAccount } from 'firebase-admin/app';
+import { NotificationToken } from '../models/index.js';
 
 export class FirebaseProvider extends BaseNotificationProvider<IFirebaseSettings> {
   private fcm?: Messaging;
@@ -76,6 +77,9 @@ export class FirebaseProvider extends BaseNotificationProvider<IFirebaseSettings
         },
       };
     }
-    return this.fcm!.send(message);
+    return this.fcm!.send(message).catch(e => {
+      ConduitGrpcSdk.Logger.error('Failed to send notification: ', e);
+      NotificationToken.getInstance().deleteOne({ token });
+    });
   }
 }
