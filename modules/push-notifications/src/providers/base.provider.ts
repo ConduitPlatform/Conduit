@@ -37,7 +37,7 @@ export class BaseNotificationProvider<T> {
       });
     }
     if (this.isBaseProvider) return;
-    const notificationTokens = await this.fetchTokens(sendTo);
+    const notificationTokens = await this.fetchTokens(sendTo, params.platform);
     if (notificationTokens.length === 0) {
       throw new Error('No notification token found');
     }
@@ -93,6 +93,7 @@ export class BaseNotificationProvider<T> {
     const promises = notificationTokens.map(async token => {
       const id = token.userId.toString();
       const data = notificationsObj[id];
+      if (data.platform && data.platform !== token.platform) return;
       await this.sendMessage(token.token, data).catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
