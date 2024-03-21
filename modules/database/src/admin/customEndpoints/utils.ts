@@ -381,7 +381,7 @@ export function validateAssignments(
         fields,
         inputs,
         operation,
-        r.schemaField,
+        r.schemaField.replaceAll('.', '.type.'),
         r.assignmentField,
         r.action,
       );
