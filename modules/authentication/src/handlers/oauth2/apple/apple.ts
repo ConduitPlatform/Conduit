@@ -134,7 +134,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
 
     const userParams = {
       id: payload.sub!,
-      email: payload.email,
+      email: userData.email,
       data: { ...userData, ...payload.email_verified },
     };
     const user = await this.createOrUpdateUser(
