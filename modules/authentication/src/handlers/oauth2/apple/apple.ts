@@ -15,8 +15,7 @@ import {
 } from '../interfaces/index.js';
 import axios from 'axios';
 import { AppleUser } from './apple.user.js';
-import jwt from 'jsonwebtoken';
-import { Jwt, JwtHeader, JwtPayload } from 'jsonwebtoken';
+import jwt, { Jwt, JwtHeader, JwtPayload } from 'jsonwebtoken';
 import { TokenProvider } from '../../tokenProvider.js';
 import { Token } from '../../../models/index.js';
 import { status } from '@grpc/grpc-js';
@@ -126,10 +125,17 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     if (decoded_id_token!.payload.sub !== payload.sub) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
     }
+    let userData = params.user;
+    try {
+      userData = JSON.parse(params.user);
+    } catch (e) {
+      // already a valid object
+    }
+
     const userParams = {
       id: payload.sub!,
       email: payload.email,
-      data: { ...payload.email_verified },
+      data: { ...userData, ...payload.email_verified },
     };
     const user = await this.createOrUpdateUser(
       userParams,
