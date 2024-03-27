@@ -39,25 +39,43 @@ const schema: ConduitModel = {
     type: TYPE.String,
     select: false,
   },
-  github: {
+  apple: {
     ...authProviderSchema,
   },
-  google: {
-    ...authProviderSchema,
-  },
-  microsoft: {
-    ...authProviderSchema,
-  },
-  figma: {
-    ...authProviderSchema,
-  },
-  slack: {
+  bitbucket: {
     ...authProviderSchema,
   },
   facebook: {
     ...authProviderSchema,
   },
+  figma: {
+    ...authProviderSchema,
+  },
+  github: {
+    ...authProviderSchema,
+  },
+  gitlab: {
+    ...authProviderSchema,
+  },
+  google: {
+    ...authProviderSchema,
+  },
+  linkedin: {
+    ...authProviderSchema,
+  },
+  microsoft: {
+    ...authProviderSchema,
+  },
+  reddit: {
+    ...authProviderSchema,
+  },
+  slack: {
+    ...authProviderSchema,
+  },
   twitch: {
+    ...authProviderSchema,
+  },
+  twitter: {
     ...authProviderSchema,
   },
   active: {
