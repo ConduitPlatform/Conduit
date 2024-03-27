@@ -229,7 +229,12 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       }
 
       // @ts-ignore
-      user[this.providerName] = payload;
+      if (!user[this.providerName]) {
+        // @ts-ignore
+        user[this.providerName] = {};
+      }
+      // @ts-ignore
+      user[this.providerName] = _.merge(user[this.providerName], payload);
       // TODO look into this again, as the email the user has registered will still not be verified
       if (!user.isVerified) user.isVerified = true;
       user = await User.getInstance().findByIdAndUpdate(user._id, user);
