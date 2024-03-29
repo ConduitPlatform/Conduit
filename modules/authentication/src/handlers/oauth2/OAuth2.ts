@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash-es';
+import { isNil, merge } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { Token, User } from '../../models/index.js';
 import axios from 'axios';
@@ -234,7 +234,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         user[this.providerName] = {};
       }
       // @ts-ignore
-      user[this.providerName] = _.merge(user[this.providerName], payload);
+      user[this.providerName] = merge(user[this.providerName], payload);
       // TODO look into this again, as the email the user has registered will still not be verified
       if (!user.isVerified) user.isVerified = true;
       user = await User.getInstance().findByIdAndUpdate(user._id, user);
