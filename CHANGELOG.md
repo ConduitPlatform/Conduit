@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.4](https://github.com/ConduitPlatform/Conduit/compare/v0.16.3...v0.16.4) (2024-03-29)
+
+
+### Bug Fixes
+
+* **authentication:** typo on merge dependency ([64ecad6](https://github.com/ConduitPlatform/Conduit/commit/64ecad6b9cbbce47d8f2165d86592e8ffe5d5dcd))
+
 ### [0.16.3](https://github.com/ConduitPlatform/Conduit/compare/v0.16.2...v0.16.3) (2024-03-29)
 
 
