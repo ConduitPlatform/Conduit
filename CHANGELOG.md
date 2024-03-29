@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.3](https://github.com/ConduitPlatform/Conduit/compare/v0.16.2...v0.16.3) (2024-03-29)
+
+
+### Features
+
+* **authentication:** endpoint to update team name ([#972](https://github.com/ConduitPlatform/Conduit/issues/972)) ([f272588](https://github.com/ConduitPlatform/Conduit/commit/f27258865ca035a8a2623729b0e5a0c10c89d662))
+* **authentication:** merge payload on oAuth user updates so that older data is not deleted ([47cd688](https://github.com/ConduitPlatform/Conduit/commit/47cd6882f020ce3cbe5c131d66a46e9ba0faf8cd))
+
+
+### Bug Fixes
+
+* **authentication:** apple data not stored ([d54fb43](https://github.com/ConduitPlatform/Conduit/commit/d54fb43fd19309cdfb6cd57a10ddb16fddee7415))
+* **authentication:** apple data not stored ([8f250f2](https://github.com/ConduitPlatform/Conduit/commit/8f250f2583e5aef5794ea39516edc0104025514c))
+* **authentication:** apple data not stored ([db2150c](https://github.com/ConduitPlatform/Conduit/commit/db2150c2b9c01767e3ccaf5852e8dbcd41f0aadc))
+* **authentication:** missing oAuth fields in user model ([4b28b9f](https://github.com/ConduitPlatform/Conduit/commit/4b28b9f38187db9d2e5669bbf6ae0d52c02ccad6))
+* **database:** schema object field access validation checks ([#996](https://github.com/ConduitPlatform/Conduit/issues/996)) ([535cb9e](https://github.com/ConduitPlatform/Conduit/commit/535cb9e05540aa92c277bde6303844e6ee3a4496))
+
 ### [0.16.2](https://github.com/ConduitPlatform/Conduit/compare/v0.16.1...v0.16.2) (2024-03-02)
 
 
