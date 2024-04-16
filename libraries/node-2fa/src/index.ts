@@ -27,7 +27,7 @@ export function generateSecret(options?: Options) {
   return {
     secret,
     uri: `${uri}${query}`,
-    qr: `https://chart.googleapis.com/chart?chs=166x166&chld=L|0&cht=qr&chl=${uri}${encodedQuery}`,
+    qr: `https://quickchart.io/chart?chs=166x166&chld=L|0&cht=qr&chl=${uri}${encodedQuery}`,
   };
 }
 
