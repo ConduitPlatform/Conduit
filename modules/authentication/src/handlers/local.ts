@@ -75,7 +75,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.authenticate.bind(this),
     );
     const config = ConfigController.getInstance().config;
-    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
+    if (this.grpcSdk.isAvailable('email')) {
       routingManager.route(
         {
           path: '/forgot-password',
@@ -89,22 +89,22 @@ export class LocalHandlers implements IAuthenticationStrategy {
         new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
         this.forgotPassword.bind(this),
       );
-
-      routingManager.route(
-        {
-          path: '/reset-password',
-          action: ConduitRouteActions.POST,
-          description: `Used after the user clicks on the 'forgot password' link and
+    }
+    routingManager.route(
+      {
+        path: '/reset-password',
+        action: ConduitRouteActions.POST,
+        description: `Used after the user clicks on the 'forgot password' link and
                         requires the token from the url and the new password.`,
-          bodyParams: {
-            passwordResetToken: ConduitString.Required,
-            password: ConduitString.Required,
-          },
+        bodyParams: {
+          passwordResetToken: ConduitString.Required,
+          password: ConduitString.Required,
         },
-        new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
-        this.resetPassword.bind(this),
-      );
-
+      },
+      new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
+      this.resetPassword.bind(this),
+    );
+    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
       routingManager.route(
         {
           path: '/local/resend-verification',
@@ -199,6 +199,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
     call: ParsedRouterRequest,
     callback: (response: UnparsedRouterResponse) => void,
   ) {
+    const email = call.request.params.email.toLowerCase();
+    const password = call.request.params.password;
+
     const config = ConfigController.getInstance().config;
     const teams = config.teams;
     if (
@@ -208,9 +211,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
     ) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
     }
-    const email = call.request.params.email.toLowerCase();
-    const password = call.request.params.password;
-
+    if (teams.enabled && call.request.params.invitationToken) {
+      const valid = await TeamsHandler.getInstance().inviteValidation(
+        call.request.params.invitationToken,
+        email,
+      );
+      if (!valid) {
+        throw new GrpcError(status.PERMISSION_DENIED, 'Invalid invitation token');
+      }
+    }
     const invalidAddress = AuthUtils.invalidEmailAddress(email);
     if (invalidAddress) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
@@ -310,10 +319,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
       AuthUtils.validateRedirectUri(call.request.bodyParams.redirectUri) ??
       config.local.forgot_password_redirect_uri;
 
-    const user: User | null = await User.getInstance().findOne({ email });
+    const user: User | null = await User.getInstance().findOne(
+      { email },
+      '+hashedPassword',
+    );
 
-    if (isNil(user) || (config.local.verification.required && !user.isVerified))
-      return 'Ok';
+    if (isNil(user))
+      return 'If the email address is valid, a password reset link will be sent to it.';
+
+    if (isNil(user.hashedPassword))
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not use password authentication',
+      );
 
     const oldToken: Token | null = await Token.getInstance().findOne({
       tokenType: TokenType.PASSWORD_RESET_TOKEN,
@@ -331,14 +349,26 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const link = `${redirectUri}?reset_token=${passwordResetTokenDoc.token}`;
     if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
-      await this.emailModule.sendEmail('ForgotPassword', {
-        email: user.email,
-        variables: {
-          link,
-        },
-      });
+      await this.emailModule
+        .sendEmail('ForgotPassword', {
+          email: user.email,
+          variables: {
+            link,
+          },
+        })
+        .catch(e => {
+          throw new GrpcError(
+            status.INTERNAL,
+            'There was an error sending the email. Please try again later.',
+          );
+        });
+    } else {
+      throw new GrpcError(
+        status.INTERNAL,
+        'There was an error sending the email. Please try again later.',
+      );
     }
-    return 'Ok';
+    return 'If the email address is valid, a password reset link will be sent to it.';
   }
 
   async resetPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -365,7 +395,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const passwordsMatch = await AuthUtils.checkPassword(
       newPassword,
-      user.hashedPassword!,
+      user.hashedPassword,
     );
     if (passwordsMatch)
       throw new GrpcError(

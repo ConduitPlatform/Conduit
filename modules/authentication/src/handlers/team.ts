@@ -42,6 +42,32 @@ export class TeamsHandler implements IAuthenticationStrategy {
     return TeamsHandler._instance;
   }
 
+  async inviteValidation(invitationToken: string, email?: string) {
+    if (!this.initialized) {
+      ConduitGrpcSdk.Logger.error('TeamsHandler not initialized');
+      return false;
+    }
+    const inviteToken = await Token.getInstance().findOne({
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
+      token: invitationToken,
+    });
+    if (!inviteToken) {
+      return false;
+    }
+    if (
+      inviteToken.data.email &&
+      (!email || email !== inviteToken.data.email) &&
+      !ConfigController.getInstance().config.teams.allowEmailMismatchForInvites
+    ) {
+      return false;
+    }
+    const team = await Team.getInstance().findOne({ _id: inviteToken!.data.teamId });
+    if (!team) {
+      return false;
+    }
+    return true;
+  }
+
   async addUserToTeam(user: User, invitationToken: string) {
     if (!this.initialized) return;
     const inviteToken = await Token.getInstance().findOne({

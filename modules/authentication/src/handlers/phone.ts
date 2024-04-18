@@ -148,6 +148,15 @@ export class PhoneHandlers implements IAuthenticationStrategy {
           'Registration requires valid invitation',
         );
       }
+
+      if (teams.enabled && call.request.params.invitationToken) {
+        const valid = await TeamsHandler.getInstance().inviteValidation(
+          call.request.params.invitationToken,
+        );
+        if (!valid) {
+          throw new GrpcError(status.PERMISSION_DENIED, 'Invalid invitation token');
+        }
+      }
     }
     const existingToken = await Token.getInstance().findOne({
       tokenType: {
