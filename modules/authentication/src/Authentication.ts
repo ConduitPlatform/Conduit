@@ -15,6 +15,10 @@ import { AuthUtils } from './utils/index.js';
 import { TokenType } from './constants/index.js';
 import { v4 as uuid } from 'uuid';
 import {
+  CreateTeamRequest,
+  GetTeamRequest,
+  ModifyTeamMembersRequest,
+  Team as GrpcTeam,
   TeamDeleteRequest,
   TeamDeleteResponse,
   UserChangePass,
@@ -24,10 +28,6 @@ import {
   UserDeleteResponse,
   UserLoginRequest,
   UserLoginResponse,
-  GetTeamRequest,
-  CreateTeamRequest,
-  Team as GrpcTeam,
-  ModifyTeamMembersRequest,
   ValidateAccessTokenRequest,
   ValidateAccessTokenResponse,
   ValidateAccessTokenResponse_Status,
@@ -47,6 +47,8 @@ import { TeamsAdmin } from './admin/team.js';
 import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
+import { TeamsHandler } from './handlers/team.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -294,6 +296,11 @@ export default class Authentication extends ManagedModule<Config> {
           'Failed to send verification email.' + ' Email service not online!',
         );
       }
+      await TeamsHandler.getInstance()
+        .addUserToDefault(user)
+        .catch(err => {
+          ConduitGrpcSdk.Logger.error(err);
+        });
       return callback(null, { password });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
