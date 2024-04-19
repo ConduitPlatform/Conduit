@@ -247,6 +247,15 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       ) {
         throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
       }
+      if (teams.enabled && invitationToken) {
+        const valid = await TeamsHandler.getInstance().inviteValidation(
+          invitationToken,
+          payload.email,
+        );
+        if (!valid) {
+          throw new GrpcError(status.PERMISSION_DENIED, 'Invalid invitation token');
+        }
+      }
       user = await User.getInstance().create({
         email: payload.email,
         [this.providerName]: payload,

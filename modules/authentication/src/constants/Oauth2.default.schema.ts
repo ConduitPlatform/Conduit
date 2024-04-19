@@ -18,4 +18,11 @@ export const oauth2Schema = {
     default: '',
     optional: true,
   },
+  accountLinking: {
+    doc:
+      'When enabled, if a new apple user matches with an existing email on the database, ' +
+      'they will be enriched with apple details',
+    format: 'Boolean',
+    default: true,
+  },
 };
