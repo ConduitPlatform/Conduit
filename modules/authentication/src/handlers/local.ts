@@ -356,7 +356,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
             link,
           },
         })
-        .catch(e => {
+        .catch(() => {
           throw new GrpcError(
             status.INTERNAL,
             'There was an error sending the email. Please try again later.',
