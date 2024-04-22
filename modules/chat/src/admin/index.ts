@@ -66,7 +66,7 @@ export class AdminHandlers {
   }
 
   async createRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { participants } = call.request.params;
+    const { participants } = call.request.params as { participants: string[] };
     if (participants.length === 0) {
       // array check is required
       throw new GrpcError(
@@ -250,10 +250,10 @@ export class AdminHandlers {
     this.routingManager.registerRoutes();
   }
 
-  private async validateUsersInput(users: User[]) {
+  private async validateUsersInput(users: string[]) {
     const uniqueUsers = Array.from(new Set(users));
     const usersToBeAdded: void | User[] = await User.getInstance().findMany({
-      _id: { $in: uniqueUsers.map(user => user._id) },
+      _id: { $in: uniqueUsers },
     });
     if (isNil(usersToBeAdded)) {
       throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
