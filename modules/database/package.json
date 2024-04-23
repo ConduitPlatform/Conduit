@@ -31,7 +31,7 @@
     "mariadb": "^3.2.3",
     "mongodb-schema": "^12.1.1",
     "mongoose": "8.1.1",
-    "mysql2": "^3.9.4",
+    "mysql2": "^3.9.7",
     "object-hash": "^3.0.0",
     "pg": "^8.11.3",
     "pg-hstore": "^2.3.4",
