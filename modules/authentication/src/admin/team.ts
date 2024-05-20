@@ -303,6 +303,9 @@ export class TeamsAdmin {
         throw new GrpcError(status.ALREADY_EXISTS, 'Team with that name already exists');
       }
     }
+    if (!found.isDefault && isDefault) {
+      await Team.getInstance().updateOne({ isDefault: true }, { isDefault: false });
+    }
 
     const updatedTeam = await Team.getInstance().findByIdAndUpdate(teamId, {
       name,
