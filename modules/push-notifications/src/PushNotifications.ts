@@ -47,6 +47,7 @@ export default class PushNotifications extends ManagedModule<Config> {
   };
   protected metricsSchema = metricsSchema;
   private isRunning = false;
+  private canServe = false;
   private authServing = false;
   private adminRouter!: AdminHandlers;
   private userRouter!: PushNotificationsRoutes;
@@ -70,12 +71,15 @@ export default class PushNotifications extends ManagedModule<Config> {
 
   async onConfig() {
     if (!ConfigController.getInstance().config.active) {
+      this.canServe = false;
       this.updateHealthState(HealthCheckStatus.NOT_SERVING);
     } else {
       try {
         await this.enableModule();
+        this.canServe = true;
         this.updateHealthState(HealthCheckStatus.SERVING);
       } catch (e) {
+        this.canServe = false;
         this.updateHealthState(HealthCheckStatus.NOT_SERVING);
       }
     }
@@ -200,7 +204,7 @@ export default class PushNotifications extends ManagedModule<Config> {
   }
 
   private updateHealthState(stateUpdate?: HealthCheckStatus, authServing?: boolean) {
-    if (authServing) {
+    if (authServing !== undefined) {
       this.authServing = authServing;
     }
     const moduleActive = ConfigController.getInstance().config.active;
@@ -208,7 +212,10 @@ export default class PushNotifications extends ManagedModule<Config> {
       moduleActive && this.authServing
         ? HealthCheckStatus.SERVING
         : HealthCheckStatus.NOT_SERVING;
-    const requestedState = stateUpdate ?? this.healthState;
+    const requestedState =
+      stateUpdate ?? this.canServe
+        ? HealthCheckStatus.SERVING
+        : HealthCheckStatus.NOT_SERVING;
     const nextState =
       depState === requestedState && requestedState === HealthCheckStatus.SERVING
         ? HealthCheckStatus.SERVING
