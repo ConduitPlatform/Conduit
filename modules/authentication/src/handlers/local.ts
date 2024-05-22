@@ -348,7 +348,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
 
     const link = `${redirectUri}?reset_token=${passwordResetTokenDoc.token}`;
-    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
+    if (this.grpcSdk.isAvailable('email')) {
       await this.emailModule
         .sendEmail('ForgotPassword', {
           email: user.email,

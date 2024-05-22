@@ -197,7 +197,7 @@ export abstract class SchemaAdapter<T> {
     options?: { userId?: string; scope?: string },
   ) {
     if (!this.authzEnabled) return;
-    if (!options || (!options?.userId && options?.scope)) {
+    if (!options || (!options?.userId && !options?.scope)) {
       return;
     }
     const subject = options.scope ?? `User:${options.userId}`;
