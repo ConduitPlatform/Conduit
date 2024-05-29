@@ -3,6 +3,7 @@ import {
   DeleteFileResponse,
   FileResponse,
   GetFileDataResponse,
+  GetFileUrlResponse,
   StorageDefinition,
 } from '../../protoUtils/storage.js';
 
@@ -18,6 +19,10 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
 
   getFile(id: string, userId?: string, scope?: string): Promise<FileResponse> {
     return this.client!.getFile({ id, userId, scope });
+  }
+
+  getFileUrl(id: string, userId?: string, scope?: string): Promise<GetFileUrlResponse> {
+    return this.client!.getFileUrl({ id, userId, scope });
   }
 
   getFileData(id: string, userId?: string, scope?: string): Promise<GetFileDataResponse> {

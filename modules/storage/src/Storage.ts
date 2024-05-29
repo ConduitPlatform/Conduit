@@ -22,6 +22,8 @@ import {
   FileResponse,
   GetFileDataResponse,
   GetFileRequest,
+  GetFileUrlRequest,
+  GetFileUrlResponse,
   UpdateFileByUrlRequest,
   UpdateFileRequest,
 } from './protoTypes/storage.js';
@@ -38,6 +40,7 @@ import { StorageParamAdapter } from './adapter/StorageParamAdapter.js';
 import { FileResource } from './authz/index.js';
 import { AdminFileHandlers } from './admin/adminFile.js';
 import { fileURLToPath } from 'node:url';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -54,6 +57,7 @@ export default class Storage extends ManagedModule<Config> {
       deleteFile: this.deleteFile.bind(this),
       createFileByUrl: this.createFileByUrl.bind(this),
       updateFileByUrl: this.updateFileByUrl.bind(this),
+      getFileUrl: this.getFileUrl.bind(this),
     },
   };
   protected metricsSchema = MetricsSchema;
@@ -201,6 +205,33 @@ export default class Storage extends ManagedModule<Config> {
       result = await this._adminFileHandlers.getFileData(request);
     }
     callback(null, result as GetFileDataResponse);
+  }
+
+  async getFileUrl(
+    call: GrpcRequest<GetFileUrlRequest>,
+    callback: GrpcCallback<GetFileUrlResponse>,
+  ) {
+    if (!this._adminFileHandlers)
+      return callback({
+        code: status.INTERNAL,
+        message: 'File handlers not initiated',
+      });
+    const request = createParsedRouterRequest(
+      call.request,
+      undefined,
+      { scope: call.request.scope },
+      undefined,
+      undefined,
+      undefined,
+      { user: { _id: call.request.userId } },
+    );
+    let result;
+    if (call.request.scope || call.request.userId) {
+      result = await this._fileHandlers.getFileUrl(request);
+    } else {
+      result = await this._adminFileHandlers.getFileUrl(request);
+    }
+    callback(null, result as GetFileUrlResponse);
   }
 
   async createFile(
