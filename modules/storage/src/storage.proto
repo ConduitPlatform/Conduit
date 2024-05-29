@@ -7,6 +7,15 @@ message GetFileRequest {
   optional string scope = 3;
 
 }
+message GetFileUrlRequest {
+  string id = 1;
+  optional string userId = 2;
+  optional string scope = 3;
+
+}
+message GetFileUrlResponse {
+  string url = 1;
+}
 
 message CreateFileRequest {
   string name = 1;
@@ -75,6 +84,7 @@ message UpdateFileByUrlRequest {
 service Storage {
   rpc GetFile(GetFileRequest) returns (FileResponse);
   rpc GetFileData(GetFileRequest) returns (GetFileDataResponse);
+  rpc GetFileUrl(GetFileUrlRequest) returns (GetFileUrlResponse);
   rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
   rpc CreateFile(CreateFileRequest) returns (FileResponse);
   rpc DeleteFile(GetFileRequest) returns (DeleteFileResponse);
