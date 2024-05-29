@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.5](https://github.com/ConduitPlatform/Conduit/compare/v0.16.4...v0.16.5) (2024-05-29)
+
+
+### Features
+
+* **authentication:** add user to default team when creating through gRPC ([ae7962d](https://github.com/ConduitPlatform/Conduit/commit/ae7962d2f284a13f21b4b7c583a6b5a758da97a0))
+* **authentication:** remove verification requirement for forgot password ([369958f](https://github.com/ConduitPlatform/Conduit/commit/369958ff81de9ec94b1353d8a60dcbf28aec46b0))
+* **authentication:** validate team invites before user creation for all authentication methods ([#1014](https://github.com/ConduitPlatform/Conduit/issues/1014)) ([49fba37](https://github.com/ConduitPlatform/Conduit/commit/49fba3724b2d70699df0d461e8b060a5ec6e4c2d))
+* **storage:** introduce gRPC call to get a file's URL ([#1045](https://github.com/ConduitPlatform/Conduit/issues/1045)) ([4979402](https://github.com/ConduitPlatform/Conduit/commit/4979402dab7bd3f603c025dd27082bef0a5ab296))
+
+
+### Bug Fixes
+
+* **authorization:** inherited permissions with wildcard ([46f801d](https://github.com/ConduitPlatform/Conduit/commit/46f801df83f4f5726f15a3157ae7172f22a597e2))
+* **chat:** createRoom admin API participants validation ([#1016](https://github.com/ConduitPlatform/Conduit/issues/1016)) ([e7d2367](https://github.com/ConduitPlatform/Conduit/commit/e7d2367e60499da0b9b8a5cc63ed9a4da60bcfaf))
+* **database:** cannot create documents with only scope ([396984b](https://github.com/ConduitPlatform/Conduit/commit/396984be4c96b1ea5c171e7422d2c0bed6b32b2d))
+* pushNotifications health updates ([#1039](https://github.com/ConduitPlatform/Conduit/issues/1039)) ([dcb0235](https://github.com/ConduitPlatform/Conduit/commit/dcb0235d034e742dca4d07f6965b671751ba4185))
+* **storage:** inconsistent behavior for admin handlers ([bea5137](https://github.com/ConduitPlatform/Conduit/commit/bea513744b997cfe906ff393ff94eb742f371398))
+
 ### [0.16.4](https://github.com/ConduitPlatform/Conduit/compare/v0.16.3...v0.16.4) (2024-03-29)
 
 
