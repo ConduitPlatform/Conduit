@@ -4,6 +4,7 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
+  Indexable,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config/index.js';
 import { AdminRoutes } from './admin/index.js';
@@ -231,7 +232,7 @@ export default class Storage extends ManagedModule<Config> {
     } else {
       result = await this._adminFileHandlers.getFileUrl(request);
     }
-    callback(null, result as GetFileUrlResponse);
+    callback(null, { url: (result as Indexable).result as string });
   }
 
   async createFile(

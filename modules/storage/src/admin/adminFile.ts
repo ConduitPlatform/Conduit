@@ -211,6 +211,9 @@ export class AdminFileHandlers {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
       if (found.isPublic) {
+        if (!call.request.params.redirect) {
+          return { result: found.url };
+        }
         return { redirect: found.url };
       }
       const url = await this.storageProvider
