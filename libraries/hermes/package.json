@@ -18,7 +18,7 @@
   "dependencies": {
     "@apollo/server": "^4.9.5",
     "@conduitplatform/grpc-sdk": "*",
-    "@grpc/grpc-js": "^1.9.7",
+    "@grpc/grpc-js": "^1.10.9",
     "@grpc/proto-loader": "^0.7.6",
     "@scalar/api-reference": "^1.13.2",
     "@scalar/express-api-reference": "^0.2.57",
