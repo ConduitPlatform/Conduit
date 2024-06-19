@@ -20,8 +20,8 @@
   "license": "ISC",
   "dependencies": {
     "@conduitplatform/grpc-sdk": "*",
-    "@conduitplatform/module-tools": "*",
     "@conduitplatform/hermes": "^1.0.1",
+    "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.10.9",
     "@grpc/proto-loader": "^0.7.6",
     "axios": "^1.6.7",
@@ -36,7 +36,6 @@
     "ioredis": "^5.3.2",
     "lodash-es": "^4.17.21",
     "moment": "^2.30.1",
-    "rate-limiter-flexible": "^5.0.0",
     "swagger-ui-express": "5.0.0"
   },
   "directories": {
