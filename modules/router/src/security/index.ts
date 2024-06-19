@@ -20,9 +20,7 @@ export default class SecurityModule {
   ) {}
 
   setupMiddlewares() {
-    if (this.initialized) {
-      this._rateLimiter!.updateConfig();
-    }
+    if (this.initialized) return;
     this._clientValidator = new ClientValidator(this.grpcSdk);
     this._captchaValidator = new CaptchaValidator(this.grpcSdk);
     this._rateLimiter = new RateLimiter(this.grpcSdk);
