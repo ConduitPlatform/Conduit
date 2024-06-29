@@ -76,7 +76,7 @@ export class ServiceDiscovery {
           });
       }
     }
-    this.grpcSdk.bus!.subscribe('config', (message: string) => {
+    this.grpcSdk.bus!.subscribe('service-discover', (message: string) => {
       const parsedMessage = JSON.parse(message);
       if (parsedMessage.type === 'module-health') {
         this._serviceMonitor.updateModuleHealth(
@@ -232,7 +232,7 @@ export class ServiceDiscovery {
     status?: HealthCheckStatus,
   ) {
     this.grpcSdk.bus!.publish(
-      'config',
+      'service-discover',
       JSON.stringify({
         type,
         name,
