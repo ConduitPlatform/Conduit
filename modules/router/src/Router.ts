@@ -44,6 +44,7 @@ import * as adminRoutes from './admin/routes/index.js';
 import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 import { fileURLToPath } from 'node:url';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -161,9 +162,9 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       const messageParsed = JSON.parse(message);
       try {
         this.internalRegisterRoute(
-          messageParsed.protofile,
           messageParsed.routes,
           messageParsed.url,
+          messageParsed.moduleName,
         );
       } catch (err) {
         ConduitGrpcSdk.Logger.error(err as Error);
@@ -172,7 +173,11 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     this.scheduleMiddlewareApply();
   }
 
-  updateState(routes: RegisterConduitRouteRequest_PathDefinition[], url: string) {
+  updateState(
+    routes: RegisterConduitRouteRequest_PathDefinition[],
+    url: string,
+    moduleName: string,
+  ) {
     this.grpcSdk
       .state!.modifyState(async (existingState: Indexable) => {
         const state = existingState ?? {};
@@ -189,12 +194,13 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
           state.routes.push({
             routes,
             url,
+            moduleName,
           });
         }
         return state;
       })
       .then(() => {
-        this.publishRouteData(routes, url);
+        this.publishRouteData(routes, url, moduleName);
         ConduitGrpcSdk.Logger.log('Updated routes state');
       })
       .catch(e => {
@@ -203,12 +209,17 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       });
   }
 
-  publishRouteData(routes: RegisterConduitRouteRequest_PathDefinition[], url: string) {
+  publishRouteData(
+    routes: RegisterConduitRouteRequest_PathDefinition[],
+    url: string,
+    moduleName: string,
+  ) {
     this.grpcSdk.bus!.publish(
       'router',
       JSON.stringify({
         routes,
         url,
+        moduleName,
       }),
     );
   }
@@ -253,7 +264,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         moduleName as string,
       );
 
-      this.updateState(call.request.routes, call.request.routerUrl);
+      this.updateState(call.request.routes, call.request.routerUrl, moduleName as string);
       this.scheduleMiddlewareApply();
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
