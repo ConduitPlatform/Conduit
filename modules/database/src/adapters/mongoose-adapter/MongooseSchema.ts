@@ -19,7 +19,6 @@ import { MongooseAdapter } from './index.js';
 import ConduitGrpcSdk, {
   ConduitSchema,
   Indexable,
-  RawQuery,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isNil } from 'lodash-es';
