@@ -52,13 +52,19 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
     }
     const existingView = this.views[viewName];
-    if (existingView && isEqual(existingView?.viewQuery, query)) {
+    const isQueryEqual = isEqual(existingView?.viewQuery, query);
+    if (existingView && isQueryEqual) {
       return;
     }
+
     const model = this.models[modelName];
     const newSchema = JSON.parse(JSON.stringify(model.schema));
     newSchema.name = viewName;
     newSchema.collectionName = viewName;
+
+    if (existingView && !isQueryEqual) {
+      await this.deleteView(viewName);
+    }
     const viewModel = new SequelizeSchema(
       this.grpcSdk,
       this.sequelize,
@@ -99,8 +105,6 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
             throw err;
           }
         });
-    } else {
-      await this.models['Views'].findByIdAndUpdate(foundView._id, { query });
     }
   }
 

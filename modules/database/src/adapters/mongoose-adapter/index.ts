@@ -76,7 +76,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
     }
     const existingView = this.views[viewName];
-    if (existingView && isEqual(existingView?.viewQuery, query)) {
+    const isQueryEqual = isEqual(existingView?.viewQuery, query);
+    if (existingView && isQueryEqual) {
       return;
     }
 
@@ -87,26 +88,24 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     //@ts-ignore
     newSchema.collectionName = viewName;
 
-    try {
-      const viewModel = new MongooseSchema(
-        this.grpcSdk,
-        this.mongoose,
-        newSchema as ConduitSchema,
-        model.originalSchema,
-        this,
-        true,
-        query,
-      );
-      await viewModel.model.createCollection({
-        viewOn: model.originalSchema.collectionName,
-        pipeline: JSON.parse(query.mongoQuery),
-      });
-      this.views[viewName] = viewModel;
-    } catch (e: any) {
-      if (!e.message.includes('Cannot overwrite')) {
-        throw e;
-      }
+    if (existingView && !isQueryEqual) {
+      await this.deleteView(viewName);
+      delete this.mongoose.models[viewName];
     }
+    const viewModel = new MongooseSchema(
+      this.grpcSdk,
+      this.mongoose,
+      newSchema as ConduitSchema,
+      model.originalSchema,
+      this,
+      true,
+      query,
+    );
+    await viewModel.model.createCollection({
+      viewOn: model.originalSchema.collectionName,
+      pipeline: JSON.parse(query.mongoQuery),
+    });
+    this.views[viewName] = viewModel;
 
     const foundView = await this.models['Views'].findOne({ name: viewName });
     if (isNil(foundView)) {
@@ -116,8 +115,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
         query,
       });
-    } else {
-      await this.models['Views'].findByIdAndUpdate(foundView._id, { query });
     }
   }
 
