@@ -28,7 +28,7 @@ import {
 } from '../../interfaces/index.js';
 import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter.js';
 import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter.js';
-import { isNil } from 'lodash-es';
+import { isEqual, isNil } from 'lodash-es';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -51,6 +51,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     if (!this.models[modelName]) {
       throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
     }
+    const existingView = this.views[viewName];
+    if (existingView && isEqual(existingView?.viewQuery, query)) {
+      return;
+    }
     const model = this.models[modelName];
     const newSchema = JSON.parse(JSON.stringify(model.schema));
     newSchema.name = viewName;
@@ -64,6 +68,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       model.extractedRelations,
       model.objectPaths,
       true,
+      query,
     );
     const dialect = this.sequelize.getDialect();
     const queryViewName = dialect === 'postgres' ? `"${viewName}"` : viewName;
@@ -94,6 +99,8 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
             throw err;
           }
         });
+    } else {
+      await this.models['Views'].findByIdAndUpdate(foundView._id, { query });
     }
   }
 

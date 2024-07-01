@@ -19,7 +19,7 @@ import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces/index.js';
-import { isNil } from 'lodash-es';
+import { isNil, isEqual } from 'lodash-es';
 
 // @ts-ignore
 import * as parseSchema from 'mongodb-schema';
@@ -75,15 +75,18 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!this.models[modelName]) {
       throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
     }
-    if (this.views[viewName]) {
+    const existingView = this.views[viewName];
+    if (existingView && isEqual(existingView?.viewQuery, query)) {
       return;
     }
+
     const model = this.models[modelName];
     const newSchema: Partial<ConduitSchema> = Object.assign({}, model.schema);
     //@ts-ignore
     newSchema.name = viewName;
     //@ts-ignore
     newSchema.collectionName = viewName;
+
     try {
       const viewModel = new MongooseSchema(
         this.grpcSdk,
@@ -92,17 +95,19 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         model.originalSchema,
         this,
         true,
+        query,
       );
-      this.views[viewName] = viewModel;
       await viewModel.model.createCollection({
         viewOn: model.originalSchema.collectionName,
         pipeline: JSON.parse(query.mongoQuery),
       });
+      this.views[viewName] = viewModel;
     } catch (e: any) {
       if (!e.message.includes('Cannot overwrite')) {
         throw e;
       }
     }
+
     const foundView = await this.models['Views'].findOne({ name: viewName });
     if (isNil(foundView)) {
       await this.models['Views'].create({
@@ -111,6 +116,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
         query,
       });
+    } else {
+      await this.models['Views'].findByIdAndUpdate(foundView._id, { query });
     }
   }
 

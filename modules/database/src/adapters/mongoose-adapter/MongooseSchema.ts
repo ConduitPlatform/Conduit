@@ -19,6 +19,7 @@ import { MongooseAdapter } from './index.js';
 import ConduitGrpcSdk, {
   ConduitSchema,
   Indexable,
+  RawQuery,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isNil } from 'lodash-es';
@@ -36,8 +37,12 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     readonly originalSchema: any,
     readonly adapter: MongooseAdapter,
     isView: boolean = false,
+    readonly viewQuery?: Indexable,
   ) {
     super(grpcSdk, adapter, isView);
+    if (viewQuery) {
+      this.viewQuery = viewQuery;
+    }
     if (!isNil(schema.collectionName)) {
       (schema.modelOptions as _ConduitSchemaOptions).collection = schema.collectionName; // @dirty-type-cast
     } else {
