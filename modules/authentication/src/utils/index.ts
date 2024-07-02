@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   Cookies,
   GrpcError,
   Headers,

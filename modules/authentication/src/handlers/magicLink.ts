@@ -1,7 +1,8 @@
 import { isEmpty, isNil } from 'lodash-es';
 import { TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   Email,

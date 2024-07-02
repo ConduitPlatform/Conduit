@@ -2,7 +2,7 @@ import path from 'path';
 import { Queue, Worker } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { GrpcError, sleep } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, GrpcError, sleep } from '@conduitplatform/grpc-sdk';
 import { Cluster, Redis } from 'ioredis';
 import { fileURLToPath } from 'node:url';
 

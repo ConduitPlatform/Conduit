@@ -1,5 +1,5 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider.js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { generateToken } from '../utils/index.js';
 import bcrypt from 'bcrypt';

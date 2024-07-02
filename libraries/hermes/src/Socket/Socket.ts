@@ -13,7 +13,7 @@ import {
   SocketPush,
 } from '../interfaces/index.js';
 import ObjectHash from 'object-hash';
-import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, ConduitError } from '@conduitplatform/grpc-sdk';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;

@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils/index.js';
 import { Relationship, ResourceDefinition } from '../models/index.js';
 import { IndexController } from './index.controller.js';

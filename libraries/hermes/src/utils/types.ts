@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitModel,
   ConduitModelFieldRelation,
 } from '@conduitplatform/grpc-sdk';

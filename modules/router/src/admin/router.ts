@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitError,
   ConduitRouteActions,
   GrpcError,

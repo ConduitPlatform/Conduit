@@ -1,5 +1,6 @@
 import { ModuleListResponse } from '@conduitplatform/commons';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   GrpcCallback,
   GrpcRequest,
   GrpcResponse,

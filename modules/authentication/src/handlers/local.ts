@@ -3,7 +3,8 @@ import { AuthUtils } from '../utils/index.js';
 import { TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
 import { Config } from '../config/index.js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   Email,

@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
 import { OAuth2 } from '../OAuth2.js';
 import { MicrosoftUser } from './microsoft.user.js';

@@ -1,7 +1,7 @@
 import { RedisManager } from './RedisManager.js';
 import { Cluster, Redis } from 'ioredis';
 import crypto from 'crypto';
-import ConduitGrpcSdk from '../index.js';
+import { ConduitGrpcSdk } from '../index.js';
 
 export class EventBus {
   private _clientSubscriber: Redis | Cluster;

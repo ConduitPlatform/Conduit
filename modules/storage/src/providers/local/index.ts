@@ -12,7 +12,7 @@ import {
   writeFile,
 } from 'fs';
 import { resolve } from 'path';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 
 export class LocalStorage implements IStorageProvider {
   _rootStoragePath: string;

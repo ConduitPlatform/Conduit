@@ -1,5 +1,5 @@
 import { SandboxedJob } from 'bullmq';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ActorIndex, ObjectIndex, ResourceDefinition } from '../models/index.js';
 import { IndexController, QueueController } from '../controllers/index.js';
 

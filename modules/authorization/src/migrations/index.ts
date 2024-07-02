@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { migrateObjectIndex } from './objectIndex.migration.js';
 import { migrateActorIndex } from './actorIndex.migration.js';
 import { migrateRelationships } from './relationship.migration.js';

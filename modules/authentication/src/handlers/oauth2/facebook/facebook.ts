@@ -1,5 +1,6 @@
 import { isNil } from 'lodash-es';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,

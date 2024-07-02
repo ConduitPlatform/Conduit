@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { UntypedArray } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, UntypedArray } from '@conduitplatform/grpc-sdk';
 
 export async function UserIdToUserAccessTokenSchemaMigration(grpcSdk: ConduitGrpcSdk) {
   const exists = await grpcSdk.databaseProvider!.columnExistence('AccessToken', [

@@ -1,5 +1,6 @@
 import { FileHandlers } from '../handlers/file.js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   TYPE,

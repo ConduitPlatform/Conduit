@@ -1,5 +1,6 @@
 import { NotificationTokensHandler } from '../handlers/notification-tokens.js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   TYPE,

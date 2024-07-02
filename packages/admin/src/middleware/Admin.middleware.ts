@@ -3,7 +3,7 @@ import { isNil } from 'lodash-es';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { isDev } from '../utils/middleware.js';
 import { ConduitRequest } from '@conduitplatform/hermes';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 
 export function getAdminMiddleware(conduit: ConduitCommons) {
   return async function adminMiddleware(

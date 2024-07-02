@@ -21,7 +21,7 @@ import {
   sqlTypesProcess,
 } from './utils/index.js';
 import { SequelizeAdapter } from './index.js';
-import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, Indexable } from '@conduitplatform/grpc-sdk';
 import { parseQuery, parseCreateRelations } from './parser/index.js';
 import { isNil } from 'lodash-es';
 import { processCreateQuery, unwrap } from './utils/pathUtils.js';

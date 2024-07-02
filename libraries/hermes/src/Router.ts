@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response, Router } from 'express';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteParameters,
   GrpcError,

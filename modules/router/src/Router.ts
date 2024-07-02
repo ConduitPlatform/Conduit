@@ -1,6 +1,7 @@
 import { NextFunction } from 'express';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   DatabaseProvider,
   GrpcCallback,
