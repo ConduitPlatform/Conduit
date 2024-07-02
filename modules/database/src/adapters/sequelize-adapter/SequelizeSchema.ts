@@ -59,8 +59,12 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       [key: string]: { parentKey: string; childKey: string };
     },
     readonly isView: boolean = false,
+    readonly viewQuery?: Indexable,
   ) {
     super(grpcSdk, adapter, isView);
+    if (viewQuery) {
+      this.viewQuery = viewQuery;
+    }
     this.excludedFields = [];
     this.idField = sqlTypesProcess(
       sequelize,

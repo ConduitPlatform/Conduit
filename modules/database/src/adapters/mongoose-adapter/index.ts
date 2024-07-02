@@ -19,7 +19,7 @@ import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces/index.js';
-import { isNil } from 'lodash-es';
+import { isNil, isEqual } from 'lodash-es';
 
 // @ts-ignore
 import * as parseSchema from 'mongodb-schema';
@@ -75,34 +75,37 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!this.models[modelName]) {
       throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
     }
-    if (this.views[viewName]) {
+    const existingView = this.views[viewName];
+    const isQueryEqual = isEqual(existingView?.viewQuery, query);
+    if (existingView && isQueryEqual) {
       return;
     }
+
     const model = this.models[modelName];
     const newSchema: Partial<ConduitSchema> = Object.assign({}, model.schema);
     //@ts-ignore
     newSchema.name = viewName;
     //@ts-ignore
     newSchema.collectionName = viewName;
-    try {
-      const viewModel = new MongooseSchema(
-        this.grpcSdk,
-        this.mongoose,
-        newSchema as ConduitSchema,
-        model.originalSchema,
-        this,
-        true,
-      );
-      this.views[viewName] = viewModel;
-      await viewModel.model.createCollection({
-        viewOn: model.originalSchema.collectionName,
-        pipeline: JSON.parse(query.mongoQuery),
-      });
-    } catch (e: any) {
-      if (!e.message.includes('Cannot overwrite')) {
-        throw e;
-      }
+
+    if (existingView && !isQueryEqual) {
+      await this.deleteView(viewName);
     }
+    const viewModel = new MongooseSchema(
+      this.grpcSdk,
+      this.mongoose,
+      newSchema as ConduitSchema,
+      model.originalSchema,
+      this,
+      true,
+      query,
+    );
+    await viewModel.model.createCollection({
+      viewOn: model.originalSchema.collectionName,
+      pipeline: JSON.parse(query.mongoQuery),
+    });
+    this.views[viewName] = viewModel;
+
     const foundView = await this.models['Views'].findOne({ name: viewName });
     if (isNil(foundView)) {
       await this.models['Views'].create({
@@ -131,6 +134,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
     await this.models['Views'].deleteOne({ name: viewName });
     delete this.views[viewName];
+    delete this.mongoose.models[viewName];
   }
 
   async introspectDatabase(): Promise<ConduitSchema[]> {

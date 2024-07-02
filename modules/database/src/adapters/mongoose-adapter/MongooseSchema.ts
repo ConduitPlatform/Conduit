@@ -36,8 +36,12 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     readonly originalSchema: any,
     readonly adapter: MongooseAdapter,
     isView: boolean = false,
+    readonly viewQuery?: Indexable,
   ) {
     super(grpcSdk, adapter, isView);
+    if (viewQuery) {
+      this.viewQuery = viewQuery;
+    }
     if (!isNil(schema.collectionName)) {
       (schema.modelOptions as _ConduitSchemaOptions).collection = schema.collectionName; // @dirty-type-cast
     } else {
