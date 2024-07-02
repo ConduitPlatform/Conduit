@@ -90,7 +90,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
     if (existingView && !isQueryEqual) {
       await this.deleteView(viewName);
-      delete this.mongoose.models[viewName];
     }
     const viewModel = new MongooseSchema(
       this.grpcSdk,
@@ -135,6 +134,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
     await this.models['Views'].deleteOne({ name: viewName });
     delete this.views[viewName];
+    delete this.mongoose.models[viewName];
   }
 
   async introspectDatabase(): Promise<ConduitSchema[]> {
