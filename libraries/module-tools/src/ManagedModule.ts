@@ -2,7 +2,7 @@ import { ConduitServiceModule, ConfigController, GrpcServer } from './classes/in
 import { kebabCase } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
-import { ConduitService } from './interfaces/index.js';
+import { ConduitService, ModuleLifecycleStage } from './interfaces/index.js';
 import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcResponse,
@@ -13,7 +13,6 @@ import { initializeSdk, merge } from './utilities/index.js';
 import { convictConfigParser } from './utilities/convictConfigParser.js';
 import { RoutingManager } from './routing/index.js';
 import { RoutingController } from './routing/RoutingController.js';
-import { ModuleLifecycleStage } from './interfaces/index.js';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
   readonly config?: convict.Config<T>;

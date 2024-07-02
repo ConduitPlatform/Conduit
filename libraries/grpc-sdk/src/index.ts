@@ -75,8 +75,10 @@ export default class ConduitGrpcSdk {
     serviceHealthStatusGetter: () => HealthCheckStatus = () => HealthCheckStatus.SERVING,
   ) {
     if (logger) {
+      console.log('Setting logger');
       ConduitGrpcSdk._Logger = logger;
     } else {
+      console.log('No logger');
       ConduitGrpcSdk._Logger = console;
     }
 

@@ -1,4 +1,4 @@
-import IORedis, { Cluster, ClusterOptions, Redis, RedisOptions } from 'ioredis';
+import { Cluster, ClusterOptions, Redis, RedisOptions } from 'ioredis';
 
 export class RedisManager {
   redisConnection:
@@ -26,9 +26,9 @@ export class RedisManager {
         nodes: { host: string; port: number }[];
         options: ClusterOptions;
       };
-      return new IORedis.Cluster(clusterOptions.nodes, { ...clusterOptions.options });
+      return new Cluster(clusterOptions.nodes, { ...clusterOptions.options });
     } else {
-      return new IORedis.Redis({ ...(this.redisConnection as RedisOptions), ...options });
+      return new Redis({ ...(this.redisConnection as RedisOptions), ...options });
     }
   }
 }
