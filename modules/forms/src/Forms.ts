@@ -77,7 +77,7 @@ export default class Forms extends ManagedModule<Config> {
     ConduitGrpcSdk.Metrics?.set('forms_total', formsTotal);
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       return this.database

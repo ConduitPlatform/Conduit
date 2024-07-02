@@ -29,6 +29,7 @@ import {
   SetNotificationTokenResponse,
 } from './protoTypes/push-notifications.js';
 import { fileURLToPath } from 'node:url';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -190,7 +191,7 @@ export default class PushNotifications extends ManagedModule<Config> {
     return callback(null, { message: 'Ok' });
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       if (Object.keys(modelInstance.fields).length !== 0) {

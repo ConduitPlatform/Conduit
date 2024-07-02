@@ -138,7 +138,7 @@ export default class Email extends ManagedModule<Config> {
     return callback(null, { sentMessageInfo });
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       return this.database

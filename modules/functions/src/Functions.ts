@@ -56,7 +56,7 @@ export default class Functions extends ManagedModule<Config> {
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       return this.database

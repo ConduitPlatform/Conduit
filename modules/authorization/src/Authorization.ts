@@ -301,7 +301,7 @@ export default class Authorization extends ManagedModule<Config> {
     return resource;
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       return this.database
