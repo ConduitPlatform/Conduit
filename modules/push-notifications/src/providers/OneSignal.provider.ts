@@ -6,6 +6,7 @@ import {
 } from '../interfaces/ISendNotification.js';
 import { createConfiguration, DefaultApi, Notification } from '@onesignal/node-onesignal';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { NotificationToken } from '../models/index.js';
 
 export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettings> {
   private client?: DefaultApi;
@@ -42,7 +43,12 @@ export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettin
         include_player_ids: Array.isArray(token) ? token : [token],
       };
     }
-    await this.client!.createNotification(notification);
+    const response = await this.client!.createNotification(notification);
+    if (response.errors?.invalid_player_ids?.length) {
+      await NotificationToken.getInstance().deleteMany({
+        token: { $in: response.errors.invalid_player_ids },
+      });
+    }
     return;
   }
 
