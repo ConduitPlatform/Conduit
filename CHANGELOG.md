@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.7](https://github.com/ConduitPlatform/Conduit/compare/v0.16.6...v0.16.7) (2024-07-03)
+
 ### [0.16.6](https://github.com/ConduitPlatform/Conduit/compare/v0.16.5...v0.16.6) (2024-07-02)
 
 
