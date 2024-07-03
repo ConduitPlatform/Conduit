@@ -7,7 +7,7 @@ import {
   SASProtocol,
 } from '@azure/storage-blob';
 import fs from 'fs';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { streamToBuffer } from '../../utils/index.js';
 import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry.js';
 

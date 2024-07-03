@@ -1,9 +1,10 @@
 import path from 'path';
 import { EventEmitter } from 'events';
-import { camelCase } from 'lodash-es';
+import { camelCase } from 'lodash';
 import { ServerWritableStream } from '@grpc/grpc-js';
 import { GrpcServer } from './GrpcServer.js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   GrpcCallback,
   GrpcRequest,
   GrpcResponse,

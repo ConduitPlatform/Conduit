@@ -37,7 +37,7 @@ import {
 
 type UrlRemap = { [url: string]: string };
 
-export default class ConduitGrpcSdk {
+class ConduitGrpcSdk {
   private static middleware: any[] = [];
   public readonly name: string;
   public readonly instance: string;
@@ -571,6 +571,7 @@ export default class ConduitGrpcSdk {
   }
 }
 
+export { ConduitGrpcSdk };
 export * from './interfaces/index.js';
 export * from './classes/index.js';
 export * from './modules/index.js';

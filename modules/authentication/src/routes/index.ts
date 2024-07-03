@@ -1,5 +1,6 @@
 import { LocalHandlers } from '../handlers/local.js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitReturn,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,

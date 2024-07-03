@@ -1,5 +1,5 @@
 import { Cluster, Redis } from 'ioredis';
-import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, ConduitError } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { isNil } from 'lodash-es';
 

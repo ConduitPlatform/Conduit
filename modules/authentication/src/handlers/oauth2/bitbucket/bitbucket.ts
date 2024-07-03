@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
 import { BitbucketUser } from './bitbucket.user.js';
 import { OAuth2 } from '../OAuth2.js';

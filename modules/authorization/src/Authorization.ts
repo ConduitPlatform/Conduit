@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   CreateRelationsRequest,
   DatabaseProvider,
   GrpcRequest,

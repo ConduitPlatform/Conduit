@@ -3,7 +3,7 @@ import {
   ISendNotificationToManyDevices,
 } from '../interfaces/ISendNotification.js';
 import { Notification, NotificationToken, User } from '../models/index.js';
-import ConduitGrpcSdk, { PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
 import { validateNotification } from './utils/index.js';
 import { isNil, keyBy } from 'lodash-es';
 

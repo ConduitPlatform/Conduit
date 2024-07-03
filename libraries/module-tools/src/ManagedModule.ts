@@ -1,9 +1,10 @@
 import { ConduitServiceModule, ConfigController, GrpcServer } from './classes/index.js';
-import { kebabCase } from 'lodash-es';
+import { kebabCase } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 import { ConduitService, ModuleLifecycleStage } from './interfaces/index.js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   GrpcRequest,
   GrpcResponse,
   SetConfigRequest,

@@ -7,7 +7,7 @@ import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTem
 import { UpdateEmailTemplate } from '../email-provider/interfaces/UpdateEmailTemplate.js';
 import { Attachment } from 'nodemailer/lib/mailer';
 import { Template } from '../email-provider/interfaces/Template.js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 
 export class EmailService {
   constructor(private emailer: EmailProvider) {}

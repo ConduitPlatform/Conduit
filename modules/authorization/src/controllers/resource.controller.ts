@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ResourceDefinition } from '../models/index.js';
 import { IndexController } from './index.controller.js';
 import { RelationsController } from './relations.controller.js';

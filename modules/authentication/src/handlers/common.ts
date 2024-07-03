@@ -1,6 +1,7 @@
 import { isNil } from 'lodash-es';
 import moment from 'moment';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,

@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { Indexable, Query } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, Indexable, Query } from '@conduitplatform/grpc-sdk';
 import { AccessToken, RefreshToken, User } from '../models/index.js';
 import moment from 'moment';
 import { AuthUtils } from '../utils/index.js';

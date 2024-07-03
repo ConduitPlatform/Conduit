@@ -1,6 +1,6 @@
 import { IRouterMatcher, NextFunction, Request, Response, Router } from 'express';
 import { ConduitRouter } from '../Router.js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ProxyRoute, TypeRegistry } from '../classes/index.js';
 import { ProxyRouteActions } from '../interfaces/index.js';
 

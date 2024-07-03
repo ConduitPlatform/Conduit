@@ -4,7 +4,7 @@ import {
   ISendNotification,
   ISendNotificationToManyDevices,
 } from '../interfaces/ISendNotification.js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { getMessaging, Message, Messaging } from 'firebase-admin/messaging';
 import { cert, initializeApp, ServiceAccount } from 'firebase-admin/app';
 import { NotificationToken } from '../models/index.js';

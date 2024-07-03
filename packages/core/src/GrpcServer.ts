@@ -1,5 +1,6 @@
 import { ConduitCommons } from '@conduitplatform/commons';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   GrpcCallback,
   GrpcRequest,
   HealthCheckStatus,
