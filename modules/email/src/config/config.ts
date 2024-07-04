@@ -84,4 +84,47 @@ export default {
       },
     },
   },
+  storeEmails: {
+    database: {
+      enabled: {
+        doc: 'Defines if emails should be stored in database',
+        format: 'Boolean',
+        default: false,
+      },
+    },
+    storage: {
+      enabled: {
+        doc: 'Defines if emails should be stored in storage',
+        format: 'Boolean',
+        default: false,
+      },
+      container: {
+        doc: 'The storage container for emails',
+        format: 'String',
+        default: 'conduit',
+      },
+      folder: {
+        doc: 'The storage folder for emails',
+        format: 'String',
+        default: 'cnd-stored-emails',
+      },
+    },
+    cleanupSettings: {
+      enabled: {
+        doc: 'Settings for deleting old stored emails',
+        format: 'Boolean',
+        default: false,
+      },
+      grace: {
+        doc: 'Grace period in milliseconds before deleting stored emails',
+        format: 'Number',
+        default: 6 * 60 * 60 * 1000,
+      },
+      limit: {
+        doc: 'Amount of stored emails to be deleted upon cleanup',
+        format: 'Number',
+        default: 100,
+      },
+    },
+  },
 };

@@ -1,5 +1,5 @@
 import { isEmpty, isNil } from 'lodash-es';
-import { EmailTemplate } from '../models/index.js';
+import { EmailTemplate, SentEmail } from '../models/index.js';
 import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces/index.js';
 import handlebars from 'handlebars';
 import { EmailProvider } from '../email-provider/index.js';
@@ -7,10 +7,18 @@ import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTem
 import { UpdateEmailTemplate } from '../email-provider/interfaces/UpdateEmailTemplate.js';
 import { Attachment } from 'nodemailer/lib/mailer';
 import { Template } from '../email-provider/interfaces/Template.js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
+import { Config } from '../config/index.js';
+import { randomUUID } from 'node:crypto';
+import { SentMessageInfo } from 'nodemailer';
+import { status } from '@grpc/grpc-js';
 
 export class EmailService {
-  constructor(private emailer: EmailProvider) {}
+  constructor(
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private emailer: EmailProvider,
+  ) {}
 
   updateProvider(emailer: EmailProvider) {
     this.emailer = emailer;
@@ -64,7 +72,7 @@ export class EmailService {
 
     let subjectString = subject!;
     let bodyString = body!;
-    let templateFound: EmailTemplate | null;
+    let templateFound: EmailTemplate | null = null;
     let senderAddress: string | undefined;
     if (template) {
       templateFound = await EmailTemplate.getInstance().findOne({ name: template });
@@ -128,6 +136,43 @@ export class EmailService {
     if (params.attachments) {
       builder.addAttachments(params.attachments as Attachment[]);
     }
-    return this.emailer.sendEmail(builder);
+    const sentMessageInfo = await this.emailer.sendEmail(builder);
+    const config = ConfigController.getInstance().config as Config;
+    const emailInfo = {
+      messageId: sentMessageInfo?.messageId,
+      sender: sender,
+      receiver: email,
+      cc: params.cc,
+      replyTo: params.replyTo,
+      sendingDomain: params.sendingDomain,
+      template: templateFound?._id,
+    };
+    if (config.storeEmails.database.enabled) {
+      await SentEmail.getInstance().create(emailInfo);
+    } else if (config.storeEmails.storage.enabled) {
+      await this.grpcSdk.storage!.createFile(
+        randomUUID(),
+        JSON.stringify({ templateId: templateFound?._id, ...params }),
+        config.storeEmails.storage.folder,
+        config.storeEmails.storage.container,
+      );
+    }
+    return sentMessageInfo;
+  }
+
+  async resendEmail(fileId: string) {
+    if (!this.grpcSdk.isAvailable('storage')) {
+      throw new GrpcError(status.INTERNAL, 'Storage is not available.');
+    }
+    const emailData = await this.grpcSdk.storage!.getFileData(fileId);
+    if (!emailData) {
+      throw new GrpcError(status.NOT_FOUND, 'File not found.');
+    }
+    const data = JSON.parse(emailData.data);
+    return this.sendEmail(data.templateId, data);
+  }
+
+  async getEmailStatus(messageId: string) {
+    return this.emailer._transport?.getEmailStatus(messageId);
   }
 }

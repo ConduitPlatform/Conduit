@@ -11,6 +11,7 @@ import {
   SendgridTemplate,
   TemplateVersion,
 } from '../../interfaces/sendgrid/SendgridTemplate.js';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 
 import sgTransport from 'nodemailer-sendgrid';
 
@@ -135,5 +136,12 @@ export class SendgridProvider extends EmailProviderClass {
 
   getBuilder() {
     return new SendgridMailBuilder();
+  }
+
+  async getEmailStatus(messageId: string): Promise<Indexable> {
+    return this._sgClient.request({
+      method: 'GET',
+      url: `/v3/messages/${messageId}`,
+    });
   }
 }

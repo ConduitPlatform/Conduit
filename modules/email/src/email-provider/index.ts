@@ -11,6 +11,7 @@ import { MandrillProvider } from './transports/mandrill/MandrilProvider.js';
 import { SendgridProvider } from './transports/sendgrid/SendgridProvider.js';
 import { SmtpProvider } from './transports/smtp/SmtpProvider.js';
 import { ConfigController } from '@conduitplatform/module-tools';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 
 export class EmailProvider {
   _transport?: EmailProviderClass;
@@ -89,5 +90,12 @@ export class EmailProvider {
       throw new Error('Email  transport not initialized!');
     }
     return this._transport.sendEmail(email.getMailObject());
+  }
+
+  getEmailStatus(messageId: string): Promise<Indexable> {
+    if (!this._transport) {
+      throw new Error('Email transport not initialized!');
+    }
+    return this._transport.getEmailStatus(messageId);
   }
 }

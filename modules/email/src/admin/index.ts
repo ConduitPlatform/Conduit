@@ -381,6 +381,18 @@ export class AdminHandlers {
     return { message: 'Email sent' };
   }
 
+  async resendEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return (await this.emailService.resendEmail(
+      call.request.params.fileId,
+    )) as UnparsedRouterResponse;
+  }
+
+  async getEmailStatus(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return (await this.emailService.getEmailStatus(
+      call.request.params.messageId,
+    )) as UnparsedRouterResponse;
+  }
+
   private registerAdminRoutes() {
     this.routingManager.clear();
     this.routingManager.route(
@@ -528,6 +540,34 @@ export class AdminHandlers {
         message: ConduitString.Required,
       }),
       this.sendEmail.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/resend',
+        action: ConduitRouteActions.POST,
+        description: `Resends an email (only if stored in storage).`,
+        bodyParams: {
+          fileId: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('Resend an email', {
+        message: ConduitString.Required,
+      }),
+      this.resendEmail.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/status',
+        action: ConduitRouteActions.GET,
+        description: `Returns the latest status of a sent email.`,
+        queryParams: {
+          messageId: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetEmailStatus', {
+        status: ConduitString.Required,
+      }),
+      this.getEmailStatus.bind(this),
     );
     this.routingManager.registerRoutes();
   }

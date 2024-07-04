@@ -12,6 +12,7 @@ import { MandrillTemplate } from '../../interfaces/mandrill/MandrillTemplate.js'
 // @ts-expect-error
 // missing typings for nodemailer-mandrill-transport
 import mandrillTransport from 'nodemailer-mandrill-transport';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 
 export class MandrillProvider extends EmailProviderClass {
   private _mandrillSdk?: Mandrill;
@@ -118,5 +119,17 @@ export class MandrillProvider extends EmailProviderClass {
 
   getBuilder() {
     return new MandrillBuilder();
+  }
+
+  async getEmailStatus(messageId: string): Promise<Indexable> {
+    return new Promise<Indexable>(
+      resolve =>
+        this._mandrillSdk?.messages.info(
+          {
+            id: messageId,
+          },
+          resolve as (json: object) => void,
+        ),
+    );
   }
 }
