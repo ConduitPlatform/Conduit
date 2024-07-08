@@ -104,17 +104,6 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   async preConfig(config: Config) {
-    const verifyWithLink = config.local.verification.link_verification;
-    const verifyWithCode = config.local.verification.code_verification;
-    const sendEmail = config.local.verification.send_email;
-    if (
-      (verifyWithLink && verifyWithCode) ||
-      (sendEmail && !verifyWithLink && !verifyWithCode)
-    ) {
-      throw new Error(
-        'Both link_verification and code_verification cannot be enabled/disabled at the same time.',
-      );
-    }
     if (config.captcha?.hasOwnProperty('provider')) {
       delete (config as Config & { captcha: { provider?: string } }).captcha.provider;
     }

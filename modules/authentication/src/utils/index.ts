@@ -249,11 +249,6 @@ export namespace AuthUtils {
   }
 
   export function generateOtp(): string {
-    return generate(4, {
-      digits: true,
-      lowerCaseAlphabets: false,
-      upperCaseAlphabets: false,
-      specialChars: false,
-    });
+    return Math.floor(1000 + Math.random() * 9000).toString();
   }
 }

@@ -16,15 +16,11 @@ export default {
         format: 'Boolean',
         default: false,
       },
-      link_verification: {
-        doc: 'Defines if the verification should be done via a link',
-        format: 'Boolean',
-        default: false,
-      },
-      code_verification: {
-        doc: 'Defines if the verification should be done via a code',
-        format: 'Boolean',
-        default: false,
+      method: {
+        doc: 'Defines if verification should be done via link or code',
+        format: 'String',
+        default: 'link',
+        enum: ['link', 'code'],
       },
       redirect_uri: {
         doc: 'Defines where the user should be redirected after verification',

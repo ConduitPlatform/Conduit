@@ -150,7 +150,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.changeEmail.bind(this),
     );
 
-    if (config.local.verification.code_verification) {
+    if (config.local.verification.method === 'code') {
       routingManager.route(
         {
           path: '/local/verify-email',
@@ -687,7 +687,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       },
     });
 
-    if (config.local.verification.link_verification) {
+    if (config.local.verification.method === 'link') {
       const serverConfig = await this.grpcSdk.config.get('router');
       const url = serverConfig.hostUrl;
       const result = { verificationToken, hostUrl: url };
