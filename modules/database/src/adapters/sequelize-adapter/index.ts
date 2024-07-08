@@ -1,5 +1,6 @@
 import { Sequelize } from 'sequelize';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitModel,
   ConduitSchema,
   GrpcError,

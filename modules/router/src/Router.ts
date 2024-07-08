@@ -1,6 +1,7 @@
 import { NextFunction } from 'express';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   DatabaseProvider,
   GrpcCallback,
@@ -359,7 +360,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     this._internalRouter.registerConduitRoute(route);
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.grpcSdk.database!);
       return this.grpcSdk

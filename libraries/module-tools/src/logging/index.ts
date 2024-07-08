@@ -1,10 +1,11 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   IConduitLogger,
   Indexable,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import winston, { format, LogCallback, Logger } from 'winston';
-import { isEmpty } from 'lodash-es';
+import { isEmpty } from 'lodash';
 import { get } from 'http';
 import LokiTransport from 'winston-loki';
 import { linearBackoffTimeoutAsync } from '../utilities/index.js';

@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   HealthCheckResponse,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';

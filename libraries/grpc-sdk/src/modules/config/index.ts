@@ -7,7 +7,7 @@ import {
   RegisterModuleRequest,
 } from '../../protoUtils/index.js';
 import { Indexable } from '../../interfaces/index.js';
-import ConduitGrpcSdk from '../../index.js';
+import { ConduitGrpcSdk } from '../../index.js';
 import { ClusterOptions, RedisOptions } from 'ioredis';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {

@@ -1,5 +1,6 @@
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   GrpcCallback,
   GrpcRequest,
   GrpcResponse,
@@ -66,7 +67,7 @@ export default class ConfigManager implements IConfigManager {
     const __dirname = path.dirname(__filename);
 
     await server.addService(
-      path.resolve(__dirname, '../../src/core.proto'),
+      path.resolve(__dirname, '../core.proto'),
       'conduit.core.Config',
       {
         get: this.getGrpc.bind(this),

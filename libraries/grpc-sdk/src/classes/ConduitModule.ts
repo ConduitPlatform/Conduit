@@ -11,7 +11,7 @@ import {
   HealthDefinition,
 } from '../protoUtils/index.js';
 import { EventEmitter } from 'events';
-import ConduitGrpcSdk from '../index.js';
+import { ConduitGrpcSdk } from '../index.js';
 
 export class ConduitModule<T extends CompatServiceDefinition> {
   protected channel?: Channel;

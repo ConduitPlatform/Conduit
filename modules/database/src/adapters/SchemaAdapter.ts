@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { MongooseSchema } from './mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from './sequelize-adapter/SequelizeSchema.js';
 import { DatabaseAdapter } from './DatabaseAdapter.js';

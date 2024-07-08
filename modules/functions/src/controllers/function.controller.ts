@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitMiddlewareOptions,
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,

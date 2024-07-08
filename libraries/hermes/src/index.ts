@@ -2,7 +2,8 @@ import express, { Express, NextFunction, Request, Response, Router } from 'expre
 import { RestController } from './Rest/index.js';
 import { GraphQLController } from './GraphQl/GraphQL.js';
 import { SocketController } from './Socket/Socket.js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitError,
   IConduitLogger,
   UntypedArray,

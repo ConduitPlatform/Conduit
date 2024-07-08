@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { migrateChatRoom } from './chatRoom.migrate.js';
 import { migrateChatMessages } from './chatMessage.migrate.js';
 

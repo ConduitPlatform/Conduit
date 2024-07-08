@@ -1,5 +1,6 @@
 import { OAuth2 } from '../OAuth2.js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,

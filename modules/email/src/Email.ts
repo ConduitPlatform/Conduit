@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
@@ -188,7 +189,7 @@ export default class Email extends ManagedModule<Config> {
     return callback(null, { statusInfo: JSON.stringify(statusInfo) });
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       return this.database

@@ -1,5 +1,6 @@
 import { isArray, isBoolean, isNumber, isString } from 'lodash-es';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitModelField,
   ConduitSchema,
   Indexable,

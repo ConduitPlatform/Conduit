@@ -1,5 +1,6 @@
 import { CmsHandlers } from '../handlers/cms/crud.handler.js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
   IConduitLogger,

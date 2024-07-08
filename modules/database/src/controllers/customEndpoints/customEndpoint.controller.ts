@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { UntypedArray } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { CustomEndpointHandler } from '../../handlers/CustomEndpoints/customEndpoint.handler.js';
 import { PopulatedCustomEndpoint } from '../../interfaces/index.js';
 import { DatabaseRoutes } from '../../routes/index.js';

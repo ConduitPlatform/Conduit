@@ -1,6 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash-es';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models/index.js';
 import { verifyToken } from '../utils/auth.js';

@@ -1,6 +1,7 @@
 import { isNaN, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitError,
   ConduitRouteActions,
   GrpcCallback,

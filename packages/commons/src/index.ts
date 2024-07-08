@@ -1,5 +1,5 @@
 import { IConduitAdmin, IConduitCore, IConfigManager } from './modules/index.js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 
 export class ConduitCommons {
   private static _instance: ConduitCommons;

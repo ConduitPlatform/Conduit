@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { RegisteredModule } from '@conduitplatform/commons';
 
 export class ServiceRegistry {

@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
 import { TwitchUser } from './twitch.user.js';
 import twitchParameters from './twitch.json' assert { type: 'json' };

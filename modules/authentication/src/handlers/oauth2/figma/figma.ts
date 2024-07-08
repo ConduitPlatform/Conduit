@@ -1,5 +1,5 @@
 import { isNil } from 'lodash-es';
-import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios, { AxiosRequestConfig } from 'axios';
 import { OAuth2 } from '../OAuth2.js';

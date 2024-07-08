@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   DatabaseProvider,
   GrpcCallback,
   GrpcError,
@@ -244,7 +245,7 @@ export default class Chat extends ManagedModule<Config> {
     });
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       //TODO: add support for multiple schemas types

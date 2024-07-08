@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   DatabaseProvider,
   GrpcError,
   Indexable,

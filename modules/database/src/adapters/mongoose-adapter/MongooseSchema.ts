@@ -16,7 +16,8 @@ import {
   SingleDocQuery,
 } from '../../interfaces/index.js';
 import { MongooseAdapter } from './index.js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitSchema,
   Indexable,
   UntypedArray,

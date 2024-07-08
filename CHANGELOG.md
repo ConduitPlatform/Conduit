@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.7](https://github.com/ConduitPlatform/Conduit/compare/v0.16.6...v0.16.7) (2024-07-03)
+
+### [0.16.6](https://github.com/ConduitPlatform/Conduit/compare/v0.16.5...v0.16.6) (2024-07-02)
+
+
+### Features
+
+* **grpc-sdk,module-tools:** support commonjs projects ([#1089](https://github.com/ConduitPlatform/Conduit/issues/1089)) ([28e62ff](https://github.com/ConduitPlatform/Conduit/commit/28e62ff2e0f6fddf0563941739579506579e9ac9))
+* **push-notifications:** delete expired tokens for one-signal provider ([#1088](https://github.com/ConduitPlatform/Conduit/issues/1088)) ([e88211f](https://github.com/ConduitPlatform/Conduit/commit/e88211faee4da4a26aa532dfa0684cd96aff807f))
+
+
+### Bug Fixes
+
+* **database:** view fixes ([#1086](https://github.com/ConduitPlatform/Conduit/issues/1086)) ([f82aa42](https://github.com/ConduitPlatform/Conduit/commit/f82aa4234600bbc696def0d75e2aad837cec1c23))
+
 ### [0.16.5](https://github.com/ConduitPlatform/Conduit/compare/v0.16.4...v0.16.5) (2024-05-29)
 
 

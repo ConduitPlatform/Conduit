@@ -15,7 +15,7 @@ import { Readable } from 'stream';
 import { streamToBuffer } from '../../utils/index.js';
 import fs from 'fs';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry.js';
 

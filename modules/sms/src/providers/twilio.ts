@@ -1,5 +1,5 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider.js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import twilio from 'twilio';
 
 export class TwilioProvider implements ISmsProvider {

@@ -9,7 +9,8 @@ import { processParams } from './utils/SimpleTypeParamUtils.js';
 import { importDbTypes } from '../utils/types.js';
 import { ConduitRouter } from '../Router.js';
 import { errorHandler } from './utils/Request.utils.js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitModel,
   ConduitReturn,
   ConduitRouteActions,

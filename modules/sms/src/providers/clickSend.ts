@@ -1,5 +1,5 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider.js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { SMSApi, SmsMessage, SmsMessageCollection } from 'clicksend';
 import { generateToken } from '../utils/index.js';
 import bcrypt from 'bcrypt';

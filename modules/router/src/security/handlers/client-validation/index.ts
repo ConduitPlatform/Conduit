@@ -1,6 +1,7 @@
 import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash-es';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitError,
   DatabaseProvider,
 } from '@conduitplatform/grpc-sdk';

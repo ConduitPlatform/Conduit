@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
@@ -374,7 +375,7 @@ export default class Storage extends ManagedModule<Config> {
     callback(null, response);
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       if (Object.keys(modelInstance.fields).length !== 0) {

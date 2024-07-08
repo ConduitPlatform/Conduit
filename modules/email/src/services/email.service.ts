@@ -7,11 +7,10 @@ import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTem
 import { UpdateEmailTemplate } from '../email-provider/interfaces/UpdateEmailTemplate.js';
 import { Attachment } from 'nodemailer/lib/mailer';
 import { Template } from '../email-provider/interfaces/Template.js';
-import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { Config } from '../config/index.js';
 import { randomUUID } from 'node:crypto';
-import { SentMessageInfo } from 'nodemailer';
 import { status } from '@grpc/grpc-js';
 
 export class EmailService {

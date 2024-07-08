@@ -5,7 +5,7 @@ import {
   Payload,
   ProviderConfig,
 } from '../interfaces/index.js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import linkedInParameters from './linkedin.json' assert { type: 'json' };
 import axios from 'axios';
 import { LinkedInUser } from './linkedin.user.js';

@@ -10,7 +10,8 @@ import { SwaggerGenerator } from './Swagger.js';
 import { extractRequestData, validateParams } from './util.js';
 import { createHashKey, extractCaching } from '../cache.utils.js';
 import { ConduitRouter } from '../Router.js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitError,
   ConduitRouteActions,
   TYPE,

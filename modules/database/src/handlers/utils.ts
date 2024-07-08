@@ -1,5 +1,5 @@
 import { Schema } from '../interfaces/index.js';
-import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 
 export function constructSortObj(sort: string[]) {
