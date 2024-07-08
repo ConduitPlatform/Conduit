@@ -16,7 +16,6 @@ import { v4 as uuid } from 'uuid';
 import escapeStringRegexp from 'escape-string-regexp';
 import { FetchMembersParams } from '../interfaces/index.js';
 import { ConfigController } from '@conduitplatform/module-tools';
-import { generate } from 'otp-generator';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
