@@ -216,7 +216,7 @@ export default class Email extends ManagedModule<Config> {
     this.emailCleanupQueue = new Queue('email-cleanup-queue', {
       connection: this.redisConnection,
     });
-
+    await this.emailCleanupQueue.drain(true);
     if (
       (storeInStorage || storeInDatabase) &&
       config.storeEmails.cleanupSettings.enabled
@@ -224,14 +224,21 @@ export default class Email extends ManagedModule<Config> {
       const processorFile = path.normalize(
         path.join(__dirname, 'jobs', 'cleanupStoredEmails.js'),
       );
-      const worker = new Worker('email-cleanup-worker', processorFile, {
+      const worker = new Worker('email-cleanup-queue', processorFile, {
         connection: this.redisConnection,
+        removeOnComplete: {
+          age: 3600,
+          count: 1000,
+        },
+        removeOnFail: {
+          age: 24 * 3600,
+        },
       });
       worker.on('active', job => {
         ConduitGrpcSdk.Logger.info(`Stored email cleanup job ${job.id} started`);
       });
-      worker.on('completed', job => {
-        ConduitGrpcSdk.Logger.info(`Stored email cleanup ${job.id} completed`);
+      worker.on('completed', () => {
+        ConduitGrpcSdk.Logger.info(`Stored email cleanup completed`);
       });
       worker.on('error', (error: Error) => {
         ConduitGrpcSdk.Logger.error(`Stored email cleanup error:`);
@@ -244,15 +251,14 @@ export default class Email extends ManagedModule<Config> {
       });
       await this.emailCleanupQueue.add(
         'cleanup',
-        {},
+        { config },
         {
           repeat: {
-            every: config.storeEmails.cleanupSettings.grace,
+            every: config.storeEmails.cleanupSettings.repeat,
           },
         },
       );
     } else if (!config.storeEmails.cleanupSettings.enabled) {
-      await this.emailCleanupQueue.drain(true);
       await this.emailCleanupQueue.close();
     }
   }

@@ -115,8 +115,8 @@ export default {
         format: 'Boolean',
         default: false,
       },
-      grace: {
-        doc: 'Grace period in milliseconds before deleting stored emails',
+      repeat: {
+        doc: 'Time in milliseconds to repeat the cleanup job',
         format: 'Number',
         default: 6 * 60 * 60 * 1000,
       },

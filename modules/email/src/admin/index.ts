@@ -389,9 +389,10 @@ export class AdminHandlers {
   }
 
   async getEmailStatus(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    return (await this.emailService.getEmailStatus(
+    const statusInfo = await this.emailService.getEmailStatus(
       call.request.params.messageId,
-    )) as UnparsedRouterResponse;
+    );
+    return { statusInfo };
   }
 
   private registerAdminRoutes() {
@@ -566,7 +567,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('GetEmailStatus', {
-        status: ConduitString.Required,
+        statusInfo: ConduitJson.Required,
       }),
       this.getEmailStatus.bind(this),
     );

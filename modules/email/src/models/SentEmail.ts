@@ -14,7 +14,7 @@ const schema: ConduitModel = {
   },
   sender: {
     type: TYPE.String,
-    required: true,
+    required: false,
   },
   receiver: {
     type: TYPE.String,
