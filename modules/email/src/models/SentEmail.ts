@@ -1,15 +1,10 @@
 import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
-import { EmailTemplate } from './EmailTemplate.schema.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   messageId: {
     type: TYPE.String,
-    required: false,
-  },
-  template: {
-    type: TYPE.ObjectId,
     required: false,
   },
   sender: {
@@ -52,7 +47,6 @@ export class SentEmail extends ConduitActiveSchema<SentEmail> {
   private static _instance: SentEmail;
   _id: string;
   messageId?: string;
-  template?: string | EmailTemplate;
   sender: string;
   receiver: string;
   cc?: string[];

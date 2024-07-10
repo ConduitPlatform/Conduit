@@ -2,12 +2,19 @@ import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { Config } from '../config/index.js';
 import { SentEmail } from '../models/index.js';
 import { SandboxedJob } from 'bullmq';
+import path from 'path';
 
 interface File {
   _id: string;
   container: string;
   folder: string;
 }
+
+function normalizeFolderPath(folderPath?: string) {
+  if (!folderPath || folderPath.trim() === '' || folderPath.trim() === '/') return '/';
+  return `${path.normalize(folderPath.trim()).replace(/^\/|\/$/g, '')}/`;
+}
+
 let grpcSdk: ConduitGrpcSdk | undefined = undefined;
 
 export default async (job: SandboxedJob<{ config: Config }>) => {
@@ -29,7 +36,7 @@ export default async (job: SandboxedJob<{ config: Config }>) => {
       .database!.findMany<File>(
         'File',
         {
-          folder: config.storeEmails.storage.folder,
+          folder: normalizeFolderPath(config.storeEmails.storage.folder),
           container: config.storeEmails.storage.container,
         },
         '_id',

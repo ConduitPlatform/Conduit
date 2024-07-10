@@ -61,7 +61,12 @@ export class EmailService {
     });
   }
 
-  async sendEmail(template: string, params: ISendEmailParams) {
+  async sendEmail(
+    template: string,
+    params: ISendEmailParams,
+    compiledBody?: string,
+    compiledSubject?: string,
+  ) {
     const { email, body, subject, variables, sender } = params;
     const builder = this.emailer.emailBuilder();
 
@@ -83,10 +88,14 @@ export class EmailService {
       }
       if (templateFound.externalManaged) {
         builder.setTemplate({ id: templateFound._id, variables: variables });
+      } else if (compiledBody) {
+        bodyString = compiledBody;
       } else {
         bodyString = handlebars.compile(templateFound.body)(variables);
       }
-      if (!isNil(templateFound.subject) && isNil(subject)) {
+      if (compiledSubject) {
+        subjectString = compiledSubject;
+      } else if (!isNil(templateFound.subject) && isNil(subject)) {
         subjectString = handlebars.compile(templateFound.subject)(variables);
       }
       if (!isEmpty(templateFound.sender)) {
@@ -136,22 +145,29 @@ export class EmailService {
       builder.addAttachments(params.attachments as Attachment[]);
     }
     const sentMessageInfo = await this.emailer.sendEmail(builder);
+
     const config = ConfigController.getInstance().config as Config;
-    const emailInfo = {
-      messageId: sentMessageInfo?.messageId,
-      sender: sender,
-      receiver: email,
-      cc: params.cc,
-      replyTo: params.replyTo,
-      sendingDomain: params.sendingDomain,
-      template: templateFound?._id,
-    };
     if (config.storeEmails.database.enabled) {
+      const emailInfo = {
+        messageId: sentMessageInfo?.messageId,
+        sender,
+        receiver: email,
+        cc: params.cc,
+        replyTo: params.replyTo,
+        sendingDomain: params.sendingDomain,
+      };
       await SentEmail.getInstance().create(emailInfo);
     } else if (config.storeEmails.storage.enabled) {
+      const fileData = {
+        messageId: sentMessageInfo?.messageId,
+        compiledSubject: subjectString,
+        compiledBody: bodyString,
+        template,
+        ...params,
+      };
       await this.grpcSdk.storage!.createFile(
         randomUUID(),
-        JSON.stringify({ templateId: templateFound?._id, ...params }),
+        Buffer.from(JSON.stringify(fileData)).toString('base64'),
         config.storeEmails.storage.folder,
         config.storeEmails.storage.container,
       );
@@ -167,8 +183,9 @@ export class EmailService {
     if (!emailData) {
       throw new GrpcError(status.NOT_FOUND, 'File not found.');
     }
-    const data = JSON.parse(emailData.data);
-    return this.sendEmail(data.templateId, data);
+    const dataString = Buffer.from(emailData.data, 'base64').toString('utf-8');
+    const data = JSON.parse(dataString);
+    return this.sendEmail(data.template, data, data.compiledBody, data.compiledSubject);
   }
 
   async getEmailStatus(messageId: string) {
