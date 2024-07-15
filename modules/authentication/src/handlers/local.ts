@@ -23,6 +23,7 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { createHash } from 'crypto';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -149,6 +150,22 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.changeEmail.bind(this),
     );
 
+    if (config.local.verification.method === 'code') {
+      routingManager.route(
+        {
+          path: '/local/verify-email',
+          action: ConduitRouteActions.POST,
+          description: `Verifies user email with code.`,
+          bodyParams: {
+            email: ConduitString.Required,
+            code: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('VerifyEmailWithCode', 'String'),
+        this.verifyEmailWithCode.bind(this),
+      );
+    }
+
     routingManager.route(
       {
         path: '/hook/verify-email/:verificationToken',
@@ -240,31 +257,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
     callback({ user });
 
-    const serverConfig = await this.grpcSdk.config.get('router');
-    const url = serverConfig.hostUrl;
     if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
-      const verificationToken: Token = await Token.getInstance().create({
-        tokenType: TokenType.VERIFICATION_TOKEN,
-        user: user._id,
-        token: uuid(),
-        data: {
-          customRedirectUri: AuthUtils.validateRedirectUri(
-            call.request.bodyParams.redirectUri,
-          ),
-        },
-      });
-      const result = { verificationToken, hostUrl: url };
-      const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
-      await this.emailModule
-        .sendEmail('EmailVerification', {
-          email: user.email,
-          variables: {
-            link,
-          },
-        })
-        .catch(e => {
+      await this.handleEmailVerification(user, call.request.bodyParams.redirectUri).catch(
+        e => {
           ConduitGrpcSdk.Logger.error(e);
-        });
+        },
+      );
     }
 
     if (call.request.params.invitationToken) {
@@ -586,7 +584,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (user.isVerified)
       throw new GrpcError(status.FAILED_PRECONDITION, 'User already verified');
 
-    let verificationToken: Token | null = await Token.getInstance().findOne({
+    const verificationToken: Token | null = await Token.getInstance().findOne({
       tokenType: TokenType.VERIFICATION_TOKEN,
       user: user._id,
     });
@@ -596,26 +594,41 @@ export class LocalHandlers implements IAuthenticationStrategy {
         tokenType: TokenType.VERIFICATION_TOKEN,
       });
     }
-
-    verificationToken = await Token.getInstance().create({
-      user: user._id,
-      tokenType: TokenType.VERIFICATION_TOKEN,
-      token: uuid(),
-      data: {
-        email,
-      },
-    });
-
-    const serverConfig = await this.grpcSdk.config.get('router');
-    const result = { token: verificationToken.token, hostUrl: serverConfig.hostUrl };
-    const link = `${result.hostUrl}/hook/authentication/verify-email/${result.token}`;
-    await this.emailModule.sendEmail('EmailVerification', {
-      email,
-      variables: {
-        link,
-      },
-    });
+    await this.handleEmailVerification(user);
     return 'Verification code sent';
+  }
+
+  async verifyEmailWithCode(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { email, code } = call.request.params;
+    const foundUser = await User.getInstance().findOne({ email });
+    if (!foundUser) {
+      throw new GrpcError(status.NOT_FOUND, 'User not found');
+    }
+    if (foundUser.isVerified) {
+      throw new GrpcError(status.FAILED_PRECONDITION, 'User already verified');
+    }
+    const verificationTokenDoc: Token | null = await Token.getInstance().findOne({
+      tokenType: TokenType.VERIFICATION_TOKEN,
+      user: foundUser._id,
+    });
+    if (isNil(verificationTokenDoc)) {
+      throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
+    }
+    const emailHash = createHash('sha256').update(email).digest('hex');
+    const otp = await this.grpcSdk.state!.getKey(emailHash);
+    if (!otp || otp !== code) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid verification code');
+    }
+    await this.grpcSdk.state!.clearKey(emailHash);
+    await User.getInstance().findByIdAndUpdate(foundUser._id, { isVerified: true });
+    await Token.getInstance().deleteOne({ _id: verificationTokenDoc._id });
+    this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(foundUser));
+
+    const config = ConfigController.getInstance().config;
+    const redirectUri = AuthUtils.validateRedirectUri(
+      verificationTokenDoc.data ? verificationTokenDoc.data.customRedirectUri : undefined,
+    );
+    return { redirect: redirectUri ?? config.local.verification.redirect_uri };
   }
 
   private async _authenticateChecks(password: string, config: Config, user: User) {
@@ -661,5 +674,40 @@ export class LocalHandlers implements IAuthenticationStrategy {
       .catch(() => {
         ConduitGrpcSdk.Logger.error('Internal error while registering email templates');
       });
+  }
+
+  private async handleEmailVerification(user: User, redirectUri?: string | undefined) {
+    const config = ConfigController.getInstance().config;
+    const verificationToken: Token = await Token.getInstance().create({
+      tokenType: TokenType.VERIFICATION_TOKEN,
+      user: user._id,
+      token: uuid(),
+      data: {
+        customRedirectUri: AuthUtils.validateRedirectUri(redirectUri),
+      },
+    });
+
+    if (config.local.verification.method === 'link') {
+      const serverConfig = await this.grpcSdk.config.get('router');
+      const url = serverConfig.hostUrl;
+      const result = { verificationToken, hostUrl: url };
+      const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
+      await this.emailModule.sendEmail('EmailVerification', {
+        email: user.email,
+        variables: {
+          link,
+        },
+      });
+    } else {
+      const otp = AuthUtils.generateOtp();
+      const emailHash = createHash('sha256').update(user.email).digest('hex');
+      await this.emailModule.sendEmail('EmailVerificationWithCode', {
+        email: user.email,
+        variables: {
+          code: otp,
+        },
+      });
+      await this.grpcSdk.state!.setKey(emailHash, otp, 2 * 60 * 1000);
+    }
   }
 }
