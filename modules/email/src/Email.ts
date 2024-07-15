@@ -98,12 +98,10 @@ export default class Email extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.SERVING);
 
       const config = ConfigController.getInstance().config as Config;
-      if (config.storeEmails.storage.enabled) {
-        if (!this.grpcSdk.isAvailable('storage')) {
-          ConduitGrpcSdk.Logger.warn(
-            'Failed to enable email storing. Storage module not serving.',
-          );
-        }
+      if (config.storeEmails.storage.enabled && !this.grpcSdk.isAvailable('storage')) {
+        ConduitGrpcSdk.Logger.warn(
+          'Failed to enable email storing. Storage module not serving.',
+        );
       }
       await this.handleEmailCleanupJob(config);
     }
