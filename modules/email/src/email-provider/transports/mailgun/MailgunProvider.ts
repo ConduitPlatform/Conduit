@@ -1,5 +1,5 @@
 import { to } from 'await-to-js';
-import { createTransport } from 'nodemailer';
+import { createTransport, SentMessageInfo } from 'nodemailer';
 import { Options } from 'nodemailer/lib/mailer';
 import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate.js';
 import { Template } from '../../interfaces/Template.js';
@@ -132,5 +132,9 @@ export class MailgunProvider extends EmailProviderClass {
       limit: 1,
     });
     return response.items[0];
+  }
+
+  getMessageId(info: SentMessageInfo): string | undefined {
+    return info?.messageId;
   }
 }

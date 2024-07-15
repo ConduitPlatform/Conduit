@@ -1,4 +1,4 @@
-import { createTransport } from 'nodemailer';
+import { createTransport, SentMessageInfo } from 'nodemailer';
 import { Options } from 'nodemailer/lib/mailer';
 import { Template } from '../../interfaces/Template.js';
 import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate.js';
@@ -42,5 +42,9 @@ export class SmtpProvider extends EmailProviderClass {
 
   getEmailStatus(messageId: string): Promise<Indexable> {
     throw new Error('Method not implemented.');
+  }
+
+  getMessageId(info: SentMessageInfo): string | undefined {
+    return undefined;
   }
 }

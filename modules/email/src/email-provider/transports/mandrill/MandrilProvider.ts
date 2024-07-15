@@ -1,4 +1,4 @@
-import { createTransport } from 'nodemailer';
+import { createTransport, SentMessageInfo } from 'nodemailer';
 import { EmailProviderClass } from '../../models/EmailProviderClass.js';
 import { MandrillConfig } from './mandrill.config.js';
 import { Mandrill } from 'mandrill-api';
@@ -131,5 +131,9 @@ export class MandrillProvider extends EmailProviderClass {
           resolve as (json: object) => void,
         ),
     );
+  }
+
+  getMessageId(info: SentMessageInfo): string | undefined {
+    return info?.messageId;
   }
 }

@@ -130,11 +130,9 @@ export class EmailService {
       }
     }
     builder.setSender(senderAddress!);
-
     builder.setContent(bodyString);
     builder.setReceiver(email);
     builder.setSubject(subjectString);
-
     if (params.cc) {
       builder.setCC(params.cc);
     }
@@ -144,13 +142,14 @@ export class EmailService {
     if (params.attachments) {
       builder.addAttachments(params.attachments as Attachment[]);
     }
-    const sentMessageInfo = await this.emailer.sendEmail(builder);
 
+    const sentMessageInfo = await this.emailer.sendEmail(builder);
+    const messageId = this.emailer._transport?.getMessageId(sentMessageInfo);
     const config = ConfigController.getInstance().config as Config;
     if (config.storeEmails.database.enabled) {
       const emailInfo = {
-        messageId: sentMessageInfo?.messageId,
-        sender,
+        messageId,
+        sender: senderAddress,
         receiver: email,
         cc: params.cc,
         replyTo: params.replyTo,
@@ -159,7 +158,7 @@ export class EmailService {
       await SentEmail.getInstance().create(emailInfo);
     } else if (config.storeEmails.storage.enabled) {
       const fileData = {
-        messageId: sentMessageInfo?.messageId,
+        messageId,
         compiledSubject: subjectString,
         compiledBody: bodyString,
         template,
@@ -189,6 +188,6 @@ export class EmailService {
   }
 
   async getEmailStatus(messageId: string) {
-    return this.emailer._transport?.getEmailStatus(messageId);
+    return this.emailer.getEmailStatus(messageId);
   }
 }
