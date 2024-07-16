@@ -55,8 +55,8 @@ export class Email extends ConduitModule<typeof EmailDefinition> {
     });
   }
 
-  resendEmail(fileId: string) {
-    return this.client!.resendEmail({ fileId }).then(res => {
+  resendEmail(messageId: string) {
+    return this.client!.resendEmail({ messageId }).then(res => {
       return res.sentMessageInfo;
     });
   }

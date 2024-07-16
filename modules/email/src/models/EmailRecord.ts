@@ -1,10 +1,21 @@
 import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
+import { EmailTemplate } from './EmailTemplate.schema.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   messageId: {
     type: TYPE.String,
+    required: false,
+  },
+  template: {
+    type: TYPE.Relation,
+    model: 'EmailTemplate',
+    required: false,
+  },
+  contentFile: {
+    type: TYPE.Relation,
+    model: 'File',
     required: false,
   },
   sender: {
@@ -43,10 +54,12 @@ const modelOptions = {
 } as const;
 const collectionName = undefined;
 
-export class SentEmail extends ConduitActiveSchema<SentEmail> {
-  private static _instance: SentEmail;
+export class EmailRecord extends ConduitActiveSchema<EmailRecord> {
+  private static _instance: EmailRecord;
   _id: string;
   messageId?: string;
+  template: string | EmailTemplate;
+  contentFile: string;
   sender: string;
   receiver: string;
   cc?: string[];
@@ -56,15 +69,15 @@ export class SentEmail extends ConduitActiveSchema<SentEmail> {
   updatedAt: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, SentEmail.name, schema, modelOptions, collectionName);
+    super(database, EmailRecord.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {
-    if (SentEmail._instance) return SentEmail._instance;
+    if (EmailRecord._instance) return EmailRecord._instance;
     if (!database) {
       throw new Error('No database instance provided!');
     }
-    SentEmail._instance = new SentEmail(database);
-    return SentEmail._instance;
+    EmailRecord._instance = new EmailRecord(database);
+    return EmailRecord._instance;
   }
 }

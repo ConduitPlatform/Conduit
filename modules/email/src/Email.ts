@@ -75,9 +75,6 @@ export default class Email extends ManagedModule<Config> {
     ) {
       throw new Error('Invalid configuration given');
     }
-    if (config.storeEmails.database.enabled && config.storeEmails.storage.enabled) {
-      throw new Error('Cannot store emails in both database and storage');
-    }
     return config;
   }
 
@@ -167,7 +164,7 @@ export default class Email extends ManagedModule<Config> {
   ) {
     let errorMessage: string | null = null;
     const sentMessageInfo = await this.emailService
-      .resendEmail(call.request.fileId)
+      .resendEmail(call.request.messageId)
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -208,17 +205,11 @@ export default class Email extends ManagedModule<Config> {
   }
 
   private async handleEmailCleanupJob(config: Config) {
-    const storeInStorage = config.storeEmails.storage.enabled;
-    const storeInDatabase = config.storeEmails.database.enabled;
-
     this.emailCleanupQueue = new Queue('email-cleanup-queue', {
       connection: this.redisConnection,
     });
     await this.emailCleanupQueue.drain(true);
-    if (
-      (storeInStorage || storeInDatabase) &&
-      config.storeEmails.cleanupSettings.enabled
-    ) {
+    if (config.storeEmails.enabled && config.storeEmails.cleanupSettings.enabled) {
       const processorFile = path.normalize(
         path.join(__dirname, 'jobs', 'cleanupStoredEmails.js'),
       );
@@ -249,14 +240,17 @@ export default class Email extends ManagedModule<Config> {
       });
       await this.emailCleanupQueue.add(
         'cleanup',
-        { config },
+        {
+          limit: config.storeEmails.cleanupSettings.limit,
+          deleteStorageFiles: config.storeEmails.storage.enabled,
+        },
         {
           repeat: {
             every: config.storeEmails.cleanupSettings.repeat,
           },
         },
       );
-    } else if (!config.storeEmails.cleanupSettings.enabled) {
+    } else {
       await this.emailCleanupQueue.close();
     }
   }

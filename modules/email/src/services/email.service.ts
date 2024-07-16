@@ -1,5 +1,5 @@
 import { isEmpty, isNil } from 'lodash-es';
-import { EmailTemplate, SentEmail } from '../models/index.js';
+import { EmailTemplate, EmailRecord } from '../models/index.js';
 import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces/index.js';
 import handlebars from 'handlebars';
 import { EmailProvider } from '../email-provider/index.js';
@@ -10,8 +10,8 @@ import { Template } from '../email-provider/interfaces/Template.js';
 import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { Config } from '../config/index.js';
-import { randomUUID } from 'node:crypto';
 import { status } from '@grpc/grpc-js';
+import { storeEmail } from '../utils/storeEmail.js';
 
 export class EmailService {
   constructor(
@@ -145,46 +145,49 @@ export class EmailService {
 
     const sentMessageInfo = await this.emailer.sendEmail(builder);
     const messageId = this.emailer._transport?.getMessageId(sentMessageInfo);
+
     const config = ConfigController.getInstance().config as Config;
-    if (config.storeEmails.database.enabled) {
-      const emailInfo = {
+    if (config.storeEmails.enabled) {
+      await storeEmail(
+        this.grpcSdk,
         messageId,
-        sender: senderAddress,
-        receiver: email,
-        cc: params.cc,
-        replyTo: params.replyTo,
-        sendingDomain: params.sendingDomain,
-      };
-      await SentEmail.getInstance().create(emailInfo);
-    } else if (config.storeEmails.storage.enabled) {
-      const fileData = {
-        messageId,
-        compiledSubject: subjectString,
-        compiledBody: bodyString,
-        template,
-        ...params,
-      };
-      await this.grpcSdk.storage!.createFile(
-        randomUUID(),
-        Buffer.from(JSON.stringify(fileData)).toString('base64'),
-        config.storeEmails.storage.folder,
-        config.storeEmails.storage.container,
-      );
+        templateFound,
+        params,
+        subjectString,
+        bodyString,
+      ).catch(e => {
+        ConduitGrpcSdk.Logger.error('Failed to store email', e);
+      });
     }
-    return sentMessageInfo;
+    return { messageId, ...sentMessageInfo };
   }
 
-  async resendEmail(fileId: string) {
+  async resendEmail(messageId: string) {
     if (!this.grpcSdk.isAvailable('storage')) {
       throw new GrpcError(status.INTERNAL, 'Storage is not available.');
     }
-    const emailData = await this.grpcSdk.storage!.getFileData(fileId);
-    if (!emailData) {
-      throw new GrpcError(status.NOT_FOUND, 'File not found.');
+    const emailRecord = await EmailRecord.getInstance().findOne(
+      { messageId },
+      undefined,
+      'template',
+    );
+    if (isNil(emailRecord)) {
+      throw new GrpcError(status.NOT_FOUND, 'Email record not found.');
     }
-    const dataString = Buffer.from(emailData.data, 'base64').toString('utf-8');
-    const data = JSON.parse(dataString);
-    return this.sendEmail(data.template, data, data.compiledBody, data.compiledSubject);
+    const contentFileData = await this.grpcSdk.storage!.getFileData(
+      emailRecord.contentFile,
+    );
+    if (!contentFileData) {
+      throw new GrpcError(status.NOT_FOUND, 'Email content file not found.');
+    }
+    const dataString = Buffer.from(contentFileData.data, 'base64').toString('utf-8');
+    const { compiledSubject, compiledBody, params } = JSON.parse(dataString);
+    return this.sendEmail(
+      (emailRecord.template as EmailTemplate).name,
+      params,
+      compiledBody,
+      compiledSubject,
+    );
   }
 
   async getEmailStatus(messageId: string) {

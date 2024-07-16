@@ -85,16 +85,14 @@ export default {
     },
   },
   storeEmails: {
-    database: {
-      enabled: {
-        doc: 'Defines if emails should be stored in database',
-        format: 'Boolean',
-        default: false,
-      },
+    enabled: {
+      doc: 'Defines if sent email info should be stored in database',
+      format: 'Boolean',
+      default: false,
     },
     storage: {
       enabled: {
-        doc: 'Defines if emails should be stored in storage',
+        doc: 'Defines if email content should be stored in storage',
         format: 'Boolean',
         default: false,
       },
