@@ -11,7 +11,7 @@ import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { Config } from '../config/index.js';
 import { status } from '@grpc/grpc-js';
-import { storeEmail } from '../utils/storeEmail.js';
+import { storeEmail } from '../utils/index.js';
 
 export class EmailService {
   constructor(
