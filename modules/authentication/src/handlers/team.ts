@@ -25,6 +25,7 @@ import { AuthUtils } from '../utils/index.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
+import { isEmpty } from 'lodash-es';
 
 export class TeamsHandler implements IAuthenticationStrategy {
   private static _instance?: TeamsHandler;
@@ -513,7 +514,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       inviter: user,
     });
     if (email && config.teams.invites.sendEmail && this.grpcSdk.isAvailable('email')) {
-      let link = redirectUri
+      let link = !isEmpty(redirectUri)
         ? AuthUtils.validateRedirectUri(redirectUri)
         : config.teams.invites.inviteUrl;
       link += `?invitationToken=${invitation.token}`;
