@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.8](https://github.com/ConduitPlatform/Conduit/compare/v0.16.7...v0.16.8) (2024-07-19)
+
+
+### Features
+
+* **authentication:** allow setting redirectUri for invites ([#1093](https://github.com/ConduitPlatform/Conduit/issues/1093)) ([066ec7f](https://github.com/ConduitPlatform/Conduit/commit/066ec7f8e73754f418a6f1b41d7df59b014be680))
+* **authentication:** verify user email via code ([#1092](https://github.com/ConduitPlatform/Conduit/issues/1092)) ([8bae7be](https://github.com/ConduitPlatform/Conduit/commit/8bae7bea62534b6412f4601997c09ed8339b9c06))
+
+
+### Bug Fixes
+
+* **grpc-sdk,module-tools:** exports structure in package.json, to solve NextJS issues ([89c0f49](https://github.com/ConduitPlatform/Conduit/commit/89c0f49a4b5b00b035124f09e5accd0d13ecfc7a))
+
 ### [0.16.7](https://github.com/ConduitPlatform/Conduit/compare/v0.16.6...v0.16.7) (2024-07-03)
 
 ### [0.16.6](https://github.com/ConduitPlatform/Conduit/compare/v0.16.5...v0.16.6) (2024-07-02)
