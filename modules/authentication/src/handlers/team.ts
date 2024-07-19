@@ -475,7 +475,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async userInvite(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { teamId, email, role } = call.request.params;
+    const { teamId, email, role, redirectUri } = call.request.params;
     const config: Config = ConfigController.getInstance().config;
     if (!config.teams.invites.enabled) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Team invites are disabled');
@@ -513,7 +513,11 @@ export class TeamsHandler implements IAuthenticationStrategy {
       inviter: user,
     });
     if (email && config.teams.invites.sendEmail && this.grpcSdk.isAvailable('email')) {
-      const link = `${config.teams.invites.inviteUrl}?invitationToken=${invitation.token}`;
+      let link = redirectUri
+        ? AuthUtils.validateRedirectUri(redirectUri)
+        : config.teams.invites.inviteUrl;
+      link += `?invitationToken=${invitation.token}`;
+
       await this.grpcSdk
         .emailProvider!.sendEmail('TeamInvite', {
           email: email,
@@ -775,6 +779,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         bodyParams: {
           role: ConduitString.Required,
           email: ConduitString.Required,
+          redirectUri: ConduitString.Optional,
         },
         action: ConduitRouteActions.POST,
         middlewares: ['authMiddleware'],
