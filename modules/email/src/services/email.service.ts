@@ -158,11 +158,7 @@ export class EmailService {
     if (!this.grpcSdk.isAvailable('storage')) {
       throw new GrpcError(status.INTERNAL, 'Storage is not available.');
     }
-    const emailRecord = await EmailRecord.getInstance().findOne(
-      { messageId },
-      undefined,
-      'template',
-    );
+    const emailRecord = await EmailRecord.getInstance().findOne({ messageId });
     if (isNil(emailRecord)) {
       throw new GrpcError(status.NOT_FOUND, 'Email record not found.');
     }
