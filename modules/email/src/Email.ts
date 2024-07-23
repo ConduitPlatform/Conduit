@@ -209,49 +209,49 @@ export default class Email extends ManagedModule<Config> {
       connection: this.redisConnection,
     });
     await this.emailCleanupQueue.drain(true);
-    if (config.storeEmails.enabled && config.storeEmails.cleanupSettings.enabled) {
-      const processorFile = path.normalize(
-        path.join(__dirname, 'jobs', 'cleanupStoredEmails.js'),
-      );
-      const worker = new Worker('email-cleanup-queue', processorFile, {
-        connection: this.redisConnection,
-        removeOnComplete: {
-          age: 3600,
-          count: 1000,
-        },
-        removeOnFail: {
-          age: 24 * 3600,
-        },
-      });
-      worker.on('active', job => {
-        ConduitGrpcSdk.Logger.info(`Stored email cleanup job ${job.id} started`);
-      });
-      worker.on('completed', () => {
-        ConduitGrpcSdk.Logger.info(`Stored email cleanup completed`);
-      });
-      worker.on('error', (error: Error) => {
-        ConduitGrpcSdk.Logger.error(`Stored email cleanup error:`);
-        ConduitGrpcSdk.Logger.error(error);
-      });
-
-      worker.on('failed', (_job, error) => {
-        ConduitGrpcSdk.Logger.error(`Stored email cleanup error:`);
-        ConduitGrpcSdk.Logger.error(error);
-      });
-      await this.emailCleanupQueue.add(
-        'cleanup',
-        {
-          limit: config.storeEmails.cleanupSettings.limit,
-          deleteStorageFiles: config.storeEmails.storage.enabled,
-        },
-        {
-          repeat: {
-            every: config.storeEmails.cleanupSettings.repeat,
-          },
-        },
-      );
-    } else {
+    if (!config.storeEmails.enabled || !config.storeEmails.cleanupSettings.enabled) {
       await this.emailCleanupQueue.close();
+      return;
     }
+    const processorFile = path.normalize(
+      path.join(__dirname, 'jobs', 'cleanupStoredEmails.js'),
+    );
+    const worker = new Worker('email-cleanup-queue', processorFile, {
+      connection: this.redisConnection,
+      removeOnComplete: {
+        age: 3600,
+        count: 1000,
+      },
+      removeOnFail: {
+        age: 24 * 3600,
+      },
+    });
+    worker.on('active', job => {
+      ConduitGrpcSdk.Logger.info(`Stored email cleanup job ${job.id} started`);
+    });
+    worker.on('completed', () => {
+      ConduitGrpcSdk.Logger.info(`Stored email cleanup completed`);
+    });
+    worker.on('error', (error: Error) => {
+      ConduitGrpcSdk.Logger.error(`Stored email cleanup error:`);
+      ConduitGrpcSdk.Logger.error(error);
+    });
+
+    worker.on('failed', (_job, error) => {
+      ConduitGrpcSdk.Logger.error(`Stored email cleanup error:`);
+      ConduitGrpcSdk.Logger.error(error);
+    });
+    await this.emailCleanupQueue.add(
+      'cleanup',
+      {
+        limit: config.storeEmails.cleanupSettings.limit,
+        deleteStorageFiles: config.storeEmails.storage.enabled,
+      },
+      {
+        repeat: {
+          every: config.storeEmails.cleanupSettings.repeat,
+        },
+      },
+    );
   }
 }

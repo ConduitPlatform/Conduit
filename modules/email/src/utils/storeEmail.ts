@@ -10,25 +10,19 @@ export async function storeEmail(
   grpcSdk: ConduitGrpcSdk,
   messageId: string | undefined,
   template: EmailTemplate | null,
+  contentFileId: string | undefined,
   params: ISendEmailParams,
-  compiledSubject: string,
-  compiledBody: string,
 ) {
   const config = ConfigController.getInstance().config as Config;
-  let contentFile;
-  if (config.storeEmails.storage.enabled) {
-    contentFile = await grpcSdk.storage!.createFileByUrl(
+  let newContentFile;
+  if (!contentFileId && config.storeEmails.storage.enabled) {
+    newContentFile = await grpcSdk.storage!.createFileByUrl(
       randomUUID(),
       config.storeEmails.storage.folder,
       config.storeEmails.storage.container,
     );
-    const fileData = {
-      compiledSubject,
-      compiledBody,
-      params,
-    };
-    const buffer = Buffer.from(JSON.stringify(fileData));
-    await axios.put(contentFile.uploadUrl, buffer, {
+    const buffer = Buffer.from(JSON.stringify(params));
+    await axios.put(newContentFile.uploadUrl, buffer, {
       headers: {
         'Content-Length': buffer.length,
         'x-ms-blob-type': 'BlockBlob',
@@ -38,7 +32,7 @@ export async function storeEmail(
   const emailInfo = {
     messageId,
     template: template ? template._id : undefined,
-    contentFile: contentFile ? contentFile.id : undefined,
+    contentFile: contentFileId ?? newContentFile?.id,
     sender: params.sender,
     receiver: params.email,
     cc: params.cc,

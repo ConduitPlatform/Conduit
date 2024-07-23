@@ -62,10 +62,9 @@ export class EmailService {
   }
 
   async sendEmail(
-    template: string,
+    template: string | undefined,
     params: ISendEmailParams,
-    compiledBody?: string,
-    compiledSubject?: string,
+    contentFileId?: string,
   ) {
     const { email, body, subject, variables, sender } = params;
     const builder = this.emailer.emailBuilder();
@@ -88,14 +87,10 @@ export class EmailService {
       }
       if (templateFound.externalManaged) {
         builder.setTemplate({ id: templateFound._id, variables: variables });
-      } else if (compiledBody) {
-        bodyString = compiledBody;
       } else {
         bodyString = handlebars.compile(templateFound.body)(variables);
       }
-      if (compiledSubject) {
-        subjectString = compiledSubject;
-      } else if (!isNil(templateFound.subject) && isNil(subject)) {
+      if (!isNil(templateFound.subject) && isNil(subject)) {
         subjectString = handlebars.compile(templateFound.subject)(variables);
       }
       if (!isEmpty(templateFound.sender)) {
@@ -148,14 +143,11 @@ export class EmailService {
 
     const config = ConfigController.getInstance().config as Config;
     if (config.storeEmails.enabled) {
-      await storeEmail(
-        this.grpcSdk,
-        messageId,
-        templateFound,
-        params,
-        subjectString,
-        bodyString,
-      ).catch(e => {
+      await storeEmail(this.grpcSdk, messageId, templateFound, contentFileId, {
+        body: bodyString,
+        subject: subjectString,
+        ...params,
+      }).catch(e => {
         ConduitGrpcSdk.Logger.error('Failed to store email', e);
       });
     }
@@ -181,13 +173,7 @@ export class EmailService {
       throw new GrpcError(status.NOT_FOUND, 'Email content file not found.');
     }
     const dataString = Buffer.from(contentFileData.data, 'base64').toString('utf-8');
-    const { compiledSubject, compiledBody, params } = JSON.parse(dataString);
-    return this.sendEmail(
-      (emailRecord.template as EmailTemplate).name,
-      params,
-      compiledBody,
-      compiledSubject,
-    );
+    return this.sendEmail(undefined, JSON.parse(dataString), emailRecord.contentFile);
   }
 
   async getEmailStatus(messageId: string) {
