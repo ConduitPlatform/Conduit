@@ -7,13 +7,14 @@
   "exports": {
     ".": {
       "import": {
-        "default": "./dist/index.esm.js",
-        "types": "./dist/index.d.ts"
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.esm.js"
       },
       "require": {
-        "default": "./dist/index.cjs",
-        "types": "./dist/index.d.ts"
-      }
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      },
+      "default": "./dist/index.esm.js"
     }
   },
   "engines": {
