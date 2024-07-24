@@ -31,7 +31,7 @@ message SendEmailResponse {
 }
 
 message ResendEmailRequest {
-  string messageId = 1;
+  string emailRecordId = 1;
 }
 
 message ResendEmailResponse {

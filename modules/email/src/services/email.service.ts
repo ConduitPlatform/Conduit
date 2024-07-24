@@ -154,11 +154,11 @@ export class EmailService {
     return { messageId, ...sentMessageInfo };
   }
 
-  async resendEmail(messageId: string) {
+  async resendEmail(emailRecordId: string) {
     if (!this.grpcSdk.isAvailable('storage')) {
       throw new GrpcError(status.INTERNAL, 'Storage is not available.');
     }
-    const emailRecord = await EmailRecord.getInstance().findOne({ messageId });
+    const emailRecord = await EmailRecord.getInstance().findOne({ _id: emailRecordId });
     if (isNil(emailRecord)) {
       throw new GrpcError(status.NOT_FOUND, 'Email record not found.');
     }

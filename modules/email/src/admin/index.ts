@@ -385,7 +385,7 @@ export class AdminHandlers {
 
   async resendEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     return (await this.emailService.resendEmail(
-      call.request.params.messageId,
+      call.request.params.emailRecordId,
     )) as UnparsedRouterResponse;
   }
 
@@ -585,7 +585,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Resends an email (only if stored in storage).`,
         bodyParams: {
-          messageId: ConduitString.Required,
+          emailRecordId: ConduitString.Required,
         },
       },
       new ConduitRouteReturnDefinition('Resend an email', {

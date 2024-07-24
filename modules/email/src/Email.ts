@@ -164,7 +164,7 @@ export default class Email extends ManagedModule<Config> {
   ) {
     let errorMessage: string | null = null;
     const sentMessageInfo = await this.emailService
-      .resendEmail(call.request.messageId)
+      .resendEmail(call.request.emailRecordId)
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
