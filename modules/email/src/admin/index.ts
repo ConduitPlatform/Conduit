@@ -10,6 +10,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitBoolean,
+  ConduitDate,
   ConduitJson,
   ConduitNumber,
   ConduitString,
@@ -21,7 +22,7 @@ import { to } from 'await-to-js';
 import { isNil } from 'lodash-es';
 import { getHandleBarsValues } from '../email-provider/utils/index.js';
 import { EmailService } from '../services/email.service.js';
-import { EmailTemplate } from '../models/index.js';
+import { EmailRecord, EmailTemplate } from '../models/index.js';
 import { Config } from '../config/index.js';
 import { Template } from '../email-provider/interfaces/Template.js';
 import { TemplateDocument } from '../email-provider/interfaces/TemplateDocument.js';
@@ -364,7 +365,7 @@ export class AdminHandlers {
       }
     }
 
-    await this.emailService
+    const sentEmailInfo = await this.emailService
       .sendEmail(templateName, {
         body,
         subject,
@@ -379,7 +380,55 @@ export class AdminHandlers {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     ConduitGrpcSdk.Metrics?.increment('emails_sent_total');
-    return { message: 'Email sent' };
+    return { message: sentEmailInfo.messageId ?? 'Email sent' };
+  }
+
+  async resendEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return (await this.emailService.resendEmail(
+      call.request.params.emailRecordId,
+    )) as UnparsedRouterResponse;
+  }
+
+  async getEmailStatus(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const statusInfo = await this.emailService.getEmailStatus(
+      call.request.params.messageId,
+    );
+    return { statusInfo };
+  }
+
+  async getEmailRecords(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const {
+      messageId,
+      templateId,
+      receiver,
+      sender,
+      cc,
+      replyTo,
+      startDate,
+      endDate,
+      skip,
+      limit,
+      sort,
+    } = call.request.params;
+    const query: Query<EmailRecord> = {
+      ...(messageId ? { messageId } : {}),
+      ...(templateId ? { templateId } : {}),
+      ...(receiver ? { receiver } : {}),
+      ...(sender ? { sender } : {}),
+      ...(cc ? { cc: { $in: cc } } : {}),
+      ...(replyTo ? { replyTo } : {}),
+      ...(startDate ? { createdAt: { $gte: startDate } } : {}),
+      ...(endDate ? { createdAt: { $lte: endDate } } : {}),
+    };
+    const records = await EmailRecord.getInstance().findMany(
+      query,
+      undefined,
+      skip,
+      limit,
+      sort,
+    );
+    const count = await EmailRecord.getInstance().countDocuments(query);
+    return { records, count };
   }
 
   private registerAdminRoutes() {
@@ -529,6 +578,59 @@ export class AdminHandlers {
         message: ConduitString.Required,
       }),
       this.sendEmail.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/resend',
+        action: ConduitRouteActions.POST,
+        description: `Resends an email (only if stored in storage).`,
+        bodyParams: {
+          emailRecordId: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('Resend an email', {
+        message: ConduitString.Required,
+      }),
+      this.resendEmail.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/status',
+        action: ConduitRouteActions.GET,
+        description: `Returns the latest status of a sent email.`,
+        queryParams: {
+          messageId: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetEmailStatus', {
+        statusInfo: ConduitJson.Required,
+      }),
+      this.getEmailStatus.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/record',
+        action: ConduitRouteActions.GET,
+        description: `Returns records of stored sent emails.`,
+        queryParams: {
+          messageId: ConduitString.Optional,
+          templateId: ConduitString.Optional,
+          receiver: ConduitString.Optional,
+          sender: ConduitString.Optional,
+          cc: [ConduitString.Optional],
+          replyTo: ConduitString.Optional,
+          startDate: ConduitDate.Optional,
+          endDate: ConduitDate.Optional,
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetEmailRecords', {
+        records: [EmailRecord.name],
+        count: ConduitNumber.Required,
+      }),
+      this.getEmailRecords.bind(this),
     );
     this.routingManager.registerRoutes();
   }

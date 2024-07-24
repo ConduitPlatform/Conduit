@@ -1,4 +1,4 @@
-import { createTransport } from 'nodemailer';
+import { createTransport, SentMessageInfo } from 'nodemailer';
 import { EmailProviderClass } from '../../models/EmailProviderClass.js';
 import { MandrillConfig } from './mandrill.config.js';
 import { Mandrill } from 'mandrill-api';
@@ -12,6 +12,7 @@ import { MandrillTemplate } from '../../interfaces/mandrill/MandrillTemplate.js'
 // @ts-expect-error
 // missing typings for nodemailer-mandrill-transport
 import mandrillTransport from 'nodemailer-mandrill-transport';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 
 export class MandrillProvider extends EmailProviderClass {
   private _mandrillSdk?: Mandrill;
@@ -118,5 +119,21 @@ export class MandrillProvider extends EmailProviderClass {
 
   getBuilder() {
     return new MandrillBuilder();
+  }
+
+  async getEmailStatus(messageId: string): Promise<Indexable> {
+    return new Promise<Indexable>(
+      resolve =>
+        this._mandrillSdk?.messages.info(
+          {
+            id: messageId,
+          },
+          resolve as (json: object) => void,
+        ),
+    );
+  }
+
+  getMessageId(info: SentMessageInfo): string | undefined {
+    return info?.messageId;
   }
 }

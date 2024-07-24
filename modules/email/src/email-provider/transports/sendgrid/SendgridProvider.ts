@@ -1,6 +1,6 @@
 import { EmailProviderClass } from '../../models/EmailProviderClass.js';
 import { SendGridConfig } from './sendgrid.config.js';
-import { createTransport } from 'nodemailer';
+import { createTransport, SentMessageInfo } from 'nodemailer';
 import { Client } from '@sendgrid/client';
 import { Template } from '../../interfaces/Template.js';
 import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate.js';
@@ -11,6 +11,7 @@ import {
   SendgridTemplate,
   TemplateVersion,
 } from '../../interfaces/sendgrid/SendgridTemplate.js';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 
 import sgTransport from 'nodemailer-sendgrid';
 
@@ -135,5 +136,16 @@ export class SendgridProvider extends EmailProviderClass {
 
   getBuilder() {
     return new SendgridMailBuilder();
+  }
+
+  async getEmailStatus(messageId: string): Promise<Indexable> {
+    return await this._sgClient.request({
+      method: 'GET',
+      url: `/v3/messages/` + messageId,
+    });
+  }
+
+  getMessageId(info: SentMessageInfo): string | undefined {
+    return info?.[0]?.caseless?.dict?.['x-message-id'];
   }
 }

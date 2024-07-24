@@ -30,7 +30,25 @@ message SendEmailResponse {
   string sentMessageInfo = 1;
 }
 
+message ResendEmailRequest {
+  string emailRecordId = 1;
+}
+
+message ResendEmailResponse {
+  string sentMessageInfo = 1;
+}
+
+message GetEmailStatusRequest {
+  string messageId = 1;
+}
+
+message GetEmailStatusResponse {
+  string statusInfo = 1;
+}
+
 service Email {
   rpc RegisterTemplate(RegisterTemplateRequest) returns (RegisterTemplateResponse);
   rpc SendEmail(SendEmailRequest) returns (SendEmailResponse);
+  rpc ResendEmail(ResendEmailRequest) returns (ResendEmailResponse);
+  rpc GetEmailStatus(GetEmailStatusRequest) returns (GetEmailStatusResponse);
 }
