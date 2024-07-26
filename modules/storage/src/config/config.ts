@@ -72,4 +72,9 @@ export default {
       default: '/var/tmp',
     },
   },
+  suffixOnNameConflict: {
+    format: 'Boolean',
+    doc: 'Defines if a suffix should be appended to the name of a file, upon creation, when name already exists',
+    default: false,
+  },
 };

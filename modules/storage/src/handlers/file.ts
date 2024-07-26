@@ -18,6 +18,7 @@ import {
   deepPathHandler,
   normalizeFolderPath,
   storeNewFile,
+  validateName,
 } from '../utils/index.js';
 
 export class FileHandlers {
@@ -124,24 +125,10 @@ export class FileHandlers {
     if (folder !== '/') {
       await this.findOrCreateFolders(folder, usedContainer, isPublic);
     }
-
-    if (name) {
-      const exists = await File.getInstance().findOne({
-        name,
-        container: usedContainer,
-        folder,
-      });
-      if (exists) {
-        throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
-      }
-    }
-    if (!isString(data)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid data provided');
-    }
-
+    const validatedName = await validateName(name, folder, usedContainer);
     try {
       const file = await storeNewFile(this.storageProvider, {
-        name,
+        name: validatedName,
         alias,
         data,
         container: usedContainer,
@@ -170,24 +157,13 @@ export class FileHandlers {
     if (folder !== '/') {
       await this.findOrCreateFolders(folder, usedContainer, isPublic);
     }
-
-    if (name) {
-      const exists = await File.getInstance().findOne({
-        name,
-        container: usedContainer,
-        folder,
-      });
-      if (exists) {
-        throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
-      }
-    }
-
+    const validatedName = await validateName(name, folder, usedContainer);
     try {
       const { file, url } = await _createFileUploadUrl(this.storageProvider, {
         container: usedContainer,
         folder,
         isPublic,
-        name,
+        name: validatedName,
         alias,
         size,
         mimeType,

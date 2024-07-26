@@ -3,8 +3,10 @@ import { IFileParams, IStorageProvider, StorageConfig } from '../interfaces/inde
 import { isNil } from 'lodash-es';
 import path from 'path';
 import { File } from '../models/index.js';
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { randomUUID } from 'node:crypto';
+import { ConfigController } from '@conduitplatform/module-tools';
+import { status } from '@grpc/grpc-js';
 
 export async function streamToBuffer(readableStream: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -71,10 +73,9 @@ export async function storeNewFile(
   params: IFileParams,
 ): Promise<File> {
   const { name, alias, data, container, folder, mimeType, isPublic } = params;
-  const finalName = name ?? randomUUID();
   const buffer = Buffer.from(data as string, 'base64');
   const size = buffer.byteLength;
-  const fileName = (folder === '/' ? '' : folder) + finalName;
+  const fileName = (folder === '/' ? '' : folder) + name;
   await storageProvider.container(container).store(fileName, buffer, isPublic);
   const publicUrl = isPublic
     ? await storageProvider.container(container).getPublicUrl(fileName)
@@ -82,7 +83,7 @@ export async function storeNewFile(
   ConduitGrpcSdk.Metrics?.increment('files_total');
   ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
   return await File.getInstance().create({
-    name: finalName,
+    name,
     alias,
     mimeType,
     folder: folder,
@@ -98,8 +99,7 @@ export async function _createFileUploadUrl(
   params: IFileParams,
 ): Promise<{ file: File; url: string }> {
   const { name, alias, container, folder, mimeType, isPublic, size } = params;
-  const finalName = name ?? randomUUID();
-  const fileName = (folder === '/' ? '' : folder) + finalName;
+  const fileName = (folder === '/' ? '' : folder) + name;
   await storageProvider
     .container(container)
     .store(fileName, Buffer.from('PENDING UPLOAD'), isPublic);
@@ -109,7 +109,7 @@ export async function _createFileUploadUrl(
   ConduitGrpcSdk.Metrics?.increment('files_total');
   ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
   const file = await File.getInstance().create({
-    name: finalName,
+    name,
     alias,
     mimeType,
     size,
@@ -213,4 +213,30 @@ export function updateFileMetrics(currentSize: number, newSize: number) {
   fileSizeDiff < 0
     ? ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', fileSizeDiff)
     : ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', fileSizeDiff);
+}
+
+export async function validateName(
+  name: string | undefined,
+  folder: string,
+  container: string,
+) {
+  if (!name) {
+    return randomUUID();
+  }
+  const config = ConfigController.getInstance().config;
+  const escapedName = name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const count = await File.getInstance().countDocuments({
+    $and: [
+      { $or: [{ name }, { name: { $regex: `^${escapedName} \\(\\d+\\)` } }] },
+      { folder: folder },
+      { container: container },
+    ],
+  });
+  if (count === 0) {
+    return name;
+  } else if (!config.suffixOnNameConflict) {
+    throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
+  } else {
+    return `${name} (${count})`;
+  }
 }
