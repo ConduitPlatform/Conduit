@@ -224,10 +224,15 @@ export async function validateName(
     return randomUUID();
   }
   const config = ConfigController.getInstance().config;
-  const escapedName = name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const extension = path.extname(name);
+  const escapedExtension = extension.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const baseName = path.basename(name, extension);
+  const escapedBaseName = baseName.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const regexPattern = `^${escapedBaseName} \\(\\d+\\)${escapedExtension}$`;
+
   const count = await File.getInstance().countDocuments({
     $and: [
-      { $or: [{ name }, { name: { $regex: `^${escapedName} \\(\\d+\\)` } }] },
+      { $or: [{ name }, { name: { $regex: regexPattern } }] },
       { folder: folder },
       { container: container },
     ],
@@ -237,6 +242,9 @@ export async function validateName(
   } else if (!config.suffixOnNameConflict) {
     throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
   } else {
+    if (extension !== '') {
+      return `${baseName} (${count})${extension}`;
+    }
     return `${name} (${count})`;
   }
 }
