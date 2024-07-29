@@ -9,6 +9,7 @@ export const Team = new ConduitAuthorizedResource(
     owner: ['User', 'Team'],
     readAll: ['User', 'Team'],
     editAll: ['User', 'Team'],
+    ownerRemover: ['User', 'Team'],
   },
   {
     read: ['owner', 'readAll', 'editAll', 'owner->read', 'owner->edit'],
@@ -19,5 +20,6 @@ export const Team = new ConduitAuthorizedResource(
     manageMembers: ['owner', 'owner->edit'],
     viewSubTeams: ['owner', 'readAll', 'editAll', 'owner->read', 'owner->edit'],
     manageSubTeams: ['owner', 'editAll', 'owner->edit'],
+    deleteOwners: ['owner', 'ownerRemover', 'ownerRemover->edit'],
   },
 );
