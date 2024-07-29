@@ -5,11 +5,15 @@ const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   name: {
     type: TYPE.String,
-    required: true,
+    required: false,
   },
   folder: {
     type: TYPE.String,
     required: true,
+  },
+  alias: {
+    type: TYPE.String,
+    required: false,
   },
   container: {
     type: TYPE.String,
@@ -46,6 +50,7 @@ export class File extends ConduitActiveSchema<File> {
   _id!: string;
   //todo rename
   declare name: string;
+  alias: string;
   folder!: string;
   container!: string;
   size!: number;

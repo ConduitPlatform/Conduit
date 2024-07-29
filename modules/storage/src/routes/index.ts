@@ -68,7 +68,8 @@ export class StorageRoutes {
       this._routingManager.route(
         {
           bodyParams: {
-            name: { type: TYPE.String, required: true },
+            name: { type: TYPE.String, required: false },
+            alias: { type: TYPE.String, required: false },
             mimeType: TYPE.String,
             data: { type: TYPE.String, required: true },
             folder: { type: TYPE.String, required: false },
@@ -89,7 +90,8 @@ export class StorageRoutes {
       this._routingManager.route(
         {
           bodyParams: {
-            name: { type: TYPE.String, required: true },
+            name: { type: TYPE.String, required: false },
+            alias: { type: TYPE.String, required: false },
             mimeType: TYPE.String,
             folder: { type: TYPE.String, required: false },
             size: { type: TYPE.Number, required: false },
@@ -117,6 +119,7 @@ export class StorageRoutes {
           },
           bodyParams: {
             name: ConduitString.Optional,
+            alias: ConduitString.Optional,
             folder: ConduitString.Optional,
             container: ConduitString.Optional,
             mimeType: ConduitString.Optional,
@@ -184,6 +187,7 @@ export class StorageRoutes {
           },
           bodyParams: {
             name: ConduitString.Optional,
+            alias: ConduitString.Optional,
             folder: ConduitString.Optional,
             container: ConduitString.Optional,
             data: ConduitString.Required,

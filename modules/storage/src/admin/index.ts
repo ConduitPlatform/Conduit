@@ -214,7 +214,8 @@ export class AdminRoutes {
         action: ConduitRouteActions.POST,
         description: `Creates a new file.`,
         bodyParams: {
-          name: ConduitString.Required,
+          name: ConduitString.Optional,
+          alias: ConduitString.Optional,
           data: ConduitString.Required,
           folder: ConduitString.Optional,
           container: ConduitString.Optional,
@@ -228,7 +229,8 @@ export class AdminRoutes {
     this.routingManager.route(
       {
         bodyParams: {
-          name: { type: TYPE.String, required: true },
+          name: { type: TYPE.String, required: false },
+          alias: { type: TYPE.String, required: false },
           mimeType: TYPE.String,
           folder: { type: TYPE.String, required: false },
           size: { type: TYPE.Number, required: false },
@@ -255,6 +257,7 @@ export class AdminRoutes {
         },
         bodyParams: {
           name: ConduitString.Optional,
+          alias: ConduitString.Optional,
           folder: ConduitString.Optional,
           container: ConduitString.Optional,
           data: ConduitString.Required,
@@ -271,6 +274,7 @@ export class AdminRoutes {
         },
         bodyParams: {
           name: ConduitString.Optional,
+          alias: ConduitString.Optional,
           folder: ConduitString.Optional,
           container: ConduitString.Optional,
           mimeType: ConduitString.Optional,

@@ -30,7 +30,7 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
   }
 
   createFile(
-    name: string,
+    name: string | undefined,
     data: string,
     folder?: string,
     container?: string,
@@ -38,6 +38,7 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     isPublic: boolean = false,
     userId?: string,
     scope?: string,
+    alias?: string,
   ): Promise<FileResponse> {
     return this.client!.createFile({
       name,
@@ -48,6 +49,7 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
       container,
       userId,
       scope,
+      alias,
     });
   }
 
@@ -60,6 +62,7 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     mimeType?: string,
     userId?: string,
     scope?: string,
+    alias?: string,
   ): Promise<FileResponse> {
     return this.client!.updateFile({
       name,
@@ -70,6 +73,7 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
       container,
       userId,
       scope,
+      alias,
     });
   }
 
@@ -78,7 +82,7 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
   }
 
   createFileByUrl(
-    name: string,
+    name: string | undefined,
     folder?: string,
     container?: string,
     mimeType?: string,
@@ -86,6 +90,7 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     isPublic: boolean = false,
     userId?: string,
     scope?: string,
+    alias?: string,
   ) {
     return this.client!.createFileByUrl({
       name,
@@ -96,6 +101,7 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
       isPublic,
       userId,
       scope,
+      alias,
     });
   }
 
@@ -108,6 +114,7 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     size?: number,
     userId?: string,
     scope?: string,
+    alias?: string,
   ) {
     return this.client!.updateFileByUrl({
       id,
@@ -118,6 +125,7 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
       size,
       userId,
       scope,
+      alias,
     });
   }
 }
