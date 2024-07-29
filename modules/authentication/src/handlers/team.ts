@@ -334,11 +334,37 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'User does not have permission to remove team members',
       );
     }
+    let deletionError = false;
     for (const member of members) {
+      const relation = await this.grpcSdk.authorization!.findRelation({
+        subject: 'User:' + member,
+        resource: 'Team:' + teamId,
+      });
+      if (!relation || relation.relations.length === 0) {
+        continue;
+      }
+      const memberRole = relation.relations[0].relation;
+      if (memberRole === 'owner') {
+        const allowed = await this.grpcSdk.authorization!.can({
+          subject: 'User:' + user._id,
+          actions: ['deleteOwners'],
+          resource: 'Team:' + teamId,
+        });
+        if (!allowed.allow) {
+          deletionError = true;
+          continue;
+        }
+      }
       await this.grpcSdk.authorization!.deleteAllRelations({
         subject: 'User:' + member,
         resource: 'Team:' + teamId,
       });
+    }
+    if (deletionError) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'One or more members were not deleted',
+      );
     }
     return 'Users removed from team';
   }
