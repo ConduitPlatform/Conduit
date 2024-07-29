@@ -22,4 +22,5 @@ export const Team = new ConduitAuthorizedResource(
     manageSubTeams: ['owner', 'editAll', 'owner->edit'],
     deleteOwners: ['owner', 'ownerRemover', 'ownerRemover->edit'],
   },
+  1,
 );

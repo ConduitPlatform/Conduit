@@ -4,11 +4,13 @@ export class ConduitAuthorizedResource {
   readonly name: string;
   readonly relations: Resource_Relation[] = [];
   readonly permissions: Resource_Permission[] = [];
+  readonly version?: number;
 
   constructor(
     name: string,
     relations: { [field: string]: string | string[] },
     permissions: { [action: string]: string | string[] },
+    version?: number,
   ) {
     this.name = name;
     this.relations = Object.keys(relations).map(relation => {
@@ -27,5 +29,6 @@ export class ConduitAuthorizedResource {
           : ([permissions[permission]] as string[]),
       };
     });
+    this.version = version;
   }
 }
