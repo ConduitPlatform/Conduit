@@ -1,19 +1,19 @@
-import { ConduitServiceModule, ConfigController, GrpcServer } from './classes';
+import { ConduitServiceModule, ConfigController, GrpcServer } from './classes/index.js';
 import { kebabCase } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
-import { ConduitService } from './interfaces';
-import ConduitGrpcSdk, {
+import { ConduitService, ModuleLifecycleStage } from './interfaces/index.js';
+import {
+  ConduitGrpcSdk,
   GrpcRequest,
   GrpcResponse,
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
-import { merge } from './utilities';
-import { convictConfigParser } from './utilities/convictConfigParser';
-import { initializeSdk } from './utilities/initializeSdk';
-import { RoutingManager } from './routing';
-import { RoutingController } from './routing/RoutingController';
+import { initializeSdk, merge } from './utilities/index.js';
+import { convictConfigParser } from './utilities/convictConfigParser.js';
+import { RoutingManager } from './routing/index.js';
+import { RoutingController } from './routing/RoutingController.js';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
   readonly config?: convict.Config<T>;
@@ -23,9 +23,11 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   protected abstract readonly metricsSchema?: object;
   private readonly serviceAddress: string;
   private readonly servicePort: string;
+  private _moduleState: ModuleLifecycleStage;
 
   protected constructor(moduleName: string) {
     super(moduleName);
+    this._moduleState = ModuleLifecycleStage.CREATE_GRPC;
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
     }
@@ -216,25 +218,33 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   /** Used to update the module's configuration on initial Redis/DB reconciliation. */
   async handleConfigSyncUpdate() {
     if (!this.config) return;
-    this.grpcSdk.bus!.subscribe(`${this.name}:config:update`, async (message: string) => {
-      ConfigController.getInstance().config = await this.preConfig(JSON.parse(message));
-      await this.onConfig();
-    });
+    this.grpcSdk.bus!.subscribe(
+      `${kebabCase(this.name)}:config:update`,
+      async (message: string) => {
+        ConfigController.getInstance().config = await this.preConfig(JSON.parse(message));
+        await this.onConfig();
+      },
+    );
   }
 
   private async preRegisterLifecycle(): Promise<void> {
     await this.createGrpcServer();
+    this._moduleState = ModuleLifecycleStage.PRE_SERVER_START;
     await this.preServerStart();
     await this.grpcSdk.initializeEventBus();
     await this.handleConfigSyncUpdate();
     await this.registerMetrics();
     await this.startGrpcServer();
+    this._moduleState = ModuleLifecycleStage.SERVER_STARTED;
     await this.onServerStart();
     await this.initializeMetrics();
+    this._moduleState = ModuleLifecycleStage.PRE_REGISTER;
     await this.preRegister();
   }
 
   private async postRegisterLifecycle(): Promise<void> {
+    this._moduleState = ModuleLifecycleStage.POST_REGISTER;
+    this.registered = true;
     await this.onRegister();
     if (this.config) {
       const configSchema = this.config.getSchema();

@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ArrayConduitModel,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
@@ -12,16 +13,16 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
-import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
-import { CustomEndpointsAdmin } from './customEndpoints/customEndpoints.admin';
-import { DocumentsAdmin } from './documents.admin';
-import { SchemaAdmin } from './schema.admin';
-import { SchemaController } from '../controllers/cms/schema.controller';
-import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
-import { CustomEndpoints, DeclaredSchema, PendingSchemas } from '../models';
-import { ConduitOptions } from '../interfaces';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
+import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
+import { CustomEndpointsAdmin } from './customEndpoints/customEndpoints.admin.js';
+import { DocumentsAdmin } from './documents.admin.js';
+import { SchemaAdmin } from './schema.admin.js';
+import { SchemaController } from '../controllers/cms/schema.controller.js';
+import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller.js';
+import { CustomEndpoints, DeclaredSchema, PendingSchemas } from '../models/index.js';
+import { ConduitOptions } from '../interfaces/index.js';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
@@ -59,24 +60,26 @@ export class AdminHandlers {
       {
         path: '/schemas/export',
         action: ConduitRouteActions.GET,
-        description: `Export custom schemas.`,
+        description: `Exports CMS schemas and extensions. Only returns database-owned entries.`,
       },
       new ConduitRouteReturnDefinition('ExportSchemas', {
         schemas: [ConduitJson.Required],
+        extensions: [ConduitJson.Required],
       }),
-      this.schemaAdmin.exportCustomSchemas.bind(this.schemaAdmin),
+      this.schemaAdmin.exportSchemas.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
         path: '/schemas/import',
         action: ConduitRouteActions.POST,
-        description: `Import custom schemas.`,
+        description: `Imports CMS schemas and extensions. Doesn't drop non-specified extensions.`,
         bodyParams: {
           schemas: { type: [TYPE.JSON], required: true },
+          extensions: { type: [TYPE.JSON], required: false },
         },
       },
       new ConduitRouteReturnDefinition('ImportSchemas', 'String'),
-      this.schemaAdmin.importCustomSchemas.bind(this.schemaAdmin),
+      this.schemaAdmin.importSchemas.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {

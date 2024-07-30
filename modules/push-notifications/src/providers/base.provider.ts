@@ -1,14 +1,15 @@
 import {
   ISendNotification,
   ISendNotificationToManyDevices,
-} from '../interfaces/ISendNotification';
-import { Notification, NotificationToken, User } from '../models';
-import ConduitGrpcSdk, { PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
-import { validateNotification } from './utils';
-import { isNil, keyBy } from 'lodash';
+} from '../interfaces/ISendNotification.js';
+import { Notification, NotificationToken, User } from '../models/index.js';
+import { ConduitGrpcSdk, PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
+import { validateNotification } from './utils/index.js';
+import { isNil, keyBy } from 'lodash-es';
 
 export class BaseNotificationProvider<T> {
   _initialized: boolean = true;
+  isBaseProvider: boolean = true;
 
   get isInitialized(): boolean {
     return this._initialized;
@@ -35,23 +36,27 @@ export class BaseNotificationProvider<T> {
         platform: params.platform,
       });
     }
-    const notificationToken = (await this.fetchTokens(sendTo)) as NotificationToken;
-    if (isNil(notificationToken)) {
+    if (this.isBaseProvider) return;
+    const notificationTokens = await this.fetchTokens(sendTo, params.platform);
+    if (notificationTokens.length === 0) {
       throw new Error('No notification token found');
     }
-    return this.sendMessage(notificationToken.token, params);
+    const promises = notificationTokens.map(async notToken => {
+      await this.sendMessage(notToken.token, params);
+    });
+    return Promise.all(promises);
   }
 
-  fetchTokens(
-    users: string | string[],
-  ): Promise<NotificationToken | NotificationToken[] | null> {
+  fetchTokens(users: string | string[], platform?: string): Promise<NotificationToken[]> {
     if (Array.isArray(users)) {
       return NotificationToken.getInstance().findMany({
         userId: { $in: users },
+        ...(platform ? { platform } : {}),
       });
     }
-    return NotificationToken.getInstance().findOne({
+    return NotificationToken.getInstance().findMany({
       userId: users as string,
+      ...(platform ? { platform } : {}),
     });
   }
 
@@ -78,6 +83,7 @@ export class BaseNotificationProvider<T> {
     if (notifications.length !== 0) {
       await Notification.getInstance().createMany(notifications);
     }
+    if (this.isBaseProvider) return;
     const userIds = params.map(param => param.sendTo);
     const notificationsObj = keyBy(params, param => param.sendTo);
 
@@ -87,6 +93,7 @@ export class BaseNotificationProvider<T> {
     const promises = notificationTokens.map(async token => {
       const id = token.userId.toString();
       const data = notificationsObj[id];
+      if (data.platform && data.platform !== token.platform) return;
       await this.sendMessage(token.token, data).catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
@@ -109,8 +116,10 @@ export class BaseNotificationProvider<T> {
         })),
       );
     }
+    if (this.isBaseProvider) return;
     const notificationTokens = (await this.fetchTokens(
       params.sendTo,
+      params.platform,
     )) as NotificationToken[];
 
     if (notificationTokens.length === 0) throw new Error('Could not find tokens');

@@ -1,1 +1,1 @@
-export * from './isInstanceOfProxyRoute';
+export * from './isInstanceOfProxyRoute.js';

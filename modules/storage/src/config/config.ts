@@ -7,6 +7,12 @@ export default {
     format: 'String',
     default: 'local',
   },
+  authorization: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+  },
   defaultContainer: {
     format: 'String',
     default: 'conduit',
@@ -65,5 +71,10 @@ export default {
       format: 'String',
       default: '/var/tmp',
     },
+  },
+  suffixOnNameConflict: {
+    format: 'Boolean',
+    doc: 'Defines if a suffix should be appended to the name of a file, upon creation, when name already exists',
+    default: false,
   },
 };

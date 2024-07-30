@@ -1,12 +1,13 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   DatabaseProvider,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import metricsSchema from './metrics';
-import { AdminHandlers } from './admin';
-import * as models from './models';
-import AppConfigSchema, { Config } from './config';
-import { FunctionController } from './controllers/function.controller';
+import metricsSchema from './metrics/index.js';
+import { AdminHandlers } from './admin/index.js';
+import * as models from './models/index.js';
+import AppConfigSchema, { Config } from './config/index.js';
+import { FunctionController } from './controllers/function.controller.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class Functions extends ManagedModule<Config> {
@@ -56,7 +57,7 @@ export default class Functions extends ManagedModule<Config> {
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       return this.database

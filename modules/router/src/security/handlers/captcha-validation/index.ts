@@ -1,22 +1,15 @@
 import { NextFunction, Response } from 'express';
-import ConduitGrpcSdk, { DatabaseProvider } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, DatabaseProvider } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { ConduitRequest } from '@conduitplatform/hermes';
 import { verify as hcaptchaVerify } from 'hcaptcha';
 import axios from 'axios';
 
 export class CaptchaValidator {
-  prod = false;
   database: DatabaseProvider;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.database = this.grpcSdk.database!;
-    const self = this;
-    this.grpcSdk.config.get('core').then(res => {
-      if (res.env === 'production') {
-        self.prod = true;
-      }
-    });
   }
 
   async recaptchaVerify(secret: string, token: string) {

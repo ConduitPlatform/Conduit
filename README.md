@@ -20,6 +20,8 @@ Conduit is a self-hosted backend aiming to cut down development times by providi
 Why write and debug the same boilerplate code for every project when you can focus on implementing the features that genuinely matter for your unique application.<br />
 Conduit takes care of all the tedious tasks that come with developing a backend from scratch, allowing you to spend your time building APIs that are going to properly support your project's needs and make it stand out.
 
+Conduit is made with ❤️ by [Quintessential SFT](https://quintessential.gr) in Athens🇬🇷.
+
 # Getting Started ✨
 
 We built a CLI to help you conveniently spin up local Conduit deployments among other interesting things.

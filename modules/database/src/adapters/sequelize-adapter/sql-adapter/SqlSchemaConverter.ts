@@ -5,20 +5,20 @@ import {
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
-import { cloneDeep, isArray, isObject } from 'lodash';
+import { cloneDeep, isArray, isObject } from 'lodash-es';
 import {
   checkDefaultValue,
   convertModelOptionsIndexes,
   convertSchemaFieldIndexes,
   extractFieldProperties,
-} from '../../utils';
-import { sqlDataTypeMap } from '../utils/sqlTypeMap';
+} from '../../utils/index.js';
+import { sqlDataTypeMap } from '../utils/sqlTypeMap.js';
 import {
   convertObjectToDotNotation,
   extractRelations,
   RelationType,
-} from '../utils/extractors';
-import { ConduitDatabaseSchema } from '../../../interfaces';
+} from '../utils/extractors/index.js';
+import { ConduitDatabaseSchema } from '../../../interfaces/index.js';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent

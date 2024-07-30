@@ -1,4 +1,4 @@
-import { ConduitModule } from '../../classes';
+import { ConduitModule } from '../../classes/index.js';
 import {
   AllowedResourcesRequest,
   AllowedResourcesResponse,
@@ -12,11 +12,16 @@ import {
   Relation,
   Resource,
   ResourceAccessListRequest,
-} from '../../protoUtils';
-import { Empty } from '../../protoUtils/google/protobuf/empty';
+  ResourceAccessListResponse,
+} from '../../protoUtils/index.js';
+import { Empty } from '../../protoUtils/google/protobuf/empty.js';
 
 export class Authorization extends ConduitModule<typeof AuthorizationDefinition> {
-  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+  constructor(
+    private readonly moduleName: string,
+    url: string,
+    grpcToken?: string,
+  ) {
     super(moduleName, 'authorization', url, grpcToken);
     this.initializeClient(AuthorizationDefinition);
   }
@@ -29,20 +34,28 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
     return this.client!.updateResource(data);
   }
 
-  deleteResource(data: Resource): Promise<Empty> {
+  deleteResource(data: Resource): Promise<unknown> {
     return this.client!.deleteResource(data);
   }
 
-  deleteRelation(data: Relation): Promise<Empty> {
+  deleteRelation(data: Relation): Promise<unknown> {
     return this.client!.deleteRelation(data);
   }
 
-  deleteAllRelations(data: DeleteAllRelationsRequest): Promise<Empty> {
+  deleteAllRelations(data: DeleteAllRelationsRequest): Promise<unknown> {
     return this.client!.deleteAllRelations(data);
   }
 
-  createRelation(data: Relation): Promise<Empty> {
+  createRelation(data: Relation): Promise<unknown> {
     return this.client!.createRelation(data);
+  }
+
+  createRelations(
+    subject: string,
+    relation: string,
+    resources: string[],
+  ): Promise<unknown> {
+    return this.client!.createRelations({ subject, relation, resources });
   }
 
   findRelation(data: FindRelationRequest): Promise<FindRelationResponse> {
@@ -53,11 +66,11 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
     return this.client!.can(data);
   }
 
-  grantPermission(data: PermissionRequest): Promise<Empty> {
+  grantPermission(data: PermissionRequest): Promise<unknown> {
     return this.client!.grantPermission(data);
   }
 
-  removePermission(data: PermissionRequest): Promise<Empty> {
+  removePermission(data: PermissionRequest): Promise<unknown> {
     return this.client!.removePermission(data);
   }
 
@@ -65,7 +78,9 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
     return this.client!.getAllowedResources(data);
   }
 
-  createResourceAccessList(data: ResourceAccessListRequest): Promise<Empty> {
+  createResourceAccessList(
+    data: ResourceAccessListRequest,
+  ): Promise<ResourceAccessListResponse> {
     return this.client!.createResourceAccessList(data);
   }
 }

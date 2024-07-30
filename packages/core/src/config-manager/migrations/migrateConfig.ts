@@ -1,4 +1,4 @@
-import { Config } from '../models';
+import { Config } from '../models/index.js';
 import { UntypedArray } from '@conduitplatform/grpc-sdk';
 
 export async function migrateConfig() {

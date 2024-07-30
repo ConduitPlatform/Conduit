@@ -1,5 +1,5 @@
 import winston, { LogCallback, Logger } from 'winston';
-import { Indexable } from './Indexable';
+import { Indexable } from './Indexable.js';
 
 export interface IConduitLogger {
   get winston(): winston.Logger;

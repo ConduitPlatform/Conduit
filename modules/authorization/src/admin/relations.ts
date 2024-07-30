@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ParsedRouterRequest,
@@ -10,9 +11,9 @@ import {
   ConduitString,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { RelationsController } from '../controllers';
-import { isNil } from 'lodash';
-import { Relationship } from '../models';
+import { RelationsController } from '../controllers/index.js';
+import { isNil } from 'lodash-es';
+import { Relationship } from '../models/index.js';
 
 export class RelationHandler {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -29,11 +30,22 @@ export class RelationHandler {
           object: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition(
-        'CreateRelation',
-        Relationship.getInstance().fields,
-      ),
+      new ConduitRouteReturnDefinition('CreateRelation', Relationship.name),
       this.createRelation.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/relations/many',
+        action: ConduitRouteActions.POST,
+        description: `Creates many relations.`,
+        bodyParams: {
+          subject: ConduitString.Required,
+          relation: ConduitString.Required,
+          resources: [ConduitString.Required],
+        },
+      },
+      new ConduitRouteReturnDefinition('CreateRelations', Relationship.name),
+      this.createRelations.bind(this),
     );
     routingManager.route(
       {
@@ -44,7 +56,7 @@ export class RelationHandler {
           id: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition('Relation', Relationship.getInstance().fields),
+      new ConduitRouteReturnDefinition('Relation', Relationship.name),
       this.getRelation.bind(this),
     );
     routingManager.route(
@@ -62,7 +74,7 @@ export class RelationHandler {
         },
       },
       new ConduitRouteReturnDefinition('GetRelations', {
-        relations: [Relationship.getInstance().fields],
+        relations: [Relationship.name],
         count: ConduitNumber.Required,
       }),
       this.getRelations.bind(this),
@@ -83,16 +95,16 @@ export class RelationHandler {
 
   async createRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { subject, relation, object } = call.request.params;
-    const newRelation = await RelationsController.getInstance().createRelation(
+    return RelationsController.getInstance().createRelation(subject, relation, object);
+  }
+
+  async createRelations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { subject, relation, resources } = call.request.params;
+    return RelationsController.getInstance().createRelations(
       subject,
       relation,
-      object,
+      resources,
     );
-    this.grpcSdk.bus?.publish(
-      'authentication:create:relation',
-      JSON.stringify(newRelation),
-    );
-    return newRelation;
   }
 
   async getRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -114,18 +126,18 @@ export class RelationHandler {
       ...(resource ?? {}),
     };
 
-    const found = await Relationship.getInstance().findMany(
+    const relations = await Relationship.getInstance().findMany(
       query,
       undefined,
       skip,
       limit,
       sort,
     );
-    if (isNil(found)) {
+    if (isNil(relations)) {
       throw new Error('Relations not found');
     }
     const count = await Relationship.getInstance().countDocuments(query);
-    return { found, count };
+    return { found: relations, count };
   }
 
   async deleteRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

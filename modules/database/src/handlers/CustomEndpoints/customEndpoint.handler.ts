@@ -4,15 +4,15 @@ import {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { constructAssignment, constructQuery } from './utils';
-import { constructSortObj } from '../utils';
+import { constructAssignment, constructQuery } from './utils.js';
+import { constructSortObj } from '../utils.js';
 import { status } from '@grpc/grpc-js';
-import { ICustomEndpoint, PopulatedCustomEndpoint } from '../../interfaces';
-import { isNil } from 'lodash';
-import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
-import { OperationsEnum } from '../../enums';
+import { ICustomEndpoint, PopulatedCustomEndpoint } from '../../interfaces/index.js';
+import { isNil } from 'lodash-es';
+import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
+import { OperationsEnum } from '../../enums/index.js';
 
 export class CustomEndpointHandler {
   private static routeControllers: Indexable = {};

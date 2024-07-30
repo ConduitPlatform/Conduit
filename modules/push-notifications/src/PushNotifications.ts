@@ -4,19 +4,19 @@ import {
   GrpcResponse,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema, { Config } from './config';
-import { AdminHandlers } from './admin';
-import { PushNotificationsRoutes } from './routes';
-import * as models from './models';
-import { FirebaseProvider } from './providers/Firebase.provider';
-import { BaseNotificationProvider } from './providers/base.provider';
+import AppConfigSchema, { Config } from './config/index.js';
+import { AdminHandlers } from './admin/index.js';
+import { PushNotificationsRoutes } from './routes/index.js';
+import * as models from './models/index.js';
+import { FirebaseProvider } from './providers/Firebase.provider.js';
+import { BaseNotificationProvider } from './providers/base.provider.js';
 import path from 'path';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { ISendNotification } from './interfaces/ISendNotification';
-import { runMigrations } from './migrations';
-import metricsSchema from './metrics';
-import { OneSignalProvider } from './providers/OneSignal.provider';
+import { ISendNotification } from './interfaces/ISendNotification.js';
+import { runMigrations } from './migrations/index.js';
+import metricsSchema from './metrics/index.js';
+import { OneSignalProvider } from './providers/OneSignal.provider.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 import {
   GetNotificationTokensRequest,
@@ -27,7 +27,11 @@ import {
   SendNotificationToManyDevicesRequest,
   SetNotificationTokenRequest,
   SetNotificationTokenResponse,
-} from './protoTypes/push-notifications';
+} from './protoTypes/push-notifications.js';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class PushNotifications extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -44,6 +48,7 @@ export default class PushNotifications extends ManagedModule<Config> {
   };
   protected metricsSchema = metricsSchema;
   private isRunning = false;
+  private canServe = false;
   private authServing = false;
   private adminRouter!: AdminHandlers;
   private userRouter!: PushNotificationsRoutes;
@@ -67,12 +72,15 @@ export default class PushNotifications extends ManagedModule<Config> {
 
   async onConfig() {
     if (!ConfigController.getInstance().config.active) {
+      this.canServe = false;
       this.updateHealthState(HealthCheckStatus.NOT_SERVING);
     } else {
       try {
         await this.enableModule();
+        this.canServe = true;
         this.updateHealthState(HealthCheckStatus.SERVING);
       } catch (e) {
+        this.canServe = false;
         this.updateHealthState(HealthCheckStatus.NOT_SERVING);
       }
     }
@@ -183,7 +191,7 @@ export default class PushNotifications extends ManagedModule<Config> {
     return callback(null, { message: 'Ok' });
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       if (Object.keys(modelInstance.fields).length !== 0) {
@@ -197,7 +205,7 @@ export default class PushNotifications extends ManagedModule<Config> {
   }
 
   private updateHealthState(stateUpdate?: HealthCheckStatus, authServing?: boolean) {
-    if (authServing) {
+    if (authServing !== undefined) {
       this.authServing = authServing;
     }
     const moduleActive = ConfigController.getInstance().config.active;
@@ -205,7 +213,10 @@ export default class PushNotifications extends ManagedModule<Config> {
       moduleActive && this.authServing
         ? HealthCheckStatus.SERVING
         : HealthCheckStatus.NOT_SERVING;
-    const requestedState = stateUpdate ?? this.healthState;
+    const requestedState =
+      stateUpdate ?? this.canServe
+        ? HealthCheckStatus.SERVING
+        : HealthCheckStatus.NOT_SERVING;
     const nextState =
       depState === requestedState && requestedState === HealthCheckStatus.SERVING
         ? HealthCheckStatus.SERVING

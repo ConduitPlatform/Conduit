@@ -1,11 +1,11 @@
-import ConduitGrpcSdk, { UntypedArray } from '@conduitplatform/grpc-sdk';
-import { CustomEndpointHandler } from '../../handlers/CustomEndpoints/customEndpoint.handler';
-import { PopulatedCustomEndpoint } from '../../interfaces';
-import { DatabaseRoutes } from '../../routes';
-import { createCustomEndpointRoute } from './utils';
-import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
+import { ConduitGrpcSdk, UntypedArray } from '@conduitplatform/grpc-sdk';
+import { CustomEndpointHandler } from '../../handlers/CustomEndpoints/customEndpoint.handler.js';
+import { PopulatedCustomEndpoint } from '../../interfaces/index.js';
+import { DatabaseRoutes } from '../../routes/index.js';
+import { createCustomEndpointRoute } from './utils.js';
+import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
 
 export class CustomEndpointController {
   private handler: CustomEndpointHandler;

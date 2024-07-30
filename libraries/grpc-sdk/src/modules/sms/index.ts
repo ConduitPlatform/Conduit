@@ -1,13 +1,17 @@
-import { ConduitModule } from '../../classes/ConduitModule';
+import { ConduitModule } from '../../classes/index.js';
 import {
   SendSmsResponse,
   SendVerificationCodeResponse,
   SmsDefinition,
   VerifyResponse,
-} from '../../protoUtils/sms';
+} from '../../protoUtils/sms.js';
 
 export class SMS extends ConduitModule<typeof SmsDefinition> {
-  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+  constructor(
+    private readonly moduleName: string,
+    url: string,
+    grpcToken?: string,
+  ) {
     super(moduleName, 'sms', url, grpcToken);
     this.initializeClient(SmsDefinition);
   }

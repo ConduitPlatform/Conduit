@@ -1,8 +1,8 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { UserIdToUserTokenSchemaMigration } from './UserIdToUserTokenSchemaMigration';
-import { UserIdToUserAccessTokenSchemaMigration } from './UserIdToUserAccessTokenSchemaMigration';
-import { UserIdToUserRefreshTokenSchemaMigration } from './UserIdToUserRefreshTokenSchemaMigration';
-import { UserIdToUserTwoFactorSchemaMigration } from './UserIdToUserTwoFactorSchemaMigration';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { UserIdToUserTokenSchemaMigration } from './UserIdToUserTokenSchemaMigration.js';
+import { UserIdToUserAccessTokenSchemaMigration } from './UserIdToUserAccessTokenSchemaMigration.js';
+import { UserIdToUserRefreshTokenSchemaMigration } from './UserIdToUserRefreshTokenSchemaMigration.js';
+import { UserIdToUserTwoFactorSchemaMigration } from './UserIdToUserTwoFactorSchemaMigration.js';
 
 export async function runMigrations(grpcSdk: ConduitGrpcSdk) {
   await UserIdToUserTokenSchemaMigration(grpcSdk).catch(ignorePostgres);

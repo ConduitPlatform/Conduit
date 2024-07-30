@@ -1,5 +1,6 @@
-import { FileHandlers } from '../handlers/file';
-import ConduitGrpcSdk, {
+import { FileHandlers } from '../handlers/file.js';
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   TYPE,
@@ -7,10 +8,11 @@ import ConduitGrpcSdk, {
 import {
   ConduitNumber,
   ConduitString,
+  ConfigController,
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { File } from '../models';
+import { File } from '../models/index.js';
 
 export class StorageRoutes {
   private _routingManager: RoutingManager;
@@ -26,14 +28,18 @@ export class StorageRoutes {
 
   async registerRoutes() {
     this._routingManager.clear();
-
+    const authzEnabled = ConfigController.getInstance().config.authorization.enabled;
     this._routingManager.route(
       {
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+        },
         action: ConduitRouteActions.GET,
         path: '/storage/file/:id',
+        middlewares: ['authMiddleware?'],
         description: `Returns a file.`,
       },
       new ConduitRouteReturnDefinition(File.name),
@@ -47,7 +53,9 @@ export class StorageRoutes {
         },
         queryParams: {
           redirect: { type: TYPE.Boolean, required: false },
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
         },
+        middlewares: ['authMiddleware?'],
         action: ConduitRouteActions.GET,
         path: '/storage/getFileUrl/:id',
         description: `Returns the file's url and optionally redirects to it.`,
@@ -60,12 +68,16 @@ export class StorageRoutes {
       this._routingManager.route(
         {
           bodyParams: {
-            name: { type: TYPE.String, required: true },
+            name: { type: TYPE.String, required: false },
+            alias: { type: TYPE.String, required: false },
             mimeType: TYPE.String,
             data: { type: TYPE.String, required: true },
             folder: { type: TYPE.String, required: false },
             container: { type: TYPE.String, required: false },
             isPublic: TYPE.Boolean,
+          },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
           },
           action: ConduitRouteActions.POST,
           path: '/storage/file',
@@ -78,12 +90,16 @@ export class StorageRoutes {
       this._routingManager.route(
         {
           bodyParams: {
-            name: { type: TYPE.String, required: true },
+            name: { type: TYPE.String, required: false },
+            alias: { type: TYPE.String, required: false },
             mimeType: TYPE.String,
             folder: { type: TYPE.String, required: false },
             size: { type: TYPE.Number, required: false },
             container: { type: TYPE.String, required: false },
             isPublic: TYPE.Boolean,
+          },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
           },
           action: ConduitRouteActions.POST,
           path: '/storage/upload',
@@ -103,10 +119,14 @@ export class StorageRoutes {
           },
           bodyParams: {
             name: ConduitString.Optional,
+            alias: ConduitString.Optional,
             folder: ConduitString.Optional,
             container: ConduitString.Optional,
             mimeType: ConduitString.Optional,
             size: ConduitNumber.Optional,
+          },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
           },
           action: ConduitRouteActions.PATCH,
           path: '/storage/upload/:id',
@@ -124,6 +144,9 @@ export class StorageRoutes {
           urlParams: {
             id: { type: TYPE.String, required: true },
           },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+          },
           action: ConduitRouteActions.GET,
           middlewares: ['authMiddleware'],
           path: '/storage/file/data/:id',
@@ -139,6 +162,9 @@ export class StorageRoutes {
         {
           urlParams: {
             id: { type: TYPE.String, required: true },
+          },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
           },
           action: ConduitRouteActions.DELETE,
           path: '/storage/file/:id',
@@ -156,8 +182,12 @@ export class StorageRoutes {
           urlParams: {
             id: { type: TYPE.String, required: true },
           },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+          },
           bodyParams: {
             name: ConduitString.Optional,
+            alias: ConduitString.Optional,
             folder: ConduitString.Optional,
             container: ConduitString.Optional,
             data: ConduitString.Required,

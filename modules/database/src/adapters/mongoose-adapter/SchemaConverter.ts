@@ -5,11 +5,10 @@ import {
   MongoIndexType,
   SchemaFieldIndex,
 } from '@conduitplatform/grpc-sdk';
-import { cloneDeep, isArray, isNil, isObject } from 'lodash';
-import { checkIfMongoOptions } from './utils';
-import { ConduitDatabaseSchema } from '../../interfaces';
-
-const deepdash = require('deepdash/standalone');
+import { cloneDeep, isArray, isNil, isObject } from 'lodash-es';
+import { checkIfMongoOptions } from './utils.js';
+import { ConduitDatabaseSchema } from '../../interfaces/index.js';
+import * as deepdash from 'deepdash-es/standalone';
 
 /**
  * This function should take as an input a JSON schema and convert it to the mongoose equivalent

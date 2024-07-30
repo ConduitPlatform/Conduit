@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitModel,
   ConduitSchema,
   GrpcError,
@@ -7,12 +8,17 @@ import ConduitGrpcSdk, {
   RawSQLQuery,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { _ConduitSchema, ConduitDatabaseSchema, IView, Schema } from '../interfaces';
-import { stitchSchema, validateExtensionFields } from './utils/extensions';
+import {
+  _ConduitSchema,
+  ConduitDatabaseSchema,
+  IView,
+  Schema,
+} from '../interfaces/index.js';
+import { stitchSchema, validateExtensionFields } from './utils/extensions.js';
 import { status } from '@grpc/grpc-js';
-import { isEqual, isNil } from 'lodash';
+import { isEqual, isNil } from 'lodash-es';
 import ObjectHash from 'object-hash';
-import * as systemModels from '../models';
+import * as systemModels from '../models/index.js';
 
 export abstract class DatabaseAdapter<T extends Schema> {
   registeredSchemas: Map<string, ConduitDatabaseSchema>;
@@ -44,9 +50,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this.legacyDeployment = await this.hasLegacyCollections();
   }
 
-  async registerSystemSchema(schema: ConduitSchema) {
+  async registerSystemSchema(schema: ConduitSchema, isReplica: boolean) {
     // @dirty-type-cast
-    await this.createSchemaFromAdapter(schema);
+    await this.createSchemaFromAdapter(schema, false, false, isReplica);
     this._systemSchemas.add(schema.name);
   }
 
@@ -85,7 +91,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
     await this.addExtensionsFromSchemaModel(schema, gRPC);
     stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const schemaUpdate = this.registeredSchemas.has(schema.name);
-    const createdSchema = await this._createSchemaFromAdapter(schema, !instanceSync);
+    const createdSchema = await this._createSchemaFromAdapter(
+      schema,
+      !instanceSync,
+      instanceSync,
+    );
     this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
     if (!instanceSync && !schemaUpdate) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
@@ -94,6 +104,31 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     if (!instanceSync) this.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     return createdSchema;
+  }
+
+  async createViewFromAdapter(
+    viewData: {
+      modelName: string;
+      viewName: string;
+      joinedSchemas: string[];
+      query: any;
+    },
+    instanceSync = false,
+  ) {
+    await this.createView(
+      viewData.modelName,
+      viewData.viewName,
+      viewData.joinedSchemas,
+      viewData.query,
+    );
+    if (!instanceSync) {
+      this.publishView(
+        viewData.modelName,
+        viewData.viewName,
+        viewData.joinedSchemas,
+        viewData.query,
+      );
+    }
   }
 
   abstract getCollectionName(schema: ConduitSchema): string;
@@ -105,6 +140,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
   getSchema(schemaName: string): ConduitSchema {
     if (this.models && this.models[schemaName]) {
       return this.models[schemaName].originalSchema;
+    } else if (this.views && this.views[schemaName]) {
+      return this.views[schemaName].originalSchema;
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
@@ -231,7 +268,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
             ],
           },
           { name: 'edit', roles: ['editor', 'editor->edit', 'owner', 'owner->edit'] },
-          { name: 'delete', roles: ['editor', 'editor->edit', 'owner', 'owner->edit'] },
+          {
+            name: 'delete',
+            roles: ['editor', 'editor->delete', 'owner', 'owner->delete'],
+          },
         ],
       });
     }
@@ -275,7 +315,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
           model,
           !!model.modelOptions.conduit?.imported,
           true,
-          false,
+          true,
         );
       });
 
@@ -306,7 +346,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
       !baseSchema.modelOptions.conduit.permissions ||
       !baseSchema.modelOptions.conduit.permissions.extendable
     ) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Schema is not extendable');
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `Schema ${schemaName} is not extendable`,
+      );
     }
     // Hacky input type conversion, clean up input flow types asap // @dirty-type-cast
     const schema: ConduitDatabaseSchema = baseSchema as ConduitDatabaseSchema;
@@ -323,12 +366,13 @@ export abstract class DatabaseAdapter<T extends Schema> {
     if (extIndex === -1 && extFieldsCount === 0) {
       return Promise.resolve(schema as unknown as Schema); // @dirty-type-cast
     } else if (extIndex === -1) {
+      const date = new Date(); // TODO FORMAT
       // Create Extension
       schema.extensions.push({
         fields: extFields,
         ownerModule: extOwner,
-        createdAt: new Date(), // TODO FORMAT
-        updatedAt: new Date(), // TODO FORMAT
+        createdAt: date,
+        updatedAt: date,
       });
     } else {
       if (extFieldsCount === 0) {
@@ -358,6 +402,22 @@ export abstract class DatabaseAdapter<T extends Schema> {
     );
   }
 
+  /**
+   * Publishes view for Database (multi-instance) synchronization
+   */
+  publishView(modelName: string, viewName: string, joinedSchemas: string[], query: any) {
+    // @dirty-type-cast
+    this.grpcSdk.bus!.publish(
+      'database:create:view',
+      JSON.stringify({
+        modelName,
+        viewName,
+        joinedSchemas,
+        query,
+      }),
+    );
+  }
+
   protected abstract connect(): void;
 
   protected abstract ensureConnected(): Promise<void>;
@@ -367,9 +427,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
    */
   protected abstract hasLegacyCollections(): Promise<boolean>;
 
+  abstract guaranteeView(viewName: string): Promise<T>;
+
   protected abstract _createSchemaFromAdapter(
     schema: ConduitSchema,
     saveToDb: boolean,
+    instanceSync: boolean,
   ): Promise<Schema>;
 
   protected async saveSchemaToDatabase(schema: ConduitSchema) {

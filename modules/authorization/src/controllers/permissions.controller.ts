@@ -1,14 +1,14 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import {
   checkRelation,
   computePermissionTuple,
   getPostgresAccessListQuery,
   getSQLAccessListQuery,
-} from '../utils';
-import { IndexController } from './index.controller';
-import { RuleCache } from './cache.controller';
-import { isNil } from 'lodash';
-import { Permission } from '../models';
+} from '../utils/index.js';
+import { IndexController } from './index.controller.js';
+import { RuleCache } from './cache.controller.js';
+import { isEmpty, isNil } from 'lodash-es';
+import { Permission } from '../models/index.js';
 import { createHash } from 'crypto';
 
 export class PermissionsController {
@@ -24,7 +24,7 @@ export class PermissionsController {
     if (grpcSdk) {
       return (PermissionsController._instance = new PermissionsController(grpcSdk));
     }
-    throw new Error('Missing grpcSdk or indexController!');
+    throw new Error('No grpcSdk instance provided!');
   }
 
   async grantPermission(subject: string, action: string, resource: string) {
@@ -33,8 +33,12 @@ export class PermissionsController {
     const computedTuple = computePermissionTuple(subject, action, resource);
     await Permission.getInstance().create({
       subject,
+      subjectId: subject.split(':')[1],
+      subjectType: subject.split(':')[0],
       permission: action,
       resource,
+      resourceId: resource.split(':')[1],
+      resourceType: resource.split(':')[0],
       computedTuple,
     });
   }
@@ -123,15 +127,27 @@ export class PermissionsController {
     return { resources: allowedIds.concat(index), count };
   }
 
-  async createAccessList(subject: string, action: string, objectType: string) {
+  async createAccessList(
+    subject: string,
+    action: string,
+    objectType: string,
+    requestedViewName?: string,
+  ) {
     const computedTuple = `${subject}#${action}@${objectType}`;
     const objectTypeCollection = await this.grpcSdk
       .database!.getSchema(objectType)
       .then(r => r.collectionName);
+    let viewName = requestedViewName;
+    if (!viewName || isEmpty(viewName)) {
+      viewName = createHash('sha256')
+        .update(`${objectType}_${subject}_${action}`)
+        .digest('hex');
+    }
+
     const dbType = await this.grpcSdk.database!.getDatabaseType().then(r => r.result);
     await this.grpcSdk.database?.createView(
       objectType,
-      createHash('sha256').update(`${objectType}_${subject}_${action}`).digest('hex'),
+      viewName,
       ['Permission', 'ActorIndex', 'ObjectIndex'],
       {
         mongoQuery: [
@@ -180,29 +196,39 @@ export class PermissionsController {
                 id_action: {
                   $concat: [`${objectType}:`, { $toString: '$_id' }, `#${action}`],
                 },
+                entities: { $concatArrays: ['$actors.entity', ['*']] },
               },
               pipeline: [
                 {
                   $match: {
-                    $expr: {
-                      $eq: ['$subject', '$$id_action'],
-                    },
+                    $and: [
+                      {
+                        $expr: {
+                          $eq: ['$subject', '$$id_action'],
+                        },
+                      },
+                      {
+                        $expr: {
+                          $in: ['$entity', '$$entities'],
+                        },
+                      },
+                    ],
                   },
                 },
               ],
-              as: 'objects',
-            },
-          },
-          {
-            $addFields: {
-              intersection: {
-                $setIntersection: ['$actors.entity', '$objects.entity'],
-              },
+              as: 'intersection',
             },
           },
           {
             $match: {
-              intersection: { $ne: [] },
+              $or: [
+                {
+                  'intersection.0': { $exists: true },
+                },
+                {
+                  'permissions.0': { $exists: true },
+                },
+              ],
             },
           },
           {
@@ -232,6 +258,6 @@ export class PermissionsController {
               ),
       },
     );
-    return;
+    return viewName;
   }
 }

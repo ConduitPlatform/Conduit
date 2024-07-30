@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   DatabaseProvider,
   GrpcCallback,
   GrpcError,
@@ -6,27 +7,30 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 
-import AppConfigSchema, { Config } from './config';
-import { AdminHandlers } from './admin';
-import { ChatRoutes } from './routes';
-import * as models from './models';
-import { validateUsersInput } from './utils';
+import AppConfigSchema, { Config } from './config/index.js';
+import { AdminHandlers } from './admin/index.js';
+import { ChatRoutes } from './routes/index.js';
+import * as models from './models/index.js';
+import { validateUsersInput } from './utils/index.js';
 import path from 'path';
-import { isArray, isNil } from 'lodash';
+import { isArray, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { runMigrations } from './migrations';
+import { runMigrations } from './migrations/index.js';
 import {
   CreateRoomRequest,
   DeleteRoomRequest,
   Room,
   SendMessageRequest,
-} from './protoTypes/chat';
-import metricsSchema from './metrics';
+} from './protoTypes/chat.js';
+import metricsSchema from './metrics/index.js';
 import {
   ConduitActiveSchema,
   ConfigController,
   ManagedModule,
 } from '@conduitplatform/module-tools';
+import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class Chat extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -151,7 +155,7 @@ export default class Chat extends ManagedModule<Config> {
       }),
     );
     callback(null, {
-      Id: room._id,
+      _id: room._id,
       name: room.name,
       participants: room.participants as string[],
     });
@@ -203,13 +207,11 @@ export default class Chat extends ManagedModule<Config> {
   }
 
   async deleteRoom(call: GrpcRequest<DeleteRoomRequest>, callback: GrpcCallback<Room>) {
-    const { id } = call.request;
+    const { _id } = call.request;
 
     let errorMessage: string | null = null;
     const room: models.ChatRoom = await models.ChatRoom.getInstance()
-      .deleteOne({
-        _id: id,
-      })
+      .deleteOne({ _id })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -219,7 +221,7 @@ export default class Chat extends ManagedModule<Config> {
 
     models.ChatMessage.getInstance()
       .deleteMany({
-        room: id,
+        room: _id,
       })
       .catch((e: Error) => {
         errorMessage = e.message;
@@ -237,13 +239,13 @@ export default class Chat extends ManagedModule<Config> {
       }),
     );
     callback(null, {
-      Id: room._id,
+      _id: room._id,
       name: room.name,
       participants: room.participants as string[],
     });
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       //TODO: add support for multiple schemas types

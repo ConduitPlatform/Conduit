@@ -8,8 +8,8 @@ import {
   Indexable,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { CmsHandlers } from '../../handlers/cms/crud.handler';
-import { ConduitBuiltRoute } from '../../interfaces';
+import { CmsHandlers } from '../../handlers/cms/crud.handler.js';
+import { ConduitBuiltRoute } from '../../interfaces/index.js';
 import { RouteBuilder } from '@conduitplatform/module-tools';
 
 export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): number {

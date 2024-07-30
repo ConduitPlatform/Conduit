@@ -1,13 +1,17 @@
-import { ConduitModule } from '../../classes';
+import { ConduitModule } from '../../classes/index.js';
 import {
   AdminDefinition,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
-} from '../../protoUtils';
-import { ConduitRouteActions } from '../../interfaces';
+} from '../../protoUtils/index.js';
+import { ConduitRouteActions } from '../../interfaces/index.js';
 
 export class Admin extends ConduitModule<typeof AdminDefinition> {
-  constructor(readonly moduleName: string, url: string, grpcToken?: string) {
+  constructor(
+    readonly moduleName: string,
+    url: string,
+    grpcToken?: string,
+  ) {
     super(moduleName, 'admin', url, grpcToken);
     this.initializeClient(AdminDefinition);
   }

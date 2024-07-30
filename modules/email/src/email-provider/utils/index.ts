@@ -1,2 +1,2 @@
-export * from './getHandleBarsValues';
-export * from './htmlCheck';
+export * from './getHandleBarsValues.js';
+export * from './htmlCheck.js';

@@ -1,1 +1,2 @@
-export * from './ConduitService';
+export * from './ConduitService.js';
+export * from './ModuleLifecycleStage.js';

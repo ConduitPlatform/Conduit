@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitModel,
   ConduitSchema,
   GrpcError,
@@ -6,9 +7,9 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import { AdminHandlers } from './admin';
-import { DatabaseRoutes } from './routes';
-import * as models from './models';
+import { AdminHandlers } from './admin/index.js';
+import { DatabaseRoutes } from './routes/index.js';
+import * as models from './models/index.js';
 import {
   ColumnExistenceRequest,
   ColumnExistenceResponse,
@@ -28,26 +29,33 @@ import {
   Schema as SchemaDto,
   UpdateManyRequest,
   UpdateRequest,
-} from './protoTypes/database';
-import { CreateSchemaExtensionRequest, SchemaResponse, SchemasResponse } from './types';
-import { DatabaseAdapter } from './adapters/DatabaseAdapter';
-import { MongooseAdapter } from './adapters/mongoose-adapter';
-import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { ConduitDatabaseSchema, IView, Schema } from './interfaces';
-import { canCreate, canDelete, canModify } from './permissions';
-import { runMigrations } from './migrations';
-import { SchemaController } from './controllers/cms/schema.controller';
-import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
-import { SchemaConverter } from './utils/SchemaConverter';
+} from './protoTypes/database.js';
+import {
+  CreateSchemaExtensionRequest,
+  SchemaResponse,
+  SchemasResponse,
+} from './types.js';
+import { DatabaseAdapter } from './adapters/DatabaseAdapter.js';
+import { MongooseAdapter } from './adapters/mongoose-adapter/index.js';
+import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema.js';
+import { ConduitDatabaseSchema, IView, Schema } from './interfaces/index.js';
+import { canCreate, canDelete, canModify } from './permissions/index.js';
+import { runMigrations } from './migrations/index.js';
+import { SchemaController } from './controllers/cms/schema.controller.js';
+import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller.js';
+import { SchemaConverter } from './utils/SchemaConverter.js';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
-import metricsSchema from './metrics';
-import { isNil } from 'lodash';
-import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter';
-import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter';
+import metricsSchema from './metrics/index.js';
+import { isNil } from 'lodash-es';
+import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter/index.js';
+import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter/index.js';
 import { ManagedModule } from '@conduitplatform/module-tools';
-import { Empty } from './protoTypes/google/protobuf/empty';
+import { Empty } from './protoTypes/google/protobuf/empty.js';
+import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
@@ -105,20 +113,23 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async onServerStart() {
-    await this._activeAdapter.registerSystemSchema(models.DeclaredSchema);
-    await this._activeAdapter.registerSystemSchema(models.MigratedSchemas);
+    const isReplica = this.grpcSdk.isAvailable('database');
+    await this._activeAdapter.registerSystemSchema(models.DeclaredSchema, isReplica);
+    await this._activeAdapter.registerSystemSchema(models.MigratedSchemas, isReplica);
     let modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       if (['_DeclaredSchema', 'MigratedSchemas'].includes(model.name)) return [];
-      return this._activeAdapter.registerSystemSchema(model);
+      return this._activeAdapter.registerSystemSchema(model, isReplica);
     });
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
     await this._activeAdapter.recoverViewsFromDatabase();
-    await runMigrations(this._activeAdapter);
+    if (!isReplica) {
+      await runMigrations(this._activeAdapter);
+    }
     modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      return this._activeAdapter.registerSystemSchema(model).then(() => {
-        if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
+      return this._activeAdapter.registerSystemSchema(model, isReplica).then(() => {
+        if (this._activeAdapter.getDatabaseType() !== 'MongoDB' && !isReplica) {
           return this._activeAdapter.syncSchema(model.name);
         }
       });
@@ -213,12 +224,12 @@ export default class DatabaseModule extends ManagedModule<void> {
    */
   async createView(call: GrpcRequest<CreateViewRequest>, callback: GrpcResponse<Empty>) {
     try {
-      await this._activeAdapter.createView(
-        call.request.schemaName,
-        call.request.viewName,
-        call.request.joinedSchemas,
-        call.request.query,
-      );
+      await this._activeAdapter.createViewFromAdapter({
+        modelName: call.request.schemaName,
+        viewName: call.request.viewName,
+        joinedSchemas: call.request.joinedSchemas,
+        query: call.request.query,
+      });
       callback(null); // @dirty-type-cast
     } catch (err) {
       callback({
@@ -343,16 +354,19 @@ export default class DatabaseModule extends ManagedModule<void> {
   async findMany(call: GrpcRequest<FindRequest>, callback: GrpcResponse<QueryResponse>) {
     try {
       const { skip, limit, select, populate } = call.request;
-      const sort = call.request.sort as { [key: string]: -1 | 1 | number } | undefined;
-      if (sort) {
-        Object.keys(sort).forEach(field => {
-          if (sort[field] !== 1 && sort[field] !== -1) {
+      const _sort = call.request.sort as { [field: string]: -1 | 1 | number };
+      // gRPC undefined object field values fall back to  empty objects...
+      let sort: { [field: string]: -1 | 1 } | undefined = undefined;
+      if (_sort && !!Object.keys(_sort).length) {
+        Object.keys(_sort).forEach(field => {
+          if (_sort[field] !== 1 && _sort[field] !== -1) {
             return callback({
               code: status.INVALID_ARGUMENT,
-              message: `Invalid sort field value "${sort[field]}" in field "${field}", should be -1 or 1.`,
+              message: `Invalid sort field value "${_sort[field]}" in field "${field}", should be -1 or 1.`,
             });
           }
         });
+        sort = _sort as { [field: string]: -1 | 1 };
       }
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const docs = await schemaAdapter.model.findMany(call.request.query, {
@@ -442,7 +456,13 @@ export default class DatabaseModule extends ManagedModule<void> {
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!(await canModify(moduleName, schemaAdapter.model))) {
+      if (
+        !(await canModify(
+          moduleName,
+          schemaAdapter.model,
+          JSON.parse(call.request.query),
+        ))
+      ) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
@@ -553,7 +573,13 @@ export default class DatabaseModule extends ManagedModule<void> {
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!(await canModify(moduleName, schemaAdapter.model))) {
+      if (
+        !(await canModify(
+          moduleName,
+          schemaAdapter.model,
+          JSON.parse(call.request.query),
+        ))
+      ) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
@@ -590,7 +616,13 @@ export default class DatabaseModule extends ManagedModule<void> {
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!(await canModify(moduleName, schemaAdapter.model))) {
+      if (
+        !(await canModify(
+          moduleName,
+          schemaAdapter.model,
+          JSON.parse(call.request.query),
+        ))
+      ) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
@@ -791,6 +823,10 @@ export default class DatabaseModule extends ManagedModule<void> {
         const syncSchema: ConduitDatabaseSchema = JSON.parse(schemaStr); // @dirty-type-cast
         delete (syncSchema as any).fieldHash;
         await this._activeAdapter.createSchemaFromAdapter(syncSchema, false, false, true);
+      });
+      this.grpcSdk.bus?.subscribe('database:create:view', async viewStr => {
+        const viewData = JSON.parse(viewStr);
+        await this._activeAdapter.createViewFromAdapter(viewData, true);
       });
       this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
         await this._activeAdapter.deleteSchema(schemaName, false, '', true);

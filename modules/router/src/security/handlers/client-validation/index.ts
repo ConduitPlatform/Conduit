@@ -1,27 +1,32 @@
 import { NextFunction, Response } from 'express';
-import { isNil } from 'lodash';
-import ConduitGrpcSdk, {
+import { isNil } from 'lodash-es';
+import {
+  ConduitGrpcSdk,
   ConduitError,
   DatabaseProvider,
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
-import { Client } from '../../../models';
-import { validateClient } from '../../utils';
-import { ValidationInterface } from '../../interfaces/ValidationInterface';
+import { Client } from '../../../models/index.js';
+import { validateClient } from '../../utils/index.js';
+import { ValidationInterface } from '../../interfaces/ValidationInterface.js';
 import { ConduitRequest } from '@conduitplatform/hermes';
 
 export class ClientValidator {
-  prod = false;
   database: DatabaseProvider;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.database = this.grpcSdk.database!;
-    const self = this;
-    this.grpcSdk.config.get('core').then(res => {
-      if (res.env === 'production') {
-        self.prod = true;
-      }
-    });
+  }
+
+  async isProd() {
+    const isProd = await this.grpcSdk.state?.getKey('isProd');
+    if (isNil(isProd)) {
+      const config = await ConfigController.getInstance().config;
+      const isProd = config.env === 'production';
+      await this.grpcSdk.state?.setKey('isProd', isProd ? 'true' : 'false', 5000);
+      return isProd;
+    }
+    return isProd === 'true';
   }
 
   async middleware(req: ConduitRequest, res: Response, next: NextFunction) {
@@ -34,11 +39,14 @@ export class ClientValidator {
 
     // check gql explorer and swagger access
     if (
-      (req.url === '/graphql' || req.url.startsWith('/swagger')) &&
+      (req.url === '/graphql' ||
+        req.url.startsWith('/swagger') ||
+        req.url.startsWith('/reference')) &&
       req.method === 'GET'
     ) {
       // disabled swagger and gql explorer access on production
-      if (this.prod) return next(ConduitError.unauthorized());
+      const isProd = await this.isProd();
+      if (isProd) return next(ConduitError.unauthorized());
       return next();
     }
 

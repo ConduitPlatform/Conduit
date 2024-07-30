@@ -1,6 +1,7 @@
 import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
-import { User } from './User.model';
+import { User } from './User.model.js';
+import { ChatParticipantsLog } from './ChatParticipantsLog.schema.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
@@ -15,6 +16,20 @@ const schema: ConduitModel = {
       required: true,
     },
   ],
+  creator: {
+    type: TYPE.Relation,
+    model: 'User',
+  },
+  participantsLog: [
+    {
+      type: TYPE.Relation,
+      model: 'ChatParticipantsLog',
+    },
+  ],
+  deleted: {
+    type: TYPE.Boolean,
+    default: false,
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -33,11 +48,15 @@ const collectionName = undefined;
 
 export class ChatRoom extends ConduitActiveSchema<ChatRoom> {
   private static _instance: ChatRoom;
-  _id!: string;
-  name!: string;
-  participants!: string[] | User[];
-  createdAt!: Date;
-  updatedAt!: Date;
+  _id: string;
+  // todo rename
+  declare name: string;
+  creator?: string | User;
+  participants: string[] | User[];
+  participantsLog: (string | ChatParticipantsLog)[];
+  deleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 
   private constructor(database: DatabaseProvider) {
     super(database, ChatRoom.name, schema, modelOptions, collectionName);

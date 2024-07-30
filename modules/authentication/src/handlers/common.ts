@@ -1,6 +1,7 @@
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import moment from 'moment';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
@@ -8,16 +9,16 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { RefreshToken, User } from '../models';
-import { IAuthenticationStrategy } from '../interfaces';
-import { Config } from '../config';
-import { TokenProvider } from './tokenProvider';
+import { AccessToken, RefreshToken, User } from '../models/index.js';
+import { IAuthenticationStrategy } from '../interfaces/index.js';
+import { Config } from '../config/index.js';
+import { TokenProvider } from './tokenProvider.js';
 import {
   ConduitString,
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { AuthUtils } from '../utils';
+import { AuthUtils } from '../utils/index.js';
 import getToken = AuthUtils.getToken;
 
 export class CommonHandlers implements IAuthenticationStrategy {
@@ -36,9 +37,9 @@ export class CommonHandlers implements IAuthenticationStrategy {
       ['user'],
     );
     if (isNil(oldRefreshToken)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Refresh token not found');
     }
-    if (moment().isAfter(moment(oldRefreshToken.expiresOn))) {
+    if (moment.utc().isAfter(moment.utc(oldRefreshToken.expiresOn))) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
     }
     if (!oldRefreshToken.user) {
@@ -50,10 +51,13 @@ export class CommonHandlers implements IAuthenticationStrategy {
 
     // delete the old refresh token
     await RefreshToken.getInstance().deleteOne({ _id: oldRefreshToken._id });
+    await AccessToken.getInstance().deleteOne({
+      _id: oldRefreshToken.accessToken as string,
+    });
     // delete all expired tokens
     RefreshToken.getInstance()
       .deleteMany({
-        expiresOn: { $lte: new Date() },
+        expiresOn: { $lte: moment.utc().toDate() },
       })
       .catch();
     return TokenProvider.getInstance().provideUserTokens({
@@ -87,7 +91,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
         options: config.refreshTokens.cookieOptions,
       });
     }
-    if (config.refreshTokens.enabled && config.refreshTokens.setCookie) {
+    if (config.accessTokens.setCookie) {
       removeCookies.push({
         name: 'accessToken',
         options: config.accessTokens.cookieOptions,

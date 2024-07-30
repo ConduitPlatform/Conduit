@@ -1,7 +1,7 @@
 import express, { Express } from 'express';
 import { Registry } from 'prom-client';
 import { isNaN } from 'lodash';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 
 export class MetricsServer {
   private readonly moduleName: string;

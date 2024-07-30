@@ -1,10 +1,10 @@
-import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { migrateCrudOperations } from './crudOperations.migration';
-import { migrateSecurityClients } from './securityClients.migration';
-import { migrateCustomEndpoints } from './customEndpoints.migration';
-import { migrateSystemSchemasCms } from './systemSchemasCms.migration';
+import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
+import { migrateCrudOperations } from './crudOperations.migration.js';
+import { migrateSecurityClients } from './securityClients.migration.js';
+import { migrateCustomEndpoints } from './customEndpoints.migration.js';
+import { migrateSystemSchemasCms } from './systemSchemasCms.migration.js';
 
 export async function runMigrations(
   adapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>,

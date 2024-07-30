@@ -1,1 +1,1 @@
-export * from './PlatformTypesEnum';
+export * from './PlatformTypesEnum.js';

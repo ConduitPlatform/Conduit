@@ -4,10 +4,10 @@ import {
   MongoIndexOptions,
   SequelizeIndexOptions,
 } from '@conduitplatform/grpc-sdk';
-import { MongooseAdapter } from './index';
-import _, { isArray, isObject } from 'lodash';
-import { MongooseSchema } from './MongooseSchema';
-import { Doc, Fields } from '../../interfaces';
+import { MongooseAdapter } from './index.js';
+import { cloneDeep, isArray, isObject } from 'lodash-es';
+import { MongooseSchema } from './MongooseSchema.js';
+import { Doc, Fields } from '../SchemaAdapter.js';
 
 /**
  * @throws {Error}
@@ -118,6 +118,6 @@ export async function createWithPopulations(
   // The problem is that if we validate the object it will fail because the references will have an object
   // that must be created and be replaced with the _id (which isn't happening on the validation call)
 
-  await _createWithPopulations(fields, _.cloneDeep(document), adapter, true);
+  await _createWithPopulations(fields, cloneDeep(document), adapter, true);
   await _createWithPopulations(fields, document, adapter);
 }

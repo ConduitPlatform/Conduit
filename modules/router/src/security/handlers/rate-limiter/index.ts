@@ -1,41 +1,43 @@
 import { Cluster, Redis } from 'ioredis';
-import { RateLimiterRedis } from 'rate-limiter-flexible';
-import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
+import { isNil } from 'lodash-es';
 
 export class RateLimiter {
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    const redisClient: Redis | Cluster = this.grpcSdk.redisManager.getClient({
-      enableOfflineQueue: false,
-    });
-    this._limiter = new RateLimiterRedis({
-      storeClient: redisClient,
-      keyPrefix: 'mainLimiter',
-      points: 50, // 10 requests
-      duration: 1, // per 1 second by IP
-      blockDuration: 10,
-      // inmemoryBlockOnConsumed: 10,
-      execEvenly: false,
-    });
-  }
+  private redisClient: Redis | Cluster;
 
-  private _limiter: RateLimiterRedis;
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+    this.redisClient = this.grpcSdk.redisManager.getClient();
+  }
 
   get limiter() {
     const self = this;
     return (req: any, res: any, next: any) => {
-      const ip =
-        req.headers['cf-connecting-ip'] ||
+      const config = ConfigController.getInstance().config.rateLimit;
+      const prefix = 'limiter';
+      const ip = (req.headers['cf-connecting-ip'] ||
         req.headers['x-original-forwarded-for'] ||
         req.headers['x-forwarded-for'] ||
-        req.ip;
-      self._limiter
-        .consume(ip)
-        .then(() => {
-          next();
-        })
-        .catch(() => {
-          next(new ConduitError('RATE_LIMIT', 429, 'Too Many Requests'));
-        });
+        req.headers['x-real-ip'] ||
+        req.ip) as string;
+      if (req.method === 'OPTIONS') next();
+      self.redisClient.incr(`${prefix}:${ip}`, (err, requests) => {
+        if (err || isNil(requests) || !requests) {
+          ConduitGrpcSdk.Logger.error(
+            `RATE_LIMIT: error with redis when processing limit.`,
+          );
+        }
+        if (requests === 1) {
+          self.redisClient.expire(`${prefix}:${ip}`, config.resetInterval);
+        }
+        if (requests! > config.maxRequests) {
+          ConduitGrpcSdk.Logger.info(
+            `RATE_LIMIT: ${ip} exceeded rate limit, ${requests} consumed.`,
+          );
+          return next(new ConduitError('RATE_LIMIT', 429, 'Too Many Requests'));
+        }
+        next();
+      });
     };
   }
 }

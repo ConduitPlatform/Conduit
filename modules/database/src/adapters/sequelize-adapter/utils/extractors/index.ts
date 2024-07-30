@@ -1,5 +1,5 @@
 import { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
-import { isArray, isObject } from 'lodash';
+import { isArray, isObject } from 'lodash-es';
 
 export interface RelationType {
   type: 'Relation';

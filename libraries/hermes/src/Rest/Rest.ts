@@ -6,35 +6,37 @@ import {
   Response,
   Router,
 } from 'express';
-import { SwaggerGenerator } from './Swagger';
-import { extractRequestData, validateParams } from './util';
-import { createHashKey, extractCaching } from '../cache.utils';
-import { ConduitRouter } from '../Router';
-import ConduitGrpcSdk, {
+import { SwaggerGenerator } from './Swagger.js';
+import { extractRequestData, validateParams } from './util.js';
+import { createHashKey, extractCaching } from '../cache.utils.js';
+import { ConduitRouter } from '../Router.js';
+import {
+  ConduitGrpcSdk,
   ConduitError,
   ConduitRouteActions,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { Cookie } from '../interfaces';
-import { SwaggerRouterMetadata } from '../types';
-import { ConduitRoute, TypeRegistry } from '../classes';
-import { merge } from 'lodash';
+import { Cookie } from '../interfaces/index.js';
+import { SwaggerRouterMetadata } from '../types/index.js';
+import { ConduitRoute, TypeRegistry } from '../classes/index.js';
+import { apiReference } from '@scalar/express-api-reference';
 
-const swaggerUi = require('swagger-ui-express');
+import swaggerUi from 'swagger-ui-express';
 
 export class RestController extends ConduitRouter {
-  private readonly _privateHeaders: string[];
+  private _privateHeaders: string[];
   private _registeredLocalRoutes: Map<string, Handler | Handler[]>;
   private _swagger?: SwaggerGenerator;
 
   constructor(
     grpcSdk: ConduitGrpcSdk,
-    swaggerRouterMetadata: SwaggerRouterMetadata = {
+    getSwaggerRouterMetadata: () => SwaggerRouterMetadata = () => ({
+      servers: [],
       urlPrefix: '',
       securitySchemes: {},
       globalSecurityHeaders: [],
-      setExtraRouteHeaders(): void {},
-    },
+      setExtraRouteHeaders: () => {},
+    }),
     private readonly metrics?: {
       registeredRoutes?: {
         name: string;
@@ -43,11 +45,7 @@ export class RestController extends ConduitRouter {
   ) {
     super(grpcSdk);
     this._registeredLocalRoutes = new Map();
-    this._privateHeaders =
-      swaggerRouterMetadata.globalSecurityHeaders.length > 0
-        ? Object.keys(swaggerRouterMetadata.globalSecurityHeaders[0])
-        : [];
-    this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
+    this._swagger = new SwaggerGenerator(getSwaggerRouterMetadata);
     this.initializeRouter();
     TypeRegistry.getInstance(grpcSdk, {
       name: 'rest',
@@ -81,13 +79,6 @@ export class RestController extends ConduitRouter {
     if (!this.routeChanged(route)) return;
     const key = `${route.input.action}-${route.input.path}`;
     const registered = this._registeredRoutes.has(key);
-    if (registered) {
-      const retrievedRoute = this._registeredRoutes.get(key);
-      route.input.middlewares = merge(
-        retrievedRoute!.input.middlewares,
-        route.input.middlewares,
-      );
-    }
     this._registeredRoutes.set(key, route);
     if (!registered) {
       this.addConduitRoute(route);
@@ -170,8 +161,7 @@ export class RestController extends ConduitRouter {
       };
       self
         .checkMiddlewares(context, route.input.middlewares)
-        .then(r => {
-          Object.assign(context.context, r);
+        .then(() => {
           if (route.input.action !== ConduitRouteActions.GET) {
             return route.executeRequest(context);
           }
@@ -312,11 +302,26 @@ export class RestController extends ConduitRouter {
   }
 
   private initializeRouter() {
+    const swaggerRouterMetadata = this._swagger?.getSwaggerRouterMetadata();
+    if (swaggerRouterMetadata) {
+      this._privateHeaders =
+        swaggerRouterMetadata.globalSecurityHeaders.length > 0
+          ? Object.keys(swaggerRouterMetadata.globalSecurityHeaders[0] ?? {})
+          : [];
+    }
     this.createRouter();
     const self = this;
     this._expressRouter!.use('/swagger', swaggerUi.serve);
     this._expressRouter!.get('/swagger', (req, res, next) =>
       swaggerUi.setup(self._swagger!.swaggerDoc)(req, res, next),
+    );
+    this._expressRouter!.get(
+      '/reference',
+      apiReference({
+        spec: {
+          url: '/swagger.json',
+        },
+      }),
     );
     this._expressRouter!.get('/swagger.json', (req, res) => {
       res.send(JSON.stringify(this._swagger!.swaggerDoc));

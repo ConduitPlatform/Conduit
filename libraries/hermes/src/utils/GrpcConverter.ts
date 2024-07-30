@@ -23,11 +23,14 @@ import {
   ProxyRouteT,
   RouteT,
   SocketProtoDescription,
-} from '../interfaces';
-import { ConduitRoute, instanceOfConduitProxy, ProxyRoute } from '../classes';
+} from '../interfaces/index.js';
+import { ConduitRoute, instanceOfConduitProxy, ProxyRoute } from '../classes/index.js';
 
-const protoLoader = require('@grpc/proto-loader');
+import protoLoader from '@grpc/proto-loader';
+import { fileURLToPath } from 'node:url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 function getDescriptor() {
   const protoPath = path.resolve(__dirname, '../module.proto');
   const packageDefinition = protoLoader.loadSync(protoPath, {

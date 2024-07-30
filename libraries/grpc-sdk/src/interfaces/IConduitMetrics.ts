@@ -11,7 +11,7 @@ import {
   Summary,
   SummaryConfiguration,
 } from 'prom-client';
-import { MetricType } from '../types';
+import { MetricType } from '../types/index.js';
 
 export interface IConduitMetrics {
   initializeDefaultMetrics(): void;

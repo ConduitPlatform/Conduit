@@ -1,10 +1,11 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitModel,
   ConduitModelFieldRelation,
 } from '@conduitplatform/grpc-sdk';
-import { TypeRegistry } from '../classes';
-import { SwaggerParser } from '../Rest/SwaggerParser';
-import { GraphQlParser } from '../GraphQl/GraphQlParser';
+import { TypeRegistry } from '../classes/index.js';
+import { SwaggerParser } from '../Rest/SwaggerParser.js';
+import { GraphQlParser } from '../GraphQl/GraphQlParser.js';
 
 type TypeObject = {
   known: Set<string>;

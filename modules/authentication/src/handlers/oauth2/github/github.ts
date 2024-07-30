@@ -1,12 +1,14 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
-import { GithubUser } from './github.user';
-import { OAuth2 } from '../OAuth2';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
-import * as githubParameters from './github.json';
-import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { Payload } from '../interfaces/Payload';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
+import { GithubUser } from './github.user.js';
+import { OAuth2 } from '../OAuth2.js';
+import {
+  ConnectionParams,
+  OAuth2Settings,
+  Payload,
+  ProviderConfig,
+} from '../interfaces/index.js';
+import githubParameters from './github.json' assert { type: 'json' };
 
 export class GithubHandlers extends OAuth2<GithubUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { github: ProviderConfig }) {

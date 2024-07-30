@@ -11,28 +11,33 @@ import {
   Router,
   SMS,
   Storage,
-} from './modules';
-import Crypto from 'crypto';
-import { EventBus, getJsonEnv, RedisManager, sleep, StateManager } from './utilities';
+} from './modules/index.js';
+import crypto from 'crypto';
+import {
+  EventBus,
+  getJsonEnv,
+  RedisManager,
+  sleep,
+  StateManager,
+} from './utilities/index.js';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
-import { checkModuleHealth, ConduitModule } from './classes';
+import { checkModuleHealth, ConduitModule } from './classes/index.js';
 import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
+import { GrpcError, HealthCheckStatus } from './types/index.js';
+import { createSigner } from 'fast-jwt';
+import { ClusterOptions, RedisOptions } from 'ioredis';
+import { IConduitLogger, IConduitMetrics } from './interfaces/index.js';
 import {
   ConduitModuleDefinition,
-  GetRedisDetailsResponse,
   HealthCheckResponse_ServingStatus,
   HealthDefinition,
   ModuleListResponse_ModuleResponse,
-} from './protoUtils';
-import { GrpcError, HealthCheckStatus } from './types';
-import { createSigner } from 'fast-jwt';
-import { ClusterOptions, RedisOptions } from 'ioredis';
-import { IConduitLogger, IConduitMetrics } from './interfaces';
+} from './protoUtils/index.js';
 
 type UrlRemap = { [url: string]: string };
 
-export default class ConduitGrpcSdk {
+class ConduitGrpcSdk {
   private static middleware: any[] = [];
   public readonly name: string;
   public readonly instance: string;
@@ -76,13 +81,13 @@ export default class ConduitGrpcSdk {
     }
 
     if (!name) {
-      this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
+      this.name = 'module_' + crypto.randomBytes(16).toString('hex');
     } else {
       this.name = name;
     }
     this.instance = this.name.startsWith('module_')
       ? this.name.substring(8)
-      : Crypto.randomBytes(16).toString('hex');
+      : crypto.randomBytes(16).toString('hex');
 
     this.urlRemap = getJsonEnv<UrlRemap>(
       'URL_REMAP',
@@ -275,19 +280,24 @@ export default class ConduitGrpcSdk {
       return this._initialize();
     }
     (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
+    await this.connectToCore().catch(() => process.exit(-1));
+    this._initialize();
+  }
+
+  async connectToCore() {
     ConduitGrpcSdk.Logger.log('Waiting for Core...');
     while (true) {
       try {
+        this.core.openConnection();
         const state = await this.core.check();
         if ((state as unknown as HealthCheckStatus) === HealthCheckStatus.SERVING) {
           ConduitGrpcSdk.Logger.log('Core connection established');
-          this._initialize();
-          break;
+          return;
         }
       } catch (err) {
         if ((err as GrpcError).code === status.PERMISSION_DENIED) {
           ConduitGrpcSdk.Logger.error(err as Error);
-          process.exit(-1);
+          throw err;
         }
         await sleep(1000);
       }
@@ -299,29 +309,35 @@ export default class ConduitGrpcSdk {
     this.config.watchModules().then();
     emitter.on('serving-modules-update', modules => {
       Object.keys(this._modules).forEach(r => {
-        if (r !== this.name) {
-          const found = modules.filter(
-            (m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving,
-          );
-          if ((!found || found.length === 0) && this._modules[r]) {
-            this._modules[r]?.closeConnection();
-            emitter.emit(`module-connection-update:${r}`, false);
-          }
+        if (r === this.name) return;
+        const found = modules.filter(
+          (m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving,
+        );
+        if ((!found || found.length === 0) && this._modules[r]) {
+          this._modules[r]?.closeConnection();
+          emitter.emit(`module-connection-update:${r}`, false);
         }
       });
       modules.forEach((m: ModuleListResponse_ModuleResponse) => {
-        if (m.moduleName !== this.name) {
-          const alreadyActive = this._modules[m.moduleName]?.active;
-          if (!alreadyActive && m.serving) {
-            if (this._availableModules[m.moduleName] && this._modules[m.moduleName]) {
-              this._modules[m.moduleName].openConnection();
-            } else {
-              this.createModuleClient(m.moduleName, m.url);
-            }
-            emitter.emit(`module-connection-update:${m.moduleName}`, true);
-          }
+        if (m.moduleName === this.name || !m.serving) return;
+        const alreadyActive = this._modules[m.moduleName]?.active;
+        if (alreadyActive) return;
+        if (this._availableModules[m.moduleName] && this._modules[m.moduleName]) {
+          this._modules[m.moduleName].openConnection();
+        } else {
+          this.createModuleClient(m.moduleName, m.url);
         }
+        emitter.emit(`module-connection-update:${m.moduleName}`, true);
       });
+    });
+    emitter.on('core-status-update', () => {
+      this.connectToCore()
+        .then(() => {
+          this._initialize();
+        })
+        .catch(() => {
+          process.exit(-1);
+        });
     });
   }
 
@@ -358,22 +374,18 @@ export default class ConduitGrpcSdk {
       this._redisDetails = {
         host: process.env.REDIS_HOST!,
         port: parseInt(process.env.REDIS_PORT!, 10),
-        username: process.env.REDIS_USERNAME,
-        password: process.env.REDIS_PASSWORD,
+        db: parseInt(process.env.REDIS_DB!, 10) || 0,
+        ...(process.env.REDIS_USERNAME ? { username: process.env.REDIS_USERNAME } : {}),
+        ...(process.env.REDIS_PASSWORD ? { password: process.env.REDIS_PASSWORD } : {}),
       };
     } else {
       promise = promise
         .then(() => this.config.getRedisDetails())
-        .then((r: GetRedisDetailsResponse) => {
-          if (r.redisConfig) {
-            this._redisDetails = JSON.parse(r.redisConfig);
+        .then(r => {
+          if (r.standalone) {
+            this._redisDetails = r.standalone;
           } else {
-            this._redisDetails = {
-              host: r.redisHost,
-              port: r.redisPort,
-              username: r.redisUsername,
-              password: r.redisPassword,
-            };
+            this._redisDetails = r.cluster!;
           }
         });
     }
@@ -405,9 +417,11 @@ export default class ConduitGrpcSdk {
   initializeModules() {
     return this._config!.moduleList()
       .then(r => {
+        const emitter = this.config.getModuleWatcher();
         this.lastSearch = Date.now();
         r.forEach(m => {
           this.createModuleClient(m.moduleName, m.url);
+          emitter.emit(`module-connection-update:${m.moduleName}`, m.serving);
         });
         return 'ok';
       })
@@ -418,6 +432,11 @@ export default class ConduitGrpcSdk {
       });
   }
 
+  updateModuleHealth(moduleName: string, serving: boolean) {
+    const emitter = this.config.getModuleWatcher();
+    emitter.emit(`module-connection-update:${moduleName}`, serving);
+  }
+
   createModuleClient(moduleName: string, moduleUrl: string) {
     if (this._modules[moduleName]) return;
     moduleUrl =
@@ -426,14 +445,14 @@ export default class ConduitGrpcSdk {
         ? `${this.urlRemap['*']}:${moduleUrl.split(':')[1]}`
         : moduleUrl);
     if (this._availableModules[moduleName]) {
-      // ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
+      ConduitGrpcSdk.Logger.info(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new this._availableModules[moduleName](
         this.name,
         moduleUrl,
         this._grpcToken,
       );
     } else if (this._dynamicModules[moduleName]) {
-      // ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
+      ConduitGrpcSdk.Logger.info(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new ConduitModule(
         this.name,
         moduleName,
@@ -488,11 +507,18 @@ export default class ConduitGrpcSdk {
     return !!this._modules[moduleName]?.active;
   }
 
-  async waitForExistence(moduleName: string) {
-    while (!this._modules[moduleName]) {
-      await sleep(1000);
-    }
-    return true;
+  async waitForExistence(moduleName: string, onlyIfServing: boolean = true) {
+    if (this.isAvailable(moduleName)) return true;
+    const emitter = this.config.getModuleWatcher();
+    return new Promise(resolve => {
+      const listener = (serving: boolean) => {
+        if (!onlyIfServing || (onlyIfServing && serving)) {
+          emitter.removeListener(`module-connection-update:${moduleName}`, listener);
+          return resolve(true);
+        }
+      };
+      emitter.on(`module-connection-update:${moduleName}`, listener);
+    });
   }
 
   onceModuleUp(moduleName: string, callback: () => void) {
@@ -522,8 +548,12 @@ export default class ConduitGrpcSdk {
   }
 
   private _initialize() {
-    if (this._initialized)
-      throw new Error("Module's grpc-sdk has already been initialized");
+    if (this._initialized) {
+      this._config?.openConnection();
+      this._admin?.openConnection();
+      this.config.watchModules().then();
+      return;
+    }
     (this._config as unknown) = new Config(
       this.name,
       this.serverUrl,
@@ -541,11 +571,12 @@ export default class ConduitGrpcSdk {
   }
 }
 
-export * from './interfaces';
-export * from './classes';
-export * from './modules';
-export * from './constants';
-export * from './types';
-export * from './utilities';
-export * from './protoUtils';
+export { ConduitGrpcSdk };
+export * from './interfaces/index.js';
+export * from './classes/index.js';
+export * from './modules/index.js';
+export * from './constants/index.js';
+export * from './types/index.js';
+export * from './utilities/index.js';
+export * from './protoUtils/index.js';
 export * from '@grpc/grpc-js';

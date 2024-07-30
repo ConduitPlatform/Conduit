@@ -1,22 +1,34 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
 import { ConduitRoute, SwaggerRouterMetadata } from '@conduitplatform/hermes';
 
-export const swaggerMetadata: SwaggerRouterMetadata = {
+export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
+  servers: [
+    {
+      url: ConfigController.getInstance().config.hostUrl,
+      description: 'Your API url',
+    },
+  ],
   urlPrefix: '',
   securitySchemes: {
-    clientId: {
-      name: 'clientid',
-      type: 'apiKey',
-      in: 'header',
-      description: 'A security client id, retrievable through [POST] /security/client',
-    },
-    clientSecret: {
-      name: 'clientSecret',
-      type: 'apiKey',
-      in: 'header',
-      description:
-        'A security client secret, retrievable through [POST] /security/client',
-    },
+    ...(ConfigController.getInstance().config.security.clientValidation
+      ? {
+          clientId: {
+            name: 'clientId',
+            type: 'apiKey',
+            in: 'header',
+            description:
+              'A security client id, retrievable through [POST] /security/client',
+          },
+          clientSecret: {
+            name: 'clientSecret',
+            type: 'apiKey',
+            in: 'header',
+            description:
+              'A security client secret, retrievable through [POST] /security/client',
+          },
+        }
+      : {}),
     userToken: {
       type: 'http',
       scheme: 'bearer',
@@ -25,15 +37,43 @@ export const swaggerMetadata: SwaggerRouterMetadata = {
         'A user authentication token, retrievable through [POST] /authentication/local or [POST] /authentication/renew',
     },
   },
-  globalSecurityHeaders: [
-    {
-      clientId: [],
-      clientSecret: [],
-    },
-  ],
+  globalSecurityHeaders: ConfigController.getInstance().config.security.clientValidation
+    ? [
+        {
+          clientId: [],
+          clientSecret: [],
+        },
+      ]
+    : [],
   setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
+    // https://swagger.io/docs/specification/authentication/#multiple
     if (route.input.middlewares?.includes('authMiddleware')) {
-      swaggerRouteDoc.security[0].userToken = [];
+      if (swaggerRouteDoc.security.length === 0) {
+        swaggerRouteDoc.security.push({});
+      }
+      // Logical AND
+      swaggerRouteDoc.security = swaggerRouteDoc.security.map(
+        (originalSecEntry: { [field: string]: string }) => ({
+          ...originalSecEntry,
+          userToken: [],
+        }),
+      );
+      swaggerRouteDoc.responses[401] = {
+        description: 'Token missing/invalid or 2fa verification required',
+      };
+      swaggerRouteDoc.responses[403] = {
+        description: 'Permission denied, user may be blocked',
+      };
+    } else if (route.input.middlewares?.includes('authMiddleware?')) {
+      if (swaggerRouteDoc.security.length === 0) {
+        swaggerRouteDoc.security.push({});
+      }
+      // Logical OR
+      swaggerRouteDoc.security.forEach(
+        (originalSecEntry: { [field: string]: string }) => {
+          swaggerRouteDoc.security.push({ ...originalSecEntry, userToken: [] });
+        },
+      );
     }
   },
-};
+});

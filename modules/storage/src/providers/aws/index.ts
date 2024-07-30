@@ -1,4 +1,4 @@
-import { IStorageProvider, StorageConfig } from '../../interfaces';
+import { IStorageProvider, StorageConfig } from '../../interfaces/index.js';
 import {
   CreateBucketCommand,
   DeleteBucketCommand,
@@ -12,12 +12,12 @@ import {
   S3ClientConfig,
 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
-import { streamToBuffer } from '../../utils';
+import { streamToBuffer } from '../../utils/index.js';
 import fs from 'fs';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
-import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry';
+import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry.js';
 
 type AwsError = { $metadata: { httpStatusCode: number } };
 type GetResult = Buffer | Error;

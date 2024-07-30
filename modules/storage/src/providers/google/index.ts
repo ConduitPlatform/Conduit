@@ -1,7 +1,7 @@
-import { IStorageProvider, StorageConfig } from '../../interfaces';
+import { IStorageProvider, StorageConfig } from '../../interfaces/index.js';
 import { Storage } from '@google-cloud/storage';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry.js';
 
 /**
  * WARNING: DO NOT USE THIS, IT NEEDS A REWRITE

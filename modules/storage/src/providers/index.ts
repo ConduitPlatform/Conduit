@@ -1,9 +1,9 @@
-import { IStorageProvider, StorageConfig } from '../interfaces';
-import { GoogleCloudStorage } from './google';
-import { LocalStorage } from './local';
-import { AzureStorage } from './azure';
-import { AWSS3Storage } from './aws';
-import { AliyunStorage } from './aliyun';
+import { IStorageProvider, StorageConfig } from '../interfaces/index.js';
+import { GoogleCloudStorage } from './google/index.js';
+import { LocalStorage } from './local/index.js';
+import { AzureStorage } from './azure/index.js';
+import { AWSS3Storage } from './aws/index.js';
+import { AliyunStorage } from './aliyun/index.js';
 
 export function createStorageProvider(
   provider: keyof StorageConfig,

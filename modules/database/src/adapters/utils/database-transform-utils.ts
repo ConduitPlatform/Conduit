@@ -1,13 +1,13 @@
 import {
   isArray,
   isBoolean,
-  isNil,
   isNumber,
   isString,
   isObject,
+  isNil,
   forEach,
   has,
-} from 'lodash';
+} from 'lodash-es';
 import {
   ConduitModelField,
   Indexable,
@@ -20,8 +20,8 @@ import {
 import {
   checkIfSequelizeIndexOptions,
   checkIfSequelizeIndexType,
-} from '../sequelize-adapter/utils';
-import { ConduitDatabaseSchema } from '../../interfaces';
+} from '../sequelize-adapter/utils/index.js';
+import { ConduitDatabaseSchema } from '../../interfaces/index.js';
 
 export function checkDefaultValue(type: string, value: string) {
   switch (type) {

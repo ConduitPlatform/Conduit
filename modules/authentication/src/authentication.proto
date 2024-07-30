@@ -1,37 +1,84 @@
 syntax = "proto3";
+import "google/protobuf/empty.proto";
 package authentication;
 
 message UserLoginRequest {
   string userId = 1;
   string clientId = 2;
 }
+
 message UserCreateRequest {
   string email = 1;
   optional string password = 2;
   bool verify = 3;
 }
+
 message UserChangePass {
   string email = 1;
   optional string password = 2;
 }
+
 message UserDeleteRequest {
   string userId = 1;
 }
+
+message GetTeamRequest {
+  optional string teamId = 1;
+}
+
+message CreateTeamRequest {
+  string name = 1;
+  optional string parentTeam = 2;
+  optional bool isDefault = 3;
+}
+
 message TeamDeleteRequest {
   string teamId = 1;
 }
+
 message UserLoginResponse {
   string accessToken = 1;
   optional string refreshToken = 2;
 }
+
 message UserDeleteResponse {
   string message = 1;
 }
+
 message UserCreateResponse {
   optional string password = 1;
 }
+
+message Team {
+  string id = 1;
+  string name = 2;
+  string parentTeam = 3;
+  bool isDefault = 4;
+}
+
 message TeamDeleteResponse {
   string message = 1;
+}
+
+message ModifyTeamMembersRequest {
+  string teamId = 1;
+  repeated string memberIds = 2;
+}
+
+message ValidateAccessTokenRequest {
+  string accessToken = 1;
+  optional string path = 2;
+}
+
+message ValidateAccessTokenResponse {
+  enum Status {
+    AUTHENTICATED = 0;
+    UNAUTHENTICATED = 1;
+    REQUIRES_2FA = 2;
+    USER_BLOCKED = 3;
+  }
+  Status status = 1;
+  optional string userId = 2;
 }
 
 service Authentication {
@@ -39,5 +86,10 @@ service Authentication {
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
   rpc ChangePass(UserChangePass) returns (UserCreateResponse);
   rpc UserDelete(UserDeleteRequest) returns (UserDeleteResponse);
+  rpc GetTeam(GetTeamRequest) returns (Team);
+  rpc CreateTeam(CreateTeamRequest) returns (Team);
   rpc TeamDelete(TeamDeleteRequest) returns (TeamDeleteResponse);
+  rpc AddTeamMembers(ModifyTeamMembersRequest) returns (google.protobuf.Empty);
+  rpc RemoveTeamMembers(ModifyTeamMembersRequest) returns (google.protobuf.Empty);
+  rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
 }

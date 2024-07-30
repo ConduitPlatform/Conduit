@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   Indexable,
   ParsedRouterRequest,
   ParsedSocketRequest,
@@ -6,7 +7,7 @@ import ConduitGrpcSdk, {
   UnparsedSocketResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { Status } from '@grpc/grpc-js/build/src/constants';
+import { Status } from '@grpc/grpc-js/build/src/constants.js';
 
 export type RouterRequestHandler = (
   call: ParsedRouterRequest,
@@ -179,7 +180,7 @@ export function wrapRouterGrpcFunction(
         ConduitGrpcSdk.Logger.error(error.message ?? 'Something went wrong');
         callback({
           code: error.code ?? status.INTERNAL,
-          message: error.message ?? 'Something went wrong',
+          message: error.details ?? error.message ?? 'Something went wrong',
         });
       });
   };

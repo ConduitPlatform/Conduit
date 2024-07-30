@@ -1,5 +1,5 @@
 import convict from 'convict';
-import AppConfigSchema from './config';
+import AppConfigSchema from './config.js';
 
 const config = convict(AppConfigSchema);
 const configProperties = config.getProperties();

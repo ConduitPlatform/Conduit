@@ -1,8 +1,8 @@
 import { ConduitModel, GrpcError, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
-import { isNil, isPlainObject, get } from 'lodash';
+import { isNil, isPlainObject, get, has } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { LocationEnum, OperationsEnum } from '../../enums';
-import { ICustomEndpoint } from '../../interfaces';
+import { LocationEnum, OperationsEnum } from '../../enums/index.js';
+import { ICustomEndpoint } from '../../interfaces/index.js';
 
 /**
  * Query schema:
@@ -94,7 +94,7 @@ function _queryValidation(
     return 'comparisonField cannot be empty and should contain type and value';
   }
 
-  if (!get(fields, schemaField)) {
+  if (!hasPath(fields, schemaField)) {
     return 'schemaField is not present/accessible in selected schema!';
   }
 
@@ -113,6 +113,27 @@ function _queryValidation(
     }
   } else if (comparisonField.type !== 'Custom' && comparisonField.type !== 'Context') {
     return 'comparisonField type is invalid!';
+  }
+  return true;
+}
+
+export function hasPath(fields: ConduitModel, schemaField: string): boolean {
+  if (schemaField.includes('.')) {
+    return findPath(fields, schemaField);
+  } else {
+    return has(fields, schemaField);
+  }
+}
+
+export function findPath(fields: ConduitModel, schemaField: string) {
+  const fieldPath = schemaField.split('.');
+  let obj: ConduitModel | undefined = fields;
+
+  for (const key of fieldPath) {
+    if (!obj || (!(key in obj) && obj['type'] && !(key in obj['type']))) {
+      return false;
+    }
+    obj = fields[key] as ConduitModel;
   }
   return true;
 }
@@ -360,7 +381,7 @@ export function validateAssignments(
         fields,
         inputs,
         operation,
-        r.schemaField,
+        r.schemaField.replaceAll('.', '.type.'),
         r.assignmentField,
         r.action,
       );

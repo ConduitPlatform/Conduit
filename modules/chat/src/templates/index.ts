@@ -1,1 +1,1 @@
-export * from './ChatRoomInvitation';
+export * from './ChatRoomInvitation.js';

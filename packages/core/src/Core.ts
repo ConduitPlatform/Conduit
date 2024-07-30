@@ -1,8 +1,8 @@
 import { ConduitError } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons, IConduitCore } from '@conduitplatform/commons';
-import { GrpcServer } from './GrpcServer';
-import { isNil } from 'lodash';
-import AppConfigSchema, { Config as ConfigSchema } from './config';
+import { GrpcServer } from './GrpcServer.js';
+import { isNil } from 'lodash-es';
+import AppConfigSchema, { Config as ConfigSchema } from './config/index.js';
 import convict from 'convict';
 
 export class Core extends IConduitCore {

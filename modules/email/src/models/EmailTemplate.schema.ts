@@ -1,4 +1,9 @@
-import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  DatabaseProvider,
+  SQLDataType,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 const schema: ConduitModel = {
@@ -11,10 +16,12 @@ const schema: ConduitModel = {
   subject: {
     type: TYPE.String,
     required: true,
+    sqlType: SQLDataType.TEXT,
   },
   body: {
     type: TYPE.String,
     required: true,
+    sqlType: SQLDataType.TEXT,
   },
   variables: {
     type: [TYPE.String],
@@ -47,7 +54,8 @@ const collectionName = undefined;
 export class EmailTemplate extends ConduitActiveSchema<EmailTemplate> {
   private static _instance: EmailTemplate;
   _id: string;
-  name: string;
+  // todo rename
+  declare name: string;
   subject?: string;
   body: string;
   variables?: string[];

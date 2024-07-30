@@ -1,8 +1,8 @@
-import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { ICustomEndpoint } from '../interfaces';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
+import { ICustomEndpoint } from '../interfaces/index.js';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 
 /*
  Populates CustomEndpoints missing selectedSchema id fields.

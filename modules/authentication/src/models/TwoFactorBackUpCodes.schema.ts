@@ -1,6 +1,6 @@
 import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
-import { User } from './User.schema';
+import { User } from './index.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
@@ -35,7 +35,7 @@ export class TwoFactorBackUpCodes extends ConduitActiveSchema<TwoFactorBackUpCod
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, TwoFactorBackUpCodes.name, schema, modelOptions, collectionName);
   }
 

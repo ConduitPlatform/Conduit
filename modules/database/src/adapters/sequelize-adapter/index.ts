@@ -1,5 +1,6 @@
 import { Sequelize } from 'sequelize';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitModel,
   ConduitModelField,
   ConduitSchema,
@@ -14,24 +15,24 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
-import { DatabaseAdapter } from '../DatabaseAdapter';
-import { SequelizeSchema } from './SequelizeSchema';
+import { DatabaseAdapter } from '../DatabaseAdapter.js';
+import { SequelizeSchema } from './SequelizeSchema.js';
 import {
   checkIfSequelizeIndexOptions,
   checkIfSequelizeIndexType,
   compileSchema,
   resolveRelatedSchemas,
   tableFetch,
-} from './utils';
-import { sqlIntroSchemaConverter } from '../../introspection/sequelize/utils';
+} from './utils/index.js';
+import { sqlIntroSchemaConverter } from '../../introspection/sequelize/utils.js';
 import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
-} from '../../interfaces';
-import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter';
-import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter';
-import { isNil, merge } from 'lodash';
-import { findAndRemoveIndex } from '../utils';
+} from '../../interfaces/index.js';
+import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter.js';
+import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter.js';
+import { isEqual, isNil } from 'lodash-es';
+import { findAndRemoveIndex } from '../utils/index.js';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -54,10 +55,20 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     if (!this.models[modelName]) {
       throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
     }
+    const existingView = this.views[viewName];
+    const isQueryEqual = isEqual(existingView?.viewQuery, query);
+    if (existingView && isQueryEqual) {
+      return;
+    }
+
     const model = this.models[modelName];
     const newSchema = JSON.parse(JSON.stringify(model.schema));
     newSchema.name = viewName;
     newSchema.collectionName = viewName;
+
+    if (existingView && !isQueryEqual) {
+      await this.deleteView(viewName);
+    }
     const viewModel = new SequelizeSchema(
       this.grpcSdk,
       this.sequelize,
@@ -67,6 +78,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       model.extractedRelations,
       model.objectPaths,
       true,
+      query,
     );
     const dialect = this.sequelize.getDialect();
     const queryViewName = dialect === 'postgres' ? `"${viewName}"` : viewName;
@@ -74,17 +86,41 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       dialect !== 'sqlite'
         ? `CREATE OR REPLACE VIEW ${queryViewName} AS ${query.sqlQuery}`
         : `CREATE VIEW IF NOT EXISTS" ${queryViewName} AS ${query.sqlQuery}`;
-    await this.sequelize.query(viewQuery);
+    await this.sequelize.query(viewQuery).catch(err => {
+      if (
+        err.name !== 'SequelizeUniqueConstraintError' &&
+        (err.name !== 'SequelizeDatabaseError' || !err.message.includes('already exists'))
+      ) {
+        throw err;
+      }
+    });
     this.views[viewName] = viewModel;
     const foundView = await this.models['Views'].findOne({ name: viewName });
     if (isNil(foundView)) {
-      await this.models['Views'].create({
-        name: viewName,
-        originalSchema: modelName,
-        joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
-        query,
-      });
+      await this.models['Views']
+        .create({
+          name: viewName,
+          originalSchema: modelName,
+          joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
+          query,
+        })
+        .catch(err => {
+          if (err.name !== 'SequelizeUniqueConstraintError') {
+            throw err;
+          }
+        });
     }
+  }
+
+  async guaranteeView(viewName: string) {
+    const view = await this.models['Views'].findOne({
+      name: viewName,
+    });
+    if (!view) {
+      throw new Error('View not found');
+    }
+    await this.createView(view.originalSchema, view.name, view.joinedSchemas, view.query);
+    return this.views[viewName];
   }
 
   async deleteView(viewName: string): Promise<void> {
@@ -193,78 +229,16 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       : schema.name;
   }
 
-  private async processExtractedSchemas(
-    schema: ConduitDatabaseSchema,
-    extractedSchemas: Indexable,
-    associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-  ) {
-    for (const extractedSchema in extractedSchemas) {
-      const modelOptions = merge({}, schema.modelOptions, {
-        conduit: {
-          cms: {
-            enabled: false,
-            crudOperations: {
-              read: {
-                enabled: false,
-              },
-              create: {
-                enabled: false,
-              },
-              delete: {
-                enabled: false,
-              },
-              update: {
-                enabled: false,
-              },
-            },
-          },
-
-          permissions: {
-            extendable: false,
-            canCreate: false,
-            canModify: 'Nothing',
-            canDelete: false,
-          },
-        },
-      });
-      let modeledSchema;
-      let isArray = false;
-      if (Array.isArray(extractedSchemas[extractedSchema])) {
-        isArray = true;
-        modeledSchema = new ConduitSchema(
-          `${schema.name}_${extractedSchema}`,
-          extractedSchemas[extractedSchema][0],
-          modelOptions,
-          `${schema.collectionName}_${extractedSchema}`,
-        );
-      } else {
-        modeledSchema = new ConduitSchema(
-          `${schema.name}_${extractedSchema}`,
-          extractedSchemas[extractedSchema],
-          modelOptions,
-          `${schema.collectionName}_${extractedSchema}`,
-        );
-      }
-
-      modeledSchema.ownerModule = schema.ownerModule;
-      (modeledSchema as ConduitDatabaseSchema).compiledFields = modeledSchema.fields;
-      // check index compatibility
-      const sequelizeSchema = await this._createSchemaFromAdapter(
-        modeledSchema as ConduitDatabaseSchema,
-        false,
-        {
-          parentSchema: schema.name,
-        },
-      );
-      associatedSchemas[extractedSchema] = isArray ? [sequelizeSchema] : sequelizeSchema;
-    }
-  }
-
   protected async _createSchemaFromAdapter(
     schema: ConduitDatabaseSchema,
     saveToDb: boolean = true,
-    options?: { parentSchema: string },
+    isInstanceSync: boolean = false,
   ): Promise<SequelizeSchema> {
+    for (const [key, value] of Object.entries(this.views)) {
+      if (value.originalSchema.name === schema.name) {
+        await this.deleteView(key);
+      }
+    }
     const compiledSchema = compileSchema(
       schema,
       this.registeredSchemas,
@@ -294,13 +268,17 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       objectPaths,
     );
 
-    const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
+    const noSync =
+      this.models[schema.name].originalSchema.modelOptions.conduit!.noSync ||
+      isInstanceSync;
     // do not sync extracted schemas
-    if ((isNil(noSync) || !noSync) && !options) {
+    if (isNil(noSync) || !noSync) {
       await this.models[schema.name].sync();
+    } else {
+      this.models[schema.name].synced = true;
     }
     // do not store extracted schemas to db
-    if (!options && saveToDb) {
+    if (saveToDb && !isInstanceSync) {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
     }
@@ -358,6 +336,8 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   getSchemaModel(schemaName: string): { model: SequelizeSchema } {
     if (this.models && this.models[schemaName]) {
       return { model: this.models[schemaName] };
+    } else if (this.views && this.views[schemaName]) {
+      return { model: this.views[schemaName] };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
@@ -478,7 +458,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     const { fields, types, options } = index;
     if (
       fields.some(
-        field =>
+        (field: string) =>
           !Object.keys(this.models[schemaName].originalSchema.compiledFields).includes(
             field,
           ),

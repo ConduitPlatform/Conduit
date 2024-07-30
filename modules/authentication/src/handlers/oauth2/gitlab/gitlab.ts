@@ -1,12 +1,14 @@
-import { OAuth2 } from '../OAuth2';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { ProviderConfig } from '../interfaces/ProviderConfig';
-import * as gitlabParameters from '../gitlab/gitlab.json';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
-import { Payload } from '../interfaces/Payload';
+import { OAuth2 } from '../OAuth2.js';
+import {
+  ConnectionParams,
+  OAuth2Settings,
+  Payload,
+  ProviderConfig,
+} from '../interfaces/index.js';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import gitlabParameters from '../gitlab/gitlab.json' assert { type: 'json' };
 import axios from 'axios';
-import { GitlabUser } from './gitlab.user';
+import { GitlabUser } from './gitlab.user.js';
 
 export class GitlabHandlers extends OAuth2<GitlabUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { gitlab: ProviderConfig }) {

@@ -5,6 +5,7 @@
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
   "engines": {
     "node": ">=14"
   },
@@ -28,19 +29,20 @@
   "dependencies": {
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
-    "@grpc/grpc-js": "^1.8.13",
+    "@grpc/grpc-js": "^1.10.9",
     "@grpc/proto-loader": "^0.7.6",
     "convict": "^6.2.4",
     "escape-string-regexp": "^4.0.0",
-    "lodash": "^4.17.21",
-    "uuid": "^9.0.0"
+    "lodash-es": "^4.17.21",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@types/node": "18.15.11",
-    "@types/uuid": "^9.0.1",
+    "@types/node": "20.11.24",
+    "@types/uuid": "^9.0.8",
+    "@types/lodash-es": "^4.17.12",
     "copyfiles": "^2.4.1",
-    "rimraf": "^5.0.0",
-    "ts-proto": "^1.146.0",
-    "typescript": "~5.0.4"
+    "rimraf": "^5.0.5",
+    "ts-proto": "^1.167.1",
+    "typescript": "~5.3.3"
   }
 }

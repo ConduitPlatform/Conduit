@@ -1,4 +1,4 @@
-FROM node:hydrogen
+FROM node:iron
 
 ARG BUILDING_SERVICE
 

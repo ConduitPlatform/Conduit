@@ -1,16 +1,15 @@
-import { RegisteredModule } from '@conduitplatform/commons';
 import {
   ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
-  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute } from '@conduitplatform/hermes';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { ConduitBoolean, ConduitString } from '@conduitplatform/module-tools';
+import { ServiceRegistry } from '../../service-discovery/ServiceRegistry.js';
 
-export function getModulesRoute(registeredModules: Map<string, RegisteredModule>) {
+export function getModulesRoute() {
   return new ConduitRoute(
     {
       path: '/config/modules',
@@ -31,24 +30,15 @@ export function getModulesRoute(registeredModules: Map<string, RegisteredModule>
     }),
     async (call: ConduitRouteParameters) => {
       const sortByName = call.params!.sortByName;
-      if (registeredModules.size !== 0) {
-        const modules: UntypedArray = [];
-        registeredModules.forEach((value: RegisteredModule, key: string) => {
-          modules.push({
-            moduleName: key,
-            url: value.address,
-            serving: value.serving,
-          });
-        });
-        if (!isNil(sortByName)) {
-          if (sortByName)
-            modules!.sort((a, b) => a.moduleName.localeCompare(b.moduleName));
-          else modules!.sort((a, b) => b.moduleName.localeCompare(a.moduleName));
-        }
-        return { modules };
-      } else {
+      const modules = ServiceRegistry.getInstance().getModuleDetailsList();
+      if (modules.length === 0) {
         throw new ConduitError('INTERNAL', 500, 'Modules not available yet');
       }
+      if (!isNil(sortByName)) {
+        if (sortByName) modules!.sort((a, b) => a.moduleName.localeCompare(b.moduleName));
+        else modules!.sort((a, b) => b.moduleName.localeCompare(a.moduleName));
+      }
+      return { modules };
     },
   );
 }

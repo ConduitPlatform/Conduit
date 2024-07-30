@@ -1,13 +1,14 @@
 import { NextFunction, Request, Response, Router } from 'express';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteParameters,
   GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { ConduitMiddleware, MiddlewarePatch } from './interfaces';
-import { ConduitRoute } from './classes';
+import { ConduitMiddleware, MiddlewarePatch } from './interfaces/index.js';
+import { ConduitRoute } from './classes/index.js';
 import ObjectHash from 'object-hash';
 
 export abstract class ConduitRouter {
@@ -80,23 +81,28 @@ export abstract class ConduitRouter {
     this._middlewareOwners.set(middleware.name, moduleUrl);
   }
 
-  checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]) {
-    let primaryPromise = new Promise(resolve => {
-      resolve({});
-    });
+  async checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]) {
+    let primaryPromise = Promise.resolve();
     middlewares?.forEach(m => {
-      if (!this._middlewares?.hasOwnProperty(m)) {
+      const middleware = m.split('?')[0];
+      if (!this._middlewares?.hasOwnProperty(middleware)) {
         primaryPromise = Promise.reject('Middleware does not exist');
       } else {
-        primaryPromise = primaryPromise.then(r => {
-          return this._middlewares![m].executeRequest.bind(this._middlewares![m])(
-            params,
-          ).then((p: any) => {
-            if (p.result) {
-              Object.assign(r as Record<string, unknown>, JSON.parse(p.result));
-            }
-            return r;
-          });
+        primaryPromise = primaryPromise.then(() => {
+          return this._middlewares![middleware].executeRequest.bind(
+            this._middlewares![middleware],
+          )(params)
+            .then(p => {
+              if (p.result) {
+                Object.assign(
+                  params.context as Record<string, unknown>,
+                  JSON.parse(p.result),
+                );
+              }
+            })
+            .catch((err: Error) => {
+              if (!m.includes('?')) throw err;
+            });
         });
       }
     });
@@ -122,7 +128,7 @@ export abstract class ConduitRouter {
     const routeKey = `${route.input.action}-${route.input.path}`;
     if (this._registeredRoutes.has(routeKey)) {
       return (
-        ObjectHash.sha1(route) !== ObjectHash.sha1(this._registeredRoutes.get(routeKey))
+        ObjectHash.sha1(route) !== ObjectHash.sha1(this._registeredRoutes.get(routeKey)!)
       );
     } else {
       return true;

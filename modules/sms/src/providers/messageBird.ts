@@ -1,5 +1,5 @@
-import { ISmsProvider } from '../interfaces/ISmsProvider';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ISmsProvider } from '../interfaces/ISmsProvider.js';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import messagebird from 'messagebird';
 
 export class messageBirdProvider implements ISmsProvider {
@@ -8,7 +8,7 @@ export class messageBirdProvider implements ISmsProvider {
   private originatorName: string;
   constructor(settings: { accessKeyId: string; originatorName: string }) {
     ({ accessKeyId: this.accessKeyId, originatorName: this.originatorName } = settings);
-    this.client = require('messagebird').initClient(this.accessKeyId);
+    this.client = messagebird.initClient(this.accessKeyId);
   }
 
   async sendSms(phoneNumber: string, message: string) {

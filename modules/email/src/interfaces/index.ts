@@ -1,2 +1,2 @@
-export * from './RegisterTemplateParams';
-export * from './SendEmailParams';
+export * from './RegisterTemplateParams.js';
+export * from './SendEmailParams.js';

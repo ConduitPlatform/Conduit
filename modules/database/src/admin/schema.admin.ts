@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitSchema,
   GrpcError,
   Indexable,
@@ -6,17 +7,32 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { isEmpty, isNil, merge } from 'lodash';
-import { validatePermissions, validateSchemaInput } from '../utils/utilities';
-import { SchemaController } from '../controllers/cms/schema.controller';
-import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
-import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { _ConduitSchema, ParsedQuery } from '../interfaces';
-import { SchemaConverter } from '../utils/SchemaConverter';
-import { parseSortParam } from '../handlers/utils';
+import { isEmpty, isNil, merge } from 'lodash-es';
+import { validatePermissions, validateSchemaInput } from '../utils/utilities.js';
+import { SchemaController } from '../controllers/cms/schema.controller.js';
+import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller.js';
+import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
+import {
+  _ConduitSchema,
+  ConduitDatabaseSchema,
+  DeclaredSchemaExtension,
+  ParsedQuery,
+} from '../interfaces/index.js';
+import { SchemaConverter } from '../utils/SchemaConverter.js';
+import { parseSortParam } from '../handlers/utils.js';
 import escapeStringRegexp from 'escape-string-regexp';
+
+type ExportedCmsSchema = Pick<
+  ConduitDatabaseSchema,
+  'name' | 'fields' | 'modelOptions' | 'ownerModule' | 'collectionName'
+>;
+
+type ExportedCmsExtension = {
+  schemaName: string;
+  extension: Omit<DeclaredSchemaExtension, 'ownerModule'>;
+};
 
 export class SchemaAdmin {
   constructor(
@@ -26,42 +42,81 @@ export class SchemaAdmin {
     private readonly customEndpointController: CustomEndpointController,
   ) {}
 
-  async exportCustomSchemas(): Promise<UnparsedRouterResponse> {
-    return await this.database
+  async exportSchemas(): Promise<UnparsedRouterResponse> {
+    const cmsSchemas: ExportedCmsSchema[] = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findMany(
         { 'modelOptions.conduit.cms.enabled': true },
         {
-          select:
-            'name parentSchema fields extensions modelOptions ownerModule collectionName',
+          select: 'name fields modelOptions ownerModule collectionName',
           sort: {
             updatedAt: 1,
           },
         },
-      )
-      .then(r => {
-        return { schemas: r };
-      });
+      );
+    const cndSchemas: Pick<ConduitDatabaseSchema, 'name' | 'extensions'>[] =
+      await this.database.getSchemaModel('_DeclaredSchema').model.findMany(
+        {
+          $and: [
+            { 'modelOptions.conduit.cms': { $exists: false } },
+            { 'modelOptions.conduit.permissions.extendable': true },
+            { extensions: { $exists: true } },
+            {
+              $or: [
+                { parentSchema: { $exists: false } },
+                { parentSchema: { $eq: null } },
+                { parentSchema: { $eq: '' } },
+              ],
+            },
+          ],
+        },
+        {
+          select: 'name extensions',
+          sort: {
+            updatedAt: 1,
+          },
+        },
+      );
+    const dbExtensions = cndSchemas.flatMap(schema => {
+      const dbExtension = schema.extensions.find(ext => ext.ownerModule === 'database');
+      if (!dbExtension) return [];
+      const { extensions: _, name: schemaName, ...rest } = schema;
+      const { ownerModule: __, ...extension } = dbExtension;
+      return { ...rest, schemaName, extension };
+    });
+    return {
+      schemas: cmsSchemas,
+      extensions: dbExtensions as ExportedCmsExtension[],
+    };
   }
 
-  async importCustomSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemas = call.request.params.schemas;
+  async importSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { schemas, extensions } = call.request.params as {
+      schemas: ExportedCmsSchema[];
+      extensions?: ExportedCmsExtension[];
+    };
+    const targetSchemas = [
+      ...schemas.map(s => s.name),
+      ...(extensions?.map(e => e.schemaName) ?? []),
+    ];
+    const models: ConduitDatabaseSchema[] = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany({ name: { $in: targetSchemas } });
     for (const schema of schemas) {
-      const existingSchema = await this.database
-        .getSchemaModel('_DeclaredSchema')
-        .model.findOne({ name: schema.name });
-      const operation = isNil(existingSchema) ? 'create' : 'update';
-      const imported = schema.modelOptions.conduit.imported === true;
+      const model = models.find(m => m.name === schema.name);
+      if (model && model.ownerModule !== 'database') {
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          `Cannot import '${schema.name}'. Schema already owned by a module!`,
+        );
+      }
+      const operation = model ? 'update' : 'create';
+      const imported = !!(model ?? schema).modelOptions.conduit?.imported;
       const modelOptions = SchemaConverter.getModelOptions({
         cmsSchema: true,
-        existingModelOptions: schema.modelOptions,
+        existingModelOptions: (model ?? schema).modelOptions,
         importedSchema: imported,
       });
-      try {
-        validateSchemaInput(schema.name, schema.fields, modelOptions);
-      } catch (err: unknown) {
-        throw new GrpcError(status.INTERNAL, (err as Error).message);
-      }
       await this.schemaController.createSchema(
         new ConduitSchema(
           schema.name,
@@ -72,15 +127,20 @@ export class SchemaAdmin {
         operation,
         imported,
       );
-      if (schema.extensions.length > 0) {
-        for (const extension of schema.extensions) {
-          await this.database.setSchemaExtension(
-            schema.name,
-            extension.owner,
-            extension.fields,
-          );
-        }
+    }
+    for (const ext of extensions ?? []) {
+      const model = models.find(m => m.name === ext.schemaName);
+      if (!model) {
+        throw new GrpcError(
+          status.FAILED_PRECONDITION,
+          `Cannot create an extension for '${ext.schemaName}'. Schema doesn't exist!`,
+        );
       }
+      await this.database.setSchemaExtension(
+        ext.schemaName,
+        'database',
+        ext.extension.fields,
+      );
     }
     return 'Schemas imported successfully';
   }

@@ -1,13 +1,15 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
-import { OAuth2 } from '../OAuth2';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
-import * as twitterParameters from './twitter.json';
-import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { Payload } from '../interfaces/Payload';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
-import { TwitterUser } from './twitter.user';
-import { AuthParams } from '../interfaces/AuthParams';
+import { OAuth2 } from '../OAuth2.js';
+import {
+  AuthParams,
+  ConnectionParams,
+  OAuth2Settings,
+  Payload,
+  ProviderConfig,
+} from '../interfaces/index.js';
+import twitterParameters from './twitter.json' assert { type: 'json' };
+import { TwitterUser } from './twitter.user.js';
 
 export class TwitterHandlers extends OAuth2<TwitterUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { twitter: ProviderConfig }) {

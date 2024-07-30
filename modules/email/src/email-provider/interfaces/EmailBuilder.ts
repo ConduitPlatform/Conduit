@@ -1,4 +1,4 @@
-import { EmailOptions } from './EmailOptions';
+import { EmailOptions } from './EmailOptions.js';
 
 export interface EmailBuilder {
   getMailObject(): EmailOptions;

@@ -10,7 +10,8 @@ type operators =
   | '$regex'
   | '$options'
   | '$like'
-  | '$ilike';
+  | '$ilike'
+  | '$exists';
 type arrayOperators = '$in' | '$nin';
 type conditionOperators = '$or' | '$and';
 
@@ -19,6 +20,7 @@ type simpleQuery<T> = {
 };
 
 type mixedQuery<T> =
+  | { $exists: boolean }
   | { [key in operators]?: documentValues<T> }
   | { [key in arrayOperators]?: documentValues<T>[] };
 

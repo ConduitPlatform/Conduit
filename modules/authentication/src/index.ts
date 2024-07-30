@@ -1,4 +1,4 @@
-import AuthenticationModule from './Authentication';
+import Authentication from './Authentication.js';
 
-const authentication = new AuthenticationModule();
+const authentication = new Authentication();
 authentication.start();

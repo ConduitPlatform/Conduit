@@ -1,13 +1,14 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   GrpcError,
   Indexable,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { AuthUtils } from '../utils';
-import { isNil } from 'lodash';
-import { User } from '../models';
+import { AuthUtils } from '../utils/index.js';
+import { isNil } from 'lodash-es';
+import { User } from '../models/index.js';
 import escapeStringRegexp from 'escape-string-regexp';
 
 export class UserAdmin {

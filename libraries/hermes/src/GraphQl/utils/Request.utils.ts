@@ -1,5 +1,5 @@
-import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
-import { GraphQLError } from 'graphql/error';
+import { ConduitGrpcSdk, ConduitError } from '@conduitplatform/grpc-sdk';
+import { GraphQLError } from 'graphql';
 
 export const errorHandler = (err: Error | ConduitError | any) => {
   ConduitGrpcSdk.Logger.error(err);

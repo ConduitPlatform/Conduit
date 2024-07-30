@@ -7,10 +7,10 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString } from '@conduitplatform/module-tools';
 import { ConduitRoute } from '@conduitplatform/hermes';
-import { isNil } from 'lodash';
-import { AdminProxyRoute } from '../../models';
-import AdminModule from '../../index';
-import { getProxies } from '../../utils';
+import { isNil } from 'lodash-es';
+import { AdminProxyRoute } from '../../models/index.js';
+import AdminModule from '../../index.js';
+import { getProxies } from '../../utils/index.js';
 
 export function updateProxyRoute(adminModule: AdminModule) {
   return new ConduitRoute(

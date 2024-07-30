@@ -1,13 +1,14 @@
 import { EventEmitter } from 'events';
-import { ConduitModule } from '../../classes';
-import { HealthCheckStatus } from '../../types';
+import { ConduitModule } from '../../classes/index.js';
+import { HealthCheckStatus } from '../../types/index.js';
 import {
   ConfigDefinition,
   ModuleHealthRequest,
   RegisterModuleRequest,
-} from '../../protoUtils/core';
-import { Indexable } from '../../interfaces';
-import ConduitGrpcSdk from '../../index';
+} from '../../protoUtils/index.js';
+import { Indexable } from '../../interfaces/index.js';
+import { ConduitGrpcSdk } from '../../index.js';
+import { ClusterOptions, RedisOptions } from 'ioredis';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {
   private readonly emitter = new EventEmitter();
@@ -23,6 +24,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     super(moduleName, 'config', url, grpcToken);
     this.initializeClient(ConfigDefinition);
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
+    this.emitter.setMaxListeners(150);
   }
 
   getServerConfig() {
@@ -76,9 +78,27 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       });
   }
 
-  getRedisDetails() {
+  async getRedisDetails(): Promise<{
+    standalone?: RedisOptions;
+    cluster?: ClusterOptions;
+    redisHost?: string;
+    redisPort?: number;
+    redisUsername?: string;
+    redisPassword?: string;
+    redisConfig?: string;
+  }> {
     const request: Indexable = {};
-    return this.client!.getRedisDetails(request);
+    const r = await this.client!.getRedisDetails(request);
+    return {
+      ...(r.standalone ? { standalone: JSON.parse(r.standalone) } : undefined),
+      ...(r.cluster ? { cluster: JSON.parse(r.cluster) } : undefined),
+      // maintain backwards compatibility with <=grpc-sdk-v0.16.0-alpha.20
+      redisHost: r.redisHost,
+      redisPort: r.redisPort,
+      redisUsername: r.redisUsername,
+      redisPassword: r.redisPassword,
+      redisConfig: r.redisConfig,
+    };
   }
 
   registerModule(
@@ -131,17 +151,19 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   }
 
   async watchModules() {
-    const self = this;
-    this.emitter.setMaxListeners(150);
-    self.emitter.emit('serving-modules-update', await self.moduleList().catch());
+    if (!this.coreLive) {
+      this.coreLive = true;
+    }
+    this.emitter.emit('serving-modules-update', await this.moduleList().catch());
     try {
       const call = this.client!.watchModules({});
       for await (const data of call) {
-        self.emitter.emit('serving-modules-update', data.modules);
+        this.emitter.emit('serving-modules-update', data.modules);
       }
     } catch (error) {
-      self.coreLive = false;
+      this.coreLive = false;
       ConduitGrpcSdk.Logger.warn('Core unhealthy');
+      this.emitter.emit('core-status-update', HealthCheckStatus.UNKNOWN);
     }
   }
 }

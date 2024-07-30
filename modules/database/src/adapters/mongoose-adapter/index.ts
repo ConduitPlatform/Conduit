@@ -1,7 +1,8 @@
 import { ConnectOptions, IndexOptions, Mongoose } from 'mongoose';
-import { MongooseSchema } from './MongooseSchema';
-import { schemaConverter } from './SchemaConverter';
-import ConduitGrpcSdk, {
+import { MongooseSchema } from './MongooseSchema.js';
+import { schemaConverter } from './SchemaConverter.js';
+import {
+  ConduitGrpcSdk,
   ConduitModelField,
   ConduitSchema,
   GrpcError,
@@ -10,31 +11,30 @@ import ConduitGrpcSdk, {
   MongoIndexType,
   RawMongoQuery,
 } from '@conduitplatform/grpc-sdk';
-import { DatabaseAdapter } from '../DatabaseAdapter';
+import { DatabaseAdapter } from '../DatabaseAdapter.js';
 import {
   findAndRemoveIndex,
   validateFieldChanges,
   validateFieldConstraints,
-} from '../utils';
-import pluralize from '../../utils/pluralize';
-import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
+} from '../utils/index.js';
+import pluralize from '../../utils/pluralize.js';
+import { mongoSchemaConverter } from '../../introspection/mongoose/utils.js';
 import { status } from '@grpc/grpc-js';
-import { checkIfMongoOptions } from './utils';
+import { checkIfMongoOptions } from './utils.js';
 import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
-} from '../../interfaces';
-import { isNil } from 'lodash';
+} from '../../interfaces/index.js';
+import { isNil, isEqual } from 'lodash-es';
 
-const EJSON = require('mongodb-extended-json');
-const parseSchema = require('mongodb-schema');
+// @ts-ignore
+import * as parseSchema from 'mongodb-schema';
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
   mongoose: Mongoose;
   connectionString: string;
   options: ConnectOptions = {
-    keepAlive: true,
     minPoolSize: 5,
     connectTimeoutMS: this.maxConnTimeoutMs,
     serverSelectionTimeoutMS: this.maxConnTimeoutMs,
@@ -81,28 +81,37 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!this.models[modelName]) {
       throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
     }
-    if (this.views[viewName]) {
+    const existingView = this.views[viewName];
+    const isQueryEqual = isEqual(existingView?.viewQuery, query);
+    if (existingView && isQueryEqual) {
       return;
     }
+
     const model = this.models[modelName];
-    let newSchema = model.schema;
+    const newSchema: Partial<ConduitSchema> = Object.assign({}, model.schema);
     //@ts-ignore
     newSchema.name = viewName;
     //@ts-ignore
     newSchema.collectionName = viewName;
+
+    if (existingView && !isQueryEqual) {
+      await this.deleteView(viewName);
+    }
     const viewModel = new MongooseSchema(
       this.grpcSdk,
       this.mongoose,
-      newSchema,
+      newSchema as ConduitSchema,
       model.originalSchema,
       this,
       true,
+      query,
     );
     await viewModel.model.createCollection({
       viewOn: model.originalSchema.collectionName,
-      pipeline: EJSON.parse(query.mongoQuery),
+      pipeline: JSON.parse(query.mongoQuery),
     });
     this.views[viewName] = viewModel;
+
     const foundView = await this.models['Views'].findOne({ name: viewName });
     if (isNil(foundView)) {
       await this.models['Views'].create({
@@ -114,12 +123,24 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
   }
 
+  async guaranteeView(viewName: string) {
+    const view = await this.models['Views'].findOne({
+      name: viewName,
+    });
+    if (!view) {
+      throw new Error('View not found');
+    }
+    await this.createView(view.originalSchema, view.name, view.joinedSchemas, view.query);
+    return this.views[viewName];
+  }
+
   async deleteView(viewName: string): Promise<void> {
     if (this.views[viewName]) {
       await this.views[viewName].model.collection.drop();
     }
     await this.models['Views'].deleteOne({ name: viewName });
     delete this.views[viewName];
+    delete this.mongoose.models[viewName];
   }
 
   async introspectDatabase(): Promise<ConduitSchema[]> {
@@ -191,6 +212,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   getSchemaModel(schemaName: string): { model: MongooseSchema } {
     if (this.models && this.models[schemaName]) {
       return { model: this.models[schemaName] };
+    } else if (this.views && this.views[schemaName]) {
+      return { model: this.views[schemaName] };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
@@ -253,9 +276,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const collection = this.mongoose.model(schemaName).collection;
     const convIndex = this.checkAndConvertIndex(schemaName, index, callerModule);
-    const indexSpecs: Indexable[] = convIndex.fields.map((field, i) => ({
-      [field]: convIndex.types?.[i] ?? 1,
-    }));
+    const indexSpecs: Indexable[] = convIndex.fields.map(
+      (field: any, i: string | number) => ({
+        [field]: convIndex.types?.[i as any] ?? 1,
+      }),
+    );
     await collection
       .createIndex(indexSpecs, {
         name: convIndex.name,
@@ -322,7 +347,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async execRawQuery(schemaName: string, rawQuery: RawMongoQuery) {
-    const collection = this.models[schemaName].model.collection;
+    let collection = this.models[schemaName]?.model.collection;
+    if (!collection) {
+      collection = this.views[schemaName]?.model.collection;
+    }
     let result;
     try {
       const queryOperation = Object.keys(rawQuery).filter(v => {
@@ -402,6 +430,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   protected async _createSchemaFromAdapter(
     schema: ConduitDatabaseSchema,
     saveToDb: boolean = true,
+    isInstanceSync: boolean = false,
   ): Promise<MongooseSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));
     validateFieldConstraints(compiledSchema, 'mongodb');
@@ -434,7 +463,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
     }
-    if (indexes) {
+    if (indexes && !isInstanceSync) {
       for (const i of indexes) {
         await this.createIndex(schema.name, i, schema.ownerModule);
       }
@@ -450,7 +479,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     const { fields, types, options } = index;
     if (
       fields.some(
-        field =>
+        (field: string) =>
           !Object.keys(this.models[schemaName].originalSchema.compiledFields).includes(
             field,
           ),
@@ -477,19 +506,15 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       if (
         types.length !== index.fields.length ||
         types.some(
-          type =>
+          (type: string | MongoIndexType.Ascending | MongoIndexType.Descending) =>
             !(type in MongoIndexType) && !Object.values(MongoIndexType).includes(type),
         )
       ) {
         throw new GrpcError(status.INTERNAL, 'Invalid index types');
       }
       // Convert index types (if called by endpoint index.types contains the keys of MongoIndexType enum)
-      index.types = types.map(type => {
-        if (
-          Object.keys(MongoIndexType).includes(
-            type as unknown as keyof typeof MongoIndexType,
-          )
-        )
+      index.types = types.map((type: unknown) => {
+        if (Object.keys(MongoIndexType).includes(type as keyof typeof MongoIndexType))
           return MongoIndexType[type as unknown as keyof typeof MongoIndexType];
         return type;
       }) as MongoIndexType[];

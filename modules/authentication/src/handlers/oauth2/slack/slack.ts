@@ -1,15 +1,17 @@
-import { isNil } from 'lodash';
-import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
+import { isNil } from 'lodash-es';
+import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios from 'axios';
-import { OAuth2 } from '../OAuth2';
-import { SlackUser } from './slack.user';
-import * as slackParameters from './slack.json';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
-import { SlackResponse } from './slack.response';
-import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { Payload } from '../interfaces/Payload';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
+import { OAuth2 } from '../OAuth2.js';
+import { SlackUser } from './slack.user.js';
+import slackParameters from './slack.json' assert { type: 'json' };
+import {
+  ConnectionParams,
+  OAuth2Settings,
+  Payload,
+  ProviderConfig,
+} from '../interfaces/index.js';
+import { SlackResponse } from './slack.response.js';
 
 export class SlackHandlers extends OAuth2<SlackUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { slack: ProviderConfig }) {

@@ -1,18 +1,19 @@
 import { to } from 'await-to-js';
-import { createTransport } from 'nodemailer';
+import { createTransport, SentMessageInfo } from 'nodemailer';
 import { Options } from 'nodemailer/lib/mailer';
-import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate';
-import { Template } from '../../interfaces/Template';
-import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate';
-import { EmailBuilderClass } from '../../models/EmailBuilderClass';
-import { EmailProviderClass } from '../../models/EmailProviderClass';
-import { getHandleBarsValues } from '../../utils';
-import { initialize as initializeMailgun } from './mailgun';
-import { MailgunConfig } from './mailgun.config';
-import { MailgunMailBuilder } from './mailgunMailBuilder';
+import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate.js';
+import { Template } from '../../interfaces/Template.js';
+import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
+import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
+import { EmailProviderClass } from '../../models/EmailProviderClass.js';
+import { getHandleBarsValues } from '../../utils/index.js';
+import { initialize as initializeMailgun } from './mailgun.js';
+import { MailgunConfig } from './mailgun.config.js';
+import { MailgunMailBuilder } from './mailgunMailBuilder.js';
 import mailgun, { Mailgun } from 'mailgun-js';
-import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate';
-import { MailgunTemplate } from '../../interfaces/mailgun/MailgunTemplate';
+import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate.js';
+import { MailgunTemplate } from '../../interfaces/mailgun/MailgunTemplate.js';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 
 export class MailgunProvider extends EmailProviderClass {
   protected _mailgunSdk: Mailgun;
@@ -122,5 +123,18 @@ export class MailgunProvider extends EmailProviderClass {
 
   getBuilder(): EmailBuilderClass<Options> {
     return new MailgunMailBuilder();
+  }
+
+  async getEmailStatus(messageId: string): Promise<Indexable> {
+    const response = await this._mailgunSdk.get(`/${this.domain}/events`, {
+      'message-id': messageId,
+      ascending: 'no',
+      limit: 1,
+    });
+    return response.items[0];
+  }
+
+  getMessageId(info: SentMessageInfo): string | undefined {
+    return info?.messageId;
   }
 }

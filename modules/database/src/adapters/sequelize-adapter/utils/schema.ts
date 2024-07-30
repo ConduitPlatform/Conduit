@@ -1,11 +1,11 @@
 import { DataTypes, ModelStatic, Sequelize, Transaction } from 'sequelize';
 import { Indexable, sleep, UntypedArray } from '@conduitplatform/grpc-sdk';
-import { SequelizeSchema } from '../SequelizeSchema';
-import { ConduitDatabaseSchema, ParsedQuery } from '../../../interfaces';
-import { isNil } from 'lodash';
-import { validateFieldChanges, validateFieldConstraints } from '../../utils';
+import { SequelizeSchema } from '../SequelizeSchema.js';
+import { ConduitDatabaseSchema, ParsedQuery } from '../../../interfaces/index.js';
+import { isNil } from 'lodash-es';
+import { validateFieldChanges, validateFieldConstraints } from '../../utils/index.js';
 
-const deepdash = require('deepdash/standalone');
+import * as deepdash from 'deepdash-es/standalone';
 
 export const extractRelations = (
   name: string,

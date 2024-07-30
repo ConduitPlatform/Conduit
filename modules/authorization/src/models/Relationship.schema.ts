@@ -1,4 +1,9 @@
-import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  DatabaseProvider,
+  MongoIndexType,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 /**
@@ -11,11 +16,40 @@ const schema: ConduitModel = {
   resource: {
     type: TYPE.String,
     required: true,
+    index: {
+      type: MongoIndexType.Ascending,
+    },
+  },
+  resourceId: {
+    type: TYPE.String,
+    required: true,
+    default: '',
+  },
+  // organization
+  resourceType: {
+    type: TYPE.String,
+    required: true,
+    default: '',
   },
   // user:1adasdas
   subject: {
     type: TYPE.String,
     required: true,
+    index: {
+      type: MongoIndexType.Ascending,
+    },
+  },
+  // user:1adasdas
+  subjectId: {
+    type: TYPE.String,
+    required: true,
+    default: '',
+  },
+  // user
+  subjectType: {
+    type: TYPE.String,
+    required: true,
+    default: '',
   },
   // member relation: "owner"
   relation: {
@@ -48,13 +82,16 @@ export class Relationship extends ConduitActiveSchema<Relationship> {
   _id: string;
   resource: string;
   resourceId: string;
+  resourceType: string;
   subject: string;
+  subjectId: string;
+  subjectType: string;
   relation: string;
   computedTuple: string;
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, Relationship.name, schema, schemaOptions, collectionName);
   }
 

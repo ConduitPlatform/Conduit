@@ -1,8 +1,12 @@
-import { ConduitModule } from '../../classes/ConduitModule';
-import { EmailDefinition } from '../../protoUtils/email';
+import { ConduitModule } from '../../classes/index.js';
+import { EmailDefinition } from '../../protoUtils/email.js';
 
 export class Email extends ConduitModule<typeof EmailDefinition> {
-  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+  constructor(
+    private readonly moduleName: string,
+    url: string,
+    grpcToken?: string,
+  ) {
     super(moduleName, 'email', url, grpcToken);
     this.initializeClient(EmailDefinition);
   }
@@ -12,12 +16,14 @@ export class Email extends ConduitModule<typeof EmailDefinition> {
     subject: string;
     body: string;
     variables: string[];
+    sender?: string;
   }) {
     return this.client!.registerTemplate({
       name: template.name,
       subject: template.subject,
       body: template.body,
       variables: template.variables,
+      sender: template.sender,
     }).then(res => {
       return JSON.parse(res.template);
     });
@@ -28,7 +34,7 @@ export class Email extends ConduitModule<typeof EmailDefinition> {
     params: {
       email: string;
       variables: any;
-      sender: string;
+      sender?: string;
       replyTo?: string;
       cc?: string[];
       attachments?: string[];
@@ -46,6 +52,18 @@ export class Email extends ConduitModule<typeof EmailDefinition> {
       },
     }).then(res => {
       return res.sentMessageInfo;
+    });
+  }
+
+  resendEmail(emailRecordId: string) {
+    return this.client!.resendEmail({ emailRecordId }).then(res => {
+      return res.sentMessageInfo;
+    });
+  }
+
+  getEmailStatus(messageId: string) {
+    return this.client!.getEmailStatus({ messageId }).then(res => {
+      return JSON.parse(res.statusInfo);
     });
   }
 }

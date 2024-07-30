@@ -6,6 +6,7 @@ const schema: ConduitModel = {
   name: {
     type: TYPE.String,
     required: true,
+    unique: true,
   },
   /**
    * Example:
@@ -43,7 +44,12 @@ const schema: ConduitModel = {
    */
   permissions: {
     type: TYPE.JSON,
+    required: false,
+  },
+  version: {
+    type: TYPE.Number,
     required: true,
+    default: 0,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -64,13 +70,15 @@ const collectionName = undefined;
 export class ResourceDefinition extends ConduitActiveSchema<ResourceDefinition> {
   private static _instance: ResourceDefinition;
   _id: string;
-  name: string;
-  relations: { [key: string]: string[] };
-  permissions: { [key: string]: string[] };
+  // todo rename
+  declare name: string;
+  relations?: { [key: string]: string[] };
+  permissions?: { [key: string]: string[] };
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, ResourceDefinition.name, schema, schemaOptions, collectionName);
   }
 

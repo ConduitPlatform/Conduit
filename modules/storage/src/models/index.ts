@@ -1,3 +1,3 @@
-export * from './Container.schema';
-export * from './File.schema';
-export * from './Folder.schema';
+export * from './Container.schema.js';
+export * from './File.schema.js';
+export * from './Folder.schema.js';

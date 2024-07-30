@@ -1,4 +1,4 @@
-import { Indexable } from './Indexable';
+import { Indexable } from './Indexable.js';
 
 export type UrlParams = {
   [key: string]: string;

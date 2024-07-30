@@ -1,12 +1,12 @@
 import { NextFunction, Response } from 'express';
-import { isNil } from 'lodash';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { isNil } from 'lodash-es';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
-import { Admin } from '../models';
-import { verifyToken } from '../utils/auth';
-import { isDev } from '../utils/middleware';
+import { Admin } from '../models/index.js';
+import { verifyToken } from '../utils/auth.js';
+import { isDev } from '../utils/middleware.js';
 import { ConduitRequest } from '@conduitplatform/hermes';
-import gql from 'graphql-tag';
+import { gql } from 'graphql-tag';
 import { ConfigController } from '@conduitplatform/module-tools';
 
 const excludedRestRoutes = ['/ready', '/login', '/config/modules'];
@@ -22,6 +22,7 @@ async function requestExcluded(req: ConduitRequest, conduit: ConduitCommons) {
   if (await isDev(conduit)) {
     if (req.originalUrl.indexOf('/graphql') === 0 && req.method === 'GET') return true;
     if (req.originalUrl.indexOf('/swagger') === 0) return true;
+    if (req.originalUrl.indexOf('/reference') === 0) return true;
   }
   // REST
   if (excludedRestRoutes.includes(req.path)) return true;

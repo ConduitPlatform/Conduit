@@ -1,5 +1,6 @@
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -10,14 +11,17 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { FormReplies, Forms } from '../models';
+import { FormReplies, Forms } from '../models/index.js';
 import axios from 'axios';
 
 export class FormsRoutes {
   public readonly _routingManager: RoutingManager;
   private forms: UntypedArray = [];
 
-  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    readonly server: GrpcServer,
+    private readonly grpcSdk: ConduitGrpcSdk,
+  ) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
   }
 
@@ -93,7 +97,6 @@ export class FormsRoutes {
     await this.grpcSdk
       .emailProvider!.sendEmail('FormSubmission', {
         email: form.forwardTo,
-        sender: 'forms',
         replyTo: form.emailField ? data[form.emailField] : null,
         variables: {
           data: text,

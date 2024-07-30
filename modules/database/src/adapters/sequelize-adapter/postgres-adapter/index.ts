@@ -1,4 +1,4 @@
-import { SequelizeAdapter } from '../index';
+import { SequelizeAdapter } from '../index.js';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 

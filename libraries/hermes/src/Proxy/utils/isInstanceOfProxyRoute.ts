@@ -1,4 +1,4 @@
-import { ProxyRoute } from '../../classes';
+import { ProxyRoute } from '../../classes/index.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 
 export function isInstanceOfProxyRoute(object: Indexable): object is ProxyRoute {

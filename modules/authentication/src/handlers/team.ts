@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
@@ -15,15 +16,16 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { Team, Token, User } from '../models';
-import { Config } from '../config';
-import { Team as TeamAuthz } from '../authz';
-import { TeamInviteTemplate } from '../templates';
+import { Team, Token, User } from '../models/index.js';
+import { Config } from '../config/index.js';
+import { Team as TeamAuthz } from '../authz/index.js';
+import { TeamInviteTemplate } from '../templates/index.js';
 import { status } from '@grpc/grpc-js';
-import { AuthUtils } from '../utils';
-import { IAuthenticationStrategy } from '../interfaces';
-import { TokenType } from '../constants';
+import { AuthUtils } from '../utils/index.js';
+import { IAuthenticationStrategy } from '../interfaces/index.js';
+import { TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
+import { isEmpty } from 'lodash-es';
 
 export class TeamsHandler implements IAuthenticationStrategy {
   private static _instance?: TeamsHandler;
@@ -40,6 +42,32 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!grpcSdk) throw new Error('GrpcSdk not provided');
     TeamsHandler._instance = new TeamsHandler(grpcSdk);
     return TeamsHandler._instance;
+  }
+
+  async inviteValidation(invitationToken: string, email?: string) {
+    if (!this.initialized) {
+      ConduitGrpcSdk.Logger.error('TeamsHandler not initialized');
+      return false;
+    }
+    const inviteToken = await Token.getInstance().findOne({
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
+      token: invitationToken,
+    });
+    if (!inviteToken) {
+      return false;
+    }
+    if (
+      inviteToken.data.email &&
+      (!email || email !== inviteToken.data.email) &&
+      !ConfigController.getInstance().config.teams.allowEmailMismatchForInvites
+    ) {
+      return false;
+    }
+    const team = await Team.getInstance().findOne({ _id: inviteToken!.data.teamId });
+    if (!team) {
+      return false;
+    }
+    return true;
   }
 
   async addUserToTeam(user: User, invitationToken: string) {
@@ -182,7 +210,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         );
       }
     }
-    const existingTeam = await Team.getInstance().findOne({ name });
+    const existingTeam = await Team.getInstance().findOne({ name, parentTeam });
     if (existingTeam) {
       throw new GrpcError(status.ALREADY_EXISTS, 'A team with that name already exists');
     }
@@ -246,6 +274,30 @@ export class TeamsHandler implements IAuthenticationStrategy {
     return 'Deleted';
   }
 
+  async updateTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { teamId } = call.request.urlParams;
+    const { name } = call.request.bodyParams;
+    const existingTeam = await Team.getInstance().findOne({ _id: teamId });
+    if (!existingTeam) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Team does not exist');
+    }
+
+    const can = await this.grpcSdk.authorization!.can({
+      subject: 'User:' + user._id,
+      actions: ['edit'],
+      resource: 'Team:' + teamId,
+    });
+    if (!can.allow) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to edit this team',
+      );
+    }
+    const team = await Team.getInstance().findByIdAndUpdate(teamId, { name });
+    return team!;
+  }
+
   async removeTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { teamId, members } = call.request.params;
@@ -282,11 +334,37 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'User does not have permission to remove team members',
       );
     }
+    let deletionError = false;
     for (const member of members) {
+      const relation = await this.grpcSdk.authorization!.findRelation({
+        subject: 'User:' + member,
+        resource: 'Team:' + teamId,
+      });
+      if (!relation || relation.relations.length === 0) {
+        continue;
+      }
+      const memberRole = relation.relations[0].relation;
+      if (memberRole === 'owner') {
+        const allowed = await this.grpcSdk.authorization!.can({
+          subject: 'User:' + user._id,
+          actions: ['deleteOwners'],
+          resource: 'Team:' + teamId,
+        });
+        if (!allowed.allow) {
+          deletionError = true;
+          continue;
+        }
+      }
       await this.grpcSdk.authorization!.deleteAllRelations({
         subject: 'User:' + member,
         resource: 'Team:' + teamId,
       });
+    }
+    if (deletionError) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'One or more members were not deleted',
+      );
     }
     return 'Users removed from team';
   }
@@ -424,7 +502,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async userInvite(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { teamId, email, role } = call.request.params;
+    const { teamId, email, role, redirectUri } = call.request.params;
     const config: Config = ConfigController.getInstance().config;
     if (!config.teams.invites.enabled) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Team invites are disabled');
@@ -462,11 +540,14 @@ export class TeamsHandler implements IAuthenticationStrategy {
       inviter: user,
     });
     if (email && config.teams.invites.sendEmail && this.grpcSdk.isAvailable('email')) {
-      const link = `${config.teams.invites.inviteUrl}?invitationToken=${invitation.token}`;
+      let link = !isEmpty(redirectUri)
+        ? AuthUtils.validateRedirectUri(redirectUri)
+        : config.teams.invites.inviteUrl;
+      link += `?invitationToken=${invitation.token}`;
+
       await this.grpcSdk
         .emailProvider!.sendEmail('TeamInvite', {
           email: email,
-          sender: 'no-reply',
           variables: {
             link,
             teamName: team.name,
@@ -611,6 +692,22 @@ export class TeamsHandler implements IAuthenticationStrategy {
     routingManager.route(
       {
         path: '/teams/:teamId',
+        description: `Updates a team. Currently only supports changing the team name.`,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          name: ConduitString.Required,
+        },
+        action: ConduitRouteActions.PATCH,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition(Team.name),
+      this.updateTeam.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/teams/:teamId',
         description: `Gets a team.`,
         urlParams: {
           teamId: ConduitObjectId.Required,
@@ -709,6 +806,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         bodyParams: {
           role: ConduitString.Required,
           email: ConduitString.Required,
+          redirectUri: ConduitString.Optional,
         },
         action: ConduitRouteActions.POST,
         middlewares: ['authMiddleware'],

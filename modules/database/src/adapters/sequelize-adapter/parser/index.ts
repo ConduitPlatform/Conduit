@@ -1,9 +1,9 @@
-import { ParsedQuery } from '../../../interfaces';
+import { ParsedQuery } from '../../../interfaces/index.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { Op, WhereOptions } from 'sequelize';
-import { cloneDeep, isArray, isBoolean, isNil, isNumber, isString } from 'lodash';
-import { SequelizeSchema } from '../SequelizeSchema';
-import { preprocessQuery } from '../utils/pathUtils';
+import { cloneDeep, isArray, isBoolean, isNil, isNumber, isString } from 'lodash-es';
+import { SequelizeSchema } from '../SequelizeSchema.js';
+import { preprocessQuery } from '../utils/pathUtils.js';
 
 function arrayHandler(
   schema: Indexable,
@@ -117,7 +117,8 @@ function _parseQuery(
     isBoolean(query) ||
     isNumber(query) ||
     query instanceof Buffer ||
-    query instanceof Date
+    query instanceof Date ||
+    query === null
   )
     return query;
   for (const key in query) {
@@ -268,6 +269,10 @@ export function parseQuery(
       relations,
       objectDotPathMapping,
     );
+    if (queryOptions.exclude)
+      parsingResult.attributes.exclude = parsingResult.attributes.exclude!.concat(
+        queryOptions.exclude,
+      );
   }
   if (
     Object.keys(parsingResult.query).length === 0 &&
@@ -397,4 +402,18 @@ export function renameRelations(
     include,
     exclude,
   };
+}
+
+export function parseCreateRelations(
+  doc: Indexable,
+  relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+) {
+  for (const relation in relations) {
+    const dbName = `${relation}Id`;
+    if (doc.hasOwnProperty(dbName)) {
+      doc[relation] = doc[dbName];
+      delete doc[dbName];
+    }
+  }
+  return doc;
 }

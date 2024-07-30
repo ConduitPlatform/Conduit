@@ -1,1 +1,1 @@
-export * from './ConduitAdmin';
+export * from './ConduitAdmin.js';

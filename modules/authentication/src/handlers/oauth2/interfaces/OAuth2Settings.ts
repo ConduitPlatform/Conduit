@@ -1,6 +1,6 @@
-import { ProviderConfig } from './ProviderConfig';
+import { ProviderConfig } from './ProviderConfig.js';
 import { v4 as uuid } from 'uuid';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 
 export class OAuth2Settings {
   providerName: string;

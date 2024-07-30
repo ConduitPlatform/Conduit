@@ -14,21 +14,21 @@ import {
   Query,
   SchemaAdapter,
   SingleDocQuery,
-} from '../../interfaces';
-import { MongooseAdapter } from './index';
-import ConduitGrpcSdk, {
+} from '../../interfaces/index.js';
+import { MongooseAdapter } from './index.js';
+import {
+  ConduitGrpcSdk,
   ConduitSchema,
   Indexable,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
-import { cloneDeep, isNil } from 'lodash';
-import { parseQuery } from './parser';
-
-const EJSON = require('mongodb-extended-json');
+import { cloneDeep, isNil } from 'lodash-es';
+import { parseQuery } from './parser/index.js';
 
 export class MongooseSchema extends SchemaAdapter<Model<any>> {
   model: Model<any>;
-  fieldHash: string;
+  // todo rename
+  declare fieldHash: string;
 
   constructor(
     grpcSdk: ConduitGrpcSdk,
@@ -37,8 +37,12 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     readonly originalSchema: any,
     readonly adapter: MongooseAdapter,
     isView: boolean = false,
+    readonly viewQuery?: Indexable,
   ) {
     super(grpcSdk, adapter, isView);
+    if (viewQuery) {
+      this.viewQuery = viewQuery;
+    }
     if (!isNil(schema.collectionName)) {
       (schema.modelOptions as _ConduitSchemaOptions).collection = schema.collectionName; // @dirty-type-cast
     } else {
@@ -59,7 +63,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   parseStringToQuery(
     query: Query | SingleDocQuery | MultiDocQuery,
   ): ParsedQuery | ParsedQuery[] {
-    return typeof query === 'string' ? EJSON.parse(query) : query;
+    return typeof query === 'string' ? JSON.parse(query) : query;
   }
 
   async create(
@@ -70,11 +74,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     },
   ) {
     await this.createPermissionCheck(options?.userId, options?.scope);
-    const parsedQuery = {
-      ...this.parseStringToQuery(query),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const parsedQuery = this.parseStringToQuery(query);
 
     const obj = await this.model.create(parsedQuery).then(r => r.toObject());
     await this.addPermissionToData(obj, options);
@@ -127,7 +127,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
       populate?: string[];
     },
-  ) {
+  ): Promise<any> {
     let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
     parsedFilter = await this.getAuthorizedQuery(
       'edit',
@@ -136,11 +136,13 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
+    if (isNil(parsedFilter)) {
+      throw new Error("Document doesn't exist or can't be modified by user.");
+    }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    parsedQuery['updatedAt'] = new Date();
     let finalQuery = this.model.findOneAndReplace(parsedFilter!, parsedQuery, {
       new: true,
     });
@@ -158,7 +160,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
       populate?: string[];
     },
-  ) {
+  ): Promise<any> {
     let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
     parsedFilter = await this.getAuthorizedQuery(
       'edit',
@@ -167,11 +169,13 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
+    if (isNil(parsedFilter)) {
+      throw new Error("Document doesn't exist or can't be modified by user.");
+    }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    parsedQuery['updatedAt'] = new Date();
     let finalQuery = this.model.findOneAndUpdate(parsedFilter!, parsedQuery, {
       new: true,
     });
@@ -205,7 +209,6 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    parsedQuery['updatedAt'] = new Date();
     return this.model.updateMany(parsedFilter, parsedQuery).exec();
   }
 
@@ -224,7 +227,13 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
-    return this.model.deleteOne(parsedQuery!).exec();
+    if (isNil(parsedQuery)) {
+      return { deletedCount: 0 };
+    }
+    return this.model
+      .deleteOne(parsedQuery!)
+      .exec()
+      .then(r => ({ deletedCount: r.deletedCount }));
   }
 
   async deleteMany(
@@ -243,9 +252,12 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.scope,
     );
     if (isNil(parsedQuery)) {
-      return [];
+      return { deletedCount: 0 };
     }
-    return this.model.deleteMany(parsedQuery).exec();
+    return this.model
+      .deleteMany(parsedQuery)
+      .exec()
+      .then(r => ({ deletedCount: r.deletedCount }));
   }
 
   async findMany(
@@ -254,13 +266,13 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       skip?: number;
       limit?: number;
       select?: string;
-      sort?: any;
+      sort?: { [field: string]: -1 | 1 };
       populate?: string[];
       userId?: string;
       scope?: string;
     },
-  ) {
-    let { parsedQuery, modified } = await this.getPaginatedAuthorizedQuery(
+  ): Promise<any> {
+    const { query: filter, modified } = await this.getPaginatedAuthorizedQuery(
       'read',
       parseQuery(this.parseStringToQuery(query)),
       options?.userId,
@@ -269,21 +281,21 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.limit,
       options?.sort,
     );
-    if (isNil(parsedQuery)) {
+    if (isNil(filter)) {
       return [];
     }
-    let finalQuery = this.model.find(parsedQuery, options?.select);
+    let finalQuery = this.model.find(filter, options?.select);
     if (!isNil(options?.skip) && !modified) {
-      finalQuery = finalQuery.skip(options?.skip!);
+      finalQuery = finalQuery.skip(options!.skip!);
     }
     if (!isNil(options?.limit) && !modified) {
-      finalQuery = finalQuery.limit(options?.limit!);
+      finalQuery = finalQuery.limit(options!.limit!);
     }
     if (!isNil(options?.populate)) {
-      finalQuery = this.populate(finalQuery, options?.populate ?? []);
+      finalQuery = this.populate(finalQuery, options!.populate ?? []);
     }
     if (!isNil(options?.sort)) {
-      finalQuery = finalQuery.sort(this.parseSort(options?.sort));
+      finalQuery = finalQuery.sort(this.parseSort(options!.sort));
     }
     return finalQuery.lean().exec();
   }
@@ -296,15 +308,18 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       select?: string;
       populate?: string[];
     },
-  ) {
-    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
-    parsedQuery = await this.getAuthorizedQuery(
+  ): Promise<any> {
+    const parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
+    const filter = await this.getAuthorizedQuery(
       'read',
       parsedQuery,
       false,
       options?.userId,
       options?.scope,
     );
+    if (isNil(filter) && !isNil(parsedQuery)) {
+      return null;
+    }
     let finalQuery = this.model.findOne(parsedQuery!, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);

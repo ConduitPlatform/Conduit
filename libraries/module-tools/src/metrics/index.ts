@@ -12,8 +12,8 @@ import {
   Summary,
   SummaryConfiguration,
 } from 'prom-client';
-import { MetricsServer } from './MetricsServer';
-import defaultMetrics from './config/defaults';
+import { MetricsServer } from './MetricsServer.js';
+import defaultMetrics from './config/defaults.js';
 import { IConduitMetrics, MetricType } from '@conduitplatform/grpc-sdk';
 
 export class ConduitMetrics implements IConduitMetrics {

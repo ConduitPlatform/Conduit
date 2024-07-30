@@ -1,19 +1,22 @@
-import { isNil } from 'lodash';
-import ConduitGrpcSdk, {
+import { isNil } from 'lodash-es';
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import * as facebookParameters from './facebook.json';
+import facebookParameters from './facebook.json' assert { type: 'json' };
 import axios, { AxiosRequestConfig } from 'axios';
-import { Payload } from '../interfaces/Payload';
-import { OAuth2 } from '../OAuth2';
-import { FacebookUser } from './facebook.user';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
-import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
+import {
+  ConnectionParams,
+  OAuth2Settings,
+  Payload,
+  ProviderConfig,
+} from '../interfaces/index.js';
+import { OAuth2 } from '../OAuth2.js';
+import { FacebookUser } from './facebook.user.js';
 
 export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { facebook: ProviderConfig }) {
@@ -80,6 +83,7 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
           access_token: ConduitString.Required,
           invitationToken: ConduitString.Optional,
           captchaToken: ConduitString.Optional,
+          scopes: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('FacebookResponse', {

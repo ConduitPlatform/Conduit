@@ -1,14 +1,17 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
-import { OAuth2 } from '../OAuth2';
-import { MicrosoftUser } from './microsoft.user';
-import * as microsoftParameters from './microsoft.json';
-import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { AuthParams } from '../interfaces/AuthParams';
-import { Payload } from '../interfaces/Payload';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
-import { makeRequest } from '../utils';
+import { OAuth2 } from '../OAuth2.js';
+import { MicrosoftUser } from './microsoft.user.js';
+import microsoftParameters from './microsoft.json' assert { type: 'json' };
+import {
+  AuthParams,
+  ConnectionParams,
+  OAuth2Settings,
+  Payload,
+  ProviderConfig,
+} from '../interfaces/index.js';
+import { makeRequest } from '../utils/index.js';
+import { ConfigController } from '@conduitplatform/module-tools';
 
 export class MicrosoftHandlers extends OAuth2<MicrosoftUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { microsoft: ProviderConfig }) {
@@ -17,6 +20,18 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, OAuth2Settings> {
       'microsoft',
       new OAuth2Settings(config.microsoft, microsoftParameters),
     );
+    const msConfig = ConfigController.getInstance().config.microsoft;
+    if (msConfig.tenantId) {
+      this.settings.tokenUrl = this.settings.tokenUrl.replace(
+        'common',
+        msConfig.tenantId,
+      );
+      this.settings.authorizeUrl = this.settings.authorizeUrl.replace(
+        'common',
+        msConfig.tenantId,
+      );
+    }
+
     this.defaultScopes = ['openid'];
   }
 

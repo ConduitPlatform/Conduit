@@ -1,33 +1,37 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
+import { isNil, merge } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { Token, User } from '../../models';
+import { Token, User } from '../../models/index.js';
 import axios from 'axios';
-import { Payload } from './interfaces/Payload';
-import { OAuth2Settings } from './interfaces/OAuth2Settings';
-import { RedirectOptions } from './interfaces/RedirectOptions';
-import { AuthParams } from './interfaces/AuthParams';
-import { ConnectionParams } from './interfaces/ConnectionParams';
-import { OAuthRequest } from './interfaces/MakeRequest';
-import { TokenProvider } from '../tokenProvider';
+import {
+  AuthParams,
+  ConnectionParams,
+  OAuth2Settings,
+  OAuthRequest,
+  Payload,
+  RedirectOptions,
+} from './interfaces/index.js';
+import { TokenProvider } from '../tokenProvider.js';
 
 import { v4 as uuid } from 'uuid';
 import { createHash } from 'crypto';
-import { TeamsHandler } from '../team';
-import { validateStateToken } from './utils';
-import { IAuthenticationStrategy } from '../../interfaces';
-import { TokenType } from '../../constants';
+import { TeamsHandler } from '../team.js';
+import { validateStateToken } from './utils/index.js';
+import { IAuthenticationStrategy } from '../../interfaces/index.js';
+import { TokenType } from '../../constants/index.js';
 import {
   ConduitString,
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { AuthUtils } from '../../utils/index.js';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy
@@ -87,7 +91,9 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         code_challenge_method: this.settings.codeChallengeMethod,
       }),
     };
-    const baseUrl = this.settings.authorizeUrl;
+    const baseUrl = this.settings.authorizeUrl.endsWith('?')
+      ? this.settings.authorizeUrl.slice(0, -1)
+      : this.settings.authorizeUrl;
     const stateToken = await Token.getInstance()
       .create({
         tokenType: TokenType.STATE_TOKEN,
@@ -138,6 +144,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const providerResponse: { data: { access_token: string } } = await axios(
       providerOptions,
     ).catch(err => {
+      ConduitGrpcSdk.Logger.error(JSON.stringify(err.response.data));
       throw new GrpcError(status.INTERNAL, err.message);
     });
     const access_token = providerResponse.data.access_token;
@@ -148,29 +155,37 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       accessToken: access_token,
       clientId,
       scope: scope,
+    }).catch(err => {
+      ConduitGrpcSdk.Logger.error(JSON.stringify(err.response.data));
+      throw new GrpcError(status.INTERNAL, err.message);
     });
 
     await Token.getInstance().deleteOne(stateToken);
     const user = await this.createOrUpdateUser(payload, stateToken.data.invitationToken);
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
-    const uri = stateToken.data.customRedirectUri;
+    const redirectUri =
+      AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
+      this.settings.finalRedirect;
     return TokenProvider.getInstance().provideUserTokens(
       {
         user,
         clientId,
         config,
       },
-      config.customRedirectUris && !isNil(uri) ? uri : this.settings.finalRedirect,
+      redirectUri,
     );
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
+    const scopes = this.constructScopes(
+      call.request.params?.scopes ?? this.defaultScopes,
+    );
     const payload = await this.connectWithProvider({
       accessToken: call.request.params['access_token'],
-      clientId: call.request.params['clientId'],
-      scope: call.request.params?.scope,
+      clientId: this.settings.clientId,
+      scope: scopes,
     });
     const user = await this.createOrUpdateUser(
       payload,
@@ -181,7 +196,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
     return TokenProvider.getInstance().provideUserTokens({
       user,
-      clientId: call.request.params['clientId'],
+      clientId: call.request.context.clientId,
       config,
     });
   }
@@ -215,7 +230,12 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       }
 
       // @ts-ignore
-      user[this.providerName] = payload;
+      if (!user[this.providerName]) {
+        // @ts-ignore
+        user[this.providerName] = {};
+      }
+      // @ts-ignore
+      user[this.providerName] = merge(user[this.providerName], payload);
       // TODO look into this again, as the email the user has registered will still not be verified
       if (!user.isVerified) user.isVerified = true;
       user = await User.getInstance().findByIdAndUpdate(user._id, user);
@@ -227,6 +247,15 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         isNil(invitationToken)
       ) {
         throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
+      }
+      if (teams.enabled && invitationToken) {
+        const valid = await TeamsHandler.getInstance().inviteValidation(
+          invitationToken,
+          payload.email,
+        );
+        if (!valid) {
+          throw new GrpcError(status.PERMISSION_DENIED, 'Invalid invitation token');
+        }
       }
       user = await User.getInstance().create({
         email: payload.email,
@@ -257,18 +286,12 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         path: `/init/${this.providerName}`,
         description: `Begins ${this.capitalizeProvider()} authentication.`,
         action: ConduitRouteActions.GET,
-        queryParams: config.customRedirectUri
-          ? {
-              scopes: [ConduitString.Optional],
-              invitationToken: ConduitString.Optional,
-              captchaToken: ConduitString.Optional,
-              redirectUri: ConduitString.Optional,
-            }
-          : {
-              scopes: [ConduitString.Optional],
-              invitationToken: ConduitString.Optional,
-              captchaToken: ConduitString.Optional,
-            },
+        queryParams: {
+          scopes: [ConduitString.Optional],
+          invitationToken: ConduitString.Optional,
+          captchaToken: ConduitString.Optional,
+          redirectUri: ConduitString.Optional,
+        },
         middlewares:
           config.captcha.enabled && config.captcha.routes.oAuth2
             ? ['captchaMiddleware']

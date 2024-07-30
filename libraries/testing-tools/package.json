@@ -21,19 +21,18 @@
   ],
   "license": "ISC",
   "dependencies": {
-    "@grpc/grpc-js": "^1.8.13",
+    "@grpc/grpc-js": "^1.10.9",
     "@grpc/proto-loader": "^0.7.6",
-    "@types/google-protobuf": "^3.15.6",
-    "nice-grpc": "^2.1.4"
+    "@types/google-protobuf": "^3.15.12",
+    "nice-grpc": "^2.1.7"
   },
   "devDependencies": {
-    "@types/convict": "^6.1.1",
-    "@types/google-protobuf": "^3.15.6",
-    "@types/lodash": "^4.14.192",
-    "@types/node": "18.15.11",
+    "@types/convict": "^6.1.6",
+    "@types/google-protobuf": "^3.15.12",
+    "@types/node": "20.11.24",
     "copyfiles": "^2.4.1",
-    "rimraf": "^5.0.0",
-    "ts-proto": "^1.146.0",
-    "typescript": "~5.0.4"
+    "rimraf": "^5.0.5",
+    "ts-proto": "^1.167.1",
+    "typescript": "~5.3.3"
   }
 }

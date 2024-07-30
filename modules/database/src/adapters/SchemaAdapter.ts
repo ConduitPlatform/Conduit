@@ -1,13 +1,8 @@
-import ConduitGrpcSdk, {
-  ConduitSchema,
-  GrpcError,
-  Indexable,
-  status,
-} from '@conduitplatform/grpc-sdk';
-import { MongooseSchema } from './mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from './sequelize-adapter/SequelizeSchema';
-import { DatabaseAdapter } from './DatabaseAdapter';
-import { isNil } from 'lodash';
+import { ConduitGrpcSdk, ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import { MongooseSchema } from './mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from './sequelize-adapter/SequelizeSchema.js';
+import { DatabaseAdapter } from './DatabaseAdapter.js';
+import { isEmpty, isNil } from 'lodash-es';
 import { createHash } from 'crypto';
 import { Op } from 'sequelize';
 
@@ -39,6 +34,10 @@ export abstract class SchemaAdapter<T> {
     readonly isView: boolean = false,
   ) {}
 
+  get authzEnabled() {
+    return this.originalSchema.modelOptions.conduit?.authorization?.enabled;
+  }
+
   transformViewName(...names: string[]): string {
     return createHash('sha256').update(names.join('_')).digest('hex');
   }
@@ -52,10 +51,7 @@ export abstract class SchemaAdapter<T> {
     if (this.isView) {
       return undefined;
     }
-    if (
-      (!userId && !scope) ||
-      !this.originalSchema.modelOptions.conduit?.authorization?.enabled
-    ) {
+    if ((!userId && !scope) || !this.authzEnabled) {
       return undefined;
     }
     const isAvailable = this.grpcSdk.isAvailable('authorization');
@@ -74,20 +70,25 @@ export abstract class SchemaAdapter<T> {
           throw new Error(`User:${userId} is not allowed to ${operation} ${scope}`);
         }
       }
-      const view = this.adapter.views[this.transformViewName(model, scope, operation)];
+      const viewName = this.transformViewName(model, scope, operation);
+      let view = this.adapter.views[viewName];
       if (!view) {
         await this.guaranteeView(operation, userId, scope);
-        return this.adapter.views[this.transformViewName(model, scope, operation)];
+        view = this.adapter.views[viewName];
+        if (!view) {
+          view = await this.adapter.guaranteeView(viewName);
+        }
       }
       return view;
     } else {
-      const view =
-        this.adapter.views[this.transformViewName(model, 'User:' + userId!, operation)];
+      const viewName = this.transformViewName(model, 'User:' + userId!, operation);
+      let view = this.adapter.views[viewName];
       if (!view) {
         await this.guaranteeView(operation, userId);
-        return this.adapter.views[
-          this.transformViewName(model, 'User:' + userId!, operation)
-        ];
+        view = this.adapter.views[viewName];
+        if (!view) {
+          view = await this.adapter.guaranteeView(viewName);
+        }
       }
       return view;
     }
@@ -97,11 +98,7 @@ export abstract class SchemaAdapter<T> {
     if (this.isView) {
       throw new Error('Cannot create on view');
     }
-    if (
-      (!userId && !scope) ||
-      !this.originalSchema.modelOptions.conduit?.authorization?.enabled
-    )
-      return;
+    if ((!userId && !scope) || !this.authzEnabled) return;
     const isAvailable = this.grpcSdk.isAvailable('authorization');
     if (!isAvailable) {
       throw new Error('Authorization service is not available');
@@ -131,25 +128,21 @@ export abstract class SchemaAdapter<T> {
 
   async getAuthorizedQuery(
     operation: string,
-    parsedQuery: Indexable,
+    query: Indexable,
     many: boolean = false,
     userId?: string,
     scope?: string,
   ) {
-    if (
-      !this.originalSchema.modelOptions.conduit?.authorization?.enabled ||
-      (isNil(userId) && isNil(scope))
-    )
-      return parsedQuery;
+    if (!this.authzEnabled || (isNil(userId) && isNil(scope))) return query;
     const view = await this.permissionCheck(operation, userId, scope);
-    if (!view) return parsedQuery;
+    if (!view) return query;
     if (many) {
-      const docs = await view.findMany(parsedQuery, {
+      const docs = await view.findMany(query, {
         select: '_id',
         userId: undefined,
         scope: undefined,
       });
-      if (isNil(docs)) {
+      if (isEmpty(docs)) {
         return null;
       }
       if (this.adapter.getDatabaseType() === 'MongoDB') {
@@ -158,12 +151,12 @@ export abstract class SchemaAdapter<T> {
         return { _id: { [Op.in]: docs.map((doc: any) => doc._id) } };
       }
     } else {
-      const doc = await view.findOne(parsedQuery, {
+      const doc = await view.findOne(query, {
         userId: undefined,
         scope: undefined,
       });
       if (isNil(doc)) {
-        throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
+        return null;
       }
       return { _id: doc._id };
     }
@@ -171,21 +164,18 @@ export abstract class SchemaAdapter<T> {
 
   async getPaginatedAuthorizedQuery(
     operation: string,
-    parsedQuery: Indexable,
+    query: Indexable,
     userId?: string,
     scope?: string,
     skip?: number,
     limit?: number,
     sort?: Indexable,
   ) {
-    if (
-      !this.originalSchema.modelOptions.conduit?.authorization?.enabled ||
-      (isNil(userId) && isNil(scope))
-    )
-      return { parsedQuery, modified: false };
+    if (!this.authzEnabled || (isNil(userId) && isNil(scope)))
+      return { query, modified: false };
     const view = await this.permissionCheck(operation, userId, scope);
-    if (!view) return { parsedQuery, modified: false };
-    const docs = await view.findMany(parsedQuery, {
+    if (!view) return { query, modified: false };
+    const docs = await view.findMany(query, {
       select: '_id',
       skip,
       limit,
@@ -193,42 +183,32 @@ export abstract class SchemaAdapter<T> {
       userId: undefined,
       scope: undefined,
     });
-    if (isNil(docs)) {
-      return { parsedQuery: null, modified: false };
+    if (!docs?.length) {
+      return { query: null, modified: false };
     }
-    if (this.adapter.getDatabaseType() === 'MongoDB') {
-      return {
-        parsedQuery: {
-          _id: {
-            $in: docs.map((doc: any) => doc._id),
-          },
-        },
-        modified: true,
-      };
-    } else {
-      return {
-        parsedQuery: { _id: { [Op.in]: docs.map((doc: any) => doc._id) } },
-        modified: true,
-      };
-    }
+    return {
+      query: { _id: { $in: docs.map((doc: any) => doc._id) } },
+      modified: true,
+    };
   }
 
   async addPermissionToData(
     data: Indexable | Indexable[],
     options?: { userId?: string; scope?: string },
   ) {
-    if (!this.originalSchema.modelOptions.conduit?.authorization?.enabled) return;
-    if (!options || (!options?.userId && options?.scope)) {
+    if (!this.authzEnabled) return;
+    if (!options || (!options?.userId && !options?.scope)) {
       return;
     }
+    const subject = options.scope ?? `User:${options.userId}`;
+    const relation = 'owner';
     if (Array.isArray(data)) {
-      for (const d of data) {
-        await this.addPermissionToData(d, options);
-      }
+      const resources = data.map(d => `${this.originalSchema.name}:${d._id}`);
+      await this.grpcSdk.authorization?.createRelations(subject, relation, resources);
     } else {
       await this.grpcSdk.authorization?.createRelation({
-        subject: options.scope ?? `User:${options.userId}`,
-        relation: 'owner',
+        subject,
+        relation,
         resource: `${this.originalSchema.name}:${data._id}`,
       });
     }

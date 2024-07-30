@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
@@ -12,16 +13,16 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { Token, TwoFactorBackUpCodes, TwoFactorSecret, User } from '../models';
-import { AuthUtils } from '../utils';
-import { TokenType } from '../constants/TokenType';
+import { Token, TwoFactorBackUpCodes, TwoFactorSecret, User } from '../models/index.js';
+import { AuthUtils } from '../utils/index.js';
+import { TokenType } from '../constants/index.js';
 import * as node2fa from '@conduitplatform/node-2fa';
 import { v4 as uuid } from 'uuid';
-import { TokenProvider } from './tokenProvider';
-import { Config } from '../config';
-import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
+import { TokenProvider } from './tokenProvider.js';
+import { Config } from '../config/index.js';
+import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { randomInt } from 'crypto';
 
 export class TwoFa implements IAuthenticationStrategy {

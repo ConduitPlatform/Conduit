@@ -37,6 +37,12 @@ export default {
       default: false,
     },
   },
+  biometricAuthentication: {
+    enabled: {
+      format: 'Boolean',
+      default: true,
+    },
+  },
   captcha: {
     enabled: {
       format: 'Boolean',
@@ -67,8 +73,17 @@ export default {
       },
     },
   },
-  customRedirectUris: {
-    format: 'Boolean',
-    default: false,
+  redirectUris: {
+    allowAny: {
+      format: 'Boolean',
+      default: false,
+    },
+    whitelistedUris: {
+      format: 'Array',
+      children: {
+        format: 'String',
+      },
+      default: [],
+    },
   },
 };

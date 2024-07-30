@@ -1,12 +1,17 @@
 import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
-import { User } from './User.schema';
+import { User, AccessToken } from './index.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   user: {
     type: TYPE.Relation,
     model: 'User',
+    required: true,
+  },
+  accessToken: {
+    type: TYPE.Relation,
+    model: 'AccessToken',
     required: true,
   },
   clientId: {
@@ -47,6 +52,7 @@ export class RefreshToken extends ConduitActiveSchema<RefreshToken> {
   user: string | User;
   clientId: string;
   token: string;
+  accessToken: string | AccessToken;
   expiresOn: Date;
   securityDetails?: {
     macAddress: string;

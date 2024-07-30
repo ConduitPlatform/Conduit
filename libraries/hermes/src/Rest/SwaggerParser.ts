@@ -5,7 +5,7 @@ import {
   TYPE,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitParser } from '../classes';
+import { ConduitParser } from '../classes/index.js';
 
 export interface ParseResult {
   type: string;
@@ -187,6 +187,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
         format: 'uuid',
       };
     } else {
+      this.requestedTypes.add(value);
       processingObject.properties[name] = {
         oneOf: [
           {

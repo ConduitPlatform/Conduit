@@ -1,12 +1,13 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { AuthUtils } from '../utils';
-import { isNil } from 'lodash';
-import { Service } from '../models';
+import { AuthUtils } from '../utils/index.js';
+import { isNil } from 'lodash-es';
+import { Service } from '../models/index.js';
 
 export class ServiceAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}

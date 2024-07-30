@@ -39,25 +39,43 @@ const schema: ConduitModel = {
     type: TYPE.String,
     select: false,
   },
-  github: {
+  apple: {
     ...authProviderSchema,
   },
-  google: {
-    ...authProviderSchema,
-  },
-  microsoft: {
-    ...authProviderSchema,
-  },
-  figma: {
-    ...authProviderSchema,
-  },
-  slack: {
+  bitbucket: {
     ...authProviderSchema,
   },
   facebook: {
     ...authProviderSchema,
   },
+  figma: {
+    ...authProviderSchema,
+  },
+  github: {
+    ...authProviderSchema,
+  },
+  gitlab: {
+    ...authProviderSchema,
+  },
+  google: {
+    ...authProviderSchema,
+  },
+  linkedin: {
+    ...authProviderSchema,
+  },
+  microsoft: {
+    ...authProviderSchema,
+  },
+  reddit: {
+    ...authProviderSchema,
+  },
+  slack: {
+    ...authProviderSchema,
+  },
   twitch: {
+    ...authProviderSchema,
+  },
+  twitter: {
     ...authProviderSchema,
   },
   active: {
@@ -73,6 +91,7 @@ const schema: ConduitModel = {
   hasTwoFA: {
     type: TYPE.Boolean,
     default: false,
+    required: true,
   },
   twoFaMethod: TYPE.String,
   phoneNumber: TYPE.String,
@@ -112,7 +131,7 @@ export class User extends ConduitActiveSchema<User> {
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, User.name, schema, modelOptions, collectionName);
   }
 

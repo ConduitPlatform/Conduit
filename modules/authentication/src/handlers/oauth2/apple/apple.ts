@@ -1,33 +1,36 @@
-import { OAuth2 } from '../OAuth2';
-import ConduitGrpcSdk, {
+import { OAuth2 } from '../OAuth2.js';
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
   Indexable,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
-import * as appleParameters from '../apple/apple.json';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
-import { Payload } from '../interfaces/Payload';
+import appleParameters from '../apple/apple.json' assert { type: 'json' };
+import {
+  AppleOAuth2Settings,
+  AppleProviderConfig,
+  ConnectionParams,
+  Payload,
+} from '../interfaces/index.js';
 import axios from 'axios';
-import { AppleUser } from './apple.user';
-import * as jwt from 'jsonwebtoken';
-import { Jwt, JwtHeader, JwtPayload } from 'jsonwebtoken';
-import { TokenProvider } from '../../tokenProvider';
-import { Token } from '../../../models';
+import { AppleUser } from './apple.user.js';
+import jwt, { Jwt, JwtHeader, JwtPayload } from 'jsonwebtoken';
+import { TokenProvider } from '../../tokenProvider.js';
+import { Token } from '../../../models/index.js';
 import { status } from '@grpc/grpc-js';
 import moment from 'moment';
 import jwksRsa from 'jwks-rsa';
 import qs from 'querystring';
-import { AppleOAuth2Settings } from '../interfaces/AppleOAuth2Settings';
-import { AppleProviderConfig } from '../interfaces/AppleProviderConfig';
-import { validateStateToken } from '../utils';
+
+import { validateStateToken } from '../utils/index.js';
 import {
   ConduitString,
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { isNil } from 'lodash';
+import { AuthUtils } from '../../../utils/index.js';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { apple: AppleProviderConfig }) {
@@ -123,10 +126,17 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     if (decoded_id_token!.payload.sub !== payload.sub) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
     }
+    let userData = params.user;
+    try {
+      userData = JSON.parse(params.user);
+    } catch (e) {
+      // already a valid object
+    }
+
     const userParams = {
       id: payload.sub!,
       email: payload.email,
-      data: { ...payload.email_verified },
+      data: { ...userData, ...payload.email_verified },
     };
     const user = await this.createOrUpdateUser(
       userParams,
@@ -135,14 +145,18 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     await Token.getInstance().deleteOne(stateToken);
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
-    const uri = stateToken.data.customRedirectUri;
+    const redirectUri =
+      AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
+      this.settings.finalRedirect;
+    const conduitClientId = stateToken.data.clientId;
+
     return TokenProvider.getInstance()!.provideUserTokens(
       {
         user,
-        clientId,
+        clientId: conduitClientId,
         config,
       },
-      config.customRedirectUris && !isNil(uri) ? uri : this.settings.finalRedirect,
+      redirectUri,
     );
   }
 

@@ -2,8 +2,9 @@ import path from 'path';
 import { EventEmitter } from 'events';
 import { camelCase } from 'lodash';
 import { ServerWritableStream } from '@grpc/grpc-js';
-import { GrpcServer } from './GrpcServer';
-import ConduitGrpcSdk, {
+import { GrpcServer } from './GrpcServer.js';
+import {
+  ConduitGrpcSdk,
   GrpcCallback,
   GrpcRequest,
   GrpcResponse,
@@ -14,8 +15,11 @@ import ConduitGrpcSdk, {
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
-import { RoutingManager } from '../routing';
+import { RoutingManager } from '../routing/index.js';
+import { fileURLToPath } from 'node:url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 export abstract class ConduitServiceModule {
   protected readonly _moduleName: string;
   protected _serviceName?: string;
@@ -26,6 +30,11 @@ export abstract class ConduitServiceModule {
 
   protected constructor(moduleName: string) {
     this._moduleName = camelCase(moduleName);
+  }
+
+  private _registered = false;
+  set registered(registered: boolean) {
+    this._registered = registered;
   }
 
   protected _port!: string; // port to bring up gRPC service
@@ -71,8 +80,11 @@ export abstract class ConduitServiceModule {
     }
     if (this._serviceHealthState !== state) {
       this._serviceHealthState = state;
-      this.events.emit(`grpc-health-change:${this._serviceName}`, state);
-      this._grpcSdk?.config.moduleHealthProbe(this._moduleName, this._address);
+      // do not emit health updates until registered
+      if (this._registered) {
+        this.events.emit(`grpc-health-change:${this._serviceName}`, state);
+        this._grpcSdk?.config.moduleHealthProbe(this._moduleName, this._address);
+      }
     }
   }
 
@@ -87,6 +99,11 @@ export abstract class ConduitServiceModule {
           HealthCheckStatus.SERVICE_UNKNOWN as unknown as HealthCheckResponse_ServingStatus,
       });
     } else {
+      if (!this._registered) {
+        return callback(null, {
+          status: HealthCheckResponse_ServingStatus.UNKNOWN,
+        });
+      }
       callback(null, {
         status: this._serviceHealthState as unknown as HealthCheckResponse_ServingStatus,
       });
@@ -119,7 +136,7 @@ export abstract class ConduitServiceModule {
 
   protected async addHealthCheckService() {
     await this.grpcServer.addService(
-      path.resolve(__dirname, '../grpc_health_check.proto'),
+      path.resolve(__dirname, './grpc_health_check.proto'),
       'grpc.health.v1.Health',
       {
         Check: this.healthCheck.bind(this),
@@ -130,14 +147,14 @@ export abstract class ConduitServiceModule {
 
   protected async addModuleService() {
     await this.grpcServer.addService(
-      path.resolve(__dirname, '../module.proto'),
+      path.resolve(__dirname, './module.proto'),
       'conduit.module.v1.ConduitModule',
       {
         SetConfig: this.setConfig.bind(this),
       },
     );
     await this.grpcServer.addService(
-      path.resolve(__dirname, '../module.proto'),
+      path.resolve(__dirname, './module.proto'),
       'conduit.module.v1.ClientRouter',
       {
         Route: RoutingManager.ClientController.handleRequest.bind(
@@ -149,7 +166,7 @@ export abstract class ConduitServiceModule {
       },
     );
     await this.grpcServer.addService(
-      path.resolve(__dirname, '../module.proto'),
+      path.resolve(__dirname, './module.proto'),
       'conduit.module.v1.AdminRouter',
       {
         Route: RoutingManager.AdminController.handleRequest.bind(

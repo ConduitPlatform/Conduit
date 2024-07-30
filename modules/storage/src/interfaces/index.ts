@@ -1,2 +1,3 @@
-export * from './IStorageProvider';
-export * from './StorageConfig';
+export * from './IStorageProvider.js';
+export * from './StorageConfig.js';
+export * from './IFileParams.js';

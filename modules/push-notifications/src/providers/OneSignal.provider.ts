@@ -1,20 +1,21 @@
-import { BaseNotificationProvider } from './base.provider';
-import { IOneSignalSettings } from '../interfaces/IOneSignalSettings';
+import { BaseNotificationProvider } from './base.provider.js';
+import { IOneSignalSettings } from '../interfaces/IOneSignalSettings.js';
 import {
   ISendNotification,
   ISendNotificationToManyDevices,
-} from '../interfaces/ISendNotification';
-import * as OneSignal from '@onesignal/node-onesignal';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { Notification } from '@onesignal/node-onesignal/models/Notification';
+} from '../interfaces/ISendNotification.js';
+import { createConfiguration, DefaultApi, Notification } from '@onesignal/node-onesignal';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { NotificationToken } from '../models/index.js';
 
 export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettings> {
-  private client?: OneSignal.DefaultApi;
+  private client?: DefaultApi;
   private readonly appId: string;
 
   constructor(settings: IOneSignalSettings) {
     super();
     this._initialized = false;
+    this.isBaseProvider = false;
     this.updateProvider(settings);
     this.appId = settings.appId;
   }
@@ -42,7 +43,12 @@ export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettin
         include_player_ids: Array.isArray(token) ? token : [token],
       };
     }
-    await this.client!.createNotification(notification);
+    const response = await this.client!.createNotification(notification);
+    if (response.errors?.invalid_player_ids?.length) {
+      await NotificationToken.getInstance().deleteMany({
+        token: { $in: response.errors.invalid_player_ids },
+      });
+    }
     return;
   }
 
@@ -52,7 +58,7 @@ export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettin
         return settings.apiKey;
       },
     };
-    const configuration = OneSignal.createConfiguration({
+    const configuration = createConfiguration({
       authMethods: {
         app_key: {
           tokenProvider: app_key_provider,
@@ -60,7 +66,7 @@ export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettin
       },
     });
     try {
-      this.client = new OneSignal.DefaultApi(configuration);
+      this.client = new DefaultApi(configuration);
       this._initialized = true;
     } catch (e) {
       this._initialized = false;

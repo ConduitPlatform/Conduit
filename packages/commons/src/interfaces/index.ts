@@ -1,2 +1,2 @@
-export * from './IConduitModule';
-export * from './RegisteredModule';
+export * from './IConduitModule.js';
+export * from './RegisteredModule.js';

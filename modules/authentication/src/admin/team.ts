@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
@@ -7,10 +8,10 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { Team, User } from '../models';
-import { isNil } from 'lodash';
+import { Team, User } from '../models/index.js';
+import { isNil } from 'lodash-es';
 import escapeStringRegexp from 'escape-string-regexp';
-import { AuthUtils } from '../utils';
+import { AuthUtils } from '../utils/index.js';
 import {
   ConduitBoolean,
   ConduitNumber,
@@ -234,7 +235,7 @@ export class TeamsAdmin {
         throw new GrpcError(status.ALREADY_EXISTS, 'There already is a default team');
       }
     }
-    const found = await Team.getInstance().findOne({ name });
+    const found = await Team.getInstance().findOne({ name, parentTeam });
     if (found) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Team already exists');
     }
@@ -290,15 +291,29 @@ export class TeamsAdmin {
         throw new GrpcError(status.ALREADY_EXISTS, 'There already is a default team');
       }
     }
+    const found = await Team.getInstance().findOne({ _id: teamId });
+    if (!found) {
+      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+    }
+    if (found.name !== name) {
+      const duplicateName = await Team.getInstance().findOne({
+        name,
+        parentTeam: found.parentTeam,
+      });
+      if (duplicateName) {
+        throw new GrpcError(status.ALREADY_EXISTS, 'Team with that name already exists');
+      }
+    }
+    if (!found.isDefault && isDefault) {
+      await Team.getInstance().updateOne({ isDefault: true }, { isDefault: false });
+    }
 
     const updatedTeam = await Team.getInstance().findByIdAndUpdate(teamId, {
       name,
       isDefault: isNil(isDefault) ? false : isDefault,
     });
-    if (!updatedTeam) {
-      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
-    }
-    return updatedTeam;
+
+    return updatedTeam!;
   }
 
   async deleteTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

@@ -6,7 +6,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
-import { User } from './User.model';
+import { User } from './User.model.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,

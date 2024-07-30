@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
@@ -14,11 +15,11 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import { populateArray } from '../utils';
-import { ChatMessage, ChatRoom, User } from '../models';
+import { isNil } from 'lodash-es';
+import { populateArray } from '../utils/index.js';
+import { ChatMessage, ChatRoom, User } from '../models/index.js';
 
-const escapeStringRegexp = require('escape-string-regexp');
+import escapeStringRegexp from 'escape-string-regexp';
 
 export class AdminHandlers {
   private readonly routingManager: RoutingManager;
@@ -66,7 +67,7 @@ export class AdminHandlers {
   }
 
   async createRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { participants } = call.request.params;
+    const { participants } = call.request.params as { participants: string[] };
     if (participants.length === 0) {
       // array check is required
       throw new GrpcError(
@@ -250,10 +251,10 @@ export class AdminHandlers {
     this.routingManager.registerRoutes();
   }
 
-  private async validateUsersInput(users: User[]) {
+  private async validateUsersInput(users: string[]) {
     const uniqueUsers = Array.from(new Set(users));
     const usersToBeAdded: void | User[] = await User.getInstance().findMany({
-      _id: { $in: uniqueUsers.map(user => user._id) },
+      _id: { $in: uniqueUsers },
     });
     if (isNil(usersToBeAdded)) {
       throw new GrpcError(status.NOT_FOUND, 'Users do not exist');

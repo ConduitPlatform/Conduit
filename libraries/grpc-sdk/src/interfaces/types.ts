@@ -1,5 +1,5 @@
-import { Context, Cookies, Indexable, Params } from './Indexable';
-import { GrpcRequest } from '../types';
+import { Context, Cookies, Indexable, Params } from './Indexable.js';
+import { GrpcRequest } from '../types/index.js';
 
 export type ParsedRouterRequest = GrpcRequest<{
   params: Params;

@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
@@ -15,10 +16,10 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import { FileHandlers } from '../handlers/file';
-import { _StorageContainer, _StorageFolder, File } from '../models';
-import { normalizeFolderPath } from '../utils';
+import { isNil } from 'lodash-es';
+import { _StorageContainer, _StorageFolder, File } from '../models/index.js';
+import { normalizeFolderPath } from '../utils/index.js';
+import { AdminFileHandlers } from './adminFile.js';
 
 export class AdminRoutes {
   private readonly routingManager: RoutingManager;
@@ -26,7 +27,7 @@ export class AdminRoutes {
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly fileHandlers: FileHandlers,
+    private readonly fileHandlers: AdminFileHandlers,
   ) {
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
@@ -213,7 +214,8 @@ export class AdminRoutes {
         action: ConduitRouteActions.POST,
         description: `Creates a new file.`,
         bodyParams: {
-          name: ConduitString.Required,
+          name: ConduitString.Optional,
+          alias: ConduitString.Optional,
           data: ConduitString.Required,
           folder: ConduitString.Optional,
           container: ConduitString.Optional,
@@ -227,7 +229,8 @@ export class AdminRoutes {
     this.routingManager.route(
       {
         bodyParams: {
-          name: { type: TYPE.String, required: true },
+          name: { type: TYPE.String, required: false },
+          alias: { type: TYPE.String, required: false },
           mimeType: TYPE.String,
           folder: { type: TYPE.String, required: false },
           size: { type: TYPE.Number, required: false },
@@ -254,6 +257,7 @@ export class AdminRoutes {
         },
         bodyParams: {
           name: ConduitString.Optional,
+          alias: ConduitString.Optional,
           folder: ConduitString.Optional,
           container: ConduitString.Optional,
           data: ConduitString.Required,
@@ -270,6 +274,7 @@ export class AdminRoutes {
         },
         bodyParams: {
           name: ConduitString.Optional,
+          alias: ConduitString.Optional,
           folder: ConduitString.Optional,
           container: ConduitString.Optional,
           mimeType: ConduitString.Optional,

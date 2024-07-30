@@ -1,15 +1,16 @@
 import express, { NextFunction, Request, Response } from 'express';
-import { GraphQlParser, ParseResult } from './GraphQlParser';
-import { findPopulation } from './utils/TypeUtils';
+import { GraphQlParser, ParseResult } from './GraphQlParser.js';
+import { findPopulation } from './utils/TypeUtils.js';
 import { GraphQLJSONObject } from 'graphql-type-json';
 import { GraphQLScalarType, Kind } from 'graphql';
-import { createHashKey, extractCachingGql } from '../cache.utils';
+import { createHashKey, extractCachingGql } from '../cache.utils.js';
 import moment from 'moment';
-import { processParams } from './utils/SimpleTypeParamUtils';
-import { importDbTypes } from '../utils/types';
-import { ConduitRouter } from '../Router';
-import { errorHandler } from './utils/Request.utils';
-import ConduitGrpcSdk, {
+import { processParams } from './utils/SimpleTypeParamUtils.js';
+import { importDbTypes } from '../utils/types.js';
+import { ConduitRouter } from '../Router.js';
+import { errorHandler } from './utils/Request.utils.js';
+import {
+  ConduitGrpcSdk,
   ConduitModel,
   ConduitReturn,
   ConduitRouteActions,
@@ -17,13 +18,15 @@ import ConduitGrpcSdk, {
   Indexable,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitRoute, TypeRegistry } from '../classes';
+import { ConduitRoute, TypeRegistry } from '../classes/index.js';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
-import { merge } from 'lodash';
+import { isArray } from 'lodash-es';
 
-const { parseResolveInfo } = require('graphql-parse-resolve-info');
-const cookiePlugin = require('./utils/cookie.plugin');
+import { parseResolveInfo } from 'graphql-parse-resolve-info';
+
+import cookiePlugin from './utils/cookie.plugin.js';
+import { GraphQLResolveInfo } from 'graphql/index.js';
 
 export class GraphQLController extends ConduitRouter {
   typeDefs!: string;
@@ -56,9 +59,12 @@ export class GraphQLController extends ConduitRouter {
   refreshGQLServer() {
     if (!this.typeDefs || this.typeDefs === ' ' || !this.resolvers) return;
     this.importDbTypes();
+
     const server = new ApolloServer({
       typeDefs: this.typeDefs,
       resolvers: this.resolvers,
+      //todo look into
+      // @ts-ignore
       plugins: [cookiePlugin],
     });
     server.start().then(() => {
@@ -206,11 +212,11 @@ export class GraphQLController extends ConduitRouter {
       this.types + ' ' + this.generateQuerySchema() + ' ' + this.generateMutationSchema();
   }
 
-  shouldPopulate(args: Indexable, info: Indexable) {
+  shouldPopulate(args: Indexable, info: GraphQLResolveInfo) {
     const resolveInfo = parseResolveInfo(info);
-    let objs = resolveInfo.fieldsByTypeName;
-    objs = objs[Object.keys(objs)[0]];
-    const result = findPopulation(objs, this._relationTypes);
+    const objs = resolveInfo!.fieldsByTypeName;
+    const reqObjs = objs[Object.keys(objs)[0]];
+    const result = findPopulation(reqObjs, this._relationTypes);
     if (result) {
       args['populate'] = result;
     }
@@ -221,13 +227,6 @@ export class GraphQLController extends ConduitRouter {
     if (!this.routeChanged(route)) return;
     const key = `${route.input.action}-${route.input.path}`;
     const registered = this._registeredRoutes.has(key);
-    if (registered) {
-      const retrievedRoute = this._registeredRoutes.get(key);
-      route.input.middlewares = merge(
-        retrievedRoute!.input.middlewares,
-        route.input.middlewares!,
-      );
-    }
     this._registeredRoutes.set(key, route);
     if (!registered) {
       this.addConduitRoute(route);
@@ -344,13 +343,14 @@ export class GraphQLController extends ConduitRouter {
       parent: Indexable,
       args: Indexable,
       context: any,
-      info: Indexable,
+      info: GraphQLResolveInfo,
     ) => {
       const { caching, cacheAge, scope } = extractCachingGql(
         route,
         context.headers['Cache-Control'] ?? context.headers['cache-control'],
       );
       if (caching) {
+        //@ts-ignore
         info.cacheControl.setCacheHint({ maxAge: cacheAge, scope });
       }
       args = self.shouldPopulate(args, info);
@@ -438,7 +438,7 @@ export class GraphQLController extends ConduitRouter {
       parent: Indexable,
       args: Indexable,
       context: any,
-      info: Indexable,
+      info: GraphQLResolveInfo,
     ) => {
       args = self.shouldPopulate(args, info);
       context.path = route.input.path;
@@ -480,7 +480,7 @@ export class GraphQLController extends ConduitRouter {
             }
           }
 
-          return result;
+          return isArray(result) ? { result } : result;
         })
         .catch(errorHandler);
     };

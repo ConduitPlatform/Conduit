@@ -1,32 +1,30 @@
-import { SwaggerParser } from './SwaggerParser';
-import { cloneDeep, isNil } from 'lodash';
+import { SwaggerParser } from './SwaggerParser.js';
+import { cloneDeep, isNil } from 'lodash-es';
 import { ConduitModel, ConduitRouteActions, Indexable } from '@conduitplatform/grpc-sdk';
-import { SwaggerRouterMetadata } from '../types';
-import { ConduitRoute } from '../classes';
-import { importDbTypes } from '../utils/types';
-import { processSwaggerParams } from './SimpleTypeParamUtils';
+import { SwaggerRouterMetadata } from '../types/index.js';
+import { ConduitRoute } from '../classes/index.js';
+import { importDbTypes } from '../utils/types.js';
+import { processSwaggerParams } from './SimpleTypeParamUtils.js';
 
 export class SwaggerGenerator {
   private _swaggerDoc: Indexable;
   private _routerMetadata: SwaggerRouterMetadata;
-  private readonly _stringifiedGlobalSecurityHeaders: string;
   private readonly _parser: SwaggerParser;
 
-  constructor(private readonly initialRouterMetadata: SwaggerRouterMetadata) {
+  constructor(readonly getSwaggerRouterMetadata: () => SwaggerRouterMetadata) {
     this.cleanup();
     this._parser = new SwaggerParser();
-    this._stringifiedGlobalSecurityHeaders = JSON.stringify(
-      this._routerMetadata.globalSecurityHeaders,
-    );
   }
 
   cleanup() {
+    this._routerMetadata = this.getSwaggerRouterMetadata();
     this._swaggerDoc = {
       openapi: '3.0.0',
       info: {
         version: '1.0.0',
         title: 'Conduit',
       },
+      servers: this._routerMetadata.servers ?? [],
       paths: {},
       components: {
         schemas: {
@@ -35,10 +33,9 @@ export class SwaggerGenerator {
             format: 'uuid',
           },
         },
-        securitySchemes: this.initialRouterMetadata.securitySchemes,
+        securitySchemes: this._routerMetadata.securitySchemes,
       },
     };
-    this._routerMetadata = cloneDeep(this.initialRouterMetadata);
   }
 
   get swaggerDoc() {
@@ -73,7 +70,7 @@ export class SwaggerGenerator {
           },
         },
       },
-      security: JSON.parse(this._stringifiedGlobalSecurityHeaders),
+      security: cloneDeep(this._routerMetadata.globalSecurityHeaders),
     };
 
     if (
@@ -134,6 +131,16 @@ export class SwaggerGenerator {
     );
     routeDoc.responses[200].content['application/json'].schema = {
       $ref: `#/components/schemas/${route.returnTypeName}`,
+    };
+    if (!isNil(routeDoc['requestBody']) || !isNil(routeDoc['parameters'])) {
+      routeDoc.responses[400] = {
+        description:
+          'Invalid parameters provided. Check the documentation for more info.',
+      };
+    }
+
+    routeDoc.responses[500] = {
+      description: 'Internal Server Error',
     };
     if (!this._swaggerDoc.components['schemas'][route.returnTypeName]) {
       this._swaggerDoc.components['schemas'][route.returnTypeName] = returnDefinition;

@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitModel,
   GrpcError,
   Indexable,
@@ -13,16 +14,20 @@ import {
   paginationAndSortingValidation,
   paramValidation,
   validateAssignments,
-} from './utils';
-import { isNil } from 'lodash';
-import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
-import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
+} from './utils.js';
+import { isNil } from 'lodash-es';
+import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller.js';
+import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
 import escapeStringRegexp from 'escape-string-regexp';
-import { ConduitPermissions, ICustomEndpoint, IDeclaredSchema } from '../../interfaces';
-import { OperationsEnum } from '../../enums';
-import { parseSortParam } from '../../handlers/utils';
+import {
+  ConduitPermissions,
+  ICustomEndpoint,
+  IDeclaredSchema,
+} from '../../interfaces/index.js';
+import { OperationsEnum } from '../../enums/index.js';
+import { parseSortParam } from '../../handlers/utils.js';
 
 export class CustomEndpointsAdmin {
   constructor(
@@ -36,7 +41,7 @@ export class CustomEndpointsAdmin {
       .getSchemaModel('CustomEndpoints')
       .model.findMany({})
       .then(r =>
-        r.map(obj => {
+        r.map((obj: any) => {
           delete obj._id;
           delete obj.selectedSchema;
           delete obj.createdAt;

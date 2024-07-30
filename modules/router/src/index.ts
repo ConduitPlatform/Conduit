@@ -1,4 +1,4 @@
-import ConduitDefaultRouter from './Router';
+import ConduitDefaultRouter from './Router.js';
 
 const router = new ConduitDefaultRouter();
 router.start();

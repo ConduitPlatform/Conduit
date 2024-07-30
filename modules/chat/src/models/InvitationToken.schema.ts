@@ -1,7 +1,7 @@
 import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
-import { User } from './User.model';
-import { ChatRoom } from './ChatRoom.schema';
+import { User } from './User.model.js';
+import { ChatRoom } from './ChatRoom.schema.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
@@ -50,7 +50,7 @@ export class InvitationToken extends ConduitActiveSchema<InvitationToken> {
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, InvitationToken.name, schema, modelOptions, collectionName);
   }
 

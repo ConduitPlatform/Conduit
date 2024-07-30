@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
@@ -14,10 +15,10 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import { BaseNotificationProvider } from '../providers/base.provider';
-import { NotificationToken } from '../models';
-import { ISendNotification } from '../interfaces/ISendNotification';
+import { isNil } from 'lodash-es';
+import { BaseNotificationProvider } from '../providers/base.provider.js';
+import { NotificationToken } from '../models/index.js';
+import { ISendNotification } from '../interfaces/ISendNotification.js';
 
 export class AdminHandlers {
   private provider: BaseNotificationProvider<unknown>;

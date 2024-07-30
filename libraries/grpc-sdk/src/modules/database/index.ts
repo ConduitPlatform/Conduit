@@ -1,16 +1,23 @@
-import { ConduitModule } from '../../classes';
+import { ConduitModule, ConduitSchema } from '../../classes/index.js';
 import {
   DatabaseProviderDefinition,
   DropCollectionResponse,
   Schema,
-} from '../../protoUtils/database';
-import { Indexable, RawQuery, UntypedArray } from '../../interfaces';
-import { Query } from '../../types/db';
-import { ConduitSchema } from '../../classes/ConduitSchema';
-import { ConduitSchemaExtension } from '../../interfaces/ConduitSchemaExtension';
+} from '../../protoUtils/database.js';
+import {
+  ConduitSchemaExtension,
+  Indexable,
+  RawQuery,
+  UntypedArray,
+} from '../../interfaces/index.js';
+import { Query } from '../../types/db.js';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
-  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+  constructor(
+    private readonly moduleName: string,
+    url: string,
+    grpcToken?: string,
+  ) {
     super(moduleName, 'database', url, grpcToken);
     this.initializeClient(DatabaseProviderDefinition);
   }

@@ -1,6 +1,7 @@
-import { isNaN, isNil } from 'lodash';
+import { isNaN, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitError,
   ConduitRouteActions,
   GrpcCallback,
@@ -8,6 +9,7 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   IConduitLogger,
   Indexable,
+  sleep,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -16,15 +18,15 @@ import {
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
 } from '@conduitplatform/commons';
-import { hashPassword } from './utils/auth';
-import { runMigrations } from './migrations';
-import AdminConfigRawSchema from './config';
-import AppConfigSchema, { Config as ConfigSchema } from './config';
-import * as middleware from './middleware';
-import * as adminRoutes from './routes';
-import * as models from './models';
-import { AdminMiddleware } from './models';
-import { protoTemplate, swaggerMetadata } from './hermes';
+import { hashPassword } from './utils/auth.js';
+import { runMigrations } from './migrations/index.js';
+import AdminConfigRawSchema from './config/index.js';
+import AppConfigSchema, { Config as ConfigSchema } from './config/index.js';
+import * as middleware from './middleware/index.js';
+import * as adminRoutes from './routes/index.js';
+import * as models from './models/index.js';
+import { AdminMiddleware } from './models/index.js';
+import { getSwaggerMetadata } from './hermes/index.js';
 import path from 'path';
 import {
   ConduitMiddleware,
@@ -33,7 +35,6 @@ import {
   ConduitRoutingController,
   ConduitSocket,
   grpcToConduitRoute,
-  ProtoGenerator,
   ProxyRoute,
   ProxyRouteT,
   proxyToConduitRoute,
@@ -42,11 +43,12 @@ import {
 import convict from 'convict';
 import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
-import { generateConfigDefaults } from './utils/config';
-import metricsSchema from './metrics';
-import * as adminProxyRoutes from './routes/proxy';
+import { generateConfigDefaults } from './utils/config.js';
+import metricsSchema from './metrics/index.js';
+import * as adminProxyRoutes from './routes/proxy/index.js';
 import cors from 'cors';
 import { ConfigController, GrpcServer, merge } from '@conduitplatform/module-tools';
+import { fileURLToPath } from 'node:url';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -77,18 +79,21 @@ export default class AdminModule extends IConduitAdmin {
   } = {};
   private databaseHandled = false;
   private hasAppliedMiddleware: string[] = [];
+  private _refreshTimeout: NodeJS.Timeout | null = null;
 
-  constructor(readonly commons: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    readonly commons: ConduitCommons,
+    grpcSdk: ConduitGrpcSdk,
+  ) {
     super(commons);
     this.grpcSdk = grpcSdk;
-    ProtoGenerator.getInstance(protoTemplate);
     this._router = new ConduitRoutingController(
       this.getHttpPort()!,
       this.getSocketPort()!,
       '/',
       this.grpcSdk,
       1000,
-      swaggerMetadata,
+      getSwaggerMetadata,
       { registeredRoutes: { name: 'admin_routes_total' } },
     );
     this._grpcRoutes = {};
@@ -102,6 +107,8 @@ export default class AdminModule extends IConduitAdmin {
     ConfigController.getInstance().config = await this.commons
       .getConfigManager()
       .configurePackage('admin', previousConfig, AdminConfigRawSchema);
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
     await server.addService(
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',
@@ -110,12 +117,7 @@ export default class AdminModule extends IConduitAdmin {
         patchRouteMiddlewares: this.patchRouteMiddlewares.bind(this),
       },
     );
-    this.grpcSdk
-      .waitForExistence('database')
-      .then(this.handleDatabase.bind(this))
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
+    this.grpcSdk.waitForExistence('database').then(this.handleDatabase.bind(this));
   }
 
   async subscribeToBusEvents() {
@@ -158,7 +160,9 @@ export default class AdminModule extends IConduitAdmin {
     this._router.registerMiddleware(helmet(), false);
     this._router.registerMiddleware((req: Request, res: Response, next: NextFunction) => {
       if (
-        (req.url.startsWith('/graphql') || req.url.startsWith('/swagger')) &&
+        (req.url.startsWith('/graphql') ||
+          req.url.startsWith('/swagger') ||
+          req.url.startsWith('/reference')) &&
         req.method === 'GET'
       ) {
         res.removeHeader('Content-Security-Policy');
@@ -198,7 +202,7 @@ export default class AdminModule extends IConduitAdmin {
       );
       this.updateState(call.request.routes, call.request.routerUrl, moduleName as string);
       if (this.databaseHandled) {
-        await this.applyStoredMiddleware();
+        this.scheduleMiddlewareApply();
       }
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
@@ -358,7 +362,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private async highAvailability() {
-    const r = await this.grpcSdk.state!.getKey('admin');
+    const r = await this.grpcSdk.state!.getState();
     const proxyRoutes = await models.AdminProxyRoute.getInstance().findMany({});
     if ((!r || r.length === 0) && (!proxyRoutes || proxyRoutes.length === 0)) {
       this.cleanupRoutes();
@@ -430,10 +434,9 @@ export default class AdminModule extends IConduitAdmin {
     url: string,
     moduleName?: string,
   ) {
-    this.grpcSdk
-      .state!.getKey('admin')
-      .then(r => {
-        const state = !r || r.length === 0 ? {} : JSON.parse(r);
+    this.grpcSdk.state
+      ?.modifyState(async (existingState: Indexable) => {
+        const state = existingState ?? {};
         if (!state.routes) state.routes = [];
         let index;
         (state.routes as Indexable[]).forEach((val, i) => {
@@ -450,7 +453,7 @@ export default class AdminModule extends IConduitAdmin {
             moduleName,
           });
         }
-        return this.grpcSdk.state!.setKey('admin', JSON.stringify(state));
+        return state;
       })
       .then(() => {
         this.publishAdminRouteData(routes, url, moduleName);
@@ -480,7 +483,7 @@ export default class AdminModule extends IConduitAdmin {
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     await this.migrateSchemas();
-    await this.applyStoredMiddleware();
+    this.scheduleMiddlewareApply();
     this.databaseHandled = true;
     models.Admin.getInstance()
       .findOne({ username: 'admin' })
@@ -622,7 +625,33 @@ export default class AdminModule extends IConduitAdmin {
     }
   }
 
+  scheduleMiddlewareApply() {
+    if (this._refreshTimeout) {
+      clearTimeout(this._refreshTimeout);
+      this._refreshTimeout = null;
+    }
+    this._refreshTimeout = setTimeout(() => {
+      try {
+        this.applyStoredMiddleware();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this._refreshTimeout = null;
+    }, 3000);
+  }
+
   private async applyStoredMiddleware() {
+    const threshold = 10000;
+    const start = Date.now();
+    while (this.grpcSdk.database?.active === false && Date.now() - start < threshold) {
+      await sleep(500);
+    }
+    if (this.grpcSdk.database?.active === false) {
+      ConduitGrpcSdk.Logger.error(
+        'Database is not active, cannot apply stored middleware',
+      );
+      return;
+    }
     for (const key of Object.keys(this._grpcRoutes)) {
       if (this.hasAppliedMiddleware.includes(key)) {
         continue;

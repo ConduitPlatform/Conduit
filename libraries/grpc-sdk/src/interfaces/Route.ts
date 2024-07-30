@@ -1,5 +1,5 @@
-import { allowedTypes, ConduitModel, TYPE } from './Model';
-import { Indexable } from './Indexable';
+import { allowedTypes, ConduitModel, TYPE } from './Model.js';
+import { Indexable } from './Indexable.js';
 
 export interface ConduitRouteParameters {
   params?: Indexable;

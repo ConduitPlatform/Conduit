@@ -1,18 +1,21 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { OAuth2 } from '../OAuth2';
-import * as googleParameters from './google.json';
-import { GoogleUser } from './google.user';
+import { OAuth2 } from '../OAuth2.js';
+import googleParameters from './google.json' assert { type: 'json' };
+import { GoogleUser } from './google.user.js';
 import axios from 'axios';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
-import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
-import { Payload } from '../interfaces/Payload';
+import {
+  ConnectionParams,
+  OAuth2Settings,
+  Payload,
+  ProviderConfig,
+} from '../interfaces/index.js';
 
 export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { google: ProviderConfig }) {
@@ -64,6 +67,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
           expires_in: ConduitString.Optional,
           invitationToken: ConduitString.Optional,
           captchaToken: ConduitString.Optional,
+          scopes: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('GoogleResponse', {

@@ -3,15 +3,30 @@ package storage;
 
 message GetFileRequest {
   string id = 1;
+  optional string userId = 2;
+  optional string scope = 3;
+
+}
+message GetFileUrlRequest {
+  string id = 1;
+  optional string userId = 2;
+  optional string scope = 3;
+
+}
+message GetFileUrlResponse {
+  string url = 1;
 }
 
 message CreateFileRequest {
-  string name = 1;
+  optional string name = 1;
   string data = 2;
   bool isPublic = 3;
   optional string folder = 4;
   optional string container = 5;
   optional string mimeType = 6;
+  optional string userId = 7;
+  optional string scope = 8;
+  optional string alias = 9;
 }
 
 message UpdateFileRequest {
@@ -21,6 +36,9 @@ message UpdateFileRequest {
   optional string folder = 4;
   optional string container = 5;
   optional string mimeType = 6;
+  optional string userId = 7;
+  optional string scope = 8;
+  optional string alias = 9;
 }
 
 message FileResponse {
@@ -37,12 +55,15 @@ message DeleteFileResponse {
 }
 
 message CreateFileByUrlRequest {
-  string name = 1;
+  optional string name = 1;
   bool isPublic = 2;
   optional string folder = 3;
   optional string container = 4;
   optional string mimeType = 5;
   optional int32 size = 6; // todo: support int64
+  optional string userId = 7;
+  optional string scope = 8;
+  optional string alias = 9;
 }
 
 message FileByUrlResponse {
@@ -59,11 +80,15 @@ message UpdateFileByUrlRequest {
   optional string container = 4;
   optional string mimeType = 5;
   optional int32 size = 6; // todo: support int64
+  optional string userId = 7;
+  optional string scope = 8;
+  optional string alias = 9;
 }
 
 service Storage {
   rpc GetFile(GetFileRequest) returns (FileResponse);
   rpc GetFileData(GetFileRequest) returns (GetFileDataResponse);
+  rpc GetFileUrl(GetFileUrlRequest) returns (GetFileUrlResponse);
   rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
   rpc CreateFile(CreateFileRequest) returns (FileResponse);
   rpc DeleteFile(GetFileRequest) returns (DeleteFileResponse);

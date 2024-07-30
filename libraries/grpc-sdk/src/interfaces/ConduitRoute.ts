@@ -1,5 +1,5 @@
-import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
-import { ConduitRouteOptions } from './Route';
+import { ConduitRouteReturnDefinition } from './ConduitRouteReturn.js';
+import { ConduitRouteOptions } from './Route.js';
 
 export interface ConduitRoute {
   returnType: ConduitRouteReturnDefinition;

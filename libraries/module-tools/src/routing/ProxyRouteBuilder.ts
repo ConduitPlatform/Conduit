@@ -3,7 +3,7 @@ import {
   ProxyRouteActions,
   ProxyRouteOptions,
 } from '@conduitplatform/grpc-sdk';
-import { RoutingManager } from './RoutingManager';
+import { RoutingManager } from './RoutingManager.js';
 
 export class ProxyRouteBuilder {
   private _options: ProxyRouteOptions = { path: '' };

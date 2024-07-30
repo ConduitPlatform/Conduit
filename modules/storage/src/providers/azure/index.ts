@@ -1,4 +1,4 @@
-import { IStorageProvider, StorageConfig } from '../../interfaces';
+import { IStorageProvider, StorageConfig } from '../../interfaces/index.js';
 import {
   BlobClient,
   BlobSASPermissions,
@@ -7,9 +7,9 @@ import {
   SASProtocol,
 } from '@azure/storage-blob';
 import fs from 'fs';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { streamToBuffer } from '../../utils';
-import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { streamToBuffer } from '../../utils/index.js';
+import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry.js';
 
 export class AzureStorage implements IStorageProvider {
   _activeContainer: string = '';

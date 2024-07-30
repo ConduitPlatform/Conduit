@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   TYPE,
@@ -11,10 +12,10 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { RouterAdmin } from './router';
-import { SecurityAdmin } from './security';
-import ConduitDefaultRouter from '../Router';
-import { Client, RouterProxyRoute } from '../models';
+import { RouterAdmin } from './router.js';
+import { SecurityAdmin } from './security.js';
+import ConduitDefaultRouter from '../Router.js';
+import { Client, RouterProxyRoute } from '../models/index.js';
 
 export class AdminHandlers {
   private readonly routerAdmin: RouterAdmin;

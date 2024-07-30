@@ -3,17 +3,17 @@ import { createServer, Server as httpServer } from 'http';
 import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { Cluster, Redis } from 'ioredis';
-import { ConduitRouter } from '../Router';
-import { isNil } from 'lodash';
+import { ConduitRouter } from '../Router.js';
+import { isNil } from 'lodash-es';
 import {
   ConduitSocket,
   EventResponse,
   isInstanceOfEventResponse,
   JoinRoomResponse,
   SocketPush,
-} from '../interfaces';
+} from '../interfaces/index.js';
 import ObjectHash from 'object-hash';
-import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, ConduitError } from '@conduitplatform/grpc-sdk';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;
@@ -67,7 +67,7 @@ export class SocketController extends ConduitRouter {
     if (this._registeredNamespaces.has(namespace)) {
       if (
         ObjectHash.sha1(conduitSocket) !==
-        ObjectHash.sha1(this._registeredNamespaces.get(namespace))
+        ObjectHash.sha1(this._registeredNamespaces.get(namespace)!)
       ) {
         this.removeNamespace(namespace);
         if (this.metrics?.registeredRoutes) {
@@ -84,11 +84,9 @@ export class SocketController extends ConduitRouter {
 
     const self = this;
     this.globalMiddlewares.forEach(middleware => {
-      self.io.of(namespace).use((socket, next) => {
-        // @ts-ignore
-        socket.request.path = namespace;
-        // @ts-ignore
-        middleware(socket.request, {}, next);
+      self.io.engine.use((req: any, res: any, next: any) => {
+        req.path = namespace;
+        middleware(req, res, next);
       });
     });
 

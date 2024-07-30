@@ -1,3 +1,3 @@
-export * from './NotificationToken.schema';
-export * from './Notification.schema';
-export * from './User.model';
+export * from './NotificationToken.schema.js';
+export * from './Notification.schema.js';
+export * from './User.model.js';

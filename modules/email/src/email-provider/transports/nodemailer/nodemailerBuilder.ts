@@ -1,6 +1,6 @@
 import Mail from 'nodemailer/lib/mailer';
-import { TemplateOptions } from '../../interfaces/TemplateOptions';
-import { EmailBuilderClass } from '../../models/EmailBuilderClass';
+import { TemplateOptions } from '../../interfaces/TemplateOptions.js';
+import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
 
 export class NodemailerBuilder extends EmailBuilderClass<Mail.Options> {
   constructor() {

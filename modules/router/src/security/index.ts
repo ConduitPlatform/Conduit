@@ -1,28 +1,31 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import helmet from 'helmet';
-import { RateLimiter } from './handlers/rate-limiter';
-import { ClientValidator } from './handlers/client-validation';
+import { RateLimiter } from './handlers/rate-limiter/index.js';
+import { ClientValidator } from './handlers/client-validation/index.js';
 import { NextFunction, Request, Response } from 'express';
-import ConduitDefaultRouter from '../Router';
+import ConduitDefaultRouter from '../Router.js';
 import cors from 'cors';
-import { CaptchaValidator } from './handlers/captcha-validation';
+import { CaptchaValidator } from './handlers/captcha-validation/index.js';
 
 export default class SecurityModule {
+  private initialized = false;
+  private _rateLimiter: RateLimiter | null = null;
+  private _clientValidator: ClientValidator | null = null;
+  private _captchaValidator: CaptchaValidator | null = null;
+
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly router: ConduitDefaultRouter,
   ) {}
 
   setupMiddlewares() {
-    const clientValidator: ClientValidator = new ClientValidator(this.grpcSdk);
-    const captchaValidator: CaptchaValidator = new CaptchaValidator(this.grpcSdk);
+    if (this.initialized) return;
+    this._clientValidator = new ClientValidator(this.grpcSdk);
+    this._captchaValidator = new CaptchaValidator(this.grpcSdk);
+    this._rateLimiter = new RateLimiter(this.grpcSdk);
 
-    this.router.registerGlobalMiddleware(
-      'rateLimiter',
-      new RateLimiter(this.grpcSdk).limiter,
-      true,
-    );
+    this.router.registerGlobalMiddleware('rateLimiter', this._rateLimiter.limiter);
     this.router.registerGlobalMiddleware(
       'corsMiddleware',
       (req: Request, res: Response, next: NextFunction) => {
@@ -46,7 +49,9 @@ export default class SecurityModule {
       'helmetGqlFix',
       (req: Request, res: Response, next: NextFunction) => {
         if (
-          (req.url.startsWith('/graphql') || req.url.startsWith('/swagger')) &&
+          (req.url.startsWith('/graphql') ||
+            req.url.startsWith('/swagger') ||
+            req.url.startsWith('/reference')) &&
           req.method === 'GET'
         ) {
           res.removeHeader('Content-Security-Policy');
@@ -57,13 +62,14 @@ export default class SecurityModule {
     );
     this.router.registerGlobalMiddleware(
       'clientMiddleware',
-      clientValidator.middleware.bind(clientValidator),
+      this._clientValidator.middleware.bind(this._clientValidator),
       true,
     );
     this.router.registerGlobalMiddleware(
       'captchaMiddleware',
-      captchaValidator.middleware.bind(captchaValidator),
+      this._captchaValidator.middleware.bind(this._captchaValidator),
       false,
     );
+    if (!this.initialized) this.initialized = true;
   }
 }

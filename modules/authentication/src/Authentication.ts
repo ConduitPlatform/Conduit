@@ -1,20 +1,25 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
-import { isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import AppConfigSchema, { Config } from './config';
-import { AdminHandlers } from './admin';
-import { AuthenticationRoutes } from './routes';
-import * as models from './models';
-import { AuthUtils } from './utils';
-import { TokenType } from './constants';
+import AppConfigSchema, { Config } from './config/index.js';
+import { AdminHandlers } from './admin/index.js';
+import { AuthenticationRoutes } from './routes/index.js';
+import * as models from './models/index.js';
+import { AuthUtils } from './utils/index.js';
+import { TokenType } from './constants/index.js';
 import { v4 as uuid } from 'uuid';
 import {
+  CreateTeamRequest,
+  GetTeamRequest,
+  ModifyTeamMembersRequest,
+  Team as GrpcTeam,
   TeamDeleteRequest,
   TeamDeleteResponse,
   UserChangePass,
@@ -24,19 +29,29 @@ import {
   UserDeleteResponse,
   UserLoginRequest,
   UserLoginResponse,
-} from './protoTypes/authentication';
-import { runMigrations } from './migrations';
-import metricsSchema from './metrics';
-import { TokenProvider } from './handlers/tokenProvider';
-import { configMigration } from './migrations/configMigration';
+  ValidateAccessTokenRequest,
+  ValidateAccessTokenResponse,
+  ValidateAccessTokenResponse_Status,
+} from './protoTypes/authentication.js';
+import { Empty } from './protoTypes/google/protobuf/empty.js';
+import { runMigrations } from './migrations/index.js';
+import metricsSchema from './metrics/index.js';
+import { TokenProvider } from './handlers/tokenProvider.js';
+import { configMigration } from './migrations/configMigration.js';
 import {
   ConduitActiveSchema,
   ConfigController,
   createParsedRouterRequest,
   ManagedModule,
 } from '@conduitplatform/module-tools';
-import { TeamsAdmin } from './admin/team';
-import { User as UserAuthz } from './authz';
+import { TeamsAdmin } from './admin/team.js';
+import { User as UserAuthz } from './authz/index.js';
+import { handleAuthentication } from './routes/middleware.js';
+import { fileURLToPath } from 'node:url';
+import { TeamsHandler } from './handlers/team.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -48,7 +63,12 @@ export default class Authentication extends ManagedModule<Config> {
       userCreate: this.userCreate.bind(this),
       changePass: this.changePass.bind(this),
       userDelete: this.userDelete.bind(this),
+      getTeam: this.getTeam.bind(this),
+      createTeam: this.createTeam.bind(this),
       teamDelete: this.teamDelete.bind(this),
+      validateAccessToken: this.validateAccessToken.bind(this),
+      addTeamMembers: this.addTeamMembers.bind(this),
+      removeTeamMembers: this.removeTeamMembers.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -125,6 +145,11 @@ export default class Authentication extends ManagedModule<Config> {
 
   async onConfig() {
     const config = ConfigController.getInstance().config;
+    if (config.redirectUris.allowAny && process.env.NODE_ENV === 'production') {
+      ConduitGrpcSdk.Logger.warn(
+        `Config option redirectUris.allowAny shouldn't be used in production!`,
+      );
+    }
     if (!config.active) {
       this.destroyMonitors();
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
@@ -263,7 +288,6 @@ export default class Authentication extends ManagedModule<Config> {
         const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
         await this.grpcSdk.emailProvider!.sendEmail('EmailVerification', {
           email: user.email,
-          sender: 'no-reply',
           variables: {
             link,
           },
@@ -273,6 +297,11 @@ export default class Authentication extends ManagedModule<Config> {
           'Failed to send verification email.' + ' Email service not online!',
         );
       }
+      await TeamsHandler.getInstance()
+        .addUserToDefault(user)
+        .catch(err => {
+          ConduitGrpcSdk.Logger.error(err);
+        });
       return callback(null, { password });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
@@ -322,6 +351,41 @@ export default class Authentication extends ManagedModule<Config> {
     }
   }
 
+  async getTeam(call: GrpcRequest<GetTeamRequest>, callback: GrpcCallback<GrpcTeam>) {
+    const request = createParsedRouterRequest(call.request);
+    try {
+      const team = (await new TeamsAdmin(this.grpcSdk).getTeam(request)) as models.Team;
+      return callback(null, {
+        id: team._id,
+        name: team.name,
+        parentTeam: team.parentTeam,
+        isDefault: team.isDefault,
+      });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  async createTeam(
+    call: GrpcRequest<CreateTeamRequest>,
+    callback: GrpcCallback<GrpcTeam>,
+  ) {
+    const request = createParsedRouterRequest(call.request);
+    try {
+      const team = (await new TeamsAdmin(this.grpcSdk).createTeam(
+        request,
+      )) as models.Team;
+      return callback(null, {
+        id: team._id,
+        name: team.name,
+        parentTeam: team.parentTeam,
+        isDefault: team.isDefault,
+      });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
   async teamDelete(
     call: GrpcRequest<TeamDeleteRequest>,
     callback: GrpcCallback<TeamDeleteResponse>,
@@ -331,6 +395,89 @@ export default class Authentication extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     });
     return callback(null, { message: result as string });
+  }
+
+  async addTeamMembers(
+    call: GrpcRequest<ModifyTeamMembersRequest>,
+    callback: GrpcCallback<Empty>,
+  ) {
+    const teamId = call.request.teamId;
+    if (isEmpty(teamId)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'teamId must be a valid Team ID!',
+      });
+    }
+    const urlParams = { teamId };
+    const bodyParams = { members: call.request.memberIds };
+    const request = createParsedRouterRequest(
+      { ...urlParams, ...bodyParams },
+      urlParams,
+      undefined,
+      bodyParams,
+    );
+    await new TeamsAdmin(this.grpcSdk).addTeamMembers(request).catch(e => {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    });
+    return callback(null, {});
+  }
+
+  async removeTeamMembers(
+    call: GrpcRequest<ModifyTeamMembersRequest>,
+    callback: GrpcCallback<Empty>,
+  ) {
+    const teamId = call.request.teamId;
+    if (isEmpty(teamId)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'teamId must be a valid Team ID!',
+      });
+    }
+    const urlParams = { teamId };
+    const bodyParams = { members: call.request.memberIds };
+    const request = createParsedRouterRequest(
+      { ...urlParams, ...bodyParams },
+      urlParams,
+      undefined,
+      bodyParams,
+    );
+    await new TeamsAdmin(this.grpcSdk).removeTeamMembers(request).catch(e => {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    });
+    return callback(null, {});
+  }
+
+  async validateAccessToken(
+    call: GrpcRequest<ValidateAccessTokenRequest>,
+    callback: GrpcCallback<ValidateAccessTokenResponse>,
+  ) {
+    const accessToken = call.request.accessToken;
+    const path = call.request.path ?? '';
+    let userId: string | undefined = undefined;
+    const accessStatus = await handleAuthentication(
+      {},
+      { authorization: `Bearer ${accessToken}` },
+      {},
+      path,
+    )
+      .then(r => {
+        userId = (r.user as models.User)._id;
+        return ValidateAccessTokenResponse_Status.AUTHENTICATED;
+      })
+      .catch(err => {
+        switch (err.code as status) {
+          case status.PERMISSION_DENIED:
+            return ValidateAccessTokenResponse_Status.USER_BLOCKED;
+          case status.UNAUTHENTICATED:
+            if (err.message.includes('2FA')) {
+              return ValidateAccessTokenResponse_Status.REQUIRES_2FA;
+            }
+          // intentional fall through
+          default:
+            return ValidateAccessTokenResponse_Status.UNAUTHENTICATED;
+        }
+      });
+    return callback(null, { status: accessStatus, userId });
   }
 
   protected registerSchemas() {

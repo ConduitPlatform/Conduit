@@ -1,9 +1,9 @@
 import { NextFunction, Response } from 'express';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { ConduitCommons } from '@conduitplatform/commons';
-import { isDev } from '../utils/middleware';
+import { isDev } from '../utils/middleware.js';
 import { ConduitRequest } from '@conduitplatform/hermes';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 
 export function getAdminMiddleware(conduit: ConduitCommons) {
   return async function adminMiddleware(
@@ -15,7 +15,9 @@ export function getAdminMiddleware(conduit: ConduitCommons) {
     const graphQlCheck =
       req.originalUrl.indexOf('/graphql') === 0 && req.method === 'GET';
     if (
-      (req.originalUrl.indexOf('/swagger') === 0 || graphQlCheck) &&
+      (req.originalUrl.indexOf('/swagger') === 0 ||
+        req.originalUrl.indexOf('/reference') === 0 ||
+        graphQlCheck) &&
       (await isDev(conduit))
     ) {
       return next();

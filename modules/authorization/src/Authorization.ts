@@ -1,14 +1,16 @@
-import ConduitGrpcSdk, {
+import {
+  ConduitGrpcSdk,
+  CreateRelationsRequest,
   DatabaseProvider,
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
-import AppConfigSchema, { Config } from './config';
-import * as models from './models';
-import { runMigrations } from './migrations';
-import metricsSchema from './metrics';
+import AppConfigSchema, { Config } from './config/index.js';
+import * as models from './models/index.js';
+import { runMigrations } from './migrations/index.js';
+import metricsSchema from './metrics/index.js';
 import {
   AllowedResourcesRequest,
   AllowedResourcesResponse,
@@ -22,18 +24,25 @@ import {
   Resource_Permission,
   Resource_Relation,
   ResourceAccessListRequest,
-} from './protoTypes/authorization';
+  ResourceModificationAcknowledgement,
+  ResourceModificationAcknowledgement_Status,
+} from './protoTypes/authorization.js';
 import {
   IndexController,
   PermissionsController,
+  QueueController,
   RelationsController,
   ResourceController,
-} from './controllers';
-import { AdminHandlers } from './admin';
+} from './controllers/index.js';
+import { AdminHandlers } from './admin/index.js';
 import { status } from '@grpc/grpc-js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
-import { Empty } from './protoTypes/google/protobuf/empty';
-import { AuthorizationRouter } from './router';
+import { Empty } from './protoTypes/google/protobuf/empty.js';
+import { AuthorizationRouter } from './router/index.js';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default class Authorization extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -45,6 +54,7 @@ export default class Authorization extends ManagedModule<Config> {
       deleteResource: this.deleteResource.bind(this),
       updateResource: this.updateResource.bind(this),
       createRelation: this.createRelation.bind(this),
+      createRelations: this.createRelations.bind(this),
       grantPermission: this.grantPermission.bind(this),
       removePermission: this.removePermission.bind(this),
       deleteRelation: this.deleteRelation.bind(this),
@@ -63,6 +73,7 @@ export default class Authorization extends ManagedModule<Config> {
   private relationsController: RelationsController;
   private resourceController: ResourceController;
   private database: DatabaseProvider;
+  private queueController: QueueController;
 
   constructor() {
     super('authorization');
@@ -72,7 +83,6 @@ export default class Authorization extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
-    await runMigrations(this.grpcSdk);
   }
 
   async onConfig() {
@@ -81,12 +91,12 @@ export default class Authorization extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       await this.registerSchemas();
+      await runMigrations(this.grpcSdk);
+      this.queueController = QueueController.getInstance(this.grpcSdk);
+      this.queueController.addRelationIndexWorker();
+      this.queueController.addConnectionWorker();
       this.indexController = IndexController.getInstance(this.grpcSdk);
-      this.relationsController = RelationsController.getInstance(
-        this.grpcSdk,
-        this.indexController,
-      );
-      this.indexController.relationsController = this.relationsController;
+      this.relationsController = RelationsController.getInstance(this.grpcSdk);
       this.permissionsController = PermissionsController.getInstance(this.grpcSdk);
       this.resourceController = ResourceController.getInstance(this.grpcSdk);
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
@@ -95,19 +105,42 @@ export default class Authorization extends ManagedModule<Config> {
     }
   }
 
-  async defineResource(call: GrpcRequest<Resource>, callback: GrpcResponse<null>) {
-    const { name, relations, permissions } = call.request;
-    const resource = this.createResourceObject(name, relations, permissions);
-    await this.resourceController.createResource(resource);
+  async defineResource(
+    call: GrpcRequest<Resource>,
+    callback: GrpcResponse<ResourceModificationAcknowledgement>,
+  ) {
+    const { name, relations, permissions, version } = call.request;
+    const resource = this.createResourceObject(name, relations, permissions, version);
+    const res = await this.resourceController.createResource(resource);
     ConduitGrpcSdk.Logger.info(`Resource ${name} created`);
-    callback(null, null);
+    callback(null, {
+      status:
+        res.status === 'processed'
+          ? ResourceModificationAcknowledgement_Status.PROCESSED
+          : res.status === 'acknowledged'
+          ? ResourceModificationAcknowledgement_Status.ACKNOWLEDGED
+          : ResourceModificationAcknowledgement_Status.IGNORED,
+    });
   }
 
-  async updateResource(call: GrpcRequest<Resource>, callback: GrpcResponse<Empty>) {
-    const { name, relations, permissions } = call.request;
-    const resource = this.createResourceObject(name, relations, permissions);
-    await this.resourceController.updateResourceDefinition(resource.name, resource);
-    callback(null, undefined);
+  async updateResource(
+    call: GrpcRequest<Resource>,
+    callback: GrpcResponse<ResourceModificationAcknowledgement>,
+  ) {
+    const { name, relations, permissions, version } = call.request;
+    const resource = this.createResourceObject(name, relations, permissions, version);
+    const res = await this.resourceController.updateResourceDefinition(
+      { name: resource.name },
+      resource,
+    );
+    callback(null, {
+      status:
+        res.status === 'processed'
+          ? ResourceModificationAcknowledgement_Status.PROCESSED
+          : res.status === 'acknowledged'
+          ? ResourceModificationAcknowledgement_Status.ACKNOWLEDGED
+          : ResourceModificationAcknowledgement_Status.IGNORED,
+    });
   }
 
   async deleteResource(
@@ -122,6 +155,17 @@ export default class Authorization extends ManagedModule<Config> {
   async createRelation(call: GrpcRequest<Relation>, callback: GrpcResponse<Empty>) {
     const { relation, resource, subject } = call.request;
     await this.relationsController.createRelation(subject, relation, resource);
+    callback(null, {});
+  }
+
+  async createRelations(
+    call: GrpcRequest<CreateRelationsRequest>,
+    callback: GrpcResponse<Empty>,
+  ) {
+    const subject = call.request.subject;
+    const relation = call.request.relation;
+    const resources = call.request.resources;
+    await this.relationsController.createRelations(subject, relation, resources);
     callback(null, {});
   }
 
@@ -187,9 +231,14 @@ export default class Authorization extends ManagedModule<Config> {
     call: GrpcRequest<ResourceAccessListRequest>,
     callback: GrpcResponse<Empty>,
   ) {
-    const { subject, action, resourceType } = call.request;
-    await this.permissionsController.createAccessList(subject, action, resourceType);
-    callback(null);
+    const { subject, action, resourceType, viewName: requestedViewName } = call.request;
+    const viewName = await this.permissionsController.createAccessList(
+      subject,
+      action,
+      resourceType,
+      requestedViewName,
+    );
+    callback(null, { viewName });
   }
 
   async can(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {
@@ -231,13 +280,16 @@ export default class Authorization extends ManagedModule<Config> {
     name: string,
     relations: Resource_Relation[],
     permissions: Resource_Permission[],
+    version?: number,
   ) {
     const resource: {
       name: string;
       relations?: { [key: string]: string | string[] };
       permissions?: { [key: string]: string | string[] };
+      version?: number;
     } = {
       name,
+      version,
     };
     resource.relations = {};
     relations.forEach(relation => {
@@ -250,7 +302,7 @@ export default class Authorization extends ManagedModule<Config> {
     return resource;
   }
 
-  protected registerSchemas() {
+  protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       return this.database

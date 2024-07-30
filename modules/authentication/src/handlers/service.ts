@@ -1,14 +1,15 @@
-import { isEmpty, isNil } from 'lodash';
-import { AuthUtils } from '../utils';
-import ConduitGrpcSdk, {
+import { isEmpty, isNil } from 'lodash-es';
+import { AuthUtils } from '../utils/index.js';
+import {
+  ConduitGrpcSdk,
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { Service, User } from '../models';
+import { Service, User } from '../models/index.js';
 import { status } from '@grpc/grpc-js';
-import { TokenProvider } from './tokenProvider';
-import { IAuthenticationStrategy } from '../interfaces';
+import { TokenProvider } from './tokenProvider.js';
+import { IAuthenticationStrategy } from '../interfaces/index.js';
 
 import { ConfigController, RoutingManager } from '@conduitplatform/module-tools';
 

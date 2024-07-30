@@ -1,29 +1,45 @@
 {
   "name": "@conduitplatform/module-tools",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.esm.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      },
+      "default": "./dist/index.esm.js"
+    }
+  },
   "engines": {
     "node": ">=14"
   },
+  "type": "module",
   "scripts": {
     "prepublish": "npm run build",
-    "build": "rimraf dist && tsc",
+    "build": "rimraf dist && rollup -c",
     "postbuild": "copyfiles -u 1 src/*.proto src/**/*.json ./dist/"
   },
   "license": "MIT",
   "dependencies": {
-    "@grpc/grpc-js": "^1.8.13",
+    "@grpc/grpc-js": "^1.10.9",
     "@grpc/proto-loader": "^0.7.6",
     "abort-controller-x": "^0.4.1",
     "convict": "^6.2.4",
-    "express": "^4.18.2",
-    "fast-jwt": "^2.2.1",
+    "express": "^4.19.2",
+    "fast-jwt": "^3.3.2",
     "lodash": "^4.17.21",
-    "prom-client": "^14.2.0",
-    "protobufjs": "^7.2.3",
-    "winston": "^3.8.2",
-    "winston-loki": "^6.0.6"
+    "lodash-es": "^4.17.21",
+    "prom-client": "^15.1.0",
+    "protobufjs": "^7.2.6",
+    "winston": "^3.12.0",
+    "winston-loki": "^6.0.8"
   },
   "directories": {
     "lib": "dist",
@@ -39,20 +55,27 @@
   },
   "devDependencies": {
     "@conduitplatform/grpc-sdk": "*",
-    "@types/convict": "^6.1.1",
-    "@types/express": "^4.17.17",
-    "@types/fs-extra": "^11.0.1",
-    "@types/google-protobuf": "^3.15.6",
-    "@types/ioredis": "^4.28.10",
-    "@types/lodash": "^4.14.192",
-    "@types/node": "18.15.11",
+    "@rollup/plugin-commonjs": "^26.0.1",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-replace": "^5.0.7",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/convict": "^6.1.6",
+    "@types/express": "^4.17.21",
+    "@types/fs-extra": "^11.0.4",
+    "@types/google-protobuf": "^3.15.12",
+    "@types/lodash": "^4.17.6",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "20.11.24",
     "copyfiles": "^2.4.1",
-    "rimraf": "^5.0.0",
-    "ts-proto": "^1.146.0",
-    "typescript": "~5.0.4"
+    "rimraf": "^5.0.5",
+    "rollup": "^4.18.0",
+    "ts-node": "^10.9.2",
+    "ts-proto": "^1.167.1",
+    "tslib": "^2.6.3",
+    "typescript": "~5.3.3"
   },
   "peerDependencies": {
-    "@grpc/grpc-js": "^1.5.2",
-    "@conduitplatform/grpc-sdk": "*"
+    "@conduitplatform/grpc-sdk": "*",
+    "@grpc/grpc-js": "^1.10.9"
   }
 }

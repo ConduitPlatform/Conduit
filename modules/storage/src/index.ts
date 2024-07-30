@@ -1,4 +1,4 @@
-import StorageModule from './Storage';
+import StorageModule from './Storage.js';
 
 const storage = new StorageModule();
 storage.start();

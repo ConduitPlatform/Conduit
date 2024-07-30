@@ -1,8 +1,8 @@
-import { IStorageProvider, StorageConfig } from '../../interfaces';
+import { IStorageProvider, StorageConfig } from '../../interfaces/index.js';
 import OSS from 'ali-oss';
 import fs from 'fs';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry.js';
 
 export class AliyunStorage implements IStorageProvider {
   private _activeContainer: string = '';

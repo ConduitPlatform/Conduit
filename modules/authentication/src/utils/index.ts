@@ -1,19 +1,21 @@
-import * as crypto from 'crypto';
-import * as jwt from 'jsonwebtoken';
-import * as bcrypt from 'bcrypt';
-import ConduitGrpcSdk, {
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import {
+  ConduitGrpcSdk,
   Cookies,
   GrpcError,
   Headers,
   Indexable,
   SMS,
 } from '@conduitplatform/grpc-sdk';
-import { Team, Token, User } from '../models';
-import { isNil } from 'lodash';
+import { Team, Token, User } from '../models/index.js';
+import { isEmpty, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
 import escapeStringRegexp from 'escape-string-regexp';
-import { FetchMembersParams } from '../interfaces';
+import { FetchMembersParams } from '../interfaces/index.js';
+import { ConfigController } from '@conduitplatform/module-tools';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
@@ -67,33 +69,6 @@ export namespace AuthUtils {
       token: uuid(),
       data: data,
     });
-  }
-
-  export async function dbUserChecks(user: User, password: string) {
-    const dbUser: User | null = await User.getInstance().findOne(
-      { _id: user._id },
-      '+hashedPassword',
-    );
-    const isNilDbUser = isNil(dbUser);
-    if (isNilDbUser) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'User does not exist');
-    }
-    const isNilHashedPassword = isNil(dbUser.hashedPassword);
-    if (isNilHashedPassword) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
-    }
-
-    const passwordsMatch = await AuthUtils.checkPassword(
-      password,
-      dbUser.hashedPassword!,
-    );
-    if (!passwordsMatch) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
-    }
-    return dbUser;
   }
 
   export function verify(token: string, secret: string): string | object | null {
@@ -166,12 +141,12 @@ export namespace AuthUtils {
     const { relations, search, sort, populate } = params;
     const skip = params.skip ?? 0;
     const limit = params.limit ?? 25;
-    let query: any = {
+    const query: Indexable = {
       _id: { $in: relations.relations.map(r => r.subject.split(':')[1]) },
     };
     if (!isNil(search)) {
       if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        let included = relations.relations
+        const included = relations.relations
           .map(r => r.subject.split(':')[1])
           .includes(search);
         if (included) {
@@ -209,20 +184,18 @@ export namespace AuthUtils {
 
   export async function fetchUserTeams(params: FetchMembersParams) {
     const { relations, search, sort, populate } = params;
-    const skip = params.skip ?? 0;
-    const limit = params.limit ?? 25;
-    let query: any = {
+    const query: Indexable = {
       _id: { $in: relations.relations.map(r => r.resource.split(':')[1]) },
     };
     if (!isNil(search)) {
       if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        let included = relations.relations
+        const included = relations.relations
           .map(r => r.subject.split(':')[1])
           .includes(search);
         if (included) {
           query['_id'] = search;
         } else {
-          return { teams: [], count: relations.relations.length };
+          return { teams: [], count: relations.count };
         }
       } else {
         const searchString = escapeStringRegexp(search);
@@ -230,12 +203,12 @@ export namespace AuthUtils {
       }
     }
 
-    const count = relations.relations.length;
+    const count = relations.count;
     const teams = await Team.getInstance().findMany(
       query,
       undefined,
-      skip,
-      limit,
+      undefined,
+      undefined,
       sort,
       populate,
     );
@@ -258,5 +231,23 @@ export namespace AuthUtils {
         'members array contains invalid user ids',
       );
     }
+  }
+
+  export function validateRedirectUri(redirectUri?: string) {
+    if (!redirectUri || isEmpty(redirectUri)) return undefined;
+    type RedirectUris = { allowAny: boolean; whitelistedUris: string[] };
+    const { allowAny, whitelistedUris } = ConfigController.getInstance().config
+      .redirectUris as RedirectUris;
+    if (!allowAny && !whitelistedUris.includes(redirectUri)) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        `Invalid redirectUri provided! Check the redirectUris section in Authentication's config.`,
+      );
+    }
+    return redirectUri;
+  }
+
+  export function generateOtp(): string {
+    return Math.floor(1000 + Math.random() * 9000).toString();
   }
 }
