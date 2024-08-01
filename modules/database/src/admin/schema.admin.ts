@@ -3,6 +3,7 @@ import {
   ConduitSchema,
   GrpcError,
   Indexable,
+  ModelOptionsIndex,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -642,9 +643,19 @@ export class SchemaAdmin {
   }
 
   async importIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    for (const index of call.request.params.indexes) {
-      await this.database.createIndex(index.schemaName, index, 'database').catch(e => {
-        throw new GrpcError(status.INTERNAL, `${index.name}: ${e.message}`);
+    const { indexes } = call.request.params;
+    const indexMap = new Map<string, ModelOptionsIndex[]>();
+    for (const i of indexes) {
+      const { schemaName, ...rest } = i;
+      if (indexMap.has(schemaName)) {
+        indexMap.get(schemaName)!.push(rest);
+      } else {
+        indexMap.set(i.schemaName, [rest]);
+      }
+    }
+    for (const [schemaName, indexes] of indexMap) {
+      await this.database.createIndexes(schemaName, indexes, 'database').catch(e => {
+        throw new GrpcError(status.INTERNAL, `Index creation failed: ${e.message}`);
       });
     }
     return 'Indexes imported successfully';
@@ -652,9 +663,18 @@ export class SchemaAdmin {
 
   async exportIndexes(): Promise<UnparsedRouterResponse> {
     const indexes = [];
-    const schemas = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findMany({});
+    const schemas = await this.database.getSchemaModel('_DeclaredSchema').model.findMany({
+      $or: [
+        { 'modelOptions.conduit.cms.enabled': true },
+        {
+          $and: [
+            { 'modelOptions.conduit.cms': { $exists: false } },
+            { 'modelOptions.conduit.permissions.extendable': true },
+            { extensions: { $exists: true } },
+          ],
+        },
+      ],
+    });
     for (const schema of schemas) {
       const schemaIndexes = await this.database.getIndexes(schema.name);
       if (!isNil(schemaIndexes) && !isEmpty(schemaIndexes)) {
@@ -666,19 +686,15 @@ export class SchemaAdmin {
     return { indexes };
   }
 
-  async createIndex(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, name, fields, types, options } = call.request.params;
+  async createIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, indexes } = call.request.params;
     const requestedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({ _id: id });
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    return await this.database.createIndex(
-      requestedSchema.name,
-      { name, fields, types, options },
-      'database',
-    );
+    return await this.database.createIndexes(requestedSchema.name, indexes, 'database');
   }
 
   async getIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

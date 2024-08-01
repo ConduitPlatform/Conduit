@@ -33,6 +33,7 @@ import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter.js';
 import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter.js';
 import { isEqual, isNil } from 'lodash-es';
 import { findAndRemoveIndex } from '../utils/index.js';
+import { validateIndexFields } from '../utils/indexValidations.js';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -346,22 +347,29 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     return this.sequelize.getDialect();
   }
 
-  async createIndex(
+  async createIndexes(
     schemaName: string,
-    index: ModelOptionsIndex,
+    indexes: ModelOptionsIndex[],
     callerModule: string,
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    index = this.checkAndConvertIndex(schemaName, index, callerModule);
+    const convertedIndexes = indexes.map(i =>
+      this.checkAndConvertIndex(schemaName, i, callerModule),
+    );
     const schema = this.models[schemaName].originalSchema;
-    const indexes = schema.modelOptions.indexes ?? [];
-    if (!indexes.map(i => i.name).includes(index.name)) {
-      indexes.push(index);
+    const modelOptionsIndexes = schema.modelOptions.indexes ?? [];
+    const indexMap = new Map<string, ModelOptionsIndex>(
+      modelOptionsIndexes.map((i: ModelOptionsIndex) => [i.name, i]),
+    );
+    for (const i of convertedIndexes) {
+      if (!indexMap.has(i.name)) {
+        indexMap.set(i.name, i);
+      }
     }
-    Object.assign(schema.modelOptions, { indexes });
+    Object.assign(schema.modelOptions, { indexes: [...indexMap.values()] });
     await this.createSchemaFromAdapter(schema);
-    return 'Index created!';
+    return 'Indexes created!';
   }
 
   async getIndexes(schemaName: string): Promise<ModelOptionsIndex[]> {
@@ -455,49 +463,27 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     callerModule: string,
   ) {
     const dialect = this.sequelize.getDialect();
-    const { fields, types, options } = index;
+    const { types, options } = index;
+    validateIndexFields(this.models[schemaName].originalSchema, index, callerModule);
+    if (options && !checkIfSequelizeIndexOptions(options, dialect)) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `Invalid index options for ${dialect}`,
+      );
+    }
+    if (!types) return index;
+    if (types.length !== 1 || !checkIfSequelizeIndexType(types[0], dialect)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, `Invalid index type for ${dialect}`);
+    }
     if (
-      fields.some(
-        (field: string) =>
-          !Object.keys(this.models[schemaName].originalSchema.compiledFields).includes(
-            field,
-          ),
-      )
+      (dialect === 'mysql' || dialect === 'mariadb') &&
+      ['UNIQUE', 'FULLTEXT', 'SPATIAL'].includes(types[0] as string)
     ) {
-      throw new Error(`Invalid fields for index creation`);
+      index.options = { ...index.options, type: types[0] } as MySQLMariaDBIndexOptions;
+    } else {
+      index.options = { ...index.options, using: types[0] } as PgIndexOptions;
     }
-    if (!types && !options) return index;
-    if (options) {
-      if (!checkIfSequelizeIndexOptions(options, dialect)) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          `Invalid index options for ${dialect}`,
-        );
-      }
-      if (
-        Object.keys(options).includes('unique') &&
-        this.models[schemaName].originalSchema.ownerModule !== callerModule
-      ) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'Not authorized to create unique index',
-        );
-      }
-    }
-    if (types) {
-      if (types.length !== 1 || !checkIfSequelizeIndexType(types[0], dialect)) {
-        throw new GrpcError(status.INVALID_ARGUMENT, `Invalid index type for ${dialect}`);
-      }
-      if (
-        (dialect === 'mysql' || dialect === 'mariadb') &&
-        ['UNIQUE', 'FULLTEXT', 'SPATIAL'].includes(types[0] as string)
-      ) {
-        index.options = { ...index.options, type: types[0] } as MySQLMariaDBIndexOptions;
-      } else {
-        index.options = { ...index.options, using: types[0] } as PgIndexOptions;
-      }
-      delete index.types;
-    }
+    delete index.types;
     return index;
   }
 }

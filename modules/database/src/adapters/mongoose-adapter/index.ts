@@ -10,6 +10,7 @@ import {
   ModelOptionsIndex,
   MongoIndexType,
   RawMongoQuery,
+  ReverseMongoIndexTypeMap,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter.js';
 import {
@@ -25,10 +26,11 @@ import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces/index.js';
-import { isNil, isEqual } from 'lodash-es';
+import { isEqual, isNil } from 'lodash-es';
 
 // @ts-ignore
 import * as parseSchema from 'mongodb-schema';
+import { validateIndexFields } from '../utils/indexValidations.js';
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
@@ -267,69 +269,87 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return 'MongoDB';
   }
 
-  async createIndex(
+  async createIndexes(
     schemaName: string,
-    index: ModelOptionsIndex,
+    indexes: ModelOptionsIndex[],
     callerModule: string,
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const collection = this.mongoose.model(schemaName).collection;
-    const convIndex = this.checkAndConvertIndex(schemaName, index, callerModule);
-    const indexSpecs: Indexable[] = convIndex.fields.map(
-      (field: any, i: string | number) => ({
-        [field]: convIndex.types?.[i as any] ?? 1,
-      }),
-    );
-    await collection
-      .createIndex(indexSpecs, {
-        name: convIndex.name,
-        ...convIndex.options,
-      } as IndexOptions)
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    // Add index to modelOptions
-    const schema = this.models[schemaName].originalSchema;
-    const indexes = schema.modelOptions.indexes ?? [];
-    if (!indexes.map((i: ModelOptionsIndex) => i.name).includes(convIndex.name)) {
-      indexes.push(convIndex);
+    for (const index of indexes) {
+      const convIndex = this.checkAndConvertIndex(schemaName, index, callerModule);
+      const indexSpecs: Indexable[] = convIndex.fields.map(
+        (field: string, i: number) => ({
+          [field]: convIndex.types?.[i] ?? 1,
+        }),
+      );
+      await collection
+        .createIndex(indexSpecs, {
+          name: convIndex.name,
+          ...convIndex.options,
+        } as IndexOptions)
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
     }
-    Object.assign(schema.modelOptions, { indexes });
+    // Add indexes to modelOptions
+    const modelOptionsIndexes =
+      this.models[schemaName].originalSchema.modelOptions.indexes ?? [];
+    const indexMap = new Map<string, ModelOptionsIndex>(
+      modelOptionsIndexes.map((i: ModelOptionsIndex) => [i.name, i]),
+    );
+    for (const i of indexes) {
+      if (!indexMap.has(i.name)) {
+        indexMap.set(i.name, i);
+      }
+    }
     const foundSchema = await this.models['_DeclaredSchema'].findOne({
       name: schemaName,
     });
     await this.models['_DeclaredSchema'].findByIdAndUpdate(foundSchema!._id, {
-      modelOptions: schema.modelOptions,
+      'modelOptions.indexes': [...indexMap.values()],
     });
-    return 'Index created!';
+    return 'Indexes created!';
   }
 
   async getIndexes(schemaName: string): Promise<ModelOptionsIndex[]> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    const indexes: ModelOptionsIndex[] = [];
     // Find schema field indexes and convert them to modelOption indexes
-    for (const [field, value] of Object.entries(
-      this.models[schemaName].originalSchema.fields,
-    )) {
+    const indexes = [];
+    const ogSchema = this.models[schemaName].originalSchema;
+    const fields = ogSchema.fields;
+
+    for (const [field, value] of Object.entries(fields)) {
       const index = (value as ConduitModelField).index;
       if (index) {
         indexes.push({
           name: index.name,
           fields: [field],
-          types: index.type ? [index.type as MongoIndexType] : undefined,
+          types: index.type
+            ? [ReverseMongoIndexTypeMap[index.type.toString()]]
+            : undefined,
           options: index.options ?? undefined,
         });
       }
     }
-    indexes.push(...(this.models[schemaName].originalSchema.modelOptions.indexes ?? []));
+    const modelOptionsIndexes = (ogSchema.modelOptions.indexes ?? []).map(
+      (i: ModelOptionsIndex) => ({
+        ...i,
+        types: i.types?.map(
+          (t: string | number) => ReverseMongoIndexTypeMap[t.toString()],
+        ),
+      }),
+    );
+    indexes.push(...modelOptionsIndexes);
     return indexes;
   }
 
   async deleteIndexes(schemaName: string, indexNames: string[]): Promise<string> {
     if (!this.models[schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+      if (!this.models[schemaName])
+        throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const foundSchema = await this.models['_DeclaredSchema'].findOne({
       name: schemaName,
     });
@@ -464,9 +484,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       await this.saveSchemaToDatabase(schema);
     }
     if (indexes && !isInstanceSync) {
-      for (const i of indexes) {
-        await this.createIndex(schema.name, i, schema.ownerModule);
-      }
+      await this.createIndexes(schema.name, indexes, schema.ownerModule);
     }
     return this.models[schema.name];
   }
@@ -476,49 +494,25 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     index: ModelOptionsIndex,
     callerModule: string,
   ) {
-    const { fields, types, options } = index;
+    const { types, options } = index;
+    validateIndexFields(this.models[schemaName].originalSchema, index, callerModule);
+    if (options && !checkIfMongoOptions(options)) {
+      throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
+    }
+    if (!types) return index;
     if (
-      fields.some(
-        (field: string) =>
-          !Object.keys(this.models[schemaName].originalSchema.compiledFields).includes(
-            field,
-          ),
+      types.length !== index.fields.length ||
+      types.some(
+        type =>
+          !(type in MongoIndexType) && !Object.values(MongoIndexType).includes(type),
       )
     ) {
-      throw new Error(`Invalid fields for index creation`);
+      throw new GrpcError(status.INTERNAL, 'Invalid index types');
     }
-    if (!options && !types) return index;
-    if (options) {
-      if (!checkIfMongoOptions(options)) {
-        throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
-      }
-      if (
-        Object.keys(options).includes('unique') &&
-        this.models[schemaName].originalSchema.ownerModule !== callerModule
-      ) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'Not authorized to create unique index',
-        );
-      }
-    }
-    if (types) {
-      if (
-        types.length !== index.fields.length ||
-        types.some(
-          (type: string | MongoIndexType.Ascending | MongoIndexType.Descending) =>
-            !(type in MongoIndexType) && !Object.values(MongoIndexType).includes(type),
-        )
-      ) {
-        throw new GrpcError(status.INTERNAL, 'Invalid index types');
-      }
-      // Convert index types (if called by endpoint index.types contains the keys of MongoIndexType enum)
-      index.types = types.map((type: unknown) => {
-        if (Object.keys(MongoIndexType).includes(type as keyof typeof MongoIndexType))
-          return MongoIndexType[type as unknown as keyof typeof MongoIndexType];
-        return type;
-      }) as MongoIndexType[];
-    }
+    // Convert index types (if called by endpoint index.types contains the keys of MongoIndexType enum)
+    index.types = types.map(
+      type => MongoIndexType[type as unknown as keyof typeof MongoIndexType] || type,
+    ) as MongoIndexType[];
     return index;
   }
 }

@@ -39,7 +39,7 @@ export function sqlSchemaConverter(
     delete copy.fields['_id'];
   }
   if (copy.modelOptions.indexes) {
-    copy = convertModelOptionsIndexes(copy, dialect);
+    copy.modelOptions.indexes = convertModelOptionsIndexes(copy, dialect);
   }
   const objectPaths: any = {};
   convertObjectToDotNotation(jsonSchema.fields, copy.fields, objectPaths);

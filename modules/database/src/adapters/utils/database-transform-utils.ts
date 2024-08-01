@@ -9,6 +9,7 @@ import {
   has,
 } from 'lodash-es';
 import {
+  ConduitGrpcSdk,
   ConduitModelField,
   Indexable,
   ModelOptionsIndex,
@@ -43,6 +44,8 @@ export function checkDefaultValue(type: string, value: string) {
 }
 
 export function convertModelOptionsIndexes(copy: ConduitDatabaseSchema, dialect: string) {
+  const convertedIndexes = [];
+
   for (const index of copy.modelOptions.indexes!) {
     const { fields, types, options } = index;
     const compiledFields = Object.keys(copy.compiledFields);
@@ -55,7 +58,10 @@ export function convertModelOptionsIndexes(copy: ConduitDatabaseSchema, dialect:
     // Convert conduit indexes to sequelize indexes
     if (options) {
       if (!checkIfSequelizeIndexOptions(options, dialect)) {
-        throw new Error(`Invalid index options for ${dialect}`);
+        ConduitGrpcSdk.Logger.warn(
+          `Invalid index options for ${dialect} found in: ${copy.name}. Index ignored`,
+        );
+        continue;
       }
       // Used instead of ModelOptionsIndexes fields for more complex index definitions
       const seqOptions = options as SequelizeIndexOptions;
@@ -71,7 +77,10 @@ export function convertModelOptionsIndexes(copy: ConduitDatabaseSchema, dialect:
     }
     if (types) {
       if (types.length !== 1 || !checkIfSequelizeIndexType(types[0], dialect)) {
-        throw new Error(`Invalid index type for ${dialect}`);
+        ConduitGrpcSdk.Logger.warn(
+          `Invalid index type for ${dialect} found in: ${copy.name}. Index ignored`,
+        );
+        continue;
       }
       if (
         (dialect === 'mysql' || dialect === 'mariadb') &&
@@ -83,8 +92,9 @@ export function convertModelOptionsIndexes(copy: ConduitDatabaseSchema, dialect:
       }
       delete index.types;
     }
+    convertedIndexes.push(index);
   }
-  return copy;
+  return convertedIndexes;
 }
 
 export function convertSchemaFieldIndexes(copy: ConduitDatabaseSchema, dialect: string) {
@@ -97,7 +107,11 @@ export function convertSchemaFieldIndexes(copy: ConduitDatabaseSchema, dialect: 
     const newIndex: any = { name, fields: [fieldName] };
     if (type) {
       if (isArray(type) || !checkIfSequelizeIndexType(type, dialect)) {
-        throw new Error(`Invalid index type for ${dialect}`);
+        ConduitGrpcSdk.Logger.warn(
+          `Invalid index type for ${dialect} found in: ${copy.name}. Index ignored`,
+        );
+        delete (copy.fields[fieldName] as ConduitModelField).index;
+        continue;
       }
       if (
         (dialect === 'mysql' || dialect === 'mariadb') &&
@@ -109,7 +123,11 @@ export function convertSchemaFieldIndexes(copy: ConduitDatabaseSchema, dialect: 
       }
     }
     if (options && !checkIfSequelizeIndexOptions(options, dialect)) {
-      throw new Error(`Invalid index options for ${dialect}`);
+      ConduitGrpcSdk.Logger.warn(
+        `Invalid index options for ${dialect} found in: ${copy.name}. Index ignored`,
+      );
+      delete (copy.fields[fieldName] as ConduitModelField).index;
+      continue;
     }
     Object.assign(newIndex, options);
     indexes.push(newIndex);

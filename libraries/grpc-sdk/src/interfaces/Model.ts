@@ -168,6 +168,18 @@ export enum MongoIndexType {
   Text = 'text',
 }
 
+export const ReverseMongoIndexTypeMap: {
+  [key: string]: string;
+} = {
+  '1': 'Ascending',
+  '-1': 'Descending',
+  '2d': 'GeoSpatial2d',
+  '2dsphere': 'GeoSpatial2dSphere',
+  geoHaystack: 'GeoHaystack',
+  hashed: 'Hashed',
+  text: 'Text',
+};
+
 export enum PgIndexType {
   BTREE = 'BTREE',
   HASH = 'HASH',

@@ -4,6 +4,10 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   TYPE,
+  ConduitModelFieldJSON,
+  ConduitModel,
+  allowedTypes,
+  ConduitModelField,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitBoolean,
@@ -603,7 +607,15 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Imports indexes.`,
         bodyParams: {
-          indexes: [ConduitJson.Required],
+          indexes: [
+            {
+              schemaName: ConduitString.Required,
+              name: ConduitString.Required,
+              fields: [ConduitString.Required],
+              types: [ConduitString.Optional],
+              options: ConduitJson.Optional,
+            } as never,
+          ],
         },
       },
       new ConduitRouteReturnDefinition('ImportIndexes', 'String'),
@@ -619,8 +631,8 @@ export class AdminHandlers {
         indexes: [
           {
             schemaName: ConduitString.Required,
-            name: ConduitString.Required,
             fields: [ConduitString.Required],
+            name: ConduitString.Optional,
             types: [ConduitString.Optional],
             options: ConduitJson.Optional,
           },
@@ -632,19 +644,23 @@ export class AdminHandlers {
       {
         path: '/schemas/:id/indexes',
         action: ConduitRouteActions.POST,
-        description: `Creates an index for a schema.`,
+        description: `Creates indexes for a schema.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
         bodyParams: {
-          name: ConduitString.Required,
-          fields: [ConduitString.Required],
-          types: [ConduitString.Required],
-          options: ConduitJson.Optional,
+          indexes: [
+            {
+              fields: [ConduitString.Required],
+              types: [ConduitString.Required],
+              name: ConduitString.Optional,
+              options: ConduitJson.Optional,
+            } as never,
+          ],
         },
       },
-      new ConduitRouteReturnDefinition('CreateSchemaIndex', 'String'),
-      this.schemaAdmin.createIndex.bind(this.schemaAdmin),
+      new ConduitRouteReturnDefinition('CreateSchemaIndexes', 'String'),
+      this.schemaAdmin.createIndexes.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {

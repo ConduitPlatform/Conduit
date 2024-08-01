@@ -169,9 +169,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract getDatabaseType(): string;
 
-  abstract createIndex(
+  abstract createIndexes(
     schemaName: string,
-    index: ModelOptionsIndex,
+    indexes: ModelOptionsIndex[],
     callerModule: string,
   ): Promise<string>;
 

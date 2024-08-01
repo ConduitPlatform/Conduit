@@ -22,6 +22,7 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: true,
     index: {
+      name: 'subject_1',
       type: MongoIndexType.Ascending,
     },
   },
@@ -40,6 +41,7 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: true,
     index: {
+      name: 'entity_1',
       type: MongoIndexType.Ascending,
     },
   },

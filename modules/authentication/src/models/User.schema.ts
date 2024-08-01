@@ -2,6 +2,8 @@ import {
   ConduitModel,
   DatabaseProvider,
   Indexable,
+  ModelOptionsIndex,
+  MongoIndexType,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
