@@ -4,10 +4,6 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   TYPE,
-  ConduitModelFieldJSON,
-  ConduitModel,
-  allowedTypes,
-  ConduitModelField,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitBoolean,
