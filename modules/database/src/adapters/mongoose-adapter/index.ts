@@ -510,9 +510,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.INTERNAL, 'Invalid index types');
     }
     // Convert index types (if called by endpoint index.types contains the keys of MongoIndexType enum)
-    index.types = types.map(
-      type => MongoIndexType[type as unknown as keyof typeof MongoIndexType] || type,
-    ) as MongoIndexType[];
+    index.types = types.map((type: unknown) => {
+      if (Object.keys(MongoIndexType).includes(type as keyof typeof MongoIndexType))
+        return MongoIndexType[type as unknown as keyof typeof MongoIndexType];
+      return type;
+    }) as MongoIndexType[];
     return index;
   }
 }
