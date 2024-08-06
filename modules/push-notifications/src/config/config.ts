@@ -1,7 +1,7 @@
 export default {
   active: {
     format: 'Boolean',
-    default: false,
+    default: true,
   },
   providerName: {
     format: 'String',
