@@ -3,6 +3,7 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
+  Indexable,
   ParsedRouterRequest,
   TYPE,
   UnparsedRouterResponse,
@@ -10,6 +11,8 @@ import {
 import {
   ConduitBoolean,
   ConduitJson,
+  ConduitNumber,
+  ConduitObjectId,
   ConduitString,
   GrpcServer,
   RoutingManager,
@@ -97,14 +100,66 @@ export class AdminHandlers {
     return 'Ok';
   }
 
-  async getNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const tokenDocuments = await NotificationToken.getInstance().findMany({
-      userId: call.request.params.userId,
-    });
+  async getNotificationTokenByUserId(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const tokenDocuments = await NotificationToken.getInstance().findMany(
+      {
+        userId: call.request.urlParams.userId,
+      },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      call.request.queryParams.populate,
+    );
     if (isNil(tokenDocuments)) {
       throw new GrpcError(status.NOT_FOUND, 'Could not find a token for user');
     }
     return { tokenDocuments };
+  }
+
+  async getNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const tokenDocuments = await NotificationToken.getInstance().findOne(
+      {
+        _id: call.request.urlParams.id,
+      },
+      undefined,
+      call.request.queryParams.populate,
+    );
+    if (isNil(tokenDocuments)) {
+      throw new GrpcError(status.NOT_FOUND, 'Could not find a token for user');
+    }
+    return { tokenDocuments };
+  }
+
+  async getNotificationTokens(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { platform, search, sort, populate } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+
+    let query: Indexable = {};
+
+    if (!isNil(search)) {
+      query = { $or: [{ _id: search }, { userId: search }] };
+    }
+    if (!isNil(platform)) {
+      query[platform] = platform;
+    }
+
+    const tokens: NotificationToken[] = await NotificationToken.getInstance().findMany(
+      query,
+      undefined,
+      skip,
+      limit,
+      sort,
+      populate,
+    );
+    const count: number = await NotificationToken.getInstance().countDocuments(query);
+
+    return { tokens, count };
   }
 
   private registerAdminRoutes() {
@@ -172,17 +227,55 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/token/:userId',
+        path: '/token',
+        action: ConduitRouteActions.GET,
+        description: `Get and search notification tokens.`,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+          search: ConduitObjectId.Optional,
+          platform: ConduitString.Optional,
+          populate: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetNotificationTokens', {
+        tokens: ['NotificationToken'],
+        count: ConduitNumber.Required,
+      }),
+      this.getNotificationTokens.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/token/:id',
+        action: ConduitRouteActions.GET,
+        description: `Get a notification token by id.`,
+        urlParams: {
+          id: ConduitObjectId.Required,
+        },
+        queryParams: {
+          populate: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetNotificationToken', NotificationToken.name),
+      this.getNotificationToken.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/token/user/:userId',
         action: ConduitRouteActions.GET,
         description: `Returns a user's notification token.`,
         urlParams: {
           userId: { type: TYPE.String, required: true },
         },
+        queryParams: {
+          populate: ConduitString.Optional,
+        },
       },
-      new ConduitRouteReturnDefinition('GetNotificationToken', {
+      new ConduitRouteReturnDefinition('GetUserNotificationTokens', {
         tokenDocuments: ['NotificationToken'],
       }),
-      this.getNotificationToken.bind(this),
+      this.getNotificationTokenByUserId.bind(this),
     );
     this.routingManager.registerRoutes();
   }
