@@ -234,7 +234,7 @@ export class AdminHandlers {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
-          search: ConduitString.Optional,
+          search: ConduitObjectId.Optional,
           platform: ConduitString.Optional,
           populate: ConduitString.Optional,
         },
