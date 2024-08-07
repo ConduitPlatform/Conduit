@@ -4,7 +4,11 @@ import {
   ConduitRouteReturnDefinition,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
+import {
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { OAuth2 } from '../OAuth2.js';
 import googleParameters from './google.json' assert { type: 'json' };
@@ -56,6 +60,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
 
   declareRoutes(routingManager: RoutingManager) {
     super.declareRoutes(routingManager);
+    const config = ConfigController.getInstance().config;
     routingManager.route(
       {
         path: '/google',
@@ -69,6 +74,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
           captchaToken: ConduitString.Optional,
           scopes: [ConduitString.Optional],
         },
+        middlewares: config.anonymousUsers ? ['authAnonymousMiddleware'] : undefined,
       },
       new ConduitRouteReturnDefinition('GoogleResponse', {
         userId: ConduitString.Required,

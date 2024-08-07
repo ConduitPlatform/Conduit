@@ -607,7 +607,10 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   declareRoutes(routingManager: RoutingManager): void {
     const config: Config = ConfigController.getInstance().config;
-
+    const authRouteMiddlewares = ['authMiddleware'];
+    if (config.anonymousUsers) {
+      authRouteMiddlewares.push('denyAnonymousMiddleware');
+    }
     routingManager.route(
       {
         path: '/teams',
@@ -618,7 +621,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           parentTeam: ConduitString.Optional,
         },
         action: ConduitRouteActions.POST,
-        middlewares: ['authMiddleware'],
+        middlewares: authRouteMiddlewares,
       },
       new ConduitRouteReturnDefinition(Team.name),
       this.createTeam.bind(this),
@@ -647,7 +650,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         path: '/teams/invites',
         description: `Gets pending team invites.`,
         action: ConduitRouteActions.GET,
-        middlewares: ['authMiddleware'],
+        middlewares: authRouteMiddlewares,
       },
       new ConduitRouteReturnDefinition('Invites', {
         invites: [
@@ -671,7 +674,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           members: { type: [TYPE.ObjectId], required: true },
         },
         action: ConduitRouteActions.DELETE,
-        middlewares: ['authMiddleware'],
+        middlewares: authRouteMiddlewares,
       },
       new ConduitRouteReturnDefinition('DeleteTeamMembersResponse', 'String'),
       this.removeTeamMembers.bind(this),
@@ -684,7 +687,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           teamId: ConduitObjectId.Required,
         },
         action: ConduitRouteActions.DELETE,
-        middlewares: ['authMiddleware'],
+        middlewares: authRouteMiddlewares,
       },
       new ConduitRouteReturnDefinition('DeleteTeam', 'String'),
       this.deleteTeam.bind(this),
@@ -700,7 +703,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           name: ConduitString.Required,
         },
         action: ConduitRouteActions.PATCH,
-        middlewares: ['authMiddleware'],
+        middlewares: authRouteMiddlewares,
       },
       new ConduitRouteReturnDefinition(Team.name),
       this.updateTeam.bind(this),
@@ -732,7 +735,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           sort: ConduitString.Optional,
         },
         action: ConduitRouteActions.GET,
-        middlewares: ['authMiddleware'],
+        middlewares: authRouteMiddlewares,
       },
       new ConduitRouteReturnDefinition('GetTeamMembers', {
         members: [User.name],
@@ -754,7 +757,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           sort: ConduitString.Optional,
         },
         action: ConduitRouteActions.GET,
-        middlewares: ['authMiddleware'],
+        middlewares: authRouteMiddlewares,
       },
       new ConduitRouteReturnDefinition('GetTeamTeams', {
         teams: [Team.name],
@@ -776,7 +779,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           },
           role: { type: TYPE.String, required: true },
         },
-        middlewares: ['authMiddleware'],
+        middlewares: authRouteMiddlewares,
         name: 'ModifyMembersRoles',
         description: 'Modifies the roles of members in a team',
       },
@@ -791,7 +794,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           invitationToken: ConduitString.Required,
         },
         action: ConduitRouteActions.GET,
-        middlewares: ['authMiddleware'],
+        middlewares: authRouteMiddlewares,
       },
       new ConduitRouteReturnDefinition('InviteAccepted', 'String'),
       this.acceptInvite.bind(this),
@@ -809,7 +812,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           redirectUri: ConduitString.Optional,
         },
         action: ConduitRouteActions.POST,
-        middlewares: ['authMiddleware'],
+        middlewares: authRouteMiddlewares,
       },
       new ConduitRouteReturnDefinition('InvitationToken', 'String'),
       this.userInvite.bind(this),
@@ -827,7 +830,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
             userId: ConduitObjectId.Required,
           },
           action: ConduitRouteActions.POST,
-          middlewares: ['authMiddleware'],
+          middlewares: authRouteMiddlewares,
         },
         new ConduitRouteReturnDefinition('AddUserToTeam', 'String'),
         this.addUserToTeamRequest.bind(this),

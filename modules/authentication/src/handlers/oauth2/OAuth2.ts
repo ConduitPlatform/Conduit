@@ -70,6 +70,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
+    const { anonymousUser } = call.request.context;
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     let codeChallenge;
     if (!isNil(this.settings.codeChallengeMethod)) {
@@ -90,6 +91,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       ...(this.settings.codeChallengeMethod !== undefined && {
         code_challenge_method: this.settings.codeChallengeMethod,
       }),
+      anonymous_user_id: anonymousUser?._id,
     };
     const baseUrl = this.settings.authorizeUrl.endsWith('?')
       ? this.settings.authorizeUrl.slice(0, -1)
@@ -161,7 +163,11 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     });
 
     await Token.getInstance().deleteOne(stateToken);
-    const user = await this.createOrUpdateUser(payload, stateToken.data.invitationToken);
+    const user = await this.createOrUpdateUser(
+      payload,
+      stateToken.data.invitationToken,
+      params.anonymous_user_id,
+    );
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
     const redirectUri =
@@ -190,6 +196,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const user = await this.createOrUpdateUser(
       payload,
       call.request.params.invitationToken,
+      call.request.context.anonymousUser?._id,
     );
     const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
@@ -201,7 +208,11 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     });
   }
 
-  async createOrUpdateUser(payload: Payload<T>, invitationToken?: string): Promise<User> {
+  async createOrUpdateUser(
+    payload: Payload<T>,
+    invitationToken?: string,
+    anonymousUserId?: string,
+  ): Promise<User> {
     let user: User | null = null;
     if (payload.hasOwnProperty('email') && !isNil(payload.email)) {
       user = await User.getInstance().findOne({
@@ -220,6 +231,17 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         'No email or id received from provider',
       );
     }
+
+    let anonymousUser;
+    if (anonymousUserId) {
+      anonymousUser = await User.getInstance().findOne({
+        _id: anonymousUserId,
+        isAnonymous: true,
+      });
+      if (!anonymousUser)
+        throw new GrpcError(status.NOT_FOUND, 'Anonymous user not found');
+    }
+
     if (!isNil(user)) {
       if (!user!.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
       if (!this.settings.accountLinking) {
@@ -240,6 +262,14 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       if (!user.isVerified) user.isVerified = true;
       user = await User.getInstance().findByIdAndUpdate(user._id, user);
     } else {
+      if (anonymousUser) {
+        return (await User.getInstance().findByIdAndUpdate(anonymousUser._id, {
+          email: payload.email,
+          [this.providerName]: payload,
+          isVerified: true,
+          isAnonymous: false,
+        })) as User;
+      }
       const teams = ConfigController.getInstance().config.teams;
       if (
         teams.enabled &&
@@ -281,6 +311,13 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
   declareRoutes(routingManager: RoutingManager) {
     const config = ConfigController.getInstance().config;
+    const initRouteMiddleware = [];
+    if (config.captcha.enabled && config.captcha.routes.oAuth2) {
+      initRouteMiddleware.push('captchaMiddleware');
+    }
+    if (config.anonymousUsers) {
+      initRouteMiddleware.push('authAnonymousMiddleware');
+    }
     routingManager.route(
       {
         path: `/init/${this.providerName}`,
@@ -292,10 +329,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           captchaToken: ConduitString.Optional,
           redirectUri: ConduitString.Optional,
         },
-        middlewares:
-          config.captcha.enabled && config.captcha.routes.oAuth2
-            ? ['captchaMiddleware']
-            : undefined,
+        middlewares: initRouteMiddleware,
       },
       new ConduitRouteReturnDefinition(
         `${this.capitalizeProvider()}InitResponse`,

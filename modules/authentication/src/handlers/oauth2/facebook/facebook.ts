@@ -5,7 +5,11 @@ import {
   ConduitRouteReturnDefinition,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
+import {
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import facebookParameters from './facebook.json' assert { type: 'json' };
 import axios, { AxiosRequestConfig } from 'axios';
@@ -74,6 +78,7 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
 
   declareRoutes(routingManager: RoutingManager) {
     super.declareRoutes(routingManager);
+    const config = ConfigController.getInstance().config;
     routingManager.route(
       {
         path: '/facebook',
@@ -85,6 +90,7 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
           captchaToken: ConduitString.Optional,
           scopes: [ConduitString.Optional],
         },
+        middlewares: config.anonymousUsers ? ['authAnonymousMiddleware'] : undefined,
       },
       new ConduitRouteReturnDefinition('FacebookResponse', {
         userId: ConduitString.Required,

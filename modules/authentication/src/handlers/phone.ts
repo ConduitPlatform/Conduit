@@ -43,7 +43,8 @@ export class PhoneHandlers implements IAuthenticationStrategy {
   }
 
   async declareRoutes(routingManager: RoutingManager) {
-    const captchaConfig = ConfigController.getInstance().config.captcha;
+    const config = ConfigController.getInstance().config;
+    const captchaConfig = config.captcha;
     routingManager.route(
       {
         path: '/phone',
@@ -74,6 +75,9 @@ export class PhoneHandlers implements IAuthenticationStrategy {
           code: ConduitString.Required,
           token: ConduitString.Required,
         },
+        middlewares: config.anonymousUsers.enabled
+          ? ['authAnonymousMiddleware']
+          : undefined,
       },
       new ConduitRouteReturnDefinition('VerifyPhoneLoginResponse', {
         accessToken: ConduitString.Optional,
@@ -85,8 +89,9 @@ export class PhoneHandlers implements IAuthenticationStrategy {
 
   async phoneLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { token, code } = call.request.params;
+    const { anonymousUser } = call.request.context;
     const config = ConfigController.getInstance().config;
-    let user: User | null = null;
+
     const existingToken: Token | null = await Token.getInstance().findOne({
       token: token,
     });
@@ -97,23 +102,10 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     if (!verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
     }
+
+    let user: User | null;
     if (existingToken.tokenType === TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN) {
-      user = await User.getInstance().create({
-        phoneNumber: existingToken.data.phone,
-      });
-      if (isNil(existingToken.data.invitationToken)) {
-        await TeamsHandler.getInstance()
-          .addUserToDefault(user)
-          .catch(err => {
-            ConduitGrpcSdk.Logger.error(err);
-          });
-      } else {
-        await TeamsHandler.getInstance()
-          .addUserToTeam(user, existingToken.data.invitationToken)
-          .catch(err => {
-            ConduitGrpcSdk.Logger.error(err);
-          });
-      }
+      user = await this.handlePhoneRegistration(anonymousUser, existingToken);
     } else {
       user = await User.getInstance().findOne({ _id: existingToken.user as string });
       if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
@@ -205,5 +197,33 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     return {
       token: token.token,
     };
+  }
+
+  private async handlePhoneRegistration(
+    anonymousUser: User | undefined,
+    existingToken: Token,
+  ) {
+    if (anonymousUser) {
+      return (await User.getInstance().findByIdAndUpdate(anonymousUser._id, {
+        phoneNumber: existingToken.data.phone,
+      })) as User;
+    }
+    const user = await User.getInstance().create({
+      phoneNumber: existingToken.data.phone,
+    });
+    if (isNil(existingToken.data.invitationToken)) {
+      await TeamsHandler.getInstance()
+        .addUserToDefault(user)
+        .catch(err => {
+          ConduitGrpcSdk.Logger.error(err);
+        });
+    } else {
+      await TeamsHandler.getInstance()
+        .addUserToTeam(user, existingToken.data.invitationToken)
+        .catch(err => {
+          ConduitGrpcSdk.Logger.error(err);
+        });
+    }
+    return user;
   }
 }

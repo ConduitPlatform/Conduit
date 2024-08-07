@@ -11,6 +11,7 @@ message UserCreateRequest {
   string email = 1;
   optional string password = 2;
   bool verify = 3;
+  optional string anonymousId = 4;
 }
 
 message UserChangePass {
@@ -81,9 +82,14 @@ message ValidateAccessTokenResponse {
   optional string userId = 2;
 }
 
+message AnonymousUserCreateRequest {
+  string clientId = 1;
+}
+
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
+  rpc AnonymousUserCreate(AnonymousUserCreateRequest) returns (UserLoginResponse);
   rpc ChangePass(UserChangePass) returns (UserCreateResponse);
   rpc UserDelete(UserDeleteRequest) returns (UserDeleteResponse);
   rpc GetTeam(GetTeamRequest) returns (Team);

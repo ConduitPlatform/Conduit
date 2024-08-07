@@ -105,6 +105,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const { clientId } = call.request.context;
     const user: User | null = await User.getInstance().findOne({ email });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    if (user.isAnonymous) throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
 
     const token: Token = await Token.getInstance().create({
       tokenType: TokenType.MAGIC_LINK,

@@ -48,6 +48,7 @@ export class AdminHandlers {
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
           isActive: ConduitBoolean.Optional,
+          isAnonymous: ConduitBoolean.Optional,
           provider: ConduitString.Optional,
         },
       },
@@ -56,6 +57,19 @@ export class AdminHandlers {
         count: ConduitNumber.Required,
       }),
       this.userAdmin.getUsers.bind(this.userAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/users',
+        action: ConduitRouteActions.POST,
+        description: `Creates a new user using email/password.`,
+        bodyParams: {
+          email: ConduitString.Required,
+          password: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition(User.name),
+      this.userAdmin.createUser.bind(this.userAdmin),
     );
     this.routingManager.route(
       {

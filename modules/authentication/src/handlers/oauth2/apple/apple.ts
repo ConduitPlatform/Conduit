@@ -161,7 +161,14 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   }
 
   declareRoutes(routingManager: RoutingManager) {
-    const captchaConfig = ConfigController.getInstance().config.captcha;
+    const config = ConfigController.getInstance().config;
+    const initRouteMiddleware = [];
+    if (config.captcha.enabled && config.captcha.routes.oAuth2) {
+      initRouteMiddleware.push('captchaMiddleware');
+    }
+    if (config.anonymousUsers) {
+      initRouteMiddleware.push('authAnonymousMiddleware');
+    }
     routingManager.route(
       {
         path: `/init/apple`,
@@ -171,10 +178,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
           invitationToken: ConduitString.Optional,
           captchaConfig: ConduitString.Optional,
         },
-        middlewares:
-          captchaConfig.enabled && captchaConfig.routes.oAuth2
-            ? ['captchaMiddleware']
-            : undefined,
+        middlewares: initRouteMiddleware,
       },
       new ConduitRouteReturnDefinition(`AppleInitResponse`, 'String'),
       this.redirect.bind(this),

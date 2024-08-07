@@ -131,3 +131,33 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
 
   return {};
 }
+
+export async function authAnonymousMiddleware(call: ParsedRouterRequest) {
+  const context = call.request.context;
+  const headers = call.request.headers;
+  const cookies = call.request.cookies;
+  let authError;
+  const { user, jwtPayload } = await handleAuthentication(
+    context,
+    headers,
+    cookies,
+    call.request.path,
+  ).catch(e => (authError = e));
+  const config = ConfigController.getInstance().config;
+  if (user.isAnonymous) {
+    if (authError) throw authError;
+    if (!config.anonymousUsers.enabled)
+      throw new Error('Anonymous users configuration is disabled.');
+    return { anonymousUser: user, jwtPayload };
+  }
+}
+
+export async function denyAnonymousMiddleware(call: ParsedRouterRequest) {
+  const { user } = call.request.context;
+  if (user.isAnonymous) {
+    throw new GrpcError(
+      status.PERMISSION_DENIED,
+      'Anonymous users are not allowed to perform this action.',
+    );
+  }
+}
