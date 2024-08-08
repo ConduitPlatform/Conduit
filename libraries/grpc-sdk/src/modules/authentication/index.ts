@@ -7,7 +7,6 @@ import {
   UserLoginResponse,
   Team,
   ValidateAccessTokenResponse,
-  AnonymousUserCreateRequest,
 } from '../../protoUtils/index.js';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
