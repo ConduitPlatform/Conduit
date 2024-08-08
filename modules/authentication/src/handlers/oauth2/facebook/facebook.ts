@@ -78,7 +78,6 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
 
   declareRoutes(routingManager: RoutingManager) {
     super.declareRoutes(routingManager);
-    const config = ConfigController.getInstance().config;
     routingManager.route(
       {
         path: '/facebook',

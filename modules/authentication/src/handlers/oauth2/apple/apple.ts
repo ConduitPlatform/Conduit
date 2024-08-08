@@ -141,6 +141,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     const user = await this.createOrUpdateUser(
       userParams,
       stateToken.data.invitationToken,
+      stateToken.data.anonymousUserId,
     );
     await Token.getInstance().deleteOne(stateToken);
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');

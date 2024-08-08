@@ -60,7 +60,6 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
 
   declareRoutes(routingManager: RoutingManager) {
     super.declareRoutes(routingManager);
-    const config = ConfigController.getInstance().config;
     routingManager.route(
       {
         path: '/google',
