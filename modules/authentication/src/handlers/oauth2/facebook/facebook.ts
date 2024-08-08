@@ -5,11 +5,7 @@ import {
   ConduitRouteReturnDefinition,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
-import {
-  ConduitString,
-  ConfigController,
-  RoutingManager,
-} from '@conduitplatform/module-tools';
+import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import facebookParameters from './facebook.json' assert { type: 'json' };
 import axios, { AxiosRequestConfig } from 'axios';

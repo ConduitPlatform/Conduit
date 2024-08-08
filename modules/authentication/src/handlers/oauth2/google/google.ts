@@ -4,11 +4,7 @@ import {
   ConduitRouteReturnDefinition,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
-import {
-  ConduitString,
-  ConfigController,
-  RoutingManager,
-} from '@conduitplatform/module-tools';
+import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { OAuth2 } from '../OAuth2.js';
 import googleParameters from './google.json' assert { type: 'json' };
