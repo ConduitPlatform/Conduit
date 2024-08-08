@@ -1,3 +1,4 @@
+import { Document } from 'bson';
 export enum TYPE {
   String = 'String',
   Number = 'Number',
@@ -20,25 +21,6 @@ export enum SQLDataType {
   TIME = 'TIME',
   DATETIME = 'DATETIME',
   TIMESTAMP = 'TIMESTAMP',
-}
-
-export enum MongoIndexType {
-  Ascending = 1,
-  Descending = -1,
-  GeoSpatial2d = '2d',
-  GeoSpatial2dSphere = '2dsphere',
-  GeoHaystack = 'geoHaystack',
-  Hashed = 'hashed',
-  Text = 'text',
-}
-
-export enum PostgresIndexType {
-  BTREE = 'BTREE',
-  HASH = 'HASH',
-  GIST = 'GIST',
-  SPGIST = 'SPGIST',
-  GIN = 'GIN',
-  BRIN = 'BRIN',
 }
 
 export type Array = any[];
@@ -158,28 +140,72 @@ export interface ConduitSchemaOptions {
       enabled: boolean;
     };
   };
-  indexes?: ModelOptionsIndexes[];
+  indexes?: ModelOptionsIndex[];
 }
 
+// Index types
 export interface SchemaFieldIndex {
-  type?: MongoIndexType | PostgresIndexType;
-  options?: MongoIndexOptions | PostgresIndexOptions;
-
-  [field: string]: any;
+  name: string;
+  type?: MongoIndexType | SequelizeIndexType;
+  options?: MongoIndexOptions | SequelizeIndexOptions;
 }
 
-export interface ModelOptionsIndexes {
+export interface ModelOptionsIndex {
+  name: string;
   fields: string[];
-  types?: MongoIndexType[] | PostgresIndexType;
-  options?: MongoIndexOptions | PostgresIndexOptions;
-
+  types?: MongoIndexType[] | SequelizeIndexType[];
+  options?: MongoIndexOptions | SequelizeIndexOptions;
   [field: string]: any;
 }
+
+export enum MongoIndexType {
+  Ascending = 1,
+  Descending = -1,
+  GeoSpatial2d = '2d',
+  GeoSpatial2dSphere = '2dsphere',
+  GeoHaystack = 'geoHaystack',
+  Hashed = 'hashed',
+  Text = 'text',
+}
+
+export const ReverseMongoIndexTypeMap: {
+  [key: string]: string;
+} = {
+  '1': 'Ascending',
+  '-1': 'Descending',
+  '2d': 'GeoSpatial2d',
+  '2dsphere': 'GeoSpatial2dSphere',
+  geoHaystack: 'GeoHaystack',
+  hashed: 'Hashed',
+  text: 'Text',
+};
+
+export enum PgIndexType {
+  BTREE = 'BTREE',
+  HASH = 'HASH',
+  GIST = 'GIST',
+  SPGIST = 'SPGIST',
+  GIN = 'GIN',
+  BRIN = 'BRIN',
+}
+
+export enum MySQLMariaDBIndexType {
+  BTREE = 'BTREE',
+  HASH = 'HASH',
+  UNIQUE = 'UNIQUE',
+  FULLTEXT = 'FULLTEXT',
+  SPATIAL = 'SPATIAL',
+}
+
+export enum SQLiteIndexType {
+  BTREE = 'BTREE',
+}
+
+export type SequelizeIndexType = PgIndexType | MySQLMariaDBIndexType | SQLiteIndexType;
 
 export interface MongoIndexOptions {
   background?: boolean;
   unique?: boolean;
-  name?: string;
   partialFilterExpression?: Document;
   sparse?: boolean;
   expireAfterSeconds?: number;
@@ -199,15 +225,33 @@ export interface MongoIndexOptions {
   hidden?: boolean;
 }
 
-export interface PostgresIndexOptions {
-  concurrently?: boolean;
-  name?: string;
-  operator?: string;
-  parser?: null | string;
-  prefix?: string;
+export interface SequelizeIndexOptions {
+  parser?: string | null;
   unique?: boolean;
-  using?: PostgresIndexType;
+  // Used instead of ModelOptionsIndexes fields for more complex index definitions
+  fields?: {
+    name: string;
+    length?: number;
+    order?: 'ASC' | 'DESC';
+    collate?: string;
+    operator?: string;
+  }[];
   where?: {
     [opt: string]: any;
   };
+  prefix?: string;
+}
+
+export interface PgIndexOptions extends SequelizeIndexOptions {
+  concurrently?: boolean;
+  operator?: string;
+  using?: PgIndexType;
+}
+
+export interface MySQLMariaDBIndexOptions extends SequelizeIndexOptions {
+  type?: MySQLMariaDBIndexType;
+}
+
+export interface SQLiteIndexOptions extends SequelizeIndexOptions {
+  using?: SQLiteIndexType;
 }

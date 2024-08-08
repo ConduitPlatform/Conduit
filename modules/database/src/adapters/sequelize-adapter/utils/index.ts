@@ -1,11 +1,9 @@
-import { MongoIndexOptions, PostgresIndexOptions } from '@conduitplatform/grpc-sdk';
-
 export * from './schema.js';
 export * from './collectionUtils.js';
+export * from './indexChecks.js';
+import { MongoIndexOptions, PgIndexOptions } from '@conduitplatform/grpc-sdk';
 
-export function checkIfPostgresOptions(
-  options: MongoIndexOptions | PostgresIndexOptions,
-) {
+export function checkIfPostgresOptions(options: MongoIndexOptions | PgIndexOptions) {
   const postgresOptions = [
     'concurrently',
     'name',
