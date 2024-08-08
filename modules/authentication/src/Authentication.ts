@@ -272,8 +272,14 @@ export default class Authentication extends ManagedModule<Config> {
       }
       const hashedPassword = await AuthUtils.hashPassword(password);
       const anonymousUserId = call.request.anonymousId;
-      const config = ConfigController.getInstance().config;
-      if (anonymousUserId) {
+      if (!anonymousUserId) {
+        user = await models.User.getInstance().create({
+          email,
+          hashedPassword,
+          isVerified: !verify,
+        });
+      } else {
+        const config = ConfigController.getInstance().config;
         if (!config.anonymousUsers.enabled) {
           return callback({
             code: status.FAILED_PRECONDITION,
@@ -292,12 +298,6 @@ export default class Authentication extends ManagedModule<Config> {
             message: 'Anonymous user not found',
           });
         }
-      } else {
-        user = await models.User.getInstance().create({
-          email,
-          hashedPassword,
-          isVerified: !verify,
-        });
       }
       const sendEmail =
         ConfigController.getInstance().config.local.verification.send_email;
