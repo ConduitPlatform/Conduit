@@ -73,19 +73,6 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/users',
-        action: ConduitRouteActions.POST,
-        description: `Creates a new user using email/password.`,
-        bodyParams: {
-          email: ConduitString.Required,
-          password: ConduitString.Required,
-        },
-      },
-      new ConduitRouteReturnDefinition(User.name),
-      this.userAdmin.createUser.bind(this.userAdmin),
-    );
-    this.routingManager.route(
-      {
         path: '/users/:id',
         action: ConduitRouteActions.PATCH,
         description: `Updates user's fields.`,
