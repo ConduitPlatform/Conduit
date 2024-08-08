@@ -143,13 +143,13 @@ export async function authAnonymousMiddleware(call: ParsedRouterRequest) {
     cookies,
     call.request.path,
   ).catch(e => (authError = e));
-  const config = ConfigController.getInstance().config;
-  if (user.isAnonymous) {
-    if (authError) throw authError;
-    if (!config.anonymousUsers.enabled)
-      throw new Error('Anonymous users configuration is disabled.');
-    return { anonymousUser: user, jwtPayload };
+  if (authError || !user.isAnonymous) {
+    return {};
   }
+  const config = ConfigController.getInstance().config;
+  if (!config.anonymousUsers.enabled)
+    throw new Error('Anonymous users configuration is disabled.');
+  return { anonymousUser: user, jwtPayload };
 }
 
 export async function denyAnonymousMiddleware(call: ParsedRouterRequest) {
@@ -160,4 +160,5 @@ export async function denyAnonymousMiddleware(call: ParsedRouterRequest) {
       'Anonymous users are not allowed to perform this action.',
     );
   }
+  return {};
 }
