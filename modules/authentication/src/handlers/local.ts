@@ -35,13 +35,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const config = ConfigController.getInstance().config;
     const captchaConfig = config.captcha;
 
-    const localRouteMiddleware = [];
-    if (captchaConfig.enabled && captchaConfig.routes.login) {
-      localRouteMiddleware.push('captchaMiddleware');
+    const localRouteMiddleware = ['authMiddleware?', 'checkAnonymousMiddleware'];
+    if (captchaConfig.enabled && captchaConfig.routes.register) {
+      localRouteMiddleware.unshift('captchaMiddleware');
     }
-    if (config.anonymousUsers.enabled) {
-      localRouteMiddleware.push('authAnonymousMiddleware');
-    }
+
     routingManager.route(
       {
         path: '/local/new',

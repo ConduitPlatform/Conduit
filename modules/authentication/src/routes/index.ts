@@ -19,7 +19,7 @@ import { OAuth2 } from '../handlers/oauth2/OAuth2.js';
 import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings.js';
 import { TwoFa } from '../handlers/twoFa.js';
 import {
-  authAnonymousMiddleware,
+  checkAnonymousMiddleware,
   authMiddleware,
   captchaMiddleware,
   denyAnonymousMiddleware,
@@ -162,8 +162,8 @@ export class AuthenticationRoutes {
         captchaMiddleware,
       );
       this._routingManager.middleware(
-        { path: '/', name: 'authAnonymousMiddleware' },
-        authAnonymousMiddleware,
+        { path: '/', name: 'checkAnonymousMiddleware' },
+        checkAnonymousMiddleware,
       );
       this._routingManager.middleware(
         { path: '/', name: 'denyAnonymousMiddleware' },

@@ -132,24 +132,15 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   return {};
 }
 
-export async function authAnonymousMiddleware(call: ParsedRouterRequest) {
-  const context = call.request.context;
-  const headers = call.request.headers;
-  const cookies = call.request.cookies;
-  let authError;
-  const { user, jwtPayload } = await handleAuthentication(
-    context,
-    headers,
-    cookies,
-    call.request.path,
-  ).catch(e => (authError = e));
-  if (authError || !user.isAnonymous) {
+export async function checkAnonymousMiddleware(call: ParsedRouterRequest) {
+  const { user } = call.request.context;
+  if (!user || !user.isAnonymous) {
     return {};
   }
   const config = ConfigController.getInstance().config;
   if (!config.anonymousUsers.enabled)
     throw new Error('Anonymous users configuration is disabled.');
-  return { anonymousUser: user, jwtPayload };
+  return { anonymousUser: user };
 }
 
 export async function denyAnonymousMiddleware(call: ParsedRouterRequest) {

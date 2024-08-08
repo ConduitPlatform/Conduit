@@ -162,12 +162,9 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
 
   declareRoutes(routingManager: RoutingManager) {
     const config = ConfigController.getInstance().config;
-    const initRouteMiddleware = [];
+    const initRouteMiddleware = ['authMiddleware?', 'checkAnonymousMiddleware'];
     if (config.captcha.enabled && config.captcha.routes.oAuth2) {
-      initRouteMiddleware.push('captchaMiddleware');
-    }
-    if (config.anonymousUsers) {
-      initRouteMiddleware.push('authAnonymousMiddleware');
+      initRouteMiddleware.unshift('captchaMiddleware');
     }
     routingManager.route(
       {

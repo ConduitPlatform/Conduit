@@ -74,7 +74,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
           captchaToken: ConduitString.Optional,
           scopes: [ConduitString.Optional],
         },
-        middlewares: config.anonymousUsers ? ['authAnonymousMiddleware'] : undefined,
+        middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
       },
       new ConduitRouteReturnDefinition('GoogleResponse', {
         userId: ConduitString.Required,

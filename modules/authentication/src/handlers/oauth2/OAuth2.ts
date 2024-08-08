@@ -91,7 +91,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       ...(this.settings.codeChallengeMethod !== undefined && {
         code_challenge_method: this.settings.codeChallengeMethod,
       }),
-      anonymous_user_id: anonymousUser?._id,
     };
     const baseUrl = this.settings.authorizeUrl.endsWith('?')
       ? this.settings.authorizeUrl.slice(0, -1)
@@ -107,6 +106,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           codeChallenge: codeChallenge,
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
           customRedirectUri: call.request.params.redirectUri,
+          anonymousUserId: anonymousUser?._id,
         },
       })
       .catch(err => {
@@ -166,7 +166,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const user = await this.createOrUpdateUser(
       payload,
       stateToken.data.invitationToken,
-      params.anonymous_user_id,
+      stateToken.data.anonymousUserId,
     );
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
@@ -311,12 +311,9 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
   declareRoutes(routingManager: RoutingManager) {
     const config = ConfigController.getInstance().config;
-    const initRouteMiddleware = [];
+    const initRouteMiddleware = ['authMiddleware?', 'checkAnonymousMiddleware'];
     if (config.captcha.enabled && config.captcha.routes.oAuth2) {
-      initRouteMiddleware.push('captchaMiddleware');
-    }
-    if (config.anonymousUsers) {
-      initRouteMiddleware.push('authAnonymousMiddleware');
+      initRouteMiddleware.unshift('captchaMiddleware');
     }
     routingManager.route(
       {

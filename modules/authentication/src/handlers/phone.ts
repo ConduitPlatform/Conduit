@@ -75,9 +75,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
           code: ConduitString.Required,
           token: ConduitString.Required,
         },
-        middlewares: config.anonymousUsers.enabled
-          ? ['authAnonymousMiddleware']
-          : undefined,
+        middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
       },
       new ConduitRouteReturnDefinition('VerifyPhoneLoginResponse', {
         accessToken: ConduitString.Optional,
