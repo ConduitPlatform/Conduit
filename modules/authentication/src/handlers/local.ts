@@ -32,7 +32,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async declareRoutes(routingManager: RoutingManager): Promise<void> {
-    const captchaConfig = ConfigController.getInstance().config.captcha;
+    const config = ConfigController.getInstance().config;
+    const captchaConfig = config.captcha;
+
+    const localRouteMiddleware = ['authMiddleware?', 'checkAnonymousMiddleware'];
+    if (captchaConfig.enabled && captchaConfig.routes.register) {
+      localRouteMiddleware.unshift('captchaMiddleware');
+    }
+
     routingManager.route(
       {
         path: '/local/new',
@@ -45,14 +52,25 @@ export class LocalHandlers implements IAuthenticationStrategy {
           captchaToken: ConduitString.Optional,
           redirectUri: ConduitString.Optional,
         },
-        middlewares:
-          captchaConfig.enabled && captchaConfig.routes.register
-            ? ['captchaMiddleware']
-            : undefined,
+        middlewares: localRouteMiddleware,
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
     );
+    if (config.anonymousUsers.enabled && config.teams.allowRegistrationWithoutInvite) {
+      routingManager.route(
+        {
+          path: '/local/new/anonymous',
+          action: ConduitRouteActions.POST,
+          description: `Creates a new anonymous user.`,
+        },
+        new ConduitRouteReturnDefinition('LoginResponse', {
+          accessToken: ConduitString.Optional,
+          refreshToken: ConduitString.Optional,
+        }),
+        this.anonymousRegister.bind(this),
+      );
+    }
 
     routingManager.route(
       {
@@ -76,7 +94,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       }),
       this.authenticate.bind(this),
     );
-    const config = ConfigController.getInstance().config;
+
     if (this.grpcSdk.isAvailable('email')) {
       routingManager.route(
         {
@@ -129,7 +147,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         bodyParams: {
           newPassword: ConduitString.Required,
         },
-        middlewares: ['authMiddleware'],
+        middlewares: ['authMiddleware', 'denyAnonymousMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
       this.changePassword.bind(this),
@@ -144,7 +162,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           newEmail: ConduitString.Required,
           redirectUri: ConduitString.Optional,
         },
-        middlewares: ['authMiddleware'],
+        middlewares: ['authMiddleware', 'denyAnonymousMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChangeEmailResponse', 'String'),
       this.changeEmail.bind(this),
@@ -247,13 +265,23 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (!isNil(user)) throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
 
     const hashedPassword = await AuthUtils.hashPassword(password);
-    user = await User.getInstance().create({
-      email,
-      hashedPassword,
-      isVerified: false,
-    });
-
+    const { anonymousUser } = call.request.context;
+    if (anonymousUser) {
+      user = (await User.getInstance().findByIdAndUpdate(anonymousUser._id, {
+        email,
+        hashedPassword,
+        isAnonymous: false,
+        isVerified: false,
+      })) as User;
+    } else {
+      user = await User.getInstance().create({
+        email,
+        hashedPassword,
+        isVerified: false,
+      });
+    }
     delete user.hashedPassword;
+
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
     callback({ user });
 
@@ -271,13 +299,35 @@ export class LocalHandlers implements IAuthenticationStrategy {
         .catch(err => {
           ConduitGrpcSdk.Logger.error(err);
         });
-    } else {
+    } else if (!anonymousUser) {
       await TeamsHandler.getInstance()
         .addUserToDefault(user)
         .catch(err => {
           ConduitGrpcSdk.Logger.error(err);
         });
     }
+  }
+
+  async anonymousRegister(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const email = `${uuid()}@anonymous.com`;
+    const anonymousUser = await User.getInstance().create({
+      email,
+      isAnonymous: true,
+      isVerified: false,
+    });
+    const context = call.request.context;
+    const config = ConfigController.getInstance().config;
+    await TeamsHandler.getInstance()
+      .addUserToDefault(anonymousUser)
+      .catch(err => {
+        ConduitGrpcSdk.Logger.error(err);
+      });
+    return TokenProvider.getInstance().provideUserTokens({
+      user: anonymousUser,
+      clientId: context.clientId,
+      config,
+      isRefresh: false,
+    });
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -325,7 +375,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     if (isNil(user))
       return 'If the email address is valid, a password reset link will be sent to it.';
-
+    if (user.isAnonymous) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
+    }
     if (isNil(user.hashedPassword))
       throw new GrpcError(
         status.PERMISSION_DENIED,
@@ -583,6 +635,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (user.isVerified)
       throw new GrpcError(status.FAILED_PRECONDITION, 'User already verified');
+    if (user.isAnonymous) throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
 
     const verificationToken: Token | null = await Token.getInstance().findOne({
       tokenType: TokenType.VERIFICATION_TOKEN,
@@ -606,6 +659,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
     if (foundUser.isVerified) {
       throw new GrpcError(status.FAILED_PRECONDITION, 'User already verified');
+    }
+    if (foundUser.isAnonymous) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
     }
     const verificationTokenDoc: Token | null = await Token.getInstance().findOne({
       tokenType: TokenType.VERIFICATION_TOKEN,

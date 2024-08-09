@@ -93,6 +93,10 @@ const schema: ConduitModel = {
     default: false,
     required: true,
   },
+  isAnonymous: {
+    type: TYPE.Boolean,
+    required: false,
+  },
   twoFaMethod: TYPE.String,
   phoneNumber: TYPE.String,
   createdAt: TYPE.Date,
@@ -128,6 +132,7 @@ export class User extends ConduitActiveSchema<User> {
   hasTwoFA: boolean;
   twoFaMethod: string;
   phoneNumber?: string;
+  isAnonymous?: boolean;
   createdAt: Date;
   updatedAt: Date;
 

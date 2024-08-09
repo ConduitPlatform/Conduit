@@ -86,4 +86,10 @@ export default {
       default: [],
     },
   },
+  anonymousUsers: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+  },
 };

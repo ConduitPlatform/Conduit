@@ -47,6 +47,11 @@ export class TwoFa implements IAuthenticationStrategy {
   }
 
   declareRoutes(routingManager: RoutingManager): void {
+    const config: Config = ConfigController.getInstance().config;
+    const authRouteMiddlewares = ['authMiddleware'];
+    if (config.anonymousUsers) {
+      authRouteMiddlewares.push('denyAnonymousMiddleware');
+    }
     routingManager.route(
       {
         path: '/twoFa/authorize',
@@ -100,7 +105,7 @@ export class TwoFa implements IAuthenticationStrategy {
         action: ConduitRouteActions.UPDATE,
         description: `Enables a phone or qr based 2FA method for a user and 
                 requires their phone number in case of phone 2FA.`,
-        middlewares: ['authMiddleware'],
+        middlewares: authRouteMiddlewares,
         bodyParams: {
           method: ConduitString.Required,
           phoneNumber: ConduitString.Optional,
@@ -115,7 +120,7 @@ export class TwoFa implements IAuthenticationStrategy {
         path: '/twoFa/disable',
         action: ConduitRouteActions.UPDATE,
         description: `Disables the user's 2FA mechanism.`,
-        middlewares: ['authMiddleware'],
+        middlewares: authRouteMiddlewares,
       },
       new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
       this.disableTwoFa.bind(this),
@@ -127,7 +132,7 @@ export class TwoFa implements IAuthenticationStrategy {
           path: '/twoFa/generate',
           action: ConduitRouteActions.GET,
           description: `Generates a new set of back up codes for 2FA.`,
-          middlewares: ['authMiddleware'],
+          middlewares: authRouteMiddlewares,
         },
         new ConduitRouteReturnDefinition('GenerateTwoFaBackUpCodesResponse', {
           codes: [ConduitString.Required],
@@ -140,7 +145,7 @@ export class TwoFa implements IAuthenticationStrategy {
           path: '/twoFa/recover',
           action: ConduitRouteActions.POST,
           description: `Recovers 2FA access with an 8 digit backup code.`,
-          middlewares: ['authMiddleware'],
+          middlewares: authRouteMiddlewares,
           bodyParams: {
             code: ConduitString.Required,
           },

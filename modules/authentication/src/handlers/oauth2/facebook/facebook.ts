@@ -85,6 +85,7 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
           captchaToken: ConduitString.Optional,
           scopes: [ConduitString.Optional],
         },
+        middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
       },
       new ConduitRouteReturnDefinition('FacebookResponse', {
         userId: ConduitString.Required,
