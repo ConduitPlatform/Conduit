@@ -35,7 +35,7 @@
     "@sendgrid/client": "^8.0.0",
     "@types/nodemailer-sendgrid": "^1.0.3",
     "await-to-js": "^3.0.0",
-    "axios": "^1.7.2",
+    "axios": "^1.7.4",
     "bullmq": "^5.4.3",
     "convict": "^6.2.4",
     "escape-string-regexp": "^4.0.0",
