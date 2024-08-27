@@ -15,13 +15,16 @@ export class UserAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { isActive, provider, search, sort } = call.request.params;
+    const { isActive, isAnonymous, provider, search, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
     let query: Indexable = {};
     if (!isNil(isActive)) {
       query.active = isActive;
+    }
+    if (!isNil(isAnonymous)) {
+      query.isAnonymous = isAnonymous;
     }
     if (!isNil(provider)) {
       if (provider === 'local') {

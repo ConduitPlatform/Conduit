@@ -48,6 +48,7 @@ export class AdminHandlers {
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
           isActive: ConduitBoolean.Optional,
+          isAnonymous: ConduitBoolean.Optional,
           provider: ConduitString.Optional,
         },
       },

@@ -18,7 +18,12 @@ import { PhoneHandlers } from '../handlers/phone.js';
 import { OAuth2 } from '../handlers/oauth2/OAuth2.js';
 import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings.js';
 import { TwoFa } from '../handlers/twoFa.js';
-import { authMiddleware, captchaMiddleware } from './middleware.js';
+import {
+  checkAnonymousMiddleware,
+  authMiddleware,
+  captchaMiddleware,
+  denyAnonymousMiddleware,
+} from './middleware.js';
 import { MagicLinkHandlers } from '../handlers/magicLink.js';
 import { Config } from '../config/index.js';
 import { TeamsHandler } from '../handlers/team.js';
@@ -155,6 +160,14 @@ export class AuthenticationRoutes {
       this._routingManager.middleware(
         { path: '/', name: 'captchaMiddleware' },
         captchaMiddleware,
+      );
+      this._routingManager.middleware(
+        { path: '/', name: 'checkAnonymousMiddleware' },
+        checkAnonymousMiddleware,
+      );
+      this._routingManager.middleware(
+        { path: '/', name: 'denyAnonymousMiddleware' },
+        denyAnonymousMiddleware,
       );
     }
     return this._routingManager.registerRoutes().catch((err: Error) => {

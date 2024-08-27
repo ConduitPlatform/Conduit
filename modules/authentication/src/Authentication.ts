@@ -16,6 +16,7 @@ import { AuthUtils } from './utils/index.js';
 import { TokenType } from './constants/index.js';
 import { v4 as uuid } from 'uuid';
 import {
+  AnonymousUserCreateRequest,
   CreateTeamRequest,
   GetTeamRequest,
   ModifyTeamMembersRequest,
@@ -49,6 +50,7 @@ import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
+import { User } from './models/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,6 +63,7 @@ export default class Authentication extends ManagedModule<Config> {
     functions: {
       userLogin: this.userLogin.bind(this),
       userCreate: this.userCreate.bind(this),
+      anonymousUserCreate: this.anonymousUserCreate.bind(this),
       changePass: this.changePass.bind(this),
       userDelete: this.userDelete.bind(this),
       getTeam: this.getTeam.bind(this),
@@ -268,11 +271,34 @@ export default class Authentication extends ManagedModule<Config> {
         });
       }
       const hashedPassword = await AuthUtils.hashPassword(password);
-      user = await models.User.getInstance().create({
-        email,
-        hashedPassword,
-        isVerified: !verify,
-      });
+      const anonymousUserId = call.request.anonymousId;
+      if (!anonymousUserId) {
+        user = await models.User.getInstance().create({
+          email,
+          hashedPassword,
+          isVerified: !verify,
+        });
+      } else {
+        const config = ConfigController.getInstance().config;
+        if (!config.anonymousUsers.enabled) {
+          return callback({
+            code: status.FAILED_PRECONDITION,
+            message: 'Anonymous users configuration is disabled',
+          });
+        }
+        user = await models.User.getInstance().findByIdAndUpdate(anonymousUserId, {
+          email,
+          hashedPassword,
+          isAnonymous: false,
+          isVerified: !verify,
+        });
+        if (!user) {
+          return callback({
+            code: status.NOT_FOUND,
+            message: 'Anonymous user not found',
+          });
+        }
+      }
       const sendEmail =
         ConfigController.getInstance().config.local.verification.send_email;
       const emailAvailable = this.grpcSdk.isAvailable('email');
@@ -297,15 +323,52 @@ export default class Authentication extends ManagedModule<Config> {
           'Failed to send verification email.' + ' Email service not online!',
         );
       }
-      await TeamsHandler.getInstance()
-        .addUserToDefault(user)
-        .catch(err => {
-          ConduitGrpcSdk.Logger.error(err);
-        });
+      if (!anonymousUserId) {
+        await TeamsHandler.getInstance()
+          .addUserToDefault(user)
+          .catch(err => {
+            ConduitGrpcSdk.Logger.error(err);
+          });
+      }
       return callback(null, { password });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
+  }
+
+  async anonymousUserCreate(
+    call: GrpcRequest<AnonymousUserCreateRequest>,
+    callback: GrpcCallback<UserLoginResponse>,
+  ) {
+    const config = ConfigController.getInstance().config;
+    if (!config.anonymousUsers.enabled) {
+      return callback({
+        code: status.FAILED_PRECONDITION,
+        message: 'Anonymous user creation is disabled',
+      });
+    }
+    const { clientId } = call.request;
+    const email = `${uuid()}@anonymous.com`;
+    const anonymousUser = await User.getInstance().create({
+      email,
+      isAnonymous: true,
+      isVerified: false,
+    });
+    await TeamsHandler.getInstance()
+      .addUserToDefault(anonymousUser)
+      .catch(err => {
+        ConduitGrpcSdk.Logger.error(err);
+      });
+    const tokens = await TokenProvider.getInstance().provideUserTokensInternal({
+      user: anonymousUser,
+      clientId: clientId,
+      config,
+      isRefresh: false,
+    });
+    return callback(null, {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken ?? undefined,
+    });
   }
 
   // produces login credentials for a user without them having to login

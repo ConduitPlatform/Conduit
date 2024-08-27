@@ -16,7 +16,7 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash-es';
+import { isEmpty, isNil } from 'lodash-es';
 import { _StorageContainer, _StorageFolder, File } from '../models/index.js';
 import { normalizeFolderPath } from '../utils/index.js';
 import { AdminFileHandlers } from './adminFile.js';
@@ -62,13 +62,23 @@ export class AdminRoutes {
     const query: Query<_StorageFolder> = {
       container: call.request.params.container,
     };
-    if (!isNil(search)) {
-      query.name = { $regex: search, $options: 'i' };
-    }
-    if (!isNil(parent)) {
-      const regexSuffix = !isNil(search) ? search : '([^/]+)/?$';
+    if (isNil(parent)) {
+      // match search or everything
       query.name = {
-        $regex: `${parent}\/${regexSuffix}`,
+        $regex: !isNil(search) ? search : '([^/]+)/?$',
+        $options: 'i',
+      };
+    } else if (isEmpty(parent)) {
+      // match only single level / scope
+      query.name = {
+        $regex: !isNil(search) ? `^${search}[^/]+/$` : '^[^/]+/$',
+        $options: 'i',
+      };
+    } else {
+      // match only single level /parent scope
+      const regexSuffix = !isNil(search) ? `([^/]*${search}[^/]*)/?$` : '[^/]+/$';
+      query.name = {
+        $regex: `^${parent.replace(/^\/|\/$/g, '')}/${regexSuffix}`,
         $options: 'i',
       };
     }

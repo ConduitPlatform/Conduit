@@ -31,8 +31,13 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     email: string,
     verify: boolean = false,
     password?: string,
+    anonymousId?: string,
   ): Promise<UserCreateResponse> {
-    return this.client!.userCreate({ email, verify, password });
+    return this.client!.userCreate({ email, verify, password, anonymousId });
+  }
+
+  anonymousUserCreate(clientId: string): Promise<UserLoginResponse> {
+    return this.client!.anonymousUserCreate({ clientId });
   }
 
   changePass(email: string, password?: string): Promise<UserCreateResponse> {
