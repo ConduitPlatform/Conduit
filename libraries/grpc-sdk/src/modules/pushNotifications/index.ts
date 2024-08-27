@@ -1,5 +1,15 @@
 import { ConduitModule } from '../../classes/index.js';
-import { PushNotificationsDefinition } from '../../protoUtils/index.js';
+import {
+  PushNotificationsDefinition,
+  SendNotificationResponse,
+} from '../../protoUtils/index.js';
+import {
+  SendNotificationParamEnum,
+  SendNotificationParams,
+  SendNotificationToManyDevicesParamEnum,
+  SendNotificationToManyDevicesParams,
+} from './types';
+import { normalizeParams } from '../../utilities/normalizeParams';
 
 export class PushNotifications extends ConduitModule<typeof PushNotificationsDefinition> {
   constructor(
@@ -37,14 +47,19 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
     body?: string,
     data?: string,
     platform?: string,
-  ) {
-    return this.client!.sendNotification({
-      sendTo,
-      title,
-      body,
-      data,
-      platform,
-    });
+  ): Promise<SendNotificationResponse>;
+
+  sendNotification(params: {
+    sendTo: string;
+    title: string;
+    body?: string;
+    data?: string;
+    platform?: string;
+  }): Promise<SendNotificationResponse>;
+
+  sendNotification(...params: SendNotificationParams) {
+    const obj = normalizeParams(params, Object.keys(SendNotificationParamEnum));
+    return this.client!.sendNotification(obj);
   }
 
   sendManyNotifications(
@@ -63,13 +78,21 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
     body?: string,
     data?: string,
     platform?: string,
-  ) {
-    return this.client!.sendNotificationToManyDevices({
-      sendTo,
-      title,
-      body,
-      data,
-      platform,
-    });
+  ): Promise<SendNotificationResponse>;
+
+  sendNotificationToManyDevices(params: {
+    sendTo: string[];
+    title: string;
+    body?: string;
+    data?: string;
+    platform?: string;
+  }): Promise<SendNotificationResponse>;
+
+  sendNotificationToManyDevices(...params: SendNotificationToManyDevicesParams) {
+    const obj = normalizeParams(
+      params,
+      Object.keys(SendNotificationToManyDevicesParamEnum),
+    );
+    return this.client!.sendNotificationToManyDevices(obj);
   }
 }
