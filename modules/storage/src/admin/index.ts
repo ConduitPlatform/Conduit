@@ -46,7 +46,7 @@ export class AdminRoutes {
         folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
     }
     if (!isNil(search)) {
-      query.name = { $regex: `.*${search}.*`, $options: 'i' };
+      query.alias = { $regex: `.*${search}.*`, $options: 'i' };
     }
 
     const files = await File.getInstance().findMany(query, undefined, skip, limit, sort);
