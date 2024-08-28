@@ -51,10 +51,10 @@ export class QueueController {
       // autorun: true,
     });
     worker.on('active', job => {
-      ConduitGrpcSdk.Logger.info(`Job ${job.id} started`);
+      ConduitGrpcSdk.Logger.info(`Index ${job.id} started`);
     });
     worker.on('completed', job => {
-      ConduitGrpcSdk.Logger.info(`Job ${job.id} completed`);
+      ConduitGrpcSdk.Logger.info(`Index ${job.id} completed`);
     });
     worker.on('error', (error: Error) => {
       ConduitGrpcSdk.Logger.error(`Job error:`);
@@ -84,10 +84,10 @@ export class QueueController {
       // autorun: true,
     });
     worker.on('active', job => {
-      ConduitGrpcSdk.Logger.info(`Job ${job.id} started`);
+      ConduitGrpcSdk.Logger.info(`Connection ${job.id} started`);
     });
     worker.on('completed', job => {
-      ConduitGrpcSdk.Logger.info(`Job ${job.id} completed`);
+      ConduitGrpcSdk.Logger.info(`Connection ${job.id} completed`);
     });
     worker.on('error', error => {
       ConduitGrpcSdk.Logger.error(`Job error:`);
