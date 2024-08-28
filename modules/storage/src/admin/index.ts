@@ -38,15 +38,21 @@ export class AdminRoutes {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const query: Query<File> = {
-      container: call.request.params.container,
+      $and: [{ container: call.request.params.container }],
     };
 
     if (!isNil(folder)) {
-      query.folder =
-        folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
+      query.$and?.push({
+        folder: folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim(),
+      });
     }
     if (!isNil(search)) {
-      query.name = { $regex: `.*${search}.*`, $options: 'i' };
+      query.$and?.push({
+        $or: [
+          { name: { $regex: `.*${search}.*`, $options: 'i' } },
+          { alias: { $regex: `.*${search}.*`, $options: 'i' } },
+        ],
+      });
     }
 
     const files = await File.getInstance().findMany(query, undefined, skip, limit, sort);
