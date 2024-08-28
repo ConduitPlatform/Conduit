@@ -5,7 +5,11 @@ import {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { GrpcServer, RoutingManager } from '@conduitplatform/module-tools';
+import {
+  ConduitBoolean,
+  GrpcServer,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { ResourceHandler } from './resources.js';
 import { RelationHandler } from './relations.js';
 import {
@@ -15,6 +19,7 @@ import {
   ResourceDefinition,
 } from '../models/index.js';
 import { QueueController } from '../controllers/index.js';
+import { isNil } from 'lodash-es';
 
 export class AdminHandlers {
   private readonly resourceHandler: ResourceHandler;
@@ -37,11 +42,14 @@ export class AdminHandlers {
   ) {
     // used to trigger an index re-construction
     ConduitGrpcSdk.Logger.warn('Reconstructing indices...');
-    ConduitGrpcSdk.Logger.warn('Wiping index data...');
-    await Promise.all([
-      ActorIndex.getInstance().deleteMany({}),
-      ObjectIndex.getInstance().deleteMany({}),
-    ]);
+    if (isNil(call.request.bodyParams.soft) || call.request.bodyParams.soft === false) {
+      ConduitGrpcSdk.Logger.warn('Wiping index data...');
+      await Promise.all([
+        ActorIndex.getInstance().deleteMany({}),
+        ObjectIndex.getInstance().deleteMany({}),
+      ]);
+    }
+
     callback('ok');
     ConduitGrpcSdk.Logger.warn('Beginning index reconstruction...');
     const resources = await ResourceDefinition.getInstance().findMany({});
@@ -88,6 +96,9 @@ export class AdminHandlers {
       {
         path: '/indexer/reconstruct',
         action: ConduitRouteActions.POST,
+        bodyParams: {
+          soft: ConduitBoolean.Optional,
+        },
         description: `Wipes and re-constructs the relation indexes.`,
       },
       new ConduitRouteReturnDefinition('IndexReconstruct', 'String'),
