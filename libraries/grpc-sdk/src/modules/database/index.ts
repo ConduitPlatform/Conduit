@@ -135,8 +135,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     userId?: string,
     scope?: string,
   ): Promise<T> {
-    let options: FindOneOptions | undefined;
-
+    let options: FindOneOptions;
     if (typeof selectOrOptions === 'string' || isNil(selectOrOptions)) {
       options = { select: selectOrOptions, populate, userId, scope };
     } else {
@@ -185,8 +184,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     userId?: string,
     scope?: string,
   ): Promise<T[]> {
-    let options: FindManyOptions | undefined;
-
+    let options: FindManyOptions;
     if (typeof selectOrOptions === 'string' || isNil(selectOrOptions)) {
       options = {
         select: selectOrOptions,
@@ -200,7 +198,6 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     } else {
       options = selectOrOptions;
     }
-
     if (typeof options.sort === 'string') options.sort = [options.sort];
     const sortObj = Array.isArray(options.sort)
       ? this.constructSortObj(options.sort)
@@ -349,6 +346,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       id,
       query: this.processQuery(document),
+      ...options,
       populate: (populateArray as string[]) ?? [],
     }).then(res => {
       return JSON.parse(res.result);
