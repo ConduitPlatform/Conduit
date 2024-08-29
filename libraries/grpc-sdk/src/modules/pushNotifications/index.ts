@@ -3,13 +3,8 @@ import {
   PushNotificationsDefinition,
   SendNotificationResponse,
 } from '../../protoUtils/index.js';
-import {
-  SendNotificationParamEnum,
-  SendNotificationParams,
-  SendNotificationToManyDevicesParamEnum,
-  SendNotificationToManyDevicesParams,
-} from './types';
-import { normalizeParams } from '../../utilities/normalizeParams';
+import { SendNotificationOptions } from './types';
+import { isNil } from 'lodash';
 
 export class PushNotifications extends ConduitModule<typeof PushNotificationsDefinition> {
   constructor(
@@ -49,17 +44,30 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
     platform?: string,
   ): Promise<SendNotificationResponse>;
 
-  sendNotification(params: {
-    sendTo: string;
-    title: string;
-    body?: string;
-    data?: string;
-    platform?: string;
-  }): Promise<SendNotificationResponse>;
+  sendNotification(
+    sendTo: string,
+    title: string,
+    options?: SendNotificationOptions,
+  ): Promise<SendNotificationResponse>;
 
-  sendNotification(...params: SendNotificationParams) {
-    const obj = normalizeParams(params, Object.keys(SendNotificationParamEnum));
-    return this.client!.sendNotification(obj);
+  sendNotification(
+    sendTo: string,
+    title: string,
+    bodyOrOptions?: string | SendNotificationOptions,
+    data?: string,
+    platform?: string,
+  ) {
+    let options: SendNotificationOptions;
+    if (typeof bodyOrOptions === 'string' || isNil(bodyOrOptions)) {
+      options = { body: bodyOrOptions, data, platform };
+    } else {
+      options = bodyOrOptions;
+    }
+    return this.client!.sendNotification({
+      sendTo,
+      title,
+      ...options,
+    });
   }
 
   sendManyNotifications(
@@ -80,19 +88,29 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
     platform?: string,
   ): Promise<SendNotificationResponse>;
 
-  sendNotificationToManyDevices(params: {
-    sendTo: string[];
-    title: string;
-    body?: string;
-    data?: string;
-    platform?: string;
-  }): Promise<SendNotificationResponse>;
+  sendNotificationToManyDevices(
+    sendTo: string[],
+    title: string,
+    options?: SendNotificationOptions,
+  ): Promise<SendNotificationResponse>;
 
-  sendNotificationToManyDevices(...params: SendNotificationToManyDevicesParams) {
-    const obj = normalizeParams(
-      params,
-      Object.keys(SendNotificationToManyDevicesParamEnum),
-    );
-    return this.client!.sendNotificationToManyDevices(obj);
+  sendNotificationToManyDevices(
+    sendTo: string[],
+    title: string,
+    bodyOrOptions?: string | SendNotificationOptions,
+    data?: string,
+    platform?: string,
+  ) {
+    let options: SendNotificationOptions;
+    if (typeof bodyOrOptions === 'string' || isNil(bodyOrOptions)) {
+      options = { body: bodyOrOptions, data, platform };
+    } else {
+      options = bodyOrOptions;
+    }
+    return this.client!.sendNotificationToManyDevices({
+      sendTo,
+      title,
+      ...options,
+    });
   }
 }

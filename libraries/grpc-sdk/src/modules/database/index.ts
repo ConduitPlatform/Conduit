@@ -11,33 +11,13 @@ import {
   UntypedArray,
 } from '../../interfaces/index.js';
 import { Query } from '../../types/db.js';
+import { FindOneOptions, FindManyOptions } from './types.js';
+import { AuthzOptions, PopulateAuthzOptions } from '../../types/options.js';
+import { isNil } from 'lodash';
 import {
-  FindOneParams,
-  FindOneParamEnum,
-  FindManyParams,
-  FindManyParamEnum,
-  CreateParams,
-  CreateParamEnum,
-  CreateManyParams,
-  CreateManyParamEnum,
-  FindByIdAndUpdateParams,
-  FindByIdAndUpdateParamEnum,
-  FindByIdAndReplaceParams,
-  FindByIdAndReplaceEnum,
-  UpdateManyParams,
-  UpdateManyParamEnum,
-  UpdateOneParams,
-  UpdateOneParamEnum,
-  ReplaceOneParams,
-  ReplaceOneParamEnum,
-  DeleteOneParams,
-  DeleteOneParamEnum,
-  DeleteManyParams,
-  DeleteManyParamEnum,
-  CountDocumentsParams,
-  CountDocumentsParamEnum,
-} from './types.js';
-import { normalizeParams } from '../../utilities/normalizeParams';
+  normalizeAuthzOptions,
+  normalizePopulateAuthzOptions,
+} from '../../utilities/normalizeOptions.js';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(
@@ -145,23 +125,33 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     scope?: string,
   ): Promise<T>;
 
-  findOne<T>(params: {
-    schemaName: string;
-    query: Query<T>;
-    select?: string;
-    populate?: string | string[];
-    userId?: string;
-    scope?: string;
-  }): Promise<T>;
+  findOne<T>(schemaName: string, query: Query<T>, options?: FindOneOptions): Promise<T>;
 
-  findOne<T>(...params: FindOneParams<T>): Promise<T> {
-    const obj = normalizeParams(params, Object.keys(FindOneParamEnum));
-    const populateArray =
-      obj.populate && !Array.isArray(obj.populate) ? [obj.populate] : obj.populate;
+  findOne<T>(
+    schemaName: string,
+    query: Query<T>,
+    selectOrOptions?: string | FindOneOptions,
+    populate?: string | string[],
+    userId?: string,
+    scope?: string,
+  ): Promise<T> {
+    let options: FindOneOptions | undefined;
+
+    if (typeof selectOrOptions === 'string' || isNil(selectOrOptions)) {
+      options = { select: selectOrOptions, populate, userId, scope };
+    } else {
+      options = selectOrOptions;
+    }
+    let populateArray = options.populate;
+    if (options.populate && !Array.isArray(options.populate)) {
+      populateArray = [options.populate];
+    }
+
     return this.client!.findOne({
-      ...obj,
-      query: this.processQuery(obj.query),
-      select: obj.select === null ? undefined : obj.select,
+      schemaName,
+      query: this.processQuery(query),
+      ...options,
+      select: options.select === null ? undefined : options.select,
       populate: (populateArray as string[]) ?? [],
     }).then(res => JSON.parse(res.result));
   }
@@ -178,30 +168,53 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     scope?: string,
   ): Promise<T[]>;
 
-  findMany<T>(params: {
-    schemaName: string;
-    query: Query<T>;
-    select?: string;
-    skip?: number;
-    limit?: number;
-    sort?: { [field: string]: -1 | 1 } | string[] | string;
-    populate?: string | string[];
-    userId?: string;
-    scope?: string;
-  }): Promise<T[]>;
+  findMany<T>(
+    schemaName: string,
+    query: Query<T>,
+    options?: FindManyOptions,
+  ): Promise<T[]>;
 
-  findMany<T>(...params: FindManyParams<T>): Promise<T[]> {
-    const obj = normalizeParams(params, Object.keys(FindManyParamEnum));
+  findMany<T>(
+    schemaName: string,
+    query: Query<T>,
+    selectOrOptions?: string | FindManyOptions,
+    skip?: number,
+    limit?: number,
+    sort?: { [field: string]: -1 | 1 } | string[] | string,
+    populate?: string | string[],
+    userId?: string,
+    scope?: string,
+  ): Promise<T[]> {
+    let options: FindManyOptions | undefined;
 
-    if (typeof obj.sort === 'string') obj.sort = [obj.sort];
-    const sortObj = Array.isArray(obj.sort) ? this.constructSortObj(obj.sort) : obj.sort;
-    const populateArray =
-      obj.populate && !Array.isArray(obj.populate) ? [obj.populate] : obj.populate;
+    if (typeof selectOrOptions === 'string' || isNil(selectOrOptions)) {
+      options = {
+        select: selectOrOptions,
+        skip,
+        limit,
+        sort,
+        populate,
+        userId,
+        scope,
+      };
+    } else {
+      options = selectOrOptions;
+    }
+
+    if (typeof options.sort === 'string') options.sort = [options.sort];
+    const sortObj = Array.isArray(options.sort)
+      ? this.constructSortObj(options.sort)
+      : options.sort;
+    let populateArray = options.populate;
+    if (options.populate && !Array.isArray(options.populate)) {
+      populateArray = [options.populate];
+    }
 
     return this.client!.findMany({
-      ...obj,
-      query: this.processQuery(obj.query),
-      select: obj.select === null ? undefined : obj.select,
+      schemaName,
+      query: this.processQuery(query),
+      ...options,
+      select: options.select === null ? undefined : options.select,
       sort: sortObj,
       populate: (populateArray as string[]) ?? [],
     }).then(res => {
@@ -216,18 +229,19 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     scope?: string,
   ): Promise<T>;
 
-  create<T>(params: {
-    schemaName: string;
-    query: Query<T>;
-    userId?: string;
-    scope?: string;
-  }): Promise<T>;
+  create<T>(schemaName: string, query: Query<T>, options?: AuthzOptions): Promise<T>;
 
-  create<T>(...params: CreateParams<T>): Promise<T> {
-    const obj = normalizeParams(params, Object.keys(CreateParamEnum));
+  create<T>(
+    schemaName: string,
+    query: Query<T>,
+    userIdOrOptions?: string | AuthzOptions,
+    scope?: string,
+  ): Promise<T> {
+    const options = normalizeAuthzOptions(userIdOrOptions, scope);
     return this.client!.create({
-      ...obj,
-      query: this.processQuery(obj.query),
+      schemaName,
+      query: this.processQuery(query),
+      ...options,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -240,18 +254,23 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     scope?: string,
   ): Promise<T[] | UntypedArray>;
 
-  createMany<T>(params: {
-    schemaName: string;
-    query: Query<T>[];
-    userId?: string;
-    scope?: string;
-  }): Promise<T[] | UntypedArray>;
+  createMany<T>(
+    schemaName: string,
+    query: Query<T>[],
+    options?: AuthzOptions,
+  ): Promise<T[] | UntypedArray>;
 
-  createMany<T>(...params: CreateManyParams<T>): Promise<T[] | UntypedArray> {
-    const obj = normalizeParams(params, Object.keys(CreateManyParamEnum));
+  createMany<T>(
+    schemaName: string,
+    query: Query<T>,
+    userIdOrOptions?: string | AuthzOptions,
+    scope?: string,
+  ): Promise<T[] | UntypedArray> {
+    const options = normalizeAuthzOptions(userIdOrOptions, scope);
     return this.client!.createMany({
-      ...obj,
-      query: this.processQuery(obj.query),
+      schemaName,
+      query: this.processQuery(query),
+      ...options,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -266,22 +285,31 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     scope?: string,
   ): Promise<T | any>;
 
-  findByIdAndUpdate<T>(params: {
-    schemaName: string;
-    id: string;
-    document: Query<T>;
-    populate?: string | string[];
-    userId?: string;
-    scope?: string;
-  }): Promise<T | any>;
+  findByIdAndUpdate<T>(
+    schemaName: string,
+    id: string,
+    document: Query<T>,
+    options?: PopulateAuthzOptions,
+  ): Promise<T | any>;
 
-  findByIdAndUpdate<T>(...params: FindByIdAndUpdateParams<T>): Promise<T | any> {
-    const obj = normalizeParams(params, Object.keys(FindByIdAndUpdateParamEnum));
-    const populateArray =
-      obj.populate && !Array.isArray(obj.populate) ? [obj.populate] : obj.populate;
+  findByIdAndUpdate<T>(
+    schemaName: string,
+    id: string,
+    document: Query<T>,
+    populateOrOptions?: string | string[] | PopulateAuthzOptions,
+    userId?: string,
+    scope?: string,
+  ): Promise<T | any> {
+    const options = normalizePopulateAuthzOptions(populateOrOptions, userId, scope);
+    let populateArray = options.populate;
+    if (options.populate && !Array.isArray(options.populate)) {
+      populateArray = [options.populate];
+    }
     return this.client!.findByIdAndUpdate({
-      ...obj,
-      query: this.processQuery(obj.document),
+      schemaName,
+      id,
+      query: this.processQuery(document),
+      ...options,
       populate: (populateArray as string[]) ?? [],
     }).then(res => {
       return JSON.parse(res.result);
@@ -297,22 +325,30 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     scope?: string,
   ): Promise<T | any>;
 
-  findByIdAndReplace<T>(params: {
-    schemaName: string;
-    id: string;
-    document: Query<T>;
-    populate?: string | string[];
-    userId?: string;
-    scope?: string;
-  }): Promise<T | any>;
+  findByIdAndReplace<T>(
+    schemaName: string,
+    id: string,
+    document: Query<T>,
+    options?: PopulateAuthzOptions,
+  ): Promise<T | any>;
 
-  findByIdAndReplace<T>(...params: FindByIdAndReplaceParams<T>): Promise<T | any> {
-    const obj = normalizeParams(params, Object.keys(FindByIdAndReplaceEnum));
-    const populateArray =
-      obj.populate && !Array.isArray(obj.populate) ? [obj.populate] : obj.populate;
+  findByIdAndReplace<T>(
+    schemaName: string,
+    id: string,
+    document: Query<T>,
+    populateOrOptions?: string | string[] | PopulateAuthzOptions,
+    userId?: string,
+    scope?: string,
+  ): Promise<T | any> {
+    const options = normalizePopulateAuthzOptions(populateOrOptions, userId, scope);
+    let populateArray = options.populate;
+    if (options.populate && !Array.isArray(options.populate)) {
+      populateArray = [options.populate];
+    }
     return this.client!.findByIdAndReplace({
-      ...obj,
-      query: this.processQuery(obj.document),
+      schemaName,
+      id,
+      query: this.processQuery(document),
       populate: (populateArray as string[]) ?? [],
     }).then(res => {
       return JSON.parse(res.result);
@@ -328,23 +364,31 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     scope?: string,
   ): Promise<any>;
 
-  updateMany<T>(params: {
-    schemaName: string;
-    filterQuery: Query<T>;
-    query: Query<T>;
-    populate?: string | string[];
-    userId?: string;
-    scope?: string;
-  }): Promise<any>;
+  updateMany<T>(
+    schemaName: string,
+    filterQuery: Query<T>,
+    query: Query<T>,
+    options?: PopulateAuthzOptions,
+  ): Promise<any>;
 
-  updateMany<T>(...params: UpdateManyParams<T>) {
-    const obj = normalizeParams(params, Object.keys(UpdateManyParamEnum));
-    const populateArray =
-      obj.populate && !Array.isArray(obj.populate) ? [obj.populate] : obj.populate;
+  updateMany<T>(
+    schemaName: string,
+    filterQuery: Query<T>,
+    query: Query<T>,
+    populateOrOptions?: string | string[] | PopulateAuthzOptions,
+    userId?: string,
+    scope?: string,
+  ) {
+    const options = normalizePopulateAuthzOptions(populateOrOptions, userId, scope);
+    let populateArray = options.populate;
+    if (options.populate && !Array.isArray(options.populate)) {
+      populateArray = [options.populate];
+    }
     return this.client!.updateMany({
-      ...obj,
-      filterQuery: this.processQuery(obj.filterQuery),
-      query: this.processQuery(obj.query),
+      schemaName,
+      filterQuery: this.processQuery(filterQuery),
+      query: this.processQuery(query),
+      ...options,
       populate: (populateArray as string[]) ?? [],
     }).then(res => {
       return JSON.parse(res.result);
@@ -360,23 +404,31 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     scope?: string,
   ): Promise<any>;
 
-  updateOne<T>(params: {
-    schemaName: string;
-    filterQuery: Query<T>;
-    query: Query<T>;
-    populate?: string | string[];
-    userId?: string;
-    scope?: string;
-  }): Promise<any>;
+  updateOne<T>(
+    schemaName: string,
+    filterQuery: Query<T>,
+    query: Query<T>,
+    options?: PopulateAuthzOptions,
+  ): Promise<any>;
 
-  updateOne<T>(...params: UpdateOneParams<T>) {
-    const obj = normalizeParams(params, Object.keys(UpdateOneParamEnum));
-    const populateArray =
-      obj.populate && !Array.isArray(obj.populate) ? [obj.populate] : obj.populate;
+  updateOne<T>(
+    schemaName: string,
+    filterQuery: Query<T>,
+    query: Query<T>,
+    populateOrOptions?: string | string[] | PopulateAuthzOptions,
+    userId?: string,
+    scope?: string,
+  ) {
+    const options = normalizePopulateAuthzOptions(populateOrOptions, userId, scope);
+    let populateArray = options.populate;
+    if (options.populate && !Array.isArray(options.populate)) {
+      populateArray = [options.populate];
+    }
     return this.client!.updateOne({
-      ...obj,
-      filterQuery: this.processQuery(obj.filterQuery),
-      query: this.processQuery(obj.query),
+      schemaName,
+      filterQuery: this.processQuery(filterQuery),
+      query: this.processQuery(query),
+      ...options,
       populate: (populateArray as string[]) ?? [],
     }).then(res => {
       return JSON.parse(res.result);
@@ -392,23 +444,31 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     scope?: string,
   ): Promise<any>;
 
-  replaceOne<T>(params: {
-    schemaName: string;
-    filterQuery: Query<T>;
-    query: Query<T>;
-    populate?: string | string[];
-    userId?: string;
-    scope?: string;
-  }): Promise<any>;
+  replaceOne<T>(
+    schemaName: string,
+    filterQuery: Query<T>,
+    query: Query<T>,
+    options?: PopulateAuthzOptions,
+  ): Promise<any>;
 
-  replaceOne<T>(...params: ReplaceOneParams<T>) {
-    const obj = normalizeParams(params, Object.keys(ReplaceOneParamEnum));
-    const populateArray =
-      obj.populate && !Array.isArray(obj.populate) ? [obj.populate] : obj.populate;
+  replaceOne<T>(
+    schemaName: string,
+    filterQuery: Query<T>,
+    query: Query<T>,
+    populateOrOptions?: string | string[] | PopulateAuthzOptions,
+    userId?: string,
+    scope?: string,
+  ) {
+    const options = normalizePopulateAuthzOptions(populateOrOptions, userId, scope);
+    let populateArray = options.populate;
+    if (options.populate && !Array.isArray(options.populate)) {
+      populateArray = [options.populate];
+    }
     return this.client!.replaceOne({
-      ...obj,
-      filterQuery: this.processQuery(obj.filterQuery),
-      query: this.processQuery(obj.query),
+      schemaName,
+      filterQuery: this.processQuery(filterQuery),
+      query: this.processQuery(query),
+      ...options,
       populate: (populateArray as string[]) ?? [],
     }).then(res => {
       return JSON.parse(res.result);
@@ -422,18 +482,19 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     scope?: string,
   ): Promise<any>;
 
-  deleteOne<T>(params: {
-    schemaName: string;
-    query: Query<T>;
-    userId?: string;
-    scope?: string;
-  }): Promise<any>;
+  deleteOne<T>(schemaName: string, query: Query<T>, options?: AuthzOptions): Promise<any>;
 
-  deleteOne<T>(...params: DeleteOneParams<T>) {
-    const obj = normalizeParams(params, Object.keys(DeleteOneParamEnum));
+  deleteOne<T>(
+    schemaName: string,
+    query: Query<T>,
+    userIdOrOptions?: string | AuthzOptions,
+    scope?: string,
+  ) {
+    const options = normalizeAuthzOptions(userIdOrOptions, scope);
     return this.client!.deleteOne({
-      ...obj,
-      query: this.processQuery(obj.query),
+      schemaName,
+      query: this.processQuery(query),
+      ...options,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -446,18 +507,23 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     scope?: string,
   ): Promise<any>;
 
-  deleteMany<T>(params: {
-    schemaName: string;
-    query: Query<T>;
-    userId?: string;
-    scope?: string;
-  }): Promise<any>;
+  deleteMany<T>(
+    schemaName: string,
+    query: Query<T>,
+    options?: AuthzOptions,
+  ): Promise<any>;
 
-  deleteMany<T>(...params: DeleteManyParams<T>) {
-    const obj = normalizeParams(params, Object.keys(DeleteManyParamEnum));
+  deleteMany<T>(
+    schemaName: string,
+    query: Query<T>,
+    userIdOrOptions?: string | AuthzOptions,
+    scope?: string,
+  ) {
+    const options = normalizeAuthzOptions(userIdOrOptions, scope);
     return this.client!.deleteMany({
-      ...obj,
-      query: this.processQuery(obj.query),
+      schemaName,
+      query: this.processQuery(query),
+      ...options,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -470,18 +536,23 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     scope?: string,
   ): Promise<number>;
 
-  countDocuments<T>(params: {
-    schemaName: string;
-    query: Query<T>;
-    userId?: string;
-    scope?: string;
-  }): Promise<number>;
+  countDocuments<T>(
+    schemaName: string,
+    query: Query<T>,
+    options?: AuthzOptions,
+  ): Promise<number>;
 
-  countDocuments<T>(...params: CountDocumentsParams<T>): Promise<number> {
-    const obj = normalizeParams(params, Object.keys(CountDocumentsParamEnum));
+  countDocuments<T>(
+    schemaName: string,
+    query: Query<T>,
+    userIdOrOptions?: string | AuthzOptions,
+    scope?: string,
+  ): Promise<number> {
+    const options = normalizeAuthzOptions(userIdOrOptions, scope);
     return this.client!.countDocuments({
-      ...obj,
-      query: this.processQuery(obj.query),
+      schemaName,
+      query: this.processQuery(query),
+      ...options,
     }).then(res => {
       return JSON.parse(res.result);
     });

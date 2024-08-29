@@ -7,25 +7,15 @@ import {
   GetFileUrlResponse,
   StorageDefinition,
 } from '../../protoUtils/storage.js';
+import { AuthzOptions } from '../../types';
+import { normalizeAuthzOptions } from '../../utilities/normalizeOptions';
 import {
-  GetFileParamEnum,
-  GetFileParams,
-  GetFileUrlParamEnum,
-  GetFileUrlParams,
-  GetFileDataParamEnum,
-  GetFileDataParams,
-  CreateFileParamEnum,
-  CreateFileParams,
-  UpdateFileParamEnum,
-  UpdateFileParams,
-  DeleteFileParamEnum,
-  DeleteFileParams,
-  CreateFileByUrlParamEnum,
-  CreateFileByUrlParams,
-  UpdateFileByUrlParamEnum,
-  UpdateFileByUrlParams,
+  CreateFileByURLOptions,
+  CreateFileOptions,
+  UpdateFileByURLOptions,
+  UpdateFileOptions,
 } from './types';
-import { normalizeParams } from '../../utilities/normalizeParams';
+import { isNil } from 'lodash';
 
 export class Storage extends ConduitModule<typeof StorageDefinition> {
   constructor(
@@ -39,37 +29,41 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
 
   getFile(id: string, userId?: string, scope?: string): Promise<FileResponse>;
 
-  getFile(params: { id: string; userId?: string; scope?: string }): Promise<FileResponse>;
+  getFile(id: string, options?: AuthzOptions): Promise<FileResponse>;
 
-  getFile(...params: GetFileParams): Promise<FileResponse> {
-    const obj = normalizeParams(params, Object.keys(GetFileParamEnum));
-    return this.client!.getFile(obj);
+  getFile(
+    id: string,
+    userIdOrOptions?: string | AuthzOptions,
+    scope?: string,
+  ): Promise<FileResponse> {
+    const options = normalizeAuthzOptions(userIdOrOptions, scope);
+    return this.client!.getFile({ id, ...options });
   }
 
   getFileUrl(id: string, userId?: string, scope?: string): Promise<GetFileUrlResponse>;
 
-  getFileUrl(params: {
-    id: string;
-    userId?: string;
-    scope?: string;
-  }): Promise<GetFileUrlResponse>;
+  getFileUrl(id: string, options?: AuthzOptions): Promise<GetFileUrlResponse>;
 
-  getFileUrl(...params: GetFileUrlParams): Promise<GetFileUrlResponse> {
-    const obj = normalizeParams(params, Object.keys(GetFileUrlParamEnum));
-    return this.client!.getFileUrl(obj);
+  getFileUrl(
+    id: string,
+    userIdOrOptions?: string | AuthzOptions,
+    scope?: string,
+  ): Promise<GetFileUrlResponse> {
+    const options = normalizeAuthzOptions(userIdOrOptions, scope);
+    return this.client!.getFileUrl({ id, ...options });
   }
 
   getFileData(id: string, userId?: string, scope?: string): Promise<GetFileDataResponse>;
 
-  getFileData(params: {
-    id: string;
-    userId?: string;
-    scope?: string;
-  }): Promise<GetFileDataResponse>;
+  getFileData(id: string, options?: AuthzOptions): Promise<GetFileDataResponse>;
 
-  getFileData(...params: GetFileDataParams): Promise<GetFileDataResponse> {
-    const obj = normalizeParams(params, Object.keys(GetFileDataParamEnum));
-    return this.client!.getFileData(obj);
+  getFileData(
+    id: string,
+    userIdOrOptions?: string | AuthzOptions,
+    scope?: string,
+  ): Promise<GetFileDataResponse> {
+    const options = normalizeAuthzOptions(userIdOrOptions, scope);
+    return this.client!.getFileData({ id, ...options });
   }
 
   createFile(
@@ -84,23 +78,42 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     alias?: string,
   ): Promise<FileResponse>;
 
-  createFile(params: {
-    name: string | undefined;
-    data: string;
-    folder?: string;
-    container?: string;
-    mimeType?: string;
-    isPublic?: boolean;
-    userId?: string;
-    scope?: string;
-    alias?: string;
-  }): Promise<FileResponse>;
+  createFile(
+    name: string | undefined,
+    data: string,
+    options?: CreateFileOptions,
+  ): Promise<FileResponse>;
 
-  createFile(...params: CreateFileParams): Promise<FileResponse> {
-    const obj = normalizeParams(params, Object.keys(CreateFileParamEnum));
+  createFile(
+    name: string | undefined,
+    data: string,
+    folderOrOptions?: string | CreateFileOptions,
+    container?: string,
+    mimeType?: string,
+    isPublic?: boolean,
+    userId?: string,
+    scope?: string,
+    alias?: string,
+  ): Promise<FileResponse> {
+    let options: CreateFileOptions;
+    if (typeof folderOrOptions === 'string' || isNil(folderOrOptions)) {
+      options = {
+        folder: folderOrOptions,
+        container,
+        mimeType,
+        isPublic,
+        userId,
+        scope,
+        alias,
+      };
+    } else {
+      options = folderOrOptions;
+    }
     return this.client!.createFile({
-      ...obj,
-      isPublic: obj.isPublic ?? false,
+      name,
+      data,
+      ...options,
+      isPublic: options.isPublic ?? false,
     });
   }
 
@@ -116,34 +129,55 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     alias?: string,
   ): Promise<FileResponse>;
 
-  updateFile(params: {
-    id: string;
-    data: string;
-    name?: string;
-    folder?: string;
-    container?: string;
-    mimeType?: string;
-    userId?: string;
-    scope?: string;
-    alias?: string;
-  }): Promise<FileResponse>;
+  updateFile(
+    id: string,
+    data: string,
+    options?: UpdateFileOptions,
+  ): Promise<FileResponse>;
 
-  updateFile(...params: UpdateFileParams): Promise<FileResponse> {
-    const obj = normalizeParams(params, Object.keys(UpdateFileParamEnum));
-    return this.client!.updateFile(obj);
+  updateFile(
+    id: string,
+    data: string,
+    nameOrOptions?: string | UpdateFileOptions,
+    folder?: string,
+    container?: string,
+    mimeType?: string,
+    userId?: string,
+    scope?: string,
+    alias?: string,
+  ): Promise<FileResponse> {
+    let options: UpdateFileOptions;
+    if (typeof nameOrOptions === 'string' || isNil(nameOrOptions)) {
+      options = {
+        name: nameOrOptions,
+        folder,
+        container,
+        mimeType,
+        userId,
+        scope,
+        alias,
+      };
+    } else {
+      options = nameOrOptions;
+    }
+    return this.client!.updateFile({
+      id,
+      data,
+      ...options,
+    });
   }
 
   deleteFile(id: string, userId?: string, scope?: string): Promise<DeleteFileResponse>;
 
-  deleteFile(params: {
-    id: string;
-    userId?: string;
-    scope?: string;
-  }): Promise<DeleteFileResponse>;
+  deleteFile(id: string, options?: AuthzOptions): Promise<DeleteFileResponse>;
 
-  deleteFile(...params: DeleteFileParams): Promise<DeleteFileResponse> {
-    const obj = normalizeParams(params, Object.keys(DeleteFileParamEnum));
-    return this.client!.deleteFile(obj);
+  deleteFile(
+    id: string,
+    userIdOrOptions?: string | AuthzOptions,
+    scope?: string,
+  ): Promise<DeleteFileResponse> {
+    const options = normalizeAuthzOptions(userIdOrOptions, scope);
+    return this.client!.deleteFile({ id, ...options });
   }
 
   createFileByUrl(
@@ -158,23 +192,41 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     alias?: string,
   ): Promise<FileByUrlResponse>;
 
-  createFileByUrl(params: {
-    name: string | undefined;
-    folder?: string;
-    container?: string;
-    mimeType?: string;
-    size?: number;
-    isPublic?: boolean;
-    userId?: string;
-    scope?: string;
-    alias?: string;
-  }): Promise<FileByUrlResponse>;
+  createFileByUrl(
+    name: string | undefined,
+    options?: CreateFileByURLOptions,
+  ): Promise<FileByUrlResponse>;
 
-  createFileByUrl(...params: CreateFileByUrlParams): Promise<FileByUrlResponse> {
-    const obj = normalizeParams(params, Object.keys(CreateFileByUrlParamEnum));
+  createFileByUrl(
+    name: string | undefined,
+    folderOrOptions?: string | CreateFileByURLOptions,
+    container?: string,
+    mimeType?: string,
+    size?: number,
+    isPublic?: boolean,
+    userId?: string,
+    scope?: string,
+    alias?: string,
+  ): Promise<FileByUrlResponse> {
+    let options: CreateFileByURLOptions;
+    if (typeof folderOrOptions === 'string' || isNil(folderOrOptions)) {
+      options = {
+        folder: folderOrOptions,
+        container,
+        mimeType,
+        size,
+        isPublic,
+        userId,
+        scope,
+        alias,
+      };
+    } else {
+      options = folderOrOptions;
+    }
     return this.client!.createFileByUrl({
-      ...obj,
-      isPublic: obj.isPublic ?? false,
+      name,
+      ...options,
+      isPublic: options.isPublic ?? false,
     });
   }
 
@@ -190,20 +242,37 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     alias?: string,
   ): Promise<FileByUrlResponse>;
 
-  updateFileByUrl(params: {
-    id: string;
-    name?: string;
-    folder?: string;
-    container?: string;
-    mimeType?: string;
-    size?: number;
-    userId?: string;
-    scope?: string;
-    alias?: string;
-  }): Promise<FileByUrlResponse>;
+  updateFileByUrl(
+    id: string,
+    options?: UpdateFileByURLOptions,
+  ): Promise<FileByUrlResponse>;
 
-  updateFileByUrl(...params: UpdateFileByUrlParams): Promise<FileByUrlResponse> {
-    const obj = normalizeParams(params, Object.keys(UpdateFileByUrlParamEnum));
-    return this.client!.updateFileByUrl(obj);
+  updateFileByUrl(
+    id: string,
+    nameOrOptions?: string | UpdateFileByURLOptions,
+    folder?: string,
+    container?: string,
+    mimeType?: string,
+    size?: number,
+    userId?: string,
+    scope?: string,
+    alias?: string,
+  ): Promise<FileByUrlResponse> {
+    let options: UpdateFileByURLOptions;
+    if (typeof nameOrOptions === 'string' || isNil(nameOrOptions)) {
+      options = {
+        name: nameOrOptions,
+        folder,
+        container,
+        mimeType,
+        size,
+        userId,
+        scope,
+        alias,
+      };
+    } else {
+      options = nameOrOptions;
+    }
+    return this.client!.updateFileByUrl({ id, ...options });
   }
 }
