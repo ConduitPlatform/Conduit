@@ -8922,10 +8922,10 @@ hastscript@^8.0.0:
     property-information "^6.0.0"
     space-separated-tokens "^2.0.0"
 
-hcaptcha@^0.1.1:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/hcaptcha/-/hcaptcha-0.1.1.tgz#0a5c3469ac55e3f3827f2fd07c2bf27859067d12"
-  integrity sha512-iMrDmH2VpIEKOrcKWidVjI89FdDKTEdZ7PfPWkP27sTazIIkob8YfdY2ezaufAnWBiUUcvzsn0qF+dyXtBH2Vw==
+hcaptcha@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/hcaptcha/-/hcaptcha-0.2.0.tgz#a57654e296406efe3c39f41320ed680c2707e979"
+  integrity sha512-x25z3RoEa9oqfyuQsgk2olc+LCNVDAJaGKUP1qFhpAybB6qjqOf4qB2y1E3LJpXDvM229JWEywc6iWnzWvGjNw==
 
 helmet@7.1.0:
   version "7.1.0"
