@@ -4,7 +4,7 @@ import { ConduitGrpcSdk, GrpcError, UntypedArray } from '@conduitplatform/grpc-s
 import { ChatRoom, InvitationToken, User } from '../models/index.js';
 import { v4 as uuid } from 'uuid';
 
-export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: UntypedArray) {
+export async function validateUsersInput(users: UntypedArray) {
   const uniqueUsers = Array.from(new Set(users));
   let errorMessage: string | null = null;
   const usersToBeAdded = (await User.getInstance()

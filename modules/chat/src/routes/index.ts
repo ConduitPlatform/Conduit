@@ -66,7 +66,7 @@ export class ChatRoutes {
       );
     }
     try {
-      usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
+      usersToBeAdded = await validateUsersInput(users);
     } catch (e) {
       throw new GrpcError(status.INTERNAL, (e as Error).message);
     }
@@ -153,7 +153,7 @@ export class ChatRoutes {
       throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
     }
     try {
-      usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
+      usersToBeAdded = await validateUsersInput(users);
     } catch (e) {
       throw new GrpcError(status.INTERNAL, (e as Error).message);
     }
