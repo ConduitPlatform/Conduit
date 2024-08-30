@@ -107,7 +107,7 @@ export class AdminHandlers {
   }
 
   async getMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { senderUser, roomId, populate, sort } = call.request.params;
+    const { senderUser, roomId, populate, sort, search } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const query: Query<ChatMessage> = {
@@ -125,6 +125,9 @@ export class AdminHandlers {
       if (isNil(room)) {
         throw new GrpcError(status.NOT_FOUND, `Room ${roomId} does not exists`);
       }
+    }
+    if (!isNil(search)) {
+      query.message = { $regex: search, $options: 'i' };
     }
 
     const messagesPromise = ChatMessage.getInstance().findMany(
