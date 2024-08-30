@@ -16,7 +16,6 @@ import {
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash-es';
-import { populateArray } from '../utils/index.js';
 import { ChatMessage, ChatRoom, User } from '../models/index.js';
 
 import escapeStringRegexp from 'escape-string-regexp';
@@ -37,12 +36,8 @@ export class AdminHandlers {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query: Query<ChatRoom> = {};
-    let identifier, populates;
-    if (!isNil(populate)) {
-      populates = populateArray(populate);
-    }
     if (!isNil(search)) {
-      identifier = escapeStringRegexp(search);
+      const identifier = escapeStringRegexp(search);
       query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
     }
 
@@ -52,7 +47,7 @@ export class AdminHandlers {
       skip,
       limit,
       sort,
-      populates,
+      populate,
     );
     const totalCountPromise = ChatRoom.getInstance().countDocuments(query);
 
@@ -119,10 +114,6 @@ export class AdminHandlers {
       ...(senderUser ? { senderUser } : {}),
       ...(roomId ? { room: roomId } : {}),
     };
-    let populates;
-    if (!isNil(populate)) {
-      populates = populateArray(populate);
-    }
     if (!isNil(senderUser)) {
       const user = await User.getInstance().findOne({ _id: senderUser });
       if (isNil(user)) {
@@ -142,7 +133,7 @@ export class AdminHandlers {
       skip,
       limit,
       sort,
-      populates,
+      populate,
     );
     const countPromise = ChatMessage.getInstance().countDocuments(query);
     const [messages, count] = await Promise.all([messagesPromise, countPromise]).catch(
@@ -183,6 +174,7 @@ export class AdminHandlers {
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
+          populate: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('GetRooms', {
@@ -228,6 +220,7 @@ export class AdminHandlers {
           senderUser: ConduitString.Optional,
           roomId: ConduitString.Optional,
           search: ConduitString.Optional,
+          populate: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('GetMessages', {
