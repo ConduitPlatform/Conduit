@@ -1,5 +1,10 @@
 import { ConduitModule } from '../../classes/index.js';
-import { PushNotificationsDefinition } from '../../protoUtils/index.js';
+import {
+  PushNotificationsDefinition,
+  SendNotificationResponse,
+} from '../../protoUtils/index.js';
+import { SendNotificationOptions } from './types';
+import { isNil } from 'lodash';
 
 export class PushNotifications extends ConduitModule<typeof PushNotificationsDefinition> {
   constructor(
@@ -37,13 +42,31 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
     body?: string,
     data?: string,
     platform?: string,
+  ): Promise<SendNotificationResponse>;
+
+  sendNotification(
+    sendTo: string,
+    title: string,
+    options?: SendNotificationOptions,
+  ): Promise<SendNotificationResponse>;
+
+  sendNotification(
+    sendTo: string,
+    title: string,
+    bodyOrOptions?: string | SendNotificationOptions,
+    data?: string,
+    platform?: string,
   ) {
+    let options: SendNotificationOptions;
+    if (typeof bodyOrOptions === 'string' || isNil(bodyOrOptions)) {
+      options = { body: bodyOrOptions, data, platform };
+    } else {
+      options = bodyOrOptions;
+    }
     return this.client!.sendNotification({
       sendTo,
       title,
-      body,
-      data,
-      platform,
+      ...options,
     });
   }
 
@@ -63,13 +86,31 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
     body?: string,
     data?: string,
     platform?: string,
+  ): Promise<SendNotificationResponse>;
+
+  sendNotificationToManyDevices(
+    sendTo: string[],
+    title: string,
+    options?: SendNotificationOptions,
+  ): Promise<SendNotificationResponse>;
+
+  sendNotificationToManyDevices(
+    sendTo: string[],
+    title: string,
+    bodyOrOptions?: string | SendNotificationOptions,
+    data?: string,
+    platform?: string,
   ) {
+    let options: SendNotificationOptions;
+    if (typeof bodyOrOptions === 'string' || isNil(bodyOrOptions)) {
+      options = { body: bodyOrOptions, data, platform };
+    } else {
+      options = bodyOrOptions;
+    }
     return this.client!.sendNotificationToManyDevices({
       sendTo,
       title,
-      body,
-      data,
-      platform,
+      ...options,
     });
   }
 }
