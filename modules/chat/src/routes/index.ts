@@ -92,15 +92,15 @@ export class ChatRoutes {
         participantsLog: [participantsLog._id],
       })) as ChatRoom;
       const serverConfig = await this.grpcSdk.config.get('router');
-      await sendInvitations(
-        usersToBeAdded,
-        user,
+      await sendInvitations({
+        users: usersToBeAdded,
+        sender: user,
         room,
-        serverConfig.hostUrl,
-        this.sendEmail,
-        this.sendPushNotification,
-        this.grpcSdk,
-      ).catch((e: Error) => {
+        url: serverConfig.hostUrl,
+        sendEmail: this.sendEmail,
+        sendNotification: this.sendPushNotification,
+        grpcSdk: this.grpcSdk,
+      }).catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     } else {
@@ -169,15 +169,15 @@ export class ChatRoutes {
     const config = await this.grpcSdk.config.get('chat');
     if (config.explicit_room_joins.enabled) {
       const serverConfig = await this.grpcSdk.config.get('router');
-      const ret = await sendInvitations(
-        usersToBeAdded,
-        user,
+      const ret = await sendInvitations({
+        users: usersToBeAdded,
+        sender: user,
         room,
-        serverConfig.hostUrl,
-        this.sendEmail,
-        this.sendPushNotification,
-        this.grpcSdk,
-      ).catch((e: Error) => {
+        url: serverConfig.hostUrl,
+        sendEmail: this.sendEmail,
+        sendNotification: this.sendPushNotification,
+        grpcSdk: this.grpcSdk,
+      }).catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
       return ret!;
