@@ -4749,12 +4749,10 @@
     "@types/node" "*"
     form-data "^2.5.0"
 
-"@types/mandrill-api@^1.0.33":
-  version "1.0.33"
-  resolved "https://registry.yarnpkg.com/@types/mandrill-api/-/mandrill-api-1.0.33.tgz#e25a902a91485e2bc9baae51586a044c231d59cd"
-  integrity sha512-cYF9gtfFN1aqsBEN0z1tK5MDcrT8kxJv44ASYFVuTX6mhlgtzXrPFqVG88lHkbbCYS+guWI2oZ9HvNPuHDaMYQ==
-  dependencies:
-    "@types/node" "*"
+"@types/mandrill-api@^1.0.34":
+  version "1.0.34"
+  resolved "https://registry.yarnpkg.com/@types/mandrill-api/-/mandrill-api-1.0.34.tgz#c6f10666018ea5f3d294c540b3a43968bed35210"
+  integrity sha512-ewn5bctgSyC+FgxSkYzEwI2NZAunJjguwwnGztnP5asJf8asypxLpI/nXGoao7X8BDwTS6W8d/ObqCfeuvZnVA==
 
 "@types/mdast@^3.0.0":
   version "3.0.15"
