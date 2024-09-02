@@ -3,6 +3,7 @@ import {
   ConduitSchema,
   GrpcError,
   Indexable,
+  ModelOptionsIndex,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -641,6 +642,50 @@ export class SchemaAdmin {
     return this.database.getDatabaseType();
   }
 
+  async importIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { indexes } = call.request.params;
+    const indexMap = new Map<string, ModelOptionsIndex[]>();
+    for (const i of indexes) {
+      const { schemaName, ...rest } = i;
+      if (indexMap.has(schemaName)) {
+        indexMap.get(schemaName)!.push(rest);
+      } else {
+        indexMap.set(i.schemaName, [rest]);
+      }
+    }
+    for (const [schemaName, indexes] of indexMap) {
+      await this.database.createIndexes(schemaName, indexes, 'database').catch(e => {
+        throw new GrpcError(status.INTERNAL, `Index creation failed: ${e.message}`);
+      });
+    }
+    return 'Indexes imported successfully';
+  }
+
+  async exportIndexes(): Promise<UnparsedRouterResponse> {
+    const indexes = [];
+    const schemas = await this.database.getSchemaModel('_DeclaredSchema').model.findMany({
+      $or: [
+        { 'modelOptions.conduit.cms.enabled': true },
+        {
+          $and: [
+            { 'modelOptions.conduit.cms': { $exists: false } },
+            { 'modelOptions.conduit.permissions.extendable': true },
+            { extensions: { $exists: true } },
+          ],
+        },
+      ],
+    });
+    for (const schema of schemas) {
+      const schemaIndexes = await this.database.getIndexes(schema.name);
+      if (!isNil(schemaIndexes) && !isEmpty(schemaIndexes)) {
+        indexes.push(
+          ...schemaIndexes.map(index => ({ ...index, schemaName: schema.name })),
+        );
+      }
+    }
+    return { indexes };
+  }
+
   async createIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, indexes } = call.request.params;
     const requestedSchema = await this.database
@@ -660,7 +705,8 @@ export class SchemaAdmin {
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    return this.database.getIndexes(requestedSchema.name);
+    const indexes = await this.database.getIndexes(requestedSchema.name);
+    return { indexes };
   }
 
   async deleteIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

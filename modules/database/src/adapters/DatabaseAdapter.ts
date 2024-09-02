@@ -3,7 +3,7 @@ import {
   ConduitModel,
   ConduitSchema,
   GrpcError,
-  ModelOptionsIndexes,
+  ModelOptionsIndex,
   RawMongoQuery,
   RawSQLQuery,
   TYPE,
@@ -171,11 +171,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract createIndexes(
     schemaName: string,
-    indexes: ModelOptionsIndexes[],
+    indexes: ModelOptionsIndex[],
     callerModule: string,
   ): Promise<string>;
 
-  abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
+  abstract getIndexes(schemaName: string): Promise<ModelOptionsIndex[]>;
 
   abstract createView(
     modelName: string,

@@ -2,22 +2,24 @@ import { Sequelize } from 'sequelize';
 import {
   ConduitGrpcSdk,
   ConduitModel,
+  ConduitModelField,
   ConduitSchema,
   GrpcError,
   Indexable,
-  ModelOptionsIndexes,
-  PostgresIndexOptions,
-  PostgresIndexType,
+  ModelOptionsIndex,
+  MySQLMariaDBIndexOptions,
+  PgIndexOptions,
   RawSQLQuery,
+  SequelizeIndexType,
   sleep,
-  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
 import { DatabaseAdapter } from '../DatabaseAdapter.js';
 import { SequelizeSchema } from './SequelizeSchema.js';
 import {
-  checkIfPostgresOptions,
+  checkIfSequelizeIndexOptions,
+  checkIfSequelizeIndexType,
   compileSchema,
   resolveRelatedSchemas,
   tableFetch,
@@ -30,6 +32,8 @@ import {
 import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter.js';
 import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter.js';
 import { isEqual, isNil } from 'lodash-es';
+import { findAndRemoveIndex } from '../utils/index.js';
+import { validateIndexFields } from '../utils/indexValidations.js';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -244,8 +248,8 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     const dialect = this.sequelize.getDialect();
     const [newSchema, objectPaths, extractedRelations] =
       dialect === 'postgres'
-        ? pgSchemaConverter(compiledSchema)
-        : sqlSchemaConverter(compiledSchema);
+        ? pgSchemaConverter(compiledSchema, dialect)
+        : sqlSchemaConverter(compiledSchema, dialect);
     this.registeredSchemas.set(
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
@@ -340,78 +344,74 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   }
 
   getDatabaseType(): string {
-    const type = this.sequelize.getDialect();
-    if (type === 'postgres') {
-      return 'PostgreSQL'; // TODO: clean up
-    }
-    return type;
+    return this.sequelize.getDialect();
   }
 
   async createIndexes(
     schemaName: string,
-    indexes: ModelOptionsIndexes[],
+    indexes: ModelOptionsIndex[],
     callerModule: string,
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    indexes = this.checkAndConvertIndexes(schemaName, indexes, callerModule);
-    const queryInterface = this.sequelize.getQueryInterface();
-    for (const index of indexes) {
-      await queryInterface
-        .addIndex('cnd_' + schemaName, index.fields, index.options)
-        .catch(() => {
-          throw new GrpcError(status.INTERNAL, 'Unsuccessful index creation');
-        });
+    const convertedIndexes = indexes.map(i =>
+      this.checkAndConvertIndex(schemaName, i, callerModule),
+    );
+    const schema = this.models[schemaName].originalSchema;
+    const modelOptionsIndexes = schema.modelOptions.indexes ?? [];
+    const indexMap = new Map<string, ModelOptionsIndex>(
+      modelOptionsIndexes.map((i: ModelOptionsIndex) => [i.name, i]),
+    );
+    for (const i of convertedIndexes) {
+      if (!indexMap.has(i.name)) {
+        indexMap.set(i.name, i);
+      }
     }
-    await this.models[schemaName].sync();
+    Object.assign(schema.modelOptions, { indexes: [...indexMap.values()] });
+    await this.createSchemaFromAdapter(schema);
     return 'Indexes created!';
   }
 
-  async getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]> {
+  async getIndexes(schemaName: string): Promise<ModelOptionsIndex[]> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    const queryInterface = this.sequelize.getQueryInterface();
-    const result = (await queryInterface.showIndex('cnd_' + schemaName)) as UntypedArray;
-    result.filter(index => {
-      const fieldNames = [];
-      for (const field of index.fields) {
-        fieldNames.push(field.attribute);
+    const indexes: ModelOptionsIndex[] = [];
+    // Find schema field indexes and convert them to modelOption indexes
+    for (const [field, value] of Object.entries(
+      this.models[schemaName].originalSchema.fields,
+    )) {
+      const index = (value as ConduitModelField).index;
+      if (index) {
+        indexes.push({
+          name: index.name,
+          fields: [field],
+          types: index.type ? [index.type as SequelizeIndexType] : undefined,
+          options: index.options ?? undefined,
+        });
       }
-      index.fields = fieldNames;
-      // extract index type from index definition
-      let tmp = index.definition.split('USING ');
-      tmp = tmp[1].split(' ');
-      index.types = tmp[0];
-      delete index.definition;
-      index.options = {};
-      for (const indexEntry of Object.entries(index)) {
-        if (
-          indexEntry[0] === 'options' ||
-          indexEntry[0] === 'types' ||
-          indexEntry[0] === 'fields'
-        ) {
-          continue;
-        }
-        if (indexEntry[0] === 'indkey') {
-          delete index.indkey;
-          continue;
-        }
-        index.options[indexEntry[0]] = indexEntry[1];
-        delete index[indexEntry[0]];
-      }
-    });
-    return result;
+    }
+    indexes.push(...(this.models[schemaName].originalSchema.modelOptions.indexes ?? []));
+    return indexes;
   }
 
   async deleteIndexes(schemaName: string, indexNames: string[]): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const foundSchema = await this.models['_DeclaredSchema'].findOne({
+      name: schemaName,
+    });
     const queryInterface = this.sequelize.getQueryInterface();
+    let newSchema;
     for (const name of indexNames) {
-      queryInterface.removeIndex('cnd_' + schemaName, name).catch(() => {
-        throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
-      });
+      queryInterface
+        .removeIndex(this.models[schemaName].originalSchema.collectionName, name)
+        .catch(() => {
+          throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
+        });
+      // Remove index from fields/compiledFields or modelOptions
+      newSchema = findAndRemoveIndex(foundSchema, name);
     }
+    await this.models['_DeclaredSchema'].findByIdAndUpdate(foundSchema!._id, newSchema);
     return 'Indexes deleted';
   }
 
@@ -457,44 +457,33 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
 
   protected abstract hasLegacyCollections(): Promise<boolean>;
 
-  private checkAndConvertIndexes(
+  private checkAndConvertIndex(
     schemaName: string,
-    indexes: ModelOptionsIndexes[],
+    index: ModelOptionsIndex,
     callerModule: string,
   ) {
-    for (const index of indexes) {
-      if (!index.types && !index.options) continue;
-      if (index.types) {
-        if (
-          Array.isArray(index.types) ||
-          !Object.values(PostgresIndexType).includes(index.types)
-        ) {
-          throw new GrpcError(
-            status.INVALID_ARGUMENT,
-            'Invalid index type for PostgreSQL',
-          );
-        }
-        (index.options as PostgresIndexOptions).using = index.types;
-        delete index.types;
-      }
-      if (index.options) {
-        if (!checkIfPostgresOptions(index.options)) {
-          throw new GrpcError(
-            status.INVALID_ARGUMENT,
-            'Invalid index options for PostgreSQL',
-          );
-        }
-        if (
-          Object.keys(index.options).includes('unique') &&
-          this.models[schemaName].originalSchema.ownerModule !== callerModule
-        ) {
-          throw new GrpcError(
-            status.PERMISSION_DENIED,
-            'Not authorized to create unique index',
-          );
-        }
-      }
+    const dialect = this.sequelize.getDialect();
+    const { types, options } = index;
+    validateIndexFields(this.models[schemaName].originalSchema, index, callerModule);
+    if (options && !checkIfSequelizeIndexOptions(options, dialect)) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `Invalid index options for ${dialect}`,
+      );
     }
-    return indexes;
+    if (!types) return index;
+    if (types.length !== 1 || !checkIfSequelizeIndexType(types[0], dialect)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, `Invalid index type for ${dialect}`);
+    }
+    if (
+      (dialect === 'mysql' || dialect === 'mariadb') &&
+      ['UNIQUE', 'FULLTEXT', 'SPATIAL'].includes(types[0] as string)
+    ) {
+      index.options = { ...index.options, type: types[0] } as MySQLMariaDBIndexOptions;
+    } else {
+      index.options = { ...index.options, using: types[0] } as PgIndexOptions;
+    }
+    delete index.types;
+    return index;
   }
 }

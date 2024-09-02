@@ -18,12 +18,16 @@ import {
   extractRelations,
   RelationType,
 } from '../utils/extractors/index.js';
+import { ConduitDatabaseSchema } from '../../../interfaces/index.js';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
  * @param jsonSchema
  */
-export function pgSchemaConverter(jsonSchema: ConduitSchema): [
+export function pgSchemaConverter(
+  jsonSchema: ConduitDatabaseSchema,
+  dialect: string,
+): [
   ConduitSchema,
   {
     [key: string]: { parentKey: string; childKey: string };
@@ -37,13 +41,13 @@ export function pgSchemaConverter(jsonSchema: ConduitSchema): [
     delete copy.fields['_id'];
   }
   if (copy.modelOptions.indexes) {
-    copy = convertModelOptionsIndexes(copy);
+    copy.modelOptions.indexes = convertModelOptionsIndexes(copy, dialect);
   }
   const objectPaths: any = {};
   convertObjectToDotNotation(jsonSchema.fields, copy.fields, objectPaths);
   const secondaryCopy = cloneDeep(copy.fields);
   const extractedRelations = extractRelations(secondaryCopy, copy.fields);
-  copy = convertSchemaFieldIndexes(copy);
+  copy = convertSchemaFieldIndexes(copy, dialect);
   iterDeep(secondaryCopy, copy.fields);
   return [copy, objectPaths, extractedRelations];
 }

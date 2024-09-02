@@ -1,13 +1,28 @@
-import { isArray, isBoolean, isNumber, isString } from 'lodash-es';
+import {
+  isArray,
+  isBoolean,
+  isNumber,
+  isString,
+  isObject,
+  isNil,
+  forEach,
+  has,
+} from 'lodash-es';
 import {
   ConduitGrpcSdk,
   ConduitModelField,
-  ConduitSchema,
   Indexable,
-  PostgresIndexOptions,
-  PostgresIndexType,
+  ModelOptionsIndex,
+  MySQLMariaDBIndexType,
+  PgIndexType,
+  SequelizeIndexOptions,
+  SQLiteIndexType,
 } from '@conduitplatform/grpc-sdk';
-import { checkIfPostgresOptions } from '../sequelize-adapter/utils/index.js';
+import {
+  checkIfSequelizeIndexOptions,
+  checkIfSequelizeIndexType,
+} from '../sequelize-adapter/utils/index.js';
+import { ConduitDatabaseSchema } from '../../interfaces/index.js';
 
 export function checkDefaultValue(type: string, value: string) {
   switch (type) {
@@ -28,78 +43,99 @@ export function checkDefaultValue(type: string, value: string) {
   }
 }
 
-export function convertModelOptionsIndexes(copy: ConduitSchema) {
+export function convertModelOptionsIndexes(copy: ConduitDatabaseSchema, dialect: string) {
+  const convertedIndexes = [];
+
   for (const index of copy.modelOptions.indexes!) {
-    if (index.types) {
-      if (
-        isArray(index.types) ||
-        !Object.values(PostgresIndexType).includes(index.types as PostgresIndexType)
-      ) {
-        // ignore index instead of error
-        ConduitGrpcSdk.Logger.warn('Invalid index type for PostgreSQL, ignoring index');
-        continue;
-        // throw new Error('Incorrect index type for PostgreSQL');
-      }
-      index.using = index.types as PostgresIndexType;
-      delete index.types;
+    const { fields, types, options } = index;
+    const compiledFields = Object.keys(copy.compiledFields);
+    if (fields.length === 0) {
+      throw new Error('Undefined fields for index creation');
     }
-    if (index.options) {
-      if (!checkIfPostgresOptions(index.options)) {
-        // ignore index instead of error
+    if (fields.some(field => !compiledFields.includes(field))) {
+      throw new Error(`Invalid fields for index creation`);
+    }
+    // Convert conduit indexes to sequelize indexes
+    if (options) {
+      if (!checkIfSequelizeIndexOptions(options, dialect)) {
         ConduitGrpcSdk.Logger.warn(
-          'Invalid index options for PostgreSQL, ignoring index',
+          `Invalid index options for ${dialect} found in: ${copy.name}. Index ignored`,
         );
         continue;
-        // throw new Error('Incorrect index options for PostgreSQL');
       }
-      for (const [option, value] of Object.entries(index.options)) {
-        index[option as keyof PostgresIndexOptions] = value;
+      // Used instead of ModelOptionsIndexes fields for more complex index definitions
+      const seqOptions = options as SequelizeIndexOptions;
+      if (
+        !isNil(seqOptions.fields) &&
+        seqOptions.fields.every(f => compiledFields.includes(f.name))
+      ) {
+        (index.fields as any) = seqOptions.fields;
+        delete (index.options as SequelizeIndexOptions).fields;
       }
+      Object.assign(index, options);
       delete index.options;
     }
-  }
-  return copy;
-}
-
-export function convertSchemaFieldIndexes(copy: ConduitSchema) {
-  const indexes = [];
-  for (const field of Object.entries(copy.fields)) {
-    const fieldName = field[0];
-    const index = (copy.fields[fieldName] as ConduitModelField).index;
-    if (!index) continue;
-    const newIndex: any = {
-      fields: [fieldName],
-    };
-    if (index.type) {
-      if (!Object.values(PostgresIndexType).includes(index.type as PostgresIndexType)) {
-        // ignore index instead of error
-        ConduitGrpcSdk.Logger.warn('Invalid index type for PostgreSQL, ignoring index');
-        continue;
-        // throw new Error('Invalid index type for PostgreSQL');
-      }
-      newIndex.using = index.type;
-    }
-    if (index.options) {
-      if (!checkIfPostgresOptions(index.options)) {
-        // ignore index instead of error
+    if (types) {
+      if (types.length !== 1 || !checkIfSequelizeIndexType(types[0], dialect)) {
         ConduitGrpcSdk.Logger.warn(
-          'Invalid index options for PostgreSQL, ignoring index',
+          `Invalid index type for ${dialect} found in: ${copy.name}. Index ignored`,
         );
         continue;
-        // throw new Error('Invalid index options for PostgreSQL');
       }
-      for (const [option, value] of Object.entries(index.options)) {
-        newIndex[option] = value;
+      if (
+        (dialect === 'mysql' || dialect === 'mariadb') &&
+        ['UNIQUE', 'FULLTEXT', 'SPATIAL'].includes(types[0] as string)
+      ) {
+        index.type = types[0] as MySQLMariaDBIndexType;
+      } else {
+        index.using = types[0] as PgIndexType | SQLiteIndexType;
+      }
+      delete index.types;
+    }
+    convertedIndexes.push(index);
+  }
+  return convertedIndexes;
+}
+
+export function convertSchemaFieldIndexes(copy: ConduitDatabaseSchema, dialect: string) {
+  const indexes = [];
+  for (const [fieldName, fieldValue] of Object.entries(copy.fields)) {
+    const index = (fieldValue as ConduitModelField).index;
+    if (!index) continue;
+    // Convert conduit indexes to sequelize indexes
+    const { name, type, options } = index;
+    const newIndex: any = { name, fields: [fieldName] };
+    if (type) {
+      if (isArray(type) || !checkIfSequelizeIndexType(type, dialect)) {
+        ConduitGrpcSdk.Logger.warn(
+          `Invalid index type for ${dialect} found in: ${copy.name}. Index ignored`,
+        );
+        delete (copy.fields[fieldName] as ConduitModelField).index;
+        continue;
+      }
+      if (
+        (dialect === 'mysql' || dialect === 'mariadb') &&
+        ['UNIQUE', 'FULLTEXT', 'SPATIAL'].includes(type as string)
+      ) {
+        newIndex.type = type as MySQLMariaDBIndexType;
+      } else {
+        newIndex.using = type as PgIndexType | SQLiteIndexType;
       }
     }
+    if (options && !checkIfSequelizeIndexOptions(options, dialect)) {
+      ConduitGrpcSdk.Logger.warn(
+        `Invalid index options for ${dialect} found in: ${copy.name}. Index ignored`,
+      );
+      delete (copy.fields[fieldName] as ConduitModelField).index;
+      continue;
+    }
+    Object.assign(newIndex, options);
     indexes.push(newIndex);
-    delete copy.fields[fieldName];
+    delete (copy.fields[fieldName] as ConduitModelField).index;
   }
-  if (copy.modelOptions.indexes) {
-    copy.modelOptions.indexes = [...copy.modelOptions.indexes, ...indexes];
-  } else {
-    copy.modelOptions.indexes = indexes;
-  }
+  copy.modelOptions.indexes = copy.modelOptions.indexes
+    ? [...copy.modelOptions.indexes, ...indexes]
+    : indexes;
   return copy;
 }
 
@@ -125,4 +161,22 @@ export function extractFieldProperties(
   }
 
   return res;
+}
+
+export function findAndRemoveIndex(schema: any, indexName: string) {
+  const arrayIndex = schema.modelOptions.indexes.findIndex(
+    (i: ModelOptionsIndex) => i.name === indexName,
+  );
+  if (arrayIndex !== -1) {
+    schema.modelOptions.indexes.splice(arrayIndex, 1);
+    return schema;
+  }
+  forEach(schema.fields, (value: ConduitModelField, key: string, fields: any) => {
+    if (isObject(value) && has(value, 'index') && value.index!.name === indexName) {
+      delete fields[key].index;
+      delete schema.compiledFields[key].index;
+      return schema;
+    }
+  });
+  throw new Error('Index not found in schema');
 }
