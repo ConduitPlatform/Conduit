@@ -46,7 +46,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       {},
     );
     const collectionNames: string[] = [];
-    (await this.mongoose.connection.db.listCollections().toArray()).forEach(c =>
+    (await this.mongoose.connection?.db?.listCollections()?.toArray())?.forEach(c =>
       collectionNames.push(c.name),
     );
     const declaredSchemaCollectionName =
@@ -160,7 +160,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     // Wipe Pending Schemas
     const pendingSchemaCollectionName =
       this.models['_PendingSchemas'].originalSchema.collectionName;
-    await db.collection(pendingSchemaCollectionName).deleteMany({});
+    await db?.collection(pendingSchemaCollectionName).deleteMany({});
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
     (declaredSchemas as unknown as ConduitSchema[]).forEach(schema => {
@@ -176,7 +176,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     await Promise.all(
       introspectableSchemas.map(async collectionName => {
         await parseSchema(
-          db.collection(collectionName).find(),
+          db?.collection(collectionName).find(),
           async (err: Error, originalSchema: Indexable) => {
             if (err) {
               throw new GrpcError(status.INTERNAL, err.message);
@@ -310,10 +310,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       for (const keyEntry of Object.entries(index.key)) {
         index.fields.push(keyEntry[0]);
         index.types.push(keyEntry[1]);
+        //@ts-expect-error
         delete index.key;
       }
     });
-    return result as ModelOptionsIndexes[];
+    return result as unknown as ModelOptionsIndexes[];
   }
 
   async deleteIndexes(schemaName: string, indexNames: string[]): Promise<string> {
@@ -404,7 +405,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   protected async hasLegacyCollections() {
-    return !!(await this.mongoose.connection.db.listCollections().toArray()).find(
+    return !!(await this.mongoose.connection.db?.listCollections().toArray())?.find(
       c => c.name === '_declaredschemas',
     );
   }
