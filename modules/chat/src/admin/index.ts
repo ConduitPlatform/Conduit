@@ -10,13 +10,21 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitNumber,
+  ConduitObjectId,
   ConduitString,
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash-es';
-import { ChatMessage, ChatRoom, User } from '../models/index.js';
+import {
+  ChatMessage,
+  ChatParticipantsLog,
+  ChatRoom,
+  InvitationToken,
+  User,
+} from '../models/index.js';
+import { Config } from '../config/index.js';
 
 import escapeStringRegexp from 'escape-string-regexp';
 
@@ -62,7 +70,10 @@ export class AdminHandlers {
   }
 
   async createRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { participants } = call.request.params as { participants: string[] };
+    const { participants, creator } = call.request.params as {
+      participants: string[];
+      creator: string;
+    };
     if (participants.length === 0) {
       // array check is required
       throw new GrpcError(
@@ -71,14 +82,31 @@ export class AdminHandlers {
       );
     }
     await this.validateUsersInput(participants);
-    const chatRoom = await ChatRoom.getInstance()
+    const unique = new Set([...participants]);
+    let chatRoom = await ChatRoom.getInstance()
       .create({
         name: call.request.params.name,
-        participants: Array.from(new Set([...participants])),
+        participants: Array.from(unique),
+        creator: creator,
       })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
+    const participantsLog = await ChatParticipantsLog.getInstance().createMany([
+      {
+        user: creator,
+        action: 'create',
+        chatRoom: chatRoom._id,
+      },
+      ...Array.from(unique).map((userId: string) => ({
+        user: userId,
+        action: 'join' as 'join',
+        chatRoom: chatRoom._id,
+      })),
+    ]);
+    chatRoom = (await ChatRoom.getInstance().findByIdAndUpdate(chatRoom._id, {
+      participantsLog: participantsLog.map(log => log._id),
+    })) as ChatRoom;
     ConduitGrpcSdk.Metrics?.increment('chat_rooms_total');
     return chatRoom;
   }
@@ -193,7 +221,8 @@ export class AdminHandlers {
         description: `Creates a new chat room.`,
         bodyParams: {
           name: ConduitString.Required,
-          participants: { type: [TYPE.String], required: true }, // handler array check is still required
+          participants: [ConduitObjectId.Required], // handler array check is still required
+          creator: ConduitObjectId.Required,
         },
       },
       new ConduitRouteReturnDefinition(ChatRoom.name),
