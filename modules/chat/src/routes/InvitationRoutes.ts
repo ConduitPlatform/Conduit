@@ -220,8 +220,9 @@ export class InvitationRoutes {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-
-    const count = invitations.length;
+    const count = await InvitationToken.getInstance().countDocuments({
+      receiver: user._id,
+    });
     return { invitations, count };
   }
 
