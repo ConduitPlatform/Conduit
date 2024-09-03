@@ -6038,13 +6038,13 @@ builtins@^1.0.3:
   resolved "https://registry.yarnpkg.com/builtins/-/builtins-1.0.3.tgz#cb94faeb61c8696451db36534e1422f94f0aee88"
   integrity sha512-uYBjakWipfaO/bXI7E8rq6kpwHRZK5cNYrUv2OzZSI/FvmdMyXJ2tG9dKcjEC5YHmHpUAwsargWIZNWdxb/bnQ==
 
-bullmq@^5.4.3:
-  version "5.4.3"
-  resolved "https://registry.yarnpkg.com/bullmq/-/bullmq-5.4.3.tgz#173b4bc7ad6e87cffd07065aca88d5bc6f38cf97"
-  integrity sha512-JWzwAjX2LLn969W2R4ExoftOV646YX5rpB4q117vDaKYKT8cgAx+n94virnlLKVPK+X4WO8qSDJHzsiIepF2OA==
+bullmq@^5.12.12:
+  version "5.12.12"
+  resolved "https://registry.yarnpkg.com/bullmq/-/bullmq-5.12.12.tgz#f346647e95f1bbd388273864b96911de36787f07"
+  integrity sha512-xrWKDj1ZwnGKmrlmFqF6Vmub3WqDFfdBcIRLCooIs5+jeVzbHK7/1usgYSFg2pZiwK6h6eMivTb9WvcKkNW/+w==
   dependencies:
     cron-parser "^4.6.0"
-    ioredis "^5.3.2"
+    ioredis "^5.4.1"
     msgpackr "^1.10.1"
     node-abort-controller "^3.1.1"
     semver "^7.5.4"
@@ -9309,10 +9309,10 @@ inquirer@^8.2.4:
     through "^2.3.6"
     wrap-ansi "^7.0.0"
 
-ioredis@^5.3.2:
-  version "5.3.2"
-  resolved "https://registry.yarnpkg.com/ioredis/-/ioredis-5.3.2.tgz#9139f596f62fc9c72d873353ac5395bcf05709f7"
-  integrity sha512-1DKMMzlIHM02eBBVOFQ1+AolGjs6+xEcM4PDL7NqOS6szq7H9jSaEkIUH6/a5Hl241LzW6JLSiAbNvTQjUupUA==
+ioredis@^5.3.2, ioredis@^5.4.1:
+  version "5.4.1"
+  resolved "https://registry.yarnpkg.com/ioredis/-/ioredis-5.4.1.tgz#1c56b70b759f01465913887375ed809134296f40"
+  integrity sha512-2YZsvl7jopIa1gaePkeMtd9rAcSjOOjPtpcLlOeusyO+XH2SK5ZcT+UCrElPP+WVIInh2TzeI4XW9ENaSLVVHA==
   dependencies:
     "@ioredis/commands" "^1.1.1"
     cluster-key-slot "^1.1.0"
