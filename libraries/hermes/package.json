@@ -46,6 +46,9 @@
     "swagger-ui-express": "5.0.0",
     "winston": "^3.12.0"
   },
+  "peerDependencies": {
+    "socket.io-adapter": "^2.5.4"
+  },
   "directories": {
     "lib": "src"
   },
