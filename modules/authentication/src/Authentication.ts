@@ -116,14 +116,14 @@ export default class Authentication extends ManagedModule<Config> {
     if (
       (
         config.accessTokens
-          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
+          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
           maxAge?: number;
         }
       ).maxAge
     ) {
       delete (
         config.accessTokens
-          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
+          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
           maxAge?: number;
         }
       )['maxAge'];
@@ -131,14 +131,14 @@ export default class Authentication extends ManagedModule<Config> {
     if (
       (
         config.refreshTokens
-          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
+          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
           maxAge?: number;
         }
       ).maxAge
     ) {
       delete (
         config.refreshTokens
-          .cookieOptions as (typeof config.refreshTokens)['cookieOptions'] & {
+          .cookieOptions as typeof config.refreshTokens['cookieOptions'] & {
           maxAge?: number;
         }
       )['maxAge'];
@@ -226,13 +226,26 @@ export default class Authentication extends ManagedModule<Config> {
         message: 'User not found',
       });
     }
+    if (!user.active) {
+      return callback({
+        code: status.PERMISSION_DENIED,
+        message: 'User is blocked or deleted',
+      });
+    }
     const config = ConfigController.getInstance().config;
 
-    const tokens = await TokenProvider.getInstance().provideUserTokensInternal({
-      user,
-      clientId,
-      config,
-    });
+    const tokens = await TokenProvider.getInstance()
+      .provideUserTokensInternal({
+        user,
+        clientId,
+        config,
+      })
+      .catch(() => {
+        return callback({
+          code: status.INTERNAL,
+          message: 'Failed to login',
+        });
+      });
 
     return callback(null, {
       accessToken: tokens.accessToken,
