@@ -116,14 +116,14 @@ export default class Authentication extends ManagedModule<Config> {
     if (
       (
         config.accessTokens
-          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       ).maxAge
     ) {
       delete (
         config.accessTokens
-          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       )['maxAge'];
@@ -131,14 +131,14 @@ export default class Authentication extends ManagedModule<Config> {
     if (
       (
         config.refreshTokens
-          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       ).maxAge
     ) {
       delete (
         config.refreshTokens
-          .cookieOptions as typeof config.refreshTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.refreshTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       )['maxAge'];
@@ -430,7 +430,12 @@ export default class Authentication extends ManagedModule<Config> {
   async getTeam(call: GrpcRequest<GetTeamRequest>, callback: GrpcCallback<GrpcTeam>) {
     const request = createParsedRouterRequest(call.request);
     try {
-      const team = (await new TeamsAdmin(this.grpcSdk).getTeam(request)) as models.Team;
+      const team = (await new TeamsAdmin(this.grpcSdk).getTeam(request)) as
+        | models.Team
+        | undefined;
+      if (!team) {
+        return callback({ code: status.NOT_FOUND, message: 'Team not found' });
+      }
       return callback(null, {
         id: team._id,
         name: team.name,
