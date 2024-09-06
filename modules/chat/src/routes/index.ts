@@ -264,6 +264,57 @@ export class ChatRoutes {
     return 'Ok';
   }
 
+  async removeFromRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { roomId } = call.request.urlParams as { roomId: string };
+    const { user } = call.request.context as { user: User };
+    const { users } = call.request.bodyParams as { users: string[] };
+
+    if (users.length === 0) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Users is required and must be a non-empty array',
+      );
+    }
+
+    const room = await ChatRoom.getInstance().findOne({ _id: roomId });
+    if (isNil(room)) throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
+
+    if (room.creator !== user._id)
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        "User doesn't have permissions to remove users from room!",
+      );
+
+    const index = (room.participants as string[]).indexOf(user._id);
+    if (index > -1)
+      throw new GrpcError(status.INVALID_ARGUMENT, "Users can't remove self from room!");
+
+    for (const user of users) {
+      if ((room.participants as string[]).indexOf(user) === -1)
+        throw new GrpcError(status.NOT_FOUND, 'User is not participant of room!');
+    }
+
+    room.participants = (room.participants as string[]).flatMap(participant => {
+      if (users.indexOf(participant) > -1) return [];
+      return participant;
+    });
+    users.map(async user => {
+      const log = await ChatParticipantsLog.getInstance().create({
+        user: user,
+        action: 'remove',
+        chatRoom: room._id,
+      });
+      room.participantsLog.push(log);
+    });
+    await ChatRoom.getInstance()
+      .findByIdAndUpdate(room._id, room)
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+
+    return 'OK';
+  }
+
   async getMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { roomId, skip, limit } = call.request.params;
     const { user } = call.request.context;
@@ -547,6 +598,23 @@ export class ChatRoutes {
       },
       new ConduitRouteReturnDefinition('LeaveRoom', 'String'),
       this.leaveRoom.bind(this),
+    );
+
+    this._routingManager.route(
+      {
+        path: '/room/:roomId/remove',
+        action: ConduitRouteActions.UPDATE,
+        description: `Room Creator removes users from chat room.`,
+        urlParams: {
+          roomId: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          users: [ConduitObjectId.Required],
+        },
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('RemoveFromRoomResponse', 'String'),
+      this.removeFromRoom.bind(this),
     );
 
     this._routingManager.route(
