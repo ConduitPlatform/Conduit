@@ -248,8 +248,8 @@ export default class Authentication extends ManagedModule<Config> {
       });
 
     return callback(null, {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken ?? undefined,
+      accessToken: tokens!.accessToken,
+      refreshToken: tokens!.refreshToken ?? undefined,
     });
   }
 
