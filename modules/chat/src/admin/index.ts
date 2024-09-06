@@ -9,14 +9,16 @@ import {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import {
+  ConduitBoolean,
   ConduitNumber,
   ConduitObjectId,
   ConduitString,
+  ConfigController,
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash-es';
+import { isEmpty, isNil } from 'lodash-es';
 import {
   ChatMessage,
   ChatParticipantsLog,
@@ -27,6 +29,7 @@ import {
 import { Config } from '../config/index.js';
 
 import escapeStringRegexp from 'escape-string-regexp';
+import { sendInvitations } from '../utils/index.js';
 
 export class AdminHandlers {
   private readonly routingManager: RoutingManager;
@@ -116,7 +119,7 @@ export class AdminHandlers {
       },
       ...Array.from(unique).map((userId: string) => ({
         user: userId,
-        action: 'join' as 'join',
+        action: 'join',
         chatRoom: chatRoom._id,
       })),
     ]);
@@ -214,6 +217,167 @@ export class AdminHandlers {
     return 'Done';
   }
 
+  async getRoomById(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { roomId } = call.request.urlParams as { roomId: string };
+    const { populate } = call.request.queryParams as { populate: string[] };
+    const room = await ChatRoom.getInstance().findOne(
+      { _id: roomId },
+      undefined,
+      populate,
+    );
+    if (isNil(room)) throw new GrpcError(status.NOT_FOUND, 'Room does not exist');
+    return room;
+  }
+
+  async getRoomInvitations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { roomId } = call.request.urlParams as { roomId: string };
+    const { skip, limit, sort, populate } = call.request.queryParams as {
+      skip?: number;
+      limit?: number;
+      sort?: string;
+      populate?: string[];
+    };
+    const invitations = await InvitationToken.getInstance()
+      .findMany(
+        { room: roomId },
+        undefined,
+        skip ?? 0,
+        limit ?? 10,
+        sort ?? '-createdAt',
+        populate,
+      )
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    const count = await InvitationToken.getInstance().countDocuments({
+      room: roomId,
+    });
+    return { invitations, count };
+  }
+
+  async removeFromRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { roomId } = call.request.urlParams as { roomId: string };
+    const { users } = call.request.bodyParams as { users: string[] };
+    if (!users.length) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'users field is required and must be a non-empty array',
+      );
+    }
+    const room = await ChatRoom.getInstance().findOne({ _id: roomId });
+    if (isNil(room) || room.deleted)
+      throw new GrpcError(status.NOT_FOUND, "Room doesn't exists!");
+    if (!room.participants.length)
+      throw new GrpcError(status.CANCELLED, 'Room is already empty!');
+
+    const unique = Array.from(new Set(users));
+    const toBeRemoved = unique.flatMap(user => {
+      const index = (room.participants as string[]).indexOf(user);
+      if (index > -1) return user;
+      else return [];
+    });
+    if (!toBeRemoved.length)
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Users are not participants of room!');
+
+    room.participants = room.participants.flatMap(user => {
+      const index = toBeRemoved.indexOf(user as string);
+      if (index > -1) return [];
+      else return user as string;
+    });
+    const participantsLog = await Promise.all(
+      toBeRemoved.map(user =>
+        ChatParticipantsLog.getInstance().create({
+          user,
+          action: 'remove',
+          chatRoom: room._id,
+        }),
+      ),
+    ).catch(e => {
+      throw new GrpcError(status.INTERNAL, e.message);
+    });
+    room.participantsLog.push(...participantsLog);
+    await ChatRoom.getInstance()
+      .findByIdAndUpdate(room._id, room)
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+
+    const config = ConfigController.getInstance().config as Config;
+    if (!room.participants.length && config.deleteEmptyRooms) {
+      if (config.auditMode) {
+        await ChatRoom.getInstance().findByIdAndUpdate(room._id, {
+          deleted: true,
+        });
+        await ChatMessage.getInstance().updateMany({ room: room._id }, { deleted: true });
+      } else {
+        await ChatRoom.getInstance().deleteOne({ _id: roomId });
+        await ChatMessage.getInstance().deleteMany({ room: room._id });
+      }
+    }
+    return 'OK';
+  }
+
+  async addUserToRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { roomId } = call.request.urlParams as { roomId: string };
+    const { users } = call.request.bodyParams as { users: string[] };
+
+    const room = await ChatRoom.getInstance().findOne({ _id: roomId }, undefined, [
+      'creator',
+    ]);
+    if (isNil(room)) throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
+    if (room.deleted) throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
+
+    const unique = Array.from(new Set(users));
+    const found = await User.getInstance().findMany({
+      _id: { $in: unique },
+    });
+    if (found.length !== unique.length) {
+      throw new GrpcError(status.INVALID_ARGUMENT, "User doesn't exist");
+    }
+    const toBeAdded = found.filter(
+      user => !(room.participants as string[]).includes(user._id),
+    );
+
+    if (!toBeAdded.length)
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Users are already room members!');
+
+    const config = ConfigController.getInstance().config as Config;
+    if (config.explicit_room_joins.enabled) {
+      const serverConfig = await this.grpcSdk.config.get('router');
+      await sendInvitations({
+        users: toBeAdded,
+        sender: room.creator as User,
+        room,
+        url: serverConfig.hostUrl,
+        sendEmail: config.explicit_room_joins.send_email,
+        sendNotification: config.explicit_room_joins.send_notification,
+        grpcSdk: this.grpcSdk,
+      });
+    } else {
+      const participantsLog = await ChatParticipantsLog.getInstance().createMany(
+        toBeAdded.map(user => ({
+          user: user._id,
+          action: 'added',
+          chatRoom: room._id,
+        })),
+      );
+      await ChatRoom.getInstance().findByIdAndUpdate(room._id, {
+        participants: Array.from(
+          new Set([
+            ...(room.participants as string[]),
+            ...toBeAdded.map(user => user._id),
+          ]),
+        ),
+        participantsLog: [
+          ...room.participantsLog,
+          ...participantsLog.map(log => log._id),
+        ],
+      });
+    }
+
+    return 'OK';
+  }
+
   private registerAdminRoutes() {
     this.routingManager.clear();
     this.routingManager.route(
@@ -272,8 +436,8 @@ export class AdminHandlers {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
-          senderUser: ConduitString.Optional,
-          roomId: ConduitString.Optional,
+          senderUser: ConduitObjectId.Optional,
+          roomId: ConduitObjectId.Optional,
           search: ConduitString.Optional,
           populate: [ConduitString.Optional],
         },
@@ -295,6 +459,72 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('DeleteMessages', 'String'),
       this.deleteMessages.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/rooms/:roomId',
+        action: ConduitRouteActions.GET,
+        description: `Returns room by id.`,
+        urlParams: {
+          roomId: ConduitObjectId.Required,
+        },
+        queryParams: {
+          populate: [ConduitString.Optional],
+        },
+      },
+      new ConduitRouteReturnDefinition('GetRoomById', ChatRoom.name),
+      this.getRoomById.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/invitations/:roomId',
+        action: ConduitRouteActions.GET,
+        description: `Returns room invitations.`,
+        urlParams: {
+          roomId: ConduitObjectId.Required,
+        },
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+          populate: [ConduitString.Optional],
+        },
+      },
+      new ConduitRouteReturnDefinition('GetInvitationsResponse', {
+        invitations: [InvitationToken.name],
+        count: ConduitNumber.Required,
+      }),
+      this.getRoomInvitations.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/rooms/:roomId/add',
+        action: ConduitRouteActions.UPDATE,
+        description: 'Adds users to room',
+        urlParams: {
+          roomId: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          users: [ConduitObjectId.Required],
+        },
+      },
+      new ConduitRouteReturnDefinition('RoomAddResponse', 'String'),
+      this.addUserToRoom.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/room/:roomId/remove',
+        action: ConduitRouteActions.UPDATE,
+        description: 'Removes users from room',
+        urlParams: {
+          roomId: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          users: [ConduitObjectId.Required],
+        },
+      },
+      new ConduitRouteReturnDefinition('RoomLeaveResponse', 'String'),
+      this.removeFromRoom.bind(this),
     );
     this.routingManager.registerRoutes();
   }
