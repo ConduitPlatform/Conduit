@@ -12,6 +12,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitNumber,
+  ConduitObjectId,
   ConduitString,
   ConfigController,
   GrpcServer,
@@ -507,7 +508,7 @@ export class ChatRoutes {
         description: `Creates a new room.`,
         bodyParams: {
           roomName: ConduitString.Required,
-          users: [TYPE.String],
+          users: [ConduitObjectId.Required],
         },
         middlewares: ['authMiddleware'],
       },
@@ -523,7 +524,7 @@ export class ChatRoutes {
         action: ConduitRouteActions.UPDATE,
         description: `Adds users to a chat room.`,
         urlParams: {
-          roomId: ConduitString.Required,
+          roomId: ConduitObjectId.Required,
         },
         bodyParams: {
           users: [TYPE.String],
@@ -540,7 +541,7 @@ export class ChatRoutes {
         action: ConduitRouteActions.UPDATE,
         description: `Context user leaves chat room.`,
         urlParams: {
-          roomId: ConduitString.Required,
+          roomId: ConduitObjectId.Required,
         },
         middlewares: ['authMiddleware'],
       },
@@ -554,7 +555,7 @@ export class ChatRoutes {
         action: ConduitRouteActions.GET,
         description: `Returns a chat room.`,
         urlParams: {
-          id: ConduitString.Required,
+          id: ConduitObjectId.Required,
         },
         middlewares: ['authMiddleware'],
       },
