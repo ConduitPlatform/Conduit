@@ -7,7 +7,7 @@ const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   action: {
     type: TYPE.String,
-    enum: ['add', 'remove', 'create', 'join', 'leave'],
+    enum: ['added', 'remove', 'create', 'join', 'leave'],
     required: true,
   },
   user: {
@@ -39,7 +39,7 @@ const collectionName = undefined;
 export class ChatParticipantsLog extends ConduitActiveSchema<ChatParticipantsLog> {
   private static _instance: ChatParticipantsLog;
   _id: string;
-  action: 'add' | 'remove' | 'create' | 'join' | 'leave';
+  action: 'added' | 'remove' | 'create' | 'join' | 'leave';
   user: string | User;
   chatRoom: string | ChatRoom;
   createdAt: Date;

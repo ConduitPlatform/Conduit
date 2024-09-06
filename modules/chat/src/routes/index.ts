@@ -118,7 +118,7 @@ export class ChatRoutes {
         },
         ...users.map((userId: string) => ({
           user: userId,
-          action: 'join' as 'join',
+          action: 'join',
           chatRoom: room._id,
         })),
       ]);
@@ -185,7 +185,7 @@ export class ChatRoutes {
       const participantsLog = await ChatParticipantsLog.getInstance().createMany(
         users.map((userId: string) => ({
           user: userId,
-          action: 'join' as 'join',
+          action: 'added',
           chatRoom: room._id,
         })),
       );
@@ -223,7 +223,7 @@ export class ChatRoutes {
       room.participants.splice(index, 1);
       const participantsLog = await ChatParticipantsLog.getInstance().create({
         user: user._id,
-        action: 'leave' as 'leave',
+        action: 'leave',
         chatRoom: room._id,
       });
 
@@ -538,7 +538,7 @@ export class ChatRoutes {
       {
         path: '/leave/:roomId',
         action: ConduitRouteActions.UPDATE,
-        description: `Removes current user from a chat room.`,
+        description: `Context user leaves chat room.`,
         urlParams: {
           roomId: ConduitString.Required,
         },
