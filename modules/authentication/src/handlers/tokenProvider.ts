@@ -144,6 +144,9 @@ export class TokenProvider {
   private async createUserTokens(
     tokenOptions: TokenOptions,
   ): Promise<[AccessToken, RefreshToken?]> {
+    if (!tokenOptions.user.active) {
+      throw new Error('User is blocked or deleted');
+    }
     const signTokenOptions: SignOptions = {
       expiresIn: (tokenOptions.config.accessTokens.expiryPeriod as number) / 1000,
     };

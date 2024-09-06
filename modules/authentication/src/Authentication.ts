@@ -226,13 +226,26 @@ export default class Authentication extends ManagedModule<Config> {
         message: 'User not found',
       });
     }
+    if (!user.active) {
+      return callback({
+        code: status.PERMISSION_DENIED,
+        message: 'User is blocked or deleted',
+      });
+    }
     const config = ConfigController.getInstance().config;
 
-    const tokens = await TokenProvider.getInstance().provideUserTokensInternal({
-      user,
-      clientId,
-      config,
-    });
+    const tokens = await TokenProvider.getInstance()
+      .provideUserTokensInternal({
+        user,
+        clientId,
+        config,
+      })
+      .catch(() => {
+        return callback({
+          code: status.INTERNAL,
+          message: 'Failed to login',
+        });
+      });
 
     return callback(null, {
       accessToken: tokens.accessToken,
@@ -417,7 +430,12 @@ export default class Authentication extends ManagedModule<Config> {
   async getTeam(call: GrpcRequest<GetTeamRequest>, callback: GrpcCallback<GrpcTeam>) {
     const request = createParsedRouterRequest(call.request);
     try {
-      const team = (await new TeamsAdmin(this.grpcSdk).getTeam(request)) as models.Team;
+      const team = (await new TeamsAdmin(this.grpcSdk).getTeam(request)) as
+        | models.Team
+        | undefined;
+      if (!team) {
+        return callback({ code: status.NOT_FOUND, message: 'Team not found' });
+      }
       return callback(null, {
         id: team._id,
         name: team.name,
