@@ -40,14 +40,30 @@ export class AdminHandlers {
   }
 
   async getRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sort, search, populate } = call.request.params;
+    const { sort, search, users, deleted, populate } = call.request.params as {
+      sort?: string[];
+      search?: string;
+      users?: string[];
+      deleted?: boolean;
+      populate?: string[];
+    };
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: Query<ChatRoom> = {};
+    let query: Query<ChatRoom> = {
+      $and: [],
+    };
     if (!isNil(search)) {
-      const identifier = escapeStringRegexp(search);
-      query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
+      query.$and?.push({
+        name: { $regex: `.*${escapeStringRegexp(search)}.*`, $options: 'i' },
+      });
     }
+    if (!isNil(deleted)) {
+      query.$and?.push({ deleted });
+    }
+    if (!isEmpty(users)) {
+      query.$and?.push({ participants: { $in: users } });
+    }
+    if (!query.$and?.length) query = {};
 
     const chatRoomDocumentsPromise = ChatRoom.getInstance().findMany(
       query,
@@ -203,8 +219,10 @@ export class AdminHandlers {
         queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
-          sort: ConduitString.Optional,
+          sort: [ConduitString.Optional],
           search: ConduitString.Optional,
+          users: [ConduitObjectId.Optional],
+          deleted: ConduitBoolean.Optional,
           populate: [ConduitString.Optional],
         },
       },
