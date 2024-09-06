@@ -128,7 +128,7 @@ export class AdminHandlers {
   }
 
   async deleteRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { ids } = call.request.params;
+    const { ids } = call.request.params as { ids: string[] };
     if (ids.length === 0) {
       // array check is required
       throw new GrpcError(
@@ -136,16 +136,21 @@ export class AdminHandlers {
         'ids is required and must be a non-empty array',
       );
     }
-    await ChatRoom.getInstance()
-      .deleteMany({ _id: { $in: ids } })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    await ChatMessage.getInstance()
-      .deleteMany({ room: { $in: ids } })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    const config = ConfigController.getInstance().config as Config;
+    if (config.auditMode) {
+      await Promise.all(
+        ids.map(roomId => {
+          ChatRoom.getInstance().findByIdAndUpdate(roomId, {
+            deleted: true,
+          });
+          ChatMessage.getInstance().updateMany({ room: roomId }, { deleted: true });
+        }),
+      );
+    } else {
+      await ChatRoom.getInstance().deleteMany({ _id: { $in: ids } });
+      await ChatMessage.getInstance().deleteMany({ room: { $in: ids } });
+      await ChatParticipantsLog.getInstance().deleteMany({ chatRoom: { $in: ids } });
+    }
     ConduitGrpcSdk.Metrics?.decrement('chat_rooms_total');
     return 'Done';
   }
