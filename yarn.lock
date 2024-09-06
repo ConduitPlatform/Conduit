@@ -2981,13 +2981,6 @@
     semver "^7.3.5"
     tar "^6.1.11"
 
-"@mongodb-js/saslprep@^1.1.0":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@mongodb-js/saslprep/-/saslprep-1.1.0.tgz#022fa36620a7287d17acd05c4aae1e5f390d250d"
-  integrity sha512-Xfijy7HvfzzqiOAhAepF4SGN5e9leLkMvg/OPOF97XemjfVCYN/oWa75wnkc6mltMSTwY+XlbhWgUOJmkFspSw==
-  dependencies:
-    sparse-bitfield "^3.0.3"
-
 "@mongodb-js/saslprep@^1.1.5":
   version "1.1.9"
   resolved "https://registry.yarnpkg.com/@mongodb-js/saslprep/-/saslprep-1.1.9.tgz#e974bab8eca9faa88677d4ea4da8d09a52069004"
@@ -5195,14 +5188,6 @@
   dependencies:
     "@types/webidl-conversions" "*"
 
-"@types/whatwg-url@^8.2.1":
-  version "8.2.2"
-  resolved "https://registry.yarnpkg.com/@types/whatwg-url/-/whatwg-url-8.2.2.tgz#749d5b3873e845897ada99be4448041d4cc39e63"
-  integrity sha512-FtQu10RWgn3D9U4aazdwIE2yzphmTJREDqNdODHrbrZmmMqI0vMheC/6NE/J1Yveaj8H+ela+YwWTjq5PGmuhA==
-  dependencies:
-    "@types/node" "*"
-    "@types/webidl-conversions" "*"
-
 "@types/yargs-parser@*":
   version "21.0.0"
   resolved "https://registry.yarnpkg.com/@types/yargs-parser/-/yargs-parser-21.0.0.tgz#0c60e537fa790f5f9472ed2776c2b71ec117351b"
@@ -6235,11 +6220,6 @@ bser@2.1.1:
   integrity sha512-gQxTNE/GAfIIrmHLUE3oJyp5FO6HRBfhjnw4/wMmA63ZGDJnWBmgY/lyQBpnDUkGmAhbSe39tx2d/iTOAfglwQ==
   dependencies:
     node-int64 "^0.4.0"
-
-bson@^5.0.1, bson@^5.4.0:
-  version "5.4.0"
-  resolved "https://registry.yarnpkg.com/bson/-/bson-5.4.0.tgz#0eea77276d490953ad8616b483298dbff07384c6"
-  integrity sha512-WRZ5SQI5GfUuKnPTNmAYPiKIof3ORXAF4IRU5UcgmivNIon01rWQlw5RUH954dpu8yGL8T59YShVddIPaU/gFA==
 
 bson@^6.2.0, bson@^6.7.0:
   version "6.8.0"
@@ -12027,14 +12007,6 @@ moment@^2.17.1, moment@^2.29.4, moment@^2.30.1:
   resolved "https://registry.yarnpkg.com/moment/-/moment-2.30.1.tgz#f8c91c07b7a786e30c59926df530b4eac96974ae"
   integrity sha512-uEmtNhbDOrWPFS+hdjFCBfy9f2YoyzRpwcl+DqpC6taX21FzsTLQVbMV/W7PzNSX6x/bhC1zA3c2UQ5NzH6how==
 
-mongodb-connection-string-url@^2.6.0:
-  version "2.6.0"
-  resolved "https://registry.yarnpkg.com/mongodb-connection-string-url/-/mongodb-connection-string-url-2.6.0.tgz#57901bf352372abdde812c81be47b75c6b2ec5cf"
-  integrity sha512-WvTZlI9ab0QYtTYnuMLgobULWhokRjtC7db9LtcVfJ+Hsnyr5eo6ZtNAt3Ly24XZScGMelOcGtm7lSn0332tPQ==
-  dependencies:
-    "@types/whatwg-url" "^8.2.1"
-    whatwg-url "^11.0.0"
-
 mongodb-connection-string-url@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/mongodb-connection-string-url/-/mongodb-connection-string-url-3.0.0.tgz#b4f87f92fd8593f3b9365f592515a06d304a1e9c"
@@ -12048,24 +12020,24 @@ mongodb-ns@^2.4.0:
   resolved "https://registry.yarnpkg.com/mongodb-ns/-/mongodb-ns-2.4.0.tgz#72cfab2833354c84534cf0baa89c2b1673b5c3df"
   integrity sha512-pCutlP/AU0hcJ/f1h2h3nmn79/gXrQo6088QvPCbdx7SBDkAeGPH4AYu28DgqZzFvsn5mtt2RUpsFicYhjaHow==
 
-mongodb-schema@^12.1.1:
-  version "12.1.1"
-  resolved "https://registry.yarnpkg.com/mongodb-schema/-/mongodb-schema-12.1.1.tgz#e8785ddb15c5a3e7aa6a84661c1c68e40db4ada7"
-  integrity sha512-YNTorlzwXKAUhC1nNLN4cFANbt1G76Yk6OCCgeCl6ZiME1wMOceXxVjPEfYeZnkXUa6DQ846oEzu46v+6NJBcg==
+mongodb-schema@^12.2.0:
+  version "12.2.0"
+  resolved "https://registry.yarnpkg.com/mongodb-schema/-/mongodb-schema-12.2.0.tgz#196340d700fb011128a900f45199361d45c77a4f"
+  integrity sha512-YszO0B8yxeu2yD6KtjM5x5DjWi++gS+p74hEuoQKCmR/89aft1q2/FuBvV8gslgoT04lWbtLwI2eQNvklePLMw==
   dependencies:
     reservoir "^0.1.2"
   optionalDependencies:
-    bson "^5.0.1"
+    bson "^6.7.0"
     cli-table "^0.3.4"
     js-yaml "^4.0.0"
-    mongodb "^5.0.1"
+    mongodb "^6.6.1"
     mongodb-ns "^2.4.0"
     numeral "^2.0.6"
     progress "^2.0.3"
     stats-lite "^2.0.0"
     yargs "^17.6.2"
 
-mongodb@6.8.0:
+mongodb@6.8.0, mongodb@^6.6.1:
   version "6.8.0"
   resolved "https://registry.yarnpkg.com/mongodb/-/mongodb-6.8.0.tgz#680450f113cdea6d2d9f7121fe57cd29111fd2ce"
   integrity sha512-HGQ9NWDle5WvwMnrvUxsFYPd3JEbqD3RgABHBQRuoCEND0qzhsd0iH5ypHsf1eJ+sXmvmyKpP+FLOKY8Il7jMw==
@@ -12073,17 +12045,6 @@ mongodb@6.8.0:
     "@mongodb-js/saslprep" "^1.1.5"
     bson "^6.7.0"
     mongodb-connection-string-url "^3.0.0"
-
-mongodb@^5.0.1:
-  version "5.8.1"
-  resolved "https://registry.yarnpkg.com/mongodb/-/mongodb-5.8.1.tgz#dc201adfbd6c6d73401cdcf12ebdb75f14771faf"
-  integrity sha512-wKyh4kZvm6NrCPH8AxyzXm3JBoEf4Xulo0aUWh3hCgwgYJxyQ1KLST86ZZaSWdj6/kxYUA3+YZuyADCE61CMSg==
-  dependencies:
-    bson "^5.4.0"
-    mongodb-connection-string-url "^2.6.0"
-    socks "^2.7.1"
-  optionalDependencies:
-    "@mongodb-js/saslprep" "^1.1.0"
 
 mongoose@8.6.0:
   version "8.6.0"
@@ -14478,7 +14439,7 @@ socks-proxy-agent@^8.0.3:
     debug "^4.3.4"
     socks "^2.8.3"
 
-socks@^2.6.2, socks@^2.7.1:
+socks@^2.6.2:
   version "2.7.1"
   resolved "https://registry.yarnpkg.com/socks/-/socks-2.7.1.tgz#d8e651247178fde79c0663043e07240196857d55"
   integrity sha512-7maUZy1N7uo6+WVEX6psASxtNlKaNVMlGQKkG/63nEDdLOWNbiUMoLK7X4uYoLhQstau72mLgfEWcXcwsaHbYQ==
@@ -15186,13 +15147,6 @@ tough-cookie@~2.5.0:
   integrity sha512-nlLsUzgm1kfLXSXfRZMc1KLAugd4hqJHDTvc2hDIwS3mZAfMEuMbc03SujMF+GEcpaX/qboeycw6iO8JwVv2+g==
   dependencies:
     psl "^1.1.28"
-    punycode "^2.1.1"
-
-tr46@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/tr46/-/tr46-3.0.0.tgz#555c4e297a950617e8eeddef633c87d4d9d6cbf9"
-  integrity sha512-l7FvfAHlcmulp8kr+flpQZmVwtu7nfRV7NZujtN0OqES8EL4O4e0qqzL0DC5gAvx/ZC/9lk6rhcUwYvkBnBnYA==
-  dependencies:
     punycode "^2.1.1"
 
 tr46@^4.1.1:
@@ -15955,14 +15909,6 @@ whatwg-mimetype@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/whatwg-mimetype/-/whatwg-mimetype-4.0.0.tgz#bc1bf94a985dc50388d54a9258ac405c3ca2fc0a"
   integrity sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==
-
-whatwg-url@^11.0.0:
-  version "11.0.0"
-  resolved "https://registry.yarnpkg.com/whatwg-url/-/whatwg-url-11.0.0.tgz#0a849eebb5faf2119b901bb76fd795c2848d4018"
-  integrity sha512-RKT8HExMpoYx4igMiVMY83lN6UeITKJlBQ+vR/8ZJ8OCdSiN3RwCq+9gH0+Xzj0+5IrM6i4j/6LuvzbZIQgEcQ==
-  dependencies:
-    tr46 "^3.0.0"
-    webidl-conversions "^7.0.0"
 
 whatwg-url@^13.0.0:
   version "13.0.0"

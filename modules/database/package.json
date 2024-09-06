@@ -29,7 +29,7 @@
     "escape-string-regexp": "^4.0.0",
     "lodash-es": "^4.17.21",
     "mariadb": "^3.2.3",
-    "mongodb-schema": "^12.1.1",
+    "mongodb-schema": "^12.2.0",
     "mongoose": "8.6.0",
     "mysql2": "^3.10.0",
     "object-hash": "^3.0.0",
