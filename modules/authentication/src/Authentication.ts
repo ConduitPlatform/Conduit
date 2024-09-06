@@ -234,23 +234,22 @@ export default class Authentication extends ManagedModule<Config> {
     }
     const config = ConfigController.getInstance().config;
 
-    const tokens = await TokenProvider.getInstance()
-      .provideUserTokensInternal({
+    try {
+      const tokens = await TokenProvider.getInstance().provideUserTokensInternal({
         user,
         clientId,
         config,
-      })
-      .catch(() => {
-        return callback({
-          code: status.INTERNAL,
-          message: 'Failed to login',
-        });
       });
-
-    return callback(null, {
-      accessToken: tokens!.accessToken,
-      refreshToken: tokens!.refreshToken ?? undefined,
-    });
+      return callback(null, {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken ?? undefined,
+      });
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: 'Failed to login',
+      });
+    }
   }
 
   async userCreate(
