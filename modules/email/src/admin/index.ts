@@ -313,11 +313,9 @@ export class AdminHandlers {
       const templateDocument = await EmailTemplate.getInstance().findOne({
         externalId: element.id,
       });
-
       if (isNil(templateDocument)) {
-        throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
+        continue;
       }
-
       const synchronized = {
         name: element.name,
         subject: element.versions[0].subject,
