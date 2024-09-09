@@ -62,6 +62,6 @@
     "rimraf": "^5.0.5",
     "smtp-server": "^3.11.0",
     "ts-proto": "^1.167.1",
-    "typescript": "~5.3.3"
+    "typescript": "~5.5.4"
   }
 }
