@@ -31,7 +31,7 @@
     "@grpc/grpc-js": "^1.10.9",
     "@grpc/proto-loader": "^0.7.6",
     "bluebird": "^3.7.2",
-    "clicksend": "^5.0.37",
+    "clicksend": "^5.0.79",
     "convict": "^6.2.4",
     "lodash-es": "^4.17.21",
     "messagebird": "^4.0.1",
