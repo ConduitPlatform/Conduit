@@ -47,8 +47,8 @@ export default class Chat extends ManagedModule<Config> {
   private adminRouter: AdminHandlers;
   private userRouter: ChatRoutes;
   private database: DatabaseProvider;
-  private _emailServing: boolean;
-  private _pushNotificationsServing: boolean;
+  private _emailServing: boolean = false;
+  private _pushNotificationsServing: boolean = false;
 
   constructor() {
     super('chat');
@@ -133,7 +133,7 @@ export default class Chat extends ManagedModule<Config> {
     }
 
     try {
-      await validateUsersInput(this.grpcSdk, participants);
+      await validateUsersInput(participants);
     } catch (e) {
       return callback({ code: (e as GrpcError).code, message: (e as GrpcError).message });
     }

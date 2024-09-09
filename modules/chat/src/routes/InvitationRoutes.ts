@@ -11,7 +11,7 @@ import {
   ConduitString,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { ChatRoom, InvitationToken } from '../models/index.js';
+import { ChatParticipantsLog, ChatRoom, InvitationToken } from '../models/index.js';
 import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 
@@ -122,6 +122,11 @@ export class InvitationRoutes {
     if (!isNil(invitationTokenDoc) && accepted) {
       chatRoom.participants.push(user);
       await ChatRoom.getInstance().findByIdAndUpdate(chatRoom._id, chatRoom);
+      await ChatParticipantsLog.getInstance().create({
+        user: user._id,
+        action: 'join',
+        chatRoom: invitationTokenDoc.room as string,
+      });
       message = 'Invitation accepted';
     } else {
       message = 'Invitation declined';
@@ -166,6 +171,11 @@ export class InvitationRoutes {
     if (!isNil(invitationTokenDoc) && accepted) {
       (chatRoom.participants as string[]).push(receiver as string);
       await ChatRoom.getInstance().findByIdAndUpdate(roomId, chatRoom);
+      await ChatParticipantsLog.getInstance().create({
+        user: user._id,
+        action: 'join',
+        chatRoom: roomId,
+      });
       message = 'Invitation accepted';
     } else {
       message = 'Invitation declined';
@@ -220,8 +230,9 @@ export class InvitationRoutes {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-
-    const count = invitations.length;
+    const count = await InvitationToken.getInstance().countDocuments({
+      receiver: user._id,
+    });
     return { invitations, count };
   }
 
