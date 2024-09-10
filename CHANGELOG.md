@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.9](https://github.com/ConduitPlatform/Conduit/compare/v0.16.8...v0.16.9) (2024-09-10)
+
+
+### Features
+
+* **authentication, grpc-sdk:** anonymous users ([#1101](https://github.com/ConduitPlatform/Conduit/issues/1101)) ([6e9f874](https://github.com/ConduitPlatform/Conduit/commit/6e9f8740df6fcb1e59a1167c753a5c83d672c8e6))
+* **authorization:** add "soft" param to trigger re-indexing without index wipe ([#1116](https://github.com/ConduitPlatform/Conduit/issues/1116)) ([d01c516](https://github.com/ConduitPlatform/Conduit/commit/d01c516d2c9b5d58a344ff7922633de2de91b535))
+* **email:** store emails to db/storage ([#1091](https://github.com/ConduitPlatform/Conduit/issues/1091)) ([3e2792c](https://github.com/ConduitPlatform/Conduit/commit/3e2792c9bcd9264348239e2c0274c5cb7a67cab7))
+* **storage:** file aliases ([#1096](https://github.com/ConduitPlatform/Conduit/issues/1096)) ([bf3f63f](https://github.com/ConduitPlatform/Conduit/commit/bf3f63ffe7888c048742059df34f5970140fc85f))
+
+
+### Bug Fixes
+
+* **authentication, grpc-sdk:** team owner deletion bug ([#1097](https://github.com/ConduitPlatform/Conduit/issues/1097)) ([84c0a4a](https://github.com/ConduitPlatform/Conduit/commit/84c0a4a837726c631c0b63ca18c90cbe0ecc7636))
+* **authentication:** type bug ([#1134](https://github.com/ConduitPlatform/Conduit/issues/1134)) ([8604b92](https://github.com/ConduitPlatform/Conduit/commit/8604b929c39848ca7649db170d8cbb4675dce61f))
+* **authentication:** UserLogin, GetTeam RPCs ([#1128](https://github.com/ConduitPlatform/Conduit/issues/1128)) ([a979dc3](https://github.com/ConduitPlatform/Conduit/commit/a979dc336c63b0f7eccd029a2ea9a4f681a3cc66))
+* **database:** canModify does not check flattened group extension fields ([#1136](https://github.com/ConduitPlatform/Conduit/issues/1136)) ([1eef736](https://github.com/ConduitPlatform/Conduit/commit/1eef7369790daeedd16ecf046dc38428f88fed08))
+* **database:** mongoose bump issues ([6c97b1c](https://github.com/ConduitPlatform/Conduit/commit/6c97b1ca7062355694a1f0d97f6ffe2b3ccfcf36))
+* **email:** sync templates/SendGrid provider eu domain/Email providers missing config fields error handling/GetExternalTemplates error handling ([#1146](https://github.com/ConduitPlatform/Conduit/issues/1146)) ([4e17224](https://github.com/ConduitPlatform/Conduit/commit/4e172247f7e1d2b29924a4da163de432e0dd8744))
+* scripts/Dockerfile.builder to reduce vulnerabilities ([#1094](https://github.com/ConduitPlatform/Conduit/issues/1094)) ([edbc1f0](https://github.com/ConduitPlatform/Conduit/commit/edbc1f0f81ee23c827c950a80bafce72771ba78f))
+* **storage:** getFolders by parent/root/all ([#1102](https://github.com/ConduitPlatform/Conduit/issues/1102)) ([5f9b8db](https://github.com/ConduitPlatform/Conduit/commit/5f9b8db879821bc258869bfcbe468d0fd47effa2))
+* **storage:** search files alias integration ([#1114](https://github.com/ConduitPlatform/Conduit/issues/1114)) ([b272286](https://github.com/ConduitPlatform/Conduit/commit/b27228685ab3c7084a7fecbc57514a7d6e802d87))
+
 ### [0.16.8](https://github.com/ConduitPlatform/Conduit/compare/v0.16.7...v0.16.8) (2024-07-19)
 
 
