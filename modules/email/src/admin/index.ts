@@ -281,13 +281,12 @@ export class AdminHandlers {
       sortByName?: boolean;
     };
     const [err, externalTemplates] = await to(this.emailService.getExternalTemplates()!);
+    if (!isNil(err)) {
+      throw new GrpcError(status.INTERNAL, err.message);
+    }
     if (!isNil(sortByName)) {
       if (sortByName) externalTemplates!.sort((a, b) => a.name.localeCompare(b.name));
       else externalTemplates!.sort((a, b) => b.name.localeCompare(a.name));
-    }
-
-    if (!isNil(err)) {
-      throw new GrpcError(status.INTERNAL, err.message);
     }
     if (isNil(externalTemplates)) {
       throw new GrpcError(status.NOT_FOUND, 'No external templates could be retrieved');
