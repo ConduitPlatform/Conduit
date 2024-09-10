@@ -77,11 +77,6 @@ export default {
         format: 'String',
         default: '',
       },
-      apiUser: {
-        doc: 'The SendGrid API username',
-        format: 'String',
-        default: '',
-      },
     },
   },
   storeEmails: {
