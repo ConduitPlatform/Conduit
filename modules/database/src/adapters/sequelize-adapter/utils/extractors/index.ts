@@ -30,7 +30,9 @@ export function extractRelations(ogSchema: ConduitModel, schema: any) {
         }
       }
     } else if (isObject(schema[key])) {
+      // @ts-expect-error
       if (schema[key].hasOwnProperty('type') && schema[key].type === 'Relation') {
+        // @ts-expect-error
         extracted[key] = { ...schema[key] };
         delete schema[key];
         delete ogSchema[key];

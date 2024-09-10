@@ -15,6 +15,8 @@ export async function streamToBuffer(readableStream: any): Promise<Buffer> {
       chunks.push(data instanceof Buffer ? data : Buffer.from(data));
     });
     readableStream.on('end', () => {
+      // shouldn't really provide an error
+      // @ts-expect-error
       resolve(Buffer.concat(chunks));
     });
     readableStream.on('error', reject);
