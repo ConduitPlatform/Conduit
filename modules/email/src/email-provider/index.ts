@@ -19,6 +19,7 @@ export class EmailProvider {
 
   constructor(transport: string, transportSettings: any) {
     if (transport === 'mailgun') {
+      this._transportName = 'mailgun';
       const { apiKey, proxy, host } = transportSettings.mailgun;
       let domain = ConfigController.getInstance().config.sendingDomain;
       if (!isEmpty(transportSettings.mailgun.domain)) {
@@ -65,8 +66,13 @@ export class EmailProvider {
       this._transport = new MandrillProvider(mandrillSettings);
     } else if (transport === 'sendgrid') {
       this._transportName = 'sendgrid';
+      const { residency, apiKey } = transportSettings.sendgrid;
+      if (isNil(apiKey) || isNil(residency)) {
+        throw new Error('Sendgrid transport settings are missing');
+      }
       const sgSettings: SendGridConfig = {
-        apiKey: transportSettings['sendgrid'].apiKey,
+        apiKey,
+        residency,
       };
       this._transport = new SendgridProvider(sgSettings);
     } else {
