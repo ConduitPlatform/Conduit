@@ -3,5 +3,6 @@
   "authorizeUrl": "https://www.figma.com/oauth",
   "tokenUrl": "https://www.figma.com/api/oauth/token",
   "responseType": "code",
-  "grantType": "authorization_code"
+  "grantType": "authorization_code",
+  "supportNative": false
 }

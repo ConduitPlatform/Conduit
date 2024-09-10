@@ -4,5 +4,6 @@
   "tokenUrl": "https://oauth2.googleapis.com/token",
   "responseType": "code",
   "grantType": "authorization_code",
-  "authorizeUrl": "https://accounts.google.com/o/oauth2/v2/auth"
+  "authorizeUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+  "supportNative": false
 }
