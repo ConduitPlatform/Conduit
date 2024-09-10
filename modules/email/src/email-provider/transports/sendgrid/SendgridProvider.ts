@@ -21,6 +21,7 @@ export class SendgridProvider extends EmailProviderClass {
   constructor(sgSettings: SendGridConfig) {
     super(createTransport(sgTransport(sgSettings)));
     this._sgClient = new Client();
+    this._sgClient.setDataResidency(sgSettings.residency);
     this._sgClient.setApiKey(sgSettings.apiKey);
   }
 
