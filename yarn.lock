@@ -12065,10 +12065,10 @@ mongodb@6.8.0, mongodb@^6.6.1:
     bson "^6.7.0"
     mongodb-connection-string-url "^3.0.0"
 
-mongoose@8.6.0:
-  version "8.6.0"
-  resolved "https://registry.yarnpkg.com/mongoose/-/mongoose-8.6.0.tgz#52a7cc6026c4d49cd14e4a40e6601c44b1186e49"
-  integrity sha512-p6VSbYKvD4ZIabqo8C0kS5eKX1Xpji+opTAIJ9wyuPJ8Y/FblgXSMnFRXnB40bYZLKPQT089K5KU8+bqIXtFdw==
+mongoose@8.6.1:
+  version "8.6.1"
+  resolved "https://registry.yarnpkg.com/mongoose/-/mongoose-8.6.1.tgz#b353b5c6f901ffb01f53a746c1dc4aacd39a87f9"
+  integrity sha512-dppGcYqvsdg+VcnqXR5b467V4a+iNhmvkfYNpEPi6AjaUxnz6ioEDmrMLOi+sOWjvoHapuwPOigV4f2l7HC6ag==
   dependencies:
     bson "^6.7.0"
     kareem "2.6.3"
