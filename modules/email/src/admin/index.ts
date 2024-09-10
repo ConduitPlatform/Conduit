@@ -271,9 +271,15 @@ export class AdminHandlers {
   }
 
   async getExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
-    const { sortByName } = call.request.params;
+    const {
+      skip = 0,
+      limit = 25,
+      sortByName = false,
+    } = call.request.params as {
+      skip?: number;
+      limit?: number;
+      sortByName?: boolean;
+    };
     const [err, externalTemplates] = await to(this.emailService.getExternalTemplates()!);
     if (!isNil(sortByName)) {
       if (sortByName) externalTemplates!.sort((a, b) => a.name.localeCompare(b.name));
