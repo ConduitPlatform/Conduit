@@ -271,17 +271,22 @@ export class AdminHandlers {
   }
 
   async getExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
-    const { sortByName } = call.request.params;
+    const {
+      skip = 0,
+      limit = 25,
+      sortByName = false,
+    } = call.request.params as {
+      skip?: number;
+      limit?: number;
+      sortByName?: boolean;
+    };
     const [err, externalTemplates] = await to(this.emailService.getExternalTemplates()!);
+    if (!isNil(err)) {
+      throw new GrpcError(status.INTERNAL, err.message);
+    }
     if (!isNil(sortByName)) {
       if (sortByName) externalTemplates!.sort((a, b) => a.name.localeCompare(b.name));
       else externalTemplates!.sort((a, b) => b.name.localeCompare(a.name));
-    }
-
-    if (!isNil(err)) {
-      throw new GrpcError(status.INTERNAL, err.message);
     }
     if (isNil(externalTemplates)) {
       throw new GrpcError(status.NOT_FOUND, 'No external templates could be retrieved');
@@ -313,11 +318,9 @@ export class AdminHandlers {
       const templateDocument = await EmailTemplate.getInstance().findOne({
         externalId: element.id,
       });
-
       if (isNil(templateDocument)) {
-        throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
+        continue;
       }
-
       const synchronized = {
         name: element.name,
         subject: element.versions[0].subject,

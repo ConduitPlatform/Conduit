@@ -68,6 +68,11 @@ export default class Email extends ManagedModule<Config> {
   }
 
   async preConfig(config: Config) {
+    if (config.transportSettings?.sendgrid.hasOwnProperty('apiUser')) {
+      delete (
+        config as Config & { transportSettings: { sendgrid: { apiUser?: string } } }
+      ).transportSettings.sendgrid.apiUser;
+    }
     if (
       isNil(config.active) ||
       isNil(config.transport) ||

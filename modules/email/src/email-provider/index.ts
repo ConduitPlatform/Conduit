@@ -1,7 +1,7 @@
 import Mail from 'nodemailer/lib/mailer';
 import { SentMessageInfo } from 'nodemailer';
 import { MailgunConfig } from './transports/mailgun/mailgun.config.js';
-import { isEmpty, isNil } from 'lodash-es';
+import { isEmpty } from 'lodash-es';
 import { MandrillConfig } from './transports/mandrill/mandrill.config.js';
 import { EmailBuilderClass } from './models/EmailBuilderClass.js';
 import { SendGridConfig } from './transports/sendgrid/sendgrid.config.js';
@@ -19,12 +19,13 @@ export class EmailProvider {
 
   constructor(transport: string, transportSettings: any) {
     if (transport === 'mailgun') {
+      this._transportName = 'mailgun';
       const { apiKey, proxy, host } = transportSettings.mailgun;
       let domain = ConfigController.getInstance().config.sendingDomain;
       if (!isEmpty(transportSettings.mailgun.domain)) {
         domain = transportSettings.mailgun.domain;
       }
-      if (isNil(apiKey) || isNil(domain) || isNil(host)) {
+      if (isEmpty(apiKey) || isEmpty(domain) || isEmpty(host)) {
         throw new Error('Mailgun transport settings are missing');
       }
       const mailgunSettings: MailgunConfig = {
@@ -40,6 +41,10 @@ export class EmailProvider {
       this._transportName = 'smtp';
 
       const { smtp } = transportSettings;
+      const { port, host } = smtp;
+      if (isEmpty(port) || isEmpty(host)) {
+        throw new Error('Smtp transport settings are missing');
+      }
       smtp.auth.user = smtp.auth.username;
       smtp.auth.pass = smtp.auth.password;
       if (smtp.ignoreTls) {
@@ -57,16 +62,23 @@ export class EmailProvider {
       });
     } else if (transport === 'mandrill') {
       this._transportName = 'mandrill';
+      const { apiKey } = transportSettings.mandrill.apiKey;
+      if (isEmpty(apiKey)) {
+        throw new Error('Mandrill transport settings are missing');
+      }
       const mandrillSettings: MandrillConfig = {
-        auth: {
-          apiKey: transportSettings.mandrill.apiKey,
-        },
+        auth: { apiKey },
       };
       this._transport = new MandrillProvider(mandrillSettings);
     } else if (transport === 'sendgrid') {
       this._transportName = 'sendgrid';
+      const { residency, apiKey } = transportSettings.sendgrid;
+      if (isEmpty(apiKey) || isEmpty(residency)) {
+        throw new Error('Sendgrid transport settings are missing');
+      }
       const sgSettings: SendGridConfig = {
-        apiKey: transportSettings['sendgrid'].apiKey,
+        apiKey,
+        residency,
       };
       this._transport = new SendgridProvider(sgSettings);
     } else {

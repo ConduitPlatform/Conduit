@@ -72,13 +72,13 @@ export default {
       },
     },
     sendgrid: {
-      apiKey: {
-        doc: 'The SendGrid API key',
+      residency: {
+        doc: 'Sets the host for sendgrid provider. SendGrid Default: global',
         format: 'String',
         default: '',
       },
-      apiUser: {
-        doc: 'The SendGrid API username',
+      apiKey: {
+        doc: 'The SendGrid API key',
         format: 'String',
         default: '',
       },
