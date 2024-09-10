@@ -65,9 +65,9 @@ export function validateParams(params: Params, routeDefinedParams: Params) {
       if (routeDefinedParams[key].hasOwnProperty('type')) {
         params[key] = validateType(
           key,
-          routeDefinedParams[key].type,
+          (routeDefinedParams[key] as { type: string }).type,
           params[key],
-          routeDefinedParams[key]?.required || false,
+          (routeDefinedParams[key] as { required?: boolean })?.required || false,
         );
       } else {
         validateObject(key, params[key], routeDefinedParams[key]);

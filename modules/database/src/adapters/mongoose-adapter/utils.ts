@@ -41,6 +41,7 @@ async function _createWithPopulations(
 
     if (!fields.hasOwnProperty(key)) continue;
     if (!isObject(fields[key])) continue;
+    // @ts-expect-error
     if (fields[key] === 'JSON' || fields[key].type === 'JSON') continue;
 
     if (isArray(document[key])) {
@@ -50,10 +51,14 @@ async function _createWithPopulations(
           continue;
         }
         let field = fields[key];
+        // @ts-expect-error
         if (!isArray(field) && field.type && isArray(field.type)) {
+          // @ts-expect-error
           field = field.type;
         }
+        // @ts-expect-error
         if (field[0].hasOwnProperty('model')) {
+          // @ts-expect-error
           const { model } = adapter.getSchemaModel(field[0].model);
           if (validate) {
             await model.model.validate(val);
@@ -61,11 +66,13 @@ async function _createWithPopulations(
             document[key][i] = await _createOrUpdate(val, model);
           }
         } else {
+          // @ts-expect-error
           await _createWithPopulations(field[0], val, adapter, validate);
         }
       }
     } else if (isObject(document[key])) {
       if (fields[key].hasOwnProperty('model')) {
+        // @ts-expect-error
         const { model } = adapter.getSchemaModel(fields[key].model);
         if (validate) {
           await model.model.validate(document[key]);
