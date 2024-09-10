@@ -30,7 +30,9 @@ export function extractRelations(ogSchema: ConduitModel, schema: any) {
         }
       }
     } else if (isObject(schema[key])) {
+      // @ts-expect-error
       if (schema[key].hasOwnProperty('type') && schema[key].type === 'Relation') {
+        // @ts-expect-error
         extracted[key] = { ...schema[key] };
         delete schema[key];
         delete ogSchema[key];
@@ -46,29 +48,31 @@ export function convertObjectToDotNotation(
   keyMapping: any = {},
   parentKey: string | null = null,
   prefix: string = '',
+  separator: string = '_',
 ) {
   for (const key of Object.keys(schema)) {
     if (!isArray(schema[key]) && isObject(schema[key])) {
       const extraction = extractObjectType(schema[key]);
       if (!extraction.hasOwnProperty('type')) {
         const newParentKey = parentKey ? `${parentKey}.${key}` : key;
-        const newPrefix = prefix ? `${prefix}_${key}` : key;
+        const newPrefix = prefix ? `${prefix}${separator}${key}` : key;
         convertObjectToDotNotation(
           extraction,
           resSchema,
           keyMapping,
           newParentKey,
           newPrefix,
+          separator,
         );
 
         // Remove the original key from resSchema
         if (prefix) {
-          delete resSchema[`${prefix}_${key}`];
+          delete resSchema[`${prefix}${separator}${key}`];
         } else {
           delete resSchema[key];
         }
       } else {
-        const newKey = prefix ? `${prefix}_${key}` : key;
+        const newKey = prefix ? `${prefix}${separator}${key}` : key;
         resSchema[newKey] = extraction;
         if (parentKey || prefix) {
           keyMapping[newKey] = {
@@ -78,7 +82,7 @@ export function convertObjectToDotNotation(
         }
       }
     } else {
-      const newKey = prefix ? `${prefix}_${key}` : key;
+      const newKey = prefix ? `${prefix}${separator}${key}` : key;
       resSchema[newKey] = schema[key];
       if (parentKey || prefix) {
         keyMapping[newKey] = {

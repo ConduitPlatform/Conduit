@@ -106,7 +106,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Key not found!');
     }
     const verifier = crypto.createVerify('sha256WithRSAEncryption');
-    verifier.update(Buffer.from((key.user as User)._id));
+    verifier.update(new Uint8Array(Buffer.from((key.user as User)._id)));
     const cryptoKey = crypto.createPublicKey({
       key: key.publicKey,
       format: 'der',
@@ -177,7 +177,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       user: user._id,
     });
     const verifier = crypto.createVerify('sha256WithRSAEncryption');
-    verifier.update(Buffer.from(existingToken.data.challenge));
+    verifier.update(new Uint8Array(Buffer.from(existingToken.data.challenge)));
     const cryptoKey = crypto.createPublicKey({
       key: existingToken.data.publicKey,
       format: 'der',

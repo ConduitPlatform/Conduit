@@ -117,7 +117,7 @@ export class AzureStorage implements IStorageProvider {
       .download(0);
     const data: Buffer = await streamToBuffer(promise.readableStreamBody);
     if (downloadPath) {
-      fs.writeFileSync(downloadPath, data);
+      fs.writeFileSync(downloadPath, new Uint8Array(data));
     }
     return data;
   }

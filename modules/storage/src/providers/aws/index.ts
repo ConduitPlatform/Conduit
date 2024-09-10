@@ -72,7 +72,7 @@ export class AWSS3Storage implements IStorageProvider {
 
     const data = await streamToBuffer(stream.Body as Readable);
     if (downloadPath) {
-      fs.writeFileSync(downloadPath, data);
+      fs.writeFileSync(downloadPath, new Uint8Array(data));
     }
     return data;
   }
