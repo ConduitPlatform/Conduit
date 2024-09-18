@@ -53,8 +53,27 @@ export default class Comms extends ManagedModule<Config> {
     };
   }
 
-  async preConfig(config: any) {
+  async preConfig(config: Config) {
     let modifiedConfig = config;
+    if (!config.migrationComplete) {
+      const sms = await this.grpcSdk.config.get('sms');
+      const email = await this.grpcSdk.config.get('email');
+      const push = await this.grpcSdk.config.get('pushNotifications');
+      modifiedConfig = {
+        ...config,
+        sms: {
+          ...sms,
+        },
+        email: {
+          ...email,
+        },
+        push: {
+          ...push,
+        },
+        migrationComplete: true,
+      };
+    }
+
     modifiedConfig =
       (await this.smsService.preConfig?.(modifiedConfig)) ?? modifiedConfig;
     modifiedConfig =
@@ -116,7 +135,7 @@ export default class Comms extends ManagedModule<Config> {
       available = this.smsService.health === HealthCheckStatus.SERVING;
     } else if (feature === 'email') {
       available = this.emailService.health === HealthCheckStatus.SERVING;
-    } else if (feature === 'push') {
+    } else if (feature === 'pushNotifications') {
       available = this.pushService.health === HealthCheckStatus.SERVING;
     }
     callback(null, { available });
