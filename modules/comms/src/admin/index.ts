@@ -26,9 +26,8 @@ export class AdminHandlers {
   async registerAdminRoutes() {
     this.routingManager.clear();
     await Sms.getInstance().registerAdminRoutes(this.routingManager);
-    // Email.getInstance().registerAdminRoutes(this.routingManager);
-    // PushNotifications.getInstance().registerAdminRoutes(this.routingManager);
-
+    await Email.getInstance().registerAdminRoutes(this.routingManager);
+    await PushNotifications.getInstance().registerAdminRoutes(this.routingManager);
     await this.routingManager.registerRoutes();
   }
 }

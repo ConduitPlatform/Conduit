@@ -2,6 +2,8 @@ import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { GrpcServer, RoutingManager } from '@conduitplatform/module-tools';
 import Sms from '../modules/sms/Sms.js';
 import { CommService } from '../interfaces/CommService.js';
+import Email from '../modules/email/Email.js';
+import PushNotifications from '../modules/push/PushNotifications.js';
 
 export class ClientRouteHandlers {
   private readonly routingManager: RoutingManager;
@@ -25,8 +27,10 @@ export class ClientRouteHandlers {
   async registerRoutes() {
     this.routingManager.clear();
     await (Sms.getInstance() as CommService).registerRoutes?.(this.routingManager);
-    // await Email.getInstance().registerAdminRoutes(this.routingManager);
-    // await PushNotifications.getInstance().registerAdminRoutes(this.routingManager);
+    await (Email.getInstance() as CommService).registerAdminRoutes?.(this.routingManager);
+    await (PushNotifications.getInstance() as CommService).registerAdminRoutes?.(
+      this.routingManager,
+    );
 
     await this.routingManager.registerRoutes();
   }
