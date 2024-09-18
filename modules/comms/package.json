@@ -1,0 +1,77 @@
+{
+  "name": "@conduitplatform/email",
+  "version": "1.0.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=14"
+  },
+  "scripts": {
+    "start": "node dist/index.js",
+    "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
+    "prebuild": "npm run generateTypes",
+    "build": "rimraf dist && tsc",
+    "prepare": "npm run build",
+    "build:docker": "docker build -t ghcr.io/conduitplatform/email:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/email:latest",
+    "generateTypes": "sh build.sh"
+  },
+  "directories": {
+    "lib": "src"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@conduitplatform/grpc-sdk": "*",
+    "@conduitplatform/module-tools": "*",
+    "@grpc/grpc-js": "^1.10.9",
+    "@grpc/proto-loader": "^0.7.6",
+    "@sendgrid/client": "^8.0.0",
+    "@types/nodemailer-sendgrid": "^1.0.3",
+    "await-to-js": "^3.0.0",
+    "axios": "^1.7.4",
+    "bullmq": "^5.12.14",
+    "convict": "^6.2.4",
+    "escape-string-regexp": "^4.0.0",
+    "handlebars": "^4.7.8",
+    "lodash-es": "^4.17.21",
+    "mailgun-js": "^0.22.0",
+    "mandrill-api": "^1.0.45",
+    "nodemailer": "^6.9.10",
+    "nodemailer-mailgun-transport": "^2.1.5",
+    "nodemailer-mandrill-transport": "^1.2.0",
+    "nodemailer-sendgrid": "^1.0.3",
+    "@aws-sdk/client-sns": "^3.627.1",
+    "bluebird": "^3.7.2",
+    "clicksend": "^5.0.79",
+    "messagebird": "^4.0.1",
+    "otp-generator": "^4.0.1",
+    "twilio": "5.3.0",
+    "@onesignal/node-onesignal": "^1.0.0-beta9",
+    "firebase-admin": "^12.4.0"
+  },
+  "devDependencies": {
+    "@types/bluebird": "^3.5.42",
+    "@types/otp-generator": "^4.0.2",
+    "@types/convict": "^6.1.6",
+    "@types/lodash-es": "^4.17.12",
+    "@types/mailgun-js": "^0.22.18",
+    "@types/mandrill-api": "^1.0.34",
+    "@types/node": "20.11.24",
+    "@types/nodemailer": "^6.4.14",
+    "@types/nodemailer-mailgun-transport": "^1.4.3",
+    "@types/smtp-server": "^3.5.7",
+    "copyfiles": "^2.4.1",
+    "cross-env": "^7.0.3",
+    "rimraf": "^5.0.5",
+    "smtp-server": "^3.11.0",
+    "ts-proto": "^1.167.1",
+    "typescript": "~5.6.2"
+  }
+}
