@@ -5,6 +5,7 @@ import { migrateCrudOperations } from './crudOperations.migration.js';
 import { migrateSecurityClients } from './securityClients.migration.js';
 import { migrateCustomEndpoints } from './customEndpoints.migration.js';
 import { migrateSystemSchemasCms } from './systemSchemasCms.migration.js';
+import { migrateCommsSchemas } from './comms.migration.js';
 
 export async function runMigrations(
   adapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
@@ -13,4 +14,5 @@ export async function runMigrations(
   await migrateSecurityClients(adapter);
   await migrateCustomEndpoints(adapter);
   await migrateSystemSchemasCms(adapter);
+  await migrateCommsSchemas(adapter);
 }
