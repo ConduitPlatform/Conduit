@@ -193,8 +193,8 @@ export class RelationsController {
       resourceType?: string;
       subjectType?: string;
     },
-    skip: number = 0,
-    limit = 10,
+    skip?: number,
+    limit?: number,
   ) {
     const query: {
       subject?: string;
