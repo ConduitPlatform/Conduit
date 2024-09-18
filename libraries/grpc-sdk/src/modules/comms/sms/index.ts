@@ -1,10 +1,10 @@
-import { ConduitModule } from '../../classes/index.js';
+import { ConduitModule } from '../../../classes/index.js';
 import {
   SendSmsResponse,
   SendVerificationCodeResponse,
   SmsDefinition,
   VerifyResponse,
-} from '../../protoUtils/sms.js';
+} from '../../../protoUtils/index.js';
 
 export class SMS extends ConduitModule<typeof SmsDefinition> {
   constructor(

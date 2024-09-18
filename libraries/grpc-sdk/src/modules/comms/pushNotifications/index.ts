@@ -1,8 +1,8 @@
-import { ConduitModule } from '../../classes/index.js';
+import { ConduitModule } from '../../../classes/index.js';
 import {
   PushNotificationsDefinition,
   SendNotificationResponse,
-} from '../../protoUtils/index.js';
+} from '../../../protoUtils/index.js';
 import { SendNotificationOptions } from './types';
 import { isNil } from 'lodash';
 

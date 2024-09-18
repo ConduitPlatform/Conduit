@@ -3,13 +3,11 @@ import {
   Authentication,
   Authorization,
   Chat,
+  Comms,
   Config,
   Core,
   DatabaseProvider,
-  Email,
-  PushNotifications,
   Router,
-  SMS,
   Storage,
 } from './modules/index.js';
 import crypto from 'crypto';
@@ -51,11 +49,9 @@ class ConduitGrpcSdk {
     router: Router,
     database: DatabaseProvider,
     storage: Storage,
-    email: Email,
-    pushNotifications: PushNotifications,
+    comms: Comms,
     authentication: Authentication,
     authorization: Authorization,
-    sms: SMS,
     chat: Chat,
   };
   private _dynamicModules: { [key: string]: CompatServiceDefinition } = {};
@@ -213,20 +209,11 @@ class ConduitGrpcSdk {
     }
   }
 
-  get emailProvider(): Email | null {
-    if (this._modules['email']) {
-      return this._modules['email'] as Email;
+  get comms(): Comms | null {
+    if (this._modules['comms']) {
+      return this._modules['comms'] as Comms;
     } else {
-      ConduitGrpcSdk.Logger.warn('Email provider not up yet!');
-      return null;
-    }
-  }
-
-  get pushNotifications(): PushNotifications | null {
-    if (this._modules['pushNotifications']) {
-      return this._modules['pushNotifications'] as PushNotifications;
-    } else {
-      ConduitGrpcSdk.Logger.warn('Push notifications module not up yet!');
+      ConduitGrpcSdk.Logger.warn('Comms not up yet!');
       return null;
     }
   }
@@ -245,15 +232,6 @@ class ConduitGrpcSdk {
       return this._modules['authorization'] as Authorization;
     } else {
       ConduitGrpcSdk.Logger.warn('Authorization module not up yet!');
-      return null;
-    }
-  }
-
-  get sms(): SMS | null {
-    if (this._modules['sms']) {
-      return this._modules['sms'] as SMS;
-    } else {
-      ConduitGrpcSdk.Logger.warn('SMS module not up yet!');
       return null;
     }
   }

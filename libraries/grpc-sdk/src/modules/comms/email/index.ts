@@ -1,5 +1,5 @@
-import { ConduitModule } from '../../classes/index.js';
-import { EmailDefinition } from '../../protoUtils/email.js';
+import { ConduitModule } from '../../../classes/index.js';
+import { EmailDefinition } from '../../../protoUtils/index.js';
 
 export class Email extends ConduitModule<typeof EmailDefinition> {
   constructor(
