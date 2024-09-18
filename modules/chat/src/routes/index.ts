@@ -40,20 +40,25 @@ export class ChatRoutes {
   }
 
   async registerTemplates() {
-    this.grpcSdk.config
-      .get('email')
-      .then(() => {
-        const promises = Object.values(templates).map((template: any) => {
-          return this.grpcSdk.emailProvider!.registerTemplate(template);
-        });
-        return Promise.all(promises);
-      })
-      .then(() => {
-        ConduitGrpcSdk.Logger.log('Email templates registered');
-      })
-      .catch(() => {
-        ConduitGrpcSdk.Logger.error('Internal error while registering email templates');
+    if (
+      this.grpcSdk.isAvailable('comms') &&
+      this.grpcSdk.comms?.featureAvailable('email')
+    ) {
+      const promises = Object.values(templates).map((template: any) => {
+        return this.grpcSdk.comms?.email!.registerTemplate(template);
       });
+      return Promise.all(promises)
+        .then(() => {
+          ConduitGrpcSdk.Logger.log('Email templates registered');
+        })
+        .catch(() => {
+          ConduitGrpcSdk.Logger.error('Internal error while registering email templates');
+        });
+    } else {
+      ConduitGrpcSdk.Logger.error(
+        'Could not register email templates, email not available',
+      );
+    }
   }
 
   async createRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

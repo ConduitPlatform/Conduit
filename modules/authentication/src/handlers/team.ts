@@ -539,14 +539,19 @@ export class TeamsHandler implements IAuthenticationStrategy {
       role,
       inviter: user,
     });
-    if (email && config.teams.invites.sendEmail && this.grpcSdk.isAvailable('email')) {
+    if (
+      email &&
+      config.teams.invites.sendEmail &&
+      this.grpcSdk.isAvailable('comms') &&
+      (await this.grpcSdk.comms?.featureAvailable('email'))
+    ) {
       let link = !isEmpty(redirectUri)
         ? AuthUtils.validateRedirectUri(redirectUri)
         : config.teams.invites.inviteUrl;
       link += `?invitationToken=${invitation.token}`;
 
       await this.grpcSdk
-        .emailProvider!.sendEmail('TeamInvite', {
+        .comms!.email!.sendEmail('TeamInvite', {
           email: email,
           variables: {
             link,
@@ -554,7 +559,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
             inviterName: user.name,
           },
         })
-        .catch(e => {
+        .catch((e: Error) => {
           ConduitGrpcSdk.Logger.error(e);
         });
     }
@@ -854,14 +859,19 @@ export class TeamsHandler implements IAuthenticationStrategy {
         }
       }
       if (config.teams.invites.enabled && config.teams.invites.sendEmail) {
-        if (!config.teams.invites.sendEmail || !this.grpcSdk.isAvailable('email')) {
+        if (
+          !config.teams.invites.sendEmail ||
+          !this.grpcSdk.isAvailable('comms') ||
+          !(await this.grpcSdk.comms!.featureAvailable('email'))
+        ) {
           ConduitGrpcSdk.Logger.warn(
             'Team invites are enabled, but email sending is disabled. No invites will be sent.',
           );
         }
         if (config.teams.invites.sendEmail) {
-          this.grpcSdk.onceModuleUp('email', async () => {
-            await this.grpcSdk.emailProvider!.registerTemplate(TeamInviteTemplate);
+          this.grpcSdk.onceModuleUp('comms', async () => {
+            // email doesn't have to be generally serving to user registerTemplate
+            await this.grpcSdk.comms!.email.registerTemplate(TeamInviteTemplate);
           });
         }
       }

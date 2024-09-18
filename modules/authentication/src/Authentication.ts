@@ -12,6 +12,7 @@ import AppConfigSchema, { Config } from './config/index.js';
 import { AdminHandlers } from './admin/index.js';
 import { AuthenticationRoutes } from './routes/index.js';
 import * as models from './models/index.js';
+import { User } from './models/index.js';
 import { AuthUtils } from './utils/index.js';
 import { TokenType } from './constants/index.js';
 import { v4 as uuid } from 'uuid';
@@ -50,7 +51,6 @@ import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
-import { User } from './models/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -313,7 +313,9 @@ export default class Authentication extends ManagedModule<Config> {
       }
       const sendEmail =
         ConfigController.getInstance().config.local.verification.send_email;
-      const emailAvailable = this.grpcSdk.isAvailable('email');
+      const emailAvailable =
+        this.grpcSdk.isAvailable('comms') &&
+        (await this.grpcSdk.comms?.featureAvailable('email'));
       if (verify && sendEmail && emailAvailable) {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
@@ -324,7 +326,7 @@ export default class Authentication extends ManagedModule<Config> {
         });
         const result = { verificationToken, hostUrl: url };
         const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
-        await this.grpcSdk.emailProvider!.sendEmail('EmailVerification', {
+        await this.grpcSdk.comms?.email!.sendEmail('EmailVerification', {
           email: user.email,
           variables: {
             link,

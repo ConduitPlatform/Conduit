@@ -30,8 +30,12 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
 
   async validate(): Promise<boolean> {
     const config = ConfigController.getInstance().config;
-    if (config.magic_link.enabled && this.grpcSdk.isAvailable('email')) {
-      this.emailModule = this.grpcSdk.emailProvider!;
+    if (
+      config.magic_link.enabled &&
+      this.grpcSdk.isAvailable('comms') &&
+      (await this.grpcSdk.comms!.featureAvailable('email'))
+    ) {
+      this.emailModule = this.grpcSdk.comms?.email!;
       const success = await this.registerTemplate()
         .then(() => true)
         .catch(e => {

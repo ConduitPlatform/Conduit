@@ -57,14 +57,18 @@ export async function sendInvitations(args: {
       token: uuid(),
       room: roomId,
     });
-    if (sendEmail && grpcSdk.isAvailable('email')) {
+    if (
+      sendEmail &&
+      grpcSdk.isAvailable('comms') &&
+      grpcSdk.comms?.featureAvailable('email')
+    ) {
       const result = { invitationToken, hostUrl: url };
       const acceptLink = `${result.hostUrl}/hook/chat/invitations/accept/${result.invitationToken.token}`;
       const declineLink = `${result.hostUrl}/hook/chat/invitations/decline/${result.invitationToken.token}`;
       const roomName = room.name;
       const userName = sender.email;
-      await grpcSdk
-        .emailProvider!.sendEmail('ChatRoomInvitation', {
+      await grpcSdk.comms?.email
+        ?.sendEmail('ChatRoomInvitation', {
           email: invitedUser.email,
           variables: {
             acceptLink,
@@ -77,10 +81,14 @@ export async function sendInvitations(args: {
           throw new Error(e.message);
         });
     }
-    if (sendNotification && grpcSdk.isAvailable('pushNotifications')) {
+    if (
+      sendNotification &&
+      grpcSdk.isAvailable('comms') &&
+      grpcSdk.comms?.featureAvailable('pushNotifications')
+    ) {
       const body = `User ${sender._id} has invited you to join in room ${room.name}`;
       const title = 'You have an invitation request!';
-      await grpcSdk
+      await grpcSdk.comms
         .pushNotifications!.sendNotification(invitedUser._id, title, body)
         .catch((e: Error) => {
           throw new Error(e.message);
