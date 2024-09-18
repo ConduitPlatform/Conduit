@@ -25,14 +25,15 @@ export class PushNotificationsRoutes {
   async registerRoutes(_routingManager: RoutingManager) {
     _routingManager.route(
       {
+        path: '/push/token',
+        action: ConduitRouteActions.POST,
+        description: `Sets the given notification token for a user.`,
         bodyParams: {
           token: ConduitString.Required,
           platform: ConduitString.Required,
         },
-        action: ConduitRouteActions.POST,
-        description: `Sets the given notification token for a user.`,
+
         middlewares: ['authMiddleware'],
-        path: '/token',
       },
       new ConduitRouteReturnDefinition('SetNotificationTokenResponse', {
         newTokenDocument: NotificationToken.getInstance().fields, // @type-inconsistency
@@ -41,29 +42,31 @@ export class PushNotificationsRoutes {
     );
     _routingManager.route(
       {
+        path: '/token',
+        action: ConduitRouteActions.DELETE,
+        description: `Removes tokens for a user (optionally for specific platform). This effectively disables push notifications for the user, but not the notification center.`,
         queryParams: {
           platform: ConduitString.Optional,
         },
-        action: ConduitRouteActions.DELETE,
-        description: `Removes tokens for a user (optionally for specific platform). This effectively disables push notifications for the user, but not the notification center.`,
+
         middlewares: ['authMiddleware'],
-        path: '/token',
       },
       new ConduitRouteReturnDefinition('SetNotificationTokenResponse', 'String'),
       this.handlers.clearNotificationTokens.bind(this.handlers),
     );
     _routingManager.route(
       {
+        path: '/push/notifications',
+        action: ConduitRouteActions.GET,
         queryParams: {
           read: ConduitBoolean.Optional,
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
           platform: ConduitString.Optional,
         },
-        action: ConduitRouteActions.GET,
+
         description: `Get User notifications`,
         middlewares: ['authMiddleware'],
-        path: '/notifications',
       },
       new ConduitRouteReturnDefinition('GetNotificationsResponse', {
         notifications: [Notification.name],
@@ -74,14 +77,15 @@ export class PushNotificationsRoutes {
     );
     _routingManager.route(
       {
+        path: '/push/notifications',
+        action: ConduitRouteActions.PATCH,
+        description: `Read user notifications. If before is provided, any notification before that date will be marked as read. If id is provided, only that notification will be marked as read.`,
         bodyParams: {
           before: ConduitDate.Optional,
           id: ConduitString.Optional,
         },
-        action: ConduitRouteActions.PATCH,
-        description: `Read user notifications. If before is provided, any notification before that date will be marked as read. If id is provided, only that notification will be marked as read.`,
+
         middlewares: ['authMiddleware'],
-        path: '/notifications',
       },
       new ConduitRouteReturnDefinition('ReadNotificationsResponse', 'String'),
       this.handlers.readUserNotification.bind(this.handlers),
