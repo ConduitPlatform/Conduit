@@ -44,7 +44,7 @@ export class AdminHandlers {
   registerAdminRoutes(routingManager: RoutingManager) {
     routingManager.route(
       {
-        path: '/send',
+        path: '/sms/send',
         action: ConduitRouteActions.POST,
         description: `Sends sms.`,
         bodyParams: {

@@ -160,7 +160,7 @@ export class AdminHandlers {
   registerAdminRoutes(routingManager: RoutingManager) {
     routingManager.route(
       {
-        path: '/send',
+        path: '/push/send',
         action: ConduitRouteActions.POST,
         description: `Sends a notification.`,
         bodyParams: {
@@ -178,7 +178,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/sendToManyDevices',
+        path: '/push/sendToManyDevices',
         action: ConduitRouteActions.POST,
         description: `Sends a notification to multiple devices.`,
         bodyParams: {
@@ -196,7 +196,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/sendMany',
+        path: '/push/sendMany',
         action: ConduitRouteActions.POST,
         description: `Sends many notifications to many devices.`,
         bodyParams: {
@@ -220,7 +220,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/token',
+        path: '/push/token',
         action: ConduitRouteActions.GET,
         description: `Get and search notification tokens.`,
         queryParams: {
@@ -240,7 +240,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/token/:id',
+        path: '/push/token/:id',
         action: ConduitRouteActions.GET,
         description: `Get a notification token by id.`,
         urlParams: {
@@ -255,7 +255,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/token/user/:userId',
+        path: '/push/token/user/:userId',
         action: ConduitRouteActions.GET,
         description: `Returns a user's notification token.`,
         urlParams: {

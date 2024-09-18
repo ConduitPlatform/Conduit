@@ -429,7 +429,7 @@ export class AdminHandlers {
   registerAdminRoutes(routingManager: RoutingManager) {
     routingManager.route(
       {
-        path: '/templates',
+        path: '/email/templates',
         action: ConduitRouteActions.GET,
         description: `Returns queried templates and their total count.`,
         queryParams: {
@@ -447,7 +447,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/templates',
+        path: '/email/templates',
         action: ConduitRouteActions.POST,
         description: `Creates a new email template.`,
         bodyParams: {
@@ -466,7 +466,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/templates/:id',
+        path: '/email/templates/:id',
         action: ConduitRouteActions.PATCH,
         description: `Updates an email template.`,
         urlParams: {
@@ -485,7 +485,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/templates',
+        path: '/email/templates',
         action: ConduitRouteActions.DELETE,
         description: `Deletes queried email templates.`,
         queryParams: {
@@ -499,7 +499,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/templates/:id',
+        path: '/email/templates/:id',
         action: ConduitRouteActions.DELETE,
         description: `Deletes an email template.`,
         urlParams: {
@@ -513,7 +513,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/templates/upload',
+        path: '/email/templates/upload',
         action: ConduitRouteActions.POST,
         description: `Uploads a local email template to remote provider.`,
         bodyParams: {
@@ -527,7 +527,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/externalTemplates',
+        path: '/email/externalTemplates',
         action: ConduitRouteActions.GET,
         description: `Returns external email templates and their total count.`,
         queryParams: {
@@ -544,7 +544,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/syncExternalTemplates',
+        path: '/email/syncExternalTemplates',
         action: ConduitRouteActions.UPDATE,
         description: `Synchronizes local email templates from remote provider.`,
       },
@@ -556,7 +556,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/send',
+        path: '/email/send',
         action: ConduitRouteActions.POST,
         description: `Sends an email.`,
         bodyParams: {
@@ -575,7 +575,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/resend',
+        path: '/email/resend',
         action: ConduitRouteActions.POST,
         description: `Resends an email (only if stored in storage).`,
         bodyParams: {
@@ -589,7 +589,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/status',
+        path: '/email/status',
         action: ConduitRouteActions.GET,
         description: `Returns the latest status of a sent email.`,
         queryParams: {
@@ -603,7 +603,7 @@ export class AdminHandlers {
     );
     routingManager.route(
       {
-        path: '/record',
+        path: '/email/record',
         action: ConduitRouteActions.GET,
         description: `Returns records of stored sent emails.`,
         queryParams: {
