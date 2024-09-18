@@ -1,5 +1,5 @@
 {
-  "name": "@conduitplatform/email",
+  "name": "@conduitplatform/comms",
   "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,7 +14,7 @@
     "prebuild": "npm run generateTypes",
     "build": "rimraf dist && tsc",
     "prepare": "npm run build",
-    "build:docker": "docker build -t ghcr.io/conduitplatform/email:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/email:latest",
+    "build:docker": "docker build -t ghcr.io/conduitplatform/comms:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/comms:latest",
     "generateTypes": "sh build.sh"
   },
   "directories": {

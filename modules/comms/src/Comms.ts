@@ -1,4 +1,9 @@
-import { ConduitGrpcSdk, HealthCheckStatus } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitGrpcSdk,
+  GrpcCallback,
+  GrpcRequest,
+  HealthCheckStatus,
+} from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config/index.js';
 import { AdminHandlers } from './admin/index.js';
 import path from 'path';
@@ -8,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import Sms from './modules/sms/Sms.js';
 import { CommService } from './interfaces/CommService.js';
 import { ClientRouteHandlers } from './router/index.js';
+import { FeatureAvailableRequest, FeatureAvailableResponse } from './protoTypes/comms.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,7 +37,9 @@ export default class Comms extends ManagedModule<Config> {
       protoPath: path.resolve(__dirname, 'comms.proto'),
       protoDescription: 'comms',
       functions: {
-        Comms: {},
+        Comms: {
+          featureAvailable: this.featureAvailable.bind(this),
+        },
         Sms: {
           ...(this.smsService.rpcFunctions as { [key: string]: ServiceFunction }),
         },
@@ -95,5 +103,22 @@ export default class Comms extends ManagedModule<Config> {
     await this.smsService.initializeMetrics?.();
     await this.emailService.initializeMetrics?.();
     await this.pushService.initializeMetrics?.();
+  }
+
+  // gRPC Service
+  async featureAvailable(
+    call: GrpcRequest<FeatureAvailableRequest>,
+    callback: GrpcCallback<FeatureAvailableResponse>,
+  ) {
+    const feature = call.request.serviceName;
+    let available = false;
+    if (feature === 'sms') {
+      available = this.smsService.health === HealthCheckStatus.SERVING;
+    } else if (feature === 'email') {
+      available = this.emailService.health === HealthCheckStatus.SERVING;
+    } else if (feature === 'push') {
+      available = this.pushService.health === HealthCheckStatus.SERVING;
+    }
+    callback(null, { available });
   }
 }

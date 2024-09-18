@@ -1,5 +1,18 @@
 syntax = 'proto3';
 package comms;
+
+message FeatureAvailableRequest{
+  string serviceName = 1;
+}
+
+message FeatureAvailableResponse{
+  bool available = 1;
+}
+
+service Comms {
+  rpc FeatureAvailable(FeatureAvailableRequest) returns (FeatureAvailableResponse);
+}
+
 //------ SMS ------
 message SendSmsRequest {
   string to = 1;
