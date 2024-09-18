@@ -26,7 +26,7 @@ export default class Comms extends ManagedModule<Config> {
   private readonly pushService: CommService;
 
   constructor() {
-    super('sms');
+    super('comms');
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     AdminHandlers.getInstance(this.grpcServer, this.grpcSdk);
     ClientRouteHandlers.getInstance(this.grpcServer, this.grpcSdk);
