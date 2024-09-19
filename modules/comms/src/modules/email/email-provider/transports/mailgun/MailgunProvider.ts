@@ -1,8 +1,6 @@
-import { to } from 'await-to-js';
 import { createTransport, SentMessageInfo } from 'nodemailer';
 import { Options } from 'nodemailer/lib/mailer';
 import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate.js';
-import { Template } from '../../interfaces/Template.js';
 import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
 import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
 import { EmailProviderClass } from '../../models/EmailProviderClass.js';
@@ -10,13 +8,15 @@ import { getHandleBarsValues } from '../../utils/index.js';
 import { initialize as initializeMailgun } from './mailgun.js';
 import { MailgunConfig } from './mailgun.config.js';
 import { MailgunMailBuilder } from './mailgunMailBuilder.js';
-import mailgun, { Mailgun } from 'mailgun-js';
 import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate.js';
-import { MailgunTemplate } from '../../interfaces/mailgun/MailgunTemplate.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
+import Mailgun, { Interfaces } from 'mailgun.js';
+import formData from 'form-data';
+import { Template } from '../../interfaces/Template.js';
+import { YesNo } from 'mailgun.js/Enums';
 
 export class MailgunProvider extends EmailProviderClass {
-  protected _mailgunSdk: Mailgun;
+  protected _mailgunSdk: Interfaces.IMailgunClient;
   private domain: string;
   private apiKey: string;
 
@@ -24,40 +24,42 @@ export class MailgunProvider extends EmailProviderClass {
     super(createTransport(initializeMailgun(mailgunSettings)));
     this.domain = mailgunSettings.auth.domain;
     this.apiKey = mailgunSettings.auth.api_key;
-    this._mailgunSdk = mailgun({
-      apiKey: this.apiKey,
-      domain: this.domain,
-      host: mailgunSettings.host,
+    this._mailgunSdk = new Mailgun.default(formData).client({
+      username: 'api',
+      key: this.apiKey,
+      url: mailgunSettings.host,
     });
   }
 
   async listTemplates(): Promise<Template[]> {
-    const templates = await this._mailgunSdk.get(`/${this.domain}/templates`);
-    const retList: Template[] = templates.items.map(
-      async (element: Template) => await this.getTemplateInfo(element.name),
+    const templates = await this._mailgunSdk.domains.domainTemplates.list(this.domain);
+    const retList: Promise<Template>[] = templates.items.map(element =>
+      this.getTemplateInfo(element.name),
     );
     return Promise.all(retList);
   }
 
   async getTemplateInfo(template_name: string): Promise<Template> {
-    const response: MailgunTemplate = await this._mailgunSdk.get(
-      `/${this.domain}/templates/${template_name}`,
-      { active: 'yes' },
-    );
+    const response: Interfaces.IDomainTemplate =
+      await this._mailgunSdk.domains.domainTemplates.get(this.domain, template_name, {
+        active: YesNo.YES,
+      });
     return {
-      name: response.template.name,
-      id: response.template.name,
-      createdAt: response.template.createdAt,
-      versions: [
-        {
-          name: response.template.version.tag,
-          id: response.template.version.id,
-          body: response.template.version.template,
-          active: true,
-          updatedAt: '',
-          variables: Object.keys(getHandleBarsValues(response.template.version.template)),
-        },
-      ],
+      name: response.name,
+      id: response.name,
+      createdAt: response.createdAt.toString(),
+      versions: response.version
+        ? [
+            {
+              name: response.version.tag,
+              id: response.version.id,
+              body: response.version.template,
+              active: true,
+              updatedAt: '',
+              variables: Object.keys(getHandleBarsValues(response.version.template)),
+            },
+          ]
+        : [],
     };
   }
 
@@ -69,55 +71,49 @@ export class MailgunProvider extends EmailProviderClass {
       active: true,
       tag: data.versionName,
     };
-
-    const [err, response] = await to(
-      this._mailgunSdk.post(`/${this.domain}/templates`, mailgun_input),
+    const response = await this._mailgunSdk.domains.domainTemplates.create(
+      this.domain,
+      mailgun_input,
     );
-    if (err) {
-      throw new Error(err.message);
-    }
+
     return {
-      name: response.template.name,
-      createdAt: response.template.createdAt,
-      id: response.template.name,
-      versions: [
-        {
-          name: response.template.version.tag,
-          id: response.template.version.id,
-          active: true,
-          updatedAt: response.template.version.createdAt,
-          body: response.template.version.template,
-          variables: Object.keys(getHandleBarsValues(mailgun_input.template)),
-        },
-      ],
+      name: response.name,
+      createdAt: response.createdAt.toString(),
+      id: response.name,
+      versions: response.version
+        ? [
+            {
+              name: response.version.tag,
+              id: response.version.id,
+              active: true,
+              updatedAt: response.version.createdAt.toString(),
+              body: response.version.template,
+              variables: Object.keys(getHandleBarsValues(mailgun_input.template)),
+            },
+          ]
+        : [],
     };
   }
 
   async updateTemplate(data: UpdateEmailTemplate): Promise<Template> {
-    const [err, template] = await to(
-      this._mailgunSdk.put(`/${this.domain}/templates/${data.id}/versions/initial`, {
+    const template = await this._mailgunSdk.domains.domainTemplates.updateVersion(
+      this.domain,
+      data.id,
+      data!.versionId!,
+      {
         template: data.body,
-        active: data.active,
-      }),
+        active: data.active as unknown as YesNo,
+      },
     );
 
-    if (err) {
-      throw new Error(err.message);
-    }
-
-    return this.getTemplateInfo(template.template.name);
+    return this.getTemplateInfo(template.templateName);
   }
 
   async deleteTemplate(id: string): Promise<DeleteEmailTemplate> {
-    const [err, resp] = await to(
-      this._mailgunSdk.delete(`/${this.domain}/templates/${id}`),
-    );
-    if (err) {
-      throw new Error(err.message);
-    }
+    const res = await this._mailgunSdk.domains.domainTemplates.destroy(this.domain, id);
     return {
       id: id,
-      message: resp.message,
+      message: res.message,
     };
   }
 
@@ -126,7 +122,7 @@ export class MailgunProvider extends EmailProviderClass {
   }
 
   async getEmailStatus(messageId: string): Promise<Indexable> {
-    const response = await this._mailgunSdk.get(`/${this.domain}/events`, {
+    const response = await this._mailgunSdk.events.get(this.domain, {
       'message-id': messageId,
       ascending: 'no',
       limit: 1,
