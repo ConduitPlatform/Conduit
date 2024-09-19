@@ -158,14 +158,27 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
 
   async startGrpcServer() {
     if (this.service) {
-      this._serviceName = this.service.protoDescription.substring(
-        this.service.protoDescription.indexOf('.') + 1,
-      );
-      await this.grpcServer.addService(
-        this.service.protoPath,
-        this.service.protoDescription,
-        this.service.functions,
-      );
+      // singular service
+      if (this.service.protoDescription.includes('.')) {
+        this._serviceName = this.service.protoDescription.substring(
+          this.service.protoDescription.indexOf('.') + 1,
+        );
+        await this.grpcServer.addService(
+          this.service.protoPath,
+          this.service.protoDescription,
+          this.service.functions as { [name: string]: Function },
+        );
+      } else {
+        const packageName = this.service.protoDescription;
+        for (const service of Object.keys(this.service.functions)) {
+          this._serviceName = packageName + '.' + service;
+          await this.grpcServer.addService(
+            this.service.protoPath,
+            this._serviceName,
+            this.service.functions[service] as { [name: string]: Function },
+          );
+        }
+      }
     }
     RoutingManager.ClientController = new RoutingController();
     RoutingManager.AdminController = new RoutingController();

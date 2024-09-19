@@ -37,11 +37,15 @@ export class TwoFa implements IAuthenticationStrategy {
       return false;
     }
     if (authConfig.twoFa.enabled && authConfig.twoFa.methods.sms) {
-      if (!this.grpcSdk.isAvailable('sms')) {
+      if (
+        !this.grpcSdk.isAvailable('comms') ||
+        !(await this.grpcSdk.comms!.featureAvailable('sms'))
+      ) {
         ConduitGrpcSdk.Logger.error('SMS module not available');
         return false;
       }
     }
+    this.smsModule = this.grpcSdk.comms!.sms!;
     ConduitGrpcSdk.Logger.log('TwoFactor authentication is available');
     return true;
   }

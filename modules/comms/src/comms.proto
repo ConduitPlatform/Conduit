@@ -1,0 +1,156 @@
+syntax = 'proto3';
+package comms;
+
+message FeatureAvailableRequest{
+  string serviceName = 1;
+}
+
+message FeatureAvailableResponse{
+  bool available = 1;
+}
+
+service Comms {
+  rpc FeatureAvailable(FeatureAvailableRequest) returns (FeatureAvailableResponse);
+}
+
+//------ SMS ------
+message SendSmsRequest {
+  string to = 1;
+  string message = 2;
+}
+
+message SendSmsResponse {
+  string message = 1;
+}
+
+message SendVerificationCodeRequest {
+  string to = 1;
+}
+
+message SendVerificationCodeResponse {
+  string verificationSid = 1;
+}
+
+message VerifyRequest {
+  string verificationSid = 1;
+  string code = 2;
+}
+
+message VerifyResponse {
+  bool verified = 1;
+}
+
+service Sms {
+  rpc SendSms(SendSmsRequest) returns (SendSmsResponse);
+  rpc SendVerificationCode(SendVerificationCodeRequest) returns (SendVerificationCodeResponse);
+  rpc Verify(VerifyRequest) returns (VerifyResponse);
+
+}
+//------ EMAIL ------
+message RegisterTemplateRequest {
+  string name = 1;
+  string subject = 2;
+  string body = 3;
+  repeated string variables = 4;
+  optional string sender = 5;
+}
+
+message RegisterTemplateResponse {
+  string template = 1;
+}
+
+message SendEmailRequest {
+  string templateName = 1;
+  SendEmailParams params = 2;
+  message SendEmailParams {
+    string email = 1;
+    string variables = 2;
+    optional string sender = 3;
+    repeated string cc = 4;
+    optional string replyTo = 5;
+    repeated string attachments = 6;
+  }
+}
+
+message SendEmailResponse {
+  string sentMessageInfo = 1;
+}
+
+message ResendEmailRequest {
+  string emailRecordId = 1;
+}
+
+message ResendEmailResponse {
+  string sentMessageInfo = 1;
+}
+
+message GetEmailStatusRequest {
+  string messageId = 1;
+}
+
+message GetEmailStatusResponse {
+  string statusInfo = 1;
+}
+
+service Email {
+  rpc RegisterTemplate(RegisterTemplateRequest) returns (RegisterTemplateResponse);
+  rpc SendEmail(SendEmailRequest) returns (SendEmailResponse);
+  rpc ResendEmail(ResendEmailRequest) returns (ResendEmailResponse);
+  rpc GetEmailStatus(GetEmailStatusRequest) returns (GetEmailStatusResponse);
+}
+
+//------ PushNotifications ------
+
+message SetNotificationTokenRequest {
+  string token = 1;
+  string platform = 2;
+  string userId = 3;
+}
+
+message SetNotificationTokenResponse {
+  string newTokenDocument = 1;
+}
+
+message GetNotificationTokensRequest {
+  string userId = 1;
+}
+
+message GetNotificationTokensResponse {
+  repeated string tokenDocuments = 1;
+}
+
+message SendNotificationRequest {
+  string sendTo = 1;
+  optional string title = 2;
+  optional string platform = 3;
+  optional string body = 4;
+  optional string data = 5;
+  optional bool doNotStore = 6;
+  optional bool isSilent = 7;
+}
+
+message SendNotificationToManyDevicesRequest {
+  repeated string sendTo = 1;
+  optional string title = 2;
+  optional string body = 3;
+  optional string data = 4;
+  optional string platform = 5;
+  optional bool doNotStore = 6;
+  optional bool isSilent = 7;
+}
+
+message SendManyNotificationsRequest {
+  repeated SendNotificationRequest notifications = 1;
+}
+
+message SendNotificationResponse {
+  string message = 1;
+}
+
+service PushNotifications {
+  rpc SetNotificationToken(SetNotificationTokenRequest) returns (SetNotificationTokenResponse);
+  rpc GetNotificationTokens(GetNotificationTokensRequest) returns (GetNotificationTokensResponse);
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+  rpc SendNotificationToManyDevices(SendNotificationToManyDevicesRequest) returns (SendNotificationResponse);
+  rpc SendManyNotifications(SendManyNotificationsRequest) returns (SendNotificationResponse);
+}

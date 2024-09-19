@@ -94,8 +94,8 @@ export class FormsRoutes {
     Object.keys(data).forEach(r => {
       text += `</br>${r}: ${data[r]}`;
     });
-    await this.grpcSdk
-      .emailProvider!.sendEmail('FormSubmission', {
+    await this.grpcSdk.comms?.email
+      ?.sendEmail('FormSubmission', {
         email: form.forwardTo,
         replyTo: form.emailField ? data[form.emailField] : null,
         variables: {

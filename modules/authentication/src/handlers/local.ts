@@ -709,11 +709,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
   private async initDbAndEmail() {
     const config = ConfigController.getInstance().config;
 
-    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
-      this.emailModule = this.grpcSdk.emailProvider!;
-    }
-
-    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
+    if (
+      config.local.verification.send_email &&
+      this.grpcSdk.isAvailable('comms') &&
+      this.grpcSdk.comms?.featureAvailable('email')
+    ) {
+      this.emailModule = this.grpcSdk.comms.email!;
       this.registerTemplates();
     }
     this.initialized = true;

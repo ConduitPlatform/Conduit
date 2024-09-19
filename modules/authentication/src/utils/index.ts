@@ -92,7 +92,7 @@ export namespace AuthUtils {
     token: Token,
     code: string,
   ): Promise<boolean> {
-    const verified = await grpcSdk.sms!.verify(token.data.verification, code);
+    const verified = await grpcSdk.comms!.sms!.verify(token.data.verification, code);
     if (!verified.verified) {
       return false;
     }

@@ -31,9 +31,11 @@ export class PhoneHandlers implements IAuthenticationStrategy {
 
   async validate(): Promise<boolean> {
     const config = ConfigController.getInstance().config;
-    const isAvailable = this.grpcSdk.isAvailable('sms');
+    const isAvailable =
+      this.grpcSdk.isAvailable('comms') &&
+      (await this.grpcSdk.comms!.featureAvailable('sms'));
     if (config.phoneAuthentication.enabled && isAvailable) {
-      this.sms = this.grpcSdk.sms!;
+      this.sms = this.grpcSdk.comms!.sms!;
       ConduitGrpcSdk.Logger.log('Phone authentication is available');
       return (this.initialized = true);
     } else {
