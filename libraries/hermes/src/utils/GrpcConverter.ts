@@ -67,6 +67,7 @@ export function grpcToConduitRoute(
     {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
+      'grpc.service_config': '{"loadBalancingConfig":[{"round_robin":{}}]}',
     },
   );
 

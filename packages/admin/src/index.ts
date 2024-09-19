@@ -383,7 +383,7 @@ export default class AdminModule extends IConduitAdmin {
                   }
                 });
             }
-            return this.internalRegisterRoute(r.protofile, r.routes, r.url);
+            return this.internalRegisterRoute(r.routes, r.url);
           } catch (err) {
             ConduitGrpcSdk.Logger.error(err as Error);
           }
@@ -418,9 +418,9 @@ export default class AdminModule extends IConduitAdmin {
       const messageParsed = JSON.parse(message);
       try {
         this.internalRegisterRoute(
-          messageParsed.protofile,
           messageParsed.routes,
           messageParsed.url,
+          messageParsed.moduleName,
         );
       } catch (err) {
         ConduitGrpcSdk.Logger.error(err as Error);
