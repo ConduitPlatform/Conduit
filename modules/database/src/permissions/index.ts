@@ -43,7 +43,9 @@ export async function canModify(moduleName: string, schema: Schema, data?: Index
         return Object.keys(flattenedFields);
       })
       .reduce((acc: string[], curr: string[]) => [...acc, ...curr], []);
-    const dataFields = Object.keys(data);
+    const flattenedData = {};
+    convertObjectToDotNotation(data, flattenedData, undefined, undefined, '', '.');
+    const dataFields = Object.keys(flattenedData);
     return dataFields.every((field: string) => extensionFields.includes(field));
   }
   return false;
