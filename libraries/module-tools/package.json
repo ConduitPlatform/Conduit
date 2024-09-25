@@ -30,7 +30,7 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.10.9",
     "@grpc/proto-loader": "^0.7.6",
-    "abort-controller-x": "^0.4.1",
+    "abort-controller-x": "^0.4.3",
     "convict": "^6.2.4",
     "express": "^4.20.0",
     "fast-jwt": "^3.3.2",
