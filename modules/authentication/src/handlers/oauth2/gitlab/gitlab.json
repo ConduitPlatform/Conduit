@@ -4,6 +4,7 @@
   "responseType": "code",
   "authorizeUrl": "https://gitlab.com/oauth/authorize",
   "tokenUrl": "https://gitlab.com/oauth/token",
-  "grantType": "authorization_code"
+  "grantType": "authorization_code",
+  "supportNative": false
 }
 

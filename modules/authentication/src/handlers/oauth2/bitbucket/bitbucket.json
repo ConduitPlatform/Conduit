@@ -4,5 +4,6 @@
   "providerName": "bitbucket",
   "tokenUrl": "https://bitbucket.org/site/oauth2/access_token",
   "responseType": "code",
-  "grantType": "authorization_code"
+  "grantType": "authorization_code",
+  "supportNative": false
 }

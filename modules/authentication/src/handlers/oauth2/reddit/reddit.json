@@ -4,5 +4,6 @@
   "providerName": "reddit",
   "tokenUrl": "https://www.reddit.com/api/v1/access_token",
   "responseType": "code",
-  "grantType": "authorization_code"
+  "grantType": "authorization_code",
+  "supportNative": false
 }

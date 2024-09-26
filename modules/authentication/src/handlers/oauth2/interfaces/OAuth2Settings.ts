@@ -20,6 +20,7 @@ export class OAuth2Settings {
   scopeSeperator?: string;
   codeChallengeMethod?: string;
   codeVerifier?: string;
+  supportNative: boolean;
 
   constructor(
     providerConfig: ProviderConfig,
@@ -31,6 +32,7 @@ export class OAuth2Settings {
       responseType: string;
       responseMode?: string;
       codeChallengeMethod?: string;
+      supportNative?: boolean;
     },
   ) {
     this.accountLinking = providerConfig.accountLinking;
@@ -46,6 +48,7 @@ export class OAuth2Settings {
       providerParams.responseMode === 'form_post' ? 'form_post' : 'query';
     this.codeChallengeMethod = providerParams.codeChallengeMethod;
     this.codeVerifier = !isNil(this.codeChallengeMethod) ? uuid() : undefined;
+    this.supportNative = providerParams.supportNative ?? false;
   }
 
   set provider(providerName: string) {
