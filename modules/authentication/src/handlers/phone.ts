@@ -24,7 +24,6 @@ import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy.js
 import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
 import { TeamsHandler } from './team.js';
-import checkUserData = AuthUtils.checkUserData;
 
 export class PhoneHandlers implements IAuthenticationStrategy {
   private sms: SMS;
@@ -212,7 +211,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       })) as User;
     }
     if (userData) {
-      checkUserData(userData);
+      AuthUtils.checkUserData(userData);
     }
     const user = await User.getInstance().create({
       phoneNumber: existingToken.data.phone,
