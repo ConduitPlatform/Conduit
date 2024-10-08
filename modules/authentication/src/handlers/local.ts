@@ -19,6 +19,7 @@ import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import { TeamsHandler } from './team.js';
 import {
+  ConduitJson,
   ConduitString,
   ConfigController,
   RoutingManager,
@@ -51,6 +52,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           invitationToken: ConduitString.Optional,
           captchaToken: ConduitString.Optional,
           redirectUri: ConduitString.Optional,
+          userData: ConduitJson.Optional,
         },
         middlewares: localRouteMiddleware,
       },
@@ -62,6 +64,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         {
           path: '/local/new/anonymous',
           action: ConduitRouteActions.POST,
+          bodyParams: {
+            userData: ConduitJson.Optional,
+          },
           description: `Creates a new anonymous user.`,
         },
         new ConduitRouteReturnDefinition('LoginResponse', {
@@ -236,25 +241,30 @@ export class LocalHandlers implements IAuthenticationStrategy {
     callback: (response: UnparsedRouterResponse) => void,
   ) {
     const email = call.request.params.email.toLowerCase();
-    const password = call.request.params.password;
+    const { password, invitationToken, redirectUri, userData } = call.request.params;
 
     const config = ConfigController.getInstance().config;
     const teams = config.teams;
     if (
       teams.enabled &&
       !teams.allowRegistrationWithoutInvite &&
-      isNil(call.request.params.invitationToken)
+      isNil(invitationToken)
     ) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
     }
-    if (teams.enabled && call.request.params.invitationToken) {
+    let isVerified = false;
+    if (teams.enabled && invitationToken) {
       const valid = await TeamsHandler.getInstance().inviteValidation(
-        call.request.params.invitationToken,
+        invitationToken,
         email,
       );
       if (!valid) {
         throw new GrpcError(status.PERMISSION_DENIED, 'Invalid invitation token');
       }
+      isVerified = await TeamsHandler.getInstance().verifyUserViaInvitation(
+        invitationToken,
+        email,
+      );
     }
     const invalidAddress = AuthUtils.invalidEmailAddress(email);
     if (invalidAddress) {
@@ -263,6 +273,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     let user: User | null = await User.getInstance().findOne({ email });
     if (!isNil(user)) throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
+    if (userData) {
+      AuthUtils.checkUserData(userData);
+    }
 
     const hashedPassword = await AuthUtils.hashPassword(password);
     const { anonymousUser } = call.request.context;
@@ -271,13 +284,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
         email,
         hashedPassword,
         isAnonymous: false,
-        isVerified: false,
+        isVerified,
       })) as User;
     } else {
       user = await User.getInstance().create({
         email,
         hashedPassword,
-        isVerified: false,
+        isVerified,
+        ...userData,
       });
     }
     delete user.hashedPassword;
@@ -285,17 +299,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
     callback({ user });
 
-    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
-      await this.handleEmailVerification(user, call.request.bodyParams.redirectUri).catch(
-        e => {
-          ConduitGrpcSdk.Logger.error(e);
-        },
-      );
+    if (
+      config.local.verification.send_email &&
+      this.grpcSdk.isAvailable('email') &&
+      !isVerified
+    ) {
+      await this.handleEmailVerification(user, redirectUri).catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
     }
 
-    if (call.request.params.invitationToken) {
+    if (invitationToken) {
       await TeamsHandler.getInstance()
-        .addUserToTeam(user, call.request.params.invitationToken)
+        .addUserToTeam(user, invitationToken)
         .catch(err => {
           ConduitGrpcSdk.Logger.error(err);
         });
@@ -310,10 +326,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async anonymousRegister(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const email = `${uuid()}@anonymous.com`;
+    const { userData } = call.request.params;
+    if (userData) {
+      AuthUtils.checkUserData(userData);
+    }
     const anonymousUser = await User.getInstance().create({
       email,
       isAnonymous: true,
       isVerified: false,
+      ...userData,
     });
     const context = call.request.context;
     const config = ConfigController.getInstance().config;

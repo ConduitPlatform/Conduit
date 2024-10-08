@@ -3,13 +3,16 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
+  Indexable,
   ParsedRouterRequest,
+  Query,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 
 import {
   ConduitBoolean,
+  ConduitJson,
   ConduitNumber,
   ConduitObjectId,
   ConduitString,
@@ -70,6 +73,27 @@ export class TeamsHandler implements IAuthenticationStrategy {
     return true;
   }
 
+  async verifyUserViaInvitation(invitationToken: string, email: string) {
+    if (!this.initialized) {
+      ConduitGrpcSdk.Logger.error('TeamsHandler not initialized');
+      return false;
+    }
+    const inviteToken = await Token.getInstance().findOne({
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
+      token: invitationToken,
+    });
+    if (!inviteToken) {
+      return false;
+    }
+    if (!inviteToken.data.email) {
+      return false;
+    }
+    if (inviteToken.data.email === email) {
+      return true;
+    }
+    return !!ConfigController.getInstance().config.teams.allowEmailMismatchForInvites;
+  }
+
   async addUserToTeam(user: User, invitationToken: string) {
     if (!this.initialized) return;
     const inviteToken = await Token.getInstance().findOne({
@@ -104,7 +128,9 @@ export class TeamsHandler implements IAuthenticationStrategy {
       relation: inviteToken!.data.role,
       resource: 'Team:' + team._id,
     });
-    await Token.getInstance().deleteOne({ _id: inviteToken!._id });
+    if (inviteToken.data.email) {
+      await Token.getInstance().deleteOne({ _id: inviteToken!._id });
+    }
   }
 
   async getUserInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -173,6 +199,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     role?: string;
     email?: string;
     inviter: User;
+    userData?: Indexable;
   }) {
     return Token.getInstance().create({
       tokenType: TokenType.TEAM_INVITE_TOKEN,
@@ -181,6 +208,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         teamId: invite.teamId,
         role: invite.role || 'member',
         email: invite.email,
+        userData: invite.userData,
       },
       user: invite.inviter._id,
     });
@@ -191,6 +219,20 @@ export class TeamsHandler implements IAuthenticationStrategy {
     const { invitationToken } = call.request.params;
     await this.addUserToTeam(user, invitationToken);
     return 'OK';
+  }
+
+  async getInvitationTokenUserData(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { invitationToken } = call.request.params;
+    const inviteToken = await Token.getInstance().findOne({
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
+      token: invitationToken,
+    });
+    if (!inviteToken) {
+      throw new GrpcError(status.NOT_FOUND, 'Invitation token not found');
+    }
+    return { userData: inviteToken.data.userData ?? {} };
   }
 
   async createTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -502,7 +544,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async userInvite(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { teamId, email, role, redirectUri } = call.request.params;
+    const { teamId, email, role, redirectUri, userData } = call.request.params;
     const config: Config = ConfigController.getInstance().config;
     if (!config.teams.invites.enabled) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Team invites are disabled');
@@ -538,6 +580,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       email,
       role,
       inviter: user,
+      userData,
     });
     if (email && config.teams.invites.sendEmail && this.grpcSdk.isAvailable('email')) {
       let link = !isEmpty(redirectUri)
@@ -559,6 +602,78 @@ export class TeamsHandler implements IAuthenticationStrategy {
         });
     }
     return invitation.token;
+  }
+
+  async persistentInvite(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { teamId, role, userData } = call.request.params;
+    const config = ConfigController.getInstance().config;
+    if (!config.teams.invites.enabled) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Team invites are disabled');
+    }
+    const team = await Team.getInstance().findOne({ _id: teamId });
+    if (!team) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Could not create invite, team does not exist',
+      );
+    }
+    const isOwner = await this.grpcSdk.authorization!.findRelation({
+      subject: 'User:' + user._id,
+      resource: 'Team:' + teamId,
+      relation: 'owner',
+    });
+    if (!isOwner) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'You do not have permission to invite users to this team',
+      );
+    }
+    const invitation = await this.createUserInvitation({
+      teamId,
+      role,
+      inviter: user,
+      userData,
+    });
+    return invitation.token;
+  }
+
+  async deletePersistentInvitation(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { teamId, invitationToken } = call.request.params;
+    const config: Config = ConfigController.getInstance().config;
+    if (!config.teams.invites.enabled) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Team invites are disabled');
+    }
+    const team = await Team.getInstance().findOne({ _id: teamId });
+    if (!team) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Could not create invite, team does not exist',
+      );
+    }
+    const isOwner = await this.grpcSdk.authorization!.findRelation({
+      subject: 'User:' + user._id,
+      resource: 'Team:' + teamId,
+      relation: 'owner',
+    });
+    if (!isOwner) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'You do not have permission to invite users to this team',
+      );
+    }
+    const foundToken = await Token.getInstance().findOne({
+      token: invitationToken,
+      'data.teamId': teamId,
+    } as Query<Token>);
+    if (!foundToken) {
+      throw new GrpcError(status.NOT_FOUND, 'Token not found');
+    }
+    await Token.getInstance().deleteOne({ _id: foundToken._id });
+    return 'Invitation token deleted';
   }
 
   async modifyMembersRoles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -801,6 +916,20 @@ export class TeamsHandler implements IAuthenticationStrategy {
     );
     routingManager.route(
       {
+        path: '/teams/invite/user/data',
+        description: `Returns user data of an invitation token.`,
+        queryParams: {
+          invitationToken: ConduitString.Required,
+        },
+        action: ConduitRouteActions.GET,
+      },
+      new ConduitRouteReturnDefinition('GetInvitationTokenUserData', {
+        userData: ConduitJson.Optional,
+      }),
+      this.getInvitationTokenUserData.bind(this),
+    );
+    routingManager.route(
+      {
         path: '/teams/:teamId/invite',
         description: `Creates a new invite to add a user to a team.`,
         urlParams: {
@@ -810,12 +939,46 @@ export class TeamsHandler implements IAuthenticationStrategy {
           role: ConduitString.Required,
           email: ConduitString.Required,
           redirectUri: ConduitString.Optional,
+          userData: ConduitJson.Optional,
         },
         action: ConduitRouteActions.POST,
         middlewares: authRouteMiddlewares,
       },
       new ConduitRouteReturnDefinition('InvitationToken', 'String'),
       this.userInvite.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/teams/:teamId/invite/persistent',
+        description: `Creates a persistent invitation token to add multiple users to a team.`,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          role: ConduitString.Required,
+          userData: ConduitJson.Optional,
+        },
+        action: ConduitRouteActions.POST,
+        middlewares: authRouteMiddlewares,
+      },
+      new ConduitRouteReturnDefinition('PersistentInvitationToken', 'String'),
+      this.persistentInvite.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/teams/:teamId/invite/persistent',
+        description: `Deletes a persistent invitation token of a team.`,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        queryParams: {
+          invitationToken: ConduitString.Required,
+        },
+        action: ConduitRouteActions.DELETE,
+        middlewares: authRouteMiddlewares,
+      },
+      new ConduitRouteReturnDefinition('DeletePersistentInvitationToken', 'String'),
+      this.deletePersistentInvitation.bind(this),
     );
     if (config.teams.allowAddWithoutInvite) {
       routingManager.route(
