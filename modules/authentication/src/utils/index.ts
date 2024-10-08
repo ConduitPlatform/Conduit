@@ -250,4 +250,16 @@ export namespace AuthUtils {
   export function generateOtp(): string {
     return Math.floor(1000 + Math.random() * 9000).toString();
   }
+
+  export function checkUserData(userData: Indexable) {
+    const userKeys = Object.keys(User.getInstance().fields);
+    const userDataKeys = Object.keys(userData);
+    const overwrite = userDataKeys.some(key => userKeys.includes(key));
+    if (overwrite) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `User data cannot overwrite User schema fields`,
+      );
+    }
+  }
 }

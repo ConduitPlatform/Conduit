@@ -6,6 +6,7 @@ import {
   ConduitRouteReturnDefinition,
   GrpcError,
   ParsedRouterRequest,
+  TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
@@ -129,6 +130,14 @@ export class CommonHandlers implements IAuthenticationStrategy {
     return this.logOut(call);
   }
 
+  async updateUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const fields = call.request.params.fields;
+    AuthUtils.checkUserData(fields);
+    const updatedUser = await User.getInstance().findByIdAndUpdate(user._id, fields);
+    return updatedUser!;
+  }
+
   declareRoutes(routingManager: RoutingManager): void {
     routingManager.route(
       {
@@ -149,6 +158,24 @@ export class CommonHandlers implements IAuthenticationStrategy {
       },
       new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
       this.deleteUser.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/user',
+        description: `Updates user.`,
+        action: ConduitRouteActions.PATCH,
+        bodyParams: {
+          fields: {
+            type: TYPE.JSON,
+            required: true,
+            description:
+              'Fields to update that should not overwrite the User schema fields.',
+          },
+        },
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition(User.name),
+      this.updateUser.bind(this),
     );
     const config = ConfigController.getInstance().config;
     if (config.refreshTokens.enabled) {
