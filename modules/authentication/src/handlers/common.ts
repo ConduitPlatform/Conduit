@@ -132,9 +132,9 @@ export class CommonHandlers implements IAuthenticationStrategy {
 
   async updateUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const fields = call.request.params.fields;
-    AuthUtils.checkUserData(fields);
-    const updatedUser = await User.getInstance().findByIdAndUpdate(user._id, fields);
+    const { userData } = call.request.bodyParams;
+    AuthUtils.checkUserData(userData);
+    const updatedUser = await User.getInstance().findByIdAndUpdate(user._id, userData);
     return updatedUser!;
   }
 
@@ -165,7 +165,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
         description: `Updates user.`,
         action: ConduitRouteActions.PATCH,
         bodyParams: {
-          fields: {
+          userData: {
             type: TYPE.JSON,
             required: true,
             description:
