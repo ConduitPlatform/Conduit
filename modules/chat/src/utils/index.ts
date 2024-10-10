@@ -4,7 +4,7 @@ import { ConduitGrpcSdk, GrpcError, UntypedArray } from '@conduitplatform/grpc-s
 import { ChatRoom, InvitationToken, User } from '../models/index.js';
 import { v4 as uuid } from 'uuid';
 
-export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: UntypedArray) {
+export async function validateUsersInput(users: UntypedArray) {
   const uniqueUsers = Array.from(new Set(users));
   let errorMessage: string | null = null;
   const usersToBeAdded = (await User.getInstance()
@@ -28,15 +28,16 @@ export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: Untyped
   return usersToBeAdded;
 }
 
-export async function sendInvitations(
-  users: User[],
-  sender: User,
-  room: ChatRoom,
-  url: string,
-  sendEmail: boolean,
-  sendNotification: boolean,
-  grpcSdk: ConduitGrpcSdk,
-) {
+export async function sendInvitations(args: {
+  users: User[];
+  sender: User;
+  room: ChatRoom;
+  url: string;
+  sendEmail: boolean;
+  sendNotification: boolean;
+  grpcSdk: ConduitGrpcSdk;
+}) {
+  const { room, users, sender, url, sendEmail, sendNotification, grpcSdk } = args;
   const roomId = room._id;
   for (const invitedUser of users) {
     const invitationsCount = await InvitationToken.getInstance().countDocuments({
@@ -56,7 +57,7 @@ export async function sendInvitations(
       token: uuid(),
       room: roomId,
     });
-    if (sendEmail) {
+    if (sendEmail && grpcSdk.isAvailable('email')) {
       const result = { invitationToken, hostUrl: url };
       const acceptLink = `${result.hostUrl}/hook/chat/invitations/accept/${result.invitationToken.token}`;
       const declineLink = `${result.hostUrl}/hook/chat/invitations/decline/${result.invitationToken.token}`;
@@ -76,7 +77,7 @@ export async function sendInvitations(
           throw new Error(e.message);
         });
     }
-    if (sendNotification) {
+    if (sendNotification && grpcSdk.isAvailable('pushNotifications')) {
       const body = `User ${sender._id} has invited you to join in room ${room.name}`;
       const title = 'You have an invitation request!';
       await grpcSdk
@@ -87,16 +88,4 @@ export async function sendInvitations(
     }
   }
   return 'Invitations sent';
-}
-
-export function populateArray(pop: string | string[] | undefined) {
-  if (!pop) return pop;
-  if (typeof pop === 'string' && pop.indexOf(',') !== -1) {
-    pop = pop.split(',');
-  } else if (Array.isArray(pop)) {
-    return pop;
-  } else {
-    pop = [pop];
-  }
-  return pop;
 }
