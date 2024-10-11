@@ -43,7 +43,7 @@
     "lodash-es": "^4.17.21",
     "mailgun-js": "^0.22.0",
     "mandrill-api": "^1.0.45",
-    "nodemailer": "^6.9.12",
+    "nodemailer": "^6.9.15",
     "nodemailer-mailgun-transport": "^2.1.5",
     "nodemailer-mandrill-transport": "^1.2.0",
     "nodemailer-sendgrid": "^1.0.3"
@@ -54,7 +54,7 @@
     "@types/mailgun-js": "^0.22.18",
     "@types/mandrill-api": "^1.0.34",
     "@types/node": "20.11.24",
-    "@types/nodemailer": "^6.4.14",
+    "@types/nodemailer": "^6.4.16",
     "@types/nodemailer-mailgun-transport": "^1.4.6",
     "@types/smtp-server": "^3.5.7",
     "copyfiles": "^2.4.1",
