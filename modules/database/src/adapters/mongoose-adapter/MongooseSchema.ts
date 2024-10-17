@@ -320,7 +320,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (isNil(filter) && !isNil(parsedQuery)) {
       return null;
     }
-    let finalQuery = this.model.findOne(parsedQuery!, options?.select);
+    let finalQuery = this.model.findOne(filter!, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
     }
