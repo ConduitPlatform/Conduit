@@ -3744,7 +3744,7 @@
     whatwg-mimetype "^4.0.0"
     zod "^3.22.4"
 
-"@scalar/api-reference@1.25.10", "@scalar/api-reference@^1.25.9":
+"@scalar/api-reference@^1.25.9":
   version "1.25.10"
   resolved "https://registry.yarnpkg.com/@scalar/api-reference/-/api-reference-1.25.10.tgz#62f67cd16f021590f7bbb32c6729b0aab5d3f9cd"
   integrity sha512-rt774ox6itGtAHRPqcoQzgwO+WBQ118q4LB7yffFsp1S3QO2LH1VsydD4Mkudqu3OdRStkkCZshdh3OP+wuQKw==
@@ -3820,13 +3820,12 @@
   dependencies:
     vue "^3.4.29"
 
-"@scalar/express-api-reference@^0.4.149":
-  version "0.4.149"
-  resolved "https://registry.yarnpkg.com/@scalar/express-api-reference/-/express-api-reference-0.4.149.tgz#b40e9c1300d3004a305072a0cc9abeda064feb24"
-  integrity sha512-FtP2762K9SzByAuDOa8lh6BnTbc1KWGhwy1PCVNsfc6HOO7mhybRVu5pM65YzhZci8FQK1lSccC/FZ5A6dmg+Q==
+"@scalar/express-api-reference@^0.4.157":
+  version "0.4.165"
+  resolved "https://registry.yarnpkg.com/@scalar/express-api-reference/-/express-api-reference-0.4.165.tgz#cf7fb69999ee73776817a7dc49515e84ba432b99"
+  integrity sha512-Bpam2htoq6Oq+vlW05qlEyw1libyoA2i44DwN+1gHH9s6toydEIkFdlAS00gor+3WwN+ogdBeAyfJDZlqUj7Bw==
   dependencies:
-    "@scalar/api-reference" "1.25.10"
-    express "^4.19.2"
+    "@scalar/types" "0.0.17"
 
 "@scalar/oas-utils@0.2.42":
   version "0.2.42"
@@ -3867,6 +3866,11 @@
   resolved "https://registry.yarnpkg.com/@scalar/openapi-types/-/openapi-types-0.1.0.tgz#d331ead80793587a753cc8754616b4c235eea3d7"
   integrity sha512-UxyIkRqC2rbvQJhenA+KdgAbLNUPjqI5CHhZmTuxiv7De9ZJLRVTQCa0JxNqSJ/b51VKpqZ/pDLvjbQpxGFWcA==
 
+"@scalar/openapi-types@0.1.4":
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/@scalar/openapi-types/-/openapi-types-0.1.4.tgz#11b6bf90dc847f6925d3e437b834e42e84213025"
+  integrity sha512-+wRXgmqzgDnj8Dxqf4OOPMPo4or/LRd1Bsy4pnrIW0yBt8rKSdtBb+jH/aRnhgDDmKVjWxJ+KFk7WlSKvZwNTw==
+
 "@scalar/snippetz@0.2.2":
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/@scalar/snippetz/-/snippetz-0.2.2.tgz#bd0fa581b4e8c0b83cf6935ca206b07724e97d31"
@@ -3876,6 +3880,14 @@
   version "0.9.28"
   resolved "https://registry.yarnpkg.com/@scalar/themes/-/themes-0.9.28.tgz#a63de14eb9b3d463fbcd6783fe51367172ca7ae3"
   integrity sha512-2pFGnjSBL2daPA5roRNRDy8xAHpeTI5QYpfyTj88iIaYT68EVnDUheUA2i3vRB705FCGEbDR0xKD7poTSfAYng==
+
+"@scalar/types@0.0.17":
+  version "0.0.17"
+  resolved "https://registry.yarnpkg.com/@scalar/types/-/types-0.0.17.tgz#f44c34a14ec27ab1d704d989ada8568796e96a7a"
+  integrity sha512-wUrvNnYFMULsHENX/9TP3oyECRTtZsP06mOZU+RlWg9sRtzWVTjlBCahkgUETL93J+Bz2RLFSKVgPyNN4fpIpA==
+  dependencies:
+    "@scalar/openapi-types" "0.1.4"
+    "@unhead/schema" "^1.9.5"
 
 "@scalar/types@0.0.7":
   version "0.0.7"
@@ -7047,23 +7059,18 @@ convict@^6.2.4:
     lodash.clonedeep "^4.5.0"
     yargs-parser "^20.2.7"
 
-cookie-parser@~1.4.6:
-  version "1.4.6"
-  resolved "https://registry.yarnpkg.com/cookie-parser/-/cookie-parser-1.4.6.tgz#3ac3a7d35a7a03bbc7e365073a26074824214594"
-  integrity sha512-z3IzaNjdwUC2olLIB5/ITd0/setiaFMLYiZJle7xg5Fe9KWAceil7xszYfHHBtDFYLSgJduS2Ty0P1uJdPDJeA==
+cookie-parser@~1.4.7:
+  version "1.4.7"
+  resolved "https://registry.yarnpkg.com/cookie-parser/-/cookie-parser-1.4.7.tgz#e2125635dfd766888ffe90d60c286404fa0e7b26"
+  integrity sha512-nGUvgXnotP3BsjiLX2ypbQnWoGUPIIfHQNZkkC668ntrzGWEZVW70HDEB1qnNGMicPje6EttlIgzo51YSwNQGw==
   dependencies:
-    cookie "0.4.1"
+    cookie "0.7.2"
     cookie-signature "1.0.6"
 
 cookie-signature@1.0.6:
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/cookie-signature/-/cookie-signature-1.0.6.tgz#e303a882b342cc3ee8ca513a79999734dab3ae2c"
   integrity sha512-QADzlaHc8icV8I7vbaJXJwod9HWYp8uCqf1xa4OfNu1T7JVxQIrUgOWtHdNDtPiywmFbiS12VjotIXLrKM3orQ==
-
-cookie@0.4.1:
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/cookie/-/cookie-0.4.1.tgz#afd713fe26ebd21ba95ceb61f9a8116e50a537d1"
-  integrity sha512-ZwrFkGJxUR3EIoXtO+yVE69Eb7KlixbaeAWfBQB9vVsNn/o+Yw69gBWSSDK825hQNdN+wF8zELf3dFNl/kxkUA==
 
 cookie@0.6.0:
   version "0.6.0"
@@ -7074,6 +7081,11 @@ cookie@0.7.1:
   version "0.7.1"
   resolved "https://registry.yarnpkg.com/cookie/-/cookie-0.7.1.tgz#2f73c42142d5d5cf71310a74fc4ae61670e5dbc9"
   integrity sha512-6DnInpx7SJ2AK3+CTUE/ZM0vWTUboZCegxhC2xiIydHR9jNuTAASBrfEpHhiGOZw/nX51bHt6YQl8jsGo4y/0w==
+
+cookie@0.7.2:
+  version "0.7.2"
+  resolved "https://registry.yarnpkg.com/cookie/-/cookie-0.7.2.tgz#556369c472a2ba910f2979891b526b3436237ed7"
+  integrity sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==
 
 cookie@~0.4.1:
   version "0.4.2"
@@ -8046,7 +8058,7 @@ express-winston@^4.2.0:
     chalk "^2.4.2"
     lodash "^4.17.21"
 
-express@^4.17.1, express@^4.19.2:
+express@^4.17.1:
   version "4.21.0"
   resolved "https://registry.yarnpkg.com/express/-/express-4.21.0.tgz#d57cb706d49623d4ac27833f1cbc466b668eb915"
   integrity sha512-VqcNGcj/Id5ZT1LZ/cfihi3ttTn+NJmkli2eZADigjq29qTlWi/hAQ43t/VLPq8+UX06FCEx3ByOYet6ZFblng==
@@ -8120,7 +8132,7 @@ express@^4.20.0, express@~4.20.0:
     utils-merge "1.0.1"
     vary "~1.1.2"
 
-express@^4.21.1:
+express@^4.21.1, express@~4.21.1:
   version "4.21.1"
   resolved "https://registry.yarnpkg.com/express/-/express-4.21.1.tgz#9dae5dda832f16b4eec941a4e44aa89ec481b281"
   integrity sha512-YSFlK1Ee0/GC8QaO91tHcDxJiE/X4FbpAyQWkxAvG6AXCuR65YzK8ua6D9hvi/TzUfZMpc+BwuM1IPw8fmQBiQ==
