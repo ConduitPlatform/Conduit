@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.10](https://github.com/ConduitPlatform/Conduit/compare/v0.16.9...v0.16.10) (2024-10-21)
+
+
+### Features
+
+* **authentication:** invitations & additional user data in registration ([#1184](https://github.com/ConduitPlatform/Conduit/issues/1184)) ([5ac198f](https://github.com/ConduitPlatform/Conduit/commit/5ac198febadfa34e9bf64e7295b08eaf62e774fc))
+* **authentication:** supportNative setting in providers ([#1170](https://github.com/ConduitPlatform/Conduit/issues/1170)) ([028b315](https://github.com/ConduitPlatform/Conduit/commit/028b3154ec7075b54a9838449319f86dc293de11))
+
+
+### Bug Fixes
+
+* **authentication, authorization:** teamMembers count, remove default pagination from rpc routes ([#1161](https://github.com/ConduitPlatform/Conduit/issues/1161)) ([b0c562b](https://github.com/ConduitPlatform/Conduit/commit/b0c562be73fc1093cb9addda09a526f526e584ff))
+* **database:** canModify extensions remove redundant nested fields check, parse mongo nested update syntax ([#1169](https://github.com/ConduitPlatform/Conduit/issues/1169)) ([be4adbd](https://github.com/ConduitPlatform/Conduit/commit/be4adbd83e4708a58f0771fc563af712023cd32b))
+* **database:** wrong query in mongoose findOne ([#1192](https://github.com/ConduitPlatform/Conduit/issues/1192)) ([d527b8a](https://github.com/ConduitPlatform/Conduit/commit/d527b8a805ed334a52f1d70c344817fd7b27098e))
+
 ### [0.16.9](https://github.com/ConduitPlatform/Conduit/compare/v0.16.8...v0.16.9) (2024-09-10)
 
 
