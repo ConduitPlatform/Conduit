@@ -75,7 +75,7 @@ export default {
       residency: {
         doc: 'Sets the host for sendgrid provider. SendGrid Default: global',
         format: 'String',
-        default: '',
+        default: 'global',
       },
       apiKey: {
         doc: 'The SendGrid API key',
