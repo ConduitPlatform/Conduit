@@ -43,7 +43,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.1",
+    "@types/bcrypt": "^5.0.2",
     "@types/convict": "^6.1.6",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/lodash-es": "^4.17.12",
