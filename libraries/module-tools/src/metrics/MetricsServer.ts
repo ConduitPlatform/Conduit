@@ -1,4 +1,4 @@
-import express, { Express } from 'express';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { Registry } from 'prom-client';
 import { isNaN } from 'lodash';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
@@ -14,28 +14,35 @@ export class MetricsServer {
     this.Registry = registry;
   }
 
-  initialize(): Express {
-    const server = express();
+  initialize() {
     const port = this.getHttpPort();
     const url = '0.0.0.0:' + port.toString();
+    const server = createServer(this.requestHandler.bind(this));
+
     server.listen(port, () => {
       ConduitGrpcSdk.Logger.info(`Metrics server listening on: ${url}`);
     });
-    server.get('/', (req: express.Request, res: express.Response) => {
-      return res
-        .status(200)
-        .send(
-          `Conduit Metrics for module: ${this.moduleName}, instance: ${this.instance}`,
-        );
-    });
-    server.get('/metrics', async (req: express.Request, res: express.Response) => {
-      const metrics = await this.Registry.metrics();
-      return res.status(200).send(metrics);
-    });
+
     return server;
   }
 
-  getHttpPort() {
+  private async requestHandler(req: IncomingMessage, res: ServerResponse) {
+    if (req.url === '/' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end(
+        `Conduit Metrics for module: ${this.moduleName}, instance: ${this.instance}`,
+      );
+    } else if (req.url === '/metrics' && req.method === 'GET') {
+      const metrics = await this.Registry.metrics();
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end(metrics);
+    } else {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Not Found');
+    }
+  }
+
+  private getHttpPort() {
     const value = process.env['METRICS_PORT'];
     if (!value) {
       ConduitGrpcSdk.Logger.error(`Metrics HTTP port not set`);
