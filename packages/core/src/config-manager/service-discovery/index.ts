@@ -1,4 +1,10 @@
-import { ModuleListResponse } from '@conduitplatform/commons';
+import {
+  ModuleExistsRequest,
+  ModuleExistsResponse,
+  ModuleListResponse,
+  RegisterModuleRequest,
+  RegisterModuleResponse,
+} from '@conduitplatform/commons';
 import {
   ConduitGrpcSdk,
   GrpcCallback,
@@ -13,6 +19,7 @@ import { EventEmitter } from 'events';
 import { ServiceRegistry } from './ServiceRegistry.js';
 import { ServiceMonitor } from './ServiceMonitor.js';
 import { isEmpty } from 'lodash-es';
+import { ServiceDiscoverMessage } from '../models/ServiceDiscover.message.js';
 
 /*
  * - Multi-instance services are not handled individually (LoadBalancer)
@@ -78,7 +85,7 @@ export class ServiceDiscovery {
       }
     }
     this.grpcSdk.bus!.subscribe('service-discover', (message: string) => {
-      const parsedMessage = JSON.parse(message);
+      const parsedMessage: ServiceDiscoverMessage = JSON.parse(message);
       if (parsedMessage.type === 'module-health') {
         this._serviceMonitor.updateModuleHealth(
           parsedMessage.name,
@@ -89,6 +96,7 @@ export class ServiceDiscovery {
         this._serviceRegistry.updateModule(parsedMessage.name, {
           address: parsedMessage.url,
           serving: true,
+          instanceId: parsedMessage.instanceId,
         });
       }
     });
@@ -185,10 +193,13 @@ export class ServiceDiscovery {
     this._serviceMonitor.updateModuleHealth(moduleName, moduleUrl, healthStatus!);
   }
 
-  async registerModule(call: any, callback: GrpcResponse<{ result: boolean }>) {
+  async registerModule(
+    call: GrpcRequest<RegisterModuleRequest>,
+    callback: GrpcResponse<RegisterModuleResponse>,
+  ) {
     if (
-      call.request.status < HealthCheckStatus.UNKNOWN ||
-      call.request.status > HealthCheckStatus.NOT_SERVING
+      call.request.healthStatus < HealthCheckStatus.UNKNOWN ||
+      call.request.healthStatus > HealthCheckStatus.NOT_SERVING
     ) {
       callback({
         code: status.INVALID_ARGUMENT,
@@ -212,8 +223,8 @@ export class ServiceDiscovery {
   }
 
   moduleExists(
-    call: GrpcRequest<{ moduleName: string }>,
-    callback: GrpcResponse<{ url: string }>,
+    call: GrpcRequest<ModuleExistsRequest>,
+    callback: GrpcResponse<ModuleExistsResponse>,
   ) {
     const module = this._serviceRegistry.getModule(call.request.moduleName);
     if (module) {
@@ -227,20 +238,18 @@ export class ServiceDiscovery {
   }
 
   private publishModuleData(
-    type: string,
+    type: 'module-health' | 'serving-modules-update',
     name: string,
-    url?: string,
-    status?: HealthCheckStatus,
+    url: string,
+    status: HealthCheckStatus,
   ) {
-    this.grpcSdk.bus!.publish(
-      'service-discover',
-      JSON.stringify({
-        type,
-        name,
-        url,
-        status,
-      }),
-    );
+    const serviceDiscoverMessage: ServiceDiscoverMessage = {
+      type,
+      name,
+      url,
+      status,
+    };
+    this.grpcSdk.bus!.publish('service-discover', JSON.stringify(serviceDiscoverMessage));
   }
 
   private updateState(name: string, url: string) {

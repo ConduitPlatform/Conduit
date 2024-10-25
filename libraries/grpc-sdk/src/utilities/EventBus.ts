@@ -16,6 +16,7 @@ export class EventBus {
     this._clientSubscriber = redisManager.getClient({ keyPrefix: 'bus_' });
     this._clientPublisher = redisManager.getClient({ keyPrefix: 'bus_' });
     this._signature = crypto.randomBytes(20).toString('hex');
+    //@ts-expect-error
     this._clientSubscriber.on('ready', () => {
       ConduitGrpcSdk.Logger.log('The Bus is in the station...hehe');
     });
@@ -59,6 +60,7 @@ export class EventBus {
     this._subscribedChannels[channelName] = [callback];
     this._clientSubscriber.subscribe(channelName, () => {});
     const self = this;
+    //@ts-expect-error
     this._clientSubscriber.on('message', (channel: string, message: string) => {
       if (channel !== channelName) return;
       // if the message supports the signature

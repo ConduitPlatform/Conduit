@@ -14,6 +14,7 @@ import { initializeSdk, merge } from './utilities/index.js';
 import { convictConfigParser } from './utilities/convictConfigParser.js';
 import { RoutingManager } from './routing/index.js';
 import { RoutingController } from './routing/RoutingController.js';
+import crypto from 'crypto';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
   readonly config?: convict.Config<T>;
@@ -25,8 +26,8 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   private readonly servicePort: string;
   private _moduleState: ModuleLifecycleStage;
 
-  protected constructor(moduleName: string) {
-    super(moduleName);
+  protected constructor(moduleName: string, instanceId?: string) {
+    super(moduleName, instanceId ?? crypto.randomBytes(16).toString('hex'));
     this._moduleState = ModuleLifecycleStage.CREATE_GRPC;
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
@@ -48,6 +49,10 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
     return this._moduleName;
   }
 
+  get instanceId() {
+    return this._instanceId;
+  }
+
   get address() {
     return this._address;
   }
@@ -57,7 +62,12 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
     this.initialize(this.serviceAddress, this.servicePort);
     try {
       await this.preRegisterLifecycle();
-      await this.grpcSdk.config.registerModule(this.name, this.address, this.healthState);
+      await this.grpcSdk.config.registerModule(
+        this.name,
+        this.address,
+        this.healthState,
+        this.instanceId,
+      );
     } catch (err) {
       ConduitGrpcSdk.Logger.error('Failed to initialize server');
       ConduitGrpcSdk.Logger.error(err as Error);

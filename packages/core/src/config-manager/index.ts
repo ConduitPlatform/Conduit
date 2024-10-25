@@ -8,9 +8,12 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
+  GetConfigRequest,
   GetConfigResponse,
   GetRedisDetailsResponse,
   IConfigManager,
+  ModuleByNameRequest,
+  ModuleByNameResponse,
   UpdateConfigRequest,
   UpdateConfigResponse,
 } from '@conduitplatform/commons';
@@ -48,8 +51,8 @@ export default class ConfigManager implements IConfigManager {
   }
 
   getModuleUrlByNameGrpc(
-    call: GrpcRequest<{ name: string }>,
-    callback: GrpcResponse<{ moduleUrl: string }>,
+    call: GrpcRequest<ModuleByNameRequest>,
+    callback: GrpcResponse<ModuleByNameResponse>,
   ) {
     const name = call.request.name;
     const result = this.getModuleUrlByName(name);
@@ -156,7 +159,10 @@ export default class ConfigManager implements IConfigManager {
     this._configStorage.onDatabaseAvailable();
   }
 
-  getGrpc(call: GrpcRequest<{ key: string }>, callback: GrpcResponse<{ data: string }>) {
+  getGrpc(
+    call: GrpcRequest<GetConfigRequest>,
+    callback: GrpcResponse<GetConfigResponse>,
+  ) {
     this.get(call.request.key).then(r => {
       if (!r) {
         return callback({
