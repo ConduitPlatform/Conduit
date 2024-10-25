@@ -1,5 +1,5 @@
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import { RegisteredModule } from '@conduitplatform/commons';
+import { ModuleInstance, RegisteredModule } from '../models/RegisteredModule.js';
 
 export class ServiceRegistry {
   private static _instance: ServiceRegistry;
@@ -24,20 +24,18 @@ export class ServiceRegistry {
     return this.registeredModules.get(moduleName);
   }
 
-  updateModule(moduleName: string, module: RegisteredModule) {
-    this.registeredModules.set(moduleName, module);
+  updateModule(moduleName: string, module: ModuleInstance) {
+    const existingModule = this.registeredModules.get(moduleName);
+    if (existingModule) {
+      existingModule.addOrUpdateInstance(module);
+    } else {
+      const newModule = new RegisteredModule(moduleName, [module]);
+      this.registeredModules.set(moduleName, newModule);
+    }
   }
 
   removeModule(moduleName: string) {
     this.registeredModules.delete(moduleName);
-  }
-
-  getModuleDetails(
-    moduleName: string,
-  ): { moduleName: string; url: string; serving: boolean } | undefined {
-    const module = this.registeredModules.get(moduleName);
-    if (!module) return undefined;
-    return { moduleName: moduleName, url: module.address, serving: module.serving };
   }
 
   getModuleDetailsList(): { moduleName: string; url: string; serving: boolean }[] {
@@ -45,8 +43,8 @@ export class ServiceRegistry {
     this.registeredModules.forEach((value: RegisteredModule, key: string) => {
       modules.push({
         moduleName: key,
-        url: value.address,
-        serving: value.serving,
+        url: value.servingAddress ?? value.allAddresses,
+        serving: value.isServing,
       });
     });
     return modules;

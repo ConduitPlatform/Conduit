@@ -80,6 +80,7 @@ message ModuleHealthRequest {
   string moduleName = 1;
   string url = 2;
   int32 status = 3; // [0, 1, 2]
+  string instanceId = 4;
 }
 
 message ModuleByNameRequest {
@@ -88,12 +89,14 @@ message ModuleByNameRequest {
 
 message ModuleByNameResponse {
   string moduleUrl = 1;
+  repeated string instances = 2;
 }
 
 message RegisterModuleRequest {
   string moduleName = 1;
   string url = 2;
   int32 healthStatus = 3; // [0, 1, 2]
+  string instanceId = 4;
 }
 
 message RegisterModuleResponse {
@@ -106,6 +109,7 @@ message ModuleListResponse {
     string moduleName = 1;
     string url = 2;
     bool serving = 3;
+    repeated string instances = 4;
   }
 }
 
@@ -115,6 +119,7 @@ message ModuleExistsRequest {
 
 message ModuleExistsResponse {
   string url = 1;
+  repeated string instances = 2;
 }
 
 message GetConfigRequest {
