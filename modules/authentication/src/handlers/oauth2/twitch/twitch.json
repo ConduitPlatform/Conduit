@@ -4,5 +4,6 @@
   "providerName": "twitch",
   "tokenUrl": "https://id.twitch.tv/oauth2/token",
   "grantType": "authorization_code",
-  "responseType": "code"
+  "responseType": "code",
+  "supportNative": false
 }

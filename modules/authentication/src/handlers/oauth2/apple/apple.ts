@@ -161,27 +161,96 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     );
   }
 
-  declareRoutes(routingManager: RoutingManager) {
-    const config = ConfigController.getInstance().config;
-    const initRouteMiddleware = ['authMiddleware?', 'checkAnonymousMiddleware'];
-    if (config.captcha.enabled && config.captcha.routes.oAuth2) {
-      initRouteMiddleware.unshift('captchaMiddleware');
-    }
-    routingManager.route(
-      {
-        path: `/init/apple`,
-        description: `Begins Apple authentication.`,
-        action: ConduitRouteActions.GET,
-        queryParams: {
-          invitationToken: ConduitString.Optional,
-          captchaConfig: ConduitString.Optional,
-        },
-        middlewares: initRouteMiddleware,
-      },
-      new ConduitRouteReturnDefinition(`AppleInitResponse`, 'String'),
-      this.redirect.bind(this),
-    );
+  async nativeAuthorize(call: ParsedRouterRequest) {
+    const params = call.request.bodyParams;
+    const stateToken = await validateStateToken(params.state);
+    const decoded_id_token = jwt.decode(params.id_token, { complete: true });
 
+    const publicKeys = await axios.get('https://appleid.apple.com/auth/keys');
+    const publicKey = publicKeys.data.keys.find(
+      (key: Indexable) => key.kid === decoded_id_token!.header.kid,
+    );
+    const applePublicKey = await this.generateApplePublicKey(publicKey.kid);
+    this.verifyIdentityToken(applePublicKey, params.id_token);
+
+    const apple_private_key = this.settings.privateKey;
+
+    const jwtHeader = {
+      alg: 'ES256',
+      kid: this.settings.keyId,
+    };
+
+    const jwtPayload = {
+      iss: this.settings.teamId,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 86400,
+      aud: 'https://appleid.apple.com',
+      sub: this.settings.clientId,
+    };
+
+    const apple_client_secret = jwt.sign(jwtPayload, apple_private_key, {
+      algorithm: 'ES256',
+      header: jwtHeader,
+    });
+
+    const clientId = this.settings.clientId;
+    const config = ConfigController.getInstance().config;
+    const postData = qs.stringify({
+      client_id: clientId,
+      client_secret: apple_client_secret,
+      code: params.code,
+      grant_type: this.settings.grantType,
+    });
+    const req = {
+      method: this.settings.accessTokenMethod,
+      url: this.settings.tokenUrl,
+      data: postData,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    };
+    const appleResponseToken = await axios(req).catch(err => {
+      throw new GrpcError(status.INTERNAL, err.message);
+    });
+
+    const data = appleResponseToken.data;
+    const id_token = data.id_token;
+    const decoded = jwt.decode(id_token, { complete: true }) as Jwt;
+    const payload = decoded.payload as JwtPayload;
+    if (decoded_id_token!.payload.sub !== payload.sub) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
+    }
+    let userData = params.user;
+    try {
+      userData = JSON.parse(params.user);
+    } catch (e) {
+      // already a valid object
+    }
+
+    const userParams = {
+      id: payload.sub!,
+      email: payload.email,
+      data: { ...userData, ...payload.email_verified },
+    };
+    const user = await this.createOrUpdateUser(
+      userParams,
+      stateToken.data.invitationToken,
+      stateToken.data.anonymousUserId,
+    );
+    await Token.getInstance().deleteOne(stateToken);
+    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
+
+    const conduitClientId = stateToken.data.clientId;
+
+    return TokenProvider.getInstance()!.provideUserTokens({
+      user,
+      clientId: conduitClientId,
+      config,
+    });
+  }
+
+  declareRoutes(routingManager: RoutingManager) {
+    super.declareRoutes(routingManager);
     routingManager.route(
       {
         path: `/hook/apple`,

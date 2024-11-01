@@ -68,6 +68,42 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     return (this.initialized = true);
   }
 
+  async initNative(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const scopes = call.request.params?.scopes ?? this.defaultScopes;
+    const { anonymousUser } = call.request.context;
+    const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
+
+    // returns part of regular redirect options for native usage
+    const queryOptions: Partial<RedirectOptions> = {
+      client_id: this.settings.clientId,
+      redirect_uri: conduitUrl + this.settings.callbackUrl,
+      scope: this.constructScopes(scopes),
+    };
+    const stateToken = await Token.getInstance()
+      .create({
+        tokenType: TokenType.STATE_TOKEN,
+        token: uuid(),
+        data: {
+          invitationToken: call.request.params?.invitationToken,
+          clientId: call.request.context.clientId,
+          scope: queryOptions.scope,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+          customRedirectUri: call.request.params.redirectUri,
+          anonymousUserId: anonymousUser?._id,
+        },
+      })
+      .catch(err => {
+        throw new GrpcError(status.INTERNAL, err);
+      });
+    queryOptions['state'] = stateToken.token;
+
+    return queryOptions;
+  }
+
+  nativeAuthorize(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    throw new GrpcError(status.INTERNAL, 'Not supported for current provider');
+  }
+
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const { anonymousUser } = call.request.context;
@@ -334,6 +370,43 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       ),
       this.redirect.bind(this),
     );
+    if (this.settings.supportNative) {
+      routingManager.route(
+        {
+          path: `/initNative/${this.providerName}`,
+          description: `Begins ${this.capitalizeProvider()} native authentication.`,
+          action: ConduitRouteActions.GET,
+          queryParams: {
+            scopes: [ConduitString.Optional],
+            invitationToken: ConduitString.Optional,
+            captchaToken: ConduitString.Optional,
+          },
+          middlewares: initRouteMiddleware,
+        },
+        new ConduitRouteReturnDefinition(
+          `${this.capitalizeProvider()}InitNativeResponse`,
+          'String',
+        ),
+        this.initNative.bind(this),
+      );
+      routingManager.route(
+        {
+          path: `/native/${this.providerName}`,
+          description: `Completes ${this.capitalizeProvider()} native authentication.`,
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            code: ConduitString.Required,
+            id_token: ConduitString.Required,
+            state: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
+          accessToken: ConduitString.Optional,
+          refreshToken: ConduitString.Optional,
+        }),
+        this.nativeAuthorize.bind(this),
+      );
+    }
 
     if (this.settings.responseMode === 'query') {
       routingManager.route(

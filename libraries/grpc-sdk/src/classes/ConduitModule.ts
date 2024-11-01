@@ -73,7 +73,9 @@ export class ConduitModule<T extends CompatServiceDefinition> {
     this.channel = createChannel(this._serviceUrl, undefined, {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
+      'grpc.service_config': '{"loadBalancingConfig":[{"round_robin":{}}]}',
     });
+
     let clientFactory = createClientFactory()
       .use(
         this._grpcToken

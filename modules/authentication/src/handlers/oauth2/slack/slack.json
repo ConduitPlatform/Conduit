@@ -3,5 +3,6 @@
   "authorizeUrl": "https://slack.com/oauth/authorize",
   "providerName": "slack",
   "tokenUrl": "https://slack.com/api/oauth.access",
-  "responseType": "code"
+  "responseType": "code",
+  "supportNative": false
 }

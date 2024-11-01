@@ -17,6 +17,7 @@ import {
   ProviderConfig,
 } from '../interfaces/index.js';
 
+// todo migrate to use native method properly
 export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { google: ProviderConfig }) {
     super(grpcSdk, 'google', new OAuth2Settings(config.google, googleParameters));

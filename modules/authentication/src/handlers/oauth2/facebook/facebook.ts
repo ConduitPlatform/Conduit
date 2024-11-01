@@ -18,6 +18,7 @@ import {
 import { OAuth2 } from '../OAuth2.js';
 import { FacebookUser } from './facebook.user.js';
 
+// todo migrate to use native method properly
 export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { facebook: ProviderConfig }) {
     super(grpcSdk, 'facebook', new OAuth2Settings(config.facebook, facebookParameters));

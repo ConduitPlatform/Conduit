@@ -1,6 +1,5 @@
 import { DeclaredSchemaExtension, Schema } from '../interfaces/index.js';
-import { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
-import { convertObjectToDotNotation } from '../adapters/sequelize-adapter/utils/extractors/index.js';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 
 export async function canCreate(moduleName: string, schema: Schema) {
   if (moduleName === 'database' && schema.originalSchema.name === '_DeclaredSchema')
@@ -30,20 +29,15 @@ export async function canModify(moduleName: string, schema: Schema, data?: Index
           extension.ownerModule === moduleName || extension.ownerModule === 'database',
       )
       .map((extension: DeclaredSchemaExtension) => extension.fields)
-      .map((fields: ConduitModel) => {
-        const flattenedFields = {};
-        convertObjectToDotNotation(
-          fields,
-          flattenedFields,
-          undefined,
-          undefined,
-          '',
-          '.',
-        );
-        return Object.keys(flattenedFields);
-      })
-      .reduce((acc: string[], curr: string[]) => [...acc, ...curr], []);
-    const dataFields = Object.keys(data);
+      .reduce(
+        (acc: string[], curr: DeclaredSchemaExtension) => [...acc, ...Object.keys(curr)],
+        [],
+      );
+    const dataFields = Object.keys(data).reduce((acc: string[], curr: string) => {
+      const head = curr.split('.')[0];
+      if (!acc.includes(head)) acc.push(head);
+      return acc;
+    }, []);
     return dataFields.every((field: string) => extensionFields.includes(field));
   }
   return false;
