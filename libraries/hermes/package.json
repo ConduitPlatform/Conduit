@@ -16,7 +16,7 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@apollo/server": "^4.10.0",
+    "@apollo/server": "^4.11.1",
     "@conduitplatform/grpc-sdk": "*",
     "@grpc/grpc-js": "^1.10.9",
     "@grpc/proto-loader": "^0.7.6",
