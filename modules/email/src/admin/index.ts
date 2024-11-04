@@ -79,7 +79,8 @@ export class AdminHandlers {
   }
 
   async createTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { _id, sender, externalManaged, name, subject, body } = call.request.params;
+    const { _id, sender, externalManaged, name, subject, body, jsonTemplate } =
+      call.request.params;
 
     let externalId = undefined;
     const body_vars = getHandleBarsValues(body);
@@ -115,6 +116,7 @@ export class AdminHandlers {
         externalManaged,
         sender,
         externalId,
+        jsonTemplate,
       })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
@@ -148,7 +150,10 @@ export class AdminHandlers {
     }
 
     const updatedTemplate = await EmailTemplate.getInstance()
-      .findByIdAndUpdate(call.request.params.id, templateDocument)
+      .findByIdAndUpdate(call.request.params.id, {
+        ...templateDocument,
+        jsonTemplate: call.request.bodyParams.jsonTemplate,
+      })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -466,6 +471,7 @@ export class AdminHandlers {
           body: ConduitString.Required,
           sender: ConduitString.Optional,
           externalManaged: ConduitBoolean.Optional,
+          jsonTemplate: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('CreateTemplate', {
@@ -485,6 +491,7 @@ export class AdminHandlers {
           name: ConduitString.Optional,
           subject: ConduitString.Optional,
           body: ConduitString.Optional,
+          jsonTemplate: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('PatchTemplate', {
