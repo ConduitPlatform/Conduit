@@ -123,7 +123,6 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   moduleHealthProbe(name: string, url: string, instanceId: string) {
     const request: ModuleHealthRequest = {
       moduleName: name.toString(),
-      url,
       status: this._serviceHealthStatusGetter
         ? this._serviceHealthStatusGetter()
         : HealthCheckStatus.SERVICE_UNKNOWN,
