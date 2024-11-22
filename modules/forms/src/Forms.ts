@@ -32,17 +32,6 @@ export default class Forms extends ManagedModule<Config> {
     this.database = this.grpcSdk.database!;
     await runMigrations(this.grpcSdk);
     await this.registerSchemas();
-    this.grpcSdk.monitorModule('email', serving => {
-      if (serving && ConfigController.getInstance().config.active) {
-        this.onConfig()
-          .then()
-          .catch(() => {
-            ConduitGrpcSdk.Logger.error('Failed to update Forms configuration');
-          });
-      } else {
-        this.updateHealth(HealthCheckStatus.NOT_SERVING);
-      }
-    });
   }
 
   async onConfig() {
@@ -50,8 +39,6 @@ export default class Forms extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       if (!this.isRunning) {
-        if (!this.grpcSdk.isAvailable('email')) return;
-        await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
         this.formController = new FormsController(this.grpcSdk);
         this.adminRouter = new AdminHandlers(
           this.grpcServer,
@@ -64,6 +51,14 @@ export default class Forms extends ManagedModule<Config> {
             this.userRouter = new FormsRoutes(this.grpcServer, this.grpcSdk);
             this.formController.setRouter(this.userRouter);
             this.isRunning = true;
+          })
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e.message);
+          });
+        this.grpcSdk
+          .waitForExistence('email')
+          .then(() => {
+            this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
           })
           .catch(e => {
             ConduitGrpcSdk.Logger.error(e.message);
