@@ -27,7 +27,10 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   private _moduleState: ModuleLifecycleStage;
 
   protected constructor(moduleName: string, instanceId?: string) {
-    super(moduleName, instanceId ?? crypto.randomBytes(16).toString('hex'));
+    super(
+      moduleName,
+      `${moduleName}-${instanceId ?? crypto.randomBytes(16).toString('hex')}`,
+    );
     this._moduleState = ModuleLifecycleStage.CREATE_GRPC;
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
@@ -267,11 +270,9 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         convictConfigParser(configSchema),
         this.configOverride,
       );
+      ConfigController.getInstance().config = config;
 
-      ConfigController.getInstance();
-      if (config) ConfigController.getInstance().config = config;
-      if (!config || config.active || !config.hasOwnProperty('active'))
-        await this.onConfig();
+      await this.onConfig();
     }
   }
 }
