@@ -1,3 +1,3 @@
 export type BasicMessage = {
-  type: 'module-health' | 'serving-modules-update';
+  type: 'instance-health' | 'serving-modules-update';
 };

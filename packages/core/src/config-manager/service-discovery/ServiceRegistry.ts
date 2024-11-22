@@ -29,7 +29,7 @@ export class ServiceRegistry {
     if (existingModule) {
       existingModule.addOrUpdateInstance(module);
     } else {
-      const newModule = new RegisteredModule(moduleName, [module]);
+      const newModule = new RegisteredModule(moduleName, this.grpcSdk, [module]);
       this.registeredModules.set(moduleName, newModule);
     }
   }
@@ -38,13 +38,24 @@ export class ServiceRegistry {
     this.registeredModules.delete(moduleName);
   }
 
-  getModuleDetailsList(): { moduleName: string; url: string; serving: boolean }[] {
-    const modules: { moduleName: string; url: string; serving: boolean }[] = [];
+  getModuleDetailsList(): {
+    moduleName: string;
+    url: string;
+    serving: boolean;
+    instances: ModuleInstance[];
+  }[] {
+    const modules: {
+      moduleName: string;
+      url: string;
+      serving: boolean;
+      instances: ModuleInstance[];
+    }[] = [];
     this.registeredModules.forEach((value: RegisteredModule, key: string) => {
       modules.push({
         moduleName: key,
-        url: value.servingAddress ?? value.allAddresses,
+        url: value.servingAddress ?? value.allAddresses!,
         serving: value.isServing,
+        instances: value.instances,
       });
     });
     return modules;
