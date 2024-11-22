@@ -94,18 +94,20 @@ export class FormsRoutes {
     Object.keys(data).forEach(r => {
       text += `</br>${r}: ${data[r]}`;
     });
-    await this.grpcSdk
-      .emailProvider!.sendEmail('FormSubmission', {
-        email: form.forwardTo,
-        replyTo: form.emailField ? data[form.emailField] : null,
-        variables: {
-          data: text,
-        },
-        attachments: Object.values(fileData),
-      })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    if (this.grpcSdk.isAvailable('email')) {
+      await this.grpcSdk
+        .emailProvider!.sendEmail('FormSubmission', {
+          email: form.forwardTo,
+          replyTo: form.emailField ? data[form.emailField] : null,
+          variables: {
+            data: text,
+          },
+          attachments: Object.values(fileData),
+        })
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+    }
 
     return 'Ok';
   }
