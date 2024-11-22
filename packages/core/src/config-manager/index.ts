@@ -47,7 +47,8 @@ export default class ConfigManager implements IConfigManager {
   }
 
   getModuleUrlByName(moduleName: string): string | undefined {
-    return this.serviceDiscovery.getModuleUrlByName(moduleName);
+    const result = this.serviceDiscovery.getModule(moduleName);
+    return result!.servingAddress ?? result!.allAddresses!;
   }
 
   getModuleUrlByNameGrpc(
@@ -55,14 +56,18 @@ export default class ConfigManager implements IConfigManager {
     callback: GrpcResponse<ModuleByNameResponse>,
   ) {
     const name = call.request.name;
-    const result = this.getModuleUrlByName(name);
+    const result = this.serviceDiscovery.getModule(name);
     if (!result) {
       return callback({
         code: status.NOT_FOUND,
         message: 'Module not found',
       });
     }
-    callback(null, { moduleUrl: result });
+    callback(null, {
+      moduleUrl: result.servingAddress ?? result.allAddresses!,
+      //@ts-expect-error
+      instances: result.instances,
+    });
   }
 
   async initialize(server: GrpcServer) {
@@ -84,7 +89,7 @@ export default class ConfigManager implements IConfigManager {
         moduleHealthProbe: this.serviceDiscovery.moduleHealthProbe.bind(
           this.serviceDiscovery,
         ),
-        getModuleUrlByName: this.getModuleUrlByNameGrpc.bind(this.serviceDiscovery),
+        getModuleUrlByName: this.getModuleUrlByNameGrpc.bind(this),
       },
     );
     this.serviceDiscovery.beginMonitors();
@@ -237,7 +242,7 @@ export default class ConfigManager implements IConfigManager {
     const module = ServiceRegistry.getInstance().getModule(moduleName);
     if (!module) return false;
     try {
-      await this.grpcSdk.isModuleUp(moduleName, module.address);
+      await this.grpcSdk.isModuleUp(moduleName, module.allAddresses!);
     } catch (e) {
       return false;
     }

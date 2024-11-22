@@ -1,26 +1,26 @@
-import { formatAddress, getAddressType } from '../utils/index.js';
-import dns from 'node:dns';
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { getAddressType } from '../utils/index.js';
+import { ConduitGrpcSdk, HealthCheckStatus } from '@conduitplatform/grpc-sdk';
 
 export type ModuleInstance = {
   instanceId: string;
   address: string;
-  serving: boolean;
+  url: string;
+  status: HealthCheckStatus;
+  serving?: boolean;
   addressType?: 'ipv4' | 'ipv6' | 'dns';
 };
 
 export class RegisteredModule {
   private readonly _name: string;
   private _instances: ModuleInstance[] = [];
-  // Should always be array of IP addresses of the same type,
-  // but may contain either ipv4 or ipv6 addresses.
-  private _resolvedAddresses: string[] = [];
-  // Should always be array of IP addresses of the same type
-  private _servingAddresses: string[] = [];
 
-  constructor(name: string);
-  constructor(name: string, instances: ModuleInstance[]);
-  constructor(name: string, instances?: ModuleInstance[]) {
+  constructor(name: string, grpcSdk: ConduitGrpcSdk);
+  constructor(name: string, grpcSdk: ConduitGrpcSdk, instances: ModuleInstance[]);
+  constructor(
+    name: string,
+    private readonly grpcSdk: ConduitGrpcSdk,
+    instances?: ModuleInstance[],
+  ) {
     this._name = name;
     if (instances) {
       for (const instance of instances) {
@@ -34,67 +34,53 @@ export class RegisteredModule {
   }
 
   public get isServing() {
-    return this._servingAddresses.length > 0;
+    return this._instances.some(i => i.serving);
   }
 
   public get servingAddress() {
-    if (this._servingAddresses.length === 0) {
+    if (!this._instances.some(i => i.serving)) {
       return undefined;
     }
-    const addressType = getAddressType(this._servingAddresses[0]);
-    return `${addressType}:${this._servingAddresses.join(',')}`;
+    const servingInstances = this._instances.filter(i => i.serving);
+    let addressType = getAddressType(servingInstances[0].url);
+    if (addressType === 'dns') {
+      return `dns:///${servingInstances[0].url}`;
+    } else {
+      return `${addressType}:${servingInstances.map(i => i.url).join(',')}`;
+    }
   }
 
   public get allAddresses() {
-    const addressType = getAddressType(this._resolvedAddresses[0]);
-    return `${addressType}:${this._resolvedAddresses.join(',')}`;
+    if (this._instances.length === 0) {
+      return undefined;
+    }
+    let addressType = getAddressType(this._instances[0].url);
+    if (addressType === 'dns') {
+      return `dns:///${this._instances[0].url}`;
+    } else {
+      return `${addressType}:${this._instances.map(i => i.url).join(',')}`;
+    }
+  }
+
+  public updateInstanceHealth(instanceId: string, status: HealthCheckStatus) {
+    const instance = this._instances.find(i => i.instanceId === instanceId);
+    if (instance) {
+      instance.status = status;
+      instance.serving = instance.status === HealthCheckStatus.SERVING;
+      this.updateServingList();
+    }
   }
 
   public addOrUpdateInstance(instance: ModuleInstance) {
     const index = this._instances.findIndex(i => i.instanceId === instance.instanceId);
     if (!instance.addressType) {
-      instance.addressType = getAddressType(instance.address);
+      instance.addressType = getAddressType(instance.url);
     }
+    this._instances.findIndex(i => i.address === instance.instanceId);
     if (index === -1) {
       this._instances.push(instance);
     } else {
-      this._instances[index] = instance;
-    }
-    this.resolveAddresses(instance.instanceId);
-  }
-
-  private resolveAddresses(instanceId: string) {
-    const instance = this._instances.find(i => i.instanceId === instanceId);
-    if (!instance) return;
-    const addressType = instance.addressType;
-    if (addressType! === 'dns') {
-      // We shouldn't need to extend this to resolve ipv6 addresses,
-      // since all communications inside the mesh should be ipv4
-      dns.resolve(instance.address, (err, addresses) => {
-        if (err) {
-          throw new Error('DNS resolution failed');
-        }
-        for (const address of addresses) {
-          const formattedAddress = formatAddress(address, addressType!);
-          this._resolvedAddresses.push(formattedAddress);
-          if (instance.serving) {
-            this._servingAddresses.push(formattedAddress);
-          }
-        }
-        this.updateServingList();
-      });
-    } else {
-      this._resolvedAddresses = this._instances.map(i =>
-        formatAddress(i.address, i.addressType!),
-      );
-      this.updateServingList();
-    }
-    // check if all instances have the same address type
-    const allSameType = this._instances.every(i => i.addressType === addressType);
-    if (!allSameType) {
-      ConduitGrpcSdk.Logger.warn(
-        `Module ${this._name} has instances with different address types. Some instances will be unavailable for communication.`,
-      );
+      this._instances[index] = { ...this._instances[index], ...instance };
     }
   }
 
@@ -107,17 +93,18 @@ export class RegisteredModule {
           (servingCount[instance.addressType!] || 0) + 1;
       }
     }
-    // get the address type with the most serving instances
-    const maxServing = Math.max(...Object.values(servingCount));
-    const mostServingType = Object.keys(servingCount).find(
-      type => servingCount[type] === maxServing,
-    );
-    // update the serving addresses
-    this._servingAddresses = this._resolvedAddresses.filter(address =>
-      this._instances.some(
-        i => i.address === address && i.addressType === mostServingType,
-      ),
-    );
+    if (!this._instances.some(i => i.status === HealthCheckStatus.SERVING)) {
+      ConduitGrpcSdk.Logger.warn(
+        `Module ${this._name} has no serving instances. Communication with this module will fail.`,
+      );
+    } else {
+      ConduitGrpcSdk.Logger.log(
+        `Module ${this._name} has ${
+          this._instances.filter(i => i.serving).length
+        } serving instances.`,
+      );
+      this.grpcSdk.updateModuleHealth(this._name, true);
+    }
   }
 
   public removeInstance(instanceId: string) {
@@ -126,5 +113,9 @@ export class RegisteredModule {
 
   public getInstance(instanceId: string) {
     return this._instances.find(i => i.instanceId === instanceId);
+  }
+
+  public get instances() {
+    return this._instances;
   }
 }
