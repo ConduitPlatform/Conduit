@@ -305,7 +305,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         email,
         hashedPassword,
         isVerified,
-        ...merge(userInvitationExtensionData, userData),
+        ...merge(userInvitationExtensionData ?? {}, userData ?? {}),
       });
     }
     delete user.hashedPassword;
