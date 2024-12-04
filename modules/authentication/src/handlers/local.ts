@@ -25,6 +25,7 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { createHash } from 'crypto';
+import { merge } from 'lodash-es';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -243,6 +244,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const email = call.request.params.email.toLowerCase();
     const { password, invitationToken, redirectUri, userData } = call.request.params;
 
+    let userInvitationExtensionData: any;
+
     const config = ConfigController.getInstance().config;
     const teams = config.teams;
     if (
@@ -265,6 +268,17 @@ export class LocalHandlers implements IAuthenticationStrategy {
         invitationToken,
         email,
       );
+      userInvitationExtensionData = await Token.getInstance()
+        .findOne({
+          tokenType: TokenType.TEAM_INVITE_TOKEN,
+          token: invitationToken,
+        })
+        .then(token => {
+          if (token?.data?.userData) {
+            AuthUtils.checkUserData(token.data.userData);
+          }
+          return token?.data?.userData;
+        });
     }
     const invalidAddress = AuthUtils.invalidEmailAddress(email);
     if (invalidAddress) {
@@ -291,7 +305,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         email,
         hashedPassword,
         isVerified,
-        ...userData,
+        ...merge(userInvitationExtensionData, userData),
       });
     }
     delete user.hashedPassword;
