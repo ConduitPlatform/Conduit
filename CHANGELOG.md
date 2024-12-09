@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.11](https://github.com/ConduitPlatform/Conduit/compare/v0.16.10...v0.16.11) (2024-12-09)
+
+
+### Features
+
+* **authentication:** user activate/deactivate gRPC routes ([#1248](https://github.com/ConduitPlatform/Conduit/issues/1248)) ([37f96b8](https://github.com/ConduitPlatform/Conduit/commit/37f96b8fd1400dea81a39e9f2c58fcc40e214dc7))
+
+
+### Bug Fixes
+
+* **authentication:** default behaviour on register with invitation token ([#1242](https://github.com/ConduitPlatform/Conduit/issues/1242)) ([21c977f](https://github.com/ConduitPlatform/Conduit/commit/21c977f44ced052636c63e63c84d6084287b73c7))
+* **email:** missing default in residency ([57d4705](https://github.com/ConduitPlatform/Conduit/commit/57d47057365b6844b2c880bc56965f6f125329e4))
+* scripts/Dockerfile.builder to reduce vulnerabilities ([#1232](https://github.com/ConduitPlatform/Conduit/issues/1232)) ([5b31b82](https://github.com/ConduitPlatform/Conduit/commit/5b31b82f6f2f89572d2dd753ffb2dc33d2e86e06))
+
 ### [0.16.10](https://github.com/ConduitPlatform/Conduit/compare/v0.16.9...v0.16.10) (2024-10-21)
 
 
