@@ -33,6 +33,10 @@ import {
   ValidateAccessTokenRequest,
   ValidateAccessTokenResponse,
   ValidateAccessTokenResponse_Status,
+  UserActivateRequest,
+  UserActivateResponse,
+  UserDeactivateRequest,
+  UserDeactivateResponse,
 } from './protoTypes/authentication.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { runMigrations } from './migrations/index.js';
@@ -51,6 +55,7 @@ import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
 import { User } from './models/index.js';
+import { UserAdmin } from './admin/user.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,6 +67,8 @@ export default class Authentication extends ManagedModule<Config> {
     protoDescription: 'authentication.Authentication',
     functions: {
       userLogin: this.userLogin.bind(this),
+      userDeactivate: this.userDeactivate.bind(this),
+      userActivate: this.userActivate.bind(this),
       userCreate: this.userCreate.bind(this),
       anonymousUserCreate: this.anonymousUserCreate.bind(this),
       changePass: this.changePass.bind(this),
@@ -558,6 +565,33 @@ export default class Authentication extends ManagedModule<Config> {
         }
       });
     return callback(null, { status: accessStatus, userId });
+  }
+
+  async userDeactivate(
+    call: GrpcRequest<UserDeactivateRequest>,
+    callback: GrpcCallback<UserDeactivateResponse>,
+  ) {
+    try {
+      const request = createParsedRouterRequest(call.request);
+      await new UserAdmin(this.grpcSdk).blockUser(request);
+      callback(null, { message: 'ok' });
+      TokenProvider.getInstance().deleteUserTokens({ user: request.request.params.id });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  async userActivate(
+    call: GrpcRequest<UserActivateRequest>,
+    callback: GrpcCallback<UserActivateResponse>,
+  ) {
+    try {
+      const request = createParsedRouterRequest(call.request);
+      await new UserAdmin(this.grpcSdk).unblockUser(request);
+      callback(null, { message: 'ok' });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
   }
 
   protected registerSchemas() {

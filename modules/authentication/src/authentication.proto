@@ -86,9 +86,27 @@ message AnonymousUserCreateRequest {
   string clientId = 1;
 }
 
+message UserDeactivateRequest {
+  string id = 1;
+}
+
+message UserActivateRequest {
+  string id = 1;
+}
+
+message UserDeactivateResponse {
+  string message = 1;
+}
+
+message UserActivateResponse {
+  string message = 1;
+}
+
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
+  rpc UserDeactivate(UserDeactivateRequest) returns (UserDeactivateResponse);
+  rpc UserActivate(UserActivateRequest) returns (UserActivateResponse);
   rpc AnonymousUserCreate(AnonymousUserCreateRequest) returns (UserLoginResponse);
   rpc ChangePass(UserChangePass) returns (UserCreateResponse);
   rpc UserDelete(UserDeleteRequest) returns (UserDeleteResponse);
