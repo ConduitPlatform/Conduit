@@ -39,7 +39,7 @@
     "@azure/storage-blob": "^12.23.0",
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
-    "@google-cloud/storage": "^7.7.0",
+    "@google-cloud/storage": "^7.14.0",
     "@grpc/grpc-js": "^1.10.9",
     "@grpc/proto-loader": "^0.7.6",
     "ali-oss": "^6.21.0",
