@@ -32,7 +32,7 @@
     "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.10.9",
     "@grpc/proto-loader": "^0.7.6",
-    "@sendgrid/client": "^8.0.0",
+    "@sendgrid/client": "^8.1.4",
     "@types/nodemailer-sendgrid": "^1.0.3",
     "await-to-js": "^3.0.0",
     "axios": "^1.7.8",
