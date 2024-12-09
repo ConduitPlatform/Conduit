@@ -86,9 +86,18 @@ message AnonymousUserCreateRequest {
   string clientId = 1;
 }
 
+message UserModifyStatusRequest {
+  string id = 1;
+  bool active = 2;
+}
+
+message UserModifyStatusResponse {
+  string message = 1;
+}
+
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
-  rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
+  rpc UserModifyStatus(UserModifyStatusRequest) returns (UserModifyStatusResponse);
   rpc AnonymousUserCreate(AnonymousUserCreateRequest) returns (UserLoginResponse);
   rpc ChangePass(UserChangePass) returns (UserCreateResponse);
   rpc UserDelete(UserDeleteRequest) returns (UserDeleteResponse);

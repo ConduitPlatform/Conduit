@@ -30,6 +30,8 @@ import {
   UserDeleteResponse,
   UserLoginRequest,
   UserLoginResponse,
+  UserModifyStatusRequest,
+  UserModifyStatusResponse,
   ValidateAccessTokenRequest,
   ValidateAccessTokenResponse,
   ValidateAccessTokenResponse_Status,
@@ -62,6 +64,7 @@ export default class Authentication extends ManagedModule<Config> {
     protoDescription: 'authentication.Authentication',
     functions: {
       userLogin: this.userLogin.bind(this),
+      userModifyStatus: this.userModifyStatus.bind(this),
       userCreate: this.userCreate.bind(this),
       anonymousUserCreate: this.anonymousUserCreate.bind(this),
       changePass: this.changePass.bind(this),
@@ -558,6 +561,34 @@ export default class Authentication extends ManagedModule<Config> {
         }
       });
     return callback(null, { status: accessStatus, userId });
+  }
+
+  async userModifyStatus(
+    call: GrpcRequest<UserModifyStatusRequest>,
+    callback: GrpcCallback<UserModifyStatusResponse>,
+  ) {
+    const { id, active } = call.request as { id: string; active: boolean };
+    const user = await User.getInstance().findOne({ _id: id });
+    if (!user) {
+      return callback({ code: status.NOT_FOUND, message: 'User not found' });
+    }
+    if (user.active && active) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'User is already active',
+      });
+    }
+    if (!user.active && !active) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'User is already blocked',
+      });
+    }
+    await User.getInstance().findByIdAndUpdate(user._id, { active });
+    callback(null, { message: 'ok' });
+    if (!active) {
+      TokenProvider.getInstance().deleteUserTokens({ user: id });
+    }
   }
 
   protected registerSchemas() {
