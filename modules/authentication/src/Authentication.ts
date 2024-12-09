@@ -64,7 +64,7 @@ export default class Authentication extends ManagedModule<Config> {
     protoDescription: 'authentication.Authentication',
     functions: {
       userLogin: this.userLogin.bind(this),
-      UserModifyStatus: this.userModifyStatus.bind(this),
+      userModifyStatus: this.userModifyStatus.bind(this),
       userCreate: this.userCreate.bind(this),
       anonymousUserCreate: this.anonymousUserCreate.bind(this),
       changePass: this.changePass.bind(this),
