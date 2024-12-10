@@ -97,6 +97,7 @@ message UserModifyStatusResponse {
 
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
+  rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
   rpc UserModifyStatus(UserModifyStatusRequest) returns (UserModifyStatusResponse);
   rpc AnonymousUserCreate(AnonymousUserCreateRequest) returns (UserLoginResponse);
   rpc ChangePass(UserChangePass) returns (UserCreateResponse);
