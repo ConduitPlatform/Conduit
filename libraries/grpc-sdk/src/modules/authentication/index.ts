@@ -7,6 +7,7 @@ import {
   UserLoginResponse,
   Team,
   ValidateAccessTokenResponse,
+  UserModifyStatusResponse,
 } from '../../protoUtils/index.js';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
@@ -69,5 +70,9 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     path?: string,
   ): Promise<ValidateAccessTokenResponse> {
     return this.client!.validateAccessToken({ accessToken, path });
+  }
+
+  userModifyStatus(userId: string, active: boolean): Promise<UserModifyStatusResponse> {
+    return this.client!.userModifyStatus({ id: userId, active });
   }
 }
