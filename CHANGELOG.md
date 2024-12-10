@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.12](https://github.com/ConduitPlatform/Conduit/compare/v0.16.11...v0.16.12) (2024-12-10)
+
+
+### Bug Fixes
+
+* **authentication:**  grpc-sdk/authentication missing user routes ([#1252](https://github.com/ConduitPlatform/Conduit/issues/1252)) ([6a583b2](https://github.com/ConduitPlatform/Conduit/commit/6a583b2b575d29d8ef9e62d8e4dbdc372b98598d))
+
 ### [0.16.11](https://github.com/ConduitPlatform/Conduit/compare/v0.16.10...v0.16.11) (2024-12-09)
 
 
