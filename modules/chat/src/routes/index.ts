@@ -12,6 +12,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitNumber,
+  ConduitObjectId,
   ConduitString,
   ConfigController,
   GrpcServer,
@@ -66,7 +67,7 @@ export class ChatRoutes {
       );
     }
     try {
-      usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
+      usersToBeAdded = await validateUsersInput(users);
     } catch (e) {
       throw new GrpcError(status.INTERNAL, (e as Error).message);
     }
@@ -92,15 +93,15 @@ export class ChatRoutes {
         participantsLog: [participantsLog._id],
       })) as ChatRoom;
       const serverConfig = await this.grpcSdk.config.get('router');
-      await sendInvitations(
-        usersToBeAdded,
-        user,
+      await sendInvitations({
+        users: usersToBeAdded,
+        sender: user,
         room,
-        serverConfig.hostUrl,
-        this.sendEmail,
-        this.sendPushNotification,
-        this.grpcSdk,
-      ).catch((e: Error) => {
+        url: serverConfig.hostUrl,
+        sendEmail: this.sendEmail,
+        sendNotification: this.sendPushNotification,
+        grpcSdk: this.grpcSdk,
+      }).catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     } else {
@@ -118,7 +119,7 @@ export class ChatRoutes {
         },
         ...users.map((userId: string) => ({
           user: userId,
-          action: 'join' as 'join',
+          action: 'join',
           chatRoom: room._id,
         })),
       ]);
@@ -153,7 +154,7 @@ export class ChatRoutes {
       throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
     }
     try {
-      usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
+      usersToBeAdded = await validateUsersInput(users);
     } catch (e) {
       throw new GrpcError(status.INTERNAL, (e as Error).message);
     }
@@ -169,15 +170,15 @@ export class ChatRoutes {
     const config = await this.grpcSdk.config.get('chat');
     if (config.explicit_room_joins.enabled) {
       const serverConfig = await this.grpcSdk.config.get('router');
-      const ret = await sendInvitations(
-        usersToBeAdded,
-        user,
+      const ret = await sendInvitations({
+        users: usersToBeAdded,
+        sender: user,
         room,
-        serverConfig.hostUrl,
-        this.sendEmail,
-        this.sendPushNotification,
-        this.grpcSdk,
-      ).catch((e: Error) => {
+        url: serverConfig.hostUrl,
+        sendEmail: this.sendEmail,
+        sendNotification: this.sendPushNotification,
+        grpcSdk: this.grpcSdk,
+      }).catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
       return ret!;
@@ -185,7 +186,7 @@ export class ChatRoutes {
       const participantsLog = await ChatParticipantsLog.getInstance().createMany(
         users.map((userId: string) => ({
           user: userId,
-          action: 'join' as 'join',
+          action: 'added',
           chatRoom: room._id,
         })),
       );
@@ -223,7 +224,7 @@ export class ChatRoutes {
       room.participants.splice(index, 1);
       const participantsLog = await ChatParticipantsLog.getInstance().create({
         user: user._id,
-        action: 'leave' as 'leave',
+        action: 'leave',
         chatRoom: room._id,
       });
 
@@ -261,6 +262,57 @@ export class ChatRoutes {
     );
 
     return 'Ok';
+  }
+
+  async removeFromRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { roomId } = call.request.urlParams as { roomId: string };
+    const { user } = call.request.context as { user: User };
+    const { users } = call.request.bodyParams as { users: string[] };
+
+    if (users.length === 0) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Users is required and must be a non-empty array',
+      );
+    }
+
+    const room = await ChatRoom.getInstance().findOne({ _id: roomId });
+    if (isNil(room)) throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
+
+    if (room.creator !== user._id)
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        "User doesn't have permissions to remove users from room!",
+      );
+
+    const index = (room.participants as string[]).indexOf(user._id);
+    if (index > -1)
+      throw new GrpcError(status.INVALID_ARGUMENT, "Users can't remove self from room!");
+
+    for (const user of users) {
+      if ((room.participants as string[]).indexOf(user) === -1)
+        throw new GrpcError(status.NOT_FOUND, 'User is not participant of room!');
+    }
+
+    room.participants = (room.participants as string[]).flatMap(participant => {
+      if (users.indexOf(participant) > -1) return [];
+      return participant;
+    });
+    users.map(async user => {
+      const log = await ChatParticipantsLog.getInstance().create({
+        user: user,
+        action: 'remove',
+        chatRoom: room._id,
+      });
+      room.participantsLog.push(log);
+    });
+    await ChatRoom.getInstance()
+      .findByIdAndUpdate(room._id, room)
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+
+    return 'OK';
   }
 
   async getMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -507,7 +559,7 @@ export class ChatRoutes {
         description: `Creates a new room.`,
         bodyParams: {
           roomName: ConduitString.Required,
-          users: [TYPE.String],
+          users: [ConduitObjectId.Required],
         },
         middlewares: ['authMiddleware'],
       },
@@ -523,7 +575,7 @@ export class ChatRoutes {
         action: ConduitRouteActions.UPDATE,
         description: `Adds users to a chat room.`,
         urlParams: {
-          roomId: ConduitString.Required,
+          roomId: ConduitObjectId.Required,
         },
         bodyParams: {
           users: [TYPE.String],
@@ -538,9 +590,9 @@ export class ChatRoutes {
       {
         path: '/leave/:roomId',
         action: ConduitRouteActions.UPDATE,
-        description: `Removes current user from a chat room.`,
+        description: `Context user leaves chat room.`,
         urlParams: {
-          roomId: ConduitString.Required,
+          roomId: ConduitObjectId.Required,
         },
         middlewares: ['authMiddleware'],
       },
@@ -550,11 +602,28 @@ export class ChatRoutes {
 
     this._routingManager.route(
       {
+        path: '/room/:roomId/remove',
+        action: ConduitRouteActions.UPDATE,
+        description: `Room Creator removes users from chat room.`,
+        urlParams: {
+          roomId: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          users: [ConduitObjectId.Required],
+        },
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('RemoveFromRoomResponse', 'String'),
+      this.removeFromRoom.bind(this),
+    );
+
+    this._routingManager.route(
+      {
         path: '/rooms/:id',
         action: ConduitRouteActions.GET,
         description: `Returns a chat room.`,
         urlParams: {
-          id: ConduitString.Required,
+          id: ConduitObjectId.Required,
         },
         middlewares: ['authMiddleware'],
       },
