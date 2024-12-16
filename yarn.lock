@@ -8162,10 +8162,10 @@ fast-json-stable-stringify@2.x, fast-json-stable-stringify@^2.0.0, fast-json-sta
   resolved "https://registry.yarnpkg.com/fast-json-stable-stringify/-/fast-json-stable-stringify-2.1.0.tgz#874bf69c6f404c2b5d99c481341399fd55892633"
   integrity sha512-lhd/wF+Lk98HZoTCtlVraHtfh5XYijIjalXck7saUtuanSDyLMxnHhSXEDJqHxD7msR8D0uCmqlkwjCV8xvwHw==
 
-fast-jwt@^3.3.2:
-  version "3.3.2"
-  resolved "https://registry.yarnpkg.com/fast-jwt/-/fast-jwt-3.3.2.tgz#08812282cd9ca0d1f7060987d3e527f84e364f88"
-  integrity sha512-H+JYxaFy2LepiC1AQWM/2hzKlQOWaWUkEnu/yebhYu4+ameb3qG77WiRZ1Ct6YBk6d/ESsNguBfTT5+q0XMtKg==
+fast-jwt@^5.0.2:
+  version "5.0.2"
+  resolved "https://registry.yarnpkg.com/fast-jwt/-/fast-jwt-5.0.2.tgz#c9fd7b1e9d4277a4aa385d58b033aca3e2d185a3"
+  integrity sha512-b2z/32MTWyURskK8plXXkbLuZU3F+T79iFaVLYZEveF5lOwUj6g8wg2T7zIi6/xTbbv4BRQzm/lgH2jL3vSPgA==
   dependencies:
     "@lukeed/ms" "^2.0.1"
     asn1.js "^5.4.1"
