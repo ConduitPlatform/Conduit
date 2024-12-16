@@ -35,7 +35,7 @@
     "@sesamecare-oss/redlock": "^1.2.0",
     "abort-controller-x": "^0.4.3",
     "convict": "^6.2.4",
-    "express": "^4.21.1",
+    "express": "^4.21.2",
     "fast-jwt": "^5.0.2",
     "fs-extra": "^11.2.0",
     "ioredis": "^5.3.2",
