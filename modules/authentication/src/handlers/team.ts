@@ -232,7 +232,10 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!inviteToken) {
       throw new GrpcError(status.NOT_FOUND, 'Invitation token not found');
     }
-    return { userData: inviteToken.data.userData ?? {} };
+    return {
+      email: inviteToken.data.email,
+      userData: inviteToken.data.userData ?? {},
+    };
   }
 
   async createTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -924,6 +927,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         action: ConduitRouteActions.GET,
       },
       new ConduitRouteReturnDefinition('GetInvitationTokenUserData', {
+        email: ConduitString.Required,
         userData: ConduitJson.Optional,
       }),
       this.getInvitationTokenUserData.bind(this),
