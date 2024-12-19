@@ -122,15 +122,18 @@ export namespace AuthUtils {
       );
   }
 
-  export function checkResendThreshold(token: Token, notBefore: number = 600000) {
+  export function checkResendThreshold(token: Token, notBefore?: number) {
+    const threshold =
+      notBefore ||
+      ConfigController.getInstance().config.local.verification.resend_threshold;
     const diffInMilliSec = Math.abs(new Date(token.createdAt).getTime() - Date.now());
-    if (diffInMilliSec < notBefore) {
-      const remainTime = Math.ceil((notBefore - diffInMilliSec) / notBefore);
+    if (diffInMilliSec < threshold) {
+      const remainTimeInSec = Math.ceil((threshold - diffInMilliSec) / 1000);
       throw new GrpcError(
         status.RESOURCE_EXHAUSTED,
-        'Verification code not sent. You have to wait ' +
-          remainTime +
-          ' minutes to try again',
+        'Verification not sent. You have to wait ' +
+          remainTimeInSec +
+          ' seconds to try again',
       );
     } else {
       return true;
