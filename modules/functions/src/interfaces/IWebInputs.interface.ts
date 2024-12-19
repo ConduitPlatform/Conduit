@@ -5,7 +5,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 
 export interface IWebInputsInterface {
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   event?: string;
   bodyParams?: ConduitModel;
   urlParams?: ConduitUrlParams;

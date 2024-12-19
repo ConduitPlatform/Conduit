@@ -37,7 +37,8 @@ export class AdminHandlers {
   }
 
   async uploadFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, functionType, functionCode, inputs, returns } = call.request.params;
+    const { name, functionType, functionCode, inputs, returns, timeout } =
+      call.request.params;
     const func = await Functions.getInstance().findOne({ name: name });
     if (!isNil(func)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
@@ -48,14 +49,13 @@ export class AdminHandlers {
     } catch (e) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid function code');
     }
-    const timeoutValue = inputs.timeout ?? 180000;
     const query = {
       name,
       functionType,
       functionCode,
       inputs,
       returns,
-      timeout: timeoutValue,
+      timeout: timeout ?? 180000,
     };
     const functionEndpoint = await Functions.getInstance().create(query);
     this.functionsController.refreshEndpoints();
@@ -154,21 +154,23 @@ export class AdminHandlers {
       limit,
       sort,
     );
-    return functionsExecutions;
+    const count = await FunctionExecutions.getInstance().countDocuments({});
+    return { functionsExecutions, count };
   }
 
   async getFunctionExecutions(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
-    const { functionName, success } = call.request.params;
+    const { functionId } = call.request.urlParams as {
+      functionId: string;
+    };
+    const { success } = call.request.queryParams as { success: boolean };
     const functionExecutions = await FunctionExecutions.getInstance().findMany({
-      functionName: functionName,
+      function: functionId,
       success: success,
     });
-    if (isNil(functionExecutions) || isEmpty(functionExecutions)) {
-      throw new GrpcError(status.NOT_FOUND, 'Function Executions not exist');
-    }
-    return functionExecutions;
+    const count = await FunctionExecutions.getInstance().countDocuments({});
+    return { functionExecutions, count };
   }
 
   private registerAdminRoutes() {
@@ -256,22 +258,28 @@ export class AdminHandlers {
           sort: ConduitString.Optional,
         },
       },
-      new ConduitRouteReturnDefinition('ListFunctionsExecutions', 'String'),
+      new ConduitRouteReturnDefinition('ListFunctionsExecutions', {
+        functionsExecutions: [FunctionExecutions.name],
+        count: ConduitNumber.Required,
+      }),
       this.getFunctionsExecutions.bind(this),
     );
     this.routingManager.route(
       {
-        path: '/executions/:functionName',
+        path: '/executions/:functionId',
         action: ConduitRouteActions.GET,
         description: 'Get function executions for specific function',
         urlParams: {
-          functionName: { type: TYPE.String, required: true },
+          functionId: { type: TYPE.ObjectId, required: true },
         },
         queryParams: {
           success: ConduitBoolean.Optional,
         },
       },
-      new ConduitRouteReturnDefinition('GetFunctionExecutions', 'String'),
+      new ConduitRouteReturnDefinition('GetFunctionExecutions', {
+        functionsExecutions: [FunctionExecutions.name],
+        count: ConduitNumber.Required,
+      }),
       this.getFunctionExecutions.bind(this),
     );
     this.routingManager.route(

@@ -80,7 +80,7 @@ async function executeFunction(
   } catch (e) {
     const end = process.hrtime(start);
     duration = end[0] * 1e3 + end[1] / 1e6;
-    await addFunctionExecutions(name, duration, false, e, logs);
+    await addFunctionExecutions(func._id, duration, false, e, logs);
     ConduitGrpcSdk.Metrics?.increment('failed_functions_total');
     ConduitGrpcSdk.Metrics?.observe('function_execution_time', duration, {
       function_name: name,
@@ -90,6 +90,9 @@ async function executeFunction(
 }
 
 export function createRequestOrWebhookFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
+  if (!func.inputs?.method) {
+    throw new GrpcError(status.INVALID_ARGUMENT, 'Method is required');
+  }
   const compiledFunctionCode = compileFunctionCode(func.functionCode);
   const route = new RouteBuilder()
     .path(`${func.functionType !== 'request' ? '/hook' : ''}/${func.name}`)
@@ -136,7 +139,7 @@ export function createSocketFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
     input: {
       path: `/${func.name}`,
       name: func.name,
-      middlewares: func.inputs.auth ? ['authMiddleware'] : undefined,
+      middlewares: func.inputs?.auth ? ['authMiddleware'] : undefined,
     },
     events: {
       [func.inputs.event!]: (call: ParsedRouterRequest) => {
@@ -171,9 +174,12 @@ export function createMiddlewareFunction(func: Functions, grpcSdk: ConduitGrpcSd
 }
 
 export function createEventFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
+  if (!func.inputs?.event) {
+    throw new GrpcError(status.INVALID_ARGUMENT, 'Event not found');
+  }
   const compiledFunctionCode = compileFunctionCode(func.functionCode);
   grpcSdk.bus?.subscribe(
-    func.inputs.event!,
+    func.inputs.event,
     (data: any) => {
       ConduitGrpcSdk.Logger.log(`Received event ${func.inputs.event} for ${func.name}`);
       let parsedData = data;
@@ -224,14 +230,14 @@ export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
 }
 
 async function addFunctionExecutions(
-  functionName: string,
+  functionId: string,
   duration: number,
   success: boolean,
   error?: any,
   logs?: string[],
 ) {
   const query = {
-    functionName,
+    function: functionId,
     duration,
     success,
     error,

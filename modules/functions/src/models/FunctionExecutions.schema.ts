@@ -8,8 +8,9 @@ import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
-  functionName: {
-    type: TYPE.String,
+  function: {
+    type: TYPE.Relation,
+    model: 'Functions',
     required: true,
   },
   duration: {
@@ -49,17 +50,11 @@ const collectionName = undefined;
 export class FunctionExecutions extends ConduitActiveSchema<FunctionExecutions> {
   private static _instance: FunctionExecutions;
   _id!: string;
-
-  functionName!: string;
-
+  function!: string | Function;
   duration!: number;
-
   success!: boolean;
-
   error?: Indexable;
-
   logs?: string[];
-
   createdAt: Date;
   updatedAt: Date;
 
