@@ -166,10 +166,13 @@ export class AdminHandlers {
     };
     const { success } = call.request.queryParams as { success: boolean };
     const functionExecutions = await FunctionExecutions.getInstance().findMany({
-      function: functionId,
+      serverlessFunction: functionId,
       success: success,
     });
-    const count = await FunctionExecutions.getInstance().countDocuments({});
+    const count = await FunctionExecutions.getInstance().countDocuments({
+      serverlessFunction: functionId,
+      success: success,
+    });
     return { functionExecutions, count };
   }
 

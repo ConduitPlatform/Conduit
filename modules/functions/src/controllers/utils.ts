@@ -59,7 +59,7 @@ async function executeFunction(
       functionInSandbox(grpcSdk, call.request, (data: any) => {
         const end = process.hrtime(start);
         duration = end[0] * 1e3 + end[1] / 1e6;
-        addFunctionExecutions(name, duration, true, undefined, logs).then();
+        addFunctionExecutions(func._id, duration, true, undefined, logs).then();
         ConduitGrpcSdk.Metrics?.increment('executed_functions_total');
         ConduitGrpcSdk.Metrics?.observe('function_execution_time', duration, {
           function_name: name,

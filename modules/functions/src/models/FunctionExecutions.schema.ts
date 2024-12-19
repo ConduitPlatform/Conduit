@@ -5,12 +5,13 @@ import {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
+import { Functions } from './Function.schema.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
-  function: {
+  serverlessFunction: {
     type: TYPE.Relation,
-    model: 'Functions',
+    model: Functions.name,
     required: true,
   },
   duration: {
@@ -50,7 +51,7 @@ const collectionName = undefined;
 export class FunctionExecutions extends ConduitActiveSchema<FunctionExecutions> {
   private static _instance: FunctionExecutions;
   _id!: string;
-  function!: string | Function;
+  serverlessFunction!: string | Functions;
   duration!: number;
   success!: boolean;
   error?: Indexable;
