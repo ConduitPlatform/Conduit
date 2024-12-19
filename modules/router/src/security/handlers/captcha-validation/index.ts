@@ -13,7 +13,7 @@ export class CaptchaValidator {
   }
 
   async recaptchaVerify(secret: string, token: string) {
-    const googleUrl = `https://www.google.com/siteverify?secret=${secret}&response=${token}`;
+    const googleUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${token}`;
     const response = await axios
       .post(
         googleUrl,
