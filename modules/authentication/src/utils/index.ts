@@ -122,14 +122,13 @@ export namespace AuthUtils {
       );
   }
 
-  export function checkResendThreshold(
-    token: Token,
-    notBefore: number = ConfigController.getInstance().config.local.verification
-      .resend_threshold,
-  ) {
+  export function checkResendThreshold(token: Token, notBefore?: number) {
+    const threshold =
+      notBefore ||
+      ConfigController.getInstance().config.local.verification.resend_threshold;
     const diffInMilliSec = Math.abs(new Date(token.createdAt).getTime() - Date.now());
-    if (diffInMilliSec < notBefore) {
-      const remainTimeInSec = Math.ceil((notBefore - diffInMilliSec) / 1000);
+    if (diffInMilliSec < threshold) {
+      const remainTimeInSec = Math.ceil((threshold - diffInMilliSec) / 1000);
       throw new GrpcError(
         status.RESOURCE_EXHAUSTED,
         'Verification not sent. You have to wait ' +
