@@ -27,6 +27,11 @@ export default {
         format: 'String',
         default: '',
       },
+      resend_threshold: {
+        doc: 'Defines the threshold in milliseconds for resending verification',
+        format: 'Number',
+        default: 60000,
+      },
     },
     forgot_password_redirect_uri: {
       doc: 'Defines where the user should be redirected once they click the forgot password link',
