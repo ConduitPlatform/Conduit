@@ -221,7 +221,13 @@ export class ServiceDiscovery {
       call.request.instanceId,
       call.request.healthStatus as HealthCheckStatus,
     );
-    this.updateState(call.request.moduleName, call.request.url);
+    this.updateState(call.request.moduleName, {
+      address: callingIp.split(':')[0] + ':' + call.request.url.split(':')[1],
+      url: call.request.url,
+      instanceId: call.request.instanceId,
+      serving: call.request.healthStatus === HealthCheckStatus.SERVING,
+      status: call.request.healthStatus,
+    });
     this.publishModuleData(
       'serving-modules-update',
       call.request.moduleName,
@@ -289,31 +295,63 @@ export class ServiceDiscovery {
     this.grpcSdk.bus!.publish('service-discover', JSON.stringify(serviceDiscoverMessage));
   }
 
-  // todo
-  private updateState(name: string, url: string) {
+  private updateState(name: string, instance: ModuleInstance) {
     this.grpcSdk
       .state!.modifyState(async (existingState: Indexable) => {
         const state = existingState ?? {};
         if (!state.modules) state.modules = [];
-        // const module = state.modules.find((module: IModuleConfig) => {
-        //   return module.url === url;
-        // });
+        let module = state.modules.find((module: IModuleConfig) => {
+          return module.name === name;
+        });
+        if (!module) {
+          module = {
+            name,
+            addresses: '',
+            instances: [
+              {
+                instanceId: instance.instanceId,
+                address: instance.address,
+                url: instance.url,
+                status: instance.status,
+              },
+            ],
+            status: instance.status,
+          };
+        } else {
+          let existingInstance = module.instances.find((instance: ModuleInstance) => {
+            return instance.instanceId === instance.instanceId;
+          });
+          if (!existingInstance) {
+            module.instances.push({
+              instanceId: instance.instanceId,
+              address: instance.address,
+              url: instance.url,
+              status: instance.status,
+            });
+          } else {
+            existingInstance.address = instance.address;
+            existingInstance.url = instance.url;
+            existingInstance.status = instance.status;
+          }
+        }
 
         state.modules = [
           ...state.modules.filter((module: IModuleConfig) => module.name !== name),
           {
-            ...module, //persist the module config schema
-            name,
-            url,
+            ...module,
           },
         ];
         return state;
       })
       .then(() => {
-        ConduitGrpcSdk.Logger.log(`SD: Updated state for ${name} ${url}`);
+        ConduitGrpcSdk.Logger.log(
+          `SD: Updated state for ${name}/${instance.instanceId}:${instance.address}`,
+        );
       })
       .catch(() => {
-        ConduitGrpcSdk.Logger.error(`SD: Failed to update state ${name} ${url}`);
+        ConduitGrpcSdk.Logger.error(
+          `SD: Failed to update state ${name}/${instance.instanceId}:${instance.address}`,
+        );
       });
   }
 }
