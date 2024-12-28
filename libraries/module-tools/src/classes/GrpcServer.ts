@@ -133,7 +133,6 @@ export class GrpcServer {
     }
     this.started = true;
     this.startedOnce = true;
-    this.grpcServer?.start();
   }
 
   private postponeRestart() {
