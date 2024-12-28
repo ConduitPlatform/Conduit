@@ -7,7 +7,7 @@ import {
 import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { OAuth2 } from '../OAuth2.js';
-import googleParameters from './google.json' assert { type: 'json' };
+import googleParameters from './google.json' with { type: 'json' };
 import { GoogleUser } from './google.user.js';
 import axios from 'axios';
 import {

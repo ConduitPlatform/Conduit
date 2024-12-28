@@ -7,7 +7,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=14"
+    "node": ">=22"
   },
   "scripts": {
     "test": "jest --coverage --forceExit",
@@ -30,8 +30,8 @@
   "dependencies": {
     "@conduitplatform/commons": "*",
     "@conduitplatform/grpc-sdk": "*",
-    "@conduitplatform/module-tools": "*",
     "@conduitplatform/hermes": "*",
+    "@conduitplatform/module-tools": "*",
     "@conduitplatform/node-2fa": "*",
     "@grpc/grpc-js": "^1.10.9",
     "@grpc/proto-loader": "^0.7.6",

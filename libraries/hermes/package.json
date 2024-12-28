@@ -5,7 +5,7 @@
   "types": "dist/index.d.ts",
   "private": true,
   "engines": {
-    "node": ">=14"
+    "node": ">=22"
   },
   "type": "module",
   "scripts": {

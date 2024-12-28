@@ -2,7 +2,7 @@ import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
 import { OAuth2 } from '../OAuth2.js';
 import { MicrosoftUser } from './microsoft.user.js';
-import microsoftParameters from './microsoft.json' assert { type: 'json' };
+import microsoftParameters from './microsoft.json' with { type: 'json' };
 import {
   AuthParams,
   ConnectionParams,

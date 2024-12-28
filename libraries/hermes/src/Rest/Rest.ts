@@ -311,8 +311,10 @@ export class RestController extends ConduitRouter {
     }
     this.createRouter();
     const self = this;
+    //@ts-expect-error
     this._expressRouter!.use('/swagger', swaggerUi.serve);
     this._expressRouter!.get('/swagger', (req, res, next) =>
+      //@ts-expect-error
       swaggerUi.setup(self._swagger!.swaggerDoc)(req, res, next),
     );
     this._expressRouter!.get(

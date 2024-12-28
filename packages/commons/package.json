@@ -6,7 +6,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=14"
+    "node": ">=22"
   },
   "scripts": {
     "prepublish": "npm run build",
@@ -17,8 +17,8 @@
   "license": "ISC",
   "dependencies": {
     "@conduitplatform/grpc-sdk": "*",
-    "@conduitplatform/module-tools": "*",
     "@conduitplatform/hermes": "*",
+    "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.10.9"
   },
   "directories": {

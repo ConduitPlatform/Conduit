@@ -5,9 +5,8 @@
   "types": "dist/index.d.ts",
   "private": true,
   "type": "module",
-
   "engines": {
-    "node": ">=14"
+    "node": ">=22"
   },
   "scripts": {
     "start": "node dist/index.js",

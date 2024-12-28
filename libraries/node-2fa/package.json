@@ -10,7 +10,7 @@
   "types": "dist/index.d.ts",
   "private": true,
   "engines": {
-    "node": ">=14"
+    "node": ">=22"
   },
   "scripts": {
     "prepublish": "npm run build",
