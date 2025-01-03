@@ -1,17 +1,10 @@
-import {
-  ConduitGrpcSdk,
-  HealthCheckResponse,
-  HealthCheckStatus,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, HealthCheckStatus } from '@conduitplatform/grpc-sdk';
 import { ServiceRegistry } from './ServiceRegistry.js';
 import { linearBackoffTimeout } from '@conduitplatform/module-tools';
 import { EventEmitter } from 'events';
 
 export class ServiceMonitor {
   private static _instance: ServiceMonitor;
-  private readonly moduleHealth: {
-    [module: string]: { address: string; timestamp: number; status: HealthCheckStatus };
-  } = {};
   private readonly _serviceRegistry = ServiceRegistry.getInstance();
   private monitorIntervalMs = 5000;
   private serviceReconnectionInitMs = 500;
@@ -58,106 +51,94 @@ export class ServiceMonitor {
    * Any services that do not provide a gRPC health check service are assumed to be healthy.
    * Used by healthCheckRegisteredModules(), reviveService()
    */
-  private async healthCheckService(module: string, address: string) {
-    const healthClient = this.grpcSdk.getHealthClient(module);
-    let status = HealthCheckStatus.SERVING;
-    if (healthClient) {
-      status = await healthClient
-        .check({})
-        .then((res: HealthCheckResponse) => res.status as unknown as HealthCheckStatus);
-    }
-    const isRegistered = Object.keys(this.moduleHealth).includes(module);
-    if (!isRegistered && status === HealthCheckStatus.SERVICE_UNKNOWN) return;
-    this.updateModuleHealth(module, address, status);
+
+  // OK
+  private async healthCheckService(module: string, instanceId: string) {
+    const instance = this._serviceRegistry.getModule(module)!.getInstance(instanceId)!;
+    const status = await this.grpcSdk.isModuleUp(module, instance.address);
+    this.updateInstanceHealth(module, instanceId, status);
     return status;
   }
 
-  handleUnresponsiveModule(
-    moduleName: string,
-    moduleUrl: string,
-    status: HealthCheckStatus,
-  ) {
-    const isRegistered = Object.keys(this.moduleHealth).includes(moduleName);
-    if (!isRegistered && status === HealthCheckStatus.SERVICE_UNKNOWN) {
-      ConduitGrpcSdk.Logger.info(
-        `SD/health: unresponsive ${moduleName} ${moduleUrl} with no health history`,
-      );
-      return;
-    }
-
-    ConduitGrpcSdk.Logger.log(`SD/health: update ${moduleName} ${moduleUrl} unknown`);
-    this.grpcSdk.updateModuleHealth(moduleName, false);
-    // Deregister Unresponsive Module
-    delete this.moduleHealth[moduleName];
-    this._serviceRegistry.removeModule(moduleName);
-    this.reviveService(moduleName, moduleUrl);
+  handleUnresponsiveInstance(moduleName: string, instanceId: string) {
+    ConduitGrpcSdk.Logger.log(`SD/health: update ${moduleName}/${instanceId} unknown`);
+    this.reviveService(moduleName, instanceId);
   }
 
+  updateInstanceHealth(
+    moduleName: string,
+    instanceId: string,
+    instanceStatus: HealthCheckStatus,
+  ) {
+    let module = this._serviceRegistry.getModule(moduleName);
+    // if module doesn't exist in the registry, do nothing.
+    if (!module) {
+      return null;
+    }
+    module.updateInstanceHealth(instanceId, instanceStatus);
+  }
+
+  // OK
   updateModuleHealth(
     moduleName: string,
-    moduleUrl: string,
-    moduleStatus: HealthCheckStatus,
+    instanceId: string,
+    instanceStatus: HealthCheckStatus,
   ) {
-    if (moduleStatus === HealthCheckStatus.SERVICE_UNKNOWN) {
-      return this.handleUnresponsiveModule(moduleName, moduleUrl, moduleStatus);
+    if (instanceStatus === HealthCheckStatus.SERVICE_UNKNOWN) {
+      return this.handleUnresponsiveInstance(moduleName, instanceId);
     }
 
     let module = this._serviceRegistry.getModule(moduleName);
+    // if module doesn't exist in the registry, do nothing.
     if (!module) {
-      module = {
-        address: moduleUrl,
-        serving: moduleStatus === HealthCheckStatus.SERVING,
-      };
-      // ConduitGrpcSdk.Logger.log(
-      //   `SD/health: update unregistered module ${moduleName} ${moduleUrl} ${moduleStatus}`,
-      // );
-      this._serviceRegistry.updateModule(moduleName, module);
-    } else {
-      const prevStatus = module.serving;
-      // ConduitGrpcSdk.Logger.log(
-      //   `SD/health: update registered module ${moduleName} ${moduleUrl} to ${moduleStatus} from serving: ${prevStatus}`,
-      // );
-      module.serving = moduleStatus === HealthCheckStatus.SERVING;
+      return null;
     }
-    this.grpcSdk.updateModuleHealth(
-      moduleName,
-      moduleStatus === HealthCheckStatus.SERVING,
+    const instance = module.getInstance(instanceId);
+    // if instance doesn't exist in the registry, do nothing.
+    // instances should be registered before their first probe
+    if (!instance) {
+      return null;
+    }
+    const prevStatus = instance.serving;
+    ConduitGrpcSdk.Logger.log(
+      `SD/health: update instance ${moduleName}/${instanceId} to ${instanceStatus} from serving: ${prevStatus}`,
     );
-    this._serviceRegistry.updateModule(moduleName, module);
-    this.moduleHealth[moduleName] = {
-      address: moduleUrl,
-      timestamp: Date.now(),
-      status: moduleStatus,
-    };
+    module.addOrUpdateInstance({ ...instance, status: instanceStatus });
   }
 
   /*
    * Attempt to reconnect to a recently removed module service.
    * Retries using linear backoff.
    */
-  private reviveService(name: string, address: string) {
+
+  // OK
+  private reviveService(name: string, instanceId: string) {
+    const instance = this._serviceRegistry.getModule(name)!.getInstance(instanceId)!;
+
     const onTry = (stop: () => void) => {
-      if (Object.keys(this.moduleHealth).includes(name)) {
+      if (instance.serving) {
         stop();
-        ConduitGrpcSdk.Logger.log(`SD/health/revive: found healthy ${name} ${address}`);
+        ConduitGrpcSdk.Logger.log(
+          `SD/health/revive: found healthy ${name}/${instanceId}`,
+        );
       } else {
-        this.healthCheckService(name, address)
+        this.healthCheckService(name, instanceId)
           .then(() => {
             ConduitGrpcSdk.Logger.log(
-              `SD/health/revive: check completed ${name} ${address}`,
+              `SD/health/revive: check completed ${name}/${instanceId}`,
             );
           })
           .catch(() => {
             ConduitGrpcSdk.Logger.log(
-              `SD/health/revive: check failed ${name} ${address}`,
+              `SD/health/revive: check failed ${name}/${instanceId}`,
             );
           });
       }
     };
     const onFailure = () => {
-      this.grpcSdk.getModule(name)?.closeConnection();
+      this._serviceRegistry.getModule(name)?.removeInstance(instanceId);
       ConduitGrpcSdk.Logger.log(
-        `SD/health/revive: check connection closed  ${name} ${address}`,
+        `SD/health/revive: failed to recover ${name}/${instanceId}`,
       );
     };
     linearBackoffTimeout(
@@ -168,19 +149,23 @@ export class ServiceMonitor {
     );
   }
 
+  // OK
   private async monitorModules() {
     for (const module of this._serviceRegistry.getRegisteredModules()) {
-      const registeredModule = this._serviceRegistry.getModule(module);
-      if (!registeredModule) continue;
-      try {
-        await this.healthCheckService(module, registeredModule.address);
-      } catch (e) {
-        if (this._serviceRegistry.getModule(module)) {
-          this.handleUnresponsiveModule(
-            module,
-            registeredModule.address,
-            HealthCheckStatus.SERVICE_UNKNOWN,
-          );
+      const registeredModule = this._serviceRegistry.getModule(module)!;
+      for (const instance of registeredModule.instances) {
+        // skip instances with unknown status
+        if (instance.status === HealthCheckStatus.UNKNOWN) continue;
+        try {
+          await this.healthCheckService(module, instance.instanceId);
+        } catch (e) {
+          if (this._serviceRegistry.getModule(module)) {
+            registeredModule.updateInstanceHealth(
+              instance.instanceId,
+              HealthCheckStatus.UNKNOWN,
+            );
+            this.handleUnresponsiveInstance(module, instance.instanceId);
+          }
         }
       }
     }

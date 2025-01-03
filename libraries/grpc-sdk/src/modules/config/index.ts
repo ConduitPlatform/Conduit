@@ -105,11 +105,13 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     name: string,
     url: string,
     healthStatus: Omit<HealthCheckStatus, HealthCheckStatus.SERVICE_UNKNOWN>,
+    instanceId: string,
   ) {
     const request: RegisterModuleRequest = {
       moduleName: name.toString(),
       url: url.toString(),
       healthStatus: healthStatus as number,
+      instanceId,
     };
     const self = this;
     return this.client!.registerModule(request).then(res => {
@@ -118,13 +120,13 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     });
   }
 
-  moduleHealthProbe(name: string, url: string) {
+  moduleHealthProbe(name: string, url: string, instanceId: string) {
     const request: ModuleHealthRequest = {
       moduleName: name.toString(),
-      url,
       status: this._serviceHealthStatusGetter
         ? this._serviceHealthStatusGetter()
         : HealthCheckStatus.SERVICE_UNKNOWN,
+      instanceId,
     };
     const self = this;
     this.client!.moduleHealthProbe(request)
