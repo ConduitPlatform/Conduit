@@ -45,7 +45,7 @@
     "@types/otp-generator": "^4.0.2",
     "copyfiles": "^2.4.1",
     "rimraf": "^6.0.1",
-    "ts-proto": "^1.167.1",
+    "ts-proto": "^2.6.1",
     "typescript": "~5.7.2"
   }
 }
