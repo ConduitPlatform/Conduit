@@ -18,16 +18,19 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 export abstract class ConduitServiceModule {
   protected readonly _moduleName: string;
+  protected readonly _instanceId: string;
   protected _serviceName?: string;
   protected _address!: string; // external address:port of service (LoadBalancer)
   protected grpcServer!: GrpcServer;
   protected readonly events: EventEmitter = new EventEmitter();
   private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.SERVING; // default for health-agnostic modules
 
-  protected constructor(moduleName: string) {
+  protected constructor(moduleName: string, instanceId: string) {
     this._moduleName = camelCase(moduleName);
+    this._instanceId = instanceId;
   }
 
   private _registered = false;
@@ -81,7 +84,11 @@ export abstract class ConduitServiceModule {
       // do not emit health updates until registered
       if (this._registered) {
         this.events.emit(`grpc-health-change:${this._serviceName}`, state);
-        this._grpcSdk?.config.moduleHealthProbe(this._moduleName, this._address);
+        this._grpcSdk?.config.moduleHealthProbe(
+          this._moduleName,
+          this._address,
+          this._instanceId,
+        );
       }
     }
   }
