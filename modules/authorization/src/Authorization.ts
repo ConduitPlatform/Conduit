@@ -1,6 +1,6 @@
 import {
   ConduitGrpcSdk,
-  AuthorizationProtoUtils,
+  AuthorizationProto,
   DatabaseProvider,
   GrpcRequest,
   GrpcResponse,
@@ -159,7 +159,7 @@ export default class Authorization extends ManagedModule<Config> {
   }
 
   async createRelations(
-    call: GrpcRequest<AuthorizationProtoUtils.CreateRelationsRequest>,
+    call: GrpcRequest<AuthorizationProto.CreateRelationsRequest>,
     callback: GrpcResponse<Empty>,
   ) {
     const subject = call.request.subject;

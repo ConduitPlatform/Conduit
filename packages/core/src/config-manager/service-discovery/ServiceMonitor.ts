@@ -1,6 +1,6 @@
 import {
   ConduitGrpcSdk,
-  GrpcHealthCheckProtoUtils,
+  GrpcHealthCheckProto,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import { ServiceRegistry } from './ServiceRegistry.js';
@@ -65,7 +65,7 @@ export class ServiceMonitor {
       status = await healthClient
         .check({})
         .then(
-          (res: GrpcHealthCheckProtoUtils.HealthCheckResponse) =>
+          (res: GrpcHealthCheckProto.HealthCheckResponse) =>
             res.status as unknown as HealthCheckStatus,
         );
     }

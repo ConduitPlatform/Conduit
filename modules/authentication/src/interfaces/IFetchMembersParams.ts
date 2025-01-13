@@ -1,7 +1,7 @@
-import { AuthorizationProtoUtils } from '@conduitplatform/grpc-sdk';
+import { AuthorizationProto } from '@conduitplatform/grpc-sdk';
 
 export interface FetchMembersParams {
-  relations: AuthorizationProtoUtils.FindRelationResponse;
+  relations: AuthorizationProto.FindRelationResponse;
   skip?: number;
   limit?: number;
   sort?: string;

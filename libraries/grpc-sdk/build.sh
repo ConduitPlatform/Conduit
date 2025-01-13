@@ -32,7 +32,7 @@ for FILE in ./*.ts; do
     # Convert the BASENAME to PascalCase
     PASCALCASE_BASENAME=$(echo "$BASENAME_WITH_DASHES" | awk -F'-' '{ for (i=1; i<=NF; i++) $i = toupper(substr($i, 1, 1)) tolower(substr($i, 2)) } 1' OFS='')
 
-    EXPORT_STATEMENT="export * as ${PASCALCASE_BASENAME}ProtoUtils from './$BASENAME.js';"
+    EXPORT_STATEMENT="export * as ${PASCALCASE_BASENAME}Proto from './$BASENAME.js';"
 
     # Append the export statement to the index.ts content
     INDEX_CONTENT="$INDEX_CONTENT$EXPORT_STATEMENT\n"

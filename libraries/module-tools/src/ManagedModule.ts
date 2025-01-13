@@ -7,7 +7,7 @@ import {
   ConduitGrpcSdk,
   GrpcRequest,
   GrpcResponse,
-  ModuleProtoUtils,
+  ModuleProto,
 } from '@conduitplatform/grpc-sdk';
 import { initializeSdk, merge } from './utilities/index.js';
 import { convictConfigParser } from './utilities/convictConfigParser.js';
@@ -175,8 +175,8 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   }
 
   async setConfig(
-    call: GrpcRequest<ModuleProtoUtils.SetConfigRequest>,
-    callback: GrpcResponse<ModuleProtoUtils.SetConfigResponse>,
+    call: GrpcRequest<ModuleProto.SetConfigRequest>,
+    callback: GrpcResponse<ModuleProto.SetConfigResponse>,
   ) {
     try {
       if (!this.config) {

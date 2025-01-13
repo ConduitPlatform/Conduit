@@ -8,8 +8,8 @@ import {
   GrpcCallback,
   GrpcRequest,
   GrpcResponse,
-  ModuleProtoUtils,
-  GrpcHealthCheckProtoUtils,
+  ModuleProto,
+  GrpcHealthCheckProto,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 
@@ -87,39 +87,39 @@ export abstract class ConduitServiceModule {
   }
 
   healthCheck(
-    call: GrpcRequest<GrpcHealthCheckProtoUtils.HealthCheckRequest>,
-    callback: GrpcCallback<GrpcHealthCheckProtoUtils.HealthCheckResponse>,
+    call: GrpcRequest<GrpcHealthCheckProto.HealthCheckRequest>,
+    callback: GrpcCallback<GrpcHealthCheckProto.HealthCheckResponse>,
   ) {
     const service = call.request.service.substring(call.request.service.indexOf('.') + 1);
     if (service && service !== this._serviceName) {
       callback(null, {
         status:
-          HealthCheckStatus.SERVICE_UNKNOWN as unknown as GrpcHealthCheckProtoUtils.HealthCheckResponse_ServingStatus,
+          HealthCheckStatus.SERVICE_UNKNOWN as unknown as GrpcHealthCheckProto.HealthCheckResponse_ServingStatus,
       });
     } else {
       if (!this._registered) {
         return callback(null, {
-          status: GrpcHealthCheckProtoUtils.HealthCheckResponse_ServingStatus.UNKNOWN,
+          status: GrpcHealthCheckProto.HealthCheckResponse_ServingStatus.UNKNOWN,
         });
       }
       callback(null, {
         status: this
-          ._serviceHealthState as unknown as GrpcHealthCheckProtoUtils.HealthCheckResponse_ServingStatus,
+          ._serviceHealthState as unknown as GrpcHealthCheckProto.HealthCheckResponse_ServingStatus,
       });
     }
   }
 
   healthWatch(
     call: ServerWritableStream<
-      GrpcHealthCheckProtoUtils.HealthCheckRequest,
-      GrpcHealthCheckProtoUtils.HealthCheckResponse
+      GrpcHealthCheckProto.HealthCheckRequest,
+      GrpcHealthCheckProto.HealthCheckResponse
     >,
   ) {
     const service = call.request.service.substring(call.request.service.indexOf('.') + 1);
     if (service && service !== this._serviceName) {
       call.write({
         status:
-          HealthCheckStatus.SERVICE_UNKNOWN as unknown as GrpcHealthCheckProtoUtils.HealthCheckResponse_ServingStatus,
+          HealthCheckStatus.SERVICE_UNKNOWN as unknown as GrpcHealthCheckProto.HealthCheckResponse_ServingStatus,
       });
     } else {
       this.events.on(
@@ -127,7 +127,7 @@ export abstract class ConduitServiceModule {
         (status: HealthCheckStatus) => {
           call.write({
             status:
-              status as unknown as GrpcHealthCheckProtoUtils.HealthCheckResponse_ServingStatus,
+              status as unknown as GrpcHealthCheckProto.HealthCheckResponse_ServingStatus,
           });
         },
       );
@@ -135,8 +135,8 @@ export abstract class ConduitServiceModule {
   }
 
   abstract setConfig(
-    call: GrpcRequest<ModuleProtoUtils.SetConfigRequest>,
-    callback: GrpcResponse<ModuleProtoUtils.SetConfigResponse>,
+    call: GrpcRequest<ModuleProto.SetConfigRequest>,
+    callback: GrpcResponse<ModuleProto.SetConfigResponse>,
   ): Promise<void>;
 
   protected async addHealthCheckService() {
