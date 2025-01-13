@@ -1,12 +1,13 @@
 syntax = "proto3";
-import "google/protobuf/empty.proto";
 package router;
 
 service Router {
-  rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (google.protobuf.Empty);
-  rpc SocketPush (SocketData) returns (google.protobuf.Empty);
-  rpc PatchRouteMiddlewares(PatchAppRouteMiddlewaresRequest) returns (google.protobuf.Empty);
+  rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (Empty);
+  rpc SocketPush (SocketData) returns (Empty);
+  rpc PatchRouteMiddlewares(PatchAppRouteMiddlewaresRequest) returns (Empty);
 }
+
+message Empty {}
 
 message SocketData {
   string event = 1;

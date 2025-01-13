@@ -18,6 +18,7 @@ import { v4 as uuid } from 'uuid';
 import {
   AnonymousUserCreateRequest,
   CreateTeamRequest,
+  Empty,
   GetTeamRequest,
   ModifyTeamMembersRequest,
   Team as GrpcTeam,
@@ -36,7 +37,6 @@ import {
   ValidateAccessTokenResponse,
   ValidateAccessTokenResponse_Status,
 } from './protoTypes/authentication.js';
-import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { runMigrations } from './migrations/index.js';
 import metricsSchema from './metrics/index.js';
 import { TokenProvider } from './handlers/tokenProvider.js';

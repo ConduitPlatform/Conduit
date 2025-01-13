@@ -1,4 +1,8 @@
-import { ConduitGrpcSdk, HealthCheckStatus } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitGrpcSdk,
+  GrpcHealthCheckProto,
+  HealthCheckStatus,
+} from '@conduitplatform/grpc-sdk';
 import { ServiceRegistry } from './ServiceRegistry.js';
 import { linearBackoffTimeout } from '@conduitplatform/module-tools';
 import { EventEmitter } from 'events';
@@ -51,8 +55,6 @@ export class ServiceMonitor {
    * Any services that do not provide a gRPC health check service are assumed to be healthy.
    * Used by healthCheckRegisteredModules(), reviveService()
    */
-
-  // OK
   private async healthCheckService(module: string, instanceId: string) {
     const instance = this._serviceRegistry.getModule(module)!.getInstance(instanceId)!;
     const status = await this.grpcSdk.isModuleUp(module, instance.address);

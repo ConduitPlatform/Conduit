@@ -279,6 +279,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         indexSpecs.push(spec);
       }
       await collection
+        // @ts-expect-error
         .createIndex(indexSpecs, index.options as IndexOptions)
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);

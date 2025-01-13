@@ -4,13 +4,13 @@ import {
   Indexable,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
-import winston, { format, LogCallback, Logger } from 'winston';
+import winston, { format, Logger } from 'winston';
 import { isEmpty } from 'lodash';
 import { get } from 'http';
 import LokiTransport from 'winston-loki';
 import { linearBackoffTimeoutAsync } from '../utilities/index.js';
 
-const processMeta = (meta: Indexable) => {
+const processMeta = (meta: Indexable | unknown) => {
   if (Array.isArray(meta)) {
     return meta.reduce(
       (message: string, meta: Indexable) =>
@@ -81,40 +81,35 @@ export class ConduitLogger implements IConduitLogger {
     this._winston.add(transport);
   }
 
-  log(message: string, level: string = 'info', cb?: LogCallback): Logger {
-    return this._winston.log(level, message, cb);
+  log(message: string, level: string = 'info'): Logger {
+    return this._winston.log(level, message);
   }
 
-  logObject(
-    object: Indexable,
-    message: string = '',
-    level: string = 'info',
-    cb?: LogCallback,
-  ): Logger {
-    return this._winston.log(level, message, object, cb);
+  logObject(object: Indexable, message: string = '', level: string = 'info'): Logger {
+    return this._winston.log(level, message, object);
   }
 
-  info(message: string, cb?: LogCallback): Logger {
-    return this._winston.info(message, cb);
+  info(message: string): Logger {
+    return this._winston.info(message);
   }
 
-  warn(message: string, cb?: LogCallback): Logger {
-    return this._winston.warn(message, cb);
+  warn(message: string): Logger {
+    return this._winston.warn(message);
   }
 
-  error(message: string | Error, cb?: LogCallback): Logger {
-    if (typeof message === 'object') {
-      return this._winston.error(message);
+  error(messageOrError: string | Error, originalError?: Error): Logger {
+    if (typeof messageOrError === 'object') {
+      return this._winston.error(messageOrError);
     }
-    return this._winston.error(message, cb);
+    return this._winston.error(messageOrError, originalError);
   }
 
-  http(message: string, cb?: LogCallback): Logger {
-    return this._winston.http(message, cb);
+  http(message: string): Logger {
+    return this._winston.http(message);
   }
 
-  verbose(message: string, cb?: LogCallback): Logger {
-    return this._winston.verbose(message, cb);
+  verbose(message: string): Logger {
+    return this._winston.verbose(message);
   }
 }
 

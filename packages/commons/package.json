@@ -6,7 +6,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=14"
+    "node": ">=22"
   },
   "scripts": {
     "prepublish": "npm run build",
@@ -17,8 +17,8 @@
   "license": "ISC",
   "dependencies": {
     "@conduitplatform/grpc-sdk": "*",
-    "@conduitplatform/module-tools": "*",
     "@conduitplatform/hermes": "*",
+    "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.10.9"
   },
   "directories": {
@@ -36,11 +36,11 @@
     "@types/convict": "^6.1.6",
     "@types/express": "~4.17.21",
     "@types/is-natural-number": "^4.0.4",
-    "@types/node": "20.11.24",
+    "@types/node": "22.10.2",
     "@types/validator": "^13.11.5",
-    "express": "~4.20.0",
-    "rimraf": "^5.0.5",
-    "ts-proto": "^1.167.1",
-    "typescript": "~5.6.2"
+    "express": "~4.21.2",
+    "rimraf": "^6.0.1",
+    "ts-proto": "^2.6.1",
+    "typescript": "~5.7.2"
   }
 }

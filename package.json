@@ -5,7 +5,7 @@
   "main": "index.js",
   "private": true,
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -30,7 +30,7 @@
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^9.0.11",
     "lerna": "^8.1.8",
-    "lint-staged": ">=15",
+    "lint-staged": ">=15.3.0",
     "prettier": "^3.0.3",
     "standard-version": "^9.5.0",
     "turbo": "^1.12.4"

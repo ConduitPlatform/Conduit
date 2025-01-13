@@ -10,7 +10,6 @@ import { ISmsProvider } from './interfaces/ISmsProvider.js';
 import { TwilioProvider } from './providers/twilio.js';
 import { AwsSnsProvider } from './providers/awsSns.js';
 import { messageBirdProvider } from './providers/messageBird.js';
-import { clickSendProvider } from './providers/clickSend.js';
 import path from 'path';
 import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
@@ -162,7 +161,8 @@ export default class Sms extends ManagedModule<Config> {
           this._provider = new messageBirdProvider(settings);
           break;
         case 'clickSend':
-          this._provider = new clickSendProvider(settings, this.grpcSdk);
+          ConduitGrpcSdk.Logger.error('ClickSend unavailable in this version');
+          // this._provider = new clickSendProvider(settings, this.grpcSdk);
           break;
         default:
           ConduitGrpcSdk.Logger.error('SMS provider not supported');
