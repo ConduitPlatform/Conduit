@@ -1,5 +1,4 @@
 syntax = "proto3";
-import "google/protobuf/empty.proto";
 package authentication;
 
 message UserLoginRequest {
@@ -95,6 +94,8 @@ message UserModifyStatusResponse {
   string message = 1;
 }
 
+message Empty {}
+
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
@@ -105,7 +106,7 @@ service Authentication {
   rpc GetTeam(GetTeamRequest) returns (Team);
   rpc CreateTeam(CreateTeamRequest) returns (Team);
   rpc TeamDelete(TeamDeleteRequest) returns (TeamDeleteResponse);
-  rpc AddTeamMembers(ModifyTeamMembersRequest) returns (google.protobuf.Empty);
-  rpc RemoveTeamMembers(ModifyTeamMembersRequest) returns (google.protobuf.Empty);
+  rpc AddTeamMembers(ModifyTeamMembersRequest) returns (Empty);
+  rpc RemoveTeamMembers(ModifyTeamMembersRequest) returns (Empty);
   rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
 }

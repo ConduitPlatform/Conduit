@@ -26,7 +26,13 @@ for FILE in ./*.ts; do
   if [ "$FILENAME" != "index.ts" ]; then
     # Remove the file extension and create an export statement
     BASENAME="${FILENAME%.ts}"
-    EXPORT_STATEMENT="export * from './$BASENAME.js';"
+
+    # Replace underscores with dashes for consistent word separation
+    BASENAME_WITH_DASHES=$(echo "$BASENAME" | tr '_' '-')
+    # Convert the BASENAME to PascalCase
+    PASCALCASE_BASENAME=$(echo "$BASENAME_WITH_DASHES" | awk -F'-' '{ for (i=1; i<=NF; i++) $i = toupper(substr($i, 1, 1)) tolower(substr($i, 2)) } 1' OFS='')
+
+    EXPORT_STATEMENT="export * as ${PASCALCASE_BASENAME}ProtoUtils from './$BASENAME.js';"
 
     # Append the export statement to the index.ts content
     INDEX_CONTENT="$INDEX_CONTENT$EXPORT_STATEMENT\n"

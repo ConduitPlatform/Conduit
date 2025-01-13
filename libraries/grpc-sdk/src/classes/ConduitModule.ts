@@ -5,11 +5,11 @@ import {
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
 import { retryMiddleware } from 'nice-grpc-client-middleware-retry';
+import { ConduitModuleDefinition } from '../protoUtils/module.js';
 import {
-  ConduitModuleDefinition,
   HealthCheckResponse,
   HealthDefinition,
-} from '../protoUtils/index.js';
+} from '../protoUtils/grpc_health_check.js';
 import { EventEmitter } from 'events';
 import { ConduitGrpcSdk } from '../index.js';
 

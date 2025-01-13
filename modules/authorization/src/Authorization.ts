@@ -1,6 +1,6 @@
 import {
   ConduitGrpcSdk,
-  CreateRelationsRequest,
+  AuthorizationProtoUtils,
   DatabaseProvider,
   GrpcRequest,
   GrpcResponse,
@@ -15,6 +15,7 @@ import {
   AllowedResourcesRequest,
   AllowedResourcesResponse,
   Decision,
+  Empty,
   DeleteResourceRequest,
   FindRelationRequest,
   PermissionCheck,
@@ -37,7 +38,6 @@ import {
 import { AdminHandlers } from './admin/index.js';
 import { status } from '@grpc/grpc-js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
-import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { AuthorizationRouter } from './router/index.js';
 import { fileURLToPath } from 'node:url';
 
@@ -118,8 +118,8 @@ export default class Authorization extends ManagedModule<Config> {
         res.status === 'processed'
           ? ResourceModificationAcknowledgement_Status.PROCESSED
           : res.status === 'acknowledged'
-          ? ResourceModificationAcknowledgement_Status.ACKNOWLEDGED
-          : ResourceModificationAcknowledgement_Status.IGNORED,
+            ? ResourceModificationAcknowledgement_Status.ACKNOWLEDGED
+            : ResourceModificationAcknowledgement_Status.IGNORED,
     });
   }
 
@@ -138,8 +138,8 @@ export default class Authorization extends ManagedModule<Config> {
         res.status === 'processed'
           ? ResourceModificationAcknowledgement_Status.PROCESSED
           : res.status === 'acknowledged'
-          ? ResourceModificationAcknowledgement_Status.ACKNOWLEDGED
-          : ResourceModificationAcknowledgement_Status.IGNORED,
+            ? ResourceModificationAcknowledgement_Status.ACKNOWLEDGED
+            : ResourceModificationAcknowledgement_Status.IGNORED,
     });
   }
 
@@ -159,7 +159,7 @@ export default class Authorization extends ManagedModule<Config> {
   }
 
   async createRelations(
-    call: GrpcRequest<CreateRelationsRequest>,
+    call: GrpcRequest<AuthorizationProtoUtils.CreateRelationsRequest>,
     callback: GrpcResponse<Empty>,
   ) {
     const subject = call.request.subject;

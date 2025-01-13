@@ -3,7 +3,7 @@ import {
   AdminDefinition,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
-} from '../../protoUtils/index.js';
+} from '../../protoUtils/core.js';
 import { ConduitRouteActions } from '../../interfaces/index.js';
 
 export class Admin extends ConduitModule<typeof AdminDefinition> {
