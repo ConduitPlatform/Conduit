@@ -1,5 +1,4 @@
 syntax = "proto3";
-import "google/protobuf/empty.proto";
 package chat;
 
 message CreateRoomRequest {
@@ -27,8 +26,10 @@ message GetRoomResponse {
   repeated Room rooms = 1;
 }
 
+message Empty {}
+
 service Chat {
   rpc CreateRoom(CreateRoomRequest) returns (Room);
   rpc DeleteRoom(DeleteRoomRequest) returns (Room);
-  rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty);
+  rpc SendMessage(SendMessageRequest) returns (Empty);
 }

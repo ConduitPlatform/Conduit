@@ -1,5 +1,4 @@
 syntax = "proto3";
-import "google/protobuf/empty.proto";
 package authorization;
 
 message Resource {
@@ -102,16 +101,18 @@ message Decision {
   bool allow = 1;
 }
 
+message Empty {}
+
 service Authorization {
   rpc DefineResource(Resource) returns (ResourceModificationAcknowledgement);
-  rpc DeleteResource(DeleteResourceRequest) returns (google.protobuf.Empty);
+  rpc DeleteResource(DeleteResourceRequest) returns (Empty);
   rpc UpdateResource(Resource) returns (ResourceModificationAcknowledgement);
-  rpc CreateRelation(Relation) returns (google.protobuf.Empty);
-  rpc CreateRelations(CreateRelationsRequest) returns (google.protobuf.Empty);
-  rpc DeleteRelation(Relation) returns (google.protobuf.Empty);
-  rpc GrantPermission(PermissionRequest) returns (google.protobuf.Empty);
-  rpc RemovePermission(PermissionRequest) returns (google.protobuf.Empty);
-  rpc DeleteAllRelations(DeleteAllRelationsRequest) returns (google.protobuf.Empty);
+  rpc CreateRelation(Relation) returns (Empty);
+  rpc CreateRelations(CreateRelationsRequest) returns (Empty);
+  rpc DeleteRelation(Relation) returns (Empty);
+  rpc GrantPermission(PermissionRequest) returns (Empty);
+  rpc RemovePermission(PermissionRequest) returns (Empty);
+  rpc DeleteAllRelations(DeleteAllRelationsRequest) returns (Empty);
   rpc FindRelation(FindRelationRequest) returns (FindRelationResponse);
   rpc Can(PermissionCheck) returns (Decision);
   rpc GetAllowedResources(AllowedResourcesRequest) returns (AllowedResourcesResponse);

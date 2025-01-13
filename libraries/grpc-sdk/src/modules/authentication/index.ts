@@ -8,7 +8,7 @@ import {
   Team,
   ValidateAccessTokenResponse,
   UserModifyStatusResponse,
-} from '../../protoUtils/index.js';
+} from '../../protoUtils/authentication.js';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
   constructor(

@@ -1,6 +1,6 @@
 import {
   ConduitGrpcSdk,
-  HealthCheckResponse,
+  GrpcHealthCheckProto,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import { ServiceRegistry } from './ServiceRegistry.js';
@@ -64,7 +64,10 @@ export class ServiceMonitor {
     if (healthClient) {
       status = await healthClient
         .check({})
-        .then((res: HealthCheckResponse) => res.status as unknown as HealthCheckStatus);
+        .then(
+          (res: GrpcHealthCheckProto.HealthCheckResponse) =>
+            res.status as unknown as HealthCheckStatus,
+        );
     }
     const isRegistered = Object.keys(this.moduleHealth).includes(module);
     if (!isRegistered && status === HealthCheckStatus.SERVICE_UNKNOWN) return;

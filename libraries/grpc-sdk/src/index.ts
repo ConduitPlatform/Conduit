@@ -28,12 +28,12 @@ import { GrpcError, HealthCheckStatus } from './types/index.js';
 import { createSigner } from 'fast-jwt';
 import { ClusterOptions, RedisOptions } from 'ioredis';
 import { IConduitLogger, IConduitMetrics } from './interfaces/index.js';
+import { ModuleListResponse_ModuleResponse } from './protoUtils/core.js';
+import { ConduitModuleDefinition } from './protoUtils/module.js';
 import {
-  ConduitModuleDefinition,
   HealthCheckResponse_ServingStatus,
   HealthDefinition,
-  ModuleListResponse_ModuleResponse,
-} from './protoUtils/index.js';
+} from './protoUtils/grpc_health_check.js';
 
 type UrlRemap = { [url: string]: string };
 
