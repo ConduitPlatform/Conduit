@@ -257,18 +257,10 @@ export class AdminFileHandlers {
     container: string,
     isPublic?: boolean,
   ): Promise<string> {
-    const config = ConfigController.getInstance().config;
-    // the container is sent from the client
     const found = await _StorageContainer.getInstance().findOne({
       name: container,
     });
     if (!found) {
-      if (!config.allowContainerCreation) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'Container creation is not allowed!',
-        );
-      }
       const exists = await this.storageProvider.containerExists(container);
       if (!exists) {
         await this.storageProvider.createContainer(container);

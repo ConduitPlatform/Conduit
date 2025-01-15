@@ -56,7 +56,7 @@ export class FileHandlers {
       if (action === 'create' && request.queryParams.scope) {
         const allowed = await this.grpcSdk.authorization?.can({
           subject: `User:${request.context.user._id}`,
-          actions: ['read'],
+          actions: ['edit'],
           resource: request.params.scope,
         });
         if (!allowed || !allowed.allow) {
@@ -325,23 +325,16 @@ export class FileHandlers {
     container: string,
     isPublic?: boolean,
   ): Promise<string> {
-    const config = ConfigController.getInstance().config;
-    // the container is sent from the client
     const found = await _StorageContainer.getInstance().findOne({
       name: container,
     });
     if (!found) {
-      if (!config.allowContainerCreation) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'Container creation is not allowed!',
-        );
-      }
       const exists = await this.storageProvider.containerExists(container);
       if (!exists) {
-        await this.storageProvider.createContainer(container);
+        throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
       }
       await _StorageContainer.getInstance().create({
+        // TODO: think about this
         name: container,
         isPublic,
       });
