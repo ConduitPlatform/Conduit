@@ -15,7 +15,7 @@ import {
   _createFileUploadUrl,
   _updateFile,
   _updateFileUploadUrl,
-  deepPathHandler,
+  getNestedPaths,
   normalizeFolderPath,
   storeNewFile,
   validateName,
@@ -46,59 +46,110 @@ export class FileHandlers {
 
   async fileAccessCheck(
     action: 'read' | 'create' | 'edit' | 'delete',
-    request: Indexable,
+    userId: string,
+    scope?: string,
     file?: File,
   ) {
-    if (!request.context.user) {
+    if (!userId) {
       throw new GrpcError(status.PERMISSION_DENIED, 'File access is not public');
     }
-    if (ConfigController.getInstance().config.authorization.enabled) {
-      if (action === 'create' && request.queryParams.scope) {
-        const allowed = await this.grpcSdk.authorization?.can({
-          subject: `User:${request.context.user._id}`,
-          actions: ['edit'],
-          resource: request.params.scope,
-        });
-        if (!allowed || !allowed.allow) {
-          throw new GrpcError(
-            status.PERMISSION_DENIED,
-            'You are not allowed to create files in this scope',
-          );
-        }
+    if (!ConfigController.getInstance().config.authorization.enabled) {
+      return;
+    }
+    if (action === 'create' && scope) {
+      const allowed = await this.grpcSdk.authorization?.can({
+        subject: 'User:' + userId,
+        actions: ['edit'],
+        resource: scope,
+      });
+      if (!allowed || !allowed.allow) {
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          'You are not allowed to create files in this scope',
+        );
       }
-      if (['read', 'edit', 'delete'].includes(action)) {
-        const allowed = await this.grpcSdk.authorization?.can({
-          subject: `User:${request.context.user._id}`,
-          actions: [action],
-          resource: `File:${file!._id}`,
-        });
-        if (!allowed || !allowed.allow) {
-          throw new GrpcError(status.PERMISSION_DENIED, 'You do not have access to file');
-        }
+    }
+    if (['read', 'edit', 'delete'].includes(action)) {
+      const allowed = await this.grpcSdk.authorization?.can({
+        subject: 'User:' + userId,
+        actions: [action],
+        resource: `File:${file!._id}`,
+      });
+      if (!allowed || !allowed.allow) {
+        throw new GrpcError(status.PERMISSION_DENIED, 'You do not have access to file');
       }
     }
   }
 
   async fileAccessAdd(file: File, request: Indexable) {
-    if (ConfigController.getInstance().config.authorization.enabled) {
-      if (request.queryParams.scope) {
-        const allowed = await this.grpcSdk.authorization?.can({
-          subject: `User:${request.context.user._id}`,
-          actions: ['read'],
-          resource: request.params.scope,
+    if (!ConfigController.getInstance().config.authorization.enabled) {
+      return;
+    }
+    if (request.queryParams.scope) {
+      const allowed = await this.grpcSdk.authorization?.can({
+        subject: `User:${request.context.user._id}`,
+        actions: ['read'], // TODO: check this out
+        resource: request.params.scope,
+      });
+      if (!allowed || !allowed.allow) {
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          'You are not allowed to create files in this scope',
+        );
+      }
+    }
+    await this.grpcSdk.authorization?.createRelation({
+      subject: request.params.scope ?? `User:${request.context.user._id}`,
+      relation: 'owner',
+      resource: `File:${file._id}`,
+    });
+  }
+
+  /* Checks if user can create-update file in provided folder */
+  async fileAccessEdit(container: string, folder: string, scope: string) {
+    const folderDoc = await _StorageFolder.getInstance().findOne({
+      name: folder,
+      container,
+    });
+    if (folderDoc) {
+      const allowed = await this.grpcSdk.authorization?.can({
+        subject: scope,
+        actions: ['edit'],
+        resource: 'Folder:' + folderDoc._id,
+      });
+      if (!allowed || !allowed.allow) {
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          'You are not allowed to edit files in folder' + folderDoc.name,
+        );
+      }
+      return;
+    } else {
+      // Check previous folders
+      const nestedPaths = getNestedPaths(folder);
+      for (let i = nestedPaths.length - 2; i >= 0; i--) {
+        const prevFolder = await _StorageFolder.getInstance().findOne({
+          name: nestedPaths[i],
+          container,
         });
-        if (!allowed || !allowed.allow) {
-          throw new GrpcError(
-            status.PERMISSION_DENIED,
-            'You are not allowed to create files in this scope',
-          );
+        if (!prevFolder) {
+          continue;
+        }
+        if (prevFolder) {
+          const allowed = await this.grpcSdk.authorization?.can({
+            subject: scope,
+            actions: ['edit'],
+            resource: 'Folder:' + prevFolder._id,
+          });
+          if (!allowed || !allowed.allow) {
+            throw new GrpcError(
+              status.PERMISSION_DENIED,
+              'You are not allowed to edit files in folder' + prevFolder.name,
+            );
+          }
+          return;
         }
       }
-      await this.grpcSdk.authorization?.createRelation({
-        subject: request.params.scope ?? `User:${request.context.user._id}`,
-        relation: 'owner',
-        resource: `File:${file._id}`,
-      });
     }
   }
 
@@ -115,19 +166,26 @@ export class FileHandlers {
   }
 
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, alias, data, container, mimeType, isPublic } = call.request.params;
-    await this.fileAccessCheck('create', call.request);
-    const folder = normalizeFolderPath(call.request.params.folder);
+    const { name, alias, data, container, mimeType, isPublic, scope } =
+      call.request.params;
+    const { user } = call.request.context;
+    await this.fileAccessCheck('create', user, scope);
+
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
       ? config.defaultContainer
-      : await this.findOrCreateContainer(container, isPublic);
+      : await this.findContainer(container);
+
+    const folder = normalizeFolderPath(call.request.params.folder);
+    await this.fileAccessEdit(usedContainer, folder, scope ?? 'User:' + user._id);
     if (folder !== '/') {
-      await this.findOrCreateFolders(folder, usedContainer, isPublic);
+      await this.findOrCreateFolders(folder, usedContainer, isPublic, scope);
     }
     const validatedName = await validateName(name, folder, usedContainer);
+
     try {
-      const file = await storeNewFile(this.storageProvider, {
+      // TODO: check this try catch
+      return await storeNewFile(this.storageProvider, {
         name: validatedName,
         alias,
         data,
@@ -136,8 +194,6 @@ export class FileHandlers {
         isPublic,
         mimeType,
       });
-      await this.fileAccessAdd(file, call.request);
-      return file;
     } catch (e) {
       throw new GrpcError(
         status.INTERNAL,
@@ -147,17 +203,30 @@ export class FileHandlers {
   }
 
   async createFileUploadUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, alias, container, size = 0, mimeType, isPublic } = call.request.params;
-    await this.fileAccessCheck('create', call.request);
-    const folder = normalizeFolderPath(call.request.params.folder);
+    const {
+      name,
+      alias,
+      container,
+      size = 0,
+      mimeType,
+      isPublic,
+      scope,
+    } = call.request.params;
+    const { user } = call.request.context;
+    await this.fileAccessCheck('create', user, scope);
+
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
       ? config.defaultContainer
-      : await this.findOrCreateContainer(container, isPublic);
+      : await this.findContainer(container);
+
+    const folder = normalizeFolderPath(call.request.params.folder);
+    await this.fileAccessEdit(usedContainer, folder, scope ?? 'User:' + user._id);
     if (folder !== '/') {
-      await this.findOrCreateFolders(folder, usedContainer, isPublic);
+      await this.findOrCreateFolders(folder, usedContainer, isPublic, scope);
     }
     const validatedName = await validateName(name, folder, usedContainer);
+
     try {
       const { file, url } = await _createFileUploadUrl(this.storageProvider, {
         container: usedContainer,
@@ -168,7 +237,6 @@ export class FileHandlers {
         size,
         mimeType,
       });
-      await this.fileAccessAdd(file, call.request);
       return { file, url };
     } catch (e) {
       throw new GrpcError(
@@ -321,45 +389,67 @@ export class FileHandlers {
     }
   }
 
-  private async findOrCreateContainer(
-    container: string,
-    isPublic?: boolean,
-  ): Promise<string> {
+  private async findContainer(container: string): Promise<string> {
     const found = await _StorageContainer.getInstance().findOne({
       name: container,
     });
     if (!found) {
-      const exists = await this.storageProvider.containerExists(container);
-      if (!exists) {
-        throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
-      }
-      await _StorageContainer.getInstance().create({
-        // TODO: think about this
-        name: container,
-        isPublic,
-      });
+      throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
     }
     return container;
   }
 
+  /* First folder in path will be owned by container
+     First folder in path, if not pre-existing, will be owned by provided scope
+     The other subfolders will be owned by their previous folder */
   async findOrCreateFolders(
     folderPath: string,
     container: string,
     isPublic?: boolean,
+    scope?: string,
     lastExistsHandler?: () => void,
   ): Promise<_StorageFolder[]> {
+    const authzOn = ConfigController.getInstance().config.authorization.enabled;
+    const containerDoc = await _StorageContainer
+      .getInstance()
+      .findOne({ name: container });
+    if (!containerDoc) {
+      throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
+    }
     const createdFolders: _StorageFolder[] = [];
     let folder: _StorageFolder | null = null;
-    await deepPathHandler(folderPath, async (folderPath, isLast) => {
+    const nestedPaths = getNestedPaths(folderPath);
+
+    for (let i = 0; i < nestedPaths.length; i++) {
+      const folderPath = nestedPaths[i];
+      const isFirst = i === 0;
+      const isLast = i === nestedPaths.length - 1;
+
       folder = await _StorageFolder
         .getInstance()
         .findOne({ name: folderPath, container });
-      if (isNil(folder)) {
-        folder = await _StorageFolder.getInstance().create({
-          name: folderPath,
+
+      let folderScope: string | undefined;
+      if (authzOn && isFirst) {
+        folderScope = scope;
+      } else if (authzOn && !isFirst) {
+        const prevFolder = (await _StorageFolder.getInstance().findOne({
+          name: nestedPaths[i - 1],
           container,
-          isPublic,
-        });
+        })) as _StorageFolder;
+        folderScope = 'Folder:' + prevFolder._id;
+      }
+
+      if (!folder) {
+        folder = await _StorageFolder.getInstance().create(
+          {
+            name: folderPath,
+            container,
+            isPublic,
+          },
+          undefined,
+          folderScope,
+        );
         createdFolders.push(folder);
         const exists = await this.storage.container(container).folderExists(folderPath);
         if (!exists) {
@@ -368,7 +458,15 @@ export class FileHandlers {
       } else if (isLast) {
         lastExistsHandler?.();
       }
-    });
+
+      if (authzOn && isFirst) {
+        await this.grpcSdk.authorization?.createRelation({
+          subject: 'Container:' + containerDoc._id,
+          relation: 'owner',
+          resource: `Folder:${folder!._id}`,
+        });
+      }
+    }
     return createdFolders;
   }
 
@@ -377,7 +475,7 @@ export class FileHandlers {
     const newName = name ?? file.name;
     const newContainer = container ?? file.container;
     if (newContainer !== file.container) {
-      await this.findOrCreateContainer(newContainer);
+      await this.findContainer(newContainer);
     }
     const newFolder = isNil(folder) ? file.folder : normalizeFolderPath(folder);
     if (newFolder !== file.folder && newFolder !== '/') {

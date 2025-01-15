@@ -2,7 +2,7 @@ import { GetUserCommand, IAMClient } from '@aws-sdk/client-iam';
 import { IFileParams, IStorageProvider, StorageConfig } from '../interfaces/index.js';
 import { isNil } from 'lodash-es';
 import path from 'path';
-import { File } from '../models/index.js';
+import { _StorageFolder, File } from '../models/index.js';
 import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { randomUUID } from 'node:crypto';
 import { ConfigController } from '@conduitplatform/module-tools';
@@ -43,7 +43,7 @@ export function normalizeFolderPath(folderPath?: string) {
   return `${path.normalize(folderPath.trim()).replace(/^\/|\/$/g, '')}/`;
 }
 
-function getNestedPaths(inputPath: string): string[] {
+export function getNestedPaths(inputPath: string): string[] {
   const paths: string[] = [];
   const strippedPath = !inputPath.trim()
     ? ''
@@ -74,6 +74,8 @@ export async function storeNewFile(
   params: IFileParams,
 ): Promise<File> {
   const { name, alias, data, container, folder, mimeType, isPublic } = params;
+  const authzOn = ConfigController.getInstance().config.authorization.enabled;
+
   const buffer = Buffer.from(data as string, 'base64');
   const size = buffer.byteLength;
   const fileName = (folder === '/' ? '' : folder) + name;
@@ -81,18 +83,26 @@ export async function storeNewFile(
   const publicUrl = isPublic
     ? await storageProvider.container(container).getPublicUrl(fileName)
     : null;
+  const folderDoc = await _StorageFolder
+    .getInstance()
+    .findOne({ name: folder, container });
+
   ConduitGrpcSdk.Metrics?.increment('files_total');
   ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
-  return await File.getInstance().create({
-    name,
-    alias,
-    mimeType,
-    folder: folder,
-    container: container,
-    size,
-    isPublic,
-    url: publicUrl,
-  });
+  return await File.getInstance().create(
+    {
+      name,
+      alias,
+      mimeType,
+      folder: folder,
+      container: container,
+      size,
+      isPublic,
+      url: publicUrl,
+    },
+    undefined,
+    authzOn ? 'Folder:' + folderDoc!._id : undefined,
+  );
 }
 
 export async function _createFileUploadUrl(
