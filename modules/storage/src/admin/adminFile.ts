@@ -281,7 +281,7 @@ export class AdminFileHandlers {
   ): Promise<_StorageFolder[]> {
     const createdFolders: _StorageFolder[] = [];
     let folder: _StorageFolder | null = null;
-    await deepPathHandler(folderPath, async (folderPath, isFirst, isLast) => {
+    await deepPathHandler(folderPath, async (folderPath, isLast) => {
       folder = await _StorageFolder
         .getInstance()
         .findOne({ name: folderPath, container });
