@@ -72,6 +72,7 @@ export async function deepPathHandler(
 export async function storeNewFile(
   storageProvider: IStorageProvider,
   params: IFileParams,
+  scope?: string,
 ): Promise<File> {
   const { name, alias, data, container, folder, mimeType, isPublic } = params;
   const authzOn = ConfigController.getInstance().config.authorization.enabled;
@@ -87,6 +88,11 @@ export async function storeNewFile(
     .getInstance()
     .findOne({ name: folder, container });
 
+  let fileScope: string | undefined;
+  if (authzOn) {
+    fileScope = folder === '/' ? scope : 'Folder:' + folderDoc!._id;
+  }
+
   ConduitGrpcSdk.Metrics?.increment('files_total');
   ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
   return await File.getInstance().create(
@@ -101,15 +107,18 @@ export async function storeNewFile(
       url: publicUrl,
     },
     undefined,
-    authzOn ? 'Folder:' + folderDoc!._id : undefined,
+    fileScope,
   );
 }
 
 export async function _createFileUploadUrl(
   storageProvider: IStorageProvider,
   params: IFileParams,
+  scope?: string,
 ): Promise<{ file: File; url: string }> {
   const { name, alias, container, folder, mimeType, isPublic, size } = params;
+  const authzOn = ConfigController.getInstance().config.authorization.enabled;
+
   const fileName = (folder === '/' ? '' : folder) + name;
   await storageProvider
     .container(container)
@@ -117,18 +126,31 @@ export async function _createFileUploadUrl(
   const publicUrl = isPublic
     ? await storageProvider.container(container).getPublicUrl(fileName)
     : null;
+  const folderDoc = await _StorageFolder
+    .getInstance()
+    .findOne({ name: folder, container });
+
+  let fileScope: string | undefined;
+  if (authzOn) {
+    fileScope = folder === '/' ? scope : 'Folder:' + folderDoc!._id;
+  }
+
   ConduitGrpcSdk.Metrics?.increment('files_total');
   ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
-  const file = await File.getInstance().create({
-    name,
-    alias,
-    mimeType,
-    size,
-    folder: folder,
-    container: container,
-    isPublic,
-    url: publicUrl,
-  });
+  const file = await File.getInstance().create(
+    {
+      name,
+      alias,
+      mimeType,
+      size,
+      folder: folder,
+      container: container,
+      isPublic,
+      url: publicUrl,
+    },
+    undefined,
+    fileScope,
+  );
   const url = (await storageProvider
     .container(container)
     .getUploadUrl(fileName)) as string;

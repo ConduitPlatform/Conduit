@@ -82,6 +82,9 @@ export class FileHandlers {
 
   /* Checks if user can create-update file in provided folder */
   async fileAccessEdit(container: string, folder: string, scope: string) {
+    if (!ConfigController.getInstance().config.authorization.enabled) {
+      return;
+    }
     const folderDoc = await _StorageFolder.getInstance().findOne({
       name: folder,
       container,
@@ -156,24 +159,32 @@ export class FileHandlers {
       ? config.defaultContainer
       : await this.findContainer(container);
 
-    const folder = normalizeFolderPath(call.request.params.folder ?? 'cnd-' + user._id);
-    await this.fileAccessEdit(usedContainer, folder, scope ?? 'User:' + user._id);
+    const folder = normalizeFolderPath(call.request.params.folder ?? 'cnd_' + user._id);
     if (folder !== '/') {
-      await this.findOrCreateFolders(folder, usedContainer, isPublic, scope);
+      await this.fileAccessEdit(usedContainer, folder, scope ?? 'User:' + user._id);
+      await this.findOrCreateFolders(
+        folder,
+        usedContainer,
+        isPublic,
+        scope ?? 'User:' + user._id,
+      );
     }
     const validatedName = await validateName(name, folder, usedContainer);
 
     try {
-      // TODO: check this try catch
-      return await storeNewFile(this.storageProvider, {
-        name: validatedName,
-        alias,
-        data,
-        container: usedContainer,
-        folder,
-        isPublic,
-        mimeType,
-      });
+      return await storeNewFile(
+        this.storageProvider,
+        {
+          name: validatedName,
+          alias,
+          data,
+          container: usedContainer,
+          folder,
+          isPublic,
+          mimeType,
+        },
+        scope,
+      );
     } catch (e) {
       throw new GrpcError(
         status.INTERNAL,
@@ -200,23 +211,32 @@ export class FileHandlers {
       ? config.defaultContainer
       : await this.findContainer(container);
 
-    const folder = normalizeFolderPath(call.request.params.folder ?? 'cnd-' + user._id);
-    await this.fileAccessEdit(usedContainer, folder, scope ?? 'User:' + user._id);
+    const folder = normalizeFolderPath(call.request.params.folder ?? 'cnd_' + user._id);
     if (folder !== '/') {
-      await this.findOrCreateFolders(folder, usedContainer, isPublic, scope);
+      await this.fileAccessEdit(usedContainer, folder, scope ?? 'User:' + user._id);
+      await this.findOrCreateFolders(
+        folder,
+        usedContainer,
+        isPublic,
+        scope ?? 'User:' + user._id,
+      );
     }
     const validatedName = await validateName(name, folder, usedContainer);
 
     try {
-      const { file, url } = await _createFileUploadUrl(this.storageProvider, {
-        container: usedContainer,
-        folder,
-        isPublic,
-        name: validatedName,
-        alias,
-        size,
-        mimeType,
-      });
+      const { file, url } = await _createFileUploadUrl(
+        this.storageProvider,
+        {
+          container: usedContainer,
+          folder,
+          isPublic,
+          name: validatedName,
+          alias,
+          size,
+          mimeType,
+        },
+        scope,
+      );
       return { file, url };
     } catch (e) {
       throw new GrpcError(
