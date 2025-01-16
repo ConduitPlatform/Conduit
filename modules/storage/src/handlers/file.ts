@@ -354,7 +354,7 @@ export class FileHandlers {
       if (ConfigController.getInstance().config.authorization.enabled) {
         await this.grpcSdk.authorization?.deleteAllRelations({
           resource: 'File:' + id,
-        });
+        }); // TODO: add catch
       }
       return { success: true };
     } catch (e) {

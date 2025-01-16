@@ -72,7 +72,7 @@ export async function deepPathHandler(
 export async function createFileRelations(
   grpcSdk: ConduitGrpcSdk,
   file: File,
-  scope: string,
+  scope?: string,
 ) {
   if (file.folder === '/') {
     const containerDoc = await _StorageContainer
@@ -83,11 +83,13 @@ export async function createFileRelations(
       relation: 'owner',
       resource: `File:${file._id}`,
     });
-    await grpcSdk.authorization?.createRelation({
-      subject: scope!,
-      relation: 'owner',
-      resource: `File:${file._id}`,
-    });
+    if (scope) {
+      await grpcSdk.authorization?.createRelation({
+        subject: scope,
+        relation: 'owner',
+        resource: `File:${file._id}`,
+      });
+    }
   } else {
     const folderDoc = await _StorageFolder
       .getInstance()
@@ -104,7 +106,7 @@ export async function updateFileRelations(
   grpcSdk: ConduitGrpcSdk,
   file: File,
   updatedFile: File,
-  scope: string,
+  scope?: string,
 ) {
   if (updatedFile.container !== file.container) {
     const prevContainer = await _StorageContainer
@@ -129,11 +131,13 @@ export async function updateFileRelations(
       relation: 'owner',
       resource: `File:${updatedFile._id}`,
     });
-    await grpcSdk.authorization?.createRelation({
-      subject: scope!,
-      relation: 'owner',
-      resource: `File:${updatedFile._id}`,
-    });
+    if (scope) {
+      await grpcSdk.authorization?.createRelation({
+        subject: scope!,
+        relation: 'owner',
+        resource: `File:${updatedFile._id}`,
+      });
+    }
   } else {
     const folderDoc = await _StorageFolder
       .getInstance()
@@ -251,7 +255,7 @@ export async function storeNewFile(
     url: publicUrl,
   });
   if (authzEnabled) {
-    await createFileRelations(grpcSdk, file, scope!);
+    await createFileRelations(grpcSdk, file, scope);
   }
   return file;
 }
@@ -286,7 +290,7 @@ export async function _createFileUploadUrl(
     url: publicUrl,
   });
   if (authzEnabled) {
-    await createFileRelations(grpcSdk, file, scope!);
+    await createFileRelations(grpcSdk, file, scope);
   }
   const url = (await storageProvider
     .container(container)
@@ -331,7 +335,7 @@ export async function _updateFile(
     mimeType,
   })) as File;
   if (authzEnabled) {
-    await updateFileRelations(grpcSdk, file, updatedFile, scope!);
+    await updateFileRelations(grpcSdk, file, updatedFile, scope);
   }
   updateFileMetrics(file.size, (data as Buffer).byteLength);
   return updatedFile;
@@ -383,7 +387,7 @@ export async function _updateFileUploadUrl(
       ...{ size: size ?? file.size },
     });
     if (authzEnabled) {
-      await updateFileRelations(grpcSdk, file, updatedFile!, scope!);
+      await updateFileRelations(grpcSdk, file, updatedFile!, scope);
     }
   }
   if (!isNil(size)) updateFileMetrics(file.size, size!);
