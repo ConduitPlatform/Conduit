@@ -53,7 +53,8 @@ export class AdminFileHandlers {
   }
 
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, alias, data, container, mimeType, isPublic } = call.request.params;
+    const { name, alias, data, container, mimeType, isPublic, scope } =
+      call.request.params;
     const folder = normalizeFolderPath(call.request.params.folder);
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
@@ -271,36 +272,6 @@ export class AdminFileHandlers {
       });
     }
     return container;
-  }
-
-  async findOrCreateFolders(
-    folderPath: string,
-    container: string,
-    isPublic?: boolean,
-    lastExistsHandler?: () => void,
-  ): Promise<_StorageFolder[]> {
-    const createdFolders: _StorageFolder[] = [];
-    let folder: _StorageFolder | null = null;
-    await deepPathHandler(folderPath, async (folderPath, isLast) => {
-      folder = await _StorageFolder
-        .getInstance()
-        .findOne({ name: folderPath, container });
-      if (isNil(folder)) {
-        folder = await _StorageFolder.getInstance().create({
-          name: folderPath,
-          container,
-          isPublic,
-        });
-        createdFolders.push(folder);
-        const exists = await this.storage.container(container).folderExists(folderPath);
-        if (!exists) {
-          await this.storage.container(container).createFolder(folderPath);
-        }
-      } else if (isLast) {
-        lastExistsHandler?.();
-      }
-    });
-    return createdFolders;
   }
 
   private async validateFilenameAndContainer(call: ParsedRouterRequest, file: File) {

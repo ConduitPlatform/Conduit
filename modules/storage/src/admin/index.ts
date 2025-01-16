@@ -12,6 +12,7 @@ import {
   ConduitBoolean,
   ConduitNumber,
   ConduitString,
+  ConfigController,
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
@@ -192,6 +193,7 @@ export class AdminRoutes {
 
   private registerAdminRoutes() {
     this.routingManager.clear();
+    const authzEnabled = ConfigController.getInstance().config.authorization.enabled;
     this.routingManager.route(
       {
         path: '/files/:id',
@@ -237,6 +239,9 @@ export class AdminRoutes {
           container: ConduitString.Optional,
           mimeType: ConduitString.Optional,
           isPublic: ConduitBoolean.Optional,
+        },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
         },
       },
       new ConduitRouteReturnDefinition('CreateFile', File.name),
