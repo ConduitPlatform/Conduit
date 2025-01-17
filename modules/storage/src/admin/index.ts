@@ -113,7 +113,7 @@ export class AdminRoutes {
       .getInstance()
       .findOne({ name: container });
     if (isNil(containerDoc)) {
-      await this._createContainer(container, isPublic).catch((e: Error) => {
+      await this._createContainer(container, isPublic, scope).catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     }
@@ -195,7 +195,7 @@ export class AdminRoutes {
         throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
       } else {
         await this.fileHandlers.storage.deleteContainer(container.name);
-        await _StorageContainer.getInstance().deleteOne({ _id: id }, undefined, scope);
+
         await File.getInstance().deleteMany(
           { container: container.name },
           undefined,
@@ -204,6 +204,42 @@ export class AdminRoutes {
         await _StorageFolder
           .getInstance()
           .deleteMany({ container: container.name }, undefined, scope);
+        await _StorageContainer.getInstance().deleteOne({ _id: id }, undefined, scope);
+
+        // Delete all relations & indexes associated with container
+        if (ConfigController.getInstance().config.authorization.enabled) {
+          const filesResult = await this.grpcSdk.authorization?.getAllowedResources({
+            subject: 'Container:' + id,
+            action: 'read',
+            resourceType: 'File',
+            skip: 0,
+            limit: 0,
+          });
+          if (filesResult?.resources?.length) {
+            for (const fileId of filesResult.resources) {
+              await this.grpcSdk.authorization?.deleteAllRelations({
+                resource: 'File:' + fileId,
+              });
+            }
+          }
+          const foldersResult = await this.grpcSdk.authorization?.getAllowedResources({
+            subject: 'Container:' + id,
+            action: 'read',
+            resourceType: 'Folder',
+            skip: 0,
+            limit: 0,
+          });
+          if (foldersResult?.resources?.length) {
+            for (const folderId of foldersResult.resources) {
+              await this.grpcSdk.authorization?.deleteAllRelations({
+                resource: 'Folder:' + folderId,
+              });
+            }
+          }
+          await this.grpcSdk.authorization?.deleteAllRelations({
+            subject: 'Container:' + id,
+          });
+        }
       }
       return container;
     } catch (e) {

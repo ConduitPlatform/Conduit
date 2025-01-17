@@ -3,6 +3,7 @@ import {
   DatabaseProvider,
   GrpcError,
   ParsedRouterRequest,
+  Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
@@ -49,6 +50,7 @@ export class FileHandlers {
     userId?: string,
     scope?: string,
     file?: File,
+    container?: string,
   ) {
     if (!userId) {
       throw new GrpcError(status.PERMISSION_DENIED, 'File access is not public');
@@ -68,6 +70,23 @@ export class FileHandlers {
           'You are not allowed to create files in this scope',
         );
       }
+      const defaultContainer = ConfigController.getInstance().config.defaultContainer;
+      if (container !== defaultContainer) {
+        const containerDoc = await _StorageContainer
+          .getInstance()
+          .findOne({ name: container });
+        const allowed = await this.grpcSdk.authorization?.can({
+          subject: scope ?? 'User:' + userId,
+          actions: ['edit'],
+          resource: 'Container:' + containerDoc?._id,
+        });
+        if (!allowed || !allowed.allow) {
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'You are not allowed to create files in this container',
+          );
+        }
+      }
     }
     if (['read', 'edit', 'delete'].includes(action)) {
       const allowed = await this.grpcSdk.authorization?.can({
@@ -85,7 +104,7 @@ export class FileHandlers {
   }
 
   /* Checks if user can create-update file in provided folder */
-  async fileAccessEdit(container: string, folder: string, scope: string) {
+  async folderAccessEdit(container: string, folder: string, scope: string) {
     if (!ConfigController.getInstance().config.authorization.enabled) {
       return;
     }
@@ -152,11 +171,47 @@ export class FileHandlers {
     return file;
   }
 
+  async getFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { search, folder, container, skip, limit, sort, scope } =
+      call.request.queryParams;
+    const { user } = call.request.context;
+    const authzEnabled = ConfigController.getInstance().config.authorization.enabled;
+    const query: Query<File> = {
+      $and: [{ container }],
+    };
+    if (!isNil(folder)) {
+      query.$and?.push({
+        folder: folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim(),
+      });
+    }
+    if (!isNil(search)) {
+      query.$and?.push({
+        $or: [
+          { name: { $regex: `.*${search}.*`, $options: 'i' } },
+          { alias: { $regex: `.*${search}.*`, $options: 'i' } },
+        ],
+      });
+    }
+    if (!user) {
+      return await File.getInstance().findMany(query, undefined, skip, limit, sort);
+    }
+    return await File.getInstance().findMany(
+      query,
+      undefined,
+      skip,
+      limit,
+      sort,
+      undefined,
+      authzEnabled ? user._id : undefined,
+      authzEnabled ? scope : undefined,
+    );
+  }
+
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, alias, data, container, mimeType, isPublic, scope } =
       call.request.params;
     const { user } = call.request.context;
-    await this.fileAccessCheck('create', user, scope);
+    await this.fileAccessCheck('create', user, scope, undefined, container);
 
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
@@ -165,7 +220,7 @@ export class FileHandlers {
 
     const folder = normalizeFolderPath(call.request.params.folder ?? 'cnd_' + user._id);
     if (folder !== '/') {
-      await this.fileAccessEdit(usedContainer, folder, scope ?? 'User:' + user._id);
+      await this.folderAccessEdit(usedContainer, folder, scope ?? 'User:' + user._id);
       await findOrCreateFolders(
         this.grpcSdk,
         this.storageProvider,
@@ -211,7 +266,7 @@ export class FileHandlers {
       scope,
     } = call.request.params;
     const { user } = call.request.context;
-    await this.fileAccessCheck('create', user, scope);
+    await this.fileAccessCheck('create', user, scope, undefined, container);
 
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
@@ -220,7 +275,7 @@ export class FileHandlers {
 
     const folder = normalizeFolderPath(call.request.params.folder ?? 'cnd_' + user._id);
     if (folder !== '/') {
-      await this.fileAccessEdit(usedContainer, folder, scope ?? 'User:' + user._id);
+      await this.folderAccessEdit(usedContainer, folder, scope ?? 'User:' + user._id);
       await findOrCreateFolders(
         this.grpcSdk,
         this.storageProvider,
@@ -453,7 +508,7 @@ export class FileHandlers {
     }
     const newFolder = isNil(folder) ? file.folder : normalizeFolderPath(folder);
     if (newFolder !== file.folder && newFolder !== '/') {
-      await this.fileAccessEdit(
+      await this.folderAccessEdit(
         newContainer,
         newFolder,
         scope ?? 'User:' + call.request.context.user._id,

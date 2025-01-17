@@ -6,6 +6,7 @@ import {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import {
+  ConduitBoolean,
   ConduitNumber,
   ConduitString,
   ConfigController,
@@ -44,6 +45,29 @@ export class StorageRoutes {
       },
       new ConduitRouteReturnDefinition(File.name),
       this.fileHandlers.getFile.bind(this.fileHandlers),
+    );
+
+    this._routingManager.route(
+      {
+        queryParams: {
+          container: ConduitString.Required,
+          folder: ConduitString.Optional,
+          search: ConduitString.Optional,
+          skip: ConduitNumber.Required,
+          limit: ConduitNumber.Required,
+          sort: ConduitString.Optional,
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+        },
+        action: ConduitRouteActions.GET,
+        path: '/storage/file',
+        middlewares: ['authMiddleware?'],
+        description: `Returns queried files. If unauthenticated, only public files are returned.`,
+      },
+      new ConduitRouteReturnDefinition('GetFiles', {
+        files: [File.name],
+        count: ConduitNumber.Required,
+      }),
+      this.fileHandlers.getFiles.bind(this.fileHandlers),
     );
 
     this._routingManager.route(
