@@ -112,11 +112,17 @@ export async function updateFileRelations(
     const prevContainer = await _StorageContainer
       .getInstance()
       .findOne({ name: file.container });
-    await grpcSdk.authorization?.deleteRelation({
-      subject: 'Container:' + prevContainer!._id,
-      relation: 'owner',
-      resource: `File:${updatedFile._id}`,
-    }); // TODO: add catch
+    await grpcSdk.authorization
+      ?.deleteRelation({
+        subject: 'Container:' + prevContainer!._id,
+        relation: 'owner',
+        resource: `File:${updatedFile._id}`,
+      })
+      .catch((e: Error) => {
+        if (!e.message.includes('Relation does not exist')) {
+          throw e;
+        }
+      });
   }
   if (updatedFile.folder === file.folder) {
     return;

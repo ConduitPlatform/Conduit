@@ -407,9 +407,13 @@ export class FileHandlers {
       ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', found.size);
 
       if (ConfigController.getInstance().config.authorization.enabled) {
-        await this.grpcSdk.authorization?.deleteAllRelations({
-          resource: 'File:' + id,
-        }); // TODO: add catch
+        await this.grpcSdk.authorization
+          ?.deleteAllRelations({ resource: 'File:' + id })
+          .catch((e: Error) => {
+            if (!e.message.includes('No relations found')) {
+              throw e;
+            }
+          });
       }
       return { success: true };
     } catch (e) {
