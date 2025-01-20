@@ -1,5 +1,4 @@
 syntax = 'proto3';
-import "google/protobuf/empty.proto";
 package database;
 
 message CreateSchemaRequest {
@@ -153,14 +152,16 @@ message GetDatabaseTypeResponse {
   string result = 1;
 }
 
+message Empty {}
+
 service DatabaseProvider {
   rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (Schema);
   rpc GetSchema(GetSchemaRequest) returns (Schema);
   rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
   rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
   rpc SetSchemaExtension(SchemaExtension) returns (Schema);
-  rpc Migrate(MigrateRequest) returns (google.protobuf.Empty);
-  rpc GetDatabaseType(google.protobuf.Empty) returns (GetDatabaseTypeResponse);
+  rpc Migrate(MigrateRequest) returns (Empty);
+  rpc GetDatabaseType(Empty) returns (GetDatabaseTypeResponse);
   // Database queries
   rpc findOne(FindOneRequest) returns (QueryResponse);
   rpc findMany(FindRequest) returns (QueryResponse);
@@ -175,7 +176,7 @@ service DatabaseProvider {
   rpc replaceOne(UpdateManyRequest) returns (QueryResponse);
   rpc countDocuments(QueryRequest) returns (QueryResponse);
   rpc rawQuery(RawQueryRequest) returns (QueryResponse);
-  rpc createView(CreateViewRequest) returns (google.protobuf.Empty);
-  rpc deleteView(DeleteViewRequest) returns (google.protobuf.Empty);
+  rpc createView(CreateViewRequest) returns (Empty);
+  rpc deleteView(DeleteViewRequest) returns (Empty);
   rpc columnExistence(ColumnExistenceRequest) returns (ColumnExistenceResponse);
 }

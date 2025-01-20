@@ -8,14 +8,14 @@ import {
   StorageDefinition,
 } from '../../protoUtils/storage.js';
 import { AuthzOptions } from '../../types';
-import { normalizeAuthzOptions } from '../../utilities/normalizeOptions';
+import { normalizeAuthzOptions } from '../../utilities/normalizeOptions.js';
 import {
   CreateFileByURLOptions,
   CreateFileOptions,
   UpdateFileByURLOptions,
   UpdateFileOptions,
 } from './types';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 
 export class Storage extends ConduitModule<typeof StorageDefinition> {
   constructor(

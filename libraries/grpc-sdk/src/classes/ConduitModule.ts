@@ -5,11 +5,11 @@ import {
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
 import { retryMiddleware } from 'nice-grpc-client-middleware-retry';
+import { ConduitModuleDefinition } from '../protoUtils/module.js';
 import {
-  ConduitModuleDefinition,
   HealthCheckResponse,
   HealthDefinition,
-} from '../protoUtils/index.js';
+} from '../protoUtils/grpc_health_check.js';
 import { EventEmitter } from 'events';
 import { ConduitGrpcSdk } from '../index.js';
 
@@ -73,7 +73,9 @@ export class ConduitModule<T extends CompatServiceDefinition> {
     this.channel = createChannel(this._serviceUrl, undefined, {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
+      'grpc.service_config': '{"loadBalancingConfig":[{"round_robin":{}}]}',
     });
+
     let clientFactory = createClientFactory()
       .use(
         this._grpcToken

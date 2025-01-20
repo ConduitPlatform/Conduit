@@ -1,4 +1,4 @@
-FROM node:iron
+FROM node:jod
 
 ARG BUILDING_SERVICE
 

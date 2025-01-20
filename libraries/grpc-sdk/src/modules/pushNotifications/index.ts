@@ -2,9 +2,9 @@ import { ConduitModule } from '../../classes/index.js';
 import {
   PushNotificationsDefinition,
   SendNotificationResponse,
-} from '../../protoUtils/index.js';
+} from '../../protoUtils/push-notifications.js';
 import { SendNotificationOptions } from './types';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 
 export class PushNotifications extends ConduitModule<typeof PushNotificationsDefinition> {
   constructor(

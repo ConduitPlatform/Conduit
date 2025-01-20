@@ -7,7 +7,7 @@
   "type": "module",
   "private": true,
   "engines": {
-    "node": ">=14"
+    "node": ">=22"
   },
   "scripts": {
     "start": "node dist/index.js",
@@ -45,17 +45,17 @@
     "ali-oss": "^6.21.0",
     "convict": "^6.2.4",
     "lodash-es": "^4.17.21",
-    "uuid": "^9.0.1"
+    "uuid": "^11.0.3"
   },
   "devDependencies": {
     "@types/ali-oss": "^6.16.7",
     "@types/convict": "^6.1.6",
     "@types/lodash-es": "^4.17.12",
-    "@types/node": "20.11.24",
-    "@types/uuid": "^9.0.8",
+    "@types/node": "22.10.2",
+    "@types/uuid": "^10.0.0",
     "copyfiles": "^2.4.1",
-    "rimraf": "^5.0.5",
-    "ts-proto": "^1.167.1",
-    "typescript": "~5.6.2"
+    "rimraf": "^6.0.1",
+    "ts-proto": "^2.6.1",
+    "typescript": "~5.7.2"
   }
 }

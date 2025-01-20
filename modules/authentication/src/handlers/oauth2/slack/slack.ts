@@ -4,7 +4,7 @@ import { status } from '@grpc/grpc-js';
 import axios from 'axios';
 import { OAuth2 } from '../OAuth2.js';
 import { SlackUser } from './slack.user.js';
-import slackParameters from './slack.json' assert { type: 'json' };
+import slackParameters from './slack.json' with { type: 'json' };
 import {
   ConnectionParams,
   OAuth2Settings,

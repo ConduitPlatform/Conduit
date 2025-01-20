@@ -1,5 +1,4 @@
 syntax = "proto3";
-import "google/protobuf/empty.proto";
 package conduit.core;
 
 service Core {}
@@ -8,19 +7,21 @@ service Config {
   rpc Get (GetConfigRequest) returns (GetConfigResponse);
   rpc Configure (UpdateConfigRequest) returns (UpdateConfigResponse);
   rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
-  rpc ModuleList (google.protobuf.Empty) returns (ModuleListResponse);
-  rpc WatchModules (google.protobuf.Empty) returns (stream ModuleListResponse);
+  rpc ModuleList (Empty) returns (ModuleListResponse);
+  rpc WatchModules (Empty) returns (stream ModuleListResponse);
   rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
-  rpc ModuleHealthProbe(ModuleHealthRequest) returns (google.protobuf.Empty);
-  rpc GetServerConfig (google.protobuf.Empty) returns (GetConfigResponse);
-  rpc GetRedisDetails (google.protobuf.Empty) returns (GetRedisDetailsResponse);
+  rpc ModuleHealthProbe(ModuleHealthRequest) returns (Empty);
+  rpc GetServerConfig (Empty) returns (GetConfigResponse);
+  rpc GetRedisDetails (Empty) returns (GetRedisDetailsResponse);
   rpc GetModuleUrlByName (ModuleByNameRequest) returns (ModuleByNameResponse);
 }
 
 service Admin {
-  rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (google.protobuf.Empty);
-  rpc PatchRouteMiddlewares(PatchRouteMiddlewaresRequest) returns (google.protobuf.Empty);
+  rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (Empty);
+  rpc PatchRouteMiddlewares(PatchRouteMiddlewaresRequest) returns (Empty);
 }
+
+message Empty {}
 
 message RegisterAdminRouteRequest {
   repeated PathDefinition routes = 1;
@@ -78,8 +79,8 @@ message PatchRouteMiddlewaresRequest {
 
 message ModuleHealthRequest {
   string moduleName = 1;
-  string url = 2;
-  int32 status = 3; // [0, 1, 2]
+  int32 status = 2; // [0, 1, 2]
+  string instanceId = 3;
 }
 
 message ModuleByNameRequest {
@@ -88,25 +89,35 @@ message ModuleByNameRequest {
 
 message ModuleByNameResponse {
   string moduleUrl = 1;
+  repeated ModuleInstance instances = 2;
 }
 
 message RegisterModuleRequest {
   string moduleName = 1;
   string url = 2;
   int32 healthStatus = 3; // [0, 1, 2]
+  string instanceId = 4;
 }
 
 message RegisterModuleResponse {
   bool result = 1;
 }
-
+message ModuleInstance {
+  string instanceId = 1;
+  string address = 2;
+  int32 status = 3;
+  bool serving = 4;
+  string addressType = 5;
+}
 message ModuleListResponse {
   repeated ModuleResponse modules = 1;
   message ModuleResponse {
     string moduleName = 1;
     string url = 2;
     bool serving = 3;
+    repeated ModuleInstance instances = 4;
   }
+
 }
 
 message ModuleExistsRequest {
@@ -115,6 +126,7 @@ message ModuleExistsRequest {
 
 message ModuleExistsResponse {
   string url = 1;
+  repeated ModuleInstance instances = 2;
 }
 
 message GetConfigRequest {

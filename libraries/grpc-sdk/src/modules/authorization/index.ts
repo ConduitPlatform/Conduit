@@ -13,8 +13,8 @@ import {
   Resource,
   ResourceAccessListRequest,
   ResourceAccessListResponse,
-} from '../../protoUtils/index.js';
-import { Empty } from '../../protoUtils/google/protobuf/empty.js';
+  Empty,
+} from '../../protoUtils/authorization.js';
 
 export class Authorization extends ConduitModule<typeof AuthorizationDefinition> {
   constructor(

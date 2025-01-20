@@ -1,6 +1,6 @@
 import { addServiceToServer, createServer, wrapGrpcFunctions } from '../helpers/index.js';
 import { Server } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 
 export class GrpcServer {
@@ -133,7 +133,6 @@ export class GrpcServer {
     }
     this.started = true;
     this.startedOnce = true;
-    this.grpcServer?.start();
   }
 
   private postponeRestart() {

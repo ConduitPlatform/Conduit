@@ -10,7 +10,7 @@
   "types": "dist/index.d.ts",
   "private": true,
   "engines": {
-    "node": ">=14"
+    "node": ">=22"
   },
   "scripts": {
     "prepublish": "npm run build",
@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
-    "@types/node": "^20.11.24",
+    "@types/node": "^22.10.2",
     "@typescript-eslint/eslint-plugin": "^8.13.0",
     "@typescript-eslint/parser": "^8.3.0",
     "eslint": "^8.57.0",

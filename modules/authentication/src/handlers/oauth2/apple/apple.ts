@@ -7,7 +7,7 @@ import {
   Indexable,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
-import appleParameters from '../apple/apple.json' assert { type: 'json' };
+import appleParameters from '../apple/apple.json' with { type: 'json' };
 import {
   AppleOAuth2Settings,
   AppleProviderConfig,
