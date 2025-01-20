@@ -30,7 +30,7 @@
     "lodash-es": "^4.17.21",
     "mariadb": "^3.2.3",
     "mongodb-schema": "^12.2.0",
-    "mongoose": "8.8.3",
+    "mongoose": "8.9.5",
     "mysql2": "^3.11.5",
     "object-hash": "^3.0.0",
     "pg": "^8.11.3",
