@@ -1,5 +1,5 @@
 import { AuthzOptions, PopulateAuthzOptions } from '../types';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 
 export function normalizeAuthzOptions(
   userIdOrOptions?: string | AuthzOptions,

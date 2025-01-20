@@ -13,7 +13,7 @@ import {
 import { Query } from '../../types/db.js';
 import { FindOneOptions, FindManyOptions } from './types.js';
 import { AuthzOptions, PopulateAuthzOptions } from '../../types/options.js';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import {
   normalizeAuthzOptions,
   normalizePopulateAuthzOptions,

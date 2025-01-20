@@ -1,6 +1,6 @@
 import path from 'path';
 import { EventEmitter } from 'events';
-import { camelCase } from 'lodash';
+import { camelCase } from 'lodash-es';
 import { ServerWritableStream } from '@grpc/grpc-js';
 import { GrpcServer } from './GrpcServer.js';
 import {
@@ -148,7 +148,7 @@ export abstract class ConduitServiceModule {
 
   protected async addHealthCheckService() {
     await this.grpcServer.addService(
-      path.resolve(__dirname, './grpc_health_check.proto'),
+      path.resolve(__dirname, '../grpc_health_check.proto'),
       'grpc.health.v1.Health',
       {
         Check: this.healthCheck.bind(this),
@@ -159,14 +159,14 @@ export abstract class ConduitServiceModule {
 
   protected async addModuleService() {
     await this.grpcServer.addService(
-      path.resolve(__dirname, './module.proto'),
+      path.resolve(__dirname, '../module.proto'),
       'conduit.module.v1.ConduitModule',
       {
         SetConfig: this.setConfig.bind(this),
       },
     );
     await this.grpcServer.addService(
-      path.resolve(__dirname, './module.proto'),
+      path.resolve(__dirname, '../module.proto'),
       'conduit.module.v1.ClientRouter',
       {
         Route: RoutingManager.ClientController.handleRequest.bind(
@@ -178,7 +178,7 @@ export abstract class ConduitServiceModule {
       },
     );
     await this.grpcServer.addService(
-      path.resolve(__dirname, './module.proto'),
+      path.resolve(__dirname, '../module.proto'),
       'conduit.module.v1.AdminRouter',
       {
         Route: RoutingManager.AdminController.handleRequest.bind(
