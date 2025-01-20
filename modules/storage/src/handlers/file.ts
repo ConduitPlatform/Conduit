@@ -135,9 +135,6 @@ export class FileHandlers {
           name: nestedPaths[i],
           container,
         });
-        if (!prevFolder) {
-          continue;
-        }
         if (prevFolder) {
           const allowed = await this.grpcSdk.authorization?.can({
             subject: scope,

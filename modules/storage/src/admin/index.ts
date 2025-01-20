@@ -106,7 +106,7 @@ export class AdminRoutes {
       name,
       container,
     });
-    if (!foundFolder) {
+    if (foundFolder) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
     }
     const containerDoc = await _StorageContainer
