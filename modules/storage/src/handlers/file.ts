@@ -58,17 +58,20 @@ export class FileHandlers {
     if (!ConfigController.getInstance().config.authorization.enabled) {
       return;
     }
-    if (action === 'create' && scope) {
-      const allowed = await this.grpcSdk.authorization?.can({
-        subject: 'User:' + userId,
-        actions: ['edit'],
-        resource: scope,
-      });
-      if (!allowed || !allowed.allow) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'You are not allowed to create files in this scope',
-        );
+
+    if (action === 'create') {
+      if (scope) {
+        const allowed = await this.grpcSdk.authorization?.can({
+          subject: 'User:' + userId,
+          actions: ['edit'],
+          resource: scope,
+        });
+        if (!allowed || !allowed.allow) {
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'You are not allowed to create files in this scope',
+          );
+        }
       }
       const defaultContainer = ConfigController.getInstance().config.defaultContainer;
       if (container !== defaultContainer) {
@@ -87,8 +90,7 @@ export class FileHandlers {
           );
         }
       }
-    }
-    if (['read', 'edit', 'delete'].includes(action)) {
+    } else {
       const allowed = await this.grpcSdk.authorization?.can({
         subject: 'User:' + userId,
         actions: [action],
@@ -121,7 +123,7 @@ export class FileHandlers {
       if (!allowed || !allowed.allow) {
         throw new GrpcError(
           status.PERMISSION_DENIED,
-          'You are not allowed to edit files in folder' + folderDoc.name,
+          'You are not allowed to edit files in folder ' + folderDoc.name,
         );
       }
       return;
@@ -211,12 +213,12 @@ export class FileHandlers {
     const { name, alias, data, container, mimeType, isPublic, scope } =
       call.request.params;
     const { user } = call.request.context;
-    await this.fileAccessCheck('create', user, scope, undefined, container);
 
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
       ? config.defaultContainer
       : await this.findContainer(container);
+    await this.fileAccessCheck('create', user, scope, undefined, usedContainer);
 
     const folder = normalizeFolderPath(call.request.params.folder ?? 'cnd_' + user._id);
     if (folder !== '/') {
@@ -266,12 +268,12 @@ export class FileHandlers {
       scope,
     } = call.request.params;
     const { user } = call.request.context;
-    await this.fileAccessCheck('create', user, scope, undefined, container);
 
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
       ? config.defaultContainer
       : await this.findContainer(container);
+    await this.fileAccessCheck('create', user, scope, undefined, usedContainer);
 
     const folder = normalizeFolderPath(call.request.params.folder ?? 'cnd_' + user._id);
     if (folder !== '/') {

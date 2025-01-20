@@ -192,40 +192,36 @@ export async function findOrCreateFolders(
     const isFirst = i === 0;
     folder = await _StorageFolder.getInstance().findOne({ name: folderPath, container });
 
-    let folderScope: string | undefined;
-    if (authzEnabled && isFirst) {
-      folderScope = scope;
-    } else if (authzEnabled && !isFirst) {
-      const prevFolder = (await _StorageFolder.getInstance().findOne({
-        name: nestedPaths[i - 1],
-        container,
-      })) as _StorageFolder;
-      folderScope = 'Folder:' + prevFolder._id;
-    }
-
     if (!folder) {
-      folder = await _StorageFolder.getInstance().create(
-        {
-          name: folderPath,
-          container,
-          isPublic,
-        },
-        undefined,
-        folderScope,
-      );
+      folder = await _StorageFolder
+        .getInstance()
+        .create({ name: folderPath, container, isPublic });
       createdFolders.push(folder);
       const exists = await storageProvider.container(container).folderExists(folderPath);
       if (!exists) {
         await storageProvider.container(container).createFolder(folderPath);
       }
-    }
-
-    if (authzEnabled && isFirst) {
-      await grpcSdk.authorization?.createRelation({
-        subject: 'Container:' + containerDoc._id,
-        relation: 'owner',
-        resource: `Folder:${folder!._id}`,
-      });
+      if (!authzEnabled) {
+        continue;
+      }
+      // Create folder owner relations
+      const folderOwners: string[] = [];
+      if (isFirst) {
+        folderOwners.push('Container:' + containerDoc._id, scope!);
+      } else {
+        const prevFolder = await _StorageFolder.getInstance().findOne({
+          name: nestedPaths[i - 1],
+          container,
+        });
+        folderOwners.push('Folder:' + prevFolder!._id);
+      }
+      for (const owner of folderOwners) {
+        await grpcSdk.authorization?.createRelation({
+          subject: owner,
+          relation: 'owner',
+          resource: `Folder:${folder._id}`,
+        });
+      }
     }
   }
   return createdFolders;

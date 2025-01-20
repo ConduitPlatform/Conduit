@@ -123,16 +123,16 @@ export default class Storage extends ManagedModule<Config> {
       if (authorization.enabled) {
         this.grpcSdk.onceModuleUp('authorization', async () => {
           for (const resource of Object.values(resources)) {
-            this.grpcSdk.authorization!.defineResource(resource);
+            await this.grpcSdk.authorization!.defineResource(resource);
           }
-          const defaultContainer = await models._StorageContainer.getInstance().findOne({
-            name: config.defaultContainer,
-          });
-          if (!defaultContainer) {
-            await models._StorageContainer.getInstance().create({
-              name: config.defaultContainer,
-            });
-          }
+        });
+      }
+      const defaultContainer = await models._StorageContainer.getInstance().findOne({
+        name: config.defaultContainer,
+      });
+      if (!defaultContainer) {
+        await models._StorageContainer.getInstance().create({
+          name: config.defaultContainer,
         });
       }
       this.storageProvider = createStorageProvider(provider, {

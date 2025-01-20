@@ -536,13 +536,18 @@ export class AdminRoutes {
       });
       if (isNil(container)) {
         const exists = await this.fileHandlers.storage.containerExists(name);
-
         if (!exists) {
           await this.fileHandlers.storage.createContainer(name);
         }
-        container = await _StorageContainer
-          .getInstance()
-          .create({ name, isPublic }, undefined, scope);
+        container = await _StorageContainer.getInstance().create({ name, isPublic });
+        const authzEnabled = ConfigController.getInstance().config.authorization.enabled;
+        if (authzEnabled && scope) {
+          await this.grpcSdk.authorization?.createRelation({
+            subject: scope,
+            relation: 'owner',
+            resource: 'Container:' + container._id,
+          });
+        }
       } else {
         throw new GrpcError(status.ALREADY_EXISTS, 'Container already exists');
       }
