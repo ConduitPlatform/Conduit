@@ -39,8 +39,8 @@ import {
   ManagedModule,
 } from '@conduitplatform/module-tools';
 import { StorageParamAdapter } from './adapter/StorageParamAdapter.js';
-import { FileResource } from './authz/index.js';
 import { AdminFileHandlers } from './admin/adminFile.js';
+import * as resources from './authz/index.js';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -95,11 +95,20 @@ export default class Storage extends ManagedModule<Config> {
         config.aws.accountId = await getAwsAccountId(config);
       }
     }
+    if (
+      !isNil(
+        (config as Config & { allowContainerCreation?: boolean }).allowContainerCreation,
+      )
+    ) {
+      delete (config as Config & { allowContainerCreation?: boolean })
+        .allowContainerCreation;
+    }
     return config;
   }
 
   async onConfig() {
-    if (!ConfigController.getInstance().config.active) {
+    const config = ConfigController.getInstance().config;
+    if (!config.active) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       await this.grpcSdk.monitorModule(
@@ -110,11 +119,20 @@ export default class Storage extends ManagedModule<Config> {
         },
         false,
       );
-      const { provider, local, google, azure, aws, aliyun, authorization } =
-        ConfigController.getInstance().config;
+      const { provider, local, google, azure, aws, aliyun, authorization } = config;
       if (authorization.enabled) {
-        this.grpcSdk.onceModuleUp('authorization', () => {
-          this.grpcSdk.authorization!.defineResource(FileResource);
+        this.grpcSdk.onceModuleUp('authorization', async () => {
+          for (const resource of Object.values(resources)) {
+            await this.grpcSdk.authorization!.defineResource(resource);
+          }
+        });
+      }
+      const defaultContainer = await models._StorageContainer.getInstance().findOne({
+        name: config.defaultContainer,
+      });
+      if (!defaultContainer) {
+        await models._StorageContainer.getInstance().create({
+          name: config.defaultContainer,
         });
       }
       this.storageProvider = createStorageProvider(provider, {

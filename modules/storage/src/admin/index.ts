@@ -12,13 +12,14 @@ import {
   ConduitBoolean,
   ConduitNumber,
   ConduitString,
+  ConfigController,
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { isEmpty, isNil } from 'lodash-es';
 import { _StorageContainer, _StorageFolder, File } from '../models/index.js';
-import { normalizeFolderPath } from '../utils/index.js';
+import { findOrCreateFolders, normalizeFolderPath } from '../utils/index.js';
 import { AdminFileHandlers } from './adminFile.js';
 
 export class AdminRoutes {
@@ -96,26 +97,33 @@ export class AdminRoutes {
   }
 
   async createFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { container, isPublic } = call.request.params;
+    const { container, isPublic, scope } = call.request.params;
     const name = normalizeFolderPath(call.request.params.name);
     if (name === '/') {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Folder name may not be empty');
     }
-    const containerDocument = await _StorageContainer
+    const foundFolder = await _StorageFolder.getInstance().findOne({
+      name,
+      container,
+    });
+    if (foundFolder) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
+    }
+    const containerDoc = await _StorageContainer
       .getInstance()
       .findOne({ name: container });
-    if (isNil(containerDocument)) {
-      await this._createContainer(container, isPublic).catch((e: Error) => {
+    if (isNil(containerDoc)) {
+      await this._createContainer(container, isPublic, scope).catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     }
-    const createdFolders = await this.fileHandlers.findOrCreateFolders(
+    const createdFolders = await findOrCreateFolders(
+      this.grpcSdk,
+      this.fileHandlers.storage,
       name,
       container,
       isPublic,
-      () => {
-        throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
-      },
+      scope,
     );
     return createdFolders[createdFolders.length - 1];
   }
@@ -132,12 +140,28 @@ export class AdminRoutes {
       await this.fileHandlers.storage
         .container(folder.container)
         .deleteFolder(folder.name);
-      await _StorageFolder.getInstance().deleteOne({
-        name: folder.name,
+      await _StorageFolder.getInstance().deleteMany({
+        name: { $regex: `^${folder.name}` },
         container: folder.container,
       });
       await File.getInstance().deleteMany({
-        folder: folder.name,
+        folder: { $regex: `^${folder.name}` },
+        container: folder.container,
+      });
+      if (ConfigController.getInstance().config.authorization.enabled) {
+        await this.grpcSdk.authorization
+          ?.deleteAllRelations({ subject: 'Folder:' + folder._id })
+          .catch((e: Error) => {
+            if (e.message !== 'No relations found') throw e;
+          });
+        await this.grpcSdk.authorization
+          ?.deleteAllRelations({ resource: 'Folder:' + folder._id })
+          .catch((e: Error) => {
+            if (e.message !== 'No relations found') throw e;
+          });
+      }
+      await _StorageFolder.getInstance().deleteOne({
+        name: folder.name,
         container: folder.container,
       });
     }
@@ -157,29 +181,63 @@ export class AdminRoutes {
   }
 
   async createContainer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, isPublic } = call.request.params;
-    return await this._createContainer(name, isPublic);
+    const { name, isPublic, scope } = call.request.params;
+    return await this._createContainer(name, isPublic, scope);
   }
 
   async deleteContainer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
     try {
-      const container = await _StorageContainer.getInstance().findOne({
-        _id: id,
-      });
+      const container = await _StorageContainer.getInstance().findOne({ _id: id });
       if (isNil(container)) {
         throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
       } else {
         await this.fileHandlers.storage.deleteContainer(container.name);
-        await _StorageContainer.getInstance().deleteOne({
-          _id: id,
-        });
-        await File.getInstance().deleteMany({
-          container: container.name,
-        });
-        await _StorageFolder.getInstance().deleteMany({
-          container: container.name,
-        });
+        await _StorageContainer.getInstance().deleteOne({ _id: id });
+
+        if (!ConfigController.getInstance().config.authorization.enabled) {
+          await File.getInstance().deleteMany({ container: container.name });
+          await _StorageFolder.getInstance().deleteMany({ container: container.name });
+        } else {
+          // Delete all relations & indexes associated with container
+          const files = await File.getInstance().findMany(
+            { container: container.name },
+            '_id',
+          );
+          for (const file of files) {
+            await this.grpcSdk.authorization
+              ?.deleteAllRelations({
+                resource: 'File:' + file._id,
+              })
+              .catch((e: Error) => {
+                if (!e.message.includes('No relations found')) throw e;
+              });
+          }
+          await File.getInstance().deleteMany({ container: container.name });
+
+          const folders = await _StorageFolder
+            .getInstance()
+            .findMany({ container: container.name }, '_id');
+          for (const folder of folders) {
+            await this.grpcSdk.authorization
+              ?.deleteAllRelations({ resource: 'Folder:' + folder._id })
+              .catch((e: Error) => {
+                if (!e.message.includes('No relations found')) throw e;
+              });
+            await this.grpcSdk.authorization
+              ?.deleteAllRelations({ subject: 'Folder:' + folder._id })
+              .catch((e: Error) => {
+                if (!e.message.includes('No relations found')) throw e;
+              });
+          }
+          await _StorageFolder.getInstance().deleteMany({ container: container.name });
+
+          await this.grpcSdk.authorization
+            ?.deleteAllRelations({ subject: 'Container:' + id })
+            .catch((e: Error) => {
+              if (!e.message.includes('No relations found')) throw e;
+            });
+        }
       }
       return container;
     } catch (e) {
@@ -192,6 +250,7 @@ export class AdminRoutes {
 
   private registerAdminRoutes() {
     this.routingManager.clear();
+    const authzEnabled = ConfigController.getInstance().config.authorization.enabled;
     this.routingManager.route(
       {
         path: '/files/:id',
@@ -238,6 +297,9 @@ export class AdminRoutes {
           mimeType: ConduitString.Optional,
           isPublic: ConduitBoolean.Optional,
         },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+        },
       },
       new ConduitRouteReturnDefinition('CreateFile', File.name),
       this.fileHandlers.createFile.bind(this.fileHandlers),
@@ -252,6 +314,9 @@ export class AdminRoutes {
           size: { type: TYPE.Number, required: false },
           container: { type: TYPE.String, required: false },
           isPublic: TYPE.Boolean,
+        },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
         },
         action: ConduitRouteActions.POST,
         path: '/files/upload',
@@ -279,6 +344,9 @@ export class AdminRoutes {
           data: ConduitString.Required,
           mimeType: ConduitString.Optional,
         },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+        },
       },
       new ConduitRouteReturnDefinition('PatchFile', File.name),
       this.fileHandlers.updateFile.bind(this.fileHandlers),
@@ -295,6 +363,9 @@ export class AdminRoutes {
           container: ConduitString.Optional,
           mimeType: ConduitString.Optional,
           size: ConduitNumber.Optional,
+        },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
         },
         action: ConduitRouteActions.PATCH,
         path: '/files/upload/:id',
@@ -382,6 +453,9 @@ export class AdminRoutes {
           container: ConduitString.Required,
           isPublic: ConduitBoolean.Optional,
         },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+        },
       },
       new ConduitRouteReturnDefinition('CreateFolder', _StorageFolder.name),
       this.createFolder.bind(this),
@@ -424,6 +498,9 @@ export class AdminRoutes {
           name: ConduitString.Required,
           isPublic: ConduitBoolean.Optional,
         },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+        },
       },
       new ConduitRouteReturnDefinition(_StorageContainer.name),
       this.createContainer.bind(this),
@@ -443,21 +520,29 @@ export class AdminRoutes {
     this.routingManager.registerRoutes();
   }
 
-  private async _createContainer(name: string, isPublic: boolean | undefined) {
+  private async _createContainer(
+    name: string,
+    isPublic: boolean | undefined,
+    scope?: string,
+  ) {
     try {
       let container = await _StorageContainer.getInstance().findOne({
         name,
       });
       if (isNil(container)) {
         const exists = await this.fileHandlers.storage.containerExists(name);
-
         if (!exists) {
           await this.fileHandlers.storage.createContainer(name);
         }
-        container = await _StorageContainer.getInstance().create({
-          name,
-          isPublic,
-        });
+        container = await _StorageContainer.getInstance().create({ name, isPublic });
+        const authzEnabled = ConfigController.getInstance().config.authorization.enabled;
+        if (authzEnabled && scope) {
+          await this.grpcSdk.authorization?.createRelation({
+            subject: scope,
+            relation: 'owner',
+            resource: 'Container:' + container._id,
+          });
+        }
       } else {
         throw new GrpcError(status.ALREADY_EXISTS, 'Container already exists');
       }
