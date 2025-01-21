@@ -170,42 +170,6 @@ export class FileHandlers {
     return file;
   }
 
-  async getFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { search, folder, container, skip, limit, sort, scope } =
-      call.request.queryParams;
-    const { user } = call.request.context;
-    const authzEnabled = ConfigController.getInstance().config.authorization.enabled;
-    const query: Query<File> = {
-      $and: [{ container }],
-    };
-    if (!isNil(folder)) {
-      query.$and?.push({
-        folder: folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim(),
-      });
-    }
-    if (!isNil(search)) {
-      query.$and?.push({
-        $or: [
-          { name: { $regex: `.*${search}.*`, $options: 'i' } },
-          { alias: { $regex: `.*${search}.*`, $options: 'i' } },
-        ],
-      });
-    }
-    if (!user) {
-      return await File.getInstance().findMany(query, undefined, skip, limit, sort);
-    }
-    return await File.getInstance().findMany(
-      query,
-      undefined,
-      skip,
-      limit,
-      sort,
-      undefined,
-      authzEnabled ? user._id : undefined,
-      authzEnabled ? scope : undefined,
-    );
-  }
-
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, alias, data, container, mimeType, isPublic, scope } =
       call.request.params;
@@ -215,7 +179,7 @@ export class FileHandlers {
     const usedContainer = isNil(container)
       ? config.defaultContainer
       : await this.findContainer(container);
-    await this.fileAccessCheck('create', user, scope, undefined, usedContainer);
+    await this.fileAccessCheck('create', user._id, scope, undefined, usedContainer);
 
     const folder = normalizeFolderPath(call.request.params.folder ?? 'cnd_' + user._id);
     if (folder !== '/') {
@@ -270,7 +234,7 @@ export class FileHandlers {
     const usedContainer = isNil(container)
       ? config.defaultContainer
       : await this.findContainer(container);
-    await this.fileAccessCheck('create', user, scope, undefined, usedContainer);
+    await this.fileAccessCheck('create', user._id, scope, undefined, usedContainer);
 
     const folder = normalizeFolderPath(call.request.params.folder ?? 'cnd_' + user._id);
     if (folder !== '/') {
@@ -385,6 +349,7 @@ export class FileHandlers {
   async deleteFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.urlParams;
     const { scope } = call.request.queryParams;
+    const { user } = call.request.context;
     if (!isString(id)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'The provided id is invalid');
     }
@@ -393,7 +358,7 @@ export class FileHandlers {
       if (isNil(found)) {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
-      await this.fileAccessCheck('delete', id, scope, found);
+      await this.fileAccessCheck('delete', user._id, scope, found);
 
       const success = await this.storageProvider
         .container(found.container)
@@ -507,7 +472,25 @@ export class FileHandlers {
     const newName = name ?? file.name;
     const newContainer = container ?? file.container;
     if (newContainer !== file.container) {
-      await this.findContainer(newContainer);
+      const foundContainer = await _StorageContainer.getInstance().findOne({
+        name: newContainer,
+      });
+      if (!foundContainer) {
+        throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
+      }
+      if (ConfigController.getInstance().config.authorization.enabled) {
+        const allowed = await this.grpcSdk.authorization?.can({
+          subject: scope ?? 'User:' + call.request.context.user._id,
+          actions: ['edit'],
+          resource: 'Container:' + foundContainer._id,
+        });
+        if (!allowed || !allowed.allow) {
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'You are not allowed to edit files in this container',
+          );
+        }
+      }
     }
     const newFolder = isNil(folder) ? file.folder : normalizeFolderPath(folder);
     if (newFolder !== file.folder && newFolder !== '/') {

@@ -145,7 +145,7 @@ export class AdminRoutes {
         container: folder.container,
       });
       await File.getInstance().deleteMany({
-        folder: folder.name,
+        folder: { $regex: `^${folder.name}` },
         container: folder.container,
       });
       if (ConfigController.getInstance().config.authorization.enabled) {
@@ -186,59 +186,57 @@ export class AdminRoutes {
   }
 
   async deleteContainer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, scope } = call.request.params;
+    const { id } = call.request.params;
     try {
-      const container = await _StorageContainer
-        .getInstance()
-        .findOne({ _id: id }, undefined, scope);
+      const container = await _StorageContainer.getInstance().findOne({ _id: id });
       if (isNil(container)) {
         throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
       } else {
         await this.fileHandlers.storage.deleteContainer(container.name);
+        await _StorageContainer.getInstance().deleteOne({ _id: id });
 
-        await File.getInstance().deleteMany(
-          { container: container.name },
-          undefined,
-          scope,
-        );
-        await _StorageFolder
-          .getInstance()
-          .deleteMany({ container: container.name }, undefined, scope);
-        await _StorageContainer.getInstance().deleteOne({ _id: id }, undefined, scope);
+        if (!ConfigController.getInstance().config.authorization.enabled) {
+          await File.getInstance().deleteMany({ container: container.name });
+          await _StorageFolder.getInstance().deleteMany({ container: container.name });
+        } else {
+          // Delete all relations & indexes associated with container
+          const files = await File.getInstance().findMany(
+            { container: container.name },
+            '_id',
+          );
+          for (const file of files) {
+            await this.grpcSdk.authorization
+              ?.deleteAllRelations({
+                resource: 'File:' + file._id,
+              })
+              .catch((e: Error) => {
+                if (!e.message.includes('No relations found')) throw e;
+              });
+          }
+          await File.getInstance().deleteMany({ container: container.name });
 
-        // Delete all relations & indexes associated with container
-        if (ConfigController.getInstance().config.authorization.enabled) {
-          const filesResult = await this.grpcSdk.authorization?.getAllowedResources({
-            subject: 'Container:' + id,
-            action: 'read',
-            resourceType: 'File',
-            skip: 0,
-            limit: 0,
-          });
-          if (filesResult?.resources?.length) {
-            for (const fileId of filesResult.resources) {
-              await this.grpcSdk.authorization?.deleteAllRelations({
-                resource: 'File:' + fileId,
+          const folders = await _StorageFolder
+            .getInstance()
+            .findMany({ container: container.name }, '_id');
+          for (const folder of folders) {
+            await this.grpcSdk.authorization
+              ?.deleteAllRelations({ resource: 'Folder:' + folder._id })
+              .catch((e: Error) => {
+                if (!e.message.includes('No relations found')) throw e;
               });
-            }
-          }
-          const foldersResult = await this.grpcSdk.authorization?.getAllowedResources({
-            subject: 'Container:' + id,
-            action: 'read',
-            resourceType: 'Folder',
-            skip: 0,
-            limit: 0,
-          });
-          if (foldersResult?.resources?.length) {
-            for (const folderId of foldersResult.resources) {
-              await this.grpcSdk.authorization?.deleteAllRelations({
-                resource: 'Folder:' + folderId,
+            await this.grpcSdk.authorization
+              ?.deleteAllRelations({ subject: 'Folder:' + folder._id })
+              .catch((e: Error) => {
+                if (!e.message.includes('No relations found')) throw e;
               });
-            }
           }
-          await this.grpcSdk.authorization?.deleteAllRelations({
-            subject: 'Container:' + id,
-          });
+          await _StorageFolder.getInstance().deleteMany({ container: container.name });
+
+          await this.grpcSdk.authorization
+            ?.deleteAllRelations({ subject: 'Container:' + id })
+            .catch((e: Error) => {
+              if (!e.message.includes('No relations found')) throw e;
+            });
         }
       }
       return container;
@@ -514,9 +512,6 @@ export class AdminRoutes {
         description: `Deletes a container.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
-        },
-        queryParams: {
-          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
         },
       },
       new ConduitRouteReturnDefinition('DeleteContainer', _StorageContainer.name),
