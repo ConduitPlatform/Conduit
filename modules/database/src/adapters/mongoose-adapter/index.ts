@@ -278,11 +278,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         spec[index.fields[i]] = index.types ? index.types[i] : 1;
         indexSpecs.push(spec);
       }
-      await collection
-        .createIndex(indexSpecs, index.options as IndexOptions)
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+      await collection.createIndex(indexSpecs, index.options).catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     }
     return 'Indexes created!';
   }
