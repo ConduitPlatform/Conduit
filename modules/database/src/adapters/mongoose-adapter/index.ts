@@ -1,4 +1,4 @@
-import { ConnectOptions, IndexOptions, Mongoose } from 'mongoose';
+import { ConnectOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema.js';
 import { schemaConverter } from './SchemaConverter.js';
 import {
