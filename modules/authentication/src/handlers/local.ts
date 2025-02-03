@@ -715,11 +715,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     await Token.getInstance().deleteOne({ _id: verificationTokenDoc._id });
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(foundUser));
 
-    const config = ConfigController.getInstance().config;
-    const redirectUri = AuthUtils.validateRedirectUri(
-      verificationTokenDoc.data ? verificationTokenDoc.data.customRedirectUri : undefined,
-    );
-    return { redirect: redirectUri ?? config.local.verification.redirect_uri };
+    return 'OK';
   }
 
   private async _authenticateChecks(password: string, config: Config, user: User) {
