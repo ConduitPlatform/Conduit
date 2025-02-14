@@ -76,7 +76,6 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
       case TYPE.ObjectId:
       case TYPE.Relation:
         res.type = 'string';
-        res.format = 'uuid';
         break;
       case 'String':
       case 'Number':
