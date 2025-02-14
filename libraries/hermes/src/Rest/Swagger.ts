@@ -30,7 +30,6 @@ export class SwaggerGenerator {
         schemas: {
           ModelId: {
             type: 'string',
-            format: 'uuid',
           },
         },
         securitySchemes: this._routerMetadata.securitySchemes,

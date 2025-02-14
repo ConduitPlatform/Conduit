@@ -11,8 +11,8 @@ import { extractRequestData, validateParams } from './util.js';
 import { createHashKey, extractCaching } from '../cache.utils.js';
 import { ConduitRouter } from '../Router.js';
 import {
-  ConduitGrpcSdk,
   ConduitError,
+  ConduitGrpcSdk,
   ConduitRouteActions,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
@@ -315,7 +315,8 @@ export class RestController extends ConduitRouter {
     this._expressRouter!.get('/swagger', (req, res, next) =>
       swaggerUi.setup(self._swagger!.swaggerDoc)(req, res, next),
     );
-    this._expressRouter!.get(
+
+    this._expressRouter!.use(
       '/reference',
       apiReference({
         spec: {
