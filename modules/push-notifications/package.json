@@ -37,7 +37,7 @@
     "@grpc/proto-loader": "^0.7.6",
     "@onesignal/node-onesignal": "^1.0.0-beta9",
     "convict": "^6.2.4",
-    "firebase-admin": "^12.4.0",
+    "firebase-admin": "^13.1.0",
     "lodash-es": "^4.17.21"
   },
   "devDependencies": {
