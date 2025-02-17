@@ -183,7 +183,6 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     if (this.isInput) {
       processingObject.properties[name] = {
         type: 'string',
-        format: 'uuid',
       };
     } else {
       this.requestedTypes.add(value);
@@ -194,7 +193,6 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
           },
           {
             type: 'string',
-            format: 'uuid',
           },
         ],
       };

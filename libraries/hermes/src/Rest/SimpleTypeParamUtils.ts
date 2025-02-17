@@ -16,7 +16,7 @@ function extractParam(param: string, required: boolean = false) {
     case TYPE.ObjectId:
     case TYPE.Relation:
       res.type = 'string';
-      res.format = 'uuid';
+      // res.format = 'uuid';
       // res.required = required;
 
       break;
