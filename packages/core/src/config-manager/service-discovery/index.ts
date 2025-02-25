@@ -192,7 +192,7 @@ export class ServiceDiscovery {
     if (!this.grpcSdk.isAvailable(moduleName)) {
       this.grpcSdk.createModuleClient(
         moduleName,
-        this._serviceRegistry.getModule(moduleName)!.servingAddress!,
+        this._serviceRegistry.getModule(moduleName)!.allAddresses!,
       );
     }
 
