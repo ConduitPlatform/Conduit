@@ -42,7 +42,7 @@ export class LocalStorage implements IStorageProvider {
   }
 
   deleteContainer(name: string): Promise<boolean | Error> {
-    return this.deleteFolder(name);
+    return this.container(name).deleteFolder(name);
   }
 
   deleteFolder(name: string): Promise<boolean | Error> {

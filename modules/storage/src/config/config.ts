@@ -17,10 +17,6 @@ export default {
     format: 'String',
     default: 'conduit',
   },
-  allowContainerCreation: {
-    format: 'Boolean',
-    default: true,
-  },
   google: {
     serviceAccountKeyPath: {
       format: 'String',

@@ -6,6 +6,7 @@ import {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import {
+  ConduitBoolean,
   ConduitNumber,
   ConduitString,
   ConfigController,
