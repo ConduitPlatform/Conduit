@@ -16,9 +16,9 @@ export class RateLimiter {
       const config = ConfigController.getInstance().config.rateLimit;
       const prefix = 'limiter';
       const ip = (req.headers['cf-connecting-ip'] ||
-        req.headers['x-original-forwarded-for'] ||
         req.headers['x-forwarded-for'] ||
         req.headers['x-real-ip'] ||
+        req.headers['x-original-forwarded-for'] ||
         req.ip) as string;
       if (req.method === 'OPTIONS') next();
       self.redisClient.incr(`${prefix}:${ip}`, (err, requests) => {
