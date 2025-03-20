@@ -36,6 +36,7 @@
     "@grpc/grpc-js": "^1.10.9",
     "@grpc/proto-loader": "^0.7.6",
     "@onesignal/node-onesignal": "^1.0.0-beta9",
+    "aws-sdk": "^2.1692.0",
     "convict": "^6.2.4",
     "firebase-admin": "^12.4.0",
     "lodash-es": "^4.17.21"
