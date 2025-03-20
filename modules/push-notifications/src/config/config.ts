@@ -1,7 +1,7 @@
 export default {
   active: {
     format: 'Boolean',
-    default: true,
+    default: false,
   },
   providerName: {
     format: 'String',
@@ -27,6 +27,48 @@ export default {
       default: '',
     },
     apiKey: {
+      format: 'String',
+      default: '',
+    },
+  },
+  sns: {
+    accessKeyId: {
+      format: 'String',
+      default: '',
+    },
+    secretAccessKey: {
+      format: 'String',
+      default: '',
+    },
+    region: {
+      format: 'String',
+      default: '',
+    },
+    platformApplications: {
+      format: 'String',
+      default: {},
+    },
+    topicArn: {
+      format: 'String',
+      default: '',
+    },
+  },
+  brevo: {
+    accessToken: {
+      format: 'String',
+      default: '',
+    },
+    apiUrl: {
+      format: 'String',
+      default: '',
+    },
+  },
+  pushowl: {
+    apiKey: {
+      format: 'String',
+      default: '',
+    },
+    endpoint: {
       format: 'String',
       default: '',
     },
