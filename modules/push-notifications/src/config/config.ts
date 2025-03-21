@@ -45,7 +45,7 @@ export default {
       default: '',
     },
     platformApplications: {
-      format: 'String',
+      format: 'Object',
       default: {},
     },
     topicArn: {

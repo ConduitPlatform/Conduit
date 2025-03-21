@@ -29,12 +29,7 @@ export class BrevoProvider extends BaseNotificationProvider<IBrevoSettings> {
     }
   }
 
-  /**
-   * Ensure the user exists in Brevo(WonderPush), if they don't, create them using userId.
-   */
   private async ensureUserExists(userId: string): Promise<boolean> {
-    ConduitGrpcSdk.Logger.log(`Checking if user exists in Brevo: ${userId}...`);
-
     try {
       const userResponse = await fetch(`${this.apiUrl}/users/${userId}`, {
         method: 'GET',
@@ -45,14 +40,11 @@ export class BrevoProvider extends BaseNotificationProvider<IBrevoSettings> {
       });
 
       if (userResponse.ok) {
-        ConduitGrpcSdk.Logger.log(`User ${userId} already exists.`);
         return true;
       }
     } catch (error) {
       ConduitGrpcSdk.Logger.error(`Error checking user in Brevo:`);
     }
-
-    ConduitGrpcSdk.Logger.log(`Creating user ${userId} in Brevo...`);
 
     try {
       const createUserResponse = await fetch(`${this.apiUrl}/users/${userId}`, {
@@ -75,7 +67,6 @@ export class BrevoProvider extends BaseNotificationProvider<IBrevoSettings> {
         return false;
       }
 
-      ConduitGrpcSdk.Logger.log(`User ${userId} created successfully.`);
       return true;
     } catch (error) {
       ConduitGrpcSdk.Logger.error(`Error creating user in Brevo:`);
@@ -83,27 +74,24 @@ export class BrevoProvider extends BaseNotificationProvider<IBrevoSettings> {
     }
   }
 
-  /**
-   * Sends a push notification via Brevo (WonderPush).
-   */
   async sendMessage(
     token: string | string[],
     params: ISendNotification | ISendNotificationToManyDevices,
   ): Promise<void> {
-    ConduitGrpcSdk.Logger.log(`Received request:`, JSON.stringify(params, null, 2));
-
     const userId = params.sendTo;
 
-    if (!userId) {
-      ConduitGrpcSdk.Logger.error(`Missing userId in request`);
+    if (!userId || Array.isArray(userId)) {
+      ConduitGrpcSdk.Logger.error(`Invalid or missing userId in request`);
       return;
     }
 
-    ConduitGrpcSdk.Logger.log(`Extracted userId: ${userId}`);
+    const userReady = await this.ensureUserExists(userId);
+    if (!userReady) {
+      ConduitGrpcSdk.Logger.error(`User ${userId} could not be created or verified`);
+      return;
+    }
 
-    const message = params.body ?? 'ok'; // Default message if none provided
-
-    ConduitGrpcSdk.Logger.log(`Sending push notification to user ${userId}...`);
+    const message = params.body ?? 'ok';
 
     try {
       const notificationResponse = await fetch(`${this.apiUrl}/deliveries`, {
@@ -115,7 +103,7 @@ export class BrevoProvider extends BaseNotificationProvider<IBrevoSettings> {
         body: JSON.stringify({
           accessToken: this.accessToken,
           targetUserIds: [userId],
-          notification: { message: message },
+          notification: { message },
         }),
       });
 
@@ -127,10 +115,7 @@ export class BrevoProvider extends BaseNotificationProvider<IBrevoSettings> {
         return;
       }
 
-      const responseData = await notificationResponse.json();
-      ConduitGrpcSdk.Logger.log(
-        `Notification sent successfully: ${JSON.stringify(responseData)}`,
-      );
+      await notificationResponse.json();
     } catch (error) {
       ConduitGrpcSdk.Logger.error(
         `Unexpected error while sending notification: ${
