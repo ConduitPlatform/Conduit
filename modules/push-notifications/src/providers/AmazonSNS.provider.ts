@@ -9,6 +9,7 @@ import { IAmazonSNSSettings } from '../interfaces/IAmazonSNSSettings.js';
 
 export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettings> {
   private sns: AWS.SNS;
+  private settings: IAmazonSNSSettings;
 
   constructor(settings: IAmazonSNSSettings) {
     super();
@@ -19,6 +20,8 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
 
   updateProvider(settings: IAmazonSNSSettings) {
     try {
+      this.settings = settings;
+
       this.sns = new AWS.SNS({
         credentials: {
           accessKeyId: settings.accessKeyId,
@@ -26,6 +29,7 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
         },
         region: settings.region,
       });
+
       this._initialized = true;
       ConduitGrpcSdk.Logger.log('Amazon SNS Provider initialized successfully.');
     } catch (e) {
@@ -36,24 +40,41 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
     }
   }
 
-  /**
-   * Register a device token with AWS SNS and return the SNS Endpoint ARN.
-   * Does not store the ARN in the database.
-   */
-  async registerDeviceToken(deviceToken: string): Promise<string | undefined> {
+  private resolvePlatformKey(data?: Record<string, any>): string {
+    const platforms = Object.keys(this.settings.platformApplications || {});
+    let platform = data?.snsPlatform;
+
+    if (!platform) {
+      if (platforms.length === 1) {
+        platform = platforms[0]; // Use the only available platform
+      } else {
+        throw new Error(
+          'Missing snsPlatform in data. Multiple platform ARNs are configured — please specify data.snsPlatform.',
+        );
+      }
+    }
+
+    const platformArn = this.settings.platformApplications?.[platform];
+    if (!platformArn) {
+      throw new Error(`Platform ARN for "${platform}" not found in config.`);
+    }
+
+    return platform;
+  }
+
+  async registerDeviceToken(
+    deviceToken: string,
+    platform: string,
+  ): Promise<string | undefined> {
     if (!this._initialized) {
       throw new Error('Amazon SNS Provider is not initialized.');
     }
 
     try {
-      const platformArn = process.env.AWS_PLATFORM_ARN;
+      const platformArn = this.settings.platformApplications?.[platform];
       if (!platformArn) {
-        throw new Error('AWS_PLATFORM_ARN is missing.');
+        throw new Error(`Missing platform ARN for ${platform} in config.`);
       }
-
-      console.log('Registering token with AWS SNS...');
-      console.log(`Platform ARN: ${platformArn}`);
-      console.log(`Device Token: ${deviceToken}`);
 
       const response = await this.sns
         .createPlatformEndpoint({
@@ -62,20 +83,13 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
         })
         .promise();
 
-      console.log(
-        `Successfully registered device. SNS Endpoint ARN: ${response.EndpointArn}`,
-      );
       return response.EndpointArn;
     } catch (error) {
-      console.error('AWS SNS Error:', error);
+      ConduitGrpcSdk.Logger.error(`Failed to register SNS device token: ${error}`);
       return undefined;
     }
   }
 
-  /**
-   * Send a push notification using AWS SNS.
-   * If the provided token is not an SNS ARN, it will create a temporary ARN and send the message.
-   */
   async sendMessage(
     token: string,
     params: ISendNotification | ISendNotificationToManyDevices,
@@ -89,23 +103,14 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
     try {
       let snsEndpointArn: string | undefined = token;
 
-      // Step 1: If token is NOT an ARN, register it first (This is for future DB support of ARN tokens, we can delete this segment for now / token is always !ARN)
       if (!token.startsWith('arn:aws:sns:')) {
-        console.log(
-          `Creating temporary SNS Platform Endpoint for device token: ${token}`,
-        );
+        const platform = this.resolvePlatformKey(data);
 
-        snsEndpointArn = await this.registerDeviceToken(token);
-
+        snsEndpointArn = await this.registerDeviceToken(token, platform);
         if (!snsEndpointArn) {
           throw new Error('Failed to create SNS endpoint ARN.');
         }
-
-        console.log(`Temporary SNS Endpoint ARN created: ${snsEndpointArn}`);
       }
-
-      // Step 2: Send the Push Notification
-      console.log(`Sending SNS notification to ARN: ${snsEndpointArn}`);
 
       const messagePayload = {
         default: body,
@@ -121,17 +126,11 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
         })
         .promise();
 
-      console.log(`SNS Notification sent! Message ID: ${response.MessageId}`);
       return response.MessageId || 'Success';
     } catch (e) {
-      console.error(`Failed to send SNS notification: ${(e as Error).message}`);
-
-      if (
-        (e as Error).message.includes('EndpointDisabled') ||
-        (e as Error).message.includes('InvalidParameter')
-      ) {
-        console.warn(`SNS Endpoint ARN was invalid: ${token}`);
-      }
+      ConduitGrpcSdk.Logger.error(
+        `Failed to send SNS notification: ${(e as Error).message}`,
+      );
       return;
     }
   }

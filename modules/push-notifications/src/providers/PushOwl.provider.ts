@@ -6,6 +6,7 @@ import {
   ISendNotificationToManyDevices,
 } from '../interfaces/ISendNotification.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { NotificationToken } from '../models/index.js';
 
 export class PushOwlProvider extends BaseNotificationProvider<IPushOwlSettings> {
   private apiKey?: string;
@@ -28,10 +29,8 @@ export class PushOwlProvider extends BaseNotificationProvider<IPushOwlSettings> 
       }
 
       this._initialized = true;
-      ConduitGrpcSdk.Logger.log('PushOwl Provider initialized successfully.');
-    } catch (e) {
+    } catch {
       this._initialized = false;
-      ConduitGrpcSdk.Logger.error('Failed to initialize PushOwl Provider:');
     }
   }
 
@@ -43,43 +42,32 @@ export class PushOwlProvider extends BaseNotificationProvider<IPushOwlSettings> 
       throw new Error('PushOwl Provider is not initialized.');
     }
 
-    console.log('Sending notification via PushOwl...');
+    const { title, body, data } = params;
 
-    try {
-      const { title, body, data } = params;
+    const payload = {
+      notification: {
+        title: title,
+        description: body,
+        redirect_url: data?.trackingUrl || '',
+        icon: data?.iconUrl || '',
+        image: data?.imageUrl || '',
+        actions: data?.actions || [],
+      },
+      subscriber_tokens: data?.subscriber_tokens || [],
+      customer_ids: token ? [token] : [],
+      emails: data?.emails || [],
+    };
 
-      console.log('Token:', token);
-      console.log('Payload Data:', data);
-
-      const payload = {
-        notification: {
-          title: title,
-          description: body,
-          redirect_url: data?.trackingUrl || 'https://pushowl.com',
-          icon: data?.iconUrl || '',
-          image: data?.imageUrl || '',
-          actions: data?.actions || [],
-        },
-        subscriber_tokens: data?.subscriber_tokens || [],
-        customer_ids: token ? [token] : [],
-        emails: data?.emails || [],
-      };
-
-      console.log('Final Payload:', JSON.stringify(payload, null, 2));
-
-      const response = await axios.post(this.endpoint!, payload, {
+    return axios
+      .post(this.endpoint!, payload, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `JWT ${this.apiKey}`,
         },
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error('Failed to send PushOwl notification:', e);
+        return NotificationToken.getInstance().deleteOne({ token });
       });
-
-      console.log('PushOwl Response:', response.data);
-    } catch (error: any) {
-      console.error(
-        'PushOwl API Error:',
-        error.response ? error.response.data : error.message,
-      );
-    }
   }
 }
