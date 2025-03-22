@@ -154,6 +154,31 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
 
+  authorization:
+    container_name: 'conduit-authorization'
+    image: 'docker.io/conduitplatform/authorization:${IMAGE_TAG}'
+    restart: unless-stopped
+    depends_on:
+      - core
+      - database
+      - prometheus
+      - loki
+    ports:
+      - '${AUTHN_GRPC_PORT:-55162}:${AUTHZ_GRPC_PORT:-55169}'
+    environment:
+      CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
+      SERVICE_URL: 'conduit-authorization:${AUTHZ_GRPC_PORT:-55169}'
+      GRPC_PORT: '55169'
+      METRICS_PORT: '9191'
+      LOKI_URL: 'http://conduit-loki:3100'
+      GRPC_KEY: '${GRPC_KEY}'
+    networks:
+      default:
+        aliases:
+          - conduit-authorization
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
 #  # Optional Services
   chat:
     container_name: 'conduit-chat'

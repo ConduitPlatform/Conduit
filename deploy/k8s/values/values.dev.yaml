@@ -1,0 +1,82 @@
+# -- Provide a name in place of `conduit`
+nameOverride: "conduit"
+# -- String to fully override `"conduit-helm.fullname"`
+
+global:
+  image:
+    # -- Global repository option
+    repository: ghcr.io/conduitplatform
+    # -- Overrides the global Conduit image tag whose default is the chart appVersion
+    tag: dev
+    imagePullPolicy: Always
+install:
+  sms:
+    enabled: false
+  forms:
+    enabled: false
+  authorization:
+    enabled: true
+  chat:
+    enabled: false
+  notification:
+    enabled: true
+  email:
+    enabled: true
+  storage:
+    enabled: false
+module-settings:
+  # -- Resource limits and requests
+  resources:
+    requests:
+      memory: "150Mi"
+      cpu: "0"
+    limits:
+      memory: "500Mi"
+      cpu: "1000m"
+# -- Admin Panel module
+admin:
+  image:
+    repository: ghcr.io/conduitplatform
+    tag: dev
+    imagePullPolicy: Always
+
+  # -- Enable an ingress resource for the Admin Panel
+  ingress:
+    enabled: true
+    # -- Hostnames must be provided if Ingress is enabled.
+    hostName: "admin.conduit"
+
+
+# -- Core module
+core:
+  # -- Enable an ingress resource for the Core
+  ingress:
+    enabled: true
+    # -- Hostnames must be provided if Ingress is enabled.
+    hostName: "admin-api.conduit"
+
+# -- Router module
+router:
+  # -- Enable an ingress resource for the Router
+  ingress:
+    enabled: true
+
+    # -- Hostnames must be provided if Ingress is enabled.
+    hostName: "router.conduit"
+
+mongodb:
+  enabled: true
+
+loki:
+  setup: true
+
+prometheus:
+  setup: true
+  alertmanager:
+    enabled: false
+  kube-state-metrics:
+    enabled: false
+  prometheus-node-exporter:
+    enabled: false
+  prometheus-pushgateway:
+    enabled: false
