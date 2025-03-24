@@ -1,7 +1,7 @@
 export default {
   active: {
     format: 'Boolean',
-    default: false,
+    default: true,
   },
   providerName: {
     format: 'String',
@@ -47,10 +47,6 @@ export default {
     platformApplications: {
       format: 'Object',
       default: {},
-    },
-    topicArn: {
-      format: 'String',
-      default: '',
     },
   },
   brevo: {
