@@ -1,11 +1,24 @@
 import AWS from 'aws-sdk';
 import { BaseNotificationProvider } from './base.provider.js';
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
 import {
   ISendNotification,
   ISendNotificationToManyDevices,
 } from '../interfaces/ISendNotification.js';
 import { IAmazonSNSSettings } from '../interfaces/IAmazonSNSSettings.js';
+
+// Static mapping between AWS SNS platforms and Conduit platforms
+const AWS_TO_CONDUIT_PLATFORM_MAP: Record<string, PlatformTypesEnum> = {
+  GCM: PlatformTypesEnum.ANDROID, // Google Cloud Messaging (Android)
+  APNS: PlatformTypesEnum.IOS, // Apple Push Notification Service (iOS)
+  APNS_SANDBOX: PlatformTypesEnum.IOS, // APNS Sandbox (iOS development)
+  APNS_VOIP: PlatformTypesEnum.IOS, // APNS VoIP
+  APNS_VOIP_SANDBOX: PlatformTypesEnum.IOS, // APNS VoIP Sandbox
+  ADM: PlatformTypesEnum.ANDROID, // Amazon Device Messaging (Android)
+  BAIDU: PlatformTypesEnum.ANDROID, // Baidu Cloud Push (Android)
+  WNS: PlatformTypesEnum.WINDOWS, // Windows Push Notification Service
+  MPNS: PlatformTypesEnum.WINDOWS, // Microsoft Push Notification Service
+};
 
 export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettings> {
   private sns: AWS.SNS;
@@ -40,98 +53,97 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
     }
   }
 
-  private resolvePlatformKey(data?: Record<string, any>): string {
-    const platforms = Object.keys(this.settings.platformApplications || {});
-    let platform = data?.snsPlatform;
-
-    if (!platform) {
-      if (platforms.length === 1) {
-        platform = platforms[0]; // Use the only available platform
-      } else {
-        throw new Error(
-          'Missing snsPlatform in data. Multiple platform ARNs are configured — please specify data.snsPlatform.',
-        );
-      }
-    }
-
-    const platformArn = this.settings.platformApplications?.[platform];
-    if (!platformArn) {
-      throw new Error(`Platform ARN for "${platform}" not found in config.`);
-    }
-
-    return platform;
-  }
-
-  async registerDeviceToken(
-    deviceToken: string,
-    platform: string,
-  ): Promise<string | undefined> {
-    if (!this._initialized) {
-      throw new Error('Amazon SNS Provider is not initialized.');
-    }
-
-    try {
-      const platformArn = this.settings.platformApplications?.[platform];
-      if (!platformArn) {
-        throw new Error(`Missing platform ARN for ${platform} in config.`);
-      }
-
-      const response = await this.sns
-        .createPlatformEndpoint({
-          PlatformApplicationArn: platformArn,
-          Token: deviceToken,
-        })
-        .promise();
-
-      return response.EndpointArn;
-    } catch (error) {
-      ConduitGrpcSdk.Logger.error(`Failed to register SNS device token: ${error}`);
-      return undefined;
-    }
-  }
-
   async sendMessage(
-    token: string,
+    deviceToken: string,
     params: ISendNotification | ISendNotificationToManyDevices,
   ): Promise<void | string> {
     if (!this._initialized) {
       throw new Error('Amazon SNS Provider is not initialized.');
     }
 
-    const { title, body, data } = params;
-
     try {
-      let snsEndpointArn: string | undefined = token;
+      const { title, body, data, isSilent, platform } = params;
 
-      if (!token.startsWith('arn:aws:sns:')) {
-        const platform = this.resolvePlatformKey(data);
+      // Convert platform string to PlatformTypesEnum
+      const platformEnum = platform as PlatformTypesEnum;
 
-        snsEndpointArn = await this.registerDeviceToken(token, platform);
-        if (!snsEndpointArn) {
-          throw new Error('Failed to create SNS endpoint ARN.');
-        }
+      // Find the AWS platform that corresponds to the Conduit platform
+      const awsPlatform = Object.entries(AWS_TO_CONDUIT_PLATFORM_MAP).find(
+        ([_, conduitPlatform]) => conduitPlatform === platformEnum,
+      )?.[0];
+
+      if (!awsPlatform) {
+        throw new Error(`Unsupported platform for AWS SNS: ${platform}`);
       }
 
-      const messagePayload = {
-        default: body,
-        APNS: JSON.stringify({ aps: { alert: { title, body }, data } }),
-        GCM: JSON.stringify({ notification: { title, body }, data }),
-      };
+      if (!this.settings.platformApplications[awsPlatform]) {
+        throw new Error(`Missing platform application ARN for platform: ${awsPlatform}`);
+      }
 
-      const response = await this.sns
-        .publish({
-          Message: JSON.stringify(messagePayload),
-          MessageStructure: 'json',
-          TargetArn: snsEndpointArn,
+      // Create endpoint ARN for this device token
+      const endpointResponse = await this.sns
+        .createPlatformEndpoint({
+          PlatformApplicationArn: this.settings.platformApplications[awsPlatform],
+          Token: deviceToken,
         })
         .promise();
 
-      return response.MessageId || 'Success';
-    } catch (e) {
-      ConduitGrpcSdk.Logger.error(
-        `Failed to send SNS notification: ${(e as Error).message}`,
-      );
-      return;
+      const endpointArn = endpointResponse.EndpointArn;
+
+      const message = {
+        default: JSON.stringify({ title, body, data }),
+        GCM: JSON.stringify({
+          notification: { title, body },
+          data: {
+            ...data,
+            silent: isSilent ? 'true' : 'false',
+          },
+        }),
+        APNS: JSON.stringify({
+          aps: {
+            alert: { title, body },
+            sound: isSilent ? null : 'default',
+            badge: 1,
+            'content-available': isSilent ? 1 : 0,
+          },
+          ...data,
+        }),
+        APNS_SANDBOX: JSON.stringify({
+          aps: {
+            alert: { title, body },
+            sound: isSilent ? null : 'default',
+            badge: 1,
+            'content-available': isSilent ? 1 : 0,
+          },
+          ...data,
+        }),
+        WNS: JSON.stringify({
+          notification: {
+            title,
+            body,
+            ...data,
+            silent: isSilent ? 'true' : 'false',
+          },
+        }),
+      };
+
+      // Send to specific endpoint using the endpoint ARN
+      const response = await this.sns
+        .publish({
+          TargetArn: endpointArn,
+          Message: JSON.stringify(message),
+          MessageStructure: 'json',
+        })
+        .promise();
+
+      if (!response.MessageId) {
+        throw new Error('Failed to send notification: No message ID returned');
+      }
+
+      return response.MessageId;
+    } catch (error) {
+      ConduitGrpcSdk.Logger.error(`Failed to send SNS message: ${error}`);
+      throw error;
     }
   }
 }
