@@ -29,8 +29,12 @@ export class PushOwlProvider extends BaseNotificationProvider<IPushOwlSettings> 
       }
 
       this._initialized = true;
-    } catch {
+      ConduitGrpcSdk.Logger.log('PushOwl Provider initialized successfully.');
+    } catch (e) {
       this._initialized = false;
+      ConduitGrpcSdk.Logger.error(
+        `Failed to initialize PushOwl: ${(e as Error).message}`,
+      );
     }
   }
 
@@ -44,18 +48,21 @@ export class PushOwlProvider extends BaseNotificationProvider<IPushOwlSettings> 
 
     const { title, body, data } = params;
 
+    // PushOwl is only a Web push notifications provider, it cannot be silent
+    if (params.isSilent) {
+      ConduitGrpcSdk.Logger.warn(
+        'Silent notifications are not supported for web push notifications',
+      );
+      return;
+    }
+
     const payload = {
       notification: {
         title: title,
         description: body,
-        redirect_url: data?.trackingUrl || '',
-        icon: data?.iconUrl || '',
-        image: data?.imageUrl || '',
-        actions: data?.actions || [],
+        data: data || {},
       },
-      subscriber_tokens: data?.subscriber_tokens || [],
-      customer_ids: token ? [token] : [],
-      emails: data?.emails || [],
+      customer_ids: [token],
     };
 
     return axios
