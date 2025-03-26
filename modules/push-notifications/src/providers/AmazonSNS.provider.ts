@@ -6,6 +6,7 @@ import {
   ISendNotificationToManyDevices,
 } from '../interfaces/ISendNotification.js';
 import { IAmazonSNSSettings } from '../interfaces/IAmazonSNSSettings.js';
+import { NotificationToken } from '../models/NotificationToken.schema.js';
 
 // Static mapping between AWS SNS platforms and Conduit platforms
 const AWS_TO_CONDUIT_PLATFORM_MAP: Record<string, PlatformTypesEnum> = {
@@ -80,15 +81,36 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
         throw new Error(`Missing platform application ARN for platform: ${awsPlatform}`);
       }
 
-      // Create endpoint ARN for this device token
-      const endpointResponse = await this.sns
-        .createPlatformEndpoint({
-          PlatformApplicationArn: this.settings.platformApplications[awsPlatform],
-          Token: deviceToken,
-        })
-        .promise();
+      // Get the device record from database
+      const deviceRecord = await NotificationToken.getInstance().findOne({
+        token: deviceToken,
+      });
+      if (!deviceRecord) {
+        throw new Error('Device token not found');
+      }
 
-      const endpointArn = endpointResponse.EndpointArn;
+      let endpointArn = deviceRecord.token;
+
+      // If the stored token doesn't look like an ARN, create endpoint
+      if (!endpointArn.startsWith('arn:aws:sns:')) {
+        const endpointResponse = await this.sns
+          .createPlatformEndpoint({
+            PlatformApplicationArn: this.settings.platformApplications[awsPlatform],
+            Token: deviceToken,
+          })
+          .promise();
+
+        if (!endpointResponse.EndpointArn) {
+          throw new Error('Failed to create platform endpoint: No ARN returned');
+        }
+
+        endpointArn = endpointResponse.EndpointArn;
+
+        // Store the endpointArn in the token field
+        await NotificationToken.getInstance().findByIdAndUpdate(deviceRecord._id, {
+          token: endpointArn,
+        });
+      }
 
       const message = {
         default: JSON.stringify({ title, body, data }),
