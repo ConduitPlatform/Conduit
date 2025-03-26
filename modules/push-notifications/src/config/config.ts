@@ -49,24 +49,4 @@ export default {
       default: {},
     },
   },
-  brevo: {
-    accessToken: {
-      format: 'String',
-      default: '',
-    },
-    apiUrl: {
-      format: 'String',
-      default: '',
-    },
-  },
-  pushowl: {
-    apiKey: {
-      format: 'String',
-      default: '',
-    },
-    endpoint: {
-      format: 'String',
-      default: '',
-    },
-  },
 };
