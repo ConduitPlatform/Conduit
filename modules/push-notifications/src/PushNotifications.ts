@@ -30,8 +30,6 @@ import {
 } from './protoTypes/push-notifications.js';
 import { fileURLToPath } from 'node:url';
 import { AmazonSNSProvider } from './providers/AmazonSNS.provider.js';
-import { BrevoProvider } from './providers/Brevo.provider.js';
-import { PushOwlProvider } from './providers/PushOwl.provider.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -271,10 +269,6 @@ export default class PushNotifications extends ManagedModule<Config> {
       this._provider = new BaseNotificationProvider();
     } else if (name === 'sns') {
       this._provider = new AmazonSNSProvider(settings);
-    } else if (name === 'brevo') {
-      this._provider = new BrevoProvider(settings);
-    } else if (name === 'pushowl') {
-      this._provider = new PushOwlProvider(settings);
     } else {
       throw new Error('Provider not supported');
     }
