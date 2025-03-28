@@ -44,9 +44,13 @@ export default {
       format: 'String',
       default: '',
     },
-    platformApplications: {
-      format: 'Object',
-      default: {},
+    gcmApplicationArn: {
+      format: 'String',
+      default: '',
+    },
+    apnsApplicationArn: {
+      format: 'String',
+      default: '',
     },
   },
 };
