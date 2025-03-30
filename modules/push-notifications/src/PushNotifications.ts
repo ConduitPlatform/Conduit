@@ -226,35 +226,36 @@ export default class PushNotifications extends ManagedModule<Config> {
   }
 
   private async enableModule() {
-    if (!this.isRunning) {
-      await this.initProvider();
-      if (!this._provider || !this._provider?.isInitialized) {
-        throw new Error('Provider failed to initialize');
-      }
-      if (this.grpcSdk.isAvailable('router')) {
-        this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
-      } else {
-        this.grpcSdk.monitorModule('router', serving => {
-          if (serving) {
-            this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
-            this.grpcSdk.unmonitorModule('router');
-          }
-        });
-      }
+    await this.initProvider();
 
-      this.adminRouter = new AdminHandlers(
+    if (!this._provider || !this._provider.isInitialized) {
+      throw new Error('Provider failed to initialize');
+    }
+
+    if (!this.adminRouter) {
+      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this._provider);
+    } else {
+      this.adminRouter.updateProvider(this._provider);
+    }
+    if (this.grpcSdk.isAvailable('router')) {
+      this.userRouter = new PushNotificationsRoutes(
         this.grpcServer,
         this.grpcSdk,
-        this._provider!,
+        this._provider,
       );
-      this.isRunning = true;
     } else {
-      await this.initProvider();
-      if (!this._provider || !this._provider?.isInitialized) {
-        throw new Error('Provider failed to initialize');
-      }
-      this.adminRouter.updateProvider(this._provider!);
+      this.grpcSdk.monitorModule('router', serving => {
+        if (serving) {
+          this.userRouter = new PushNotificationsRoutes(
+            this.grpcServer,
+            this.grpcSdk,
+            this._provider!,
+          );
+          this.grpcSdk.unmonitorModule('router');
+        }
+      });
     }
+    this.isRunning = true;
   }
 
   private async initProvider() {
