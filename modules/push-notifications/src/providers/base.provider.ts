@@ -15,6 +15,10 @@ export class BaseNotificationProvider<T> {
     return this._initialized;
   }
 
+  async registerDeviceToken(token: string, platform: PlatformTypesEnum): Promise<string> {
+    return token;
+  }
+
   sendMessage(
     token: string | string[],
     params: ISendNotification | ISendNotificationToManyDevices,
