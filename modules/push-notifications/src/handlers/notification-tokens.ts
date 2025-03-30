@@ -6,23 +6,34 @@ import {
 import { status } from '@grpc/grpc-js';
 import { Notification, NotificationToken } from '../models/index.js';
 import { isNil } from 'lodash-es';
+import { PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
+import { BaseNotificationProvider } from '../providers/base.provider.js';
 
 export class NotificationTokensHandler {
+  constructor(private readonly provider: BaseNotificationProvider<unknown>) {}
+
   async setNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
     const { token, platform } = call.request.params;
+
     await NotificationToken.getInstance().deleteMany({
       userId: context.user._id,
       platform,
     });
+
+    const registeredToken = await this.provider.registerDeviceToken(
+      token,
+      platform as PlatformTypesEnum,
+    );
+
     const newTokenDocument = await NotificationToken.getInstance().create({
       userId: context.user._id,
-      token,
+      token: registeredToken,
       platform,
     });
 
     return {
-      newTokenDocument,
+      registeredToken,
     };
   }
 
