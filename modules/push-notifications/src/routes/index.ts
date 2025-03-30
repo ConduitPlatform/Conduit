@@ -15,6 +15,7 @@ import {
 } from '@conduitplatform/module-tools';
 
 import { Notification, NotificationToken } from '../models/index.js';
+import { BaseNotificationProvider } from '../providers/base.provider.js';
 
 export class PushNotificationsRoutes {
   private readonly handlers: NotificationTokensHandler;
@@ -23,8 +24,9 @@ export class PushNotificationsRoutes {
   constructor(
     readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly provider: BaseNotificationProvider<unknown>,
   ) {
-    this.handlers = new NotificationTokensHandler();
+    this.handlers = new NotificationTokensHandler(provider);
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.registeredRoutes();
   }
