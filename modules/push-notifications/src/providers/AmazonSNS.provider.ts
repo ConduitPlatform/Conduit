@@ -53,17 +53,16 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
       throw new Error('Amazon SNS Provider is not initialized.');
     }
 
+    // Get the appropriate application ARN based on platform
+    const applicationArn =
+      platform === PlatformTypesEnum.ANDROID
+        ? this.settings.gcmApplicationArn
+        : this.settings.apnsApplicationArn;
+
+    if (!applicationArn) {
+      throw new Error(`Missing platform application ARN for platform: ${platform}`);
+    }
     try {
-      // Get the appropriate application ARN based on platform
-      const applicationArn =
-        platform === PlatformTypesEnum.ANDROID
-          ? this.settings.gcmApplicationArn
-          : this.settings.apnsApplicationArn;
-
-      if (!applicationArn) {
-        throw new Error(`Missing platform application ARN for platform: ${platform}`);
-      }
-
       const endpointResponse = await this.sns
         .createPlatformEndpoint({
           PlatformApplicationArn: applicationArn,
@@ -96,48 +95,47 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
       throw new Error('Amazon SNS Provider is not initialized.');
     }
 
-    try {
-      const { title, body, data, isSilent = false, platform } = params;
+    const { title, body, data, isSilent = false, platform } = params;
 
-      if (!title || !body) {
-        throw new Error('Title and body are required for notifications');
-      }
+    if (!title || !body) {
+      throw new Error('Title and body are required for notifications');
+    }
 
-      // Use registerDeviceToken function to get the endpoint ARN
-      const endpointArn = await this.registerDeviceToken(
-        token,
-        platform as PlatformTypesEnum,
-      );
+    // Use registerDeviceToken function to get the endpoint ARN
+    const endpointArn = await this.registerDeviceToken(
+      token,
+      platform as PlatformTypesEnum,
+    );
 
-      // Get the AWS platform type for the message structure
-      const awsPlatform = CONDUIT_TO_AWS_PLATFORM[platform as PlatformTypesEnum];
-      if (!awsPlatform) {
-        throw new Error(`Unsupported platform for AWS SNS: ${platform}`);
-      }
+    // Get the AWS platform type for the message structure
+    const awsPlatform = CONDUIT_TO_AWS_PLATFORM[platform as PlatformTypesEnum];
+    if (!awsPlatform) {
+      throw new Error(`Unsupported platform for AWS SNS: ${platform}`);
+    }
 
-      // Message payload
-      const message = {
-        default: JSON.stringify({ title, body, data }),
-        [awsPlatform]: JSON.stringify(
-          awsPlatform === 'GCM'
-            ? {
-                notification: { title, body },
-                data: {
-                  ...data,
-                  silent: isSilent ? 'true' : 'false',
-                },
-              }
-            : {
-                aps: {
-                  alert: { title, body },
-                  ...(isSilent ? {} : { sound: 'default' }),
-                  'content-available': isSilent ? 1 : 0,
-                },
+    // Message payload
+    const message = {
+      default: JSON.stringify({ title, body, data }),
+      [awsPlatform]: JSON.stringify(
+        awsPlatform === 'GCM'
+          ? {
+              notification: { title, body },
+              data: {
                 ...data,
+                silent: isSilent ? 'true' : 'false',
               },
-        ),
-      };
-
+            }
+          : {
+              aps: {
+                alert: { title, body },
+                ...(isSilent ? {} : { sound: 'default' }),
+                'content-available': isSilent ? 1 : 0,
+              },
+              ...data,
+            },
+      ),
+    };
+    try {
       // Sending the message.
       const response = await this.sns
         .publish({

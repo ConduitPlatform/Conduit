@@ -61,6 +61,10 @@ export default class PushNotifications extends ManagedModule<Config> {
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
+  getProvider(): BaseNotificationProvider<unknown> | undefined {
+    return this._provider;
+  }
+
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
@@ -232,11 +236,19 @@ export default class PushNotifications extends ManagedModule<Config> {
         throw new Error('Provider failed to initialize');
       }
       if (this.grpcSdk.isAvailable('router')) {
-        this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
+        this.userRouter = new PushNotificationsRoutes(
+          this.grpcServer,
+          this.grpcSdk,
+          this,
+        );
       } else {
         this.grpcSdk.monitorModule('router', serving => {
           if (serving) {
-            this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
+            this.userRouter = new PushNotificationsRoutes(
+              this.grpcServer,
+              this.grpcSdk,
+              this,
+            );
             this.grpcSdk.unmonitorModule('router');
           }
         });

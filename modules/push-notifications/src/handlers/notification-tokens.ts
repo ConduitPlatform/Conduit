@@ -6,23 +6,44 @@ import {
 import { status } from '@grpc/grpc-js';
 import { Notification, NotificationToken } from '../models/index.js';
 import { isNil } from 'lodash-es';
+import { BaseNotificationProvider } from '../providers/base.provider.js';
+import { PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
+import PushNotifications from '../PushNotifications.js';
 
 export class NotificationTokensHandler {
+  private pushNotifications: PushNotifications;
+
+  constructor(pushNotifications: PushNotifications) {
+    this.pushNotifications = pushNotifications;
+  }
+
   async setNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
     const { token, platform } = call.request.params;
+
     await NotificationToken.getInstance().deleteMany({
       userId: context.user._id,
       platform,
     });
+
+    const provider = this.pushNotifications.getProvider();
+    if (!provider) {
+      throw new Error('No notification provider configured');
+    }
+
+    const registeredToken = await provider.registerDeviceToken(
+      token,
+      platform as PlatformTypesEnum,
+    );
+
     const newTokenDocument = await NotificationToken.getInstance().create({
       userId: context.user._id,
-      token,
+      token: registeredToken,
       platform,
     });
 
     return {
-      newTokenDocument,
+      registeredToken,
     };
   }
 
