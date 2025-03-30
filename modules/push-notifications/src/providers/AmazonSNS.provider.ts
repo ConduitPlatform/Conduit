@@ -47,101 +47,85 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
     }
   }
 
-  //Handles the registration of a device token to an endpoint ARN and stores the new token in the database
   async registerDeviceToken(token: string, platform: PlatformTypesEnum): Promise<string> {
-    if (!this._initialized) {
-      throw new Error('Amazon SNS Provider is not initialized.');
+    // Get the appropriate application ARN based on platform
+    const applicationArn =
+      platform === PlatformTypesEnum.ANDROID
+        ? this.settings.gcmApplicationArn
+        : this.settings.apnsApplicationArn;
+
+    if (!applicationArn) {
+      throw new Error(
+        `Only ANDROID (GCM) and IOS (APNS) platforms are supported: ${platform}`,
+      );
     }
 
+    let endpointResponse;
     try {
-      // Get the appropriate application ARN based on platform
-      const applicationArn =
-        platform === PlatformTypesEnum.ANDROID
-          ? this.settings.gcmApplicationArn
-          : this.settings.apnsApplicationArn;
-
-      if (!applicationArn) {
-        throw new Error(`Missing platform application ARN for platform: ${platform}`);
-      }
-
-      const endpointResponse = await this.sns
+      endpointResponse = await this.sns
         .createPlatformEndpoint({
           PlatformApplicationArn: applicationArn,
           Token: token,
         })
         .promise();
-
-      if (!endpointResponse.EndpointArn) {
-        throw new Error('Failed to create platform endpoint: No ARN returned');
-      }
-
-      // Update the existing token entry with the new ARN
-      await NotificationToken.getInstance().updateOne(
-        { token: token },
-        { token: endpointResponse.EndpointArn },
-      );
-
-      return endpointResponse.EndpointArn;
     } catch (error) {
-      ConduitGrpcSdk.Logger.error(`Failed to register device token: ${error}`);
+      ConduitGrpcSdk.Logger.error(
+        `Failed to register the device token at Amazon SNS: ${(error as Error).message}`,
+      );
       throw error;
     }
+
+    // Update the existing token entry with the new ARN
+    await NotificationToken.getInstance().updateOne(
+      { token: token },
+      { token: endpointResponse.EndpointArn as string },
+    );
+
+    return endpointResponse.EndpointArn as string;
   }
 
   async sendMessage(
     token: string,
     params: ISendNotification | ISendNotificationToManyDevices,
   ): Promise<void | string> {
-    if (!this._initialized) {
-      throw new Error('Amazon SNS Provider is not initialized.');
+    const { title, body, data, isSilent = false, platform } = params;
+
+    // Get the AWS platform type for the message structure
+    const awsPlatform = CONDUIT_TO_AWS_PLATFORM[platform as PlatformTypesEnum];
+    if (!awsPlatform) {
+      throw new Error(
+        `Unsupported platform for AWS SNS, use ANDROID or IOS: ${platform}`,
+      );
     }
 
-    try {
-      const { title, body, data, isSilent = false, platform } = params;
-
-      if (!title || !body) {
-        throw new Error('Title and body are required for notifications');
-      }
-
-      // Use registerDeviceToken function to get the endpoint ARN
-      const endpointArn = await this.registerDeviceToken(
-        token,
-        platform as PlatformTypesEnum,
-      );
-
-      // Get the AWS platform type for the message structure
-      const awsPlatform = CONDUIT_TO_AWS_PLATFORM[platform as PlatformTypesEnum];
-      if (!awsPlatform) {
-        throw new Error(`Unsupported platform for AWS SNS: ${platform}`);
-      }
-
-      // Message payload
-      const message = {
-        default: JSON.stringify({ title, body, data }),
-        [awsPlatform]: JSON.stringify(
-          awsPlatform === 'GCM'
-            ? {
-                notification: { title, body },
-                data: {
-                  ...data,
-                  silent: isSilent ? 'true' : 'false',
-                },
-              }
-            : {
-                aps: {
-                  alert: { title, body },
-                  ...(isSilent ? {} : { sound: 'default' }),
-                  'content-available': isSilent ? 1 : 0,
-                },
+    // Message payload
+    const message = {
+      default: JSON.stringify({ title, body, data }),
+      [awsPlatform]: JSON.stringify(
+        awsPlatform === 'GCM'
+          ? {
+              notification: { title, body },
+              data: {
                 ...data,
+                silent: isSilent ? 'true' : 'false',
               },
-        ),
-      };
+            }
+          : {
+              aps: {
+                alert: { title, body },
+                ...(isSilent ? {} : { sound: 'default' }),
+                'content-available': isSilent ? 1 : 0,
+              },
+              ...data,
+            },
+      ),
+    };
 
-      // Sending the message.
+    // Sending the message.
+    try {
       const response = await this.sns
         .publish({
-          TargetArn: endpointArn,
+          TargetArn: token, // Using the registered token directly
           Message: JSON.stringify(message),
           MessageStructure: 'json',
         })
