@@ -8,6 +8,8 @@ RUN yarn install --production --pure-lockfile --non-interactive && yarn cache cl
 
 WORKDIR /app/modules/chat
 
+ENV NODE_ENV production
+
 ENV CONDUIT_SERVER conduit_server
 
 ENV SERVICE_URL 0.0.0.0:5000
@@ -16,4 +18,4 @@ ENV GRPC_PORT 5000
 
 EXPOSE 5000
 
-CMD ["yarn", "start"]
+CMD ["node", "dist/index.js"]
