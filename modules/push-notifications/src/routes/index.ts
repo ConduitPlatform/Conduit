@@ -24,11 +24,16 @@ export class PushNotificationsRoutes {
   constructor(
     readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly provider: BaseNotificationProvider<unknown>,
+    private provider: BaseNotificationProvider<unknown>,
   ) {
     this.handlers = new NotificationTokensHandler(provider);
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.registeredRoutes();
+  }
+
+  updateProvider(provider: BaseNotificationProvider<unknown>) {
+    this.provider = provider;
+    this.handlers.updateProvider(provider);
   }
 
   async registeredRoutes() {
