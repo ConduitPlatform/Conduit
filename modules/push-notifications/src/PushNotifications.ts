@@ -226,36 +226,44 @@ export default class PushNotifications extends ManagedModule<Config> {
   }
 
   private async enableModule() {
-    await this.initProvider();
+    if (!this.isRunning) {
+      await this.initProvider();
+      if (!this._provider || !this._provider?.isInitialized) {
+        throw new Error('Provider failed to initialize');
+      }
+      if (this.grpcSdk.isAvailable('router')) {
+        this.userRouter = new PushNotificationsRoutes(
+          this.grpcServer,
+          this.grpcSdk,
+          this._provider,
+        );
+      } else {
+        this.grpcSdk.monitorModule('router', serving => {
+          if (serving) {
+            this.userRouter = new PushNotificationsRoutes(
+              this.grpcServer,
+              this.grpcSdk,
+              this._provider!,
+            );
+            this.grpcSdk.unmonitorModule('router');
+          }
+        });
+      }
 
-    if (!this._provider || !this._provider.isInitialized) {
-      throw new Error('Provider failed to initialize');
-    }
-
-    if (!this.adminRouter) {
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this._provider);
-    } else {
-      this.adminRouter.updateProvider(this._provider);
-    }
-    if (this.grpcSdk.isAvailable('router')) {
-      this.userRouter = new PushNotificationsRoutes(
+      this.adminRouter = new AdminHandlers(
         this.grpcServer,
         this.grpcSdk,
-        this._provider,
+        this._provider!,
       );
+      this.isRunning = true;
     } else {
-      this.grpcSdk.monitorModule('router', serving => {
-        if (serving) {
-          this.userRouter = new PushNotificationsRoutes(
-            this.grpcServer,
-            this.grpcSdk,
-            this._provider!,
-          );
-          this.grpcSdk.unmonitorModule('router');
-        }
-      });
+      await this.initProvider();
+      if (!this._provider || !this._provider?.isInitialized) {
+        throw new Error('Provider failed to initialize');
+      }
+      this.adminRouter.updateProvider(this._provider!);
+      this.userRouter.updateProvider(this._provider!);
     }
-    this.isRunning = true;
   }
 
   private async initProvider() {
