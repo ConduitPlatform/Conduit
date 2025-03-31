@@ -20,19 +20,20 @@ import { BaseNotificationProvider } from '../providers/base.provider.js';
 export class PushNotificationsRoutes {
   private readonly handlers: NotificationTokensHandler;
   private _routingManager: RoutingManager;
+  private readonly provider: BaseNotificationProvider<unknown>;
 
   constructor(
     readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private provider: BaseNotificationProvider<unknown>,
+    provider: BaseNotificationProvider<unknown>,
   ) {
-    this.handlers = new NotificationTokensHandler(provider);
+    this.provider = provider;
+    this.handlers = new NotificationTokensHandler(this.provider);
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.registeredRoutes();
   }
 
   updateProvider(provider: BaseNotificationProvider<unknown>) {
-    this.provider = provider;
     this.handlers.updateProvider(provider);
   }
 

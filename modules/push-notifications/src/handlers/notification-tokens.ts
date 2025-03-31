@@ -40,7 +40,7 @@ export class NotificationTokensHandler {
     });
 
     return {
-      registeredToken,
+      newTokenDocument,
     };
   }
 
