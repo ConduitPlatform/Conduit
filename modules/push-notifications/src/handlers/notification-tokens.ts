@@ -10,7 +10,14 @@ import { PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
 import { BaseNotificationProvider } from '../providers/base.provider.js';
 
 export class NotificationTokensHandler {
-  constructor(private readonly provider: BaseNotificationProvider<unknown>) {}
+  private provider: BaseNotificationProvider<unknown>;
+
+  constructor(provider: BaseNotificationProvider<unknown>) {
+    this.provider = provider;
+  }
+  updateProvider(provider: BaseNotificationProvider<unknown>) {
+    this.provider = provider;
+  }
 
   async setNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
