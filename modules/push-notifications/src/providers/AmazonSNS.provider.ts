@@ -1,4 +1,8 @@
-import AWS from 'aws-sdk';
+import {
+  SNSClient,
+  CreatePlatformEndpointCommand,
+  PublishCommand,
+} from '@aws-sdk/client-sns';
 import { BaseNotificationProvider } from './base.provider.js';
 import { ConduitGrpcSdk, PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
 import {
@@ -15,7 +19,7 @@ const CONDUIT_TO_AWS_PLATFORM: Partial<Record<PlatformTypesEnum, 'GCM' | 'APNS'>
 };
 
 export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettings> {
-  private sns: AWS.SNS;
+  private snsClient: SNSClient;
   private settings: IAmazonSNSSettings;
 
   constructor(settings: IAmazonSNSSettings) {
@@ -29,7 +33,7 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
     try {
       this.settings = settings;
 
-      this.sns = new AWS.SNS({
+      this.snsClient = new SNSClient({
         credentials: {
           accessKeyId: settings.accessKeyId,
           secretAccessKey: settings.secretAccessKey,
@@ -62,12 +66,12 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
 
     let endpointResponse;
     try {
-      endpointResponse = await this.sns
-        .createPlatformEndpoint({
-          PlatformApplicationArn: applicationArn,
-          Token: token,
-        })
-        .promise();
+      const command = new CreatePlatformEndpointCommand({
+        PlatformApplicationArn: applicationArn,
+        Token: token,
+      });
+
+      endpointResponse = await this.snsClient.send(command);
     } catch (error) {
       ConduitGrpcSdk.Logger.error(
         `Failed to register the device token at Amazon SNS: ${(error as Error).message}`,
@@ -101,20 +105,31 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
     // Message payload
     const message = {
       default: JSON.stringify({ title, body, data }),
-      [awsPlatform]: JSON.stringify(
-        awsPlatform === 'GCM'
+      GCM: JSON.stringify(
+        isSilent
           ? {
-              notification: { title, body },
               data: {
                 ...data,
-                silent: isSilent ? 'true' : 'false',
               },
+            }
+          : {
+              notification: { title, body },
+              data: { ...data },
+            },
+      ),
+      APNS: JSON.stringify(
+        isSilent
+          ? {
+              aps: {
+                'content-available': 1,
+              },
+              ...data,
             }
           : {
               aps: {
                 alert: { title, body },
-                ...(isSilent ? {} : { sound: 'default' }),
-                'content-available': isSilent ? 1 : 0,
+                sound: 'default',
+                'content-available': 0,
               },
               ...data,
             },
@@ -123,13 +138,13 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
 
     // Sending the message.
     try {
-      const response = await this.sns
-        .publish({
-          TargetArn: token, // Using the registered token directly
-          Message: JSON.stringify(message),
-          MessageStructure: 'json',
-        })
-        .promise();
+      const command = new PublishCommand({
+        TargetArn: token, // Using the registered token directly
+        Message: JSON.stringify(message),
+        MessageStructure: 'json',
+      });
+
+      const response = await this.snsClient.send(command);
 
       if (!response.MessageId) {
         throw new Error('Failed to send notification: No message ID returned');
