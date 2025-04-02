@@ -31,7 +31,7 @@ export class BaseNotificationProvider<T> {
     const { sendTo } = params;
     if (isNil(sendTo)) return;
     validateNotification(params);
-    if (!params.doNotStore) {
+    if (!params.doNotStore || !params.isSilent) {
       await Notification.getInstance().create({
         user: params.sendTo,
         title: params.title,
