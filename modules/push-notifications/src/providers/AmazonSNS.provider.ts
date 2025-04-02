@@ -103,27 +103,38 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
     }
 
     // Message payload
-    const message = {
+    const message: Record<string, string> = {
       default: JSON.stringify({ title, body, data }),
-      [awsPlatform]: JSON.stringify(
-        awsPlatform === 'GCM'
+    };
+
+    if (awsPlatform === 'GCM') {
+      message[awsPlatform] = JSON.stringify(
+        isSilent
           ? {
+              data: { ...data },
+            }
+          : {
               notification: { title, body },
-              data: {
-                ...data,
-                silent: isSilent ? 'true' : 'false',
-              },
+              data: { ...data },
+            },
+      );
+    } else if (awsPlatform === 'APNS') {
+      message[awsPlatform] = JSON.stringify(
+        isSilent
+          ? {
+              aps: { 'content-available': 1 },
+              ...data,
             }
           : {
               aps: {
                 alert: { title, body },
-                ...(isSilent ? {} : { sound: 'default' }),
-                'content-available': isSilent ? 1 : 0,
+                sound: 'default',
+                'content-available': 0,
               },
               ...data,
             },
-      ),
-    };
+      );
+    }
 
     // Sending the message.
     try {
