@@ -29,6 +29,7 @@ import {
   SetNotificationTokenResponse,
 } from './protoTypes/push-notifications.js';
 import { fileURLToPath } from 'node:url';
+import { AmazonSNSProvider } from './providers/AmazonSNS.provider.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -231,11 +232,19 @@ export default class PushNotifications extends ManagedModule<Config> {
         throw new Error('Provider failed to initialize');
       }
       if (this.grpcSdk.isAvailable('router')) {
-        this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
+        this.userRouter = new PushNotificationsRoutes(
+          this.grpcServer,
+          this.grpcSdk,
+          this._provider,
+        );
       } else {
         this.grpcSdk.monitorModule('router', serving => {
           if (serving) {
-            this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
+            this.userRouter = new PushNotificationsRoutes(
+              this.grpcServer,
+              this.grpcSdk,
+              this._provider!,
+            );
             this.grpcSdk.unmonitorModule('router');
           }
         });
@@ -253,6 +262,7 @@ export default class PushNotifications extends ManagedModule<Config> {
         throw new Error('Provider failed to initialize');
       }
       this.adminRouter.updateProvider(this._provider!);
+      this.userRouter.updateProvider(this._provider!);
     }
   }
 
@@ -266,6 +276,8 @@ export default class PushNotifications extends ManagedModule<Config> {
       this._provider = new OneSignalProvider(settings);
     } else if (name === 'basic') {
       this._provider = new BaseNotificationProvider();
+    } else if (name === 'sns') {
+      this._provider = new AmazonSNSProvider(settings);
     } else {
       throw new Error('Provider not supported');
     }

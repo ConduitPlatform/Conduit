@@ -31,4 +31,26 @@ export default {
       default: '',
     },
   },
+  sns: {
+    accessKeyId: {
+      format: 'String',
+      default: '',
+    },
+    secretAccessKey: {
+      format: 'String',
+      default: '',
+    },
+    region: {
+      format: 'String',
+      default: '',
+    },
+    gcmApplicationArn: {
+      format: 'String',
+      default: '',
+    },
+    apnsApplicationArn: {
+      format: 'String',
+      default: '',
+    },
+  },
 };
