@@ -42,6 +42,10 @@ Once logged-in, you may check out your APIs' generated route documentation throu
 
 <p align="center"><a href="https://getconduit.dev/docs/cli">Find out more regarding Conduit's CLI</a></p>
 
+### Deployment Methods
+- Docker [Instructions](deploy/docker)
+- Kubernetes [Instructions](deploy/k8s)
+
 # Documentation 📖
 
 If you're only just starting out with Conduit, make sure you familiarize yourself with the project by checking out [our docs](https://getconduit.dev/docs/overview/intro).

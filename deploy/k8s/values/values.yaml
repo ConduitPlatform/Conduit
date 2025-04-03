@@ -1,0 +1,59 @@
+install:
+  sms:
+    enabled: false
+  forms:
+    enabled: false
+  authorization:
+    enabled: true
+  chat:
+    enabled: false
+  notification:
+    enabled: true
+  email:
+    enabled: true
+  storage:
+    enabled: false
+module-settings:
+  # -- Resource limits and requests
+  resources:
+    requests:
+      memory: "150Mi"
+      cpu: "0"
+    limits:
+      memory: "500Mi"
+      cpu: "1000m"
+# -- Admin Panel module
+admin:
+  # -- Enable an ingress resource for the Admin Panel
+  ingress:
+    enabled: true
+    # -- Hostnames must be provided if Ingress is enabled.
+    hostName: "admin.conduit"
+
+# -- Core module
+core:
+  # -- Enable an ingress resource for the Core
+  ingress:
+    enabled: true
+    # -- Hostnames must be provided if Ingress is enabled.
+    hostName: "admin-api.conduit"
+
+# -- Router module
+router:
+  # -- Enable an ingress resource for the Router
+  ingress:
+    enabled: true
+
+    # -- Hostnames must be provided if Ingress is enabled.
+    hostName: "router.conduit"
+
+prometheus:
+  setup: true
+  alertmanager:
+    enabled: false
+  kube-state-metrics:
+    enabled: true
+  prometheus-node-exporter:
+    enabled: true
+  prometheus-pushgateway:
+    enabled: false
