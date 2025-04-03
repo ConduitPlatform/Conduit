@@ -15,10 +15,11 @@ while the other uses the latest stable images.
 6. Once the pods are healthy add to your hostsfile:
     ```
     # change to your defined hostnames if not using the default
+    # the IP assumes you're using minikube tunnel, if not add the IP minikube is running on
     127.0.0.1 admin-api.conduit
     127.0.0.1 router.conduit
     127.0.0.1 admin.conduit
     ```
-7. `minikube tunnel` (might request root access)
+7. `minikube tunnel` (might request root access) (this step is optional if minikube already has a host ip)
 8. You can now access the [admin panel](http://admin.conduit) and the [router](http://router.conduit) in your browser.
 
