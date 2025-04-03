@@ -46,7 +46,10 @@ export class BaseNotificationProvider<T> {
       throw new Error('No notification token found');
     }
     const promises = notificationTokens.map(async notToken => {
-      await this.sendMessage(notToken.token, params);
+      await this.sendMessage(notToken.token, {
+        ...params,
+        platform: params.platform ?? notToken.platform,
+      });
     });
     return Promise.all(promises);
   }
@@ -98,7 +101,10 @@ export class BaseNotificationProvider<T> {
       const id = token.userId.toString();
       const data = notificationsObj[id];
       if (data.platform && data.platform !== token.platform) return;
-      await this.sendMessage(token.token, data).catch(e => {
+      await this.sendMessage(token.token, {
+        ...data,
+        platform: data.platform ?? token.platform,
+      }).catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
     });
@@ -128,7 +134,10 @@ export class BaseNotificationProvider<T> {
 
     if (notificationTokens.length === 0) throw new Error('Could not find tokens');
     const promises = notificationTokens.map(async notToken => {
-      await this.sendMessage(notToken.token, params);
+      await this.sendMessage(notToken.token, {
+        ...params,
+        platform: params.platform ?? notToken.platform,
+      });
     });
     return Promise.all(promises);
   }
