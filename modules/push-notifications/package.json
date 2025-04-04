@@ -38,7 +38,7 @@
     "@onesignal/node-onesignal": "^1.0.0-beta9",
     "@aws-sdk/client-sns": "^3.627.1",
     "convict": "^6.2.4",
-    "firebase-admin": "^12.4.0",
+    "firebase-admin": "^13.2.0",
     "lodash-es": "^4.17.21"
   },
   "devDependencies": {
