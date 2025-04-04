@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.13](https://github.com/ConduitPlatform/Conduit/compare/v0.16.12...v0.16.13) (2025-04-04)
+
+
+### Features
+
+* **authentication:** make resend verification threshold configurable ([#1265](https://github.com/ConduitPlatform/Conduit/issues/1265)) ([cc982f0](https://github.com/ConduitPlatform/Conduit/commit/cc982f02be61d4da5c137b394af85cf61d5806d7))
+* **authentication:** return email in getInvitationTokenUserData ([#1261](https://github.com/ConduitPlatform/Conduit/issues/1261)) ([483c8a3](https://github.com/ConduitPlatform/Conduit/commit/483c8a3783d082f2d3d72b2dc6cb5abf639e6ace))
+* **push-notifications:** integrate Amazon SNS provider ([#1304](https://github.com/ConduitPlatform/Conduit/issues/1304)) ([5e68ce8](https://github.com/ConduitPlatform/Conduit/commit/5e68ce88c30125e5a8b65dc6bce45f8f88013678))
+
+
+### Bug Fixes
+
+* **authentication:** verify email with code wrongfully tries to redirect ([#1284](https://github.com/ConduitPlatform/Conduit/issues/1284)) ([47d8aab](https://github.com/ConduitPlatform/Conduit/commit/47d8aabb72ed6359eb369ccaf81dfbfd620eebf6))
+* **database:** create index type ([#1280](https://github.com/ConduitPlatform/Conduit/issues/1280)) ([d136ecb](https://github.com/ConduitPlatform/Conduit/commit/d136ecbd45d03a83ff272943f83604ccbb837660))
+* **functions:** pagination/execution relation/invalid params ([#1264](https://github.com/ConduitPlatform/Conduit/issues/1264)) ([1294bb5](https://github.com/ConduitPlatform/Conduit/commit/1294bb521543228c4c1cf15734acf9bab1aec02f))
+* **hermes:** missed uuid types ([d92cc9b](https://github.com/ConduitPlatform/Conduit/commit/d92cc9bd348c54e09cd04f0d801a90eef6b8bdc0))
+* **hermes:** swagger ID type causing issues with testing ([#1289](https://github.com/ConduitPlatform/Conduit/issues/1289)) ([31e496d](https://github.com/ConduitPlatform/Conduit/commit/31e496d27d95e753fda1436ff388a4963eb8594b))
+* include missing NODE_ENV ([#1310](https://github.com/ConduitPlatform/Conduit/issues/1310)) ([86aebaa](https://github.com/ConduitPlatform/Conduit/commit/86aebaaf0f4829dc8842f1f8005bc070c04b7f63))
+* **router:** google recaptcha verification url is incorrect ([#1263](https://github.com/ConduitPlatform/Conduit/issues/1263)) ([2ea88ef](https://github.com/ConduitPlatform/Conduit/commit/2ea88ef000b7d9fb8c959d516e7c67a9f87b2428))
+
 ### [0.16.12](https://github.com/ConduitPlatform/Conduit/compare/v0.16.11...v0.16.12) (2024-12-10)
 
 
