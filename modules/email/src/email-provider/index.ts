@@ -12,6 +12,8 @@ import { SendgridProvider } from './transports/sendgrid/SendgridProvider.js';
 import { SmtpProvider } from './transports/smtp/SmtpProvider.js';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { Indexable } from '@conduitplatform/grpc-sdk';
+import { MailersendConfig } from './transports/mailersend/mailersend.config.js';
+import { MailersendProvider } from './transports/mailersend/MailersendProvider.js';
 
 export class EmailProvider {
   _transport?: EmailProviderClass;
@@ -81,6 +83,28 @@ export class EmailProvider {
         residency,
       };
       this._transport = new SendgridProvider(sgSettings);
+    } else if (transport === 'mailersend') {
+      this._transportName = 'mailersend';
+      const { host, port, username, password, apiKey } = transportSettings.mailersend;
+      if (
+        isEmpty(host) ||
+        isEmpty(port) ||
+        isEmpty(username) ||
+        isEmpty(password) ||
+        isEmpty(apiKey)
+      ) {
+        throw new Error('Mailersend transport settings are missing');
+      }
+      const mailersendSettings: MailersendConfig = {
+        host,
+        port,
+        auth: {
+          user: username,
+          pass: password,
+          apiKey,
+        },
+      };
+      this._transport = new MailersendProvider(mailersendSettings);
     } else {
       this._transportName = undefined;
       this._transport = undefined;
