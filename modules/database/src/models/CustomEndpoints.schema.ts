@@ -18,6 +18,10 @@ export const CustomEndpoints = new ConduitSchema(
       model: '_DeclaredSchema',
       required: false,
     },
+    endpointDescription: {
+      type: TYPE.String,
+      required: false,
+    },
     selectedSchemaName: {
       type: TYPE.String,
       required: true,

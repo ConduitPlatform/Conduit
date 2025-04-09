@@ -73,6 +73,7 @@ export function createCustomEndpointRoute(
     endpoint.selectedSchema.modelOptions.conduit!.authorization?.enabled || false;
   const route = new RouteBuilder()
     .path(`/function/${endpoint.name}`)
+    .description(endpoint.endpointDescription ?? ' No description provided')
     .method(getOperation(endpoint.operation))
     .handler(handler);
   if (authorizationEnabled || endpoint.authentication) {
