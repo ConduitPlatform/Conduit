@@ -95,6 +95,7 @@ export function getOps(
         skip: TYPE.Number,
         limit: TYPE.Number,
         sort: [TYPE.String],
+        populate: [TYPE.String],
         // scope is used when authorization is enabled, to determine how an authenticated user can access the data
         ...(authorizationEnabled ? { scope: TYPE.String } : {}),
       })
@@ -110,6 +111,7 @@ export function getOps(
       .path(`/${schemaName}/:id`)
       .method(ConduitRouteActions.GET)
       .queryParams({
+        populate: [TYPE.String],
         // scope is used when authorization is enabled, to determine how an authenticated user can access the data
         ...(authorizationEnabled ? { scope: TYPE.String } : {}),
       })
