@@ -23,6 +23,7 @@ import {
   ResendEmailResponse,
   SendEmailRequest,
   SendEmailResponse,
+  UpdateTemplateRequest,
 } from './protoTypes/email.js';
 import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
@@ -40,6 +41,7 @@ export default class Email extends ManagedModule<Config> {
     protoDescription: 'email.Email',
     functions: {
       registerTemplate: this.registerTemplate.bind(this),
+      updateTemplate: this.updateTemplate.bind(this),
       sendEmail: this.sendEmail.bind(this),
       resendEmail: this.resendEmail.bind(this),
       getEmailStatus: this.getEmailStatus.bind(this),
@@ -129,6 +131,26 @@ export default class Email extends ManagedModule<Config> {
     let errorMessage: string | null = null;
     const template = await this.emailService
       .registerTemplate(params)
+      .catch(e => (errorMessage = e.message));
+    if (!isNil(errorMessage))
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    return callback(null, { template: JSON.stringify(template) });
+  }
+
+  async updateTemplate(
+    call: GrpcRequest<UpdateTemplateRequest>,
+    callback: GrpcCallback<RegisterTemplateResponse>,
+  ) {
+    const params = {
+      name: call.request.name,
+      subject: call.request.subject,
+      body: call.request.body,
+      variables: call.request.variables as undefined | string[],
+      sender: call.request.sender,
+    };
+    let errorMessage: string | null = null;
+    const { template } = await this.emailService
+      .updateTemplate(call.request.id, params)
       .catch(e => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
