@@ -85,6 +85,13 @@ export function createCustomEndpointRoute(
       endpoint.authentication ? 'private, max-age=10' : 'public, max-age=10',
     );
   }
+  inputs.push({
+    name: 'populate',
+    type: TYPE.String,
+    location: LocationEnum.QUERY,
+    optional: true,
+    array: true,
+  });
   if (authorizationEnabled) {
     inputs.push({
       name: 'scope',
