@@ -51,6 +51,12 @@ export default {
       format: 'String',
       default: '',
     },
+    usePathStyle: {
+      description:
+        'Use path style addressing for S3 buckets (only for non-AWS S3 compatible providers)',
+      format: 'Boolean',
+      default: true,
+    },
   },
   aliyun: {
     region: {
