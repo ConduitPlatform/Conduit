@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.14](https://github.com/ConduitPlatform/Conduit/compare/v0.16.13...v0.16.14) (2025-04-10)
+
+
+### Features
+
+* **database:** add visibility metadata for populate param ([#1315](https://github.com/ConduitPlatform/Conduit/issues/1315)) ([ec60d75](https://github.com/ConduitPlatform/Conduit/commit/ec60d75f60e9f27589d3c3fda4477b5cdd5b0754))
+* **database:** support description in custom endpoints ([#1318](https://github.com/ConduitPlatform/Conduit/issues/1318)) ([b23a563](https://github.com/ConduitPlatform/Conduit/commit/b23a5632182924cca87a0b82bb15fe732c14b7a3))
+* **email:** updateTemplate grpc ([#1320](https://github.com/ConduitPlatform/Conduit/issues/1320)) ([4c563d4](https://github.com/ConduitPlatform/Conduit/commit/4c563d4ac8413698b1e7e2685292ac556216ef9e))
+* **module-tools:** introduce status mapping in logs to provide more information ([#1317](https://github.com/ConduitPlatform/Conduit/issues/1317)) ([8154e15](https://github.com/ConduitPlatform/Conduit/commit/8154e15d472ae1eb7d8cc5bc9d3892cbb0ce7b9d))
+
+
+### Bug Fixes
+
+* **storage:** integration with non-aws providers issues ([#1316](https://github.com/ConduitPlatform/Conduit/issues/1316)) ([5a03665](https://github.com/ConduitPlatform/Conduit/commit/5a036658823cce18d686a2128be78d1e690e41b6))
+
 ### [0.16.13](https://github.com/ConduitPlatform/Conduit/compare/v0.16.12...v0.16.13) (2025-04-04)
 
 
