@@ -24,6 +24,10 @@ export async function streamToBuffer(readableStream: any): Promise<Buffer> {
 }
 
 export async function getAwsAccountId(config: StorageConfig) {
+  // when using non AWS S3 storage provider
+  if (config.aws.endpoint) {
+    return randomUUID();
+  }
   const iamClient = new IAMClient({
     region: config.aws.region,
     credentials: {

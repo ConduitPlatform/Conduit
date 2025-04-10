@@ -94,6 +94,9 @@ export default class Storage extends ManagedModule<Config> {
       if (isNil(config.aws.accountId)) {
         config.aws.accountId = await getAwsAccountId(config);
       }
+      if (isNil(config.aws.usePathStyle)) {
+        config.aws.usePathStyle = false;
+      }
     }
     return config;
   }

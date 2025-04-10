@@ -12,6 +12,8 @@ RUN yarn install --production --pure-lockfile --non-interactive && yarn cache cl
 
 WORKDIR /app/packages/core
 
+ENV NODE_ENV production
+
 # gRPC port
 EXPOSE 55152
 # HTTP port
@@ -19,4 +21,4 @@ EXPOSE 3030
 # Socket port
 EXPOSE 3031
 
-CMD ["yarn", "start"]
+CMD ["node", "dist/bin/www.js"]

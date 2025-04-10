@@ -18,6 +18,7 @@ import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry.js';
+import { Config } from '../../config/index.js';
 
 type AwsError = { $metadata: { httpStatusCode: number } };
 type GetResult = Buffer | Error;
@@ -35,9 +36,9 @@ export class AWSS3Storage implements IStorageProvider {
         secretAccessKey: options.aws.secretAccessKey,
       },
     };
-
     if (options.aws.endpoint !== '') {
       config.endpoint = options.aws.endpoint;
+      config.forcePathStyle = options.aws.usePathStyle ?? true;
     }
 
     this._storage = new S3Client(config);
@@ -212,6 +213,28 @@ export class AWSS3Storage implements IStorageProvider {
   }
 
   async getPublicUrl(fileName: string) {
+    const config: Config['aws'] = ConfigController.getInstance().config.aws;
+    if (config.endpoint !== '') {
+      // check if endpoint contains http/https or not
+      const requiresPrefix = !config.endpoint.startsWith('http');
+      if (config.usePathStyle) {
+        return `${requiresPrefix ? 'https://' : ''}${config.endpoint}/${
+          this._activeContainer
+        }/${fileName}`;
+      } else if (requiresPrefix) {
+        return `https://${this._activeContainer}.${config.endpoint}/${fileName}`;
+      } else if (config.endpoint.startsWith('http://')) {
+        const endpoint = config.endpoint.replace('http://', '');
+        return `http://${this._activeContainer}.${endpoint}/${fileName}`;
+      } else {
+        const endpoint = config.endpoint.replace('https://', '');
+        return `https://${this._activeContainer}.${endpoint}/${fileName}`;
+      }
+    }
+    if (config.region) {
+      return `https://${this._activeContainer}.s3.${config.region}.amazonaws.com/${fileName}`;
+    }
+
     return `https://${this._activeContainer}.s3.amazonaws.com/${fileName}`;
   }
 

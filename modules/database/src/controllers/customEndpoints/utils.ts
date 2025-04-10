@@ -73,6 +73,7 @@ export function createCustomEndpointRoute(
     endpoint.selectedSchema.modelOptions.conduit!.authorization?.enabled || false;
   const route = new RouteBuilder()
     .path(`/function/${endpoint.name}`)
+    .description(endpoint.endpointDescription ?? ' No description provided')
     .method(getOperation(endpoint.operation))
     .handler(handler);
   if (authorizationEnabled || endpoint.authentication) {
@@ -85,6 +86,13 @@ export function createCustomEndpointRoute(
       endpoint.authentication ? 'private, max-age=10' : 'public, max-age=10',
     );
   }
+  inputs.push({
+    name: 'populate',
+    type: TYPE.String,
+    location: LocationEnum.QUERY,
+    optional: true,
+    array: true,
+  });
   if (authorizationEnabled) {
     inputs.push({
       name: 'scope',

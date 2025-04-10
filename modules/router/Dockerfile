@@ -13,6 +13,8 @@ RUN apk update && \
 
 WORKDIR /app/modules/router
 
+ENV NODE_ENV production
+
 ENV CONDUIT_SERVER conduit_server
 
 ENV SERVICE_URL 0.0.0.0:5000
@@ -23,4 +25,4 @@ EXPOSE 5000
 EXPOSE 3000
 EXPOSE 3001
 
-CMD ["yarn", "start"]
+CMD ["node", "dist/index.js"]

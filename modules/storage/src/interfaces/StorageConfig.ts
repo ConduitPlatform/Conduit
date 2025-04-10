@@ -12,6 +12,7 @@ export interface StorageConfig {
     region: string;
     accountId: string;
     endpoint: string;
+    usePathStyle?: boolean;
   };
   azure: {
     connectionString: string;

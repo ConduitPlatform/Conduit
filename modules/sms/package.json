@@ -25,7 +25,7 @@
   ],
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-sns": "^3.627.1",
+    "@aws-sdk/client-sns": "^3.782.0",
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.10.9",

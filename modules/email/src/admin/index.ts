@@ -124,55 +124,10 @@ export class AdminHandlers {
   }
 
   async patchTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const templateDocument = await EmailTemplate.getInstance().findOne({
-      _id: call.request.params.id,
-    });
-    if (isNil(templateDocument)) {
-      throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
-    }
-
-    ['name', 'subject', 'body', 'sender'].forEach(key => {
-      if (call.request.params[key]) {
-        // @ts-ignore
-        templateDocument[key] = call.request.params[key];
-      }
-    });
-
-    templateDocument.variables = Object.keys(
-      getHandleBarsValues(call.request.params.body),
-    ).concat(Object.keys(getHandleBarsValues(call.request.params.subject)));
-    if (templateDocument.variables) {
-      templateDocument.variables = templateDocument.variables.filter(
-        (value, index) => templateDocument.variables!.indexOf(value) === index,
-      );
-    }
-
-    const updatedTemplate = await EmailTemplate.getInstance()
-      .findByIdAndUpdate(call.request.params.id, templateDocument)
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-
-    if (templateDocument.externalManaged) {
-      const template = await this.emailService.getExternalTemplate(
-        updatedTemplate!.externalId!,
-      );
-      let versionId = undefined;
-      if (!isNil(template?.versions[0].id)) {
-        versionId = template?.versions[0].id;
-      }
-      const data = {
-        id: updatedTemplate!.externalId!,
-        subject: updatedTemplate!.subject,
-        body: updatedTemplate!.body,
-        versionId: versionId,
-      };
-      await this.emailService.updateTemplate(data)?.catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    }
-
-    return { updatedTemplate };
+    return await this.emailService.updateTemplate(
+      call.request.urlParams.id,
+      call.request.bodyParams,
+    );
   }
 
   async deleteTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -485,10 +440,11 @@ export class AdminHandlers {
           name: ConduitString.Optional,
           subject: ConduitString.Optional,
           body: ConduitString.Optional,
+          sender: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('PatchTemplate', {
-        template: EmailTemplate.getInstance().fields, // @type-inconsistency
+        template: EmailTemplate.name,
       }),
       this.patchTemplate.bind(this),
     );

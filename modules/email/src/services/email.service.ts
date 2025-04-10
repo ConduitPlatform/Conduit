@@ -1,6 +1,10 @@
 import { isEmpty, isNil } from 'lodash-es';
 import { EmailTemplate, EmailRecord } from '../models/index.js';
-import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces/index.js';
+import {
+  IRegisterTemplateParams,
+  ISendEmailParams,
+  IUpdateTemplateParams,
+} from '../interfaces/index.js';
 import handlebars from 'handlebars';
 import { EmailProvider } from '../email-provider/index.js';
 import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTemplate.js';
@@ -12,6 +16,7 @@ import { ConfigController } from '@conduitplatform/module-tools';
 import { Config } from '../config/index.js';
 import { status } from '@grpc/grpc-js';
 import { storeEmail } from '../utils/index.js';
+import { getHandleBarsValues } from '../email-provider/utils/index.js';
 
 export class EmailService {
   constructor(
@@ -38,10 +43,6 @@ export class EmailService {
     );
   }
 
-  updateTemplate(data: UpdateEmailTemplate) {
-    return this.emailer._transport?.updateTemplate(data);
-  }
-
   deleteExternalTemplate(id: string) {
     return this.emailer._transport?.deleteTemplate(id);
   }
@@ -59,6 +60,56 @@ export class EmailService {
       sender,
       variables,
     });
+  }
+
+  async updateTemplate(id: string, params: IUpdateTemplateParams) {
+    const templateDocument = await EmailTemplate.getInstance().findOne({
+      _id: id,
+    });
+    if (isNil(templateDocument)) {
+      throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
+    }
+
+    ['name', 'subject', 'body', 'sender'].forEach(key => {
+      if (params[key as keyof IUpdateTemplateParams]) {
+        // @ts-ignore
+        templateDocument[key] = params[key];
+      }
+    });
+
+    templateDocument.variables = Object.keys(getHandleBarsValues(params.body)).concat(
+      Object.keys(getHandleBarsValues(params.subject)),
+    );
+    if (templateDocument.variables) {
+      templateDocument.variables = templateDocument.variables.filter(
+        (value, index) => templateDocument.variables!.indexOf(value) === index,
+      );
+    }
+
+    const updatedTemplate = await EmailTemplate.getInstance()
+      .findByIdAndUpdate(id, templateDocument)
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+
+    if (templateDocument.externalManaged) {
+      const template = await this.getExternalTemplate(updatedTemplate!.externalId!);
+      let versionId = undefined;
+      if (!isNil(template?.versions[0].id)) {
+        versionId = template?.versions[0].id;
+      }
+      const data = {
+        id: updatedTemplate!.externalId!,
+        subject: updatedTemplate!.subject,
+        body: updatedTemplate!.body,
+        versionId: versionId,
+      };
+      await this.emailer._transport?.updateTemplate(data).catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    }
+
+    return { template: updatedTemplate };
   }
 
   async sendEmail(

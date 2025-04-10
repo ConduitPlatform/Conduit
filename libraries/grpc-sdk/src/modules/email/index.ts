@@ -29,6 +29,28 @@ export class Email extends ConduitModule<typeof EmailDefinition> {
     });
   }
 
+  updateTemplate(
+    templateId: string,
+    params: {
+      name?: string;
+      subject?: string;
+      body?: string;
+      variables?: string[];
+      sender?: string;
+    },
+  ) {
+    return this.client!.updateTemplate({
+      id: templateId,
+      name: params.name,
+      subject: params.subject,
+      body: params.body,
+      variables: params.variables,
+      sender: params.sender,
+    }).then(res => {
+      return JSON.parse(res.template);
+    });
+  }
+
   sendEmail(
     templateName: string,
     params: {

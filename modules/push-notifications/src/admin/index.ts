@@ -75,6 +75,7 @@ export class AdminHandlers {
       isSilent: call.request.params.isSilent,
       data: call.request.params.data,
       doNotStore: call.request.params.doNotStore,
+      platform: call.request.params.platform,
     };
     await this.provider.sendToManyDevices(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);

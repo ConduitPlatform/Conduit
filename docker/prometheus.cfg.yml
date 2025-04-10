@@ -30,6 +30,9 @@ scrape_configs:
           module: 'Authentication'
         targets: ['conduit-authentication:9094']
       - labels:
+          module: 'Authorization'
+        targets: ['conduit-authorization:9191']
+      - labels:
           module: 'Chat'
         targets: ['conduit-chat:9095']
       - labels:

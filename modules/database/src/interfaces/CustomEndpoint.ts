@@ -5,6 +5,7 @@ export interface ICustomEndpoint {
   name: string;
   enabled?: boolean;
   operation: number;
+  endpointDescription?: string;
   selectedSchema: string;
   selectedSchemaName: string;
   inputs: {
