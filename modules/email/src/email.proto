@@ -9,16 +9,12 @@ message RegisterTemplateRequest {
   optional string sender = 5;
 }
 
-message TemplateVariables {
-  repeated string variables = 1;
-}
-
 message UpdateTemplateRequest {
   string id = 1;
   optional string name = 2;
   optional string subject = 3;
   optional string body = 4;
-  optional TemplateVariables variables = 5;
+  repeated string variables = 5;
   optional string sender = 6;
 }
 

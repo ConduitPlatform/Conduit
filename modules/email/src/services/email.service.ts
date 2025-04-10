@@ -43,10 +43,6 @@ export class EmailService {
     );
   }
 
-  // updateTemplate(data: UpdateEmailTemplate) {
-  //   return this.emailer._transport?.updateTemplate(data);
-  // }
-
   deleteExternalTemplate(id: string) {
     return this.emailer._transport?.deleteTemplate(id);
   }

@@ -145,7 +145,7 @@ export default class Email extends ManagedModule<Config> {
       name: call.request.name,
       subject: call.request.subject,
       body: call.request.body,
-      variables: call.request.variables as undefined | string[],
+      variables: call.request.variables,
       sender: call.request.sender,
     };
     let errorMessage: string | null = null;
