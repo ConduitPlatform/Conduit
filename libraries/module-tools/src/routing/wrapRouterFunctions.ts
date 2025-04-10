@@ -29,6 +29,42 @@ export type RequestHandlers =
   | SocketRequestHandler
   | SocketRequestHandlerCallback;
 
+const mapGrpcStatusToHttp = (code?: number): string => {
+  if (!code) return '200 (OK)';
+  switch (code) {
+    case status.OK:
+      return `200 (OK)`;
+    case status.CANCELLED:
+      return `499 (Cancelled)`;
+    case status.INVALID_ARGUMENT:
+      return `400 (Invalid Argument)`;
+    case status.DEADLINE_EXCEEDED:
+      return `504 (Deadline Exceeded)`;
+    case status.NOT_FOUND:
+      return `404 (Not Found)`;
+    case status.ALREADY_EXISTS:
+      return `409 (Already Exists)`;
+    case status.PERMISSION_DENIED:
+      return `403 (Permission Denied)`;
+    case status.UNAUTHENTICATED:
+      return `401 (Unauthenticated)`;
+    case status.OUT_OF_RANGE:
+      return `416 (Out of Range)`;
+    case status.FAILED_PRECONDITION:
+      return `412 (Failed Precondition)`;
+    case status.ABORTED:
+      return `409 (Aborted)`;
+    case status.INTERNAL:
+      return `416 (Internal)`;
+    case status.UNAVAILABLE:
+      return `503 (Service Unavailable)`;
+    case status.DATA_LOSS:
+      return `500 (Data Loss)`;
+    default:
+      return `500 (Unknown)`;
+  }
+};
+
 function generateLog(
   routerType: string,
   routerRequest: boolean,
@@ -43,7 +79,7 @@ function generateLog(
   } else {
     log += `(${routerType})  Socket: ${call.request.event} socket: ${call.request.socket}`;
   }
-  log += ` ${status ?? '200'} ${latency}`;
+  log += ` ${mapGrpcStatusToHttp(status) ?? '200'} ${latency}ms`;
 
   ConduitGrpcSdk.Logger.log(log);
   ConduitGrpcSdk.Metrics?.set('grpc_request_latency_seconds', latency / 1000);
@@ -52,7 +88,7 @@ function generateLog(
     latency / 1000,
   );
 
-  const successStatus = !status || status.toString().charAt(0) === '2';
+  const successStatus = !status || status.toString().startsWith('2');
   ConduitGrpcSdk.Metrics?.increment(`${routerType}_grpc_response_statuses_total`, 1, {
     success: successStatus ? 'true' : 'false',
   });
