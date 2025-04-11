@@ -94,16 +94,6 @@ export default {
         format: 'Number',
         default: '',
       },
-      username: {
-        doc: 'The email service API username',
-        format: 'String',
-        default: '',
-      },
-      password: {
-        doc: 'The email service API password',
-        format: 'String',
-        default: '',
-      },
       apiKey: {
         doc: 'The email service API key',
         format: 'String',
