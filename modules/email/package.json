@@ -28,6 +28,7 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.782.0",
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.10.9",
@@ -41,6 +42,7 @@
     "escape-string-regexp": "^4.0.0",
     "handlebars": "^4.7.8",
     "lodash-es": "^4.17.21",
+    "mailersend": "^2.4.1",
     "mailgun-js": "^0.22.0",
     "mandrill-api": "^1.0.45",
     "nodemailer": "^6.9.15",

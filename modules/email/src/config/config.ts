@@ -83,6 +83,45 @@ export default {
         default: '',
       },
     },
+    mailersend: {
+      host: {
+        doc: 'The email service API host',
+        format: 'String',
+        default: '',
+      },
+      port: {
+        doc: 'The port the SMTP server is listening on',
+        format: 'Number',
+        default: '',
+      },
+      username: {
+        doc: 'The email service API username',
+        format: 'String',
+        default: '',
+      },
+      password: {
+        doc: 'The email service API password',
+        format: 'String',
+        default: '',
+      },
+      apiKey: {
+        doc: 'The email service API key',
+        format: 'String',
+        default: '',
+      },
+    },
+    amazonSes: {
+      accessKeyId: {
+        format: 'String',
+        default: '',
+        doc: 'The email service access key identifier',
+      },
+      secretAccessKey: {
+        format: 'String',
+        default: '',
+        doc: 'The email service secret access key',
+      },
+    },
   },
   storeEmails: {
     enabled: {
