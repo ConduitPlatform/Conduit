@@ -135,10 +135,7 @@ export class EmailService {
       }
       if (templateFound.externalManaged) {
         builder.setTemplate({
-          id:
-            this.emailer._transportName === 'amazonSes'
-              ? templateFound.externalId!
-              : templateFound._id,
+          id: templateFound.externalId!,
           variables,
         });
       } else {
