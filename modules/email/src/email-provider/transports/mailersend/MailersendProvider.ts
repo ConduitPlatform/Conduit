@@ -1,7 +1,7 @@
 import { EmailProviderClass } from '../../models/EmailProviderClass.js';
 import { MailersendConfig } from './mailersend.config.js';
 import { createTransport, SentMessageInfo } from 'nodemailer';
-import { MailerSend } from 'mailersend';
+import { EmailParams, MailerSend, Recipient, Sender } from 'mailersend';
 import { Template } from '../../interfaces/Template.js';
 import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
 import { Options } from 'nodemailer/lib/mailer/index.js';
@@ -10,6 +10,7 @@ import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { MailersendBuilder } from './mailersendBuilder.js';
 import { to } from 'await-to-js';
+import Mail from 'nodemailer/lib/mailer';
 
 export class MailersendProvider extends EmailProviderClass {
   protected _mailersendSdk: MailerSend;
@@ -17,7 +18,7 @@ export class MailersendProvider extends EmailProviderClass {
   constructor(mailersendSettings: MailersendConfig) {
     super(createTransport(mailersendSettings));
     this._mailersendSdk = new MailerSend({
-      apiKey: mailersendSettings.auth.apiKey,
+      apiKey: mailersendSettings.apiKey,
     });
   }
 
@@ -56,6 +57,25 @@ export class MailersendProvider extends EmailProviderClass {
   }
 
   getMessageId(info: SentMessageInfo): string | undefined {
-    return info.response.split(' ').pop();
+    return info.headers['x-message-id'];
+  }
+
+  async sendEmail(mailOptions: Mail.Options) {
+    const emailParams = new EmailParams()
+      .setFrom(new Sender(mailOptions.from as string))
+      .setTo([new Recipient(mailOptions.to as string)])
+      .setSubject(mailOptions.subject as string);
+
+    if (mailOptions.html) emailParams.setHtml(mailOptions.html as string);
+    if (mailOptions.text) emailParams.setText(mailOptions.text as string);
+    if (mailOptions.replyTo)
+      emailParams.setReplyTo(new Recipient(mailOptions.replyTo as string));
+    if (mailOptions.cc) {
+      emailParams.setCc(
+        (mailOptions.cc as string[]).map(ccRecipient => new Recipient(ccRecipient)),
+      );
+    }
+
+    return await this._mailersendSdk.email.send(emailParams);
   }
 }

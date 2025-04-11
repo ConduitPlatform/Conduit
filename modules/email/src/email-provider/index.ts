@@ -86,18 +86,14 @@ export class EmailProvider {
       this._transport = new SendgridProvider(sgSettings);
     } else if (transport === 'mailersend') {
       this._transportName = 'mailersend';
-      const { host, port, username, password, apiKey } = transportSettings.mailersend;
-      if (!host || !port || !username || !password || !apiKey) {
+      const { host, port, apiKey } = transportSettings.mailersend;
+      if (!host || !port || !apiKey) {
         throw new Error('Mailersend transport settings are missing');
       }
       const mailersendSettings: MailersendConfig = {
         host,
         port,
-        auth: {
-          user: username,
-          pass: password,
-          apiKey,
-        },
+        apiKey,
       };
       this._transport = new MailersendProvider(mailersendSettings);
     } else if (transport === 'amazonSes') {
