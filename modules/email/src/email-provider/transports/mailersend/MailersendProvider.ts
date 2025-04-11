@@ -8,7 +8,7 @@ import { Options } from 'nodemailer/lib/mailer/index.js';
 import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
 import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { MailersendBuilder } from './MailersendBuilder.js';
+import { MailersendBuilder } from './mailersendBuilder.js';
 import { to } from 'await-to-js';
 
 export class MailersendProvider extends EmailProviderClass {
