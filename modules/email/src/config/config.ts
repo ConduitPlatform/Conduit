@@ -110,6 +110,18 @@ export default {
         default: '',
       },
     },
+    amazonSes: {
+      accessKeyId: {
+        format: 'String',
+        default: '',
+        doc: 'The email service access key identifier',
+      },
+      secretAccessKey: {
+        format: 'String',
+        default: '',
+        doc: 'The email service secret access key',
+      },
+    },
   },
   storeEmails: {
     enabled: {

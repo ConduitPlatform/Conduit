@@ -14,6 +14,7 @@ import { ConfigController } from '@conduitplatform/module-tools';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { MailersendConfig } from './transports/mailersend/mailersend.config.js';
 import { MailersendProvider } from './transports/mailersend/MailersendProvider.js';
+import { AmazonSesProvider } from './transports/amazonSes/AmazonSesProvider.js';
 
 export class EmailProvider {
   _transport?: EmailProviderClass;
@@ -86,13 +87,7 @@ export class EmailProvider {
     } else if (transport === 'mailersend') {
       this._transportName = 'mailersend';
       const { host, port, username, password, apiKey } = transportSettings.mailersend;
-      if (
-        isEmpty(host) ||
-        isEmpty(port) ||
-        isEmpty(username) ||
-        isEmpty(password) ||
-        isEmpty(apiKey)
-      ) {
+      if (!host || !port || !username || !password || !apiKey) {
         throw new Error('Mailersend transport settings are missing');
       }
       const mailersendSettings: MailersendConfig = {
@@ -105,6 +100,13 @@ export class EmailProvider {
         },
       };
       this._transport = new MailersendProvider(mailersendSettings);
+    } else if (transport === 'amazonSes') {
+      this._transportName = 'amazonSes';
+      const { accessKeyId, secretAccessKey } = transportSettings.amazonSes;
+      if (!accessKeyId || !secretAccessKey) {
+        throw new Error('Amazon SES transport settings are missing');
+      }
+      this._transport = new AmazonSesProvider(transportSettings.amazonSes);
     } else {
       this._transportName = undefined;
       this._transport = undefined;
