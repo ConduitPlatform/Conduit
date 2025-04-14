@@ -327,10 +327,13 @@ export default class Authentication extends ManagedModule<Config> {
         });
         const result = { verificationToken, hostUrl: url };
         const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
+        const safeUser = { ...user };
+        delete safeUser.hashedPassword;
         await this.grpcSdk.emailProvider!.sendEmail('EmailVerification', {
           email: user.email,
           variables: {
             link,
+            user: safeUser,
           },
         });
       } else if (verify) {
