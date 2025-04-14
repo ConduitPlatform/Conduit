@@ -101,6 +101,11 @@ export default {
       },
     },
     amazonSes: {
+      region: {
+        format: 'String',
+        default: '',
+        doc: 'The email service API region',
+      },
       accessKeyId: {
         format: 'String',
         default: '',

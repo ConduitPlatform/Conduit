@@ -98,8 +98,8 @@ export class EmailProvider {
       this._transport = new MailersendProvider(mailersendSettings);
     } else if (transport === 'amazonSes') {
       this._transportName = 'amazonSes';
-      const { accessKeyId, secretAccessKey } = transportSettings.amazonSes;
-      if (!accessKeyId || !secretAccessKey) {
+      const { accessKeyId, secretAccessKey, region } = transportSettings.amazonSes;
+      if (!accessKeyId || !secretAccessKey || !region) {
         throw new Error('Amazon SES transport settings are missing');
       }
       this._transport = new AmazonSesProvider(transportSettings.amazonSes);

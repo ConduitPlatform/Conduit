@@ -26,13 +26,11 @@ export class AmazonSesProvider extends EmailProviderClass {
   protected _amazonsSesSdk: aws.SESClient;
 
   constructor(amazonSesSettings: AmazonSesConfig) {
+    const { region, accessKeyId, secretAccessKey } = amazonSesSettings;
     const ses = new aws.SES({
       apiVersion: '2010-12-01',
-      region: 'eu-north-1',
-      credentials: {
-        accessKeyId: amazonSesSettings.accessKeyId,
-        secretAccessKey: amazonSesSettings.secretAccessKey,
-      },
+      region,
+      credentials: { accessKeyId, secretAccessKey },
     });
     super(createTransport({ SES: { ses, aws } }));
     this._amazonsSesSdk = ses;
