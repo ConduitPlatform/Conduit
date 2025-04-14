@@ -774,6 +774,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
       },
     });
 
+    const userData = await User.getInstance().findOne(
+      { _id: user._id },
+      '-hashedPassword',
+    );
+
     if (config.local.verification.method === 'link') {
       const serverConfig = await this.grpcSdk.config.get('router');
       const url = serverConfig.hostUrl;
@@ -783,6 +788,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         email: user.email,
         variables: {
           link,
+          user: userData,
         },
       });
     } else {
@@ -792,6 +798,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         email: user.email,
         variables: {
           code: otp,
+          user: userData,
         },
       });
       await this.grpcSdk.state!.setKey(emailHash, otp, 2 * 60 * 1000);

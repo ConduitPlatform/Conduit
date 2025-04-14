@@ -38,6 +38,12 @@ export async function sendInvitations(
   grpcSdk: ConduitGrpcSdk,
 ) {
   const roomId = room._id;
+
+  const invitedUsersData = await User.getInstance().findMany(
+    { _id: { $in: users.map(user => user._id) } },
+    '-hashedPassword',
+  );
+
   for (const invitedUser of users) {
     const invitationsCount = await InvitationToken.getInstance().countDocuments({
       room: roomId,
@@ -70,6 +76,7 @@ export async function sendInvitations(
             declineLink,
             userName,
             roomName,
+            users: invitedUsersData,
           },
         })
         .catch((e: Error) => {
