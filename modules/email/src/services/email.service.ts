@@ -8,7 +8,6 @@ import {
 import handlebars from 'handlebars';
 import { EmailProvider } from '../email-provider/index.js';
 import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTemplate.js';
-import { UpdateEmailTemplate } from '../email-provider/interfaces/UpdateEmailTemplate.js';
 import { Attachment } from 'nodemailer/lib/mailer';
 import { Template } from '../email-provider/interfaces/Template.js';
 import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
@@ -81,9 +80,7 @@ export class EmailService {
       Object.keys(getHandleBarsValues(params.subject)),
     );
     if (templateDocument.variables) {
-      templateDocument.variables = templateDocument.variables.filter(
-        (value, index) => templateDocument.variables!.indexOf(value) === index,
-      );
+      templateDocument.variables = [...new Set(templateDocument.variables)];
     }
 
     const updatedTemplate = await EmailTemplate.getInstance()
@@ -137,7 +134,10 @@ export class EmailService {
         throw new Error(`Subject is missing both in body params and template.`);
       }
       if (templateFound.externalManaged) {
-        builder.setTemplate({ id: templateFound._id, variables: variables });
+        builder.setTemplate({
+          id: templateFound.externalId!,
+          variables,
+        });
       } else {
         bodyString = handlebars.compile(templateFound.body)(variables);
       }

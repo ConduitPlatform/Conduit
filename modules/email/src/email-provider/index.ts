@@ -12,6 +12,9 @@ import { SendgridProvider } from './transports/sendgrid/SendgridProvider.js';
 import { SmtpProvider } from './transports/smtp/SmtpProvider.js';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { Indexable } from '@conduitplatform/grpc-sdk';
+import { MailersendConfig } from './transports/mailersend/mailersend.config.js';
+import { MailersendProvider } from './transports/mailersend/MailersendProvider.js';
+import { AmazonSesProvider } from './transports/amazonSes/AmazonSesProvider.js';
 
 export class EmailProvider {
   _transport?: EmailProviderClass;
@@ -81,6 +84,25 @@ export class EmailProvider {
         residency,
       };
       this._transport = new SendgridProvider(sgSettings);
+    } else if (transport === 'mailersend') {
+      this._transportName = 'mailersend';
+      const { host, port, apiKey } = transportSettings.mailersend;
+      if (!host || !port || !apiKey) {
+        throw new Error('Mailersend transport settings are missing');
+      }
+      const mailersendSettings: MailersendConfig = {
+        host,
+        port,
+        apiKey,
+      };
+      this._transport = new MailersendProvider(mailersendSettings);
+    } else if (transport === 'amazonSes') {
+      this._transportName = 'amazonSes';
+      const { accessKeyId, secretAccessKey, region } = transportSettings.amazonSes;
+      if (!accessKeyId || !secretAccessKey || !region) {
+        throw new Error('Amazon SES transport settings are missing');
+      }
+      this._transport = new AmazonSesProvider(transportSettings.amazonSes);
     } else {
       this._transportName = undefined;
       this._transport = undefined;
