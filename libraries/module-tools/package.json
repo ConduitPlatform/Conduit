@@ -28,8 +28,8 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@grpc/grpc-js": "^1.10.9",
-    "@grpc/proto-loader": "^0.7.6",
+    "@grpc/grpc-js": "^1.13.3",
+    "@grpc/proto-loader": "^0.7.13",
     "abort-controller-x": "^0.4.3",
     "convict": "^6.2.4",
     "fast-jwt": "^5.0.6",
@@ -74,6 +74,6 @@
   },
   "peerDependencies": {
     "@conduitplatform/grpc-sdk": "*",
-    "@grpc/grpc-js": "^1.10.9"
+    "@grpc/grpc-js": "^1.13.3"
   }
 }
