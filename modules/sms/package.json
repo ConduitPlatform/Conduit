@@ -28,7 +28,7 @@
     "@aws-sdk/client-sns": "^3.782.0",
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
-    "@grpc/grpc-js": "^1.10.9",
+    "@grpc/grpc-js": "^1.13.3",
     "@grpc/proto-loader": "^0.7.6",
     "bluebird": "^3.7.2",
     "clicksend": "^5.0.79",

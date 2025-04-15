@@ -22,7 +22,7 @@
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/hermes": "^1.0.1",
     "@conduitplatform/module-tools": "*",
-    "@grpc/grpc-js": "^1.10.9",
+    "@grpc/grpc-js": "^1.13.3",
     "@grpc/proto-loader": "^0.7.6",
     "axios": "^1.8.2",
     "bcrypt": "^5.1.1",
