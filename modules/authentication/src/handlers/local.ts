@@ -432,7 +432,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
       user: user._id,
       token: uuid(),
     });
-
+    const safeUser = { ...user };
+    delete safeUser.hashedPassword;
     const link = `${redirectUri}?reset_token=${passwordResetTokenDoc.token}`;
     if (this.grpcSdk.isAvailable('email')) {
       await this.emailModule
@@ -440,6 +441,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           email: user.email,
           variables: {
             link,
+            user: safeUser,
           },
         })
         .catch(() => {
@@ -563,11 +565,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
         const link = `${result.hostUrl}/hook/authentication/verify-change-email/${
           result.verificationToken!.token
         }`;
+        const safeUser = { ...user };
+        delete safeUser.hashedPassword;
         await this.emailModule
           .sendEmail('ChangeEmailVerification', {
             email: newEmail,
             variables: {
               link,
+              user: safeUser,
             },
           })
           .catch(e => {
@@ -774,6 +779,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
       },
     });
 
+    const safeUser = { ...user };
+    delete safeUser.hashedPassword;
     if (config.local.verification.method === 'link') {
       const serverConfig = await this.grpcSdk.config.get('router');
       const url = serverConfig.hostUrl;
@@ -783,6 +790,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         email: user.email,
         variables: {
           link,
+          user: safeUser,
         },
       });
     } else {
@@ -792,6 +800,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         email: user.email,
         variables: {
           code: otp,
+          user: safeUser,
         },
       });
       await this.grpcSdk.state!.setKey(emailHash, otp, 2 * 60 * 1000);

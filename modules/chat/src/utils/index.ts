@@ -38,6 +38,7 @@ export async function sendInvitations(
   grpcSdk: ConduitGrpcSdk,
 ) {
   const roomId = room._id;
+
   for (const invitedUser of users) {
     const invitationsCount = await InvitationToken.getInstance().countDocuments({
       room: roomId,
@@ -56,6 +57,10 @@ export async function sendInvitations(
       token: uuid(),
       room: roomId,
     });
+    const safeUser = await User.getInstance().findOne(
+      { _id: invitedUser._id },
+      '-hashedPassword',
+    );
     if (sendEmail) {
       const result = { invitationToken, hostUrl: url };
       const acceptLink = `${result.hostUrl}/hook/chat/invitations/accept/${result.invitationToken.token}`;
@@ -70,6 +75,7 @@ export async function sendInvitations(
             declineLink,
             userName,
             roomName,
+            user: safeUser,
           },
         })
         .catch((e: Error) => {
