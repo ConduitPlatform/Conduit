@@ -65,9 +65,9 @@ export class RelationHandler {
         action: ConduitRouteActions.GET,
         description: `Returns queried relations.`,
         queryParams: {
-          subject: ConduitString.Optional,
-          relation: ConduitString.Optional,
-          object: ConduitString.Optional,
+          search: ConduitString.Optional,
+          subjectType: ConduitString.Optional,
+          resourceType: ConduitString.Optional,
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
@@ -117,13 +117,13 @@ export class RelationHandler {
   }
 
   async getRelations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { subject, relation, resource, sort } = call.request.params;
+    const { subjectType, search, resourceType, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const query: Query<Relationship> = {
-      ...(subject ?? {}),
-      ...(relation ?? {}),
-      ...(resource ?? {}),
+      ...(search ? { computedTuple: { $regex: `.*${search}.*`, $options: 'i' } } : {}),
+      ...(resourceType ?? {}),
+      ...(subjectType ?? {}),
     };
 
     const relations = await Relationship.getInstance().findMany(

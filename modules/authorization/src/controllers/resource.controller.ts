@@ -36,7 +36,7 @@ export class ResourceController {
     await this.indexController.reIndexResource(resource.name);
     const res = await ResourceDefinition.getInstance().create({
       ...resource,
-      version: 0,
+      version: resource.version ?? 0,
     });
     this.grpcSdk.bus?.publish('authorization:create:resource', JSON.stringify(res));
     return { resourceDefinition: res, status: 'processed' };
