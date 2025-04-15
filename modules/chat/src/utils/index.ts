@@ -39,11 +39,6 @@ export async function sendInvitations(
 ) {
   const roomId = room._id;
 
-  const invitedUsersData = await User.getInstance().findMany(
-    { _id: { $in: users.map(user => user._id) } },
-    '-hashedPassword',
-  );
-
   for (const invitedUser of users) {
     const invitationsCount = await InvitationToken.getInstance().countDocuments({
       room: roomId,
@@ -62,6 +57,10 @@ export async function sendInvitations(
       token: uuid(),
       room: roomId,
     });
+    const safeUser = await User.getInstance().findOne(
+      { _id: invitedUser._id },
+      '-hashedPassword',
+    );
     if (sendEmail) {
       const result = { invitationToken, hostUrl: url };
       const acceptLink = `${result.hostUrl}/hook/chat/invitations/accept/${result.invitationToken.token}`;
@@ -76,7 +75,7 @@ export async function sendInvitations(
             declineLink,
             userName,
             roomName,
-            users: invitedUsersData,
+            user: safeUser,
           },
         })
         .catch((e: Error) => {
