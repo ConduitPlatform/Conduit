@@ -77,7 +77,7 @@ export class UserAdmin {
 
   async patchUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, isVerified, hasTwoFA, phoneNumber } = call.request.params;
-    const email = call.request.params.email?.toLowerCase();
+    const email = call.request.params.email.toLowerCase();
 
     const user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
@@ -88,7 +88,7 @@ export class UserAdmin {
         'Can not enable 2fa without a phone number',
       );
     }
-    if (email && user.email !== email) {
+    if (user.email !== email) {
       const duplicateEmail: User | null = await User.getInstance().findOne({ email });
       if (!isNil(duplicateEmail)) {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Email already exists');
