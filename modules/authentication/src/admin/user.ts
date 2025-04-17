@@ -57,20 +57,7 @@ export class UserAdmin {
   async createUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { email, username, password } = call.request.params;
 
-    if (!email && !username) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Either email or username must be provided',
-      );
-    }
-
-    const identifierKey = email ? 'email' : 'username';
-    const identifierValue = (email || username).toLowerCase();
-    const query = { [identifierKey]: identifierValue };
-
-    if (email && AuthUtils.invalidEmailAddress(email)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
-    }
+    const query = AuthUtils.validateAndNormalizeIdentifier(email, username);
 
     let user: User | null = await User.getInstance().findOne(query);
     if (!isNil(user)) {
