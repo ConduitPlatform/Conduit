@@ -7,8 +7,15 @@ message UserLoginRequest {
   string clientId = 2;
 }
 
+message Identifier {
+  oneof id {
+    string email = 1;
+    string username = 2;
+  }
+}
+
 message UserCreateRequest {
-  string email = 1;
+  Identifier identifier = 1;
   optional string password = 2;
   bool verify = 3;
   optional string anonymousId = 4;
