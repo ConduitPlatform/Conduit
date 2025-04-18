@@ -20,10 +20,12 @@ import {
 } from '../models/index.js';
 import { QueueController } from '../controllers/index.js';
 import { isNil } from 'lodash-es';
+import { PermissionsAdminHandler } from './permissions.js';
 
 export class AdminHandlers {
   private readonly resourceHandler: ResourceHandler;
   private readonly relationHandler: RelationHandler;
+  private readonly permissionsHandler: PermissionsAdminHandler;
   private readonly routingManager: RoutingManager;
 
   constructor(
@@ -32,6 +34,7 @@ export class AdminHandlers {
   ) {
     this.resourceHandler = new ResourceHandler(this.grpcSdk);
     this.relationHandler = new RelationHandler(this.grpcSdk);
+    this.permissionsHandler = new PermissionsAdminHandler(this.grpcSdk);
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
@@ -106,6 +109,7 @@ export class AdminHandlers {
     );
     this.relationHandler.registerRoutes(this.routingManager);
     this.resourceHandler.registerRoutes(this.routingManager);
+    this.permissionsHandler.registerRoutes(this.routingManager);
     this.routingManager.registerRoutes().then();
   }
 }

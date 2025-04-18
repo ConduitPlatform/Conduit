@@ -27,7 +27,7 @@ export class RelationHandler {
         bodyParams: {
           subject: ConduitString.Required,
           relation: ConduitString.Required,
-          object: ConduitString.Required,
+          resource: ConduitString.Required,
         },
       },
       new ConduitRouteReturnDefinition('CreateRelation', Relationship.name),
@@ -65,9 +65,9 @@ export class RelationHandler {
         action: ConduitRouteActions.GET,
         description: `Returns queried relations.`,
         queryParams: {
-          subject: ConduitString.Optional,
-          relation: ConduitString.Optional,
-          object: ConduitString.Optional,
+          search: ConduitString.Optional,
+          subjectType: ConduitString.Optional,
+          resourceType: ConduitString.Optional,
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
@@ -94,8 +94,8 @@ export class RelationHandler {
   }
 
   async createRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { subject, relation, object } = call.request.params;
-    return RelationsController.getInstance().createRelation(subject, relation, object);
+    const { subject, relation, resource } = call.request.bodyParams;
+    return RelationsController.getInstance().createRelation(subject, relation, resource);
   }
 
   async createRelations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -117,13 +117,13 @@ export class RelationHandler {
   }
 
   async getRelations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { subject, relation, resource, sort } = call.request.params;
+    const { subjectType, search, resourceType, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const query: Query<Relationship> = {
-      ...(subject ?? {}),
-      ...(relation ?? {}),
-      ...(resource ?? {}),
+      ...(search ? { computedTuple: { $regex: `.*${search}.*`, $options: 'i' } } : {}),
+      ...(resourceType ? { resourceType } : {}),
+      ...(subjectType ? { subjectType } : {}),
     };
 
     const relations = await Relationship.getInstance().findMany(
@@ -137,7 +137,7 @@ export class RelationHandler {
       throw new Error('Relations not found');
     }
     const count = await Relationship.getInstance().countDocuments(query);
-    return { found: relations, count };
+    return { relations, count };
   }
 
   async deleteRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
