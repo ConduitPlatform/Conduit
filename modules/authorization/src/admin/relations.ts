@@ -27,7 +27,7 @@ export class RelationHandler {
         bodyParams: {
           subject: ConduitString.Required,
           relation: ConduitString.Required,
-          object: ConduitString.Required,
+          resource: ConduitString.Required,
         },
       },
       new ConduitRouteReturnDefinition('CreateRelation', Relationship.name),
@@ -94,8 +94,8 @@ export class RelationHandler {
   }
 
   async createRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { subject, relation, object } = call.request.params;
-    return RelationsController.getInstance().createRelation(subject, relation, object);
+    const { subject, relation, resource } = call.request.bodyParams;
+    return RelationsController.getInstance().createRelation(subject, relation, resource);
   }
 
   async createRelations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -122,8 +122,8 @@ export class RelationHandler {
     const { limit } = call.request.params ?? 25;
     const query: Query<Relationship> = {
       ...(search ? { computedTuple: { $regex: `.*${search}.*`, $options: 'i' } } : {}),
-      ...(resourceType ?? {}),
-      ...(subjectType ?? {}),
+      ...(resourceType ? { resourceType } : {}),
+      ...(subjectType ? { subjectType } : {}),
     };
 
     const relations = await Relationship.getInstance().findMany(
@@ -137,7 +137,7 @@ export class RelationHandler {
       throw new Error('Relations not found');
     }
     const count = await Relationship.getInstance().countDocuments(query);
-    return { found: relations, count };
+    return { relations, count };
   }
 
   async deleteRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

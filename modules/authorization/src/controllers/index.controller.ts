@@ -183,15 +183,47 @@ export class IndexController {
   }
 
   async findIndex(subject: string, action: string, object: string) {
-    const subjectDefinition = await ActorIndex.getInstance().findMany({
+    const subjectIndexes = await ActorIndex.getInstance().findMany({
       subject: subject,
     });
 
     const objectDefinition = await ObjectIndex.getInstance().findOne({
       subject: object + '#' + action,
-      entity: { $in: [...subjectDefinition.map(index => index.entity), '*'] },
+      entity: { $in: [...subjectIndexes.map(index => index.entity), '*'] },
     });
     return !!objectDefinition;
+  }
+
+  async evaluateIndex(subject: string, action: string, object: string) {
+    const subjectIndexes = await ActorIndex.getInstance().findMany({
+      subject: subject,
+    });
+
+    const objectIndex = await ObjectIndex.getInstance().findOne({
+      subject: object + '#' + action,
+      entity: { $in: [...subjectIndexes.map(index => index.entity), '*'] },
+    });
+    if (!objectIndex) {
+      return {
+        subject: null,
+        object: null,
+      };
+    } else if (objectIndex.entity === '*') {
+      return {
+        subject: null,
+        object: objectIndex,
+      };
+    } else {
+      // find which subject indexes are applicable to this object index
+      const subjectIndex = subjectIndexes.find(
+        index => index.entity === objectIndex?.entity,
+      );
+
+      return {
+        subject: subjectIndex,
+        object: objectIndex,
+      };
+    }
   }
 
   async findGeneralIndex(
