@@ -84,6 +84,24 @@ export class PermissionsController {
     return index ?? false;
   }
 
+  async evaluatePermission(subject: string, action: string, object: string) {
+    checkRelation(subject, action, object);
+    const computedTuple = computePermissionTuple(subject, action, object);
+
+    const permission = await Permission.getInstance().findOne({
+      computedTuple,
+    });
+    if (permission) {
+      return {
+        assigned: true,
+      };
+    }
+
+    const index = await this.indexController.evaluateIndex(subject, action, object);
+
+    return { assigned: false, objectIndex: index.object, subjectIndex: index.subject };
+  }
+
   async findPermissions(
     subject: string,
     action: string,

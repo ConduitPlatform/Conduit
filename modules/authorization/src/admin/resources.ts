@@ -39,6 +39,7 @@ export class ResourceHandler {
       }),
       this.createResource.bind(this),
     );
+
     routingManager.route(
       {
         path: '/resources',
@@ -151,7 +152,13 @@ export class ResourceHandler {
 
   async getResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
-    return ResourceController.getInstance().findResourceDefinitionById(id);
+    let resource: ResourceDefinition;
+    if (id.match(/^[a-fA-F0-9]{24}$/)) {
+      resource = await ResourceController.getInstance().findResourceDefinitionById(id);
+    } else {
+      resource = await ResourceController.getInstance().findResourceDefinition(id);
+    }
+    return resource;
   }
 
   async patchResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
