@@ -1,5 +1,5 @@
 import { isEmpty, isNil } from 'lodash-es';
-import { EmailTemplate, EmailRecord } from '../models/index.js';
+import { EmailRecord, EmailTemplate } from '../models/index.js';
 import {
   IRegisterTemplateParams,
   ISendEmailParams,
@@ -156,7 +156,8 @@ export class EmailService {
         senderAddress = 'no-reply';
       }
     }
-    if (isNil(params.sendingDomain) || isEmpty(params.sendingDomain)) {
+    const config: Config = ConfigController.getInstance().config;
+    if (isNil(config.sendingDomain) || isEmpty(config.sendingDomain)) {
       if (senderAddress.includes('@')) {
         ConduitGrpcSdk.Logger.warn(
           `Sending domain is not set, attempting to send email with provided address: ${senderAddress}`,
@@ -166,16 +167,16 @@ export class EmailService {
           `Sending domain is not set, and sender address is not valid: ${senderAddress}`,
         );
       }
-    } else if (!senderAddress.includes(params.sendingDomain)) {
+    } else if (!senderAddress.includes(config.sendingDomain)) {
       if (senderAddress.includes('@')) {
         ConduitGrpcSdk.Logger.warn(
-          `You are trying to send email from ${senderAddress} but it does not match sending domain ${params.sendingDomain}`,
+          `You are trying to send email from ${senderAddress} but it does not match sending domain ${config.sendingDomain}`,
         );
       } else {
-        senderAddress = `${senderAddress}@${params.sendingDomain}`;
+        senderAddress = `${senderAddress}@${config.sendingDomain}`;
       }
     }
-    builder.setSender(senderAddress!);
+    builder.setSender(senderAddress);
     builder.setContent(bodyString);
     builder.setReceiver(email);
     builder.setSubject(subjectString);
@@ -192,9 +193,8 @@ export class EmailService {
     const sentMessageInfo = await this.emailer.sendEmail(builder);
     const messageId = this.emailer._transport?.getMessageId(sentMessageInfo);
 
-    const config = ConfigController.getInstance().config as Config;
     if (config.storeEmails.enabled) {
-      await storeEmail(this.grpcSdk, messageId, templateFound, contentFileId, {
+      storeEmail(this.grpcSdk, messageId, templateFound, contentFileId, {
         body: bodyString,
         subject: subjectString,
         ...params,

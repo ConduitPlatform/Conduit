@@ -31,6 +31,7 @@ import { ISendEmailParams } from './interfaces/index.js';
 import { fileURLToPath } from 'node:url';
 import { Queue, Worker } from 'bullmq';
 import { Cluster, Redis } from 'ioredis';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -162,9 +163,6 @@ export default class Email extends ManagedModule<Config> {
     callback: GrpcCallback<SendEmailResponse>,
   ) {
     const template = call.request.templateName;
-    const emailConfig: Config = await this.grpcSdk.config
-      .get('email')
-      .catch(() => ConduitGrpcSdk.Logger.error('Failed to get sending domain'));
     const params: ISendEmailParams = {
       email: call.request.params!.email,
       variables: JSON.parse(call.request.params!.variables),
@@ -172,7 +170,6 @@ export default class Email extends ManagedModule<Config> {
       cc: call.request.params!.cc,
       replyTo: call.request.params!.replyTo,
       attachments: call.request.params!.attachments,
-      sendingDomain: emailConfig?.sendingDomain ?? '',
     };
 
     let errorMessage: string | null = null;
