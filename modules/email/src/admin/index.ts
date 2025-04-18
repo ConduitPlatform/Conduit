@@ -301,9 +301,7 @@ export class AdminHandlers {
     if (!templateName && (!body || !subject)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Template/body+subject not provided');
     }
-    if (!sender) {
-      sender = 'conduit';
-    }
+    sender ??= 'conduit';
 
     if (sender.indexOf('@') === -1) {
       const emailConfig: Config = await this.grpcSdk.config
@@ -329,12 +327,10 @@ export class AdminHandlers {
         subject,
         email,
         variables,
-        sender: sender ? sender : 'conduit',
+        sender: sender,
       })
       .catch((e: Error) => {
-        {
-          ConduitGrpcSdk.Logger.error(e);
-        }
+        ConduitGrpcSdk.Logger.error(e);
         throw new GrpcError(status.INTERNAL, e.message);
       });
     ConduitGrpcSdk.Metrics?.increment('emails_sent_total');
