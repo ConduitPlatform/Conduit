@@ -37,7 +37,7 @@ export async function storeEmail(
     receiver: params.email,
     cc: params.cc,
     replyTo: params.replyTo,
-    sendingDomain: params.sendingDomain,
+    sendingDomain: config.sendingDomain,
   };
   await EmailRecord.getInstance().create(emailInfo);
 }
