@@ -8,7 +8,6 @@ import {
   Team,
   ValidateAccessTokenResponse,
   UserModifyStatusResponse,
-  Identifier,
 } from '../../protoUtils/index.js';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
@@ -30,18 +29,20 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
   }
 
   userCreate(
-    email?: string,
-    username?: string,
+    email: string,
     verify: boolean = false,
     password?: string,
     anonymousId?: string,
   ): Promise<UserCreateResponse> {
-    return this.client!.userCreate({
-      identifier: email ? { email } : username ? { username } : {},
-      verify,
-      password,
-      anonymousId,
-    });
+    return this.client!.userCreate({ email, verify, password, anonymousId });
+  }
+
+  userCreateByUsername(
+    username: string,
+    password?: string,
+    anonymousId?: string,
+  ): Promise<UserCreateResponse> {
+    return this.client!.userCreateByUsername({ username, password, anonymousId });
   }
 
   anonymousUserCreate(clientId: string): Promise<UserLoginResponse> {
