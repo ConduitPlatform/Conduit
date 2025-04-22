@@ -1,5 +1,4 @@
 import { isNil } from 'lodash-es';
-import { AuthUtils } from '../utils/index.js';
 import {
   ConduitGrpcSdk,
   ConduitRouteActions,
@@ -17,6 +16,7 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { authenticateChecks, changePassword } from './utils.js';
 
 export class UsernameHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -59,13 +59,13 @@ export class UsernameHandlers implements IAuthenticationStrategy {
         middlewares: ['authMiddleware', 'denyAnonymousMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
-      AuthUtils.changePassword.bind(this),
+      changePassword.bind(this),
     );
   }
 
   async validate(): Promise<boolean> {
     const config = ConfigController.getInstance().config;
-    if (config.username.enabled) {
+    if (config.local.username.enabled) {
       return Promise.resolve(true);
     } else {
       ConduitGrpcSdk.Logger.log('Username authentication not available');
@@ -95,7 +95,7 @@ export class UsernameHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
     }
 
-    await AuthUtils.authenticateChecks(password, config, user);
+    await authenticateChecks(password, config, user);
 
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 

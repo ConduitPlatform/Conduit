@@ -92,10 +92,4 @@ export default {
       default: false,
     },
   },
-  username: {
-    enabled: {
-      format: 'Boolean',
-      default: false,
-    },
-  },
 };

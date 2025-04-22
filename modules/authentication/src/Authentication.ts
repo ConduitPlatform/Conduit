@@ -24,6 +24,7 @@ import {
   TeamDeleteRequest,
   TeamDeleteResponse,
   UserChangePass,
+  UserCreateByUsernameRequest,
   UserCreateRequest,
   UserCreateResponse,
   UserDeleteRequest,
@@ -259,68 +260,123 @@ export default class Authentication extends ManagedModule<Config> {
     call: GrpcRequest<UserCreateRequest>,
     callback: GrpcCallback<UserCreateResponse>,
   ) {
-    const { identifier, password: rawPassword, verify, anonymousId } = call.request;
-    const { email, username } = identifier || {};
+    const email = call.request.email.toLowerCase();
+    let password = call.request.password;
+    const verify = call.request.verify;
 
-    const hasEmail = !!email;
-    const hasUsername = !!username;
-
-    if (!hasEmail && !hasUsername) {
+    const verificationConfig = ConfigController.getInstance().config.local.verification;
+    if (verify && !(verificationConfig.required && verificationConfig.send_email)) {
       return callback({
         code: status.INVALID_ARGUMENT,
-        message: 'Either email or username must be provided',
+        message: 'Email verification is disabled. Configuration required.',
       });
     }
 
-    if (verify) {
-      const verificationConfig = ConfigController.getInstance().config.local.verification;
-
-      if (hasUsername) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Email verification is not applicable to username-based registration',
-        });
-      }
-
-      if (!(verificationConfig.required && verificationConfig.send_email)) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Email verification is disabled. Configuration required.',
-        });
-      }
-    }
-
-    let password = rawPassword;
     if (isNil(password) || password.length === 0) {
       password = AuthUtils.randomToken(8);
     }
-
-    const identifierKey = hasEmail ? 'email' : 'username';
-    const identifierValue = (hasEmail ? email : username)!.toLowerCase();
-
     try {
-      const existingUser = await models.User.getInstance().findOne({
-        [identifierKey]: identifierValue,
-      });
-      if (existingUser) {
+      let user = await models.User.getInstance().findOne({ email });
+      if (user) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
-
-      if (hasEmail && AuthUtils.invalidEmailAddress(identifierValue)) {
+      if (AuthUtils.invalidEmailAddress(email)) {
         return callback({
           code: status.INVALID_ARGUMENT,
           message: 'Invalid email address provided',
         });
       }
-
       const hashedPassword = await AuthUtils.hashPassword(password);
-      let user;
-
-      if (!anonymousId) {
+      const anonymousUserId = call.request.anonymousId;
+      if (!anonymousUserId) {
         user = await models.User.getInstance().create({
-          [identifierKey]: identifierValue,
+          email,
           hashedPassword,
-          isVerified: hasEmail ? !verify : true,
+          isVerified: !verify,
+        });
+      } else {
+        const config = ConfigController.getInstance().config;
+        if (!config.anonymousUsers.enabled) {
+          return callback({
+            code: status.FAILED_PRECONDITION,
+            message: 'Anonymous users configuration is disabled',
+          });
+        }
+        user = await models.User.getInstance().findByIdAndUpdate(anonymousUserId, {
+          email,
+          hashedPassword,
+          isAnonymous: false,
+          isVerified: !verify,
+        });
+        if (!user) {
+          return callback({
+            code: status.NOT_FOUND,
+            message: 'Anonymous user not found',
+          });
+        }
+      }
+      const sendEmail =
+        ConfigController.getInstance().config.local.verification.send_email;
+      const emailAvailable = this.grpcSdk.isAvailable('email');
+      if (verify && sendEmail && emailAvailable) {
+        const serverConfig = await this.grpcSdk.config.get('router');
+        const url = serverConfig.hostUrl;
+        const verificationToken: models.Token = await models.Token.getInstance().create({
+          tokenType: TokenType.VERIFICATION_TOKEN,
+          user: user._id,
+          token: uuid(),
+        });
+        const result = { verificationToken, hostUrl: url };
+        const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
+        const safeUser = { ...user };
+        delete safeUser.hashedPassword;
+        await this.grpcSdk.emailProvider!.sendEmail('EmailVerification', {
+          email: user.email,
+          variables: {
+            link,
+            user: safeUser,
+          },
+        });
+      } else if (verify) {
+        ConduitGrpcSdk.Logger.error(
+          'Failed to send verification email.' + ' Email service not online!',
+        );
+      }
+      if (!anonymousUserId) {
+        await TeamsHandler.getInstance()
+          .addUserToDefault(user)
+          .catch(err => {
+            ConduitGrpcSdk.Logger.error(err);
+          });
+      }
+      return callback(null, { password });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  async userCreateByUsername(
+    call: GrpcRequest<UserCreateByUsernameRequest>,
+    callback: GrpcCallback<UserCreateResponse>,
+  ) {
+    const username = call.request.username.toLowerCase();
+    let password = call.request.password;
+
+    if (isNil(password) || password.length === 0) {
+      password = AuthUtils.randomToken(8);
+    }
+    try {
+      let user = await models.User.getInstance().findOne({ username });
+      if (user) {
+        return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
+      }
+      const hashedPassword = await AuthUtils.hashPassword(password);
+      const anonymousUserId = call.request.anonymousId;
+      if (!anonymousUserId) {
+        user = await models.User.getInstance().create({
+          username,
+          hashedPassword,
+          isVerified: true,
         });
         await TeamsHandler.getInstance()
           .addUserToDefault(user)
@@ -335,13 +391,12 @@ export default class Authentication extends ManagedModule<Config> {
             message: 'Anonymous users configuration is disabled',
           });
         }
-        user = await models.User.getInstance().findByIdAndUpdate(anonymousId, {
-          [identifierKey]: identifierValue,
+        user = await models.User.getInstance().findByIdAndUpdate(anonymousUserId, {
+          username,
           hashedPassword,
           isAnonymous: false,
-          isVerified: hasEmail ? !verify : true,
+          isVerified: true,
         });
-
         if (!user) {
           return callback({
             code: status.NOT_FOUND,
@@ -349,38 +404,6 @@ export default class Authentication extends ManagedModule<Config> {
           });
         }
       }
-
-      if (hasEmail && verify) {
-        const sendEmail =
-          ConfigController.getInstance().config.local.verification.send_email;
-        const emailAvailable = this.grpcSdk.isAvailable('email');
-        if (sendEmail && emailAvailable) {
-          const serverConfig = await this.grpcSdk.config.get('router');
-          const url = serverConfig.hostUrl;
-          const verificationToken: models.Token = await models.Token.getInstance().create(
-            {
-              tokenType: TokenType.VERIFICATION_TOKEN,
-              user: user._id,
-              token: uuid(),
-            },
-          );
-          const link = `${url}/hook/authentication/verify-email/${verificationToken.token}`;
-          const safeUser = { ...user };
-          delete safeUser.hashedPassword;
-          await this.grpcSdk.emailProvider!.sendEmail('EmailVerification', {
-            email: user.email,
-            variables: {
-              link,
-              user: safeUser,
-            },
-          });
-        } else {
-          ConduitGrpcSdk.Logger.error(
-            'Failed to send verification email. Email service not online!',
-          );
-        }
-      }
-
       return callback(null, { password });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });

@@ -7,18 +7,17 @@ message UserLoginRequest {
   string clientId = 2;
 }
 
-message Identifier {
-  oneof id {
-    string email = 1;
-    string username = 2;
-  }
-}
-
 message UserCreateRequest {
-  Identifier identifier = 1;
+  string email = 1;
   optional string password = 2;
   bool verify = 3;
   optional string anonymousId = 4;
+}
+
+message UserCreateByUsernameRequest {
+  string username = 1;
+  optional string password = 2;
+  optional string anonymousId = 3;
 }
 
 message UserChangePass {
@@ -105,6 +104,7 @@ message UserModifyStatusResponse {
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
+  rpc UserCreateByUsername(UserCreateByUsernameRequest) returns (UserCreateResponse);
   rpc UserModifyStatus(UserModifyStatusRequest) returns (UserModifyStatusResponse);
   rpc AnonymousUserCreate(AnonymousUserCreateRequest) returns (UserLoginResponse);
   rpc ChangePass(UserChangePass) returns (UserCreateResponse);

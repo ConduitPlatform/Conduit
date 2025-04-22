@@ -25,6 +25,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { createHash } from 'crypto';
 import { merge } from 'lodash-es';
+import { authenticateChecks, changePassword } from './utils.js';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -155,7 +156,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         middlewares: ['authMiddleware', 'denyAnonymousMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
-      AuthUtils.changePassword.bind(this),
+      changePassword.bind(this),
     );
 
     routingManager.route(
@@ -386,7 +387,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     );
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
-    await AuthUtils.authenticateChecks(password, config, user);
+    await authenticateChecks(password, config, user);
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return TokenProvider.getInstance().provideUserTokens({
       user,

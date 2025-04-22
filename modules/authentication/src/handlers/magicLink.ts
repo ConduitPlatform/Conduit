@@ -176,12 +176,6 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   }
 
   private async sendMagicLinkMail(user: User, token: Token) {
-    if (isNil(user.email)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use email authentication',
-      );
-    }
     const linkUri = ConfigController.getInstance().config.magic_link.link_uri?.replace(
       /\/$/,
       '',
