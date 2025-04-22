@@ -2,7 +2,6 @@ import { isNil } from 'lodash-es';
 import { AuthUtils } from '../utils/index.js';
 import { TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
-import { Config } from '../config/index.js';
 import {
   ConduitGrpcSdk,
   ConduitRouteActions,
@@ -85,8 +84,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         description: `Login endpoint that can be used to authenticate.
          Tokens are returned according to configuration.`,
         bodyParams: {
-          email: ConduitString.Optional,
-          username: ConduitString.Optional,
+          email: ConduitString.Required,
           password: ConduitString.Required,
           captchaToken: ConduitString.Optional,
         },
@@ -101,6 +99,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       }),
       this.authenticate.bind(this),
     );
+
     if (this.grpcSdk.isAvailable('email')) {
       routingManager.route(
         {
@@ -156,7 +155,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         middlewares: ['authMiddleware', 'denyAnonymousMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
-      this.changePassword.bind(this),
+      AuthUtils.changePassword.bind(this),
     );
 
     routingManager.route(
@@ -367,36 +366,27 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
-    const { email, username, password } = call.request.params;
+    const email = call.request.params.email.toLowerCase();
+    const password = call.request.params.password;
     const context = call.request.context;
-    if (isNil(context)) {
+    if (isNil(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-    }
 
-    if (!email && !username) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Either email or username must be provided',
-      );
-    }
-
-    const identifierKey = email ? 'email' : 'username';
-    const identifierValue = (email || username).toLowerCase();
-
-    if (email && AuthUtils.invalidEmailAddress(email)) {
+    const clientId = context.clientId;
+    const invalidAddress = AuthUtils.invalidEmailAddress(email);
+    if (invalidAddress) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
 
-    const clientId = context.clientId;
     const config = ConfigController.getInstance().config;
 
     const user: User | null = await User.getInstance().findOne(
-      { [identifierKey]: identifierValue },
+      { email },
       '+hashedPassword',
     );
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
-    await this._authenticateChecks(password, config, user);
+    await AuthUtils.authenticateChecks(password, config, user);
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return TokenProvider.getInstance().provideUserTokens({
       user,
@@ -484,12 +474,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
       '+hashedPassword',
     );
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
-    if (isNil(user.email)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use email authentication',
-      );
-    }
     if (isNil(user.hashedPassword))
       throw new GrpcError(
         status.PERMISSION_DENIED,
@@ -518,28 +502,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return 'Password reset successful';
   }
 
-  async changePassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!call.request.context.jwtPayload.sudo) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Re-login required to enter sudo mode',
-      );
-    }
-    const { user } = call.request.context;
-    const { newPassword } = call.request.bodyParams;
-    const hashedPassword = await AuthUtils.hashPassword(newPassword);
-    await User.getInstance().findByIdAndUpdate(user._id, { hashedPassword });
-    return 'Password changed successfully';
-  }
-
   async changeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { user } = call.request.context;
-    if (isNil(user.email)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use email authentication',
-      );
-    }
     if (!call.request.context.jwtPayload.sudo) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
@@ -547,6 +510,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       );
     }
     const newEmail = call.request.params.newEmail.toLowerCase();
+    const { user } = call.request.context;
     const config = ConfigController.getInstance().config;
     const redirectUri =
       AuthUtils.validateRedirectUri(call.request.bodyParams.redirectUri) ??
@@ -608,12 +572,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async verifyEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (isNil(call.request.context.user.email)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use email authentication',
-      );
-    }
     const config = ConfigController.getInstance().config;
     const verificationTokenParam = call.request.params.verificationToken;
     const verificationTokenDoc: Token | null = await Token.getInstance().findOne(
@@ -662,12 +620,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async verifyChangeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (isNil(call.request.context.user.email)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use email authentication',
-      );
-    }
     const { verificationToken } = call.request.params.verificationToken;
     const config = ConfigController.getInstance().config;
     const token: Token | null = await Token.getInstance().findOne(
@@ -756,25 +708,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return 'OK';
   }
 
-  private async _authenticateChecks(password: string, config: Config, user: User) {
-    if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
-    if (!user.hashedPassword)
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
-    const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
-    if (!passwordsMatch)
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
-
-    if (config.local.verification.required && !user.isVerified) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'You must verify your account to login',
-      );
-    }
-  }
-
   private async initDbAndEmail() {
     const config = ConfigController.getInstance().config;
 
@@ -802,12 +735,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   private async handleEmailVerification(user: User, redirectUri?: string | undefined) {
-    if (isNil(user.email)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use email authentication',
-      );
-    }
     const config = ConfigController.getInstance().config;
     const verificationToken: Token = await Token.getInstance().create({
       tokenType: TokenType.VERIFICATION_TOKEN,
