@@ -3,8 +3,8 @@ import { RestController } from './Rest/index.js';
 import { GraphQLController } from './GraphQl/GraphQL.js';
 import { SocketController } from './Socket/Socket.js';
 import {
-  ConduitGrpcSdk,
   ConduitError,
+  ConduitGrpcSdk,
   IConduitLogger,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
@@ -23,9 +23,12 @@ import { ConduitRoute, ProxyRoute } from './classes/index.js';
 import { createRouteMiddleware } from './utils/logger.js';
 import { isInstanceOfProxyRoute, ProxyRouteController } from './Proxy/index.js';
 import { fileURLToPath } from 'node:url';
+import { instrumentationMiddleware } from './metrics/middleware.js';
+import { RouteTrie } from './metrics/RouteTrie.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 export class ConduitRoutingController {
   private _restRouter?: RestController;
   private _graphQLRouter?: GraphQLController;
@@ -35,6 +38,7 @@ export class ConduitRoutingController {
   private _middlewareRouter: Router;
   private readonly _cleanupTimeoutMs: number;
   private _cleanupTimeout: NodeJS.Timeout | null = null;
+  private readonly routeTrie: RouteTrie = new RouteTrie();
   readonly expressApp: Express = express();
   readonly server = http.createServer(this.expressApp);
 
@@ -62,6 +66,13 @@ export class ConduitRoutingController {
     );
 
     const self = this;
+    const histogram = ConduitGrpcSdk.Metrics?.createHistogram({
+      name: 'http_request_duration_seconds',
+      help: 'Duration of HTTP requests in seconds',
+      labelNames: ['method', 'route', 'code'],
+      buckets: [0.1, 0.3, 0.5, 0.7, 1, 3, 5, 7, 10],
+    });
+    this.expressApp.use(baseUrl, instrumentationMiddleware(this.routeTrie, histogram));
     this.expressApp.use(baseUrl, (req, res, next) => {
       self._middlewareRouter(req, res, next);
     });
@@ -203,6 +214,7 @@ export class ConduitRoutingController {
   }
 
   registerConduitRoute(route: ConduitRoute) {
+    this.routeTrie.insert(route.input.action, route.input.path);
     this._graphQLRouter?.registerConduitRoute(route);
     this._restRouter?.registerConduitRoute(route);
   }
