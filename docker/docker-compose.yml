@@ -164,7 +164,7 @@ services:
       - prometheus
       - loki
     ports:
-      - '${AUTHN_GRPC_PORT:-55162}:${AUTHZ_GRPC_PORT:-55169}'
+      - '${AUTHZ_GRPC_PORT:-55162}:${AUTHZ_GRPC_PORT:-55169}'
     environment:
       CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
       SERVICE_URL: 'conduit-authorization:${AUTHZ_GRPC_PORT:-55169}'
@@ -200,7 +200,6 @@ services:
       METRICS_PORT: '9095'
       LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
-    profiles: ['chat']
     networks:
       default:
         aliases:
@@ -226,7 +225,6 @@ services:
       METRICS_PORT: '9096'
       LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
-    profiles: ['email']
     networks:
       default:
         aliases:
@@ -254,7 +252,6 @@ services:
       METRICS_PORT: '9097'
       LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
-    profiles: ['forms']
     networks:
       default:
         aliases:
@@ -281,7 +278,6 @@ services:
       METRICS_PORT: '9098'
       LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
-    profiles: ['push-notifications']
     networks:
       default:
         aliases:
@@ -307,7 +303,6 @@ services:
       METRICS_PORT: '9099'
       LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
-    profiles: ['sms']
     networks:
       default:
         aliases:
@@ -334,7 +329,6 @@ services:
       METRICS_PORT: '9190'
       LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
-    profiles: ['storage']
     networks:
       default:
         aliases:
@@ -360,32 +354,12 @@ services:
       MONGO_INITDB_DATABASE: 'conduit'
       MONGO_INITDB_ROOT_USERNAME: '${DB_USER:-conduit}'
       MONGO_INITDB_ROOT_PASSWORD: '${DB_PASS:-pass}'
-    profiles: ['mongodb']
     networks:
       default:
         aliases:
           - conduit-mongo
     volumes:
       - mongo:/data/db
-
-  postgres:
-    container_name: 'conduit-postgres'
-    image: 'docker.io/library/postgres:14.4'
-    restart: unless-stopped
-    ports:
-      - '${DB_PORT:-5432}:5432'
-    environment:
-      POSTGRES_DB: 'conduit'
-      POSTGRES_USER: '${DB_USER:-conduit}'
-      POSTGRES_PASSWORD: '${DB_PASS:-pass}'
-    profiles: ['postgres']
-    networks:
-      default:
-        aliases:
-          - conduit-postgres
-    volumes:
-      - postgres:/var/lib/postgresql
-
   # Metrics / Logs
   prometheus:
     image: 'docker.io/prom/prometheus:v2.37.1'
@@ -420,8 +394,6 @@ services:
 # Persistent Volumes
 volumes:
   mongo:
-    external: false
-  postgres:
     external: false
   prometheus:
     external: false
