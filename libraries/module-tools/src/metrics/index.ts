@@ -16,6 +16,8 @@ import { MetricsServer } from './MetricsServer.js';
 import defaultMetrics from './config/defaults.js';
 import { IConduitMetrics, MetricType } from '@conduitplatform/grpc-sdk';
 
+const METRICS_PREFIX = 'cnd_';
+
 export class ConduitMetrics implements IConduitMetrics {
   private readonly moduleName: string;
   private readonly instance: string;
@@ -68,7 +70,7 @@ export class ConduitMetrics implements IConduitMetrics {
   collectDefaultMetrics() {
     collectDefaultMetrics({
       register: this._registry,
-      prefix: 'cnd_',
+      prefix: METRICS_PREFIX,
       // probably not needed
       labels: {
         module_name: this.moduleName,
@@ -78,19 +80,35 @@ export class ConduitMetrics implements IConduitMetrics {
   }
 
   createCounter(config: CounterConfiguration<any>) {
-    return new Counter({ ...config, registers: [this._registry] });
+    return new Counter({
+      ...config,
+      name: this.addPrefix(config.name),
+      registers: [this._registry],
+    });
   }
 
   createSummary(config: SummaryConfiguration<any>) {
-    return new Summary({ ...config, registers: [this._registry] });
+    return new Summary({
+      ...config,
+      name: this.addPrefix(config.name),
+      registers: [this._registry],
+    });
   }
 
   createHistogram(config: HistogramConfiguration<any>) {
-    return new Histogram({ ...config, registers: [this._registry] });
+    return new Histogram({
+      ...config,
+      name: this.addPrefix(config.name),
+      registers: [this._registry],
+    });
   }
 
   createGauge(config: GaugeConfiguration<any>) {
-    return new Gauge({ ...config, registers: [this._registry] });
+    return new Gauge({
+      ...config,
+      name: this.addPrefix(config.name),
+      registers: [this._registry],
+    });
   }
 
   getMetric(name: string) {
@@ -98,7 +116,7 @@ export class ConduitMetrics implements IConduitMetrics {
   }
 
   increment(metric: string, increment: number = 1, labels?: LabelValues<any>) {
-    const metricInstance = this._registry.getSingleMetric(this.addPrefix(metric));
+    const metricInstance = this.getMetric(metric);
     if (!(metricInstance instanceof Counter) && !(metricInstance instanceof Gauge)) {
       throw new Error(`Metric ${metric} is not an incrementable metric`);
     }
@@ -108,7 +126,7 @@ export class ConduitMetrics implements IConduitMetrics {
   }
 
   decrement(metric: string, decrement: number = 1, labels?: LabelValues<any>) {
-    const metricInstance = this._registry.getSingleMetric(this.addPrefix(metric));
+    const metricInstance = this.getMetric(metric);
     if (!(metricInstance instanceof Gauge)) {
       throw new Error(`Metric ${metric} is not a decrementable metric`);
     }
@@ -118,7 +136,7 @@ export class ConduitMetrics implements IConduitMetrics {
   }
 
   set(metric: string, value: number, labels?: LabelValues<any>) {
-    const metricInstance = this._registry.getSingleMetric(this.addPrefix(metric));
+    const metricInstance = this.getMetric(metric);
     if (!(metricInstance instanceof Gauge)) {
       throw new Error(`Metric ${metric} is not a Gauge`);
     }
@@ -128,7 +146,7 @@ export class ConduitMetrics implements IConduitMetrics {
   }
 
   observe(metric: string, value: number, labels?: LabelValues<any>) {
-    const metricInstance = this._registry.getSingleMetric(this.addPrefix(metric));
+    const metricInstance = this.getMetric(metric);
     if (!(metricInstance instanceof Histogram) && !(metricInstance instanceof Summary)) {
       throw new Error(`Metric ${metric} is not a Histogram`);
     }
@@ -138,6 +156,9 @@ export class ConduitMetrics implements IConduitMetrics {
   }
 
   private addPrefix(metric: string) {
-    return `cnd_${metric}`;
+    if (!metric.includes(METRICS_PREFIX)) {
+      return `${METRICS_PREFIX}${metric}`;
+    }
+    return metric;
   }
 }
