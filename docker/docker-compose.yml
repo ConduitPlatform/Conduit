@@ -164,7 +164,7 @@ services:
       - prometheus
       - loki
     ports:
-      - '${AUTHN_GRPC_PORT:-55162}:${AUTHZ_GRPC_PORT:-55169}'
+      - '${AUTHZ_GRPC_PORT:-55162}:${AUTHZ_GRPC_PORT:-55169}'
     environment:
       CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
       SERVICE_URL: 'conduit-authorization:${AUTHZ_GRPC_PORT:-55169}'
