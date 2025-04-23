@@ -35,6 +35,10 @@ export class ConduitMetrics implements IConduitMetrics {
     this._httpServer.initialize();
   }
 
+  get registry() {
+    return this._registry;
+  }
+
   initializeDefaultMetrics() {
     for (const metric of Object.values(defaultMetrics)) {
       this.registerMetric(metric.type as unknown as MetricType, metric.config);
@@ -64,7 +68,7 @@ export class ConduitMetrics implements IConduitMetrics {
   collectDefaultMetrics() {
     collectDefaultMetrics({
       register: this._registry,
-      prefix: 'conduit_',
+      prefix: 'cnd_',
       // probably not needed
       labels: {
         module_name: this.moduleName,
@@ -134,6 +138,6 @@ export class ConduitMetrics implements IConduitMetrics {
   }
 
   private addPrefix(metric: string) {
-    return `conduit_${metric}`;
+    return `cnd_${metric}`;
   }
 }
