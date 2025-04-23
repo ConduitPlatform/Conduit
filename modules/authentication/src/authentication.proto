@@ -14,6 +14,12 @@ message UserCreateRequest {
   optional string anonymousId = 4;
 }
 
+message UserCreateByUsernameRequest {
+  string username = 1;
+  optional string password = 2;
+  optional string anonymousId = 3;
+}
+
 message UserChangePass {
   string email = 1;
   optional string password = 2;
@@ -98,6 +104,7 @@ message UserModifyStatusResponse {
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
+  rpc UserCreateByUsername(UserCreateByUsernameRequest) returns (UserCreateResponse);
   rpc UserModifyStatus(UserModifyStatusRequest) returns (UserModifyStatusResponse);
   rpc AnonymousUserCreate(AnonymousUserCreateRequest) returns (UserLoginResponse);
   rpc ChangePass(UserChangePass) returns (UserCreateResponse);

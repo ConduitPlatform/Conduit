@@ -55,22 +55,18 @@ export class UserAdmin {
   }
 
   async createUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const email = call.request.params.email.toLowerCase();
-    const password = call.request.params.password;
-    if (AuthUtils.invalidEmailAddress(email)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
-    }
+    const { email, username, password } = call.request.params;
 
-    let user: User | null = await User.getInstance().findOne({
-      email: email,
-    });
+    const query = AuthUtils.validateAndNormalizeIdentifier(email, username);
+
+    let user: User | null = await User.getInstance().findOne(query);
     if (!isNil(user)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
     }
 
     const hashedPassword = await AuthUtils.hashPassword(password);
     user = await User.getInstance().create({
-      email: email,
+      ...query,
       hashedPassword,
       isVerified: true,
     });

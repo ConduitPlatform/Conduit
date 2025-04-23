@@ -38,5 +38,10 @@ export default {
       format: 'String',
       default: '',
     },
+    username_auth_enabled: {
+      doc: 'Defines if username authentication strategy is enabled',
+      format: 'Boolean',
+      default: false,
+    },
   },
 };

@@ -62,9 +62,10 @@ export class AdminHandlers {
       {
         path: '/users',
         action: ConduitRouteActions.POST,
-        description: `Creates a new user using email/password.`,
+        description: `Creates a new user using email/username and password.`,
         bodyParams: {
-          email: ConduitString.Required,
+          email: ConduitString.Optional,
+          username: ConduitString.Optional,
           password: ConduitString.Required,
         },
       },

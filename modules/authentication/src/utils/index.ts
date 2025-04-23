@@ -50,6 +50,7 @@ export namespace AuthUtils {
     }
     return headerArgs[1] || tokenCookie;
   }
+
   export async function createToken(
     dbUserId: string,
     data: Indexable,
@@ -264,5 +265,26 @@ export namespace AuthUtils {
         `User data cannot overwrite User schema fields`,
       );
     }
+  }
+
+  export function validateAndNormalizeIdentifier(
+    email?: string,
+    username?: string,
+  ): { [key: string]: string } {
+    if (!!email === !!username) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Exactly one of email or username must be provided',
+      );
+    }
+
+    if (email && invalidEmailAddress(email)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
+    }
+
+    const key = email ? 'email' : 'username';
+    const value = (email || username)!.toLowerCase();
+
+    return { [key]: value };
   }
 }

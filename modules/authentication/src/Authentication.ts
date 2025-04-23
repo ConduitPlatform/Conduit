@@ -24,6 +24,7 @@ import {
   TeamDeleteRequest,
   TeamDeleteResponse,
   UserChangePass,
+  UserCreateByUsernameRequest,
   UserCreateRequest,
   UserCreateResponse,
   UserDeleteRequest,
@@ -347,6 +348,61 @@ export default class Authentication extends ManagedModule<Config> {
           .catch(err => {
             ConduitGrpcSdk.Logger.error(err);
           });
+      }
+      return callback(null, { password });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  async userCreateByUsername(
+    call: GrpcRequest<UserCreateByUsernameRequest>,
+    callback: GrpcCallback<UserCreateResponse>,
+  ) {
+    const username = call.request.username.toLowerCase();
+    let password = call.request.password;
+
+    if (isNil(password) || password.length === 0) {
+      password = AuthUtils.randomToken(8);
+    }
+    try {
+      let user = await models.User.getInstance().findOne({ username });
+      if (user) {
+        return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
+      }
+      const hashedPassword = await AuthUtils.hashPassword(password);
+      const anonymousUserId = call.request.anonymousId;
+      if (!anonymousUserId) {
+        user = await models.User.getInstance().create({
+          username,
+          hashedPassword,
+          isVerified: true,
+        });
+        await TeamsHandler.getInstance()
+          .addUserToDefault(user)
+          .catch(err => {
+            ConduitGrpcSdk.Logger.error(err);
+          });
+      } else {
+        const config = ConfigController.getInstance().config;
+        if (!config.anonymousUsers.enabled) {
+          return callback({
+            code: status.FAILED_PRECONDITION,
+            message: 'Anonymous users configuration is disabled',
+          });
+        }
+        user = await models.User.getInstance().findByIdAndUpdate(anonymousUserId, {
+          username,
+          hashedPassword,
+          isAnonymous: false,
+          isVerified: true,
+        });
+        if (!user) {
+          return callback({
+            code: status.NOT_FOUND,
+            message: 'Anonymous user not found',
+          });
+        }
       }
       return callback(null, { password });
     } catch (e) {

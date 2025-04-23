@@ -28,6 +28,7 @@ import { MagicLinkHandlers } from '../handlers/magicLink.js';
 import { Config } from '../config/index.js';
 import { TeamsHandler } from '../handlers/team.js';
 import { BiometricHandlers } from '../handlers/biometric.js';
+import { UsernameHandlers } from '../handlers/username.js';
 
 type OAuthHandler = typeof oauth2;
 
@@ -40,6 +41,7 @@ export class AuthenticationRoutes {
   private readonly twoFaHandlers: TwoFa;
   private readonly magicLinkHandlers: MagicLinkHandlers;
   private readonly biometricHandlers: BiometricHandlers;
+  private readonly usernameHandlers: UsernameHandlers;
 
   constructor(
     readonly server: GrpcServer,
@@ -53,6 +55,7 @@ export class AuthenticationRoutes {
     this.twoFaHandlers = new TwoFa(this.grpcSdk);
     this.magicLinkHandlers = new MagicLinkHandlers(this.grpcSdk);
     this.biometricHandlers = new BiometricHandlers(this.grpcSdk);
+    this.usernameHandlers = new UsernameHandlers(this.grpcSdk);
   }
 
   async registerRoutes() {
@@ -151,6 +154,15 @@ export class AuthenticationRoutes {
 
       enabled = true;
     }
+
+    const usernameActive = await this.usernameHandlers
+      .validate()
+      .catch(e => ConduitGrpcSdk.Logger.error(e));
+    if (usernameActive) {
+      await this.usernameHandlers.declareRoutes(this._routingManager);
+      enabled = true;
+    }
+
     if (enabled) {
       this.commonHandlers.declareRoutes(this._routingManager);
       this._routingManager.middleware(

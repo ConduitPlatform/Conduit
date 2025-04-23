@@ -2,7 +2,6 @@ import { isNil } from 'lodash-es';
 import { AuthUtils } from '../utils/index.js';
 import { TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
-import { Config } from '../config/index.js';
 import {
   ConduitGrpcSdk,
   ConduitRouteActions,
@@ -26,6 +25,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { createHash } from 'crypto';
 import { merge } from 'lodash-es';
+import { authenticateChecks, changePassword } from './utils.js';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -156,7 +156,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         middlewares: ['authMiddleware', 'denyAnonymousMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
-      this.changePassword.bind(this),
+      changePassword.bind(this),
     );
 
     routingManager.route(
@@ -387,7 +387,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     );
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
-    await this._authenticateChecks(password, config, user);
+    await authenticateChecks(password, config, user);
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return TokenProvider.getInstance().provideUserTokens({
       user,
@@ -501,20 +501,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
 
     return 'Password reset successful';
-  }
-
-  async changePassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!call.request.context.jwtPayload.sudo) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Re-login required to enter sudo mode',
-      );
-    }
-    const { user } = call.request.context;
-    const { newPassword } = call.request.bodyParams;
-    const hashedPassword = await AuthUtils.hashPassword(newPassword);
-    await User.getInstance().findByIdAndUpdate(user._id, { hashedPassword });
-    return 'Password changed successfully';
   }
 
   async changeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -721,25 +707,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(foundUser));
 
     return 'OK';
-  }
-
-  private async _authenticateChecks(password: string, config: Config, user: User) {
-    if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
-    if (!user.hashedPassword)
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
-    const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
-    if (!passwordsMatch)
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
-
-    if (config.local.verification.required && !user.isVerified) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'You must verify your account to login',
-      );
-    }
   }
 
   private async initDbAndEmail() {
