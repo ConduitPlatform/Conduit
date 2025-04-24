@@ -17,6 +17,7 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { authenticateChecks, changePassword } from './utils.js';
+import { Config } from '../config/index.js';
 
 export class UsernameHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -64,12 +65,12 @@ export class UsernameHandlers implements IAuthenticationStrategy {
   }
 
   async validate(): Promise<boolean> {
-    const config = ConfigController.getInstance().config;
-    if (config.local.username.enabled) {
-      return Promise.resolve(true);
+    const config: Config = ConfigController.getInstance().config;
+    if (config.local.username_auth_enabled) {
+      return true;
     } else {
       ConduitGrpcSdk.Logger.log('Username authentication not available');
-      return Promise.resolve(false);
+      return false;
     }
   }
 
