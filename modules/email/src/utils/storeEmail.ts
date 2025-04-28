@@ -12,7 +12,7 @@ export async function storeEmail(
   template: EmailTemplate | null,
   contentFileId: string | undefined,
   params: ISendEmailParams,
-) {
+): Promise<string> {
   const config = ConfigController.getInstance().config as Config;
   let newContentFile;
   if (!contentFileId && config.storeEmails.storage.enabled) {
@@ -39,5 +39,6 @@ export async function storeEmail(
     replyTo: params.replyTo,
     sendingDomain: config.sendingDomain,
   };
-  await EmailRecord.getInstance().create(emailInfo);
+  const emailRec = await EmailRecord.getInstance().create(emailInfo);
+  return emailRec._id;
 }

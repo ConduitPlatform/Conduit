@@ -92,7 +92,11 @@ export default class Email extends ManagedModule<Config> {
     } else {
       if (!this.isRunning) {
         await this.initEmailProvider();
-        this.emailService = new EmailService(this.grpcSdk, this.emailProvider);
+        this.emailService = new EmailService(
+          this.grpcSdk,
+          this.emailProvider,
+          this.redisConnection,
+        );
         this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
         this.adminRouter.setEmailService(this.emailService);
         this.isRunning = true;

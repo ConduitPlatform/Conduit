@@ -38,6 +38,11 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: false,
   },
+  status: {
+    type: TYPE.String,
+    required: false,
+    default: 'unknown',
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -67,6 +72,7 @@ export class EmailRecord extends ConduitActiveSchema<EmailRecord> {
   sendingDomain?: string;
   createdAt: Date;
   updatedAt: Date;
+  status: string;
 
   private constructor(database: DatabaseProvider) {
     super(database, EmailRecord.name, schema, modelOptions, collectionName);
