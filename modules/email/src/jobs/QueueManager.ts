@@ -1,10 +1,13 @@
-import { Queue, Worker, Job } from 'bullmq';
-import { Redis, Cluster } from 'ioredis';
+import { Job, Queue, Worker } from 'bullmq';
+import { Cluster, Redis } from 'ioredis';
 import { EmailRecord } from '../models/index.js';
 import { IJobData } from '../interfaces/index.js';
 import { ConfigController } from '@conduitplatform/module-tools';
 import config from '../config/config.js';
+import { Indexable } from '@conduitplatform/grpc-sdk';
+import { EmailStatusEnum } from '../models/EmailStatusEnum.js';
 
+// Exclude the ESPs that do not support fetching status updates
 type Provider = Exclude<keyof typeof config.transportSettings, 'amazonSes' | 'smtp'>;
 
 export class QueueManager {
@@ -13,33 +16,33 @@ export class QueueManager {
   private readonly retryDelay: number = 5 * 1000;
   private emailWorker: Worker<IJobData>;
 
-  // Map of statuses returned from each provider indicating finalization of the email delivery, to the status to be set in the database
+  // Map statuses returned from each provider that indicate finalization of the email delivery, to the status to be set in the database
   private readonly providerFinalStatusMap: {
-    [key in Provider]: Record<string, 'delivered' | 'failed'>;
+    [key in Provider]: Record<string, EmailStatusEnum>;
   } = {
     mailgun: {
-      delivered: 'delivered',
-      failed: 'failed',
-      rejected: 'failed',
+      delivered: EmailStatusEnum.DELIVERED,
+      failed: EmailStatusEnum.FAILED,
+      rejected: EmailStatusEnum.FAILED,
     },
     mailersend: {
-      delivered: 'delivered',
-      soft_bounced: 'failed',
-      hard_bounced: 'failed',
+      delivered: EmailStatusEnum.DELIVERED,
+      soft_bounced: EmailStatusEnum.FAILED,
+      hard_bounced: EmailStatusEnum.FAILED,
     },
     mandrill: {
-      rejected: 'failed',
-      sent: 'delivered',
-      bounced: 'failed',
+      rejected: EmailStatusEnum.FAILED,
+      sent: EmailStatusEnum.DELIVERED,
+      bounced: EmailStatusEnum.FAILED,
     },
     sendgrid: {
-      delivered: 'delivered',
-      not_delivered: 'failed',
+      delivered: EmailStatusEnum.DELIVERED,
+      not_delivered: EmailStatusEnum.FAILED,
     },
   };
 
-  // Settings about which field in the ESP's response contains the status
-  private readonly providerSettings: Record<Provider, string> = {
+  // Specifies which field in the ESP's response contains the status
+  private readonly providerStatusField: Record<Provider, string> = {
     mailgun: 'event',
     mailersend: 'status',
     mandrill: 'state',
@@ -48,7 +51,7 @@ export class QueueManager {
 
   constructor(
     private readonly redisConnection: Redis | Cluster,
-    private readonly getEmailStatus: (messageId: string) => Promise<any>,
+    private readonly getEmailStatus: (messageId: string) => Promise<Indexable>,
   ) {
     this.emailStatusQueue = new Queue('email-status-updates', {
       connection: this.redisConnection,
@@ -60,12 +63,20 @@ export class QueueManager {
     const { messageId, emailRecId, retries = 0 } = job.data;
     const rawProviderResponse = await this.getEmailStatus(messageId);
 
-    const provider = ConfigController.getInstance().config.transport as Provider;
+    const provider = ConfigController.getInstance().config.transport;
     const status = this.mapProviderStatus(provider, rawProviderResponse);
+
+    const query = {
+      status: status !== null ? status : undefined, // Does not update the status if it isn't final since mongoose ignores undefined values
+      $addToSet: { rawProviderStatusResponses: JSON.stringify(rawProviderResponse) }, // Push the raw response to the array if it doesn't already exist
+    };
+
+    await EmailRecord.getInstance().findByIdAndUpdate(emailRecId, query);
 
     // The status returned from the provider does not indicate finalization of the email delivery
     if (status === null) {
       if (retries < this.maxRetries) {
+        // Retry the job after a delay
         await this.emailStatusQueue.add(
           'email-status-updates',
           {
@@ -75,32 +86,22 @@ export class QueueManager {
           },
           { delay: this.retryDelay * (retries + this.maxRetries) },
         );
-        console.log(`Retrying job ${job.id} (${retries + 1}/${this.maxRetries})`);
       } else {
         await EmailRecord.getInstance().findByIdAndUpdate(emailRecId, {
-          status: 'failed',
+          status: EmailStatusEnum.FAILED,
         });
-        console.error(`Job ${job.id} failed after ${this.maxRetries} retries.`);
       }
-      console.log(`Job ${job.id} status is not final. Retrying...`);
-    } else {
-      await EmailRecord.getInstance().findByIdAndUpdate(emailRecId, {
-        status,
-      });
-      console.log(`Job ${job.id} completed with status: ${status}`);
     }
   }
 
   private mapProviderStatus(
     provider: Provider,
-    rawProviderResponse: any,
-  ): 'delivered' | 'failed' | null {
-    const status = rawProviderResponse[this.providerSettings[provider]];
-    console.log('Provider status:', status);
-    if (this.providerFinalStatusMap[provider][status]) {
-      return this.providerFinalStatusMap[provider][status];
-    }
-    return null;
+    rawProviderResponse: Indexable,
+  ): EmailStatusEnum | null {
+    const status = rawProviderResponse[this.providerStatusField[provider]];
+    return this.providerFinalStatusMap[provider][status]
+      ? this.providerFinalStatusMap[provider][status]
+      : null;
   }
 
   startWorker() {
