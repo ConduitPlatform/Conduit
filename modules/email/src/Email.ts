@@ -31,6 +31,7 @@ import { ISendEmailParams } from './interfaces/index.js';
 import { fileURLToPath } from 'node:url';
 import { Queue, Worker } from 'bullmq';
 import { Cluster, Redis } from 'ioredis';
+import { QueueController } from './controllers/queue.controller.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,6 +57,7 @@ export default class Email extends ManagedModule<Config> {
   private emailService: EmailService;
   private redisConnection: Redis | Cluster;
   private emailCleanupQueue: Queue | null = null;
+  private queueController: QueueController;
 
   constructor() {
     super('email');
@@ -92,13 +94,11 @@ export default class Email extends ManagedModule<Config> {
     } else {
       if (!this.isRunning) {
         await this.initEmailProvider();
-        this.emailService = new EmailService(
-          this.grpcSdk,
-          this.emailProvider,
-          this.redisConnection,
-        );
+        this.emailService = new EmailService(this.grpcSdk, this.emailProvider);
         this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
         this.adminRouter.setEmailService(this.emailService);
+        this.queueController = QueueController.getInstance(this.grpcSdk);
+        this.queueController.addEmailStatusWorker();
         this.isRunning = true;
       } else {
         await this.initEmailProvider(ConfigController.getInstance().config);

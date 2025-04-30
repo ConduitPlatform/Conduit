@@ -16,25 +16,13 @@ import { Config } from '../config/index.js';
 import { status } from '@grpc/grpc-js';
 import { storeEmail } from '../utils/index.js';
 import { getHandleBarsValues } from '../email-provider/utils/index.js';
-import { Cluster, Redis } from 'ioredis';
-import { QueueManager } from '../jobs/QueueManager.js';
+import { QueueController } from '../controllers/queue.controller.js';
 
 export class EmailService {
-  private queueManager: QueueManager;
-
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private emailer: EmailProvider,
-    private readonly redisConnection: Redis | Cluster,
-  ) {
-    const config = ConfigController.getInstance().config as Config;
-    if (config.storeEmails.enabled) {
-      this.queueManager = new QueueManager(
-        this.redisConnection,
-        this.getEmailStatus.bind(this),
-      );
-    }
-  }
+  ) {}
 
   updateProvider(emailer: EmailProvider) {
     this.emailer = emailer;
@@ -219,13 +207,9 @@ export class EmailService {
         },
       );
 
-      const queue = this.queueManager.getQueue();
-      if (!queue) throw new Error('Unable to initialize email status update queue.');
-      await queue.add(
-        'email-status-updates',
-        { messageId, emailRecId },
-        { delay: 5 * 1000 },
-      );
+      if (messageId) {
+        await QueueController.getInstance().addEmailStatusJob(messageId, emailRecId, 0);
+      }
     }
     return { messageId, ...sentMessageInfo };
   }
