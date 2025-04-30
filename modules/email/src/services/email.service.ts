@@ -208,7 +208,9 @@ export class EmailService {
       );
 
       if (messageId) {
-        await QueueController.getInstance().addEmailStatusJob(messageId, emailRecId, 0);
+        await (
+          await QueueController.getInstance()
+        ).addEmailStatusJob(messageId, emailRecId, 0);
       }
     }
     return { messageId, ...sentMessageInfo };

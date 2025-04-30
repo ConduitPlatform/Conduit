@@ -17,7 +17,7 @@ export default async (job: SandboxedJob<IJobData>) => {
     await grpcSdk.initializeEventBus();
     await grpcSdk.waitForExistence('email');
     await grpcSdk.waitForExistence('database');
-    QueueController.getInstance(grpcSdk);
+    await QueueController.getInstance(grpcSdk);
     EmailRecord.getInstance(grpcSdk.database!);
   }
 
@@ -37,12 +37,9 @@ export default async (job: SandboxedJob<IJobData>) => {
   // The status returned from the provider does not indicate finalization of the email delivery
   if (status === null) {
     if (retries < 5) {
-      // Add the job back to the queue
-      await QueueController.getInstance().addEmailStatusJob(
-        messageId,
-        emailRecId,
-        retries + 1,
-      );
+      await (
+        await QueueController.getInstance()
+      ).addEmailStatusJob(messageId, emailRecId, retries + 1);
     } else {
       await EmailRecord.getInstance().findByIdAndUpdate(emailRecId, {
         status: EmailStatusEnum.FAILED,
