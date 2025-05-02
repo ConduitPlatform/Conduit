@@ -29,8 +29,8 @@ import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 import { ISendEmailParams } from './interfaces/index.js';
 import { fileURLToPath } from 'node:url';
-import { Queue, Worker } from 'bullmq';
-import { Cluster, Redis } from 'ioredis';
+
+import { QueueController } from './controllers/queue.controller.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,8 +54,7 @@ export default class Email extends ManagedModule<Config> {
   private database: DatabaseProvider;
   private emailProvider: EmailProvider;
   private emailService: EmailService;
-  private redisConnection: Redis | Cluster;
-  private emailCleanupQueue: Queue | null = null;
+  private queueController: QueueController;
 
   constructor() {
     super('email');
@@ -67,7 +66,6 @@ export default class Email extends ManagedModule<Config> {
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
-    this.redisConnection = this.grpcSdk.redisManager.getClient();
   }
 
   async preConfig(config: Config) {
@@ -90,25 +88,36 @@ export default class Email extends ManagedModule<Config> {
     if (!ConfigController.getInstance().config.active) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
-      if (!this.isRunning) {
-        await this.initEmailProvider();
-        this.emailService = new EmailService(this.grpcSdk, this.emailProvider);
-        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-        this.adminRouter.setEmailService(this.emailService);
-        this.isRunning = true;
-      } else {
-        await this.initEmailProvider(ConfigController.getInstance().config);
-        this.emailService.updateProvider(this.emailProvider);
-      }
-      this.updateHealth(HealthCheckStatus.SERVING);
-
       const config = ConfigController.getInstance().config as Config;
       if (config.storeEmails.storage.enabled && !this.grpcSdk.isAvailable('storage')) {
         ConduitGrpcSdk.Logger.warn(
           'Failed to enable email storing. Storage module not serving.',
         );
       }
-      await this.handleEmailCleanupJob(config);
+      if (!this.isRunning) {
+        await this.initEmailProvider();
+        this.emailService = new EmailService(this.grpcSdk, this.emailProvider);
+        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+        this.adminRouter.setEmailService(this.emailService);
+        if (config.storeEmails.enabled) {
+          this.queueController = QueueController.getInstance(this.grpcSdk);
+          this.queueController.addEmailStatusWorker();
+          if (config.storeEmails.cleanupSettings.enabled) {
+            this.queueController.addEmailCleanupWorker();
+            await this.queueController.drainEmailCleanupQueue();
+            await this.queueController.addEmailCleanupJob(
+              config.storeEmails.cleanupSettings.limit,
+              config.storeEmails.storage.enabled,
+              config.storeEmails.cleanupSettings.repeat,
+            );
+          }
+        }
+        this.isRunning = true;
+      } else {
+        await this.initEmailProvider(ConfigController.getInstance().config);
+        this.emailService.updateProvider(this.emailProvider);
+      }
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
   }
 
@@ -226,56 +235,5 @@ export default class Email extends ManagedModule<Config> {
     const { transport, transportSettings } = emailConfig;
 
     this.emailProvider = new EmailProvider(transport, transportSettings);
-  }
-
-  private async handleEmailCleanupJob(config: Config) {
-    this.emailCleanupQueue = new Queue('email-cleanup-queue', {
-      connection: this.redisConnection,
-    });
-    await this.emailCleanupQueue.drain(true);
-    if (!config.storeEmails.enabled || !config.storeEmails.cleanupSettings.enabled) {
-      await this.emailCleanupQueue.close();
-      return;
-    }
-    const processorFile = path.normalize(
-      path.join(__dirname, 'jobs', 'cleanupStoredEmails.js'),
-    );
-    const worker = new Worker('email-cleanup-queue', processorFile, {
-      connection: this.redisConnection,
-      removeOnComplete: {
-        age: 3600,
-        count: 1000,
-      },
-      removeOnFail: {
-        age: 24 * 3600,
-      },
-    });
-    worker.on('active', job => {
-      ConduitGrpcSdk.Logger.info(`Stored email cleanup job ${job.id} started`);
-    });
-    worker.on('completed', () => {
-      ConduitGrpcSdk.Logger.info(`Stored email cleanup completed`);
-    });
-    worker.on('error', (error: Error) => {
-      ConduitGrpcSdk.Logger.error(`Stored email cleanup error:`);
-      ConduitGrpcSdk.Logger.error(error);
-    });
-
-    worker.on('failed', (_job, error) => {
-      ConduitGrpcSdk.Logger.error(`Stored email cleanup error:`);
-      ConduitGrpcSdk.Logger.error(error);
-    });
-    await this.emailCleanupQueue.add(
-      'cleanup',
-      {
-        limit: config.storeEmails.cleanupSettings.limit,
-        deleteStorageFiles: config.storeEmails.storage.enabled,
-      },
-      {
-        repeat: {
-          every: config.storeEmails.cleanupSettings.repeat,
-        },
-      },
-    );
   }
 }

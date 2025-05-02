@@ -53,7 +53,7 @@ export class MailersendProvider extends EmailProviderClass {
     if (error) {
       throw new Error(error.message);
     }
-    return response.body.data.emails[0].status;
+    return response.body.data.emails[0];
   }
 
   getMessageId(info: SentMessageInfo): string | undefined {

@@ -1,6 +1,7 @@
 import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 import { EmailTemplate } from './EmailTemplate.schema.js';
+import { EmailStatusEnum } from './EmailStatusEnum.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
@@ -38,6 +39,13 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: false,
   },
+  status: {
+    type: TYPE.String,
+    enum: Object.values(EmailStatusEnum),
+    required: false,
+    default: EmailStatusEnum.UNKNOWN,
+  },
+  rawProviderStatusResponses: [TYPE.String],
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -67,6 +75,8 @@ export class EmailRecord extends ConduitActiveSchema<EmailRecord> {
   sendingDomain?: string;
   createdAt: Date;
   updatedAt: Date;
+  status: string;
+  rawProviderStatusResponses: string[];
 
   private constructor(database: DatabaseProvider) {
     super(database, EmailRecord.name, schema, modelOptions, collectionName);

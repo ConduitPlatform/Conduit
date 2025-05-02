@@ -16,6 +16,7 @@ import { Config } from '../config/index.js';
 import { status } from '@grpc/grpc-js';
 import { storeEmail } from '../utils/index.js';
 import { getHandleBarsValues } from '../email-provider/utils/index.js';
+import { QueueController } from '../controllers/queue.controller.js';
 
 export class EmailService {
   constructor(
@@ -194,13 +195,21 @@ export class EmailService {
     const messageId = this.emailer._transport?.getMessageId(sentMessageInfo);
 
     if (config.storeEmails.enabled) {
-      storeEmail(this.grpcSdk, messageId, templateFound, contentFileId, {
-        body: bodyString,
-        subject: subjectString,
-        ...params,
-      }).catch(e => {
-        ConduitGrpcSdk.Logger.error('Failed to store email', e);
-      });
+      const emailRecId = await storeEmail(
+        this.grpcSdk,
+        messageId,
+        templateFound,
+        contentFileId,
+        {
+          body: bodyString,
+          subject: subjectString,
+          ...params,
+        },
+      );
+
+      if (messageId) {
+        await QueueController.getInstance().addEmailStatusJob(messageId, emailRecId, 0);
+      }
     }
     return { messageId, ...sentMessageInfo };
   }
