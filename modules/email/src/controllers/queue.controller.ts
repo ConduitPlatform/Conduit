@@ -1,45 +1,35 @@
 import path from 'path';
-import { Queue, Worker, Job, WorkerOptions } from 'bullmq';
+import { Job, Queue, Worker } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { Cluster, Redis } from 'ioredis';
 import { fileURLToPath } from 'node:url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const commonWorkerOptions: Partial<WorkerOptions> = {
-  concurrency: 5,
-  removeOnComplete: { age: 3600, count: 1000 },
-  removeOnFail: { age: 24 * 3600 },
-};
-
 export class QueueController {
   private static _instance: QueueController;
   private readonly redisConnection: Redis | Cluster;
-  private emailStatusQueue!: Queue;
-  private emailCleanupQueue!: Queue;
+  private emailStatusQueue: Queue;
+  private emailCleanupQueue: Queue;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.redisConnection = this.grpcSdk.redisManager.getClient();
+    this.initializeQueues();
   }
 
-  static async getInstance(grpcSdk?: ConduitGrpcSdk): Promise<QueueController> {
+  static getInstance(grpcSdk?: ConduitGrpcSdk): QueueController {
     if (QueueController._instance) {
       return QueueController._instance;
     }
     if (!grpcSdk) {
       throw new Error('No grpcSdk instance provided!');
     }
-    const instance = new QueueController(grpcSdk);
-    await instance.initializeQueues();
-    QueueController._instance = instance;
+    QueueController._instance = new QueueController(grpcSdk);
     return QueueController._instance;
   }
 
-  private async initializeQueues(): Promise<void> {
+  private initializeQueues(): void {
     this.emailStatusQueue = this.createQueue('email-status-queue');
-    this.emailCleanupQueue = await this.createAndDrainQueue('email-cleanup-queue');
+    this.emailCleanupQueue = this.createQueue('email-cleanup-queue');
   }
 
   private createQueue(name: string): Queue {
@@ -48,10 +38,33 @@ export class QueueController {
     });
   }
 
-  private async createAndDrainQueue(name: string): Promise<Queue> {
-    const queue = this.createQueue(name);
-    await queue.drain(true);
-    return queue;
+  private addWorker(name: string, jobPath: string): Worker {
+    const worker = new Worker(
+      name,
+      path.normalize(
+        path.join(path.dirname(fileURLToPath(import.meta.url)), '../jobs', jobPath),
+      ),
+      {
+        concurrency: 5,
+        removeOnComplete: { age: 3600, count: 1000 },
+        removeOnFail: { age: 24 * 3600 },
+        connection: this.redisConnection,
+      },
+    );
+    this.setupWorkerEventHandlers(worker);
+    return worker;
+  }
+
+  addEmailStatusWorker(): Worker {
+    return this.addWorker('email-status-queue', 'getEmailStatus.js');
+  }
+
+  addEmailCleanupWorker(): Worker {
+    return this.addWorker('email-cleanup-queue', 'cleanupStoredEmails.js');
+  }
+
+  async drainEmailCleanupQueue(): Promise<void> {
+    return this.emailCleanupQueue.drain();
   }
 
   private setupWorkerEventHandlers(worker: Worker): void {
@@ -71,32 +84,6 @@ export class QueueController {
         job ? `Job ID: ${job.id}, Error: ${error.message}` : `Error: ${error.message}`,
       );
     });
-  }
-
-  addEmailStatusWorker(): Worker {
-    const worker = new Worker(
-      'email-status-queue',
-      path.normalize(path.join(__dirname, '../jobs', 'getEmailStatus.js')),
-      {
-        ...commonWorkerOptions,
-        connection: this.redisConnection,
-      },
-    );
-    this.setupWorkerEventHandlers(worker);
-    return worker;
-  }
-
-  addEmailCleanupWorker(): Worker {
-    const worker = new Worker(
-      'email-cleanup-queue',
-      path.normalize(path.join(__dirname, '../jobs', 'cleanupStoredEmails.js')),
-      {
-        ...commonWorkerOptions,
-        connection: this.redisConnection,
-      },
-    );
-    this.setupWorkerEventHandlers(worker);
-    return worker;
   }
 
   async addEmailStatusJob(

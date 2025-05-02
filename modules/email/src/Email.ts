@@ -100,10 +100,11 @@ export default class Email extends ManagedModule<Config> {
         this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
         this.adminRouter.setEmailService(this.emailService);
         if (config.storeEmails.enabled) {
-          this.queueController = await QueueController.getInstance(this.grpcSdk);
+          this.queueController = QueueController.getInstance(this.grpcSdk);
           this.queueController.addEmailStatusWorker();
           if (config.storeEmails.cleanupSettings.enabled) {
             this.queueController.addEmailCleanupWorker();
+            await this.queueController.drainEmailCleanupQueue();
             await this.queueController.addEmailCleanupJob(
               config.storeEmails.cleanupSettings.limit,
               config.storeEmails.storage.enabled,
