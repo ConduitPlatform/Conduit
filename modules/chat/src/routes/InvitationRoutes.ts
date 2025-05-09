@@ -123,6 +123,17 @@ export class InvitationRoutes {
       chatRoom.participants.push(user);
       await ChatRoom.getInstance().findByIdAndUpdate(chatRoom._id, chatRoom);
       message = 'Invitation accepted';
+      this.grpcSdk.router?.socketPush({
+        event: 'join-room',
+        receivers: [user._id],
+        rooms: [chatRoom._id],
+      });
+      this.grpcSdk.router?.socketPush({
+        event: 'room-joined',
+        receivers: [user._id],
+        rooms: [],
+        data: JSON.stringify({ room: chatRoom._id, roomName: chatRoom.name }),
+      });
     } else {
       message = 'Invitation declined';
     }
@@ -167,6 +178,18 @@ export class InvitationRoutes {
       (chatRoom.participants as string[]).push(receiver as string);
       await ChatRoom.getInstance().findByIdAndUpdate(roomId, chatRoom);
       message = 'Invitation accepted';
+
+      this.grpcSdk.router?.socketPush({
+        event: 'join-room',
+        receivers: [user._id],
+        rooms: [chatRoom._id],
+      });
+      this.grpcSdk.router?.socketPush({
+        event: 'room-joined',
+        receivers: [user._id],
+        rooms: [],
+        data: JSON.stringify({ room: chatRoom._id, roomName: chatRoom.name }),
+      });
     } else {
       message = 'Invitation declined';
     }

@@ -125,6 +125,17 @@ export class ChatRoutes {
       room = (await ChatRoom.getInstance().findByIdAndUpdate(room._id, {
         participantsLog: participantsLog.map(log => log._id),
       })) as ChatRoom;
+      this.grpcSdk.router?.socketPush({
+        event: 'join-room',
+        receivers: room.participants as string[],
+        rooms: [room._id],
+      });
+      this.grpcSdk.router?.socketPush({
+        event: 'room-joined',
+        receivers: room.participants as string[],
+        rooms: [],
+        data: JSON.stringify({ room: room._id, roomName: room.name }),
+      });
     }
     this.grpcSdk.bus?.publish(
       'chat:create:ChatRoom',
@@ -200,6 +211,17 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
+      this.grpcSdk.router?.socketPush({
+        event: 'join-room',
+        receivers: users,
+        rooms: [room._id],
+      });
+      this.grpcSdk.router?.socketPush({
+        event: 'room-joined',
+        receivers: users,
+        rooms: [],
+        data: JSON.stringify({ room: room._id, roomName: room.name }),
+      });
       this.grpcSdk.bus?.publish('chat:addParticipant:ChatRoom', JSON.stringify(room));
       return 'Users added';
     }
@@ -254,6 +276,11 @@ export class ChatRoutes {
             throw new GrpcError(status.INTERNAL, e.message);
           });
       }
+      this.grpcSdk.router?.socketPush({
+        event: 'leave-room',
+        receivers: [user._id],
+        rooms: [roomId],
+      });
     }
     this.grpcSdk.bus?.publish(
       'chat:leaveRoom:ChatRoom',
@@ -444,7 +471,23 @@ export class ChatRoutes {
   async connect(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
     const rooms = await ChatRoom.getInstance().findMany({ participants: user._id });
-    return { rooms: rooms.map((room: ChatRoom) => room._id) };
+    return { event: 'join-room', rooms: rooms.map((room: ChatRoom) => room._id) };
+  }
+
+  async connectToRoom(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
+    const { user } = call.request.context;
+    const [roomId] = call.request.params;
+    const rooms = await ChatRoom.getInstance().findMany({
+      _id: roomId,
+      participants: user._id,
+    });
+    if (!rooms || rooms.length === 0) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        "Room does not exist or you don't have access",
+      );
+    }
+    return { event: 'join-room', rooms: rooms.map((room: ChatRoom) => room._id) };
   }
 
   async onMessage(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
@@ -468,7 +511,7 @@ export class ChatRoutes {
     ConduitGrpcSdk.Metrics?.increment('messages_sent_total');
     return {
       event: 'message',
-      receivers: [roomId],
+      rooms: [roomId],
       data: { sender: user._id, message, room: roomId },
     };
   }
@@ -494,7 +537,7 @@ export class ChatRoutes {
     });
     return {
       event: 'messagesRead',
-      receivers: [room._id],
+      rooms: [room._id],
       data: { room: room._id, readBy: user._id },
     };
   }
@@ -665,6 +708,10 @@ export class ChatRoutes {
       {
         connect: {
           handler: this.connect.bind(this),
+        },
+        connectToRoom: {
+          params: [TYPE.String],
+          handler: this.connectToRoom.bind(this),
         },
         message: {
           handler: this.onMessage.bind(this),
