@@ -578,6 +578,14 @@ export class TeamsHandler implements IAuthenticationStrategy {
       );
     }
 
+    // Delete any existing invite for the same email and team
+    await Token.getInstance().deleteOne({
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
+      // @ts-expect-error Unsafe nested property access
+      'data.teamId': teamId,
+      'data.email': email,
+    });
+
     const invitation = await this.createUserInvitation({
       teamId,
       email,
