@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.15](https://github.com/ConduitPlatform/Conduit/compare/v0.16.14...v0.16.15) (2025-05-13)
+
+
+### Features
+
+* **authentication:** delete duplicate team invitation ([#1337](https://github.com/ConduitPlatform/Conduit/issues/1337)) ([cf2cecf](https://github.com/ConduitPlatform/Conduit/commit/cf2cecf966dde8df464a214d27c2e436234c4d6c))
+* **authentication:** delete invitation RPC ([#1340](https://github.com/ConduitPlatform/Conduit/issues/1340)) ([d8a48e1](https://github.com/ConduitPlatform/Conduit/commit/d8a48e1337b79b0e7219619044d00f0b8c454fae))
+* **authentication:** implement username-based authentication ([#1327](https://github.com/ConduitPlatform/Conduit/issues/1327)) ([58f3066](https://github.com/ConduitPlatform/Conduit/commit/58f3066f8dc90580ab9161de94b82b3692b7c08c))
+* **email:** add Mailersend and Amazon SES providers ([#1314](https://github.com/ConduitPlatform/Conduit/issues/1314)) ([afb945c](https://github.com/ConduitPlatform/Conduit/commit/afb945c34c1d1d965771acc80df00a56433ed9cc))
+* **email:** email status polling ([#1333](https://github.com/ConduitPlatform/Conduit/issues/1333)) ([3a2d59e](https://github.com/ConduitPlatform/Conduit/commit/3a2d59e51d676b32da89cbc4e99513ed69fcb397))
+* **module-tools,router:**  introduce http metrics ([#1332](https://github.com/ConduitPlatform/Conduit/issues/1332)) ([0c2c008](https://github.com/ConduitPlatform/Conduit/commit/0c2c008b0fca0d9aad03ba1076f7f593e5ddd881))
+
+
+### Bug Fixes
+
+* **authentication:** wrong config checks ([3d63107](https://github.com/ConduitPlatform/Conduit/commit/3d63107026cd3582377f65481931eaffaae676ab))
+
 ### [0.16.14](https://github.com/ConduitPlatform/Conduit/compare/v0.16.13...v0.16.14) (2025-04-10)
 
 
