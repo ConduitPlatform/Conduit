@@ -85,7 +85,7 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     return this.client!.userModifyStatus({ id: userId, active });
   }
 
-  deleteInvitation(teamId: string, email: string): Promise<InvitationDeleteResponse> {
+  invitationDelete(teamId: string, email: string): Promise<InvitationDeleteResponse> {
     return this.client!.invitationDelete({ teamId, email });
   }
 }
