@@ -666,7 +666,7 @@ export default class Authentication extends ManagedModule<Config> {
         'data.email': email,
       });
 
-      if (!deletedToken) {
+      if (deletedToken.deletedCount === 0) {
         return callback({
           code: status.NOT_FOUND,
           message: 'Invitation not found',
