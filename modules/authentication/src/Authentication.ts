@@ -19,6 +19,8 @@ import {
   AnonymousUserCreateRequest,
   CreateTeamRequest,
   GetTeamRequest,
+  InvitationDeleteRequest,
+  InvitationDeleteResponse,
   ModifyTeamMembersRequest,
   Team as GrpcTeam,
   TeamDeleteRequest,
@@ -53,7 +55,7 @@ import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
-import { User } from './models/index.js';
+import { Token, User } from './models/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -76,6 +78,7 @@ export default class Authentication extends ManagedModule<Config> {
       validateAccessToken: this.validateAccessToken.bind(this),
       addTeamMembers: this.addTeamMembers.bind(this),
       removeTeamMembers: this.removeTeamMembers.bind(this),
+      invitationDelete: this.invitationDelete.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -647,6 +650,37 @@ export default class Authentication extends ManagedModule<Config> {
     callback(null, { message: 'ok' });
     if (!active) {
       TokenProvider.getInstance().deleteUserTokens({ user: id });
+    }
+  }
+
+  async invitationDelete(
+    call: GrpcRequest<InvitationDeleteRequest>,
+    callback: GrpcCallback<InvitationDeleteResponse>,
+  ) {
+    const { email, teamId } = call.request;
+
+    try {
+      const deletedToken = await Token.getInstance().deleteOne({
+        // @ts-expect-error Unsafe nested property access
+        'data.teamId': teamId,
+        'data.email': email,
+      });
+
+      if (deletedToken.deletedCount === 0) {
+        return callback({
+          code: status.NOT_FOUND,
+          message: 'Invitation not found',
+        });
+      }
+
+      return callback(null, {
+        message: 'Invitation deleted successfully',
+      });
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: (e as Error).message,
+      });
     }
   }
 
