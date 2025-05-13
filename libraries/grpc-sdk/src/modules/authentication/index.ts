@@ -8,6 +8,7 @@ import {
   Team,
   ValidateAccessTokenResponse,
   UserModifyStatusResponse,
+  InvitationDeleteResponse,
 } from '../../protoUtils/index.js';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
@@ -82,5 +83,9 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
 
   userModifyStatus(userId: string, active: boolean): Promise<UserModifyStatusResponse> {
     return this.client!.userModifyStatus({ id: userId, active });
+  }
+
+  deleteInvitation(teamId: string, email: string): Promise<InvitationDeleteResponse> {
+    return this.client!.invitationDelete({ teamId, email });
   }
 }

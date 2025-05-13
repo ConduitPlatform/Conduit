@@ -101,6 +101,15 @@ message UserModifyStatusResponse {
   string message = 1;
 }
 
+message InvitationDeleteRequest {
+  string teamId = 1;
+  string email = 2;
+}
+
+message InvitationDeleteResponse {
+  string message = 1;
+}
+
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
@@ -115,4 +124,5 @@ service Authentication {
   rpc AddTeamMembers(ModifyTeamMembersRequest) returns (google.protobuf.Empty);
   rpc RemoveTeamMembers(ModifyTeamMembersRequest) returns (google.protobuf.Empty);
   rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
+  rpc InvitationDelete(InvitationDeleteRequest) returns (InvitationDeleteResponse);
 }
