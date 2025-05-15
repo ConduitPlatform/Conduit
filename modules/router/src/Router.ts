@@ -308,7 +308,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     try {
       const socketData: SocketPush = {
         event: call.request.event,
-        data: JSON.parse(call.request.data),
+        data: call.request.data ? JSON.parse(call.request.data) : undefined,
         receivers: call.request.receivers,
         rooms: call.request.rooms,
         namespace: `/${call.metadata!.get('module-name')[0]}/`,
