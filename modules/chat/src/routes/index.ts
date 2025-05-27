@@ -264,7 +264,7 @@ export class ChatRoutes {
   }
 
   async getMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { roomId, skip, limit } = call.request.params;
+    const { roomId, skip, limit, populate } = call.request.params;
     const { user } = call.request.context;
     let messagesPromise;
     let countPromise;
@@ -284,6 +284,7 @@ export class ChatRoutes {
         skip,
         limit,
         { createdAt: -1 },
+        populate,
       );
       countPromise = ChatMessage.getInstance().countDocuments(query);
     } else {
@@ -305,6 +306,7 @@ export class ChatRoutes {
           skip,
           limit,
           { createdAt: -1 },
+          populate,
         )
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
@@ -602,6 +604,7 @@ export class ChatRoutes {
           roomId: ConduitString.Optional,
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
+          populate: [ConduitString.Optional],
         },
         middlewares: ['authMiddleware'],
       },
