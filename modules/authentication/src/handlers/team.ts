@@ -593,8 +593,6 @@ export class TeamsHandler implements IAuthenticationStrategy {
       inviter: user,
       userData,
     });
-    const safeUser = { ...user };
-    delete safeUser.hashedPassword;
     if (email && config.teams.invites.sendEmail && this.grpcSdk.isAvailable('email')) {
       let link = !isEmpty(redirectUri)
         ? AuthUtils.validateRedirectUri(redirectUri)
@@ -608,7 +606,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
             link,
             teamName: team.name,
             inviterName: user.name,
-            user: safeUser,
+            userData,
           },
         })
         .catch(e => {
