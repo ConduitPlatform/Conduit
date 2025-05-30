@@ -113,7 +113,7 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     }
 
     const message = `I am signing my one-time nonce: ${user.metamask!.nonce}`;
-    const msgBuffer = ethUtil.toBuffer(message);
+    const msgBuffer = Buffer.from(message, 'utf8');
     const msgHash = ethUtil.hashPersonalMessage(msgBuffer);
 
     let signatureParams;
