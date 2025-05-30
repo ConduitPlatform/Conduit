@@ -29,6 +29,7 @@ import { Config } from '../config/index.js';
 import { TeamsHandler } from '../handlers/team.js';
 import { BiometricHandlers } from '../handlers/biometric.js';
 import { UsernameHandlers } from '../handlers/username.js';
+import { MetamaskHandlers } from '../handlers/metamask.js';
 
 type OAuthHandler = typeof oauth2;
 
@@ -42,6 +43,7 @@ export class AuthenticationRoutes {
   private readonly magicLinkHandlers: MagicLinkHandlers;
   private readonly biometricHandlers: BiometricHandlers;
   private readonly usernameHandlers: UsernameHandlers;
+  private readonly metamaskHandlers: MetamaskHandlers;
 
   constructor(
     readonly server: GrpcServer,
@@ -56,6 +58,7 @@ export class AuthenticationRoutes {
     this.magicLinkHandlers = new MagicLinkHandlers(this.grpcSdk);
     this.biometricHandlers = new BiometricHandlers(this.grpcSdk);
     this.usernameHandlers = new UsernameHandlers(this.grpcSdk);
+    this.metamaskHandlers = new MetamaskHandlers(this.grpcSdk);
   }
 
   async registerRoutes() {
@@ -160,6 +163,12 @@ export class AuthenticationRoutes {
       .catch(e => ConduitGrpcSdk.Logger.error(e));
     if (usernameActive) {
       await this.usernameHandlers.declareRoutes(this._routingManager);
+      enabled = true;
+    }
+
+    const metamaskActive = await this.metamaskHandlers.validate();
+    if (metamaskActive) {
+      await this.metamaskHandlers.declareRoutes(this._routingManager);
       enabled = true;
     }
 

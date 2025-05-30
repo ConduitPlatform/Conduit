@@ -39,6 +39,14 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: false,
   },
+  ethPublicAddress: {
+    type: TYPE.String,
+    required: false,
+  },
+  nonce: {
+    type: TYPE.String,
+    required: false,
+  },
   hashedPassword: {
     type: TYPE.String,
     select: false,
@@ -124,6 +132,8 @@ export class User extends ConduitActiveSchema<User> {
   _id: string;
   email: string;
   username: string;
+  ethPublicAddress: string;
+  nonce: string;
   hashedPassword?: string;
   google?: AuthProviderBase;
   facebook?: AuthProviderBase;

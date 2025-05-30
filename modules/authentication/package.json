@@ -37,6 +37,7 @@
     "bcrypt": "^5.1.1",
     "convict": "^6.2.4",
     "escape-string-regexp": "^4.0.0",
+    "ethereumjs-util": "^7.1.5",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.1.0",
     "lodash-es": "^4.17.21",
@@ -47,6 +48,7 @@
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/convict": "^6.1.6",
+    "@types/ethereumjs-util": "^5.2.0",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "20.11.24",
