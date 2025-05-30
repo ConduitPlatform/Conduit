@@ -42,7 +42,7 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
         path: '/metamask/authenticate',
         action: ConduitRouteActions.POST,
         description:
-          'Returns a nonce for the user to sign using their wallet. If no user exists with the provided public address, a new user will be created.',
+          'Authenticates a user using their Metamask wallet. The user must sign a message containing their nonce, which is then verified against the provided public address.',
         bodyParams: {
           ethPublicAddress: ConduitString.Required,
           signature: ConduitString.Required,
@@ -58,7 +58,7 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
 
   async validate(): Promise<boolean> {
     const config: Config = ConfigController.getInstance().config;
-    if (config.local.metamask_auth_enabled) {
+    if (config.metamask.enabled) {
       return true;
     } else {
       ConduitGrpcSdk.Logger.log('Metamask authentication not available');
@@ -68,19 +68,23 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
 
   async getNonce(call: ParsedRouterRequest) {
     const { ethPublicAddress } = call.request.params;
+    const normalizedEthPublicAddress = ethPublicAddress.toLowerCase();
 
     const existingUser: User | null = await User.getInstance().findOne({
-      ethPublicAddress: ethPublicAddress.toLowerCase(),
+      // @ts-expect-error Unsafe nested property access
+      'metamask.ethPublicAddress': normalizedEthPublicAddress,
     });
 
     if (existingUser) {
-      return existingUser.nonce;
+      return { nonce: existingUser.metamask!.nonce };
     }
 
     const nonce = uuid();
     await User.getInstance().create({
-      ethPublicAddress,
-      nonce,
+      metamask: {
+        ethPublicAddress: normalizedEthPublicAddress,
+        nonce,
+      },
     });
 
     return { nonce };
@@ -90,20 +94,25 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
 
     const { ethPublicAddress, signature } = call.request.params;
+    const normalizedEthPublicAddress = ethPublicAddress.toLowerCase();
     const context = call.request.context;
     if (isNil(context)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     }
 
     const user = await User.getInstance().findOne({
-      ethPublicAddress: ethPublicAddress.toLowerCase(),
+      // @ts-expect-error Unsafe nested property access
+      'metamask.ethPublicAddress': normalizedEthPublicAddress,
     });
 
     if (isNil(user)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'No user with that public address');
+      throw new GrpcError(
+        status.UNAUTHENTICATED,
+        'No user found with the provided ETH public address',
+      );
     }
 
-    const message = `I am signing my one-time nonce: ${user.nonce}`;
+    const message = `I am signing my one-time nonce: ${user.metamask!.nonce}`;
     const msgBuffer = ethUtil.toBuffer(message);
     const msgHash = ethUtil.hashPersonalMessage(msgBuffer);
 
@@ -129,15 +138,17 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     const addressBuffer = ethUtil.publicToAddress(publicKey);
     const recoveredAddress = ethUtil.bufferToHex(addressBuffer).toLowerCase();
 
-    if (recoveredAddress !== ethPublicAddress.toLowerCase()) {
+    if (recoveredAddress !== normalizedEthPublicAddress) {
       throw new GrpcError(
         status.UNAUTHENTICATED,
         'Signature does not match public address',
       );
     }
 
-    const newNonce = uuid();
-    await User.getInstance().findByIdAndUpdate(user._id, { nonce: newNonce });
+    await User.getInstance().findByIdAndUpdate(user._id, {
+      // @ts-expect-error Unsafe nested property access
+      'metamask.nonce': uuid(),
+    });
 
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     const config = ConfigController.getInstance().config;

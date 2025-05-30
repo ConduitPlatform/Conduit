@@ -13,6 +13,11 @@ interface AuthProviderBase {
   data: Indexable;
 }
 
+interface MetamaskBase {
+  ethPublicAddress: string;
+  nonce: string;
+}
+
 const authProviderSchema: ConduitModel = {
   id: {
     type: TYPE.String,
@@ -28,6 +33,17 @@ const authProviderSchema: ConduitModel = {
   },
 };
 
+const metamaskSchema: ConduitModel = {
+  ethPublicAddress: {
+    type: TYPE.String,
+    required: false,
+  },
+  nonce: {
+    type: TYPE.String,
+    required: false,
+  },
+};
+
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   // do not add unique again, since this will fail due to emails being null
@@ -39,17 +55,12 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: false,
   },
-  ethPublicAddress: {
-    type: TYPE.String,
-    required: false,
-  },
-  nonce: {
-    type: TYPE.String,
-    required: false,
-  },
   hashedPassword: {
     type: TYPE.String,
     select: false,
+  },
+  metamask: {
+    ...metamaskSchema,
   },
   apple: {
     ...authProviderSchema,
@@ -132,9 +143,8 @@ export class User extends ConduitActiveSchema<User> {
   _id: string;
   email: string;
   username: string;
-  ethPublicAddress: string;
-  nonce: string;
   hashedPassword?: string;
+  metamask?: MetamaskBase;
   google?: AuthProviderBase;
   facebook?: AuthProviderBase;
   twitch?: AuthProviderBase;
