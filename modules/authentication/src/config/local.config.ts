@@ -43,10 +43,5 @@ export default {
       format: 'Boolean',
       default: false,
     },
-    metamask_auth_enabled: {
-      doc: 'Defines if metamask authentication strategy is enabled',
-      format: 'Boolean',
-      default: false,
-    },
   },
 };
