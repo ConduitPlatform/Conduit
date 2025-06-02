@@ -4,6 +4,7 @@ import {
   GrpcCallback,
   GrpcRequest,
   HealthCheckStatus,
+  Indexable,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isEmpty, isNil } from 'lodash-es';
@@ -264,8 +265,9 @@ export default class Authentication extends ManagedModule<Config> {
     callback: GrpcCallback<UserCreateResponse>,
   ) {
     const email = call.request.email.toLowerCase();
-    let password = call.request.password;
     const verify = call.request.verify;
+    let password = call.request.password;
+    let userData: Indexable = {};
 
     const verificationConfig = ConfigController.getInstance().config.local.verification;
     if (verify && !(verificationConfig.required && verificationConfig.send_email)) {
@@ -274,10 +276,14 @@ export default class Authentication extends ManagedModule<Config> {
         message: 'Email verification is disabled. Configuration required.',
       });
     }
-
     if (isNil(password) || password.length === 0) {
       password = AuthUtils.randomToken(8);
     }
+    if (call.request.userData) {
+      userData = JSON.parse(call.request.userData);
+      AuthUtils.checkUserData(userData);
+    }
+
     try {
       let user = await models.User.getInstance().findOne({ email });
       if (user) {
@@ -296,6 +302,7 @@ export default class Authentication extends ManagedModule<Config> {
           email,
           hashedPassword,
           isVerified: !verify,
+          ...userData,
         });
       } else {
         const config = ConfigController.getInstance().config;
@@ -310,6 +317,7 @@ export default class Authentication extends ManagedModule<Config> {
           hashedPassword,
           isAnonymous: false,
           isVerified: !verify,
+          ...userData,
         });
         if (!user) {
           return callback({

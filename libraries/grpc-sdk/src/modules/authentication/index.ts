@@ -10,6 +10,7 @@ import {
   UserModifyStatusResponse,
   InvitationDeleteResponse,
 } from '../../protoUtils/index.js';
+import { Indexable } from '../../interfaces';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
   constructor(
@@ -34,8 +35,15 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     verify: boolean = false,
     password?: string,
     anonymousId?: string,
+    userData?: Indexable,
   ): Promise<UserCreateResponse> {
-    return this.client!.userCreate({ email, verify, password, anonymousId });
+    return this.client!.userCreate({
+      email,
+      verify,
+      password,
+      anonymousId,
+      userData: JSON.stringify(userData),
+    });
   }
 
   userCreateByUsername(

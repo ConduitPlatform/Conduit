@@ -12,6 +12,7 @@ message UserCreateRequest {
   optional string password = 2;
   bool verify = 3;
   optional string anonymousId = 4;
+  optional string userData = 5;
 }
 
 message UserCreateByUsernameRequest {
