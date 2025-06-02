@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.16](https://github.com/ConduitPlatform/Conduit/compare/v0.16.15...v0.16.16) (2025-06-02)
+
+
+### Features
+
+* add userData in userCreate grpc ([#1350](https://github.com/ConduitPlatform/Conduit/issues/1350)) ([7aa1abf](https://github.com/ConduitPlatform/Conduit/commit/7aa1abf11d68c38be5726f12597ff1295c3e36ae))
+* **authentication:** implement metamask authentication mechanism ([#1349](https://github.com/ConduitPlatform/Conduit/issues/1349)) ([aba4809](https://github.com/ConduitPlatform/Conduit/commit/aba480900388d6622484b3abc673efa67e7efad2))
+* **chat:** add populate string array param in getMessages ([#1346](https://github.com/ConduitPlatform/Conduit/issues/1346)) ([80fb9ae](https://github.com/ConduitPlatform/Conduit/commit/80fb9ae346b70bb713c707a42c679bcd3aeed460))
+
+
+### Bug Fixes
+
+* **authentication:** use invitation userData in sendEmail() ([#1348](https://github.com/ConduitPlatform/Conduit/issues/1348)) ([0c48d48](https://github.com/ConduitPlatform/Conduit/commit/0c48d48e3d2e36fa3786e3c135372f1355b58431))
+
 ### [0.16.15](https://github.com/ConduitPlatform/Conduit/compare/v0.16.14...v0.16.15) (2025-05-13)
 
 
