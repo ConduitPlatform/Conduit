@@ -17,6 +17,7 @@ import linkedInConfig from './linkedIn.config.js';
 import appleConfig from './apple.config.js';
 import twitterConfig from './twitter.config.js';
 import teamsConfig from './teams.config.js';
+import metamaskConfig from './metamask.config.js';
 
 const AppConfigSchema = {
   ...DefaultConfig,
@@ -37,6 +38,7 @@ const AppConfigSchema = {
   ...redditConfig,
   ...bitbucketConfig,
   ...linkedInConfig,
+  ...metamaskConfig,
 };
 const config = convict(AppConfigSchema);
 const configProperties = config.getProperties();
