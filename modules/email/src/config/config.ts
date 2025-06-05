@@ -92,7 +92,7 @@ export default {
       port: {
         doc: 'The port the SMTP server is listening on',
         format: 'Number',
-        default: '',
+        default: -1,
       },
       apiKey: {
         doc: 'The email service API key',
