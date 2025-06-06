@@ -29,6 +29,7 @@ import {
   ManagedModule,
 } from '@conduitplatform/module-tools';
 import { fileURLToPath } from 'node:url';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -146,7 +147,12 @@ export default class Chat extends ManagedModule<Config> {
     if (!isNil(errorMessage)) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
-
+    this.grpcSdk.router?.socketPush({
+      event: 'room-joined',
+      receivers: participants,
+      rooms: [],
+      data: JSON.stringify({ room: room._id, roomName: room.name }),
+    });
     this.grpcSdk.bus?.publish(
       'chat:create:ChatRoom',
       JSON.stringify({
@@ -190,8 +196,8 @@ export default class Chat extends ManagedModule<Config> {
       .then(() => {
         return this.grpcSdk.router?.socketPush({
           event: 'message',
-          receivers: [roomId],
-          rooms: [],
+          receivers: [],
+          rooms: [roomId],
           data: JSON.stringify({ sender: userId, message, room: roomId }),
         });
       })
@@ -229,6 +235,21 @@ export default class Chat extends ManagedModule<Config> {
     if (!isNil(errorMessage)) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
+    this.grpcSdk.router
+      ?.socketPush({
+        event: 'room-deleted',
+        receivers: [],
+        rooms: [room._id],
+        data: JSON.stringify({ room: room._id, roomName: room.name }),
+      })
+      ?.then(() => {
+        this.grpcSdk.router?.socketPush({
+          event: 'leave-room',
+          receivers: room.participants as string[],
+          rooms: [room._id],
+        });
+      })
+      ?.catch(err => ConduitGrpcSdk.Logger.error(err));
 
     this.grpcSdk.bus?.publish(
       'chat:delete:ChatRoom',
