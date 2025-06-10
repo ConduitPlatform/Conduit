@@ -56,6 +56,24 @@ export class LocalHandlers implements IAuthenticationStrategy {
           userData: ConduitJson.Optional,
         },
         middlewares: localRouteMiddleware,
+        errors: [
+          {
+            code: 400,
+            description: 'Invalid email address provided',
+          },
+          {
+            code: 403,
+            description: 'Registration requires invitation',
+          },
+          {
+            code: 403,
+            description: 'Invalid invitation token',
+          },
+          {
+            code: 500,
+            description: 'User already exists',
+          },
+        ],
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),

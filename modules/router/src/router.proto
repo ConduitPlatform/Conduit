@@ -21,6 +21,11 @@ message PatchAppRouteMiddlewaresRequest {
   repeated string middlewares = 3;
 }
 
+message RouterErrorResponse {
+  string description = 1;
+  int32 code = 2;
+}
+
 message RegisterConduitRouteRequest {
   repeated PathDefinition routes = 1;
   optional string routerUrl = 3;
@@ -44,6 +49,7 @@ message RegisterConduitRouteRequest {
     optional string description = 7;
     repeated string middlewares = 8;
     optional string cacheControl = 9;
+    repeated RouterErrorResponse errors = 10;
   }
 
   message ProxyRouteOptions {

@@ -22,6 +22,11 @@ service Admin {
   rpc PatchRouteMiddlewares(PatchRouteMiddlewaresRequest) returns (google.protobuf.Empty);
 }
 
+message CoreErrorResponse {
+  string description = 1;
+  int32 code = 2;
+}
+
 message RegisterAdminRouteRequest {
   repeated PathDefinition routes = 1;
   optional string routerUrl = 3;
@@ -45,6 +50,7 @@ message RegisterAdminRouteRequest {
     optional string description = 7;
     repeated string middlewares = 8;
     optional string cacheControl = 9;
+    repeated CoreErrorResponse errors = 10;
   }
 
   message ProxyRouteOptions {

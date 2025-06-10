@@ -61,6 +61,7 @@ export interface ConduitRouteOptions {
   description?: string;
   middlewares?: string[];
   cacheControl?: string;
+  errors?: { code: number; description: string }[];
 }
 
 export interface ConduitRouteObject {
