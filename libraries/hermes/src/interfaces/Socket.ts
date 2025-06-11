@@ -25,6 +25,7 @@ export type EventResponse = {
   event: string;
   data: string;
   receivers?: string[];
+  rooms?: string[];
 };
 
 export function isInstanceOfEventResponse(object: Indexable): object is EventResponse {
@@ -35,6 +36,7 @@ export function isInstanceOfEventResponse(object: Indexable): object is EventRes
 }
 
 export type JoinRoomResponse = {
+  event: 'join-room';
   rooms: string[];
 };
 

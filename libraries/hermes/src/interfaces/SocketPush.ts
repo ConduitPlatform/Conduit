@@ -1,6 +1,6 @@
 export interface SocketPush {
   event: string;
-  data: any;
+  data?: any;
   receivers: string[];
   rooms: string[];
   namespace: string;
