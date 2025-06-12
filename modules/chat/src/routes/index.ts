@@ -491,7 +491,10 @@ export class ChatRoutes {
     return { event: 'join-room', rooms: rooms.map((room: ChatRoom) => room._id) };
   }
 
-  async onMessage(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
+  async onMessage(
+    call: ParsedSocketRequest,
+    callback: (response: UnparsedSocketResponse) => void,
+  ): Promise<UnparsedSocketResponse | undefined | void> {
     const { user } = call.request.context;
     const [roomId, message] = call.request.params;
     const room = await ChatRoom.getInstance().findOne({ _id: roomId, deleted: false });
@@ -562,16 +565,7 @@ export class ChatRoutes {
         data: { sender: user._id, contentType: MessageType.Typing, room: roomId },
       };
     } else {
-      await ChatMessage.getInstance().create({
-        message: formattedMessage.content ?? '',
-        messageType: formattedMessage.contentType || MessageType.Text,
-        files: formattedMessage.files || [],
-        senderUser: user._id,
-        room: roomId,
-        readBy: [user._id],
-      });
-      ConduitGrpcSdk.Metrics?.increment('messages_sent_total');
-      return {
+      callback({
         event: 'message',
         rooms: [roomId as string],
         data: {
@@ -581,7 +575,16 @@ export class ChatRoutes {
           files: formattedMessage.files,
           room: roomId,
         },
-      };
+      });
+      await ChatMessage.getInstance().create({
+        message: formattedMessage.content ?? '',
+        messageType: formattedMessage.contentType || MessageType.Text,
+        files: formattedMessage.files || [],
+        senderUser: user._id,
+        room: roomId,
+        readBy: [user._id],
+      });
+      ConduitGrpcSdk.Metrics?.increment('messages_sent_total');
     }
   }
 

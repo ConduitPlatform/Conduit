@@ -1,8 +1,12 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { RequestHandlers, wrapRouterGrpcFunction } from './wrapRouterFunctions.js';
+import {
+  RequestHandlers,
+  SocketRequestHandlers,
+  wrapRouterGrpcFunction,
+} from './wrapRouterFunctions.js';
 
 export function wrapFunctionsAsync(
-  functions: { [name: string]: RequestHandlers },
+  functions: { [name: string]: RequestHandlers | SocketRequestHandlers },
   routerType: 'admin' | 'client',
 ): {
   [name: string]: (call: Indexable, callback?: Indexable) => void;
