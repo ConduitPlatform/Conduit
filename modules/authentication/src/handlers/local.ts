@@ -1,4 +1,4 @@
-import { isNil } from 'lodash-es';
+import { isNil, merge } from 'lodash-es';
 import { AuthUtils } from '../utils/index.js';
 import { TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
@@ -24,7 +24,6 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { createHash } from 'crypto';
-import { merge } from 'lodash-es';
 import { authenticateChecks, changePassword } from './utils.js';
 
 export class LocalHandlers implements IAuthenticationStrategy {
@@ -710,13 +709,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   private async initDbAndEmail() {
-    const config = ConfigController.getInstance().config;
-
-    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
+    if (this.grpcSdk.isAvailable('email')) {
       this.emailModule = this.grpcSdk.emailProvider!;
-    }
-
-    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
       this.registerTemplates();
     }
     this.initialized = true;
