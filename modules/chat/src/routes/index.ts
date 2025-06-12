@@ -513,10 +513,10 @@ export class ChatRoutes {
         contentType: 'text',
       };
     } else {
-      if (!message.hasOwnProperty('contentType') || !message.hasOwnProperty('content')) {
+      if (!message.hasOwnProperty('contentType')) {
         throw new GrpcError(
           status.INVALID_ARGUMENT,
-          'Message must contain contentType and content properties',
+          'Message must contain contentType property',
         );
       }
       if (!['text', 'file', 'typing', 'multimedia'].includes(message.contentType)) {
