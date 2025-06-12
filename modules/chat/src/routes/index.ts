@@ -17,7 +17,13 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { ChatMessage, ChatParticipantsLog, ChatRoom, User } from '../models/index.js';
+import {
+  ChatMessage,
+  ChatParticipantsLog,
+  ChatRoom,
+  MessageType,
+  User,
+} from '../models/index.js';
 import { isArray, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { sendInvitations, validateUsersInput } from '../utils/index.js';
@@ -501,19 +507,87 @@ export class ChatRoutes {
         "Room does not exist or you don't have access",
       );
     }
-
-    await ChatMessage.getInstance().create({
-      message,
-      senderUser: user._id,
-      room: roomId,
-      readBy: [user._id],
-    });
-    ConduitGrpcSdk.Metrics?.increment('messages_sent_total');
-    return {
-      event: 'message',
-      rooms: [roomId],
-      data: { sender: user._id, message, room: roomId },
+    let formattedMessage: {
+      contentType: string;
+      content?: string;
+      files?: string[];
     };
+    if (typeof message === 'string') {
+      formattedMessage = {
+        content: message,
+        contentType: 'text',
+      };
+    } else {
+      if (!message.hasOwnProperty('contentType') || !message.hasOwnProperty('content')) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Message must contain contentType and content properties',
+        );
+      }
+      if (!['text', 'file', 'typing', 'multimedia'].includes(message.contentType)) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Invalid contentType, must be one of: text, file, typing, multimedia',
+        );
+      }
+      if (
+        [MessageType.File, MessageType.Multimedia].includes(message.contentType) &&
+        !message.files
+      ) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          `Files are required for ${message.contentType} messages`,
+        );
+      }
+      if (
+        [MessageType.File, MessageType.Multimedia].includes(message.contentType) &&
+        !Array.isArray(message.files)
+      ) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          `Files must be an array for ${message.contentType} messages`,
+        );
+      }
+      if (
+        [MessageType.Text, MessageType.Multimedia].includes(message.contentType) &&
+        !message.content
+      ) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          `${message.contentType} messages need to have content`,
+        );
+      }
+      formattedMessage = message as any;
+    }
+
+    if (formattedMessage.contentType === MessageType.Typing) {
+      return {
+        event: 'message',
+        rooms: [roomId as string],
+        data: { sender: user._id, contentType: MessageType.Typing, room: roomId },
+      };
+    } else {
+      await ChatMessage.getInstance().create({
+        message: formattedMessage.content ?? '',
+        messageType: formattedMessage.contentType || MessageType.Text,
+        files: formattedMessage.files || [],
+        senderUser: user._id,
+        room: roomId,
+        readBy: [user._id],
+      });
+      ConduitGrpcSdk.Metrics?.increment('messages_sent_total');
+      return {
+        event: 'message',
+        rooms: [roomId as string],
+        data: {
+          sender: user._id,
+          contentType: formattedMessage.contentType,
+          content: formattedMessage.content,
+          files: formattedMessage.files,
+          room: roomId,
+        },
+      };
+    }
   }
 
   async onMessagesRead(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
@@ -715,7 +789,7 @@ export class ChatRoutes {
         },
         message: {
           handler: this.onMessage.bind(this),
-          params: [TYPE.String, TYPE.String],
+          params: [TYPE.String, TYPE.JSON],
           returnType: new ConduitRouteReturnDefinition('MessageResponse', {
             sender: TYPE.String,
             message: TYPE.String,
