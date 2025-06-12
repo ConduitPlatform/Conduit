@@ -179,10 +179,10 @@ export class SocketController extends ConduitRouter {
       }
     } else if (isInstanceOfEventResponse(push)) {
       if (isNil(push.receivers) || push.receivers!.length === 0) {
-        this.io.of(push.namespace).emit(push.event, push.data);
+        this.io.of(push.namespace).emit(push.event, JSON.parse(push.data));
       } else {
         if (push.rooms.length !== 0) {
-          this.io.of(push.namespace).to(push.rooms).emit(push.event, push.data);
+          this.io.of(push.namespace).to(push.rooms).emit(push.event, JSON.parse(push.data));
         }
         if (push.receivers.length !== 0) {
           const filteredSockets = await this.findAndFilterSockets(
@@ -190,7 +190,7 @@ export class SocketController extends ConduitRouter {
             push.namespace,
           );
           for (const socket of filteredSockets) {
-            socket.emit(push.event, push.data);
+            socket.emit(push.event, JSON.parse(push.data));
           }
         }
       }
@@ -220,7 +220,7 @@ export class SocketController extends ConduitRouter {
         socket.emit(res.event, JSON.parse(res.data));
       } else {
         if (res.rooms && res.rooms.length !== 0) {
-          this.io.of(namespace).to(res.rooms).emit(res.event, res.data);
+          this.io.of(namespace).to(res.rooms).emit(res.event, JSON.parse(res.data));
         }
         if (res.receivers && res.receivers.length !== 0) {
           const filteredSockets = await this.findAndFilterSockets(
