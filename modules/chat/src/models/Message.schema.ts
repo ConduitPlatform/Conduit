@@ -2,12 +2,8 @@ import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk'
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 import { ChatRoom } from './ChatRoom.schema.js';
 import { User } from './User.model.js';
-export enum MessageType {
-  Text = 'text',
-  File = 'file',
-  Typing = 'typing',
-  Multimedia = 'multimedia',
-}
+import { MessageType } from '../enums/messageType.enum.js';
+
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   messageType: {

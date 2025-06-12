@@ -17,18 +17,13 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import {
-  ChatMessage,
-  ChatParticipantsLog,
-  ChatRoom,
-  MessageType,
-  User,
-} from '../models/index.js';
+import { ChatMessage, ChatParticipantsLog, ChatRoom, User } from '../models/index.js';
 import { isArray, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { sendInvitations, validateUsersInput } from '../utils/index.js';
 import { InvitationRoutes } from './InvitationRoutes.js';
 import * as templates from '../templates/index.js';
+import { MessageType } from '../enums/messageType.enum.js';
 
 export class ChatRoutes {
   private readonly _routingManager: RoutingManager;
