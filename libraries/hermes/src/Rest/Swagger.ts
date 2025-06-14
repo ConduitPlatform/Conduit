@@ -152,6 +152,22 @@ export class SwaggerGenerator {
       this._swaggerDoc.paths[path] = {};
       this._swaggerDoc.paths[path][method] = routeDoc;
     }
+
+    if (route.input.errors) {
+      for (const error of route.input.errors) {
+        const existingResponse = routeDoc.responses[error.code];
+        if (existingResponse) {
+          if (!existingResponse.description.startsWith('* ')) {
+            existingResponse.description = `* ${existingResponse.description}`;
+          }
+          existingResponse.description += `\n* ${error.description}`;
+        } else {
+          routeDoc.responses[error.code] = {
+            description: `* ${error.description}`,
+          };
+        }
+      }
+    }
   }
 
   private _extractMethod(action: string) {
