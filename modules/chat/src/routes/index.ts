@@ -23,6 +23,7 @@ import { status } from '@grpc/grpc-js';
 import { sendInvitations, validateUsersInput } from '../utils/index.js';
 import { InvitationRoutes } from './InvitationRoutes.js';
 import * as templates from '../templates/index.js';
+import { MessageType } from '../enums/messageType.enum.js';
 
 export class ChatRoutes {
   private readonly _routingManager: RoutingManager;
@@ -125,6 +126,17 @@ export class ChatRoutes {
       room = (await ChatRoom.getInstance().findByIdAndUpdate(room._id, {
         participantsLog: participantsLog.map(log => log._id),
       })) as ChatRoom;
+      this.grpcSdk.router?.socketPush({
+        event: 'join-room',
+        receivers: room.participants as string[],
+        rooms: [room._id],
+      });
+      this.grpcSdk.router?.socketPush({
+        event: 'room-joined',
+        receivers: room.participants as string[],
+        rooms: [],
+        data: JSON.stringify({ room: room._id, roomName: room.name }),
+      });
     }
     this.grpcSdk.bus?.publish(
       'chat:create:ChatRoom',
@@ -200,6 +212,17 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
+      this.grpcSdk.router?.socketPush({
+        event: 'join-room',
+        receivers: users,
+        rooms: [room._id],
+      });
+      this.grpcSdk.router?.socketPush({
+        event: 'room-joined',
+        receivers: users,
+        rooms: [],
+        data: JSON.stringify({ room: room._id, roomName: room.name }),
+      });
       this.grpcSdk.bus?.publish('chat:addParticipant:ChatRoom', JSON.stringify(room));
       return 'Users added';
     }
@@ -254,6 +277,11 @@ export class ChatRoutes {
             throw new GrpcError(status.INTERNAL, e.message);
           });
       }
+      this.grpcSdk.router?.socketPush({
+        event: 'leave-room',
+        receivers: [user._id],
+        rooms: [roomId],
+      });
     }
     this.grpcSdk.bus?.publish(
       'chat:leaveRoom:ChatRoom',
@@ -444,10 +472,29 @@ export class ChatRoutes {
   async connect(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
     const rooms = await ChatRoom.getInstance().findMany({ participants: user._id });
-    return { rooms: rooms.map((room: ChatRoom) => room._id) };
+    return { event: 'join-room', rooms: rooms.map((room: ChatRoom) => room._id) };
   }
 
-  async onMessage(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
+  async connectToRoom(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
+    const { user } = call.request.context;
+    const [roomId] = call.request.params;
+    const rooms = await ChatRoom.getInstance().findMany({
+      _id: roomId,
+      participants: user._id,
+    });
+    if (!rooms || rooms.length === 0) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        "Room does not exist or you don't have access",
+      );
+    }
+    return { event: 'join-room', rooms: rooms.map((room: ChatRoom) => room._id) };
+  }
+
+  async onMessage(
+    call: ParsedSocketRequest,
+    callback: (response: UnparsedSocketResponse) => void,
+  ): Promise<UnparsedSocketResponse | undefined | void> {
     const { user } = call.request.context;
     const [roomId, message] = call.request.params;
     const room = await ChatRoom.getInstance().findOne({ _id: roomId, deleted: false });
@@ -458,19 +505,87 @@ export class ChatRoutes {
         "Room does not exist or you don't have access",
       );
     }
-
-    await ChatMessage.getInstance().create({
-      message,
-      senderUser: user._id,
-      room: roomId,
-      readBy: [user._id],
-    });
-    ConduitGrpcSdk.Metrics?.increment('messages_sent_total');
-    return {
-      event: 'message',
-      receivers: [roomId],
-      data: { sender: user._id, message, room: roomId },
+    let formattedMessage: {
+      contentType: string;
+      content?: string;
+      files?: string[];
     };
+    if (typeof message === 'string') {
+      formattedMessage = {
+        content: message,
+        contentType: 'text',
+      };
+    } else {
+      if (!message.hasOwnProperty('contentType')) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Message must contain contentType property',
+        );
+      }
+      if (!['text', 'file', 'typing', 'multimedia'].includes(message.contentType)) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Invalid contentType, must be one of: text, file, typing, multimedia',
+        );
+      }
+      if (
+        [MessageType.File, MessageType.Multimedia].includes(message.contentType) &&
+        !message.files
+      ) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          `Files are required for ${message.contentType} messages`,
+        );
+      }
+      if (
+        [MessageType.File, MessageType.Multimedia].includes(message.contentType) &&
+        !Array.isArray(message.files)
+      ) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          `Files must be an array for ${message.contentType} messages`,
+        );
+      }
+      if (
+        [MessageType.Text, MessageType.Multimedia].includes(message.contentType) &&
+        !message.content
+      ) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          `${message.contentType} messages need to have content`,
+        );
+      }
+      formattedMessage = message as any;
+    }
+
+    if (formattedMessage.contentType === MessageType.Typing) {
+      return {
+        event: 'message',
+        rooms: [roomId as string],
+        data: { sender: user._id, contentType: MessageType.Typing, room: roomId },
+      };
+    } else {
+      callback({
+        event: 'message',
+        rooms: [roomId as string],
+        data: {
+          sender: user._id,
+          contentType: formattedMessage.contentType,
+          content: formattedMessage.content,
+          files: formattedMessage.files,
+          room: roomId,
+        },
+      });
+      await ChatMessage.getInstance().create({
+        message: formattedMessage.content ?? '',
+        messageType: formattedMessage.contentType || MessageType.Text,
+        files: formattedMessage.files || [],
+        senderUser: user._id,
+        room: roomId,
+        readBy: [user._id],
+      });
+      ConduitGrpcSdk.Metrics?.increment('messages_sent_total');
+    }
   }
 
   async onMessagesRead(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
@@ -494,7 +609,7 @@ export class ChatRoutes {
     });
     return {
       event: 'messagesRead',
-      receivers: [room._id],
+      rooms: [room._id],
       data: { room: room._id, readBy: user._id },
     };
   }
@@ -666,9 +781,13 @@ export class ChatRoutes {
         connect: {
           handler: this.connect.bind(this),
         },
+        connectToRoom: {
+          params: [TYPE.String],
+          handler: this.connectToRoom.bind(this),
+        },
         message: {
           handler: this.onMessage.bind(this),
-          params: [TYPE.String, TYPE.String],
+          params: [TYPE.String, TYPE.JSON],
           returnType: new ConduitRouteReturnDefinition('MessageResponse', {
             sender: TYPE.String,
             message: TYPE.String,

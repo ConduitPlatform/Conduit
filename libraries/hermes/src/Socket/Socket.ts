@@ -1,6 +1,6 @@
 import { Application, NextFunction, Request, Response } from 'express';
 import { createServer, Server as httpServer } from 'http';
-import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
+import { RemoteSocket, Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { Cluster, Redis } from 'ioredis';
 import { ConduitRouter } from '../Router.js';
@@ -13,7 +13,7 @@ import {
   SocketPush,
 } from '../interfaces/index.js';
 import ObjectHash from 'object-hash';
-import { ConduitGrpcSdk, ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConduitError, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;
@@ -89,7 +89,6 @@ export class SocketController extends ConduitRouter {
         middleware(req, res, next);
       });
     });
-
     this.io.of(namespace).use((socket, next) => {
       const context = {
         headers: socket.request.headers,
@@ -98,6 +97,9 @@ export class SocketController extends ConduitRouter {
       self
         .checkMiddlewares(context, conduitSocket.input.middlewares)
         .then(r => {
+          if (context.context) {
+            socket.data = context.context;
+          }
           Object.assign(context.context, r);
           next();
         })
@@ -114,9 +116,7 @@ export class SocketController extends ConduitRouter {
           // @ts-ignore
           context: socket.request.conduit,
         })
-        .then(res => {
-          this.handleResponse(res, socket);
-        })
+        .then(res => this.handleResponse(res, socket, namespace))
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
           socket.emit('conduit_error', e);
@@ -131,9 +131,7 @@ export class SocketController extends ConduitRouter {
             // @ts-ignore
             context: socket.request.conduit,
           })
-          .then(res => {
-            this.handleResponse(res, socket);
-          })
+          .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
             ConduitGrpcSdk.Logger.error(e);
             socket.emit('conduit_error', e);
@@ -148,9 +146,7 @@ export class SocketController extends ConduitRouter {
             // @ts-ignore
             context: socket.request.conduit,
           })
-          .then(res => {
-            this.handleResponse(res, socket);
-          })
+          .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
             ConduitGrpcSdk.Logger.error(e);
             socket.emit('conduit_error', e);
@@ -159,34 +155,100 @@ export class SocketController extends ConduitRouter {
     });
   }
 
-  handleSocketPush(push: SocketPush) {
-    if (isInstanceOfEventResponse(push)) {
-      if (isNil(push.receivers) || push.receivers!.length === 0) {
-        this.io.of(push.namespace).emit(push.event, push.data);
-      } else {
-        this.io.of(push.namespace).to(push.receivers).emit(push.event, push.data);
+  async handleSocketPush(push: SocketPush) {
+    if (push.event === 'join-room') {
+      if (push.rooms.length === 0) return;
+      const filteredSockets = await this.findAndFilterSockets(
+        push.receivers,
+        push.namespace,
+      );
+      for (const socket of filteredSockets) {
+        socket.join(push.rooms);
       }
-    } else {
-      throw new Error('Cannot join room in this context');
+    } else if (push.event === 'leave-room') {
+      if (push.rooms && push.rooms.length !== 0) {
+        const filteredSockets = await this.findAndFilterSockets(
+          push.receivers,
+          push.namespace,
+        );
+        for (const socket of filteredSockets) {
+          for (const room of push.rooms) {
+            socket.leave(room);
+          }
+        }
+      }
+    } else if (isInstanceOfEventResponse(push)) {
+      if (isNil(push.receivers) || push.receivers!.length === 0) {
+        this.io.of(push.namespace).emit(push.event, JSON.parse(push.data));
+      } else {
+        if (push.rooms.length !== 0) {
+          this.io.of(push.namespace).to(push.rooms).emit(push.event, JSON.parse(push.data));
+        }
+        if (push.receivers.length !== 0) {
+          const filteredSockets = await this.findAndFilterSockets(
+            push.receivers,
+            push.namespace,
+          );
+          for (const socket of filteredSockets) {
+            socket.emit(push.event, JSON.parse(push.data));
+          }
+        }
+      }
     }
+  }
+
+  private async handleResponse(
+    res: EventResponse | JoinRoomResponse,
+    socket: Socket,
+    namespace: string,
+  ) {
+    if (res.event === 'join-room') {
+      if (res.rooms && res.rooms.length !== 0) {
+        socket.join(res.rooms);
+      }
+    } else if (res.event === 'leave-room') {
+      if (res.rooms && res.rooms.length !== 0) {
+        for (const room of res.rooms) {
+          socket.leave(room);
+        }
+      }
+    } else if (isInstanceOfEventResponse(res)) {
+      if (
+        (!res.receivers || res.receivers.length === 0) &&
+        (!res.rooms || res.rooms.length === 0)
+      ) {
+        socket.emit(res.event, JSON.parse(res.data));
+      } else {
+        if (res.rooms && res.rooms.length !== 0) {
+          this.io.of(namespace).to(res.rooms).emit(res.event, JSON.parse(res.data));
+        }
+        if (res.receivers && res.receivers.length !== 0) {
+          const filteredSockets = await this.findAndFilterSockets(
+            res.receivers,
+            namespace,
+          );
+          for (const socket of filteredSockets) {
+            socket.emit(res.event, JSON.parse(res.data));
+          }
+        }
+      }
+    }
+  }
+
+  async findAndFilterSockets(
+    userIds: string[],
+    namespace: string,
+  ): Promise<RemoteSocket<any, any>[]> {
+    const sockets = await this.io.in(namespace).fetchSockets();
+    return sockets.filter(socket => {
+      if (socket.data && socket.data.user) {
+        return userIds.includes(socket.data.user._id);
+      }
+    });
   }
 
   protected _refreshRouter(): void {
     throw new Error('Method not implemented.');
-  }
-
-  private handleResponse(res: EventResponse | JoinRoomResponse, socket: Socket) {
-    if (isInstanceOfEventResponse(res)) {
-      if (isNil(res.receivers) || res.receivers!.length === 0) {
-        socket.emit(res.event, JSON.parse(res.data));
-      } else {
-        socket.to(res.receivers).emit(res.event, JSON.parse(res.data));
-      }
-    } else {
-      if (res.rooms.length !== 0) {
-        socket.join(res.rooms);
-      }
-    }
   }
 
   private removeNamespace(namespace: string) {

@@ -2,13 +2,25 @@ import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk'
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 import { ChatRoom } from './ChatRoom.schema.js';
 import { User } from './User.model.js';
+import { MessageType } from '../enums/messageType.enum.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
+  messageType: {
+    type: TYPE.String,
+    enum: ['text', 'file', 'typing', 'multimedia'],
+    default: 'text',
+  },
   message: {
     type: TYPE.String,
     required: true,
   },
+  files: [
+    {
+      type: TYPE.Relation,
+      model: 'File',
+    },
+  ],
   senderUser: {
     type: TYPE.Relation,
     model: 'User',
@@ -50,6 +62,8 @@ export class ChatMessage extends ConduitActiveSchema<ChatMessage> {
   private static _instance: ChatMessage;
   _id: string;
   message: string;
+  messageType: MessageType;
+  files: string[];
   senderUser: string | User;
   room: string | ChatRoom;
   readBy: string[] | User[];

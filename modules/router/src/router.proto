@@ -10,7 +10,7 @@ service Router {
 
 message SocketData {
   string event = 1;
-  string data = 2;
+  optional string data = 2;
   repeated string receivers = 3;
   repeated string rooms = 4;
 }

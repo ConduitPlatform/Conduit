@@ -25,7 +25,7 @@ export type UnparsedRouterResponse =
 export type ParsedSocketRequest = GrpcRequest<{
   event: string;
   socketId: string;
-  params: string[];
+  params: (string | Indexable)[];
   context: Context;
   cookies: Cookies;
 }>;
@@ -34,6 +34,7 @@ type EventResponse = {
   event: string;
   data: Indexable;
   receivers?: string[];
+  rooms?: string[];
 };
 
 export type UnparsedSocketResponse = EventResponse | JoinRoomResponse;

@@ -1,4 +1,3 @@
-import { ConduitRouteReturnDefinition } from './ConduitRouteReturn.js';
 import { TYPE } from './Model.js';
 
 export type ConduitSocketParamTypes = (TYPE | ConduitSocketParamTypes)[];
@@ -8,12 +7,6 @@ export interface ConduitSocketOptions {
   name?: string;
   description?: string;
   middlewares?: string[];
-}
-
-export interface ConduitSocketEventHandler {
-  params?: ConduitSocketParamTypes;
-  returnType?: ConduitRouteReturnDefinition;
-  handler: any;
 }
 
 export interface EventsProtoDescription {

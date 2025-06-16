@@ -3,13 +3,13 @@ import {
   ConduitMiddlewareOptions,
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
-  ConduitSocketEventHandler,
   ConduitSocketOptions,
 } from '@conduitplatform/grpc-sdk';
 import {
   GrpcServer,
   RequestHandlers,
   RoutingManager,
+  SocketEventHandler,
 } from '@conduitplatform/module-tools';
 
 import { Functions } from '../models/index.js';
@@ -17,7 +17,7 @@ import { createFunctionRoute } from './utils.js';
 
 type Socket = {
   input: ConduitSocketOptions;
-  events: Record<string, ConduitSocketEventHandler>;
+  events: Record<string, SocketEventHandler>;
 };
 type Route = {
   input: ConduitRouteOptions;
@@ -29,6 +29,7 @@ type Middleware = {
   input: ConduitMiddlewareOptions;
   handler: RequestHandlers;
 };
+
 export class FunctionController {
   private functionRoutes: (Route | Socket | Middleware)[] = [];
 

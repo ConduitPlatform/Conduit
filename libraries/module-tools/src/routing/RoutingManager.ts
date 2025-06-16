@@ -1,5 +1,9 @@
 import { RouteBuilder } from './RouteBuilder.js';
-import { RequestHandlers } from './wrapRouterFunctions.js';
+import {
+  RequestHandlers,
+  SocketEventHandler,
+  SocketRequestHandlers,
+} from './wrapRouterFunctions.js';
 import { wrapFunctionsAsync } from './RoutingUtilities.js';
 import {
   Admin,
@@ -9,7 +13,6 @@ import {
   ConduitRouteObject,
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
-  ConduitSocketEventHandler,
   ConduitSocketOptions,
   EventsProtoDescription,
   ProxyMiddlewareOptions,
@@ -30,7 +33,7 @@ export class RoutingManager {
   static AdminController: RoutingController;
 
   private _routeHandlers: {
-    [key: string]: RequestHandlers;
+    [key: string]: RequestHandlers | SocketRequestHandlers;
   } = {};
   private readonly isAdmin: boolean = false;
 
@@ -107,7 +110,7 @@ export class RoutingManager {
       routeObject;
   }
 
-  socket(input: ConduitSocketOptions, events: Record<string, ConduitSocketEventHandler>) {
+  socket(input: ConduitSocketOptions, events: Record<string, SocketEventHandler>) {
     const eventsObj: EventsProtoDescription = {};
     const routeObject: SocketProtoDescription = this.parseRouteObject({
       options: input,

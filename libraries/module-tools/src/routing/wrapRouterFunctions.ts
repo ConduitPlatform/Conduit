@@ -1,5 +1,7 @@
 import {
   ConduitGrpcSdk,
+  ConduitRouteReturnDefinition,
+  ConduitSocketParamTypes,
   Indexable,
   ParsedRouterRequest,
   ParsedSocketRequest,
@@ -21,13 +23,15 @@ export type SocketRequestHandler = (
 ) => Promise<UnparsedSocketResponse>;
 export type SocketRequestHandlerCallback = (
   call: ParsedSocketRequest,
-  callback: (response: UnparsedRouterResponse) => void,
+  callback: (response: UnparsedSocketResponse) => void,
 ) => Promise<UnparsedSocketResponse | undefined | void>;
-export type RequestHandlers =
-  | RouterRequestHandler
-  | RouterRequestHandlerCallback
-  | SocketRequestHandler
-  | SocketRequestHandlerCallback;
+export type RequestHandlers = RouterRequestHandler | RouterRequestHandlerCallback;
+export type SocketRequestHandlers = SocketRequestHandler | SocketRequestHandlerCallback;
+export interface SocketEventHandler {
+  params?: ConduitSocketParamTypes;
+  returnType?: ConduitRouteReturnDefinition;
+  handler: SocketRequestHandlers;
+}
 
 const mapGrpcStatusToHttp = (code?: number): string => {
   if (!code) return '200 (OK)';
@@ -152,7 +156,7 @@ function parseResponseData(
 }
 
 export function wrapRouterGrpcFunction(
-  fun: RequestHandlers,
+  fun: RequestHandlers | SocketRequestHandlers,
   routerType: string,
 ): (call: Indexable, callback: any) => void {
   return (call: any, callback: any) => {
