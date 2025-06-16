@@ -68,20 +68,6 @@ export class AdminHandlers {
           username: ConduitString.Optional,
           password: ConduitString.Required,
         },
-        errors: [
-          {
-            code: 400,
-            description: 'Exactly one of email or username must be provided',
-          },
-          {
-            code: 400,
-            description: 'Invalid email address provided',
-          },
-          {
-            code: 500,
-            description: 'User already exists',
-          },
-        ],
       },
       new ConduitRouteReturnDefinition(User.name),
       this.userAdmin.createUser.bind(this.userAdmin),

@@ -22,12 +22,6 @@ export function getLoginRoute() {
         username: ConduitString.Required,
         password: ConduitString.Required,
       },
-      errors: [
-        {
-          code: 400,
-          description: 'Both username and password must be provided',
-        },
-      ],
     },
     new ConduitRouteReturnDefinition('Login', {
       token: ConduitString.Required,

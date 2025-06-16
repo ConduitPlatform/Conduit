@@ -7,7 +7,7 @@ import {
   Router,
 } from 'express';
 import { SwaggerGenerator } from './Swagger.js';
-import { extractRequestData, validateParams } from './util.js';
+import { extractRequestData, mapGrpcErrorToHttp, validateParams } from './util.js';
 import { createHashKey, extractCaching } from '../cache.utils.js';
 import { ConduitRouter } from '../Router.js';
 import {
@@ -250,35 +250,22 @@ export class RestController extends ConduitRouter {
         });
       }
       if (err.hasOwnProperty('code')) {
-        let statusCode: number;
-        let name: string;
-        switch (err.code) {
-          case 3:
-            name = 'INVALID_ARGUMENTS';
-            statusCode = 400;
-            break;
-          case 5:
-            name = 'NOT_FOUND';
-            statusCode = 404;
-            break;
-          case 7:
-            name = 'FORBIDDEN';
-            statusCode = 403;
-            break;
-          case 16:
-            name = 'UNAUTHORIZED';
-            statusCode = 401;
-            break;
-          default:
-            name = 'INTERNAL_SERVER_ERROR';
-            statusCode = 500;
-            break;
+        const { status, name } = mapGrpcErrorToHttp(err.code);
+        const parsed = JSON.parse(err.details);
+        if (typeof parsed === 'object' && parsed !== null) {
+          return res.status(status).json({
+            name,
+            status,
+            message: parsed.message,
+            conduitCode: parsed.conduitCode,
+          });
+        } else {
+          return res.status(status).json({
+            name,
+            status,
+            message: err.details,
+          });
         }
-        return res.status(statusCode).json({
-          name,
-          status: statusCode,
-          message: err.details,
-        });
       }
       res.status(500).json({
         name: 'INTERNAL_SERVER_ERROR',

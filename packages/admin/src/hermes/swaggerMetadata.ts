@@ -42,21 +42,5 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
     swaggerRouteDoc.responses[401] = {
       description: 'Missing Master Key/Access Token or is otherwise invalid',
     };
-
-    if (route.input.errors) {
-      for (const error of route.input.errors) {
-        const existingResponse = swaggerRouteDoc.responses[error.code];
-        if (existingResponse) {
-          if (!existingResponse.description.startsWith('* ')) {
-            existingResponse.description = `* ${existingResponse.description}`;
-          }
-          existingResponse.description += `\n* ${error.description}`;
-        } else {
-          swaggerRouteDoc.responses[error.code] = {
-            description: `* ${error.description}`,
-          };
-        }
-      }
-    }
   },
 });

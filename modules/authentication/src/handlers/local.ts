@@ -56,24 +56,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           userData: ConduitJson.Optional,
         },
         middlewares: localRouteMiddleware,
-        errors: [
-          {
-            code: 400,
-            description: 'Invalid email address provided',
-          },
-          {
-            code: 403,
-            description: 'Registration requires invitation',
-          },
-          {
-            code: 403,
-            description: 'Invalid invitation token',
-          },
-          {
-            code: 500,
-            description: 'User already exists',
-          },
-        ],
+        errors: ['AUTH_USER_EXISTS'],
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
@@ -304,7 +287,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
 
     let user: User | null = await User.getInstance().findOne({ email });
-    if (!isNil(user)) throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
+    if (!isNil(user))
+      throw new GrpcError(
+        'AUTH_USER_EXISTS',
+        undefined,
+        `User with email ${email} already exists`,
+      );
     if (userData) {
       AuthUtils.checkUserData(userData);
     }

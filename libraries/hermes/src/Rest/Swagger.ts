@@ -1,10 +1,16 @@
 import { SwaggerParser } from './SwaggerParser.js';
 import { cloneDeep, isNil } from 'lodash-es';
-import { ConduitModel, ConduitRouteActions, Indexable } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  ConduitRouteActions,
+  ErrorRegistry,
+  Indexable,
+} from '@conduitplatform/grpc-sdk';
 import { SwaggerRouterMetadata } from '../types/index.js';
 import { ConduitRoute } from '../classes/index.js';
 import { importDbTypes } from '../utils/types.js';
 import { processSwaggerParams } from './SimpleTypeParamUtils.js';
+import { mapGrpcErrorToHttp } from './util.js';
 
 export class SwaggerGenerator {
   private _swaggerDoc: Indexable;
@@ -30,6 +36,24 @@ export class SwaggerGenerator {
         schemas: {
           ModelId: {
             type: 'string',
+          },
+          ErrorResponse: {
+            type: 'object',
+            properties: {
+              name: {
+                type: 'string',
+                description: 'HTTP error name',
+              },
+              message: {
+                type: 'string',
+                description: 'Error message',
+              },
+              conduitCode: {
+                type: 'string',
+                description: 'Conduit internal error code',
+              },
+            },
+            required: ['httpCode', 'conduitCode', 'description'],
           },
         },
         securitySchemes: this._routerMetadata.securitySchemes,
@@ -153,20 +177,26 @@ export class SwaggerGenerator {
       this._swaggerDoc.paths[path][method] = routeDoc;
     }
 
-    if (route.input.errors) {
-      for (const error of route.input.errors) {
-        const existingResponse = routeDoc.responses[error.code];
-        if (existingResponse) {
-          if (!existingResponse.description.startsWith('* ')) {
-            existingResponse.description = `* ${existingResponse.description}`;
-          }
-          existingResponse.description += `\n* ${error.description}`;
-        } else {
-          routeDoc.responses[error.code] = {
-            description: `* ${error.description}`,
-          };
-        }
-      }
+    const errors = route.input.errors || [];
+    for (const error of errors) {
+      const details = ErrorRegistry[error as keyof typeof ErrorRegistry];
+      const { grpc_code, message, description } = details;
+      const { name, status } = mapGrpcErrorToHttp(grpc_code);
+      routeDoc.responses[status] = {
+        description: description || 'No description provided',
+        content: {
+          'application/json': {
+            schema: {
+              $ref: '#/components/schemas/ErrorResponse',
+            },
+            example: {
+              name,
+              message: message || 'No message provided',
+              conduitCode: error,
+            },
+          },
+        },
+      };
     }
   }
 
