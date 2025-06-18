@@ -22,9 +22,11 @@ import {
   ConduitString,
   ConfigController,
   RoutingManager,
+  ModuleError,
 } from '@conduitplatform/module-tools';
 import { createHash } from 'crypto';
 import { authenticateChecks, changePassword } from './utils.js';
+import { errors } from '../errors.js';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -55,7 +57,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           userData: ConduitJson.Optional,
         },
         middlewares: localRouteMiddleware,
-        errors: ['AUTH_USER_EXISTS'],
+        errors: [errors.USER_EXISTS],
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
@@ -287,9 +289,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     let user: User | null = await User.getInstance().findOne({ email });
     if (!isNil(user))
-      throw new GrpcError(
-        'AUTH_USER_EXISTS',
-        undefined,
+      throw new ModuleError(
+        errors.USER_EXISTS,
         `User with email ${email} already exists`,
       );
     if (userData) {

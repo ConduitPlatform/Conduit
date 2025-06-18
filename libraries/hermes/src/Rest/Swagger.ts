@@ -1,11 +1,6 @@
 import { SwaggerParser } from './SwaggerParser.js';
 import { cloneDeep, isNil } from 'lodash-es';
-import {
-  ConduitModel,
-  ConduitRouteActions,
-  ErrorRegistry,
-  Indexable,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitModel, ConduitRouteActions, Indexable } from '@conduitplatform/grpc-sdk';
 import { SwaggerRouterMetadata } from '../types/index.js';
 import { ConduitRoute } from '../classes/index.js';
 import { importDbTypes } from '../utils/types.js';
@@ -179,11 +174,10 @@ export class SwaggerGenerator {
 
     const errors = route.input.errors || [];
     for (const error of errors) {
-      const details = ErrorRegistry[error as keyof typeof ErrorRegistry];
-      const { grpc_code, message, description } = details;
-      const { name, status } = mapGrpcErrorToHttp(grpc_code);
+      const { conduitCode, grpcCode, message, description } = error;
+      const { name, status } = mapGrpcErrorToHttp(grpcCode);
       routeDoc.responses[status] = {
-        description: description || 'No description provided',
+        description,
         content: {
           'application/json': {
             schema: {
@@ -191,8 +185,8 @@ export class SwaggerGenerator {
             },
             example: {
               name,
-              message: message || 'No message provided',
-              conduitCode: error,
+              message,
+              conduitCode,
             },
           },
         },
