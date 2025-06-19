@@ -16,7 +16,8 @@ export const errorHandler = (err: Error | ConduitError | any) => {
     try {
       parsed = JSON.parse(err.details);
     } catch (e) {
-      console.warn('Error parsing details:', e);
+      // The below line is commented out to avoid cluttering the logs since most errors will not have a parsable details field.
+      // console.warn('Error parsing details:', e);
     }
     if (parsed && typeof parsed === 'object') {
       ConduitGrpcSdk.Logger.error(parsed.message);
