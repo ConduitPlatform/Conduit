@@ -1,17 +1,10 @@
 import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { ModuleErrorDefinition } from '../interfaces';
 
 export class ModuleError extends GrpcError {
   debugLogInfo?: string;
 
-  constructor(
-    errorDefinition: {
-      grpcCode: number;
-      conduitCode: string;
-      message: string;
-      description: string;
-    },
-    debugLogInfo?: string,
-  ) {
+  constructor(errorDefinition: ModuleErrorDefinition, debugLogInfo?: string) {
     const { grpcCode, conduitCode, message } = errorDefinition;
     super(
       grpcCode,
@@ -20,6 +13,6 @@ export class ModuleError extends GrpcError {
         conduitCode: conduitCode,
       }),
     );
-    this.debugLogInfo = debugLogInfo;
+    if (debugLogInfo) this.debugLogInfo = debugLogInfo;
   }
 }

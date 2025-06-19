@@ -239,8 +239,9 @@ export function mapGrpcErrorToHttp(gRPCErrorCode: number): {
       return { name: 'INVALID_ARGUMENTS', status: 400 };
     case 5:
       return { name: 'NOT_FOUND', status: 404 };
-    case 6:
-      return { name: 'CONFLICT', status: 409 };
+    // TODO: Enable this case once conflict error handling is implemented. Currently commented out to avoid introducing a breaking change.
+    // case 6:
+    //   return { name: 'CONFLICT', status: 409 };
     case 7:
       return { name: 'FORBIDDEN', status: 403 };
     case 16:

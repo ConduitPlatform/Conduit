@@ -57,7 +57,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
           userData: ConduitJson.Optional,
         },
         middlewares: localRouteMiddleware,
-        errors: [errors.USER_EXISTS],
+        errors: [
+          errors.USER_EXISTS,
+          errors.INVITATION_REQUIRED,
+          errors.INVALID_INVITATION,
+        ],
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
@@ -255,7 +259,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
       !teams.allowRegistrationWithoutInvite &&
       isNil(invitationToken)
     ) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
+      throw new ModuleError(
+        errors.INVITATION_REQUIRED,
+        `User with email ${email} tried registering without providing an invitation token`,
+      );
     }
     let isVerified = false;
     if (teams.enabled && invitationToken) {
@@ -264,7 +271,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
         email,
       );
       if (!valid) {
-        throw new GrpcError(status.PERMISSION_DENIED, 'Invalid invitation token');
+        throw new ModuleError(
+          errors.INVALID_INVITATION,
+          `User with email ${email} tried registering with an invalid invitation token: ${invitationToken}`,
+        );
       }
       isVerified = await TeamsHandler.getInstance().verifyUserViaInvitation(
         invitationToken,

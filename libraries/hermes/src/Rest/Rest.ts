@@ -241,8 +241,8 @@ export class RestController extends ConduitRouter {
 
   handleError(res: Response): (err: Error | ConduitError) => void {
     return (err: Error | ConduitError | any) => {
-      ConduitGrpcSdk.Logger.error(err);
       if (err.hasOwnProperty('status')) {
+        ConduitGrpcSdk.Logger.error(err);
         return res.status((err as ConduitError).status).json({
           name: err.name,
           status: (err as ConduitError).status,
@@ -251,8 +251,14 @@ export class RestController extends ConduitRouter {
       }
       if (err.hasOwnProperty('code')) {
         const { status, name } = mapGrpcErrorToHttp(err.code);
-        const parsed = JSON.parse(err.details);
-        if (typeof parsed === 'object' && parsed !== null) {
+        let parsed: { message: string; conduitCode: string } | null = null;
+        try {
+          parsed = JSON.parse(err.details);
+        } catch (e) {
+          console.warn('Error parsing details:', e);
+        }
+        if (parsed && typeof parsed === 'object') {
+          ConduitGrpcSdk.Logger.error(parsed.message);
           return res.status(status).json({
             name,
             status,
@@ -260,6 +266,7 @@ export class RestController extends ConduitRouter {
             conduitCode: parsed.conduitCode,
           });
         } else {
+          ConduitGrpcSdk.Logger.error(err);
           return res.status(status).json({
             name,
             status,
