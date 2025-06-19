@@ -274,6 +274,7 @@ export class RestController extends ConduitRouter {
           });
         }
       }
+      ConduitGrpcSdk.Logger.error(err);
       res.status(500).json({
         name: 'INTERNAL_SERVER_ERROR',
         status: 500,
