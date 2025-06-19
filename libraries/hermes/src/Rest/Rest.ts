@@ -7,7 +7,7 @@ import {
   Router,
 } from 'express';
 import { SwaggerGenerator } from './Swagger.js';
-import { extractRequestData, validateParams } from './util.js';
+import { extractRequestData, mapGrpcErrorToHttp, validateParams } from './util.js';
 import { createHashKey, extractCaching } from '../cache.utils.js';
 import { ConduitRouter } from '../Router.js';
 import {
@@ -241,8 +241,8 @@ export class RestController extends ConduitRouter {
 
   handleError(res: Response): (err: Error | ConduitError) => void {
     return (err: Error | ConduitError | any) => {
-      ConduitGrpcSdk.Logger.error(err);
       if (err.hasOwnProperty('status')) {
+        ConduitGrpcSdk.Logger.error(err);
         return res.status((err as ConduitError).status).json({
           name: err.name,
           status: (err as ConduitError).status,
@@ -250,36 +250,32 @@ export class RestController extends ConduitRouter {
         });
       }
       if (err.hasOwnProperty('code')) {
-        let statusCode: number;
-        let name: string;
-        switch (err.code) {
-          case 3:
-            name = 'INVALID_ARGUMENTS';
-            statusCode = 400;
-            break;
-          case 5:
-            name = 'NOT_FOUND';
-            statusCode = 404;
-            break;
-          case 7:
-            name = 'FORBIDDEN';
-            statusCode = 403;
-            break;
-          case 16:
-            name = 'UNAUTHORIZED';
-            statusCode = 401;
-            break;
-          default:
-            name = 'INTERNAL_SERVER_ERROR';
-            statusCode = 500;
-            break;
+        const { status, name } = mapGrpcErrorToHttp(err.code);
+        let parsed: { message: string; conduitCode: string } | null = null;
+        try {
+          parsed = JSON.parse(err.details);
+        } catch (e) {
+          // The below line is commented out to avoid cluttering the logs since most errors will not have a parsable details field.
+          // console.warn('Error parsing details:', e);
         }
-        return res.status(statusCode).json({
-          name,
-          status: statusCode,
-          message: err.details,
-        });
+        if (parsed && typeof parsed === 'object') {
+          ConduitGrpcSdk.Logger.error(parsed.message);
+          return res.status(status).json({
+            name,
+            status,
+            message: parsed.message,
+            conduitCode: parsed.conduitCode,
+          });
+        } else {
+          ConduitGrpcSdk.Logger.error(err);
+          return res.status(status).json({
+            name,
+            status,
+            message: err.details,
+          });
+        }
       }
+      ConduitGrpcSdk.Logger.error(err);
       res.status(500).json({
         name: 'INTERNAL_SERVER_ERROR',
         status: 500,

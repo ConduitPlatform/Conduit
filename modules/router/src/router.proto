@@ -34,6 +34,13 @@ message RegisterConduitRouteRequest {
     optional ProxyRouteOptions proxy = 6;
   }
 
+  message ErrorDefinition {
+    string conduitCode = 1;
+    int32 grpcCode = 2;
+    string message = 3;
+    string description = 4;
+  }
+
   message ConduitRouteOptions {
     optional string queryParams = 1;
     optional string bodyParams = 2;
@@ -44,6 +51,7 @@ message RegisterConduitRouteRequest {
     optional string description = 7;
     repeated string middlewares = 8;
     optional string cacheControl = 9;
+    repeated ErrorDefinition errors = 10;
   }
 
   message ProxyRouteOptions {
