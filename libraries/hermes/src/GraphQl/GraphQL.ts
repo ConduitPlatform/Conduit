@@ -177,7 +177,14 @@ export class GraphQLController extends ConduitRouter {
 
     let description = '';
     if (input.description) {
-      description = `""" ${input.description} """ `;
+      description = `""" ${input.description}`;
+      if (Array.isArray(input.errors) && input.errors.length > 0) {
+        description += `\n\nPossible errors:\n\n`;
+        input.errors.forEach((err: { conduitCode: string; description: string }) => {
+          description += `- ${err.conduitCode}: ${err.description}\n\n`;
+        });
+      }
+      description += ' """ ';
     }
 
     const finalName = description + name + params + ':' + returnType;

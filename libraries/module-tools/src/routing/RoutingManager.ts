@@ -177,7 +177,7 @@ export class RoutingManager {
     }
     for (const option in routeObject.options) {
       if (!routeObject.options.hasOwnProperty(option)) continue;
-      if (option === 'middlewares') continue;
+      if (option === 'middlewares' || option === 'errors') continue;
       if (
         typeof routeObject.options[option] === 'string' ||
         routeObject.options[option] instanceof String

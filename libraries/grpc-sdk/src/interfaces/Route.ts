@@ -1,5 +1,6 @@
 import { allowedTypes, ConduitModel, TYPE } from './Model.js';
 import { Indexable } from './Indexable.js';
+import { ModuleErrorDefinition } from '@conduitplatform/module-tools';
 
 export interface ConduitRouteParameters {
   params?: Indexable;
@@ -61,6 +62,7 @@ export interface ConduitRouteOptions {
   description?: string;
   middlewares?: string[];
   cacheControl?: string;
+  errors?: ModuleErrorDefinition[];
 }
 
 export interface ConduitRouteObject {

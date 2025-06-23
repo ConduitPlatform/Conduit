@@ -5,6 +5,19 @@ import { SwaggerRouterMetadata } from '../types/index.js';
 import { ConduitRoute } from '../classes/index.js';
 import { importDbTypes } from '../utils/types.js';
 import { processSwaggerParams } from './SimpleTypeParamUtils.js';
+import { mapGrpcErrorToHttp } from './util.js';
+
+interface SwaggerExample {
+  name: string;
+  message: string;
+  conduitCode: string;
+}
+
+interface SwaggerResponseContent {
+  schema: { $ref: string };
+  example?: SwaggerExample;
+  examples?: Record<string, { value: SwaggerExample }>;
+}
 
 export class SwaggerGenerator {
   private _swaggerDoc: Indexable;
@@ -30,6 +43,24 @@ export class SwaggerGenerator {
         schemas: {
           ModelId: {
             type: 'string',
+          },
+          ErrorResponse: {
+            type: 'object',
+            properties: {
+              name: {
+                type: 'string',
+                description: 'HTTP error name',
+              },
+              message: {
+                type: 'string',
+                description: 'Error message',
+              },
+              conduitCode: {
+                type: 'string',
+                description: 'Conduit internal error code',
+              },
+            },
+            required: ['httpCode', 'conduitCode', 'description'],
           },
         },
         securitySchemes: this._routerMetadata.securitySchemes,
@@ -151,6 +182,70 @@ export class SwaggerGenerator {
     } else {
       this._swaggerDoc.paths[path] = {};
       this._swaggerDoc.paths[path][method] = routeDoc;
+    }
+
+    const errors = route.input.errors || [];
+    const errorGroups: Record<
+      string,
+      Record<
+        string,
+        { name: string; message: string; conduitCode: string; description: string }[]
+      >
+    > = {};
+    for (const error of errors) {
+      const { conduitCode, grpcCode, message, description } = error;
+      const { name, status } = mapGrpcErrorToHttp(grpcCode);
+      if (!errorGroups[status]) errorGroups[status] = {};
+      if (!errorGroups[status][conduitCode]) errorGroups[status][conduitCode] = [];
+      errorGroups[status][conduitCode].push({
+        name,
+        message,
+        conduitCode,
+        description,
+      });
+    }
+
+    for (const status in errorGroups) {
+      const allExamples: {
+        name: string;
+        message: string;
+        conduitCode: string;
+        description: string;
+      }[] = [];
+      for (const conduitCode in errorGroups[status]) {
+        allExamples.push(...errorGroups[status][conduitCode]);
+      }
+      const responseContent: { 'application/json': SwaggerResponseContent } = {
+        'application/json': {
+          schema: {
+            $ref: '#/components/schemas/ErrorResponse',
+          },
+        },
+      };
+      if (allExamples.length === 1) {
+        responseContent['application/json']['example'] = {
+          name: allExamples[0].name,
+          message: allExamples[0].message,
+          conduitCode: allExamples[0].conduitCode,
+        };
+      } else if (allExamples.length > 1) {
+        responseContent['application/json']['examples'] = {};
+        allExamples.forEach(example => {
+          const { name, message, conduitCode, description } = example;
+          if (responseContent['application/json']['examples']) {
+            responseContent['application/json']['examples'][description] = {
+              value: {
+                name,
+                message,
+                conduitCode,
+              },
+            };
+          }
+        });
+      }
+      routeDoc.responses[status] = {
+        content: responseContent,
+      };
     }
   }
 
