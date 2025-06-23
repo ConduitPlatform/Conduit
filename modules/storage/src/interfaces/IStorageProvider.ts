@@ -1,3 +1,8 @@
+export type UrlOptions = {
+  download?: boolean;
+  fileName?: string;
+};
+
 export interface IStorageProvider {
   store(fileName: string, data: any, isPublic?: boolean): Promise<boolean | Error>;
 
@@ -34,7 +39,7 @@ export interface IStorageProvider {
 
   get(fileName: string, downloadPath?: string): Promise<Buffer | Error>;
 
-  getSignedUrl(fileName: string): Promise<any | Error>;
+  getSignedUrl(fileName: string, options?: UrlOptions): Promise<any | Error>;
 
   getPublicUrl(fileName: string): Promise<any | Error>;
 

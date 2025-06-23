@@ -11,6 +11,7 @@ message GetFileUrlRequest {
   string id = 1;
   optional string userId = 2;
   optional string scope = 3;
+  optional bool download = 4;
 
 }
 message GetFileUrlResponse {

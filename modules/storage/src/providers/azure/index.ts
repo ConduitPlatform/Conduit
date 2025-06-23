@@ -1,4 +1,4 @@
-import { IStorageProvider, StorageConfig } from '../../interfaces/index.js';
+import { IStorageProvider, StorageConfig, UrlOptions } from '../../interfaces/index.js';
 import {
   BlobClient,
   BlobSASPermissions,
@@ -8,7 +8,7 @@ import {
 } from '@azure/storage-blob';
 import fs from 'fs';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import { streamToBuffer } from '../../utils/index.js';
+import { constructDispositionHeader, streamToBuffer } from '../../utils/index.js';
 import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry.js';
 
 export class AzureStorage implements IStorageProvider {
@@ -122,7 +122,7 @@ export class AzureStorage implements IStorageProvider {
     return data;
   }
 
-  async getSignedUrl(fileName: string): Promise<any | Error> {
+  async getSignedUrl(fileName: string, options: UrlOptions): Promise<any | Error> {
     const containerClient = this._storage.getContainerClient(this._activeContainer);
     const sasOptions: BlobSASSignatureValues = {
       containerName: containerClient.containerName,
@@ -130,6 +130,9 @@ export class AzureStorage implements IStorageProvider {
       expiresOn: new Date(SIGNED_URL_EXPIRY_DATE()),
       permissions: BlobSASPermissions.parse('r'),
     };
+    if (options) {
+      sasOptions.contentDisposition = constructDispositionHeader(fileName, options);
+    }
     return this.blobClient(fileName).generateSasUrl(sasOptions);
   }
 
