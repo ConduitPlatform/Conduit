@@ -224,7 +224,7 @@ export default class Storage extends ManagedModule<Config> {
     const request = createParsedRouterRequest(
       call.request,
       undefined,
-      { scope: call.request.scope },
+      { scope: call.request.scope, download: call.request.download },
       undefined,
       undefined,
       undefined,

@@ -9,7 +9,7 @@ import { ConfigController } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { isNil, isString } from 'lodash-es';
 import { _StorageContainer, _StorageFolder, File } from '../models/index.js';
-import { IStorageProvider } from '../interfaces/index.js';
+import { IStorageProvider, UrlOptions } from '../interfaces/index.js';
 import {
   _createFileUploadUrl,
   _updateFile,
@@ -208,9 +208,13 @@ export class AdminFileHandlers {
         }
         return { redirect: found.url };
       }
+      let options: UrlOptions = {
+        download: call.request.params.download ?? false,
+        fileName: found.alias ?? found.name,
+      };
       const url = await this.storageProvider
         .container(found.container)
-        .getSignedUrl((found.folder === '/' ? '' : found.folder) + found.name);
+        .getSignedUrl((found.folder === '/' ? '' : found.folder) + found.name, options);
 
       if (!call.request.params.redirect) {
         return { result: url };
