@@ -1,5 +1,4 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { ModuleErrorDefinition } from '../interfaces';
+import { GrpcError, ModuleErrorDefinition } from '@conduitplatform/grpc-sdk';
 
 export class ModuleError extends GrpcError {
   debugLogInfo?: string;
