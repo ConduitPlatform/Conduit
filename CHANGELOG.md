@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.17](https://github.com/ConduitPlatform/Conduit/compare/v0.16.16...v0.16.17) (2025-07-10)
+
+
+### Features
+
+* document the errors that each endpoint throws in Swagger and Apollo ([#1353](https://github.com/ConduitPlatform/Conduit/issues/1353)) ([e8d2cfb](https://github.com/ConduitPlatform/Conduit/commit/e8d2cfbabc98cd91cb9ebb7e9c5ba570bb108757))
+* **hermes,chat:** better support event types and auto room joins ([#1338](https://github.com/ConduitPlatform/Conduit/issues/1338)) ([056f127](https://github.com/ConduitPlatform/Conduit/commit/056f127f8bf13e72167789dac5b01ca24a0f2615))
+
+
+### Bug Fixes
+
+* **chat:** erroneous check of content along with contentType ([9778f74](https://github.com/ConduitPlatform/Conduit/commit/9778f74ae65206446d70dc736e0b57f9fa235dcf))
+* **chat:** type/import issues ([b6a8673](https://github.com/ConduitPlatform/Conduit/commit/b6a8673aed3f180e875bfec2a05c45f5c2f3d8b0))
+* define module error definition in grpc-sdk instead of module-tools ([#1362](https://github.com/ConduitPlatform/Conduit/issues/1362)) ([e641ce4](https://github.com/ConduitPlatform/Conduit/commit/e641ce45c944a0d01fc782b9c48faf2c435758a0))
+* **email:** local handlers wouldn't initialize email variable, when module was available ([146b5d5](https://github.com/ConduitPlatform/Conduit/commit/146b5d563296d1f1f179a61e915219bff4ca0055))
+
 ### [0.16.16](https://github.com/ConduitPlatform/Conduit/compare/v0.16.15...v0.16.16) (2025-06-02)
 
 
