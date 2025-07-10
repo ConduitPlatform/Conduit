@@ -1,6 +1,12 @@
 import { allowedTypes, ConduitModel, TYPE } from './Model.js';
 import { Indexable } from './Indexable.js';
-import { ModuleErrorDefinition } from '@conduitplatform/module-tools';
+
+export interface ModuleErrorDefinition {
+  grpcCode: number;
+  conduitCode: string;
+  message: string;
+  description: string;
+}
 
 export interface ConduitRouteParameters {
   params?: Indexable;

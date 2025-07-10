@@ -1,5 +1,5 @@
 import { status } from '@grpc/grpc-js';
-import { ModuleErrorDefinition } from '@conduitplatform/module-tools';
+import { ModuleErrorDefinition } from '@conduitplatform/grpc-sdk';
 
 export const errors = {
   USER_EXISTS: {
