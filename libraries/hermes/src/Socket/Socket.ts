@@ -109,6 +109,9 @@ export class SocketController extends ConduitRouter {
     });
 
     this.io.of(namespace).on('connect', socket => {
+      ConduitGrpcSdk.Logger.info(
+        `Socket connected: ${socket.id} to namespace: ${namespace}`,
+      );
       conduitSocket
         .executeRequest({
           event: 'connect',
@@ -123,6 +126,7 @@ export class SocketController extends ConduitRouter {
         });
 
       socket.onAny((event, ...args) => {
+        ConduitGrpcSdk.Logger.info(`Socket event: ${event} from socket: ${socket.id}`);
         conduitSocket
           .executeRequest({
             event,
@@ -139,6 +143,9 @@ export class SocketController extends ConduitRouter {
       });
 
       socket.on('disconnect', () => {
+        ConduitGrpcSdk.Logger.info(
+          `Socket disconnected: ${socket.id} from namespace: ${namespace}`,
+        );
         conduitSocket
           .executeRequest({
             event: 'disconnect',
@@ -163,6 +170,11 @@ export class SocketController extends ConduitRouter {
         push.namespace,
       );
       for (const socket of filteredSockets) {
+        ConduitGrpcSdk.Logger.info(
+          `Socket ${socket.id} joining rooms: ${push.rooms.join(', ')} in namespace: ${
+            push.namespace
+          }`,
+        );
         socket.join(push.rooms);
       }
     } else if (push.event === 'leave-room') {
@@ -173,16 +185,30 @@ export class SocketController extends ConduitRouter {
         );
         for (const socket of filteredSockets) {
           for (const room of push.rooms) {
+            ConduitGrpcSdk.Logger.info(
+              `Socket ${socket.id} leaving room: ${room} in namespace: ${push.namespace}`,
+            );
             socket.leave(room);
           }
         }
       }
     } else if (isInstanceOfEventResponse(push)) {
       if (isNil(push.receivers) || push.receivers!.length === 0) {
+        ConduitGrpcSdk.Logger.info(
+          `Emitting event: ${push.event} to all sockets in namespace: ${push.namespace}`,
+        );
         this.io.of(push.namespace).emit(push.event, JSON.parse(push.data));
       } else {
         if (push.rooms.length !== 0) {
-          this.io.of(push.namespace).to(push.rooms).emit(push.event, JSON.parse(push.data));
+          ConduitGrpcSdk.Logger.info(
+            `Emitting event: ${push.event} to rooms: ${push.rooms.join(
+              ', ',
+            )} in namespace: ${push.namespace}`,
+          );
+          this.io
+            .of(push.namespace)
+            .to(push.rooms)
+            .emit(push.event, JSON.parse(push.data));
         }
         if (push.receivers.length !== 0) {
           const filteredSockets = await this.findAndFilterSockets(
@@ -190,6 +216,9 @@ export class SocketController extends ConduitRouter {
             push.namespace,
           );
           for (const socket of filteredSockets) {
+            ConduitGrpcSdk.Logger.info(
+              `Emitting event: ${push.event} to socket: ${socket.id} in namespace: ${push.namespace}`,
+            );
             socket.emit(push.event, JSON.parse(push.data));
           }
         }
@@ -204,11 +233,19 @@ export class SocketController extends ConduitRouter {
   ) {
     if (res.event === 'join-room') {
       if (res.rooms && res.rooms.length !== 0) {
+        ConduitGrpcSdk.Logger.info(
+          `Socket ${socket.id} joining rooms: ${res.rooms.join(
+            ', ',
+          )} in namespace: ${namespace}`,
+        );
         socket.join(res.rooms);
       }
     } else if (res.event === 'leave-room') {
       if (res.rooms && res.rooms.length !== 0) {
         for (const room of res.rooms) {
+          ConduitGrpcSdk.Logger.info(
+            `Socket ${socket.id} leaving room: ${room} in namespace: ${namespace}`,
+          );
           socket.leave(room);
         }
       }
@@ -217,9 +254,17 @@ export class SocketController extends ConduitRouter {
         (!res.receivers || res.receivers.length === 0) &&
         (!res.rooms || res.rooms.length === 0)
       ) {
+        ConduitGrpcSdk.Logger.info(
+          `Emitting event: ${res.event} to all sockets in namespace: ${namespace}`,
+        );
         socket.emit(res.event, JSON.parse(res.data));
       } else {
         if (res.rooms && res.rooms.length !== 0) {
+          ConduitGrpcSdk.Logger.info(
+            `Emitting event: ${res.event} to rooms: ${res.rooms.join(
+              ', ',
+            )} in namespace: ${namespace}`,
+          );
           this.io.of(namespace).to(res.rooms).emit(res.event, JSON.parse(res.data));
         }
         if (res.receivers && res.receivers.length !== 0) {
@@ -228,6 +273,9 @@ export class SocketController extends ConduitRouter {
             namespace,
           );
           for (const socket of filteredSockets) {
+            ConduitGrpcSdk.Logger.info(
+              `Emitting event: ${res.event} to socket: ${socket.id} in namespace: ${namespace}`,
+            );
             socket.emit(res.event, JSON.parse(res.data));
           }
         }
