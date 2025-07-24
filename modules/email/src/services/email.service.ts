@@ -48,7 +48,7 @@ export class EmailService {
   }
 
   async registerTemplate(params: IRegisterTemplateParams) {
-    const { name, body, subject, variables, sender } = params;
+    const { name, body, subject, variables, sender, jsonTemplate } = params;
 
     const existing = await EmailTemplate.getInstance().findOne({ name });
     if (!isNil(existing)) return existing;
@@ -59,6 +59,7 @@ export class EmailService {
       body,
       sender,
       variables,
+      jsonTemplate,
     });
   }
 
@@ -70,7 +71,7 @@ export class EmailService {
       throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
     }
 
-    ['name', 'subject', 'body', 'sender'].forEach(key => {
+    ['name', 'subject', 'body', 'sender', 'jsonTemplate'].forEach(key => {
       if (params[key as keyof IUpdateTemplateParams]) {
         // @ts-ignore
         templateDocument[key] = params[key];

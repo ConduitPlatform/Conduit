@@ -29,6 +29,10 @@ const schema: ConduitModel = {
   sender: {
     type: TYPE.String,
   },
+  jsonTemplate: {
+    type: TYPE.String,
+    sqlType: SQLDataType.TEXT,
+  },
   externalManaged: {
     type: TYPE.Boolean,
     default: false,
@@ -61,6 +65,7 @@ export class EmailTemplate extends ConduitActiveSchema<EmailTemplate> {
   variables?: string[];
   sender?: string;
   externalManaged: boolean;
+  jsonTemplate?: string;
   externalId?: string;
   createdAt: Date;
   updatedAt: Date;
