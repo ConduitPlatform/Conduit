@@ -4,4 +4,5 @@ export interface IRegisterTemplateParams {
   body: string;
   sender?: string;
   variables: string[];
+  jsonTemplate?: string;
 }
