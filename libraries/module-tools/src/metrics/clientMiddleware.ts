@@ -52,28 +52,28 @@ async function* incrementStreamMessagesCounter<T>(
 
 const clientStartedMetric = new Counter({
   registers: [registry],
-  name: 'conduit_grpc_client_started_total',
+  name: 'cnd_grpc_client_started_total',
   help: 'Total number of RPCs started on the client.',
   labelNames: [typeLabel, serviceLabel, methodLabel, pathLabel],
 });
 
 const clientHandledMetric = new Counter({
   registers: [registry],
-  name: 'conduit_grpc_client_handled_total',
+  name: 'cnd_grpc_client_handled_total',
   help: 'Total number of RPCs completed on the client, regardless of success or failure.',
   labelNames: [typeLabel, serviceLabel, methodLabel, pathLabel, codeLabel],
 });
 
 const clientStreamMsgReceivedMetric = new Counter({
   registers: [registry],
-  name: 'conduit_grpc_client_msg_received_total',
+  name: 'cnd_grpc_client_msg_received_total',
   help: 'Total number of RPC stream messages received by the client.',
   labelNames: [typeLabel, serviceLabel, methodLabel, pathLabel],
 });
 
 const clientStreamMsgSentMetric = new Counter({
   registers: [registry],
-  name: 'conduit_grpc_client_msg_sent_total',
+  name: 'cnd_grpc_client_msg_sent_total',
   help: 'Total number of gRPC stream messages sent by the client.',
   labelNames: [typeLabel, serviceLabel, methodLabel, pathLabel],
 });
