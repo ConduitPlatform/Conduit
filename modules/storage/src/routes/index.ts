@@ -53,6 +53,7 @@ export class StorageRoutes {
         },
         queryParams: {
           redirect: { type: TYPE.Boolean, required: false },
+          download: { type: TYPE.Boolean, required: false },
           ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
         },
         middlewares: ['authMiddleware?'],
