@@ -47,8 +47,9 @@ export class GrpcServer {
     protoPath: string,
     protoDescription: string,
     functions: { [name: string]: Function },
+    noAuth: boolean = false,
   ): Promise<GrpcServer> {
-    functions = wrapGrpcFunctions(functions, this.postponeRestart.bind(this));
+    functions = wrapGrpcFunctions(functions, this.postponeRestart.bind(this), noAuth);
     if (this._serviceNames.indexOf(protoDescription) !== -1) {
       ConduitGrpcSdk.Logger.log('Service already exists, performing replace');
       this._services[this._serviceNames.indexOf(protoDescription)] = {

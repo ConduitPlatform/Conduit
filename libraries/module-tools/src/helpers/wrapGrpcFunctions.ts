@@ -10,6 +10,7 @@ interface JWT {
 export function wrapGrpcFunctions(
   functions: { [name: string]: Function },
   postponeRestart: () => void,
+  noAuth: boolean = false,
 ) {
   const grpcKey = process.env.GRPC_KEY;
   const wrappedFunctions: { [name: string]: Function } = {};
@@ -17,7 +18,7 @@ export function wrapGrpcFunctions(
     wrappedFunctions[name] = (call: any, callback: any) => {
       ConduitGrpcSdk.Metrics?.increment('internal_grpc_requests_total');
       postponeRestart();
-      if (grpcKey) {
+      if (grpcKey && !noAuth) {
         const verify = createVerifier({ key: grpcKey });
         const grpcToken = call.metadata.get('grpc-token')[0];
         if (!grpcToken) {

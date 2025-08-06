@@ -67,6 +67,14 @@ export function grpcToConduitRoute(
     {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
+      // round-robin by default to support multiple resolved IPs
+      'grpc.service_config': JSON.stringify({
+        loadBalancingConfig: [{ round_robin: {} }],
+      }),
+      // re-resolve DNS entries every 5s so newly added Pods appear quickly (k8s)
+      'grpc.dns_min_time_between_resolutions_ms': 5000,
+      // keepalive pings to detect dead connections (10s idle)
+      'grpc.keepalive_time_ms': 10000,
     },
   );
 
