@@ -1,4 +1,4 @@
-import { IStorageProvider, StorageConfig } from '../../interfaces/index.js';
+import { IStorageProvider, StorageConfig, UrlOptions } from '../../interfaces/index.js';
 import {
   CreateBucketCommand,
   DeleteBucketCommand,
@@ -12,7 +12,7 @@ import {
   S3ClientConfig,
 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
-import { streamToBuffer } from '../../utils/index.js';
+import { constructDispositionHeader, streamToBuffer } from '../../utils/index.js';
 import fs from 'fs';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
@@ -202,10 +202,11 @@ export class AWSS3Storage implements IStorageProvider {
     }
   }
 
-  async getSignedUrl(fileName: string) {
+  async getSignedUrl(fileName: string, options?: UrlOptions) {
     const command = new GetObjectCommand({
       Bucket: this._activeContainer,
       Key: fileName,
+      ResponseContentDisposition: constructDispositionHeader(fileName, options),
     });
     return awsGetSignedUrl(this._storage, command, {
       expiresIn: SIGNED_URL_EXPIRY_SECONDS,

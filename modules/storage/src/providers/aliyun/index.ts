@@ -1,8 +1,9 @@
-import { IStorageProvider, StorageConfig } from '../../interfaces/index.js';
+import { IStorageProvider, StorageConfig, UrlOptions } from '../../interfaces/index.js';
 import OSS from 'ali-oss';
 import fs from 'fs';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry.js';
+import { constructDispositionHeader } from '../../utils/index.js';
 
 export class AliyunStorage implements IStorageProvider {
   private _activeContainer: string = '';
@@ -135,13 +136,14 @@ export class AliyunStorage implements IStorageProvider {
     return content;
   }
 
-  async getSignedUrl(fileName: string): Promise<any | Error> {
-    const url = this._ossClient.signatureUrl(fileName, {
+  async getSignedUrl(fileName: string, options?: UrlOptions): Promise<any | Error> {
+    return this._ossClient.signatureUrl(fileName, {
       expires: SIGNED_URL_EXPIRY_SECONDS,
       method: 'GET',
+      response: {
+        'content-disposition': constructDispositionHeader(fileName, options),
+      },
     });
-
-    return url;
   }
 
   async getPublicUrl(fileName: string): Promise<any | Error> {

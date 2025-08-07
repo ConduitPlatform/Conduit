@@ -1,7 +1,8 @@
-import { IStorageProvider, StorageConfig } from '../../interfaces/index.js';
+import { IStorageProvider, StorageConfig, UrlOptions } from '../../interfaces/index.js';
 import { Storage } from '@google-cloud/storage';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry.js';
+import { constructDispositionHeader } from '../../utils/index.js';
 
 /**
  * WARNING: DO NOT USE THIS, IT NEEDS A REWRITE
@@ -103,13 +104,14 @@ export class GoogleCloudStorage implements IStorageProvider {
     });
   }
 
-  async getSignedUrl(fileName: string): Promise<any | Error> {
+  async getSignedUrl(fileName: string, options?: UrlOptions): Promise<any | Error> {
     this._storage
       .bucket(this._activeBucket)
       .file(fileName)
       .getSignedUrl({
         action: 'read',
         expires: SIGNED_URL_EXPIRY_DATE(),
+        responseDisposition: constructDispositionHeader(fileName, options),
       })
       .then((r: any) => {
         if (r.data && r.data[0]) {
@@ -120,8 +122,7 @@ export class GoogleCloudStorage implements IStorageProvider {
   }
 
   async getPublicUrl(fileName: string): Promise<any | Error> {
-    await this._storage.bucket(this._activeBucket).file(fileName).isPublic();
-    return this._storage.bucket(this._activeBucket).file(fileName).baseUrl;
+    return this._storage.bucket(this._activeBucket).file(fileName).publicUrl();
   }
 
   async store(
