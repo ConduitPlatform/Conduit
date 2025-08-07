@@ -17,7 +17,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    name: Build email
+    name: Build authorization
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,6 +27,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build conduit email
+      - name: Build conduit authorization
         run: |
           DEV=TRUE make modules/authorization
