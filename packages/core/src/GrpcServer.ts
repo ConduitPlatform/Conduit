@@ -144,6 +144,7 @@ export class GrpcServer {
         Check: this.healthCheck.bind(this),
         Watch: this.healthWatch.bind(this),
       },
+      true,
     );
   }
 
