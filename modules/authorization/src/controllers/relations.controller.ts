@@ -34,12 +34,15 @@ export class RelationsController {
         if (!resourceDefinition) {
           throw new Error('Object resource definition not found');
         }
-        if (!resourceDefinition.relations) {
+        if (
+          !resourceDefinition.relations ||
+          !resourceDefinition.relations[relation] ||
+          resourceDefinition.relations[relation].length === 0
+        ) {
           throw new Error('Relation not allowed');
         }
         if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
         if (
-          !resourceDefinition.relations[relation] ||
           resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1
         ) {
           throw new Error('Relation not allowed');
@@ -85,14 +88,15 @@ export class RelationsController {
       if (!resourceDefinition) {
         throw new Error('Object resource definition not found');
       }
-      if (!resourceDefinition.relations) {
+      if (
+        !resourceDefinition.relations ||
+        !resourceDefinition.relations[relation] ||
+        resourceDefinition.relations[relation].length === 0
+      ) {
         throw new Error('Relation not allowed');
       }
       if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
-      if (
-        !resourceDefinition.relations[relation] ||
-        resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1
-      ) {
+      if (resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1) {
         throw new Error('Relation not allowed');
       }
     }
