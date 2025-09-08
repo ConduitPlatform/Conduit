@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set env
         run: echo "RELEASE_VERSION=$(echo ${GITHUB_REF#refs/*/} | sed 's/^v//')" >> $GITHUB_ENV
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
@@ -64,7 +64,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set env
         run: echo "RELEASE_VERSION=$(echo ${GITHUB_REF#refs/*/} | sed 's/^v//')" >> $GITHUB_ENV
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
