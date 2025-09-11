@@ -9,6 +9,7 @@ import {
   ValidateAccessTokenResponse,
   UserModifyStatusResponse,
   InvitationDeleteResponse,
+  InviteUserToTeamResponse,
 } from '../../protoUtils/index.js';
 import { Indexable } from '../../interfaces';
 
@@ -95,5 +96,23 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
 
   invitationDelete(teamId: string, email: string): Promise<InvitationDeleteResponse> {
     return this.client!.invitationDelete({ teamId, email });
+  }
+
+  inviteUserToTeam(
+    teamId: string,
+    email: string,
+    role: string,
+    inviterUserId: string,
+    redirectUri?: string,
+    userData?: string,
+  ): Promise<InviteUserToTeamResponse> {
+    return this.client!.inviteUserToTeam({
+      teamId,
+      email,
+      role,
+      inviterUserId,
+      redirectUri,
+      userData,
+    });
   }
 }

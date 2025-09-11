@@ -39,6 +39,8 @@ import {
   ValidateAccessTokenRequest,
   ValidateAccessTokenResponse,
   ValidateAccessTokenResponse_Status,
+  InviteUserToTeamRequest,
+  InviteUserToTeamResponse,
 } from './protoTypes/authentication.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { runMigrations } from './migrations/index.js';
@@ -80,6 +82,7 @@ export default class Authentication extends ManagedModule<Config> {
       addTeamMembers: this.addTeamMembers.bind(this),
       removeTeamMembers: this.removeTeamMembers.bind(this),
       invitationDelete: this.invitationDelete.bind(this),
+      inviteUserToTeam: this.inviteUserToTeam.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -689,6 +692,55 @@ export default class Authentication extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: (e as Error).message,
       });
+    }
+  }
+
+  async inviteUserToTeam(
+    call: GrpcRequest<InviteUserToTeamRequest>,
+    callback: GrpcCallback<InviteUserToTeamResponse>,
+  ) {
+    const { teamId, email, role, redirectUri, inviterUserId, userData } = call.request;
+    if (isEmpty(teamId) || isEmpty(email) || isEmpty(role) || isEmpty(inviterUserId)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'teamId, email, role and inviterUserId are required',
+      });
+    }
+
+    try {
+      const inviter = await User.getInstance().findOne({ _id: inviterUserId });
+      if (!inviter) {
+        return callback({ code: status.NOT_FOUND, message: 'Inviter user not found' });
+      }
+
+      let parsedUserData: Indexable | undefined = undefined;
+      if (!isNil(userData) && userData !== '') {
+        try {
+          parsedUserData = JSON.parse(userData);
+        } catch (e) {
+          return callback({
+            code: status.INVALID_ARGUMENT,
+            message: 'userData must be valid JSON',
+          });
+        }
+      }
+
+      const request = createParsedRouterRequest(
+        { teamId, email, role, redirectUri, userData: parsedUserData },
+        { teamId },
+        undefined,
+        { email, role, redirectUri, userData: parsedUserData },
+        undefined,
+        undefined,
+        { user: inviter },
+      );
+
+      const invitationToken = (await TeamsHandler.getInstance(this.grpcSdk).userInvite(
+        request,
+      )) as string;
+      return callback(null, { invitationToken });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
   }
 

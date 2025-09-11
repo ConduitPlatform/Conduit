@@ -111,6 +111,19 @@ message InvitationDeleteResponse {
   string message = 1;
 }
 
+message InviteUserToTeamRequest {
+  string teamId = 1;
+  string email = 2;
+  string role = 3;
+  optional string redirectUri = 4;
+  optional string inviterUserId = 5;
+  optional string userData = 6;
+}
+
+message InviteUserToTeamResponse {
+  string invitationToken = 1;
+}
+
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
@@ -126,4 +139,5 @@ service Authentication {
   rpc RemoveTeamMembers(ModifyTeamMembersRequest) returns (google.protobuf.Empty);
   rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
   rpc InvitationDelete(InvitationDeleteRequest) returns (InvitationDeleteResponse);
+  rpc InviteUserToTeam(InviteUserToTeamRequest) returns (InviteUserToTeamResponse);
 }
