@@ -115,8 +115,8 @@ message InviteUserToTeamRequest {
   string teamId = 1;
   string email = 2;
   string role = 3;
+  string inviterUserId = 5;
   optional string redirectUri = 4;
-  optional string inviterUserId = 5;
   optional string userData = 6;
 }
 

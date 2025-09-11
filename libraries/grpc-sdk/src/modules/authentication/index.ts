@@ -104,7 +104,7 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     role: string,
     inviterUserId: string,
     redirectUri?: string,
-    userData?: string,
+    userData?: Indexable,
   ): Promise<InviteUserToTeamResponse> {
     return this.client!.inviteUserToTeam({
       teamId,
@@ -112,7 +112,7 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
       role,
       inviterUserId,
       redirectUri,
-      userData,
+      userData: JSON.stringify(userData),
     });
   }
 }
