@@ -48,9 +48,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - name: Install Protoc
-        uses: arduino/setup-protoc@v1
+        uses: arduino/setup-protoc@v3
         with:
-          version: '3.17.3'
+          version: '23.x'
       - name: install dependencies
         run: yarn install --pure-lockfile --non-interactive
       - name: actually_publish
@@ -76,9 +76,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - name: Install Protoc
-        uses: arduino/setup-protoc@v1
+        uses: arduino/setup-protoc@v3
         with:
-          version: '3.17.3'
+          version: '23.x'
       - name: install dependencies
         run: yarn install --pure-lockfile --non-interactive
       - name: build the sdk
