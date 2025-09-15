@@ -32,7 +32,7 @@
     "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.13.3",
     "@grpc/proto-loader": "^0.7.13",
-    "axios": "^1.9.0",
+    "axios": "^1.12.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.21.2",
     "convict": "^6.2.4",
