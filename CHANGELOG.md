@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.18](https://github.com/ConduitPlatform/Conduit/compare/v0.16.17...v0.16.18) (2025-09-15)
+
+
+### Features
+
+* **authentication:** invite user to team RPC ([#1383](https://github.com/ConduitPlatform/Conduit/issues/1383)) ([47c42e7](https://github.com/ConduitPlatform/Conduit/commit/47c42e7c0dc45ead2088a783b916c3d8fbde5088))
+* **email:** port email json template from v-next branch ([#1366](https://github.com/ConduitPlatform/Conduit/issues/1366)) ([da25dc1](https://github.com/ConduitPlatform/Conduit/commit/da25dc16ab1ca5a18607315152d61ddd5e39ed14))
+* **hermes:** verbose logging in socket router to assist debugging ([1875ed7](https://github.com/ConduitPlatform/Conduit/commit/1875ed779dddd4fd645317a5fd562934fd707219))
+* **storage:** support for proper disposition headers to maintain true filenames when using aliases ([#1358](https://github.com/ConduitPlatform/Conduit/issues/1358)) ([ffaab4e](https://github.com/ConduitPlatform/Conduit/commit/ffaab4e919b7de3bb647adf1dc904a95e69aa20c))
+
+
+### Bug Fixes
+
+* **authorization:** when providing relations that don't exist, the creation crashes ([#1370](https://github.com/ConduitPlatform/Conduit/issues/1370)) ([7f2f7d9](https://github.com/ConduitPlatform/Conduit/commit/7f2f7d9ae7542551c3cfc372b54de3492756cb27))
+* **core:** missing noAuth in health checks ([8de2229](https://github.com/ConduitPlatform/Conduit/commit/8de22291935c7a9ac808a15ad08cd5646044e25b))
+
 ### [0.16.17](https://github.com/ConduitPlatform/Conduit/compare/v0.16.16...v0.16.17) (2025-07-10)
 
 
