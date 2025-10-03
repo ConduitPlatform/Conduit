@@ -13,7 +13,7 @@ export type RawMongoQuery = {
   find?: object;
   insertOne?: object;
   insertMany?: object | object[];
-  updateOne?: object;
+  updateOne?: object | object[];
   updateMany?: object | object[];
   options?: object;
 };

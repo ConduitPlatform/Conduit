@@ -20,7 +20,7 @@ import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces/index.js';
-import { isNil, isEqual } from 'lodash-es';
+import { isNil, isEqual, isArray } from 'lodash-es';
 
 // @ts-ignore
 import * as parseSchema from 'mongodb-schema';
@@ -337,9 +337,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       const queryOperation = Object.keys(rawQuery).filter(v => {
         if (v !== 'options') return v;
       })[0];
+      const queryObjects = rawQuery[queryOperation as keyof RawMongoQuery];
       // @ts-ignore
       result = await collection[queryOperation](
-        rawQuery[queryOperation as keyof RawMongoQuery],
+        ...(isArray(queryObjects) ? queryObjects : [queryObjects]), // spread if array
         rawQuery.options,
       );
       if (queryOperation === 'aggregate') {
