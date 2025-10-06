@@ -340,7 +340,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       const queryObjects = rawQuery[queryOperation as keyof RawMongoQuery];
       // @ts-ignore
       result = await collection[queryOperation](
-        ...(isArray(queryObjects) ? queryObjects : [queryObjects]), // spread if array
+        ...(isArray(queryObjects) && queryOperation !== 'aggregate'
+          ? queryObjects
+          : [queryObjects]), // spread if array
         rawQuery.options,
       );
       if (queryOperation === 'aggregate') {
