@@ -255,6 +255,58 @@ export class TeamsAdmin {
     return team;
   }
 
+  async switchParentTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { teamId, newParentTeamId } = call.request.params;
+
+    const team = await Team.getInstance().findOne({ _id: teamId });
+    if (!team) {
+      throw new GrpcError(status.NOT_FOUND, 'Team not found');
+    }
+
+    const newParentTeam = await Team.getInstance().findOne({ _id: newParentTeamId });
+    if (!newParentTeam) {
+      throw new GrpcError(status.NOT_FOUND, 'New parent team not found');
+    }
+
+    const oldParentTeamId = team.parentTeam;
+
+    if (oldParentTeamId) {
+      try {
+        await this.grpcSdk.authorization!.deleteRelation({
+          subject: 'Team:' + oldParentTeamId,
+          relation: 'owner',
+          resource: 'Team:' + teamId,
+        });
+      } catch (e) {
+        ConduitGrpcSdk.Logger.warn(
+          `Failed to delete old parent relation: ${(e as Error).message}`,
+        );
+      }
+    }
+
+    await this.grpcSdk.authorization!.createRelation({
+      subject: 'Team:' + newParentTeamId,
+      relation: 'owner',
+      resource: 'Team:' + teamId,
+    });
+
+    const updatedTeam = await Team.getInstance().findByIdAndUpdate(teamId, {
+      parentTeam: newParentTeamId,
+    });
+
+    if (!updatedTeam) {
+      throw new GrpcError(status.INTERNAL, 'Failed to update team');
+    }
+
+    ConduitGrpcSdk.Logger.info(
+      `Team ${teamId} parent switched from ${
+        oldParentTeamId ?? 'none'
+      } to ${newParentTeamId}`,
+    );
+
+    return updatedTeam;
+  }
+
   async modifyMembersRoles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { members, teamId, role } = call.request.params;
     const team = await Team.getInstance().findOne({ _id: teamId });

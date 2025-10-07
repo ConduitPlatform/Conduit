@@ -83,6 +83,7 @@ export default class Authentication extends ManagedModule<Config> {
       removeTeamMembers: this.removeTeamMembers.bind(this),
       invitationDelete: this.invitationDelete.bind(this),
       inviteUserToTeam: this.inviteUserToTeam.bind(this),
+      switchParentTeam: this.switchParentTeam.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -739,6 +740,26 @@ export default class Authentication extends ManagedModule<Config> {
         request,
       )) as string;
       return callback(null, { invitationToken });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  async switchParentTeam(
+    call: GrpcRequest<{ teamId: string; newParentTeamId: string }>,
+    callback: GrpcCallback<GrpcTeam>,
+  ) {
+    const request = createParsedRouterRequest(call.request);
+    try {
+      const team = (await new TeamsAdmin(this.grpcSdk).switchParentTeam(
+        request,
+      )) as models.Team;
+      return callback(null, {
+        id: team._id,
+        name: team.name,
+        parentTeam: team.parentTeam,
+        isDefault: team.isDefault,
+      });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }

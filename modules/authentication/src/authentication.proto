@@ -124,6 +124,11 @@ message InviteUserToTeamResponse {
   string invitationToken = 1;
 }
 
+message SwitchParentTeamRequest {
+  string teamId = 1;
+  string newParentTeamId = 2;
+}
+
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
@@ -140,4 +145,5 @@ service Authentication {
   rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
   rpc InvitationDelete(InvitationDeleteRequest) returns (InvitationDeleteResponse);
   rpc InviteUserToTeam(InviteUserToTeamRequest) returns (InviteUserToTeamResponse);
+  rpc SwitchParentTeam(SwitchParentTeamRequest) returns (Team);
 }
