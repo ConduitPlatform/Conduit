@@ -6,6 +6,7 @@ import {
   IUpdateTemplateParams,
 } from '../interfaces/index.js';
 import handlebars from 'handlebars';
+import helpers from 'handlebars-helpers';
 import { EmailProvider } from '../email-provider/index.js';
 import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTemplate.js';
 import { Attachment } from 'nodemailer/lib/mailer';
@@ -17,6 +18,9 @@ import { status } from '@grpc/grpc-js';
 import { storeEmail } from '../utils/index.js';
 import { getHandleBarsValues } from '../email-provider/utils/index.js';
 import { QueueController } from '../controllers/queue.controller.js';
+
+// Register all handlebars helpers
+helpers({ handlebars });
 
 export class EmailService {
   constructor(
