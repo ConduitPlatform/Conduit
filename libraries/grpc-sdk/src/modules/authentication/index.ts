@@ -116,7 +116,7 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     });
   }
 
-  switchParentTeam(teamId: string, newParentTeamId: string): Promise<Team> {
-    return this.client!.switchParentTeam({ teamId, newParentTeamId });
+  updateTeam(teamId: string, name?: string, newParentTeamId?: string): Promise<Team> {
+    return this.client!.updateTeam({ teamId, name, newParentTeamId });
   }
 }
