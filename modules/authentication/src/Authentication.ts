@@ -41,6 +41,7 @@ import {
   ValidateAccessTokenResponse_Status,
   InviteUserToTeamRequest,
   InviteUserToTeamResponse,
+  UpdateTeamRequest,
 } from './protoTypes/authentication.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { runMigrations } from './migrations/index.js';
@@ -746,7 +747,7 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   async updateTeam(
-    call: GrpcRequest<{ teamId: string; name?: string; newParentTeamId?: string }>,
+    call: GrpcRequest<UpdateTeamRequest>,
     callback: GrpcCallback<GrpcTeam>,
   ) {
     const { teamId, name, newParentTeamId } = call.request;
