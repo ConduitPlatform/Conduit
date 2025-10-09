@@ -115,4 +115,8 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
       userData: JSON.stringify(userData),
     });
   }
+
+  updateTeam(teamId: string, name?: string, newParentTeamId?: string): Promise<Team> {
+    return this.client!.updateTeam({ teamId, name, newParentTeamId });
+  }
 }

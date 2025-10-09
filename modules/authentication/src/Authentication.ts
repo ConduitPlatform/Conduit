@@ -41,6 +41,7 @@ import {
   ValidateAccessTokenResponse_Status,
   InviteUserToTeamRequest,
   InviteUserToTeamResponse,
+  UpdateTeamRequest,
 } from './protoTypes/authentication.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { runMigrations } from './migrations/index.js';
@@ -83,6 +84,7 @@ export default class Authentication extends ManagedModule<Config> {
       removeTeamMembers: this.removeTeamMembers.bind(this),
       invitationDelete: this.invitationDelete.bind(this),
       inviteUserToTeam: this.inviteUserToTeam.bind(this),
+      updateTeam: this.updateTeam.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -739,6 +741,95 @@ export default class Authentication extends ManagedModule<Config> {
         request,
       )) as string;
       return callback(null, { invitationToken });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  async updateTeam(
+    call: GrpcRequest<UpdateTeamRequest>,
+    callback: GrpcCallback<GrpcTeam>,
+  ) {
+    const { teamId, name, newParentTeamId } = call.request;
+
+    try {
+      if (!name && !newParentTeamId) {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'At least one of name or newParentTeamId must be provided',
+        });
+      }
+
+      const team = await models.Team.getInstance().findOne({ _id: teamId });
+      if (!team) {
+        return callback({ code: status.NOT_FOUND, message: 'Team not found' });
+      }
+
+      const updateFields: { name?: string; parentTeam?: string } = {
+        ...(name && { name }),
+      };
+
+      if (newParentTeamId) {
+        const newParentTeam = await models.Team.getInstance().findOne({
+          _id: newParentTeamId,
+        });
+        if (!newParentTeam) {
+          return callback({
+            code: status.NOT_FOUND,
+            message: 'New parent team not found',
+          });
+        }
+
+        const oldParentTeamId = team.parentTeam;
+
+        if (oldParentTeamId) {
+          try {
+            await this.grpcSdk.authorization!.deleteRelation({
+              subject: 'Team:' + oldParentTeamId,
+              relation: 'owner',
+              resource: 'Team:' + teamId,
+            });
+          } catch (e) {
+            ConduitGrpcSdk.Logger.warn(
+              `Failed to delete old parent relation: ${(e as Error).message}`,
+            );
+          }
+        }
+
+        await this.grpcSdk.authorization!.createRelation({
+          subject: 'Team:' + newParentTeamId,
+          relation: 'owner',
+          resource: 'Team:' + teamId,
+        });
+
+        updateFields.parentTeam = newParentTeamId;
+
+        ConduitGrpcSdk.Logger.info(
+          `Team ${teamId} parent switched from ${
+            oldParentTeamId ?? 'none'
+          } to ${newParentTeamId}`,
+        );
+      }
+
+      const updatedTeam = await models.Team.getInstance().findByIdAndUpdate(
+        teamId,
+        updateFields,
+      );
+
+      if (!updatedTeam) {
+        return callback({ code: status.INTERNAL, message: 'Failed to update team' });
+      }
+
+      if (name) {
+        ConduitGrpcSdk.Logger.info(`Team ${teamId} name updated to ${name}`);
+      }
+
+      return callback(null, {
+        id: updatedTeam._id,
+        name: updatedTeam.name,
+        parentTeam: updatedTeam.parentTeam,
+        isDefault: updatedTeam.isDefault,
+      });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
