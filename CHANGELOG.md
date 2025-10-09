@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.19](https://github.com/ConduitPlatform/Conduit/compare/v0.16.18...v0.16.19) (2025-10-09)
+
+
+### Features
+
+* **authentication:** update team RPC ([#1395](https://github.com/ConduitPlatform/Conduit/issues/1395)) ([ba8caac](https://github.com/ConduitPlatform/Conduit/commit/ba8caacb5367da1edc8d6bd8cd89f25f42398501))
+
+
+### Bug Fixes
+
+* **database:** aggregation pipeline spreading ([#1393](https://github.com/ConduitPlatform/Conduit/issues/1393)) ([365779e](https://github.com/ConduitPlatform/Conduit/commit/365779e0866fb57e10d5c40400eadec15f232c7a))
+* rawQuery throwing error on mongoose update methods ([#1391](https://github.com/ConduitPlatform/Conduit/issues/1391)) ([8e5a316](https://github.com/ConduitPlatform/Conduit/commit/8e5a316121ae73798f3b0a1ea41042fe95241308))
+
 ### [0.16.18](https://github.com/ConduitPlatform/Conduit/compare/v0.16.17...v0.16.18) (2025-09-15)
 
 
