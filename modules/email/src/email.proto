@@ -28,7 +28,9 @@ message SendEmailRequest {
   SendEmailParams params = 2;
   message SendEmailParams {
     string email = 1;
+    string subject = 8;
     string variables = 2;
+    string body = 7;
     optional string sender = 3;
     repeated string cc = 4;
     optional string replyTo = 5;
