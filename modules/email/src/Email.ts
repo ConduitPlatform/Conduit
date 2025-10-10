@@ -173,9 +173,17 @@ export default class Email extends ManagedModule<Config> {
     callback: GrpcCallback<SendEmailResponse>,
   ) {
     const template = call.request.templateName;
+    let variables;
+    try {
+      variables = JSON.parse(call.request.params!.variables!);
+    } catch {
+      variables = undefined;
+    }
     const params: ISendEmailParams = {
       email: call.request.params!.email,
-      variables: JSON.parse(call.request.params!.variables),
+      body: call.request.params!.body,
+      subject: call.request.params!.subject,
+      variables: variables,
       sender: call.request.params!.sender ?? '',
       cc: call.request.params!.cc,
       replyTo: call.request.params!.replyTo,
