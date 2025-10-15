@@ -542,7 +542,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       sort,
       populate,
     });
-    return { teams: teams, count };
+    return { teams, count };
   }
 
   async userInvite(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -614,6 +614,51 @@ export class TeamsHandler implements IAuthenticationStrategy {
         });
     }
     return invitation.token;
+  }
+
+  async getTeamInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { teamId } = call.request.urlParams;
+    const config: Config = ConfigController.getInstance().config;
+    if (!config.teams.invites.enabled) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Team invites are disabled');
+    }
+    const team = await Team.getInstance().findOne({ _id: teamId });
+    if (!team) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Could not create invite, team does not exist',
+      );
+    }
+
+    const can = await this.grpcSdk.authorization!.can({
+      subject: 'User:' + user._id,
+      actions: ['invite'],
+      resource: 'Team:' + teamId,
+    });
+    if (!can.allow) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'You do not have permission to invite users to this team',
+      );
+    }
+
+    const invites = await Token.getInstance().findMany({
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
+      // @ts-expect-error Unsafe nested property access
+      'data.teamId': teamId,
+    });
+
+    const count = await Token.getInstance().countDocuments({
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
+      // @ts-expect-error Unsafe nested property access
+      'data.teamId': teamId,
+    });
+
+    return {
+      invites,
+      count,
+    };
   }
 
   async persistentInvite(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -891,6 +936,22 @@ export class TeamsHandler implements IAuthenticationStrategy {
         count: ConduitNumber.Required,
       }),
       this.getSubTeams.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/teams/:teamId/invites',
+        description: `Retrieves pending invites for the team`,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        action: ConduitRouteActions.GET,
+        middlewares: authRouteMiddlewares,
+      },
+      new ConduitRouteReturnDefinition('GetTeamInvites', {
+        invites: [Token.name],
+        count: ConduitNumber.Required,
+      }),
+      this.getTeamInvites.bind(this),
     );
     routingManager.route(
       {
