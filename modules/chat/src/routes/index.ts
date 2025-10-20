@@ -522,10 +522,12 @@ export class ChatRoutes {
           'Message must contain contentType property',
         );
       }
-      if (!['text', 'file', 'typing', 'multimedia'].includes(message.contentType)) {
+      if (
+        !['text', 'file', 'typing', 'multimedia', 'system'].includes(message.contentType)
+      ) {
         throw new GrpcError(
           status.INVALID_ARGUMENT,
-          'Invalid contentType, must be one of: text, file, typing, multimedia',
+          'Invalid contentType, must be one of: text, file, typing, multimedia, system',
         );
       }
       if (
@@ -547,7 +549,9 @@ export class ChatRoutes {
         );
       }
       if (
-        [MessageType.Text, MessageType.Multimedia].includes(message.contentType) &&
+        [MessageType.Text, MessageType.Multimedia, MessageType.System].includes(
+          message.contentType,
+        ) &&
         !message.content
       ) {
         throw new GrpcError(

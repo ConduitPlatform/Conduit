@@ -12,6 +12,7 @@ import { AdminHandlers } from './admin/index.js';
 import { ChatRoutes } from './routes/index.js';
 import * as models from './models/index.js';
 import { validateUsersInput } from './utils/index.js';
+import { MessageType } from './enums/messageType.enum.js';
 import path from 'path';
 import { isArray, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
@@ -169,7 +170,7 @@ export default class Chat extends ManagedModule<Config> {
 
   async sendMessage(call: GrpcRequest<SendMessageRequest>, callback: GrpcCallback<null>) {
     const userId = call.request.userId;
-    const { roomId, message } = call.request;
+    const { roomId, message, messageType } = call.request;
 
     let errorMessage: string | null = null;
     const room = await models.ChatRoom.getInstance()
@@ -189,6 +190,7 @@ export default class Chat extends ManagedModule<Config> {
     models.ChatMessage.getInstance()
       .create({
         message,
+        messageType: messageType || MessageType.Text,
         senderUser: userId,
         room: roomId,
         readBy: [userId],
@@ -198,7 +200,12 @@ export default class Chat extends ManagedModule<Config> {
           event: 'message',
           receivers: [],
           rooms: [roomId],
-          data: JSON.stringify({ sender: userId, message, room: roomId }),
+          data: JSON.stringify({
+            sender: userId,
+            message,
+            room: roomId,
+            contentType: messageType || MessageType.Text,
+          }),
         });
       })
       .then(() => {
