@@ -8,7 +8,7 @@ const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   messageType: {
     type: TYPE.String,
-    enum: ['text', 'file', 'typing', 'multimedia'],
+    enum: ['text', 'file', 'typing', 'multimedia', 'system'],
     default: 'text',
   },
   message: {
