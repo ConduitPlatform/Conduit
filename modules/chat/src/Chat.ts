@@ -204,7 +204,7 @@ export default class Chat extends ManagedModule<Config> {
             sender: userId,
             message,
             room: roomId,
-            messageType: messageType || MessageType.Text,
+            contentType: messageType || MessageType.Text,
           }),
         });
       })
