@@ -1,4 +1,4 @@
-FROM node:iron-alpine
+FROM node:jod-alpine
 
 WORKDIR /app
 

@@ -8,27 +8,22 @@ import { wrapFunctionsAsync } from './RoutingUtilities.js';
 import {
   Admin,
   ConduitMiddlewareOptions,
-  ConduitProxyObject,
   ConduitRouteActions,
   ConduitRouteObject,
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
   ConduitSocketOptions,
   EventsProtoDescription,
-  ProxyMiddlewareOptions,
-  ProxyRouteOptions,
   Router,
   SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
-import { GrpcServer } from '../classes/index.js';
-import { ProxyRouteBuilder } from './ProxyRouteBuilder.js';
+import { GrpcServer } from '../classes';
 import { RoutingController } from './RoutingController.js';
 
 export class RoutingManager {
   private _moduleRoutes: {
     [key: string]: ConduitRouteObject | SocketProtoDescription;
   } = {};
-  private _moduleProxyRoutes: { [key: string]: ConduitProxyObject } = {};
   static ClientController: RoutingController;
   static AdminController: RoutingController;
 
@@ -66,14 +61,9 @@ export class RoutingManager {
     return new RouteBuilder(this).method(ConduitRouteActions.PATCH).path(path);
   }
 
-  proxy(): ProxyRouteBuilder {
-    return new ProxyRouteBuilder(this);
-  }
-
   clear() {
     this._moduleRoutes = {};
     this._routeHandlers = {};
-    this._moduleProxyRoutes = {};
   }
 
   middleware(input: ConduitMiddlewareOptions, handler: RequestHandlers) {
@@ -100,14 +90,6 @@ export class RoutingManager {
     }) as ConduitRouteObject;
     this._moduleRoutes[routeObject.grpcFunction] = routeObject;
     this._routeHandlers[routeObject.grpcFunction] = handler;
-  }
-
-  proxyRoute(input: { options: ProxyRouteOptions; proxy: ProxyMiddlewareOptions }) {
-    const routeObject: ConduitProxyObject = this.parseRouteObject({
-      options: input,
-    }) as ConduitProxyObject;
-    this._moduleProxyRoutes[routeObject.options.path + routeObject.proxy.target] =
-      routeObject;
   }
 
   socket(input: ConduitSocketOptions, events: Record<string, SocketEventHandler>) {
@@ -171,7 +153,7 @@ export class RoutingManager {
 
   private parseRouteObject(
     routeObject: any,
-  ): ConduitRouteObject | SocketProtoDescription | ConduitProxyObject {
+  ): ConduitRouteObject | SocketProtoDescription {
     if (!routeObject.options.middlewares) {
       routeObject.options.middlewares = [];
     }

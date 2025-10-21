@@ -31,12 +31,12 @@
     "src"
   ],
   "dependencies": {
+    "@aws-sdk/client-sns": "^3.782.0",
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.13.3",
     "@grpc/proto-loader": "^0.7.13",
     "@onesignal/node-onesignal": "^1.0.0-beta9",
-    "@aws-sdk/client-sns": "^3.782.0",
     "convict": "^6.2.4",
     "firebase-admin": "^12.4.0",
     "lodash-es": "^4.17.21"
@@ -46,8 +46,8 @@
     "@types/lodash-es": "^4.17.12",
     "@types/node": "20.11.24",
     "copyfiles": "^2.4.1",
-    "ts-proto": "^1.167.1",
     "rimraf": "^5.0.5",
+    "ts-proto": "^1.167.1",
     "typescript": "~5.6.2"
   }
 }

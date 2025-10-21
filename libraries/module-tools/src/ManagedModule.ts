@@ -1,8 +1,8 @@
-import { ConduitServiceModule, ConfigController, GrpcServer } from './classes/index.js';
+import { ConduitServiceModule, ConfigController, GrpcServer } from './classes';
 import { kebabCase } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
-import { ConduitService, ModuleLifecycleStage } from './interfaces/index.js';
+import { ConduitService, ModuleLifecycleStage } from './interfaces';
 import {
   ConduitGrpcSdk,
   GrpcRequest,
@@ -10,9 +10,9 @@ import {
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
-import { initializeSdk, merge } from './utilities/index.js';
+import { initializeSdk, merge } from './utilities';
 import { convictConfigParser } from './utilities/convictConfigParser.js';
-import { RoutingManager } from './routing/index.js';
+import { RoutingManager } from './routing';
 import { RoutingController } from './routing/RoutingController.js';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {

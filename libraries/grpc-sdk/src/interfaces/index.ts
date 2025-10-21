@@ -1,6 +1,5 @@
 export * from './ConduitMiddleware.js';
 export * from './ConduitRoute.js';
-export * from './ProxyRoute.js';
 export * from './Route.js';
 export * from './Socket.js';
 export * from './types.js';
