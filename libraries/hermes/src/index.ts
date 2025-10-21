@@ -19,9 +19,8 @@ import {
 import { SwaggerRouterMetadata } from './types/index.js';
 import cookieParser from 'cookie-parser';
 import path from 'path';
-import { ConduitRoute, ProxyRoute } from './classes/index.js';
+import { ConduitRoute } from './classes/index.js';
 import { createRouteMiddleware } from './utils/logger.js';
-import { isInstanceOfProxyRoute, ProxyRouteController } from './Proxy/index.js';
 import { fileURLToPath } from 'node:url';
 import { instrumentationMiddleware } from './metrics/middleware.js';
 import { RouteTrie } from './metrics/RouteTrie.js';
@@ -34,7 +33,6 @@ export class ConduitRoutingController {
   private _graphQLRouter?: GraphQLController;
   private _socketRouter?: SocketController;
 
-  private _proxyRouter?: ProxyRouteController;
   private _middlewareRouter: Router;
   private readonly _cleanupTimeoutMs: number;
   private _cleanupTimeout: NodeJS.Timeout | null = null;
@@ -92,8 +90,6 @@ export class ConduitRoutingController {
             .json({ message: 'GraphQL is not enabled on this server!' });
         }
         this._graphQLRouter?.handleRequest(req, res, next);
-      } else if (req.url.startsWith('/proxy')) {
-        self._proxyRouter?.handleRequest(req, res, next);
       } else {
         // this needs to be a function to hook on whatever the current router is
         self._restRouter?.handleRequest(req, res, next);
@@ -133,11 +129,6 @@ export class ConduitRoutingController {
     );
   }
 
-  initProxy() {
-    if (this._proxyRouter) return;
-    this._proxyRouter = new ProxyRouteController(this.grpcSdk, this.metrics);
-  }
-
   stopRest() {
     if (!this._restRouter) return;
     this._restRouter.shutDown();
@@ -156,12 +147,6 @@ export class ConduitRoutingController {
     delete this._socketRouter;
   }
 
-  stopProxy() {
-    if (!this._proxyRouter) return;
-    this._proxyRouter.shutDown();
-    delete this._proxyRouter;
-  }
-
   registerMiddleware(
     middleware: (req: ConduitRequest, res: Response, next: NextFunction) => void,
     socketMiddleware: boolean,
@@ -176,7 +161,6 @@ export class ConduitRoutingController {
     this._restRouter?.registerMiddleware(middleware, moduleUrl);
     this._graphQLRouter?.registerMiddleware(middleware, moduleUrl);
     this._socketRouter?.registerMiddleware(middleware, moduleUrl);
-    this._proxyRouter?.registerMiddleware(middleware, moduleUrl);
   }
 
   patchRouteMiddlewares(patch: MiddlewarePatch) {
@@ -219,10 +203,6 @@ export class ConduitRoutingController {
     this._restRouter?.registerConduitRoute(route);
   }
 
-  registerProxyRoute(route: ProxyRoute) {
-    this._proxyRouter?.registerProxyRoute(route);
-  }
-
   registerConduitSocket(socket: ConduitSocket) {
     this._socketRouter?.registerConduitSocket(socket);
   }
@@ -249,7 +229,6 @@ export class ConduitRoutingController {
   private _cleanupRoutes(routes: UntypedArray) {
     this._restRouter?.cleanupRoutes(routes);
     this._graphQLRouter?.cleanupRoutes(routes);
-    this._proxyRouter?.cleanupRoutes(routes);
   }
 
   async socketPush(data: SocketPush) {
@@ -257,7 +236,7 @@ export class ConduitRoutingController {
   }
 
   registerRoutes(
-    processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket | ProxyRoute)[],
+    processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[],
     url?: string,
   ) {
     processedRoutes.forEach(r => {
@@ -271,16 +250,6 @@ export class ConduitRoutingController {
           'New socket registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerConduitSocket(r);
-      } else if (isInstanceOfProxyRoute(r)) {
-        ConduitGrpcSdk.Logger.log(
-          'New proxy route registered: ' +
-            r.input.options.action +
-            ' ' +
-            r.input.options.path +
-            ' target url: ' +
-            r.input.proxy.target,
-        );
-        this._proxyRouter?.registerProxyRoute(r);
       } else {
         ConduitGrpcSdk.Logger.log(
           'New route registered: ' +
@@ -295,7 +264,6 @@ export class ConduitRoutingController {
     });
     this._restRouter?.scheduleRouterRefresh();
     this._graphQLRouter?.scheduleRouterRefresh();
-    this._proxyRouter?.scheduleRouterRefresh();
   }
 
   onError(error: any) {

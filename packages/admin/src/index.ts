@@ -1,8 +1,8 @@
 import { isNaN, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import {
-  ConduitGrpcSdk,
   ConduitError,
+  ConduitGrpcSdk,
   ConduitRouteActions,
   GrpcCallback,
   GrpcError,
@@ -35,9 +35,6 @@ import {
   ConduitRoutingController,
   ConduitSocket,
   grpcToConduitRoute,
-  ProxyRoute,
-  ProxyRouteT,
-  proxyToConduitRoute,
   RouteT,
 } from '@conduitplatform/hermes';
 import convict from 'convict';
@@ -45,7 +42,6 @@ import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config.js';
 import metricsSchema from './metrics/index.js';
-import * as adminProxyRoutes from './routes/proxy/index.js';
 import cors from 'cors';
 import { ConfigController, GrpcServer, merge } from '@conduitplatform/module-tools';
 import { fileURLToPath } from 'node:url';
@@ -68,11 +64,6 @@ export default class AdminModule extends IConduitAdmin {
     adminRoutes.changeUsersPasswordRoute(),
     adminRoutes.patchRouteMiddlewares(this),
     adminRoutes.getRouteMiddlewares(this),
-    adminProxyRoutes.createProxyRoute(this),
-    adminProxyRoutes.deleteProxyRoute(this),
-    adminProxyRoutes.updateProxyRoute(this),
-    adminProxyRoutes.getProxyRoute(),
-    adminProxyRoutes.getProxyRoutesRoute(),
   ];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
@@ -221,28 +212,15 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   public internalRegisterRoute(
-    routes: RegisterAdminRouteRequest_PathDefinition[] | ProxyRouteT[],
+    routes: RegisterAdminRouteRequest_PathDefinition[],
     url: string,
     moduleName?: string,
   ) {
-    let processedRoutes: (
-      | ConduitRoute
-      | ConduitMiddleware
-      | ConduitSocket
-      | ProxyRoute
-    )[] = [];
+    let processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = [];
 
-    const proxyRoutes: ProxyRouteT[] = [];
     const regularRoutes: RegisterAdminRouteRequest_PathDefinition[] = [];
     for (const route of routes) {
-      if ((route as ProxyRouteT).options && (route as ProxyRouteT)?.proxy) {
-        proxyRoutes.push(route as ProxyRouteT);
-      } else {
-        regularRoutes.push(route as RegisterAdminRouteRequest_PathDefinition);
-      }
-    }
-    if (proxyRoutes.length > 0) {
-      processedRoutes = proxyToConduitRoute(proxyRoutes as ProxyRouteT[]);
+      regularRoutes.push(route as RegisterAdminRouteRequest_PathDefinition);
     }
     if (regularRoutes.length > 0) {
       processedRoutes = grpcToConduitRoute(
@@ -262,12 +240,6 @@ export default class AdminModule extends IConduitAdmin {
           `New admin route registered: ${r.input.action} ${r.input.path} handler url: ${url}`,
         );
         this._router.registerConduitRoute(r);
-      }
-      if (r instanceof ProxyRoute) {
-        (ConduitGrpcSdk.Logger as IConduitLogger).http(
-          `New admin proxy route registered:  ${r.input.options.action} ${r.input.options.path} target: ${r.input.proxy.target}`,
-        );
-        this._router.registerProxyRoute(r);
       }
     });
     // @ts-ignore
@@ -312,11 +284,6 @@ export default class AdminModule extends IConduitAdmin {
       this._router.initGraphQL();
     } else {
       this._router.stopGraphQL();
-    }
-    if (proxyEnabled) {
-      this._router.initProxy();
-    } else {
-      this._router.stopProxy();
     }
     if (ConfigController.getInstance().config.transports.sockets) {
       this._router.initSockets();
@@ -363,8 +330,7 @@ export default class AdminModule extends IConduitAdmin {
 
   private async highAvailability() {
     const r = await this.grpcSdk.state!.getState();
-    const proxyRoutes = await models.AdminProxyRoute.getInstance().findMany({});
-    if ((!r || r.length === 0) && (!proxyRoutes || proxyRoutes.length === 0)) {
+    if (!r || r.length === 0) {
       this.cleanupRoutes();
       return;
     }
@@ -390,27 +356,6 @@ export default class AdminModule extends IConduitAdmin {
         }, this);
         await Promise.all(promises);
       }
-    }
-    const proxies: ProxyRouteT[] = [];
-    if (proxyRoutes.length > 0) {
-      proxyRoutes.forEach(route => {
-        proxies.push({
-          options: {
-            path: route.path,
-            action: route.action,
-            description: route.routeDescription,
-            middlewares: route.middlewares,
-          },
-          proxy: {
-            target: route.target,
-            ...route.proxyMiddlewareOptions,
-          },
-        });
-        (ConduitGrpcSdk.Logger as IConduitLogger).http(
-          `New proxy route registered:  ${route.action} ${route.path} target: ${route.target}`,
-        );
-      });
-      return this.internalRegisterRoute(proxies, 'admin', 'admin');
     }
     ConduitGrpcSdk.Logger.log('Recovered routes');
 

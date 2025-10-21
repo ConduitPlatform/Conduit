@@ -3,10 +3,10 @@ import {
   HealthCheckStatus,
   IConduitLogger,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitLogger, setupLoki } from '../logging/index.js';
+import { ConduitLogger, setupLoki } from '../logging';
 import winston from 'winston';
 import path from 'path';
-import { ConduitMetrics } from '../metrics/index.js';
+import { ConduitMetrics } from '../metrics';
 import { clientMiddleware } from '../metrics/clientMiddleware.js';
 import { fileURLToPath } from 'node:url';
 

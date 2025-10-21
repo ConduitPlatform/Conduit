@@ -20,9 +20,6 @@ import {
   ConduitRoutingController,
   ConduitSocket,
   grpcToConduitRoute,
-  ProxyRoute,
-  ProxyRouteT,
-  proxyToConduitRoute,
   RouteT,
   SocketPush,
 } from '@conduitplatform/hermes';
@@ -44,6 +41,7 @@ import * as adminRoutes from './admin/routes/index.js';
 import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 import { fileURLToPath } from 'node:url';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -65,7 +63,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private readonly _routes: string[];
   private readonly _globalMiddlewares: string[];
   private _grpcRoutes: {
-    [field: string]: RouteT[] | ProxyRouteT[];
+    [field: string]: RouteT[];
   } = {};
   private _sdkRoutes: { path: string; action: string }[] = [];
   private database: DatabaseProvider;
@@ -131,12 +129,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       atLeastOne = true;
     } else {
       this._internalRouter.stopRest();
-    }
-    if (config.transports.proxy) {
-      this._internalRouter.initProxy();
-      atLeastOne = true;
-    } else {
-      this._internalRouter.stopProxy();
     }
     if (config.transports.sockets) {
       this._internalRouter.initSockets();
@@ -248,7 +240,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       }
 
       this.internalRegisterRoute(
-        call.request.routes as RouteT[] | ProxyRouteT[],
+        call.request.routes as RouteT[],
         call.request.routerUrl,
         moduleName as string,
       );
@@ -265,29 +257,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     callback(null, undefined);
   }
 
-  internalRegisterRoute(
-    routes: RouteT[] | ProxyRouteT[],
-    url: string,
-    moduleName?: string,
-  ) {
-    const proxyRoutes: ProxyRouteT[] = [];
+  internalRegisterRoute(routes: RouteT[], url: string, moduleName?: string) {
     const regularRoutes: RouteT[] = [];
     for (const route of routes) {
-      if ((route as ProxyRouteT).options && (route as ProxyRouteT)?.proxy) {
-        proxyRoutes.push(route as ProxyRouteT);
-      } else {
-        regularRoutes.push(route as RouteT);
-      }
+      regularRoutes.push(route as RouteT);
     }
-    let processedRoutes: (
-      | ConduitRoute
-      | ConduitMiddleware
-      | ConduitSocket
-      | ProxyRoute
-    )[] = [];
-    if (proxyRoutes && proxyRoutes.length > 0) {
-      processedRoutes = proxyToConduitRoute(proxyRoutes, 'router');
-    }
+    let processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = [];
     if (regularRoutes.length > 0) {
       processedRoutes = grpcToConduitRoute(
         'Router',
@@ -396,8 +371,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   private async recoverFromState() {
     const r = await this.grpcSdk.state!.getState();
-    const proxyRoutes = await models.RouterProxyRoute.getInstance().findMany({});
-    if ((!r || r.length === 0) && (!proxyRoutes || proxyRoutes.length === 0)) return;
+    if (!r || r.length === 0) return;
     if (r) {
       const state = JSON.parse(r);
       if (state.routes) {
@@ -409,24 +383,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
           }
         });
       }
-    }
-    const proxies: ProxyRouteT[] = [];
-    if (proxyRoutes) {
-      proxyRoutes.forEach(route => {
-        proxies.push({
-          options: {
-            path: route.path,
-            action: route.action,
-            description: route.routeDescription,
-            middlewares: route.middlewares,
-          },
-          proxy: {
-            target: route.target,
-            ...route.proxyMiddlewareOptions,
-          },
-        });
-      });
-      this.internalRegisterRoute(proxies, 'router', 'router');
     }
     ConduitGrpcSdk.Logger.log('Recovered routes');
   }
@@ -607,7 +563,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       const routeArray = this._grpcRoutes[key];
       for (const r of routeArray) {
         if (r.options.path === path && r.options.action === action) {
-          return { url: key, routeIndex: routeArray.indexOf(r as RouteT & ProxyRouteT) };
+          return { url: key, routeIndex: routeArray.indexOf(r as RouteT) };
         }
       }
     }
