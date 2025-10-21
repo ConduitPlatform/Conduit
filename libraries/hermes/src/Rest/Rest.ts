@@ -90,15 +90,6 @@ export class RestController extends ConduitRouter {
     }
   }
 
-  private extractResult(returnTypeFields: string, result: any) {
-    switch (returnTypeFields) {
-      case TYPE.JSON:
-        return JSON.parse(result);
-      default:
-        return result;
-    }
-  }
-
   private addRoute(
     path: string,
     router:

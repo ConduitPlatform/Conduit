@@ -26,6 +26,13 @@ message RegisterAdminRouteRequest {
   repeated PathDefinition routes = 1;
   optional string routerUrl = 3;
 
+  message ErrorDefinition {
+    string conduitCode = 1;
+    int32 grpcCode = 2;
+    string message = 3;
+    string description = 4;
+  }
+
   message PathDefinition {
     ConduitRouteOptions options = 1;
     optional ConduitRouteReturnDefinition returns = 2;
@@ -45,6 +52,8 @@ message RegisterAdminRouteRequest {
     optional string description = 7;
     repeated string middlewares = 8;
     optional string cacheControl = 9;
+    repeated ErrorDefinition errors = 10;
+    optional bool mcp = 11;
   }
 
   message ProxyRouteOptions {

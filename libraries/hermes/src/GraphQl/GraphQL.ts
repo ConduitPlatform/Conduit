@@ -16,7 +16,6 @@ import {
   ConduitRouteActions,
   ConduitRouteOptions,
   Indexable,
-  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, TypeRegistry } from '../classes/index.js';
 import { ApolloServer } from '@apollo/server';
@@ -330,15 +329,6 @@ export class GraphQLController extends ConduitRouter {
         next();
       }
     });
-  }
-
-  private extractResult(returnTypeFields: string, result: Indexable | string) {
-    switch (returnTypeFields) {
-      case TYPE.JSON:
-        return JSON.parse(result as string);
-      default:
-        return result;
-    }
   }
 
   private constructQuery(actionName: string, route: ConduitRoute) {

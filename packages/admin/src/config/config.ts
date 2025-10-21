@@ -65,5 +65,21 @@ export default {
       format: 'Boolean',
       default: true,
     },
+    mcp: {
+      format: 'Boolean',
+      default: true,
+    },
+  },
+  mcp: {
+    pingInterval: {
+      format: 'Number',
+      default: 30000,
+      doc: 'Ping interval in milliseconds for SSE connections',
+    },
+    sessionTimeout: {
+      format: 'Number',
+      default: 300000,
+      doc: 'Session timeout in milliseconds (5 minutes default)',
+    },
   },
 };
