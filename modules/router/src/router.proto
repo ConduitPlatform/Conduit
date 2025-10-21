@@ -51,6 +51,7 @@ message RegisterConduitRouteRequest {
     repeated string middlewares = 8;
     optional string cacheControl = 9;
     repeated ErrorDefinition errors = 10;
+    optional bool mcp = 11;
   }
 
 

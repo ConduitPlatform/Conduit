@@ -25,6 +25,9 @@ export function getAdminMiddleware(configManager: any) {
     if (req.originalUrl.indexOf('/ready') === 0) {
       return next();
     }
+    if (req.originalUrl.indexOf('/mcp') === 0) {
+      return next();
+    }
     const masterKey = req.headers.masterkey;
     if (
       (!process.env.MASTER_KEY || process.env.MASTER_KEY.length === 0) &&

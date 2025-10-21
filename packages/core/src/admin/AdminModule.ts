@@ -307,6 +307,11 @@ export default class AdminModule {
     } else {
       this._router.stopSockets();
     }
+    if (ConfigController.getInstance().config.transports.mcp) {
+      this._router.initMCP();
+    } else {
+      this._router.stopMCP();
+    }
   }
 
   private getHttpPort() {

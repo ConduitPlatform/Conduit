@@ -12,6 +12,7 @@ export function verifyTwoFaRoute() {
     {
       path: '/verify-twofa',
       action: ConduitRouteActions.POST,
+      mcp: false,
       bodyParams: {
         code: ConduitString.Required,
       },

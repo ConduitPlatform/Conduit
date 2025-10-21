@@ -2,6 +2,7 @@ import express, { Express, NextFunction, Request, Response, Router } from 'expre
 import { RestController } from './Rest/index.js';
 import { GraphQLController } from './GraphQl/GraphQL.js';
 import { SocketController } from './Socket/Socket.js';
+import { MCP_CONSTANTS, MCPConfig, MCPController } from './MCP/index.js';
 import {
   ConduitError,
   ConduitGrpcSdk,
@@ -32,6 +33,7 @@ export class ConduitRoutingController {
   private _restRouter?: RestController;
   private _graphQLRouter?: GraphQLController;
   private _socketRouter?: SocketController;
+  private _mcpRouter?: MCPController;
 
   private _middlewareRouter: Router;
   private readonly _cleanupTimeoutMs: number;
@@ -90,6 +92,11 @@ export class ConduitRoutingController {
             .json({ message: 'GraphQL is not enabled on this server!' });
         }
         this._graphQLRouter?.handleRequest(req, res, next);
+      } else if (req.url.startsWith('/mcp')) {
+        if (!this._mcpRouter) {
+          return res.status(500).json({ message: 'MCP is not enabled on this server!' });
+        }
+        this._mcpRouter?.handleRequest(req, res, next);
       } else {
         // this needs to be a function to hook on whatever the current router is
         self._restRouter?.handleRequest(req, res, next);
@@ -129,6 +136,24 @@ export class ConduitRoutingController {
     );
   }
 
+  initMCP(config?: {
+    enabled?: boolean;
+    transport?: { options?: { pingInterval?: number; sessionTimeout?: number } };
+  }) {
+    if (this._mcpRouter) return;
+
+    // Build full config with defaults and constants
+    const fullConfig: MCPConfig = {
+      enabled: config?.enabled ?? true,
+      path: MCP_CONSTANTS.PATH,
+      protocolVersion: MCP_CONSTANTS.PROTOCOL_VERSION,
+      serverInfo: MCP_CONSTANTS.SERVER_INFO,
+      capabilities: MCP_CONSTANTS.CAPABILITIES,
+    };
+
+    this._mcpRouter = new MCPController(this.grpcSdk, fullConfig, this.metrics);
+  }
+
   stopRest() {
     if (!this._restRouter) return;
     this._restRouter.shutDown();
@@ -147,6 +172,12 @@ export class ConduitRoutingController {
     delete this._socketRouter;
   }
 
+  stopMCP() {
+    if (!this._mcpRouter) return;
+    this._mcpRouter.shutDown();
+    delete this._mcpRouter;
+  }
+
   registerMiddleware(
     middleware: (req: ConduitRequest, res: Response, next: NextFunction) => void,
     socketMiddleware: boolean,
@@ -161,6 +192,7 @@ export class ConduitRoutingController {
     this._restRouter?.registerMiddleware(middleware, moduleUrl);
     this._graphQLRouter?.registerMiddleware(middleware, moduleUrl);
     this._socketRouter?.registerMiddleware(middleware, moduleUrl);
+    this._mcpRouter?.registerMiddleware(middleware, moduleUrl);
   }
 
   patchRouteMiddlewares(patch: MiddlewarePatch) {
@@ -201,6 +233,7 @@ export class ConduitRoutingController {
     this.routeTrie.insert(route.input.action, route.input.path);
     this._graphQLRouter?.registerConduitRoute(route);
     this._restRouter?.registerConduitRoute(route);
+    this._mcpRouter?.registerConduitRoute(route);
   }
 
   registerConduitSocket(socket: ConduitSocket) {
@@ -229,6 +262,7 @@ export class ConduitRoutingController {
   private _cleanupRoutes(routes: UntypedArray) {
     this._restRouter?.cleanupRoutes(routes);
     this._graphQLRouter?.cleanupRoutes(routes);
+    this._mcpRouter?.cleanupRoutes(routes);
   }
 
   async socketPush(data: SocketPush) {
@@ -264,6 +298,7 @@ export class ConduitRoutingController {
     });
     this._restRouter?.scheduleRouterRefresh();
     this._graphQLRouter?.scheduleRouterRefresh();
+    this._mcpRouter?.scheduleRouterRefresh();
   }
 
   onError(error: any) {
@@ -324,3 +359,4 @@ export * from './interfaces/index.js';
 export * from './types/index.js';
 export * from './classes/index.js';
 export * from './utils/GrpcConverter.js';
+export * from './MCP/index.js';
