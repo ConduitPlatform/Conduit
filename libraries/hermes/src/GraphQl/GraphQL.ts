@@ -20,7 +20,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, TypeRegistry } from '../classes/index.js';
 import { ApolloServer } from '@apollo/server';
-import { expressMiddleware } from '@apollo/server/express4';
+import { expressMiddleware } from '@as-integrations/express5';
 import { isArray } from 'lodash-es';
 
 import { parseResolveInfo } from 'graphql-parse-resolve-info';

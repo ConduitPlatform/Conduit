@@ -34,13 +34,13 @@
   },
   "devDependencies": {
     "@types/convict": "^6.1.6",
-    "@types/express": "~4.17.21",
+    "@types/express": "~5.0.3",
     "@types/is-natural-number": "^4.0.4",
-    "@types/node": "20.11.24",
+    "@types/node": "24.9.1",
     "@types/validator": "^13.11.5",
-    "express": "~4.20.0",
-    "rimraf": "^5.0.5",
-    "ts-proto": "^1.167.1",
-    "typescript": "~5.6.2"
+    "express": "~5.1.0",
+    "rimraf": "^6.0.1",
+    "ts-proto": "^2.8.0",
+    "typescript": "~5.9.3"
   }
 }
