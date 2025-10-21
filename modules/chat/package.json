@@ -30,19 +30,19 @@
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.13.3",
-    "@grpc/proto-loader": "^0.7.13",
+    "@grpc/proto-loader": "^0.8.0",
     "convict": "^6.2.4",
-    "escape-string-regexp": "^4.0.0",
+    "escape-string-regexp": "^5.0.0",
     "lodash-es": "^4.17.21",
-    "uuid": "^9.0.1"
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/lodash-es": "^4.17.12",
-    "@types/node": "20.11.24",
-    "@types/uuid": "^9.0.8",
+    "@types/node": "24.9.1",
+    "@types/uuid": "^11.0.0",
     "copyfiles": "^2.4.1",
-    "rimraf": "^5.0.5",
-    "ts-proto": "^1.167.1",
-    "typescript": "~5.6.2"
+    "rimraf": "^6.0.1",
+    "ts-proto": "^2.8.0",
+    "typescript": "~5.9.3"
   }
 }

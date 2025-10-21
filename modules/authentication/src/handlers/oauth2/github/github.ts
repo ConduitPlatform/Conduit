@@ -8,7 +8,7 @@ import {
   Payload,
   ProviderConfig,
 } from '../interfaces/index.js';
-import githubParameters from './github.json' assert { type: 'json' };
+import githubParameters from './github.json' with { type: 'json' };
 
 export class GithubHandlers extends OAuth2<GithubUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { github: ProviderConfig }) {

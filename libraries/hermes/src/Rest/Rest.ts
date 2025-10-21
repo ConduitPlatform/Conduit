@@ -315,9 +315,12 @@ export class RestController extends ConduitRouter {
     this._expressRouter!.use(
       '/reference',
       apiReference({
-        spec: {
-          url: '/swagger.json',
-        },
+        sources: [
+          {
+            url: '/swagger.json',
+            default: true,
+          },
+        ],
       }),
     );
     this._expressRouter!.get('/swagger.json', (req, res) => {

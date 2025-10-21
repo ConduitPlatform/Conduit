@@ -23,7 +23,7 @@
     "@conduitplatform/hermes": "^1.0.1",
     "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.13.3",
-    "@grpc/proto-loader": "^0.7.13",
+    "@grpc/proto-loader": "^0.8.0",
     "axios": "^1.12.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
@@ -32,11 +32,11 @@
     "graphql-parse-resolve-info": "^4.13.0",
     "graphql-type-json": "^0.3.2",
     "hcaptcha": "^0.2.0",
-    "helmet": "7.1.0",
+    "helmet": "8.1.0",
     "ioredis": "^5.3.2",
     "lodash-es": "^4.17.21",
     "moment": "^2.30.1",
-    "swagger-ui-express": "5.0.0"
+    "swagger-ui-express": "5.0.1"
   },
   "directories": {
     "lib": "src"
@@ -45,14 +45,14 @@
     "src"
   ],
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
-    "@types/express": "~4.17.21",
+    "@types/bcrypt": "^6.0.0",
+    "@types/express": "~5.0.3",
     "@types/graphql-type-json": "^0.3.5",
     "@types/lodash-es": "^4.17.12",
-    "@types/node": "20.11.24",
-    "express": "~4.20.0",
-    "rimraf": "^5.0.5",
-    "ts-proto": "^1.167.1",
-    "typescript": "~5.6.2"
+    "@types/node": "24.9.1",
+    "express": "~5.1.0",
+    "rimraf": "^6.0.1",
+    "ts-proto": "^2.8.0",
+    "typescript": "~5.9.3"
   }
 }

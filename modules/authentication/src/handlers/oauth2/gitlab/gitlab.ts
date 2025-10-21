@@ -6,7 +6,7 @@ import {
   ProviderConfig,
 } from '../interfaces/index.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import gitlabParameters from '../gitlab/gitlab.json' assert { type: 'json' };
+import gitlabParameters from '../gitlab/gitlab.json' with { type: 'json' };
 import axios from 'axios';
 import { GitlabUser } from './gitlab.user.js';
 
