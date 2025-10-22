@@ -1,6 +1,6 @@
 // Removed ConduitCommons import - now using core directly
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import * as models from '../models/index.js';
+import * as models from '../config-models/index.js';
 import { ServiceDiscovery } from '../service-discovery/index.js';
 import { clearInterval } from 'timers';
 import { merge } from 'lodash-es';

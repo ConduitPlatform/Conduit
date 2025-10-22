@@ -16,12 +16,11 @@ import {
   RegisterAdminRouteRequest_PathDefinition,
 } from '../interfaces/index.js';
 import { hashPassword } from './utils/auth.js';
-import { runMigrations } from './migrations/index.js';
 import AdminConfigRawSchema from './config/index.js';
 import AppConfigSchema, { Config as ConfigSchema } from './config/index.js';
 import * as middleware from './middleware/index.js';
 import * as adminRoutes from './routes/index.js';
-import * as configRoutes from '../config-manager/admin/routes/index.js';
+import * as configRoutes from './routes/index.js';
 import * as models from './models/index.js';
 import { AdminMiddleware } from './models/index.js';
 import { getSwaggerMetadata } from './hermes/index.js';
@@ -442,7 +441,6 @@ export default class AdminModule {
 
   private async handleDatabase() {
     await this.registerSchemas();
-    await runMigrations(this.grpcSdk);
     await this.migrateSchemas();
     this.scheduleMiddlewareApply();
     this.databaseHandled = true;
