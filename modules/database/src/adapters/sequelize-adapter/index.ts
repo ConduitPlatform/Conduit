@@ -9,7 +9,6 @@ import {
   PostgresIndexOptions,
   PostgresIndexType,
   RawSQLQuery,
-  sleep,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
@@ -446,7 +445,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       } catch (err: any) {
         error = err;
         if (error.original.code !== 'ECONNREFUSED') break;
-        await sleep(200);
+        await ConduitGrpcSdk.Sleep(200);
       }
     }
     if (error) {

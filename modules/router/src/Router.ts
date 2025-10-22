@@ -9,7 +9,6 @@ import {
   GrpcRequest,
   HealthCheckStatus,
   Indexable,
-  sleep,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
@@ -481,7 +480,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     const threshold = 10000;
     const start = Date.now();
     while (this.grpcSdk.database?.active === false && Date.now() - start < threshold) {
-      await sleep(500);
+      await ConduitGrpcSdk.Sleep(500);
     }
     if (this.grpcSdk.database?.active === false) {
       ConduitGrpcSdk.Logger.error(

@@ -1,5 +1,5 @@
 import { DataTypes, ModelStatic, Sequelize, Transaction } from 'sequelize';
-import { Indexable, sleep, UntypedArray } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, Indexable, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema.js';
 import { ConduitDatabaseSchema, ParsedQuery } from '../../../interfaces/index.js';
 import { isNil } from 'lodash-es';
@@ -253,7 +253,7 @@ export async function resolveRelatedSchemas(
       }
     }
     while (pendingModels.length > 0) {
-      await sleep(500);
+      await ConduitGrpcSdk.Sleep(500);
       pendingModels = pendingModels.filter(model => {
         if (!models[model] || !models[model].synced) {
           return true;

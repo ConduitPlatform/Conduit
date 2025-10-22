@@ -1,4 +1,4 @@
-import Mail from 'nodemailer/lib/mailer';
+import Mail from 'nodemailer/lib/mailer/index.js';
 import { CreateEmailTemplate } from '../interfaces/CreateEmailTemplate.js';
 import { DeleteEmailTemplate } from '../interfaces/DeleteEmailTemplate.js';
 import { Template } from '../interfaces/Template.js';

@@ -1,4 +1,4 @@
-import Mail from 'nodemailer/lib/mailer';
+import Mail from 'nodemailer/lib/mailer/index.js';
 import { SentMessageInfo } from 'nodemailer';
 import { MailgunConfig } from './transports/mailgun/mailgun.config.js';
 import { isEmpty } from 'lodash-es';
