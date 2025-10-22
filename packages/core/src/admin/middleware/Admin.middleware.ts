@@ -1,11 +1,11 @@
 import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash-es';
-import { ConduitCommons } from '@conduitplatform/commons';
+// Removed ConduitCommons import - now using configManager directly
 import { isDev } from '../utils/middleware.js';
 import { ConduitRequest } from '@conduitplatform/hermes';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 
-export function getAdminMiddleware(conduit: ConduitCommons) {
+export function getAdminMiddleware(configManager: any) {
   return async function adminMiddleware(
     req: ConduitRequest,
     res: Response,
@@ -18,7 +18,7 @@ export function getAdminMiddleware(conduit: ConduitCommons) {
       (req.originalUrl.indexOf('/swagger') === 0 ||
         req.originalUrl.indexOf('/reference') === 0 ||
         graphQlCheck) &&
-      (await isDev(conduit))
+      (await isDev(configManager))
     ) {
       return next();
     }

@@ -7,13 +7,11 @@ import {
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import {
-  ConduitCommons,
   GetConfigResponse,
   GetRedisDetailsResponse,
-  IConfigManager,
   UpdateConfigRequest,
   UpdateConfigResponse,
-} from '@conduitplatform/commons';
+} from '../interfaces/index.js';
 import { runMigrations } from './migrations/index.js';
 import * as adminRoutes from './admin/routes/index.js';
 import * as models from './models/index.js';
@@ -29,18 +27,23 @@ import { RedisOptions } from 'ioredis';
 import { ServiceRegistry } from './service-discovery/ServiceRegistry.js';
 import { fileURLToPath } from 'node:url';
 
-export default class ConfigManager implements IConfigManager {
+export default class ConfigManager {
   grpcSdk: ConduitGrpcSdk;
   private readonly serviceDiscovery: ServiceDiscovery;
   private _configStorage: ConfigStorage;
+  private adminModule: any;
 
   constructor(
     grpcSdk: ConduitGrpcSdk,
-    private readonly sdk: ConduitCommons,
+    private readonly core: any,
   ) {
     this.grpcSdk = grpcSdk;
     this.serviceDiscovery = new ServiceDiscovery(grpcSdk);
-    this._configStorage = new ConfigStorage(sdk, grpcSdk, this.serviceDiscovery);
+    this._configStorage = new ConfigStorage(core, grpcSdk, this.serviceDiscovery);
+  }
+
+  setAdminModule(adminModule: any) {
+    this.adminModule = adminModule;
   }
 
   getModuleUrlByName(moduleName: string): string | undefined {
@@ -180,7 +183,7 @@ export default class ConfigManager implements IConfigManager {
       await this._configStorage.setConfig(moduleName, JSON.stringify(moduleConfig));
       if (moduleName === 'admin') {
         this.grpcSdk.bus!.publish('admin:config:update', JSON.stringify(moduleConfig));
-        this.sdk.getAdmin().handleConfigUpdate(moduleConfig);
+        // Note: Admin module will handle config updates through its own subscription
       }
       return moduleConfig;
     } catch (e) {
@@ -239,29 +242,16 @@ export default class ConfigManager implements IConfigManager {
   }
 
   private registerAdminRoutes() {
-    this.sdk.getAdmin().registerRoute(adminRoutes.getModulesRoute());
+    // Note: Admin routes will be registered by the admin module itself
   }
 
   private registerConfigRoutes(
     moduleName: string,
     configSchema: convict.Config<unknown>,
   ) {
-    this.sdk.getAdmin().registerRoute(adminRoutes.getMonoConfigRoute(this.grpcSdk));
-    this.sdk
-      .getAdmin()
-      .registerRoute(
-        adminRoutes.getModuleConfigRoute(this.grpcSdk, moduleName, configSchema),
-      );
-    this.sdk
-      .getAdmin()
-      .registerRoute(
-        adminRoutes.setModuleConfigRoute(
-          this.grpcSdk,
-          this.sdk,
-          moduleName,
-          configSchema,
-        ),
-      );
+    if (this.adminModule) {
+      this.adminModule.registerConfigRoutes(moduleName, configSchema);
+    }
   }
 
   private updateState(name: string, configSchema: convict.Config<any>) {

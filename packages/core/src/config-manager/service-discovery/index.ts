@@ -1,4 +1,4 @@
-import { ModuleListResponse } from '@conduitplatform/commons';
+import { ModuleListResponse } from '../../interfaces/index.js';
 import {
   ConduitGrpcSdk,
   GrpcCallback,

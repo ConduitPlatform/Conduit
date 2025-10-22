@@ -1,19 +1,17 @@
 import { ConduitError } from '@conduitplatform/grpc-sdk';
-import { ConduitCommons, IConduitCore } from '@conduitplatform/commons';
 import { GrpcServer } from './GrpcServer.js';
 import { isNil } from 'lodash-es';
-import AppConfigSchema, { Config as ConfigSchema } from './config/index.js';
+import AppConfigSchema, { Config as ConfigSchema } from '../config/index.js';
 import convict from 'convict';
 
-export class Core extends IConduitCore {
+export class Core {
   private static _instance: Core;
   readonly config: convict.Config<ConfigSchema> = convict(AppConfigSchema);
   private readonly _grpcServer: GrpcServer;
+  private configManager: any;
 
   private constructor(grpcPort: number) {
-    super(ConduitCommons.getInstance('core'));
-    this.commons.registerCore(this);
-    this._grpcServer = new GrpcServer(this.commons, grpcPort);
+    this._grpcServer = new GrpcServer(this, grpcPort);
   }
 
   get grpcServer() {
@@ -35,7 +33,7 @@ export class Core extends IConduitCore {
   }
 
   async setConfig(moduleConfig: any): Promise<any> {
-    const previousConfig = await this.commons.getConfigManager().get('core');
+    const previousConfig = await this.configManager.get('core');
     let config = { ...previousConfig, ...moduleConfig };
     try {
       this.config.load(config).validate({
@@ -49,5 +47,9 @@ export class Core extends IConduitCore {
     }
     this.grpcServer.sdk.bus!.publish('core:config:update', JSON.stringify(config));
     return config;
+  }
+
+  setConfigManager(configManager: any) {
+    this.configManager = configManager;
   }
 }

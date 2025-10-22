@@ -11,18 +11,17 @@ import {
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import {
-  ConduitCommons,
-  IConduitAdmin,
   PatchRouteMiddlewaresRequest,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
-} from '@conduitplatform/commons';
+} from '../interfaces/index.js';
 import { hashPassword } from './utils/auth.js';
 import { runMigrations } from './migrations/index.js';
 import AdminConfigRawSchema from './config/index.js';
 import AppConfigSchema, { Config as ConfigSchema } from './config/index.js';
 import * as middleware from './middleware/index.js';
 import * as adminRoutes from './routes/index.js';
+import * as configRoutes from '../config-manager/admin/routes/index.js';
 import * as models from './models/index.js';
 import { AdminMiddleware } from './models/index.js';
 import { getSwaggerMetadata } from './hermes/index.js';
@@ -45,7 +44,7 @@ import cors from 'cors';
 import { ConfigController, GrpcServer, merge } from '@conduitplatform/module-tools';
 import { fileURLToPath } from 'node:url';
 
-export default class AdminModule extends IConduitAdmin {
+export default class AdminModule {
   grpcSdk: ConduitGrpcSdk;
   readonly config: convict.Config<ConfigSchema> = convict(AppConfigSchema);
   private _router!: ConduitRoutingController;
@@ -63,6 +62,7 @@ export default class AdminModule extends IConduitAdmin {
     adminRoutes.changeUsersPasswordRoute(),
     adminRoutes.patchRouteMiddlewares(this),
     adminRoutes.getRouteMiddlewares(this),
+    configRoutes.getModulesRoute(),
   ];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
@@ -70,13 +70,11 @@ export default class AdminModule extends IConduitAdmin {
   private databaseHandled = false;
   private hasAppliedMiddleware: string[] = [];
   private _refreshTimeout: NodeJS.Timeout | null = null;
+  private configManager: any;
 
-  constructor(
-    readonly commons: ConduitCommons,
-    grpcSdk: ConduitGrpcSdk,
-  ) {
-    super(commons);
+  constructor(grpcSdk: ConduitGrpcSdk, configManager: any) {
     this.grpcSdk = grpcSdk;
+    this.configManager = configManager;
     this._router = new ConduitRoutingController(
       this.getHttpPort()!,
       this.getSocketPort()!,
@@ -92,15 +90,17 @@ export default class AdminModule extends IConduitAdmin {
 
   async initialize(server: GrpcServer) {
     const previousConfig =
-      (await this.commons.getConfigManager().get('admin')) ?? this.config.getProperties();
+      (await this.configManager.get('admin')) ?? this.config.getProperties();
     await generateConfigDefaults(previousConfig);
-    ConfigController.getInstance().config = await this.commons
-      .getConfigManager()
-      .configurePackage('admin', previousConfig, AdminConfigRawSchema);
+    ConfigController.getInstance().config = await this.configManager.configurePackage(
+      'admin',
+      previousConfig,
+      AdminConfigRawSchema,
+    );
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     await server.addService(
-      path.resolve(__dirname, '../../core/src/core.proto'),
+      path.resolve(__dirname, '../core.proto'),
       'conduit.core.Admin',
       {
         registerAdminRoute: this.registerAdminRoute.bind(this),
@@ -115,9 +115,7 @@ export default class AdminModule extends IConduitAdmin {
       const cfg: convict.Config<any> = JSON.parse(config);
       this.handleConfigUpdate(cfg);
     });
-    ConfigController.getInstance().config = await this.commons
-      .getConfigManager()
-      .get('admin');
+    ConfigController.getInstance().config = await this.configManager.get('admin');
     this.onConfig();
     this._router.registerMiddleware((req: Request, res: Response, next: NextFunction) => {
       const config = ConfigController.getInstance().config;
@@ -141,10 +139,13 @@ export default class AdminModule extends IConduitAdmin {
       },
       true,
     );
-    this._router.registerMiddleware(middleware.getAdminMiddleware(this.commons), true);
+    this._router.registerMiddleware(
+      middleware.getAdminMiddleware(this.configManager),
+      true,
+    );
 
     this._router.registerMiddleware(
-      middleware.getAuthMiddleware(this.grpcSdk, this.commons),
+      middleware.getAuthMiddleware(this.grpcSdk, this.configManager),
       true,
     );
     this._router.registerMiddleware(helmet(), false);
@@ -174,9 +175,9 @@ export default class AdminModule extends IConduitAdmin {
     const moduleName = call.metadata!.get('module-name')[0];
     try {
       if (!call.request.routerUrl) {
-        const result = this.commons
-          .getConfigManager()!
-          .getModuleUrlByName(call.metadata!.get('module-name')![0] as string);
+        const result = this.configManager.getModuleUrlByName(
+          call.metadata!.get('module-name')![0] as string,
+        );
         if (!result) {
           return callback({
             code: status.INTERNAL,
@@ -187,10 +188,14 @@ export default class AdminModule extends IConduitAdmin {
       }
       this.internalRegisterRoute(
         call.request.routes,
-        call.request.routerUrl,
+        call.request.routerUrl!,
         moduleName as string,
       );
-      this.updateState(call.request.routes, call.request.routerUrl, moduleName as string);
+      this.updateState(
+        call.request.routes,
+        call.request.routerUrl!,
+        moduleName as string,
+      );
       if (this.databaseHandled) {
         this.scheduleMiddlewareApply();
       }
@@ -208,6 +213,21 @@ export default class AdminModule extends IConduitAdmin {
     this._sdkRoutes.push(route);
     this._router.registerConduitRoute(route);
     this.cleanupRoutes();
+  }
+
+  registerConfigRoutes(moduleName: string, configSchema: any) {
+    this.registerRoute(configRoutes.getMonoConfigRoute(this.grpcSdk));
+    this.registerRoute(
+      configRoutes.getModuleConfigRoute(this.grpcSdk, moduleName, configSchema),
+    );
+    this.registerRoute(
+      configRoutes.setModuleConfigRoute(
+        this.grpcSdk,
+        this.configManager,
+        moduleName,
+        configSchema,
+      ),
+    );
   }
 
   public internalRegisterRoute(
@@ -247,7 +267,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async setConfig(moduleConfig: any) {
-    const previousConfig = await this.commons.getConfigManager().get('admin');
+    const previousConfig = await this.configManager.get('admin');
     const config = merge(previousConfig, moduleConfig);
     await generateConfigDefaults(config);
     try {
@@ -339,14 +359,11 @@ export default class AdminModule extends IConduitAdmin {
         const promises = state.routes.map((r: Indexable) => {
           try {
             if (r.moduleName) {
-              return this.commons
-                .getConfigManager()
-                .isModuleUp(r.moduleName)
-                .then(isUp => {
-                  if (isUp) {
-                    return this.internalRegisterRoute(r.routes, r.url, r.moduleName);
-                  }
-                });
+              return this.configManager.isModuleUp(r.moduleName).then((isUp: boolean) => {
+                if (isUp) {
+                  return this.internalRegisterRoute(r.routes, r.url, r.moduleName);
+                }
+              });
             }
             return this.internalRegisterRoute(r.protofile, r.routes, r.url);
           } catch (err) {

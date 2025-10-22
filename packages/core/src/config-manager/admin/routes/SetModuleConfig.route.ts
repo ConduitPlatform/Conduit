@@ -6,7 +6,7 @@ import {
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitCommons } from '@conduitplatform/commons';
+// Removed ConduitCommons import - now using configManager directly
 import { ConduitRoute } from '@conduitplatform/hermes';
 import convict from 'convict';
 
@@ -15,7 +15,7 @@ type GetModuleResponse = { setConfig: SetConfig };
 
 export function setModuleConfigRoute(
   grpcSdk: ConduitGrpcSdk,
-  commonsSdk: ConduitCommons,
+  configManager: any,
   moduleName: string,
   configSchema: convict.Config<unknown>,
 ) {
@@ -38,18 +38,16 @@ export function setModuleConfigRoute(
       let updatedConfig = params.params!.config;
       switch (moduleName) {
         case 'core':
-          updatedConfig = await commonsSdk
-            .getCore()
+          updatedConfig = await configManager.core
             .setConfig(updatedConfig)
-            .catch(e => {
+            .catch((e: any) => {
               throw new ConduitError(e.name, e.status ?? 500, e.message);
             });
           break;
         case 'admin':
-          updatedConfig = await commonsSdk
-            .getAdmin()
+          updatedConfig = await configManager.adminModule
             .setConfig(updatedConfig)
-            .catch(e => {
+            .catch((e: any) => {
               throw new ConduitError(e.name, e.status ?? 500, e.message);
             });
           break;
@@ -66,7 +64,7 @@ export function setModuleConfigRoute(
             });
           updatedConfig = JSON.parse(updatedConfig.updatedConfig);
       }
-      await commonsSdk.getConfigManager().set(moduleName, updatedConfig);
+      await configManager.set(moduleName, updatedConfig);
       return { config: updatedConfig };
     },
   );

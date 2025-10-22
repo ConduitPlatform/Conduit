@@ -1,5 +1,5 @@
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import { RegisteredModule } from '@conduitplatform/commons';
+import { RegisteredModule } from '../../interfaces/index.js';
 
 export class ServiceRegistry {
   private static _instance: ServiceRegistry;
