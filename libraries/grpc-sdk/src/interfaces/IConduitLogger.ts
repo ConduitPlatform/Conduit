@@ -1,26 +1,21 @@
-import winston, { LogCallback, Logger } from 'winston';
+import winston, { Logger } from 'winston';
 import { Indexable } from './Indexable.js';
 
 export interface IConduitLogger {
   get winston(): winston.Logger;
-  log(message: string, level?: string, cb?: LogCallback): Logger;
+  log(message: string, level?: string): Logger;
 
-  logObject(
-    object: Indexable,
-    message?: string,
-    level?: string,
-    cb?: LogCallback,
-  ): Logger;
+  logObject(object: Indexable, message?: string, level?: string): Logger;
 
-  info(message: string, cb?: LogCallback): Logger;
+  info(message: string): Logger;
 
-  warn(message: string, cb?: LogCallback): Logger;
+  warn(message: string): Logger;
 
-  error(message: string | Error, cb?: LogCallback): Logger;
+  error(message: string | Error): Logger;
 
-  http(message: string, cb?: LogCallback): Logger;
+  http(message: string): Logger;
 
-  verbose(message: string, cb?: LogCallback): Logger;
+  verbose(message: string): Logger;
 
   addTransport(transport: winston.transport): void;
 }
