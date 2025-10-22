@@ -6,7 +6,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitBoolean, ConduitString } from '@conduitplatform/module-tools';
 import { isNil } from 'lodash-es';
-import { Admin, AdminTwoFactorSecret } from '../models/index.js';
+import { Admin, AdminTwoFactorSecret } from '../../models/index.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
 import { generateSecret } from '../utils/auth.js';

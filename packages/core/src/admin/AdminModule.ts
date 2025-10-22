@@ -21,8 +21,8 @@ import AppConfigSchema, { Config as ConfigSchema } from './config/index.js';
 import * as middleware from './middleware/index.js';
 import * as adminRoutes from './routes/index.js';
 import * as configRoutes from './routes/index.js';
-import * as models from './models/index.js';
-import { AdminMiddleware } from './models/index.js';
+import * as models from '../models/index.js';
+import { AdminMiddleware } from '../models/index.js';
 import { getSwaggerMetadata } from './hermes/index.js';
 import path from 'path';
 import {
@@ -106,7 +106,6 @@ export default class AdminModule {
         patchRouteMiddlewares: this.patchRouteMiddlewares.bind(this),
       },
     );
-    this.grpcSdk.waitForExistence('database').then(this.handleDatabase.bind(this));
   }
 
   async subscribeToBusEvents() {
@@ -439,9 +438,9 @@ export default class AdminModule {
     );
   }
 
-  private async handleDatabase() {
-    await this.registerSchemas();
-    await this.migrateSchemas();
+  public async handleDatabase() {
+    // Models are already registered/migrated by ConfigManager
+    // Only handle admin-specific database operations
     this.scheduleMiddlewareApply();
     this.databaseHandled = true;
     models.Admin.getInstance()
@@ -490,22 +489,6 @@ export default class AdminModule {
       );
     });
     this._router.cleanupRoutes(routes);
-  }
-
-  private registerSchemas() {
-    const promises = Object.values(models).map(model => {
-      const modelInstance = model.getInstance(this.grpcSdk.database!);
-      return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
-    });
-    return Promise.all(promises);
-  }
-
-  private migrateSchemas() {
-    const promises = Object.values(models).map(model => {
-      const modelInstance = model.getInstance(this.grpcSdk.database!);
-      return this.grpcSdk.database!.migrate(modelInstance.name);
-    });
-    return Promise.all(promises);
   }
 
   async patchRouteMiddlewares(

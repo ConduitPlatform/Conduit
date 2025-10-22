@@ -6,7 +6,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
 import { compare, hash } from 'bcrypt';
-import { Admin } from '../models/index.js';
+import { Admin } from '../../models/index.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
 import { isNil } from 'lodash-es';
 
