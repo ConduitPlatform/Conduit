@@ -107,7 +107,8 @@ export class GrpcServer {
     this.initializeMetrics();
     this._grpcSdk
       .waitForExistence('database')
-      .then(() => this.configManager.registerAppConfig());
+      .then(() => this.configManager.initializeModels())
+      .then(() => this.adminModule.handleDatabase());
     await this.configManager.configurePackage(
       'core',
       convict(AppConfigSchema).getProperties(),

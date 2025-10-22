@@ -7,7 +7,7 @@ import {
 import { isEmpty, isNil } from 'lodash-es';
 import { ConduitRoute } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
-import { Admin, AdminTwoFactorSecret } from '../models/index.js';
+import { Admin, AdminTwoFactorSecret } from '../../models/index.js';
 import { verifyTwoFactorToken } from '../utils/auth.js';
 import { ConduitString } from '@conduitplatform/module-tools';
 

@@ -2,7 +2,7 @@ import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash-es';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 // Removed ConduitCommons import - now using configManager directly
-import { Admin } from '../models/index.js';
+import { Admin } from '../../models/index.js';
 import { verifyToken } from '../utils/auth.js';
 import { isDev } from '../utils/middleware.js';
 import { ConduitRequest } from '@conduitplatform/hermes';

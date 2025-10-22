@@ -12,7 +12,7 @@ import {
   UpdateConfigRequest,
   UpdateConfigResponse,
 } from './interfaces/index.js';
-import * as models from './config-models/index.js';
+import * as models from './models/index.js';
 import path from 'path';
 import { ServiceDiscovery } from './service-discovery/index.js';
 import { ConfigStorage } from './storage/index.js';
@@ -149,10 +149,22 @@ export default class ConfigManager {
     this.recoverConfigRoutes();
   }
 
-  async registerAppConfig() {
-    const modelInstance = models.Config.getInstance(this.grpcSdk.database!);
-    await this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
-    await this.grpcSdk.database!.migrate(modelInstance.name);
+  async initializeModels() {
+    // Register all schemas
+    const promises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.grpcSdk.database!);
+      return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
+    });
+    await Promise.all(promises);
+
+    // Migrate all schemas
+    const migrationPromises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.grpcSdk.database!);
+      return this.grpcSdk.database!.migrate(modelInstance.name);
+    });
+    await Promise.all(migrationPromises);
+
+    // Now initialize config storage
     this._configStorage.onDatabaseAvailable();
   }
 

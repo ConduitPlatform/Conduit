@@ -1,4 +1,4 @@
-import { Admin, AdminTwoFactorSecret } from '../models/index.js';
+import { Admin, AdminTwoFactorSecret } from '../../models/index.js';
 import { isNil } from 'lodash-es';
 import { comparePasswords, signToken } from '../utils/auth.js';
 import {

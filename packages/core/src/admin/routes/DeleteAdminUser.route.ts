@@ -7,7 +7,7 @@ import {
 import { ConduitString } from '@conduitplatform/module-tools';
 
 import { isNil } from 'lodash-es';
-import { Admin } from '../models/index.js';
+import { Admin } from '../../models/index.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
 
 export function deleteAdminUserRoute() {

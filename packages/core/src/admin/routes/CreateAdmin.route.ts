@@ -1,4 +1,4 @@
-import { Admin } from '../models/index.js';
+import { Admin } from '../../models/index.js';
 import { isNil } from 'lodash-es';
 import { hashPassword } from '../utils/auth.js';
 import {

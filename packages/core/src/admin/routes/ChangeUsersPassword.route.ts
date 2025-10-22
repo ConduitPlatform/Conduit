@@ -7,7 +7,7 @@ import {
 import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
 import { hash } from 'bcrypt';
 import { isNil } from 'lodash-es';
-import { Admin } from '../models/index.js';
+import { Admin } from '../../models/index.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
 
 export function changeUsersPasswordRoute() {
