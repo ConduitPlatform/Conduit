@@ -17,8 +17,7 @@ RUN yarn && \
     npx lerna run build --scope=@conduitplatform/grpc-sdk --scope=@conduitplatform/module-tools
 
 RUN if [  -z "$BUILDING_SERVICE" ] ; then npx lerna run build ;  \
-    elif [ "$BUILDING_SERVICE" = "conduit" ] ; then npx lerna run build --scope=@conduitplatform/admin \
-    --scope=@conduitplatform/commons --scope=@conduitplatform/core --scope=@conduitplatform/hermes  \
+    elif [ "$BUILDING_SERVICE" = "conduit" ] ; then npx lerna run build --scope=@conduitplatform/core --scope=@conduitplatform/hermes  \
     --scope=@conduitplatform/node-2fa; \
     elif [ "$BUILDING_SERVICE" = "modules/router" ] ; then npx lerna run build --scope=@conduitplatform/router \
     --scope=@conduitplatform/hermes; \

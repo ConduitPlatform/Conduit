@@ -1,4 +1,4 @@
-import { ConduitCommons } from '@conduitplatform/commons';
+// Removed ConduitCommons import - now using core directly
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import * as models from '../models/index.js';
 import { ServiceDiscovery } from '../service-discovery/index.js';
@@ -11,7 +11,7 @@ export class ConfigStorage {
   reconciling: boolean = false;
 
   constructor(
-    private readonly commons: ConduitCommons,
+    private readonly core: any,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly serviceDiscovery: ServiceDiscovery,
   ) {
@@ -86,7 +86,7 @@ export class ConfigStorage {
     for (const config of moduleConfigs) {
       if (config.name === 'core') continue;
       if (config.name === 'admin') {
-        this.commons.getAdmin().handleConfigUpdate(config.config);
+        // Note: Admin config updates are handled through the admin module's own subscription
         continue;
       }
       if (registeredModules.includes(config.name)) {
