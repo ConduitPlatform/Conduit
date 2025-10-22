@@ -15,7 +15,7 @@ import {
   UpdateFileByURLOptions,
   UpdateFileOptions,
 } from './types';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 
 export class Storage extends ConduitModule<typeof StorageDefinition> {
   constructor(

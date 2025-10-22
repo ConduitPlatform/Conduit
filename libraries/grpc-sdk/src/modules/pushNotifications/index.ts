@@ -4,7 +4,7 @@ import {
   SendNotificationResponse,
 } from '../../protoUtils/index.js';
 import { SendNotificationOptions } from './types';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 
 export class PushNotifications extends ConduitModule<typeof PushNotificationsDefinition> {
   constructor(
