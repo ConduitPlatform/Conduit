@@ -23,8 +23,7 @@
   "type": "module",
   "scripts": {
     "prepublish": "npm run build",
-    "build": "rimraf dist && rollup -c",
-    "postbuild": "copyfiles -u 1 src/*.proto src/**/*.json ./dist/"
+    "build": "rimraf dist && tsup"
   },
   "license": "MIT",
   "dependencies": {
@@ -54,10 +53,6 @@
   },
   "devDependencies": {
     "@conduitplatform/grpc-sdk": "*",
-    "@rollup/plugin-commonjs": "^28.0.8",
-    "@rollup/plugin-json": "^6.1.0",
-    "@rollup/plugin-replace": "^6.0.2",
-    "@rollup/plugin-typescript": "^12.1.4",
     "@types/convict": "^6.1.6",
     "@types/fs-extra": "^11.0.4",
     "@types/google-protobuf": "^3.15.12",
@@ -66,10 +61,10 @@
     "@types/node": "24.9.1",
     "copyfiles": "^2.4.1",
     "rimraf": "^6.0.1",
-    "rollup": "^4.22.4",
     "ts-node": "^10.9.2",
     "ts-proto": "^2.8.0",
     "tslib": "^2.6.3",
+    "tsup": "^8.0.2",
     "typescript": "~5.9.3"
   },
   "peerDependencies": {
