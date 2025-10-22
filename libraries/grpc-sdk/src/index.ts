@@ -20,6 +20,14 @@ import {
   sleep,
   StateManager,
 } from './utilities/index.js';
+import {
+  getLogger,
+  setLogger,
+  getMetrics,
+  setMetrics,
+  getInterceptors,
+  addMiddleware,
+} from './utilities/GrpcSdkContext.js';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { checkModuleHealth, ConduitModule } from './classes/index.js';
 import { Client } from 'nice-grpc';
@@ -38,7 +46,6 @@ import {
 type UrlRemap = { [url: string]: string };
 
 class ConduitGrpcSdk {
-  private static middleware: any[] = [];
   public readonly name: string;
   public readonly instance: string;
   private readonly serverUrl: string;
@@ -75,9 +82,9 @@ class ConduitGrpcSdk {
     serviceHealthStatusGetter: () => HealthCheckStatus = () => HealthCheckStatus.SERVING,
   ) {
     if (logger) {
-      ConduitGrpcSdk._Logger = logger;
+      setLogger(logger);
     } else {
-      ConduitGrpcSdk._Logger = console;
+      setLogger(console);
     }
 
     if (!name) {
@@ -108,24 +115,20 @@ class ConduitGrpcSdk {
     }
   }
 
-  private static _Logger: IConduitLogger | Console;
-
   static get Logger() {
-    return ConduitGrpcSdk._Logger;
+    return getLogger();
   }
 
-  private static _Metrics: IConduitMetrics | undefined = undefined;
-
   static get Metrics() {
-    return ConduitGrpcSdk._Metrics;
+    return getMetrics();
   }
 
   static set Metrics(metrics: IConduitMetrics | undefined) {
-    ConduitGrpcSdk._Metrics = metrics;
+    setMetrics(metrics);
   }
 
   static get interceptors() {
-    return ConduitGrpcSdk.middleware;
+    return getInterceptors();
   }
 
   private _redisManager: RedisManager | null = null;
@@ -272,7 +275,7 @@ class ConduitGrpcSdk {
   }
 
   public addMiddleware(middleware: any) {
-    ConduitGrpcSdk.middleware.push(middleware);
+    addMiddleware(middleware);
   }
 
   async initialize() {
@@ -577,6 +580,5 @@ export * from './classes/index.js';
 export * from './modules/index.js';
 export * from './constants/index.js';
 export * from './types/index.js';
-export * from './utilities/index.js';
 export * from './protoUtils/index.js';
 export * from '@grpc/grpc-js';

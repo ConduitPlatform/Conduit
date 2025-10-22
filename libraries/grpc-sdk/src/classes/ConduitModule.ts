@@ -11,7 +11,7 @@ import {
   HealthDefinition,
 } from '../protoUtils/index.js';
 import { EventEmitter } from 'events';
-import { ConduitGrpcSdk } from '../index.js';
+import { getInterceptors } from '../utilities/GrpcSdkContext.js';
 
 export class ConduitModule<T extends CompatServiceDefinition> {
   protected channel?: Channel;
@@ -89,7 +89,7 @@ export class ConduitModule<T extends CompatServiceDefinition> {
           : getModuleNameInterceptor(this._clientName),
       )
       .use(retryMiddleware);
-    for (const interceptor of ConduitGrpcSdk.interceptors) {
+    for (const interceptor of getInterceptors()) {
       clientFactory = clientFactory.use(interceptor);
     }
     this._client = clientFactory.create(this.type!, this.channel, {

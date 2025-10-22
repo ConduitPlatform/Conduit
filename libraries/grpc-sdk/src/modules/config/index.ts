@@ -7,7 +7,7 @@ import {
   RegisterModuleRequest,
 } from '../../protoUtils/index.js';
 import { Indexable } from '../../interfaces/index.js';
-import { ConduitGrpcSdk } from '../../index.js';
+import { getLogger } from '../../utilities/GrpcSdkContext.js';
 import { ClusterOptions, RedisOptions } from 'ioredis';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {
@@ -130,17 +130,17 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     this.client!.moduleHealthProbe(request)
       .then(res => {
         if (!res && self.coreLive) {
-          ConduitGrpcSdk.Logger.warn('Core unhealthy');
+          getLogger().warn('Core unhealthy');
           self.coreLive = false;
         } else if (res && !self.coreLive) {
-          ConduitGrpcSdk.Logger.log('Core is live');
+          getLogger().log('Core is live');
           self.coreLive = true;
           self.watchModules();
         }
       })
       .catch(() => {
         if (self.coreLive) {
-          ConduitGrpcSdk.Logger.warn('Core unhealthy');
+          getLogger().warn('Core unhealthy');
           self.coreLive = false;
         }
       });
@@ -162,7 +162,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       }
     } catch (error) {
       this.coreLive = false;
-      ConduitGrpcSdk.Logger.warn('Core unhealthy');
+      getLogger().warn('Core unhealthy');
       this.emitter.emit('core-status-update', HealthCheckStatus.UNKNOWN);
     }
   }

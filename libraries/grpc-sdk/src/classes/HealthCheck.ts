@@ -4,7 +4,7 @@ import {
 } from '../interceptors/index.js';
 import { createChannel, createClientFactory } from 'nice-grpc';
 import { HealthCheckResponse, HealthDefinition } from '../protoUtils/index.js';
-import { ConduitGrpcSdk } from '../index.js';
+import { getInterceptors } from '../utilities/GrpcSdkContext.js';
 
 export async function checkModuleHealth(
   clientName: string,
@@ -21,7 +21,7 @@ export async function checkModuleHealth(
       ? getGrpcSignedTokenInterceptor(grpcToken)
       : getModuleNameInterceptor(clientName),
   );
-  for (const interceptor of ConduitGrpcSdk.interceptors) {
+  for (const interceptor of getInterceptors()) {
     clientFactory = clientFactory.use(interceptor);
   }
   const _healthClient = clientFactory.create(HealthDefinition, channel);
