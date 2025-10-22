@@ -1,4 +1,4 @@
-import { ModuleListResponse } from '../../interfaces/index.js';
+import { ModuleListResponse } from '../interfaces/index.js';
 import {
   ConduitGrpcSdk,
   GrpcCallback,
@@ -7,7 +7,7 @@ import {
   HealthCheckStatus,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { IModuleConfig } from '../../interfaces/IModuleConfig.js';
+import { IModuleConfig } from '../interfaces/IModuleConfig.js';
 import { ServerWritableStream, status } from '@grpc/grpc-js';
 import { EventEmitter } from 'events';
 import { ServiceRegistry } from './ServiceRegistry.js';

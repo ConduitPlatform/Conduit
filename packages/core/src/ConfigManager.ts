@@ -11,15 +11,13 @@ import {
   GetRedisDetailsResponse,
   UpdateConfigRequest,
   UpdateConfigResponse,
-} from '../interfaces/index.js';
-import { runMigrations } from './migrations/index.js';
-import * as adminRoutes from './admin/routes/index.js';
-import * as models from './models/index.js';
+} from './interfaces/index.js';
+import * as models from './config-models/index.js';
 import path from 'path';
 import { ServiceDiscovery } from './service-discovery/index.js';
-import { ConfigStorage } from './config-storage/index.js';
-import parseConfigSchema from '../utils/index.js';
-import { IModuleConfig } from '../interfaces/IModuleConfig.js';
+import { ConfigStorage } from './storage/index.js';
+import parseConfigSchema from './utils/index.js';
+import { IModuleConfig } from './interfaces/IModuleConfig.js';
 import convict from 'convict';
 import { merge } from 'lodash-es';
 import { GrpcServer } from '@conduitplatform/module-tools';
@@ -70,7 +68,7 @@ export default class ConfigManager {
     const __dirname = path.dirname(__filename);
 
     await server.addService(
-      path.resolve(__dirname, '../core.proto'),
+      path.resolve(__dirname, './core.proto'),
       'conduit.core.Config',
       {
         get: this.getGrpc.bind(this),
@@ -154,7 +152,6 @@ export default class ConfigManager {
   async registerAppConfig() {
     const modelInstance = models.Config.getInstance(this.grpcSdk.database!);
     await this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
-    await runMigrations(this.grpcSdk);
     await this.grpcSdk.database!.migrate(modelInstance.name);
     this._configStorage.onDatabaseAvailable();
   }

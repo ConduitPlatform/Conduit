@@ -1,7 +1,7 @@
 import { ConduitError } from '@conduitplatform/grpc-sdk';
 import { GrpcServer } from './GrpcServer.js';
 import { isNil } from 'lodash-es';
-import AppConfigSchema, { Config as ConfigSchema } from '../config/index.js';
+import AppConfigSchema, { Config as ConfigSchema } from './config/index.js';
 import convict from 'convict';
 
 export class Core {

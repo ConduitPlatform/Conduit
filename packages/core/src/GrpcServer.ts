@@ -8,13 +8,13 @@ import {
   GrpcServer as ConduitGrpcServer,
   initializeSdk,
 } from '@conduitplatform/module-tools';
-import AdminModule from '../admin/index.js';
+import AdminModule from './admin/AdminModule.js';
 import { EventEmitter } from 'events';
 import path from 'path';
-import AppConfigSchema from '../config/index.js';
-import CoreConfigSchema from '../config/config.js';
+import AppConfigSchema from './config/index.js';
+import CoreConfigSchema from './config/config.js';
 import { ServerWritableStream } from '@grpc/grpc-js';
-import ConfigManager from '../config-manager/index.js';
+import ConfigManager from './ConfigManager.js';
 import convict from 'convict';
 import { fileURLToPath } from 'node:url';
 
@@ -137,7 +137,7 @@ export class GrpcServer {
 
   private addHealthService() {
     return this.server.addService(
-      path.resolve(__dirname, '../grpc_health_check.proto'),
+      path.resolve(__dirname, './grpc_health_check.proto'),
       'grpc.health.v1.Health',
       {
         Check: this.healthCheck.bind(this),
