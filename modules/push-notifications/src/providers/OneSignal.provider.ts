@@ -32,7 +32,7 @@ export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettin
         content_available: true,
         app_id: this.appId,
         data: { ...data },
-        include_player_ids: Array.isArray(token) ? token : [token],
+        include_subscription_ids: Array.isArray(token) ? token : [token],
       };
     } else {
       notification = {
@@ -40,7 +40,7 @@ export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettin
         contents: { en: body ?? '' },
         headings: { en: title },
         data: { ...data },
-        include_player_ids: Array.isArray(token) ? token : [token],
+        include_subscription_ids: Array.isArray(token) ? token : [token],
       };
     }
     const response = await this.client!.createNotification(notification);
@@ -53,17 +53,8 @@ export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettin
   }
 
   updateProvider(settings: IOneSignalSettings) {
-    const app_key_provider: { getToken(): string } = {
-      getToken(): string {
-        return settings.apiKey;
-      },
-    };
     const configuration = createConfiguration({
-      authMethods: {
-        app_key: {
-          tokenProvider: app_key_provider,
-        },
-      },
+      restApiKey: settings.apiKey,
     });
     try {
       this.client = new DefaultApi(configuration);

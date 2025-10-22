@@ -11,7 +11,7 @@ export interface IConduitLogger {
 
   warn(message: string): Logger;
 
-  error(message: string | Error): Logger;
+  error(message: string | Error, error?: Error | unknown): Logger;
 
   http(message: string): Logger;
 
