@@ -21,12 +21,12 @@ import {
   StateManager,
 } from './utilities/index.js';
 import {
-  getLogger,
-  setLogger,
-  getMetrics,
-  setMetrics,
-  getInterceptors,
   addMiddleware,
+  getInterceptors,
+  getLogger,
+  getMetrics,
+  setLogger,
+  setMetrics,
 } from './utilities/GrpcSdkContext.js';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { checkModuleHealth, ConduitModule } from './classes/index.js';
@@ -117,6 +117,10 @@ class ConduitGrpcSdk {
 
   static get Logger() {
     return getLogger();
+  }
+
+  static get Sleep() {
+    return sleep;
   }
 
   static get Metrics() {

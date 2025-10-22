@@ -9,6 +9,7 @@ import {
 import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import ConduitDefaultRouter from '../Router.js';
+import { RouteT } from '@conduitplatform/hermes';
 
 export class RouterAdmin {
   constructor(

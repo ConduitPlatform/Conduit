@@ -2,7 +2,7 @@ import path from 'path';
 import { Queue, Worker } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { status } from '@grpc/grpc-js';
-import { ConduitGrpcSdk, GrpcError, sleep } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { Cluster, Redis } from 'ioredis';
 import { fileURLToPath } from 'node:url';
 
@@ -139,7 +139,7 @@ export class QueueController {
   async waitForIdle() {
     let waitingCount = await this.authorizationQueue.count();
     while (waitingCount > 0) {
-      await sleep(1000);
+      await ConduitGrpcSdk.Sleep(1000);
       waitingCount = await this.authorizationQueue.count();
     }
     return;

@@ -1,4 +1,4 @@
-import Mail, { Address, Attachment } from 'nodemailer/lib/mailer';
+import Mail, { Address, Attachment } from 'nodemailer/lib/mailer/index.js';
 import { TemplateOptions } from '../interfaces/TemplateOptions.js';
 import { checkIfHTML } from '../utils/index.js';
 

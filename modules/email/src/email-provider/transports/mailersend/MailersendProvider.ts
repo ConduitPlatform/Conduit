@@ -10,7 +10,7 @@ import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { MailersendBuilder } from './mailersendBuilder.js';
 import { to } from 'await-to-js';
-import Mail from 'nodemailer/lib/mailer';
+import Mail from 'nodemailer/lib/mailer/index.js';
 
 export class MailersendProvider extends EmailProviderClass {
   protected _mailersendSdk: MailerSend;

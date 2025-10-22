@@ -9,7 +9,6 @@ import {
   GrpcRequest,
   IConduitLogger,
   Indexable,
-  sleep,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -589,7 +588,7 @@ export default class AdminModule extends IConduitAdmin {
     const threshold = 10000;
     const start = Date.now();
     while (this.grpcSdk.database?.active === false && Date.now() - start < threshold) {
-      await sleep(500);
+      await ConduitGrpcSdk.Sleep(500);
     }
     if (this.grpcSdk.database?.active === false) {
       ConduitGrpcSdk.Logger.error(

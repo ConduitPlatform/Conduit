@@ -5,40 +5,49 @@ import { AmazonSesConfig } from './amazonSes.config.js';
 import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
 import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate.js';
 import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
-import { Options } from 'nodemailer/lib/mailer';
+import { Options } from 'nodemailer/lib/mailer/index.js';
 import { AmazonSesBuilder } from './amazonSesBuilder.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import * as aws from '@aws-sdk/client-ses';
 import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate.js';
 import { to } from 'await-to-js';
 import { getHandleBarsValues } from '../../utils/index.js';
-import {
-  CreateTemplateCommand,
-  DeleteTemplateCommand,
-  GetTemplateCommand,
-  ListTemplatesCommand,
-  SendTemplatedEmailCommand,
-  UpdateTemplateCommand,
-} from '@aws-sdk/client-ses';
 import { AmazonSesEmailOptions } from '../../interfaces/amazonSes/AmazonSesEmailOptions.js';
+import SESTransport from 'nodemailer/lib/ses-transport/index.js';
+import {
+  CreateEmailTemplateCommand,
+  DeleteEmailTemplateCommand,
+  GetEmailTemplateCommand,
+  ListEmailTemplatesCommand,
+  SendEmailCommand,
+  SESv2Client,
+  UpdateEmailTemplateCommand,
+} from '@aws-sdk/client-sesv2';
 
 export class AmazonSesProvider extends EmailProviderClass {
-  protected _amazonsSesSdk: aws.SESClient;
+  protected _amazonsSesSdk: SESv2Client;
 
   constructor(amazonSesSettings: AmazonSesConfig) {
     const { region, accessKeyId, secretAccessKey } = amazonSesSettings;
-    const ses = new aws.SES({
-      apiVersion: '2010-12-01',
+    const sesClient = new SESv2Client({
       region,
-      credentials: { accessKeyId, secretAccessKey },
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
     });
-    super(createTransport({ SES: { ses, aws } }));
-    this._amazonsSesSdk = ses;
+
+    super(
+      createTransport(
+        //@ts-expect-error type mismatch between mailer and ses
+        new SESTransport({ SES: { sesClient, SendEmailCommand: SendEmailCommand } }),
+      ),
+    );
+    this._amazonsSesSdk = sesClient;
   }
 
   async listTemplates(): Promise<Template[]> {
     const [err, response] = await to(
-      this._amazonsSesSdk.send(new ListTemplatesCommand({})),
+      this._amazonsSesSdk.send(new ListEmailTemplatesCommand({})),
     );
     if (err) {
       throw new Error(err.message);
@@ -48,8 +57,8 @@ export class AmazonSesProvider extends EmailProviderClass {
     }
     const templates: Template[] = [];
     for (const templateMetadata of response.TemplatesMetadata) {
-      if (!templateMetadata.Name) continue;
-      const templateInfo = await this.getTemplateInfo(templateMetadata.Name);
+      if (!templateMetadata.TemplateName) continue;
+      const templateInfo = await this.getTemplateInfo(templateMetadata.TemplateName);
       templates.push(templateInfo);
     }
     return templates;
@@ -57,32 +66,35 @@ export class AmazonSesProvider extends EmailProviderClass {
 
   async getTemplateInfo(template_name: string): Promise<Template> {
     const [err, response] = await to(
-      this._amazonsSesSdk.send(new GetTemplateCommand({ TemplateName: template_name })),
+      this._amazonsSesSdk.send(
+        new GetEmailTemplateCommand({ TemplateName: template_name }),
+      ),
     );
     if (err) {
       throw new Error(err.message);
     }
-    const templateInfo = response.Template;
+    const templateInfo = response.TemplateContent;
     if (!templateInfo) {
       throw new Error('Response does not contain template information.');
     }
-    const { TemplateName, SubjectPart, TextPart } = templateInfo;
-    if (!TemplateName || !SubjectPart || !TextPart) {
-      throw new Error('Response does not contain template information.');
+    const { Html, Subject, Text } = templateInfo;
+    const name = response.TemplateName;
+    if (!name || !Html || !Subject || !Text) {
+      throw new Error('Response does not contain all template information.');
     }
-    const date = new Date(Number(TemplateName.split('_').pop())).toISOString();
-    const textVars = Object.keys(getHandleBarsValues(TextPart));
-    const subjectVars = Object.keys(getHandleBarsValues(SubjectPart));
+    const date = new Date(Number(name.split('_').pop())).toISOString();
+    const textVars = Object.keys(getHandleBarsValues(Text));
+    const subjectVars = Object.keys(getHandleBarsValues(Subject));
     return {
-      name: TemplateName,
-      id: TemplateName,
+      name,
+      id: name,
       createdAt: date,
       versions: [
         {
-          name: TemplateName,
-          id: TemplateName,
-          subject: SubjectPart,
-          body: TextPart,
+          name,
+          id: name,
+          subject: Subject,
+          body: Text,
           active: true,
           updatedAt: date,
           variables: Array.from(new Set([...textVars, ...subjectVars])),
@@ -95,11 +107,11 @@ export class AmazonSesProvider extends EmailProviderClass {
     const timestamp = Date.now();
     const [err] = await to(
       this._amazonsSesSdk.send(
-        new CreateTemplateCommand({
-          Template: {
-            TemplateName: `${data.name}_${timestamp}`,
-            SubjectPart: data.subject,
-            TextPart: data.body,
+        new CreateEmailTemplateCommand({
+          TemplateName: `${data.name}_${timestamp}`,
+          TemplateContent: {
+            Subject: data.subject,
+            Text: data.body,
           },
         }),
       ),
@@ -111,11 +123,11 @@ export class AmazonSesProvider extends EmailProviderClass {
   async updateTemplate(data: UpdateEmailTemplate): Promise<Template> {
     const [err, _] = await to(
       this._amazonsSesSdk.send(
-        new UpdateTemplateCommand({
-          Template: {
-            TemplateName: data.id,
-            SubjectPart: data.subject,
-            TextPart: data.body,
+        new UpdateEmailTemplateCommand({
+          TemplateName: data.id,
+          TemplateContent: {
+            Subject: data.subject,
+            Text: data.body,
           },
         }),
       ),
@@ -126,7 +138,7 @@ export class AmazonSesProvider extends EmailProviderClass {
 
   async deleteTemplate(id: string): Promise<DeleteEmailTemplate> {
     const [err] = await to(
-      this._amazonsSesSdk.send(new DeleteTemplateCommand({ TemplateName: id })),
+      this._amazonsSesSdk.send(new DeleteEmailTemplateCommand({ TemplateName: id })),
     );
     if (err) {
       throw new Error(err.message);
@@ -150,12 +162,15 @@ export class AmazonSesProvider extends EmailProviderClass {
 
   sendEmail(mailOptions: AmazonSesEmailOptions) {
     if (mailOptions.template && mailOptions.templateData) {
-      // @ts-expect-error Temporarily ignore TS errors
-      const command = new SendTemplatedEmailCommand({
-        Source: mailOptions.from,
-        Destination: { ToAddresses: [mailOptions.to] },
-        Template: mailOptions.template,
-        TemplateData: mailOptions.templateData,
+      const command = new SendEmailCommand({
+        FromEmailAddress: mailOptions.from as string,
+        Destination: { ToAddresses: [mailOptions.to as string] },
+        Content: {
+          Template: {
+            TemplateName: mailOptions.template!,
+            TemplateData: mailOptions.templateData!,
+          },
+        },
       });
 
       return this._amazonsSesSdk.send(command);

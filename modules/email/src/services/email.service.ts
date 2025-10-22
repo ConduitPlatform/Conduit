@@ -8,7 +8,7 @@ import {
 import handlebars from 'handlebars';
 import { EmailProvider } from '../email-provider/index.js';
 import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTemplate.js';
-import { Attachment } from 'nodemailer/lib/mailer';
+import { Attachment } from 'nodemailer/lib/mailer/index.js';
 import { Template } from '../email-provider/interfaces/Template.js';
 import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';

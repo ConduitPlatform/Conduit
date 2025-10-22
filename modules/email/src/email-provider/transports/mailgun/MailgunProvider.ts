@@ -1,6 +1,6 @@
 import { to } from 'await-to-js';
 import { createTransport, SentMessageInfo } from 'nodemailer';
-import { Options } from 'nodemailer/lib/mailer';
+import { Options } from 'nodemailer/lib/mailer/index.js';
 import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate.js';
 import { Template } from '../../interfaces/Template.js';
 import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';

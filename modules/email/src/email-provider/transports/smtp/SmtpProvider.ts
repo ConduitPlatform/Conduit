@@ -1,5 +1,5 @@
 import { createTransport, SentMessageInfo } from 'nodemailer';
-import { Options } from 'nodemailer/lib/mailer';
+import { Options } from 'nodemailer/lib/mailer/index.js';
 import { Template } from '../../interfaces/Template.js';
 import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate.js';
 import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
