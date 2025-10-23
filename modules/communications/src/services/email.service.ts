@@ -57,6 +57,10 @@ export class EmailService implements IChannel {
     if (!emailConfig || !emailConfig.transport || !emailConfig.transportSettings) {
       ConduitGrpcSdk.Logger.warn('Email not configured');
     }
+    if (!emailConfig.active) {
+      this.emailer = undefined;
+      return;
+    }
 
     const { transport, transportSettings } = emailConfig;
     try {
