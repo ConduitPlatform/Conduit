@@ -1,16 +1,13 @@
 import {
-  SNSClient,
   CreatePlatformEndpointCommand,
   PublishCommand,
+  SNSClient,
 } from '@aws-sdk/client-sns';
 import { BaseNotificationProvider } from './base.provider.js';
 import { ConduitGrpcSdk, PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
-import {
-  ISendNotification,
-  ISendNotificationToManyDevices,
-} from '../interfaces/ISendNotification.js';
-import { IAmazonSNSSettings } from '../interfaces/IAmazonSNSSettings.js';
-import { NotificationToken } from '../models/index.js';
+import { IAmazonSNSSettings } from '../../interfaces/index.js';
+import { NotificationToken } from '../../models/index.js';
+import { ISendNotification, ISendNotificationToManyDevices } from './interfaces/index.js';
 
 // Mapping between Conduit platforms and AWS SNS message types
 const CONDUIT_TO_AWS_PLATFORM: Partial<Record<PlatformTypesEnum, 'GCM' | 'APNS'>> = {

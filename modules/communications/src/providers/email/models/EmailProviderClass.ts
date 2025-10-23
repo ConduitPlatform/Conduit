@@ -1,8 +1,10 @@
 import Mail from 'nodemailer/lib/mailer/index.js';
-import { CreateEmailTemplate } from '../interfaces/CreateEmailTemplate.js';
-import { DeleteEmailTemplate } from '../interfaces/DeleteEmailTemplate.js';
+import {
+  CreateEmailTemplate,
+  DeleteEmailTemplate,
+  UpdateEmailTemplate,
+} from '../interfaces/index.js';
 import { Template } from '../interfaces/Template.js';
-import { UpdateEmailTemplate } from '../interfaces/UpdateEmailTemplate.js';
 import { EmailBuilderClass } from './EmailBuilderClass.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { SentMessageInfo } from 'nodemailer';

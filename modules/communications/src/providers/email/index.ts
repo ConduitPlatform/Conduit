@@ -1,20 +1,20 @@
 import Mail from 'nodemailer/lib/mailer/index.js';
 import { SentMessageInfo } from 'nodemailer';
-import { MailgunConfig } from './transports/mailgun/mailgun.config.js';
+import { MailgunConfig } from './mailgun/mailgun.config.js';
 import { isEmpty } from 'lodash-es';
-import { MandrillConfig } from './transports/mandrill/mandrill.config.js';
+import { MandrillConfig } from './mandrill/mandrill.config.js';
 import { EmailBuilderClass } from './models/EmailBuilderClass.js';
-import { SendGridConfig } from './transports/sendgrid/sendgrid.config.js';
+import { SendGridConfig } from './sendgrid/sendgrid.config.js';
 import { EmailProviderClass } from './models/EmailProviderClass.js';
-import { MailgunProvider } from './transports/mailgun/MailgunProvider.js';
-import { MandrillProvider } from './transports/mandrill/MandrilProvider.js';
-import { SendgridProvider } from './transports/sendgrid/SendgridProvider.js';
-import { SmtpProvider } from './transports/smtp/SmtpProvider.js';
+import { MailgunProvider } from './mailgun/MailgunProvider.js';
+import { MandrillProvider } from './mandrill/MandrilProvider.js';
+import { SendgridProvider } from './sendgrid/SendgridProvider.js';
+import { SmtpProvider } from './smtp/SmtpProvider.js';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { MailersendConfig } from './transports/mailersend/mailersend.config.js';
-import { MailersendProvider } from './transports/mailersend/MailersendProvider.js';
-import { AmazonSesProvider } from './transports/amazonSes/AmazonSesProvider.js';
+import { MailersendConfig } from './mailersend/mailersend.config.js';
+import { MailersendProvider } from './mailersend/MailersendProvider.js';
+import { AmazonSesProvider } from './amazonSes/AmazonSesProvider.js';
 
 export class EmailProvider {
   _transport?: EmailProviderClass;

@@ -45,7 +45,7 @@ describe('Communications Module', () => {
       expect(communications.service.functions).toHaveProperty('sendEmail');
       expect(communications.service.functions).toHaveProperty('sendNotification');
       expect(communications.service.functions).toHaveProperty('sendSms');
-      expect(communications.service.functions).toHaveProperty('sendMessage');
+      expect(communications.service.functions).toHaveProperty('sendCommunication');
       expect(communications.service.functions).toHaveProperty('sendToMultipleChannels');
       expect(communications.service.functions).toHaveProperty('sendWithFallback');
     });
@@ -77,7 +77,7 @@ describe('Communications Module', () => {
       const functions = communications.service.functions;
 
       // New unified endpoints
-      expect(functions).toHaveProperty('sendMessage');
+      expect(functions).toHaveProperty('sendCommunication');
       expect(functions).toHaveProperty('sendToMultipleChannels');
       expect(functions).toHaveProperty('sendWithFallback');
       expect(functions).toHaveProperty('registerCommunicationTemplate');
@@ -214,7 +214,7 @@ describe('Communications Module', () => {
   });
 
   describe('New Unified Endpoints', () => {
-    it('should handle sendMessage request', async () => {
+    it('should handle sendCommunication request', async () => {
       const mockCallback = jest.fn();
       const mockCall = {
         request: {
@@ -246,7 +246,7 @@ describe('Communications Module', () => {
         }),
       };
 
-      await communications.sendMessage(mockCall as any, mockCallback);
+      await communications.sendCommunication(mockCall as any, mockCallback);
 
       expect(mockCallback).toHaveBeenCalledWith(null, {
         messageId: 'msg-123',

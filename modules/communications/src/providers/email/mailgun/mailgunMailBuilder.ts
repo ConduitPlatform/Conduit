@@ -1,6 +1,5 @@
-import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
-import { MailgunEmailOptions } from '../../interfaces/mailgun/MailgunEmailOptions.js';
-import { TemplateOptions } from '../../interfaces/TemplateOptions.js';
+import { EmailBuilderClass } from '../models/index.js';
+import { MailgunEmailOptions, TemplateOptions } from '../interfaces/index.js';
 
 export class MailgunMailBuilder extends EmailBuilderClass<MailgunEmailOptions> {
   constructor() {

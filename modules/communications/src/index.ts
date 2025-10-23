@@ -1,1 +1,4 @@
-export { default } from './Communications.js';
+import Communications from './Communications.js';
+
+const communications = new Communications();
+communications.start();

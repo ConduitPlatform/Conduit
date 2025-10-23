@@ -1,6 +1,6 @@
-import { ISmsProvider } from '../interfaces/ISmsProvider.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import messagebird from 'messagebird';
+import { ISmsProvider } from './interfaces/ISmsProvider.js';
 
 export class messageBirdProvider implements ISmsProvider {
   private readonly accessKeyId: string;

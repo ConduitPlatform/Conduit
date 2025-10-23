@@ -1,29 +1,18 @@
 import { isNil } from 'lodash-es';
 import { Notification, NotificationToken } from '../models/index.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import { IChannel, IChannelSendParams, ChannelResult } from '../interfaces/index.js';
+import {
+  ChannelResult,
+  ChannelStatus,
+  IChannel,
+  IChannelSendParams,
+} from '../interfaces/index.js';
 import { BaseNotificationProvider } from '../providers/push/base.provider.js';
 import { validateNotification } from '../providers/push/utils/index.js';
-
-export interface ISendNotification {
-  sendTo: string;
-  title?: string;
-  body?: string;
-  data?: Record<string, any>;
-  platform?: string;
-  doNotStore?: boolean;
-  isSilent?: boolean;
-}
-
-export interface ISendNotificationToManyDevices {
-  sendTo: string[];
-  title?: string;
-  body?: string;
-  data?: Record<string, any>;
-  platform?: string;
-  doNotStore?: boolean;
-  isSilent?: boolean;
-}
+import {
+  ISendNotification,
+  ISendNotificationToManyDevices,
+} from '../providers/push/interfaces/index.js';
 
 export class PushService implements IChannel {
   constructor(
@@ -79,12 +68,10 @@ export class PushService implements IChannel {
     return results;
   }
 
-  async getStatus(
-    messageId: string,
-  ): Promise<{ status: string; messageId: string; timestamp?: Date; error?: string }> {
+  async getStatus(messageId: string): Promise<ChannelStatus> {
     // Push notifications don't typically have status tracking like email
     return {
-      status: 'sent',
+      status: 'sent' as const,
       messageId,
       timestamp: new Date(),
     };

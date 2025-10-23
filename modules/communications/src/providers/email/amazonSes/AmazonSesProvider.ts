@@ -1,17 +1,9 @@
-import { EmailProviderClass } from '../../models/EmailProviderClass.js';
 import { createTransport, SentMessageInfo } from 'nodemailer';
-import { Template } from '../../interfaces/Template.js';
 import { AmazonSesConfig } from './amazonSes.config.js';
-import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
-import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate.js';
-import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
 import { Options } from 'nodemailer/lib/mailer/index.js';
 import { AmazonSesBuilder } from './amazonSesBuilder.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate.js';
 import { to } from 'await-to-js';
-import { getHandleBarsValues } from '../../utils/index.js';
-import { AmazonSesEmailOptions } from '../../interfaces/amazonSes/AmazonSesEmailOptions.js';
 import SESTransport from 'nodemailer/lib/ses-transport/index.js';
 import {
   CreateEmailTemplateCommand,
@@ -22,6 +14,15 @@ import {
   SESv2Client,
   UpdateEmailTemplateCommand,
 } from '@aws-sdk/client-sesv2';
+import { getHandleBarsValues } from '../utils/index.js';
+import {
+  AmazonSesEmailOptions,
+  CreateEmailTemplate,
+  DeleteEmailTemplate,
+  Template,
+  UpdateEmailTemplate,
+} from '../interfaces/index.js';
+import { EmailBuilderClass, EmailProviderClass } from '../models/index.js';
 
 export class AmazonSesProvider extends EmailProviderClass {
   protected _amazonsSesSdk: SESv2Client;

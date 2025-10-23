@@ -1,13 +1,12 @@
 import { createTransport, SentMessageInfo } from 'nodemailer';
-import { EmailProviderClass } from '../../models/EmailProviderClass.js';
+import { EmailProviderClass } from '../models/EmailProviderClass.js';
 import { MandrillConfig } from './mandrill.config.js';
 import { Mandrill } from 'mandrill-api';
-import { Template } from '../../interfaces/Template.js';
-import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate.js';
+import { Template } from '../interfaces/Template.js';
+import { CreateEmailTemplate, UpdateEmailTemplate } from '../interfaces/index.js';
 import { MandrillBuilder } from './mandrillBuilder.js';
-import { getHandleBarsValues } from '../../utils/index.js';
-import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
-import { MandrillTemplate } from '../../interfaces/mandrill/MandrillTemplate.js';
+import { getHandleBarsValues } from '../utils/index.js';
+import { MandrillTemplate } from '../interfaces/mandrill/MandrillTemplate.js';
 
 // @ts-expect-error
 // missing typings for nodemailer-mandrill-transport

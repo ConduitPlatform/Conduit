@@ -1,12 +1,9 @@
 import { BaseNotificationProvider } from './base.provider.js';
-import { IOneSignalSettings } from '../interfaces/IOneSignalSettings.js';
-import {
-  ISendNotification,
-  ISendNotificationToManyDevices,
-} from '../interfaces/ISendNotification.js';
 import { createConfiguration, DefaultApi, Notification } from '@onesignal/node-onesignal';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import { NotificationToken } from '../models/index.js';
+import { IOneSignalSettings } from '../../interfaces/index.js';
+import { ISendNotification, ISendNotificationToManyDevices } from './interfaces/index.js';
+import { NotificationToken } from '../../models/index.js';
 
 export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettings> {
   private client?: DefaultApi;

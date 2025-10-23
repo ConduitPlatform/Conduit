@@ -386,8 +386,15 @@ export class AdminHandlers {
     }
 
     return await this.emailService.sendEmail(
-      emailRecord.templateName,
-      emailRecord.params,
+      typeof emailRecord.template === 'string'
+        ? emailRecord.template
+        : emailRecord.template?.name || '',
+      {
+        email: emailRecord.receiver,
+        subject: emailRecord.subject,
+        body: emailRecord.body,
+        variables: emailRecord.variables || {},
+      },
     );
   }
 
@@ -402,7 +409,7 @@ export class AdminHandlers {
         query = { _id: call.request.params.search };
       } else {
         identifier = escapeStringRegexp(call.request.params.search);
-        query = { email: { $regex: `.*${identifier}.*`, $options: 'i' } };
+        query = { receiver: { $regex: `.*${identifier}.*`, $options: 'i' } };
       }
     }
 
@@ -509,7 +516,7 @@ export class AdminHandlers {
         query = { _id: call.request.params.search };
       } else {
         identifier = escapeStringRegexp(call.request.params.search);
-        query = { to: { $regex: `.*${identifier}.*`, $options: 'i' } };
+        query = { receiver: { $regex: `.*${identifier}.*`, $options: 'i' } };
       }
     }
 

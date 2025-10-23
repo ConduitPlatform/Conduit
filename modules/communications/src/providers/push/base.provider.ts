@@ -1,11 +1,8 @@
-import {
-  ISendNotification,
-  ISendNotificationToManyDevices,
-} from '../interfaces/ISendNotification.js';
-import { Notification, NotificationToken, User } from '../models/index.js';
 import { ConduitGrpcSdk, PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
 import { validateNotification } from './utils/index.js';
 import { isNil, keyBy } from 'lodash-es';
+import { NotificationToken, Notification, User } from '../../models/index.js';
+import { ISendNotification, ISendNotificationToManyDevices } from './interfaces/index.js';
 
 export class BaseNotificationProvider<T> {
   _initialized: boolean = true;

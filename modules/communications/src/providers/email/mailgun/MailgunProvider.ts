@@ -1,19 +1,20 @@
 import { to } from 'await-to-js';
 import { createTransport, SentMessageInfo } from 'nodemailer';
 import { Options } from 'nodemailer/lib/mailer/index.js';
-import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate.js';
-import { Template } from '../../interfaces/Template.js';
-import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
-import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
-import { EmailProviderClass } from '../../models/EmailProviderClass.js';
-import { getHandleBarsValues } from '../../utils/index.js';
 import { initialize as initializeMailgun } from './mailgun.js';
 import { MailgunConfig } from './mailgun.config.js';
 import { MailgunMailBuilder } from './mailgunMailBuilder.js';
 import mailgun, { Mailgun } from 'mailgun-js';
-import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate.js';
-import { MailgunTemplate } from '../../interfaces/mailgun/MailgunTemplate.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
+import {
+  CreateEmailTemplate,
+  DeleteEmailTemplate,
+  MailgunTemplate,
+  Template,
+  UpdateEmailTemplate,
+} from '../interfaces/index.js';
+import { EmailBuilderClass, EmailProviderClass } from '../models/index.js';
+import { getHandleBarsValues } from '../utils/index.js';
 
 export class MailgunProvider extends EmailProviderClass {
   protected _mailgunSdk: Mailgun;

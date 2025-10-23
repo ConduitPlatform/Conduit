@@ -1,7 +1,6 @@
-import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
-import { MandrillEmailOptions } from '../../interfaces/mandrill/MandrillEmailOptions.js';
-import { TemplateOptions } from '../../interfaces/TemplateOptions.js';
-import { Var } from '../../interfaces/Var.js';
+import { MandrillEmailOptions } from '../interfaces/mandrill/MandrillEmailOptions.js';
+import { TemplateOptions, Var } from '../interfaces/index.js';
+import { EmailBuilderClass } from '../models/index.js';
 
 export class MandrillBuilder extends EmailBuilderClass<MandrillEmailOptions> {
   constructor() {

@@ -1,13 +1,13 @@
 import {
   GrpcError,
   ParsedRouterRequest,
+  PlatformTypesEnum,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { Notification, NotificationToken } from '../models/index.js';
 import { isNil } from 'lodash-es';
-import { PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
-import { BaseNotificationProvider } from '../providers/base.provider.js';
+import { Notification, NotificationToken } from '../../models/index.js';
+import { BaseNotificationProvider } from '../../providers/push/base.provider.js';
 
 export class NotificationTokensHandler {
   private provider: BaseNotificationProvider<unknown>;

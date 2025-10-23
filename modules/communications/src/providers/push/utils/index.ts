@@ -1,7 +1,7 @@
 import {
   ISendNotification,
   ISendNotificationToManyDevices,
-} from '../../interfaces/ISendNotification.js';
+} from '../interfaces/index.js';
 
 export function validateNotification(
   notification: ISendNotification | ISendNotificationToManyDevices,
