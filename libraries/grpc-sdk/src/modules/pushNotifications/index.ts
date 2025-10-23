@@ -1,19 +1,20 @@
 import { ConduitModule } from '../../classes/index.js';
 import {
-  PushNotificationsDefinition,
+  CommunicationsDefinition,
   SendNotificationResponse,
 } from '../../protoUtils/index.js';
 import { SendNotificationOptions } from './types';
 import { isNil } from 'lodash-es';
 
-export class PushNotifications extends ConduitModule<typeof PushNotificationsDefinition> {
+export class PushNotifications extends ConduitModule<typeof CommunicationsDefinition> {
   constructor(
     private readonly moduleName: string,
     url: string,
     grpcToken?: string,
   ) {
-    super(moduleName, 'push-notifications', url, grpcToken);
-    this.initializeClient(PushNotificationsDefinition);
+    // Connect to communications module instead of push-notifications
+    super(moduleName, 'communications', url, grpcToken);
+    this.initializeClient(CommunicationsDefinition);
   }
 
   sendNotificationToken(token: string, platform: string, userId: string) {

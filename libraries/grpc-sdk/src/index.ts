@@ -3,6 +3,7 @@ import {
   Authentication,
   Authorization,
   Chat,
+  Communications,
   Config,
   Core,
   DatabaseProvider,
@@ -64,6 +65,7 @@ class ConduitGrpcSdk {
     authorization: Authorization,
     sms: SMS,
     chat: Chat,
+    communications: Communications,
   };
   private _dynamicModules: { [key: string]: CompatServiceDefinition } = {};
   private _eventBus?: EventBus;

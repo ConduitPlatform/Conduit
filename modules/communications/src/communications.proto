@@ -1,0 +1,294 @@
+syntax = 'proto3';
+package communications;
+
+// Legacy Email Service Messages
+message RegisterTemplateRequest {
+  string name = 1;
+  string subject = 2;
+  string body = 3;
+  repeated string variables = 4;
+  optional string sender = 5;
+  optional string jsonTemplate = 6;
+}
+
+message UpdateTemplateRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string subject = 3;
+  optional string body = 4;
+  repeated string variables = 5;
+  optional string sender = 6;
+}
+
+message RegisterTemplateResponse {
+  string template = 1;
+}
+
+message SendEmailRequest {
+  string templateName = 1;
+  SendEmailParams params = 2;
+  message SendEmailParams {
+    string email = 1;
+    string subject = 8;
+    string variables = 2;
+    string body = 7;
+    optional string sender = 3;
+    repeated string cc = 4;
+    optional string replyTo = 5;
+    repeated string attachments = 6;
+  }
+}
+
+message SendEmailResponse {
+  string sentMessageInfo = 1;
+}
+
+message ResendEmailRequest {
+  string emailRecordId = 1;
+}
+
+message ResendEmailResponse {
+  string sentMessageInfo = 1;
+}
+
+message GetEmailStatusRequest {
+  string messageId = 1;
+}
+
+message GetEmailStatusResponse {
+  string statusInfo = 1;
+}
+
+// Legacy Push Notifications Service Messages
+message SetNotificationTokenRequest {
+  string token = 1;
+  string platform = 2;
+  string userId = 3;
+}
+
+message SetNotificationTokenResponse {
+  string newTokenDocument = 1;
+}
+
+message GetNotificationTokensRequest {
+  string userId = 1;
+}
+
+message GetNotificationTokensResponse {
+  repeated string tokenDocuments = 1;
+}
+
+message SendNotificationRequest {
+  string sendTo = 1;
+  optional string title = 2;
+  optional string platform = 3;
+  optional string body = 4;
+  optional string data = 5;
+  optional bool doNotStore = 6;
+  optional bool isSilent = 7;
+}
+
+message SendNotificationToManyDevicesRequest {
+  repeated string sendTo = 1;
+  optional string title = 2;
+  optional string body = 3;
+  optional string data = 4;
+  optional string platform = 5;
+  optional bool doNotStore = 6;
+  optional bool isSilent = 7;
+}
+
+message SendManyNotificationsRequest {
+  repeated SendNotificationRequest notifications = 1;
+}
+
+message SendNotificationResponse {
+  string message = 1;
+}
+
+// Legacy SMS Service Messages
+message SendSmsRequest {
+  string to = 1;
+  string message = 2;
+}
+
+message SendSmsResponse {
+  string message = 1;
+}
+
+message SendVerificationCodeRequest {
+  string to = 1;
+}
+
+message SendVerificationCodeResponse {
+  string verificationSid = 1;
+}
+
+message VerifyRequest {
+  string verificationSid = 1;
+  string code = 2;
+}
+
+message VerifyResponse {
+  bool verified = 1;
+}
+
+// New Unified Communications Messages
+message SendCommunicationRequest {
+  string channel = 1; // 'email', 'push', 'sms'
+  string templateName = 2;
+  SendCommunicationParams params = 3;
+  message SendCommunicationParams {
+    string recipient = 1; // email address, user ID, or phone number
+    string subject = 2;
+    string body = 3;
+    string variables = 4; // JSON string
+    optional string sender = 5;
+    repeated string cc = 6;
+    optional string replyTo = 7;
+    repeated string attachments = 8;
+    optional string data = 9; // JSON string for push notifications
+    optional string platform = 10; // for push notifications
+    optional bool doNotStore = 11;
+    optional bool isSilent = 12;
+  }
+}
+
+message SendCommunicationResponse {
+  string messageId = 1;
+  string sentMessageInfo = 2;
+}
+
+message SendToMultipleChannelsRequest {
+  repeated string channels = 1;
+  string strategy = 2; // 'BEST_EFFORT', 'ALL_OR_NOTHING'
+  string templateName = 3;
+  SendCommunicationParams params = 4;
+  message SendCommunicationParams {
+    string recipient = 1;
+    string subject = 2;
+    string body = 3;
+    string variables = 4;
+    optional string sender = 5;
+    repeated string cc = 6;
+    optional string replyTo = 7;
+    repeated string attachments = 8;
+    optional string data = 9;
+    optional string platform = 10;
+    optional bool doNotStore = 11;
+    optional bool isSilent = 12;
+  }
+}
+
+message SendToMultipleChannelsResponse {
+  repeated ChannelResult results = 1;
+  message ChannelResult {
+    string channel = 1;
+    bool success = 2;
+    string messageId = 3;
+    optional string error = 4;
+  }
+}
+
+message SendWithFallbackRequest {
+  repeated FallbackStep fallbackChain = 1;
+  string templateName = 2;
+  SendCommunicationParams params = 3;
+  message FallbackStep {
+    string channel = 1;
+    int32 timeout = 2; // milliseconds
+  }
+  message SendCommunicationParams {
+    string recipient = 1;
+    string subject = 2;
+    string body = 3;
+    string variables = 4;
+    optional string sender = 5;
+    repeated string cc = 6;
+    optional string replyTo = 7;
+    repeated string attachments = 8;
+    optional string data = 9;
+    optional string platform = 10;
+    optional bool doNotStore = 11;
+    optional bool isSilent = 12;
+  }
+}
+
+message SendWithFallbackResponse {
+  string successfulChannel = 1;
+  string messageId = 2;
+  repeated ChannelResult attempts = 3;
+  message ChannelResult {
+    string channel = 1;
+    bool success = 2;
+    string messageId = 3;
+    optional string error = 4;
+  }
+}
+
+message RegisterCommunicationTemplateRequest {
+  string name = 1;
+  CommunicationTemplate template = 2;
+  message CommunicationTemplate {
+    optional EmailTemplate email = 1;
+    optional PushTemplate push = 2;
+    optional SmsTemplate sms = 3;
+    message EmailTemplate {
+      string subject = 1;
+      string body = 2;
+      repeated string variables = 3;
+      optional string sender = 4;
+    }
+    message PushTemplate {
+      string title = 1;
+      string body = 2;
+      repeated string variables = 3;
+    }
+    message SmsTemplate {
+      string message = 1;
+      repeated string variables = 2;
+    }
+  }
+}
+
+message RegisterCommunicationTemplateResponse {
+  string template = 1;
+}
+
+message GetMessageStatusRequest {
+  string messageId = 1;
+  string channel = 2;
+}
+
+message GetMessageStatusResponse {
+  string statusInfo = 1;
+}
+
+// Unified Communications Service
+service Communications {
+  // Legacy Email endpoints
+  rpc RegisterTemplate(RegisterTemplateRequest) returns (RegisterTemplateResponse);
+  rpc UpdateTemplate(UpdateTemplateRequest) returns (RegisterTemplateResponse);
+  rpc SendEmail(SendEmailRequest) returns (SendEmailResponse);
+  rpc ResendEmail(ResendEmailRequest) returns (ResendEmailResponse);
+  rpc GetEmailStatus(GetEmailStatusRequest) returns (GetEmailStatusResponse);
+
+  // Legacy Push Notifications endpoints
+  rpc SetNotificationToken(SetNotificationTokenRequest) returns (SetNotificationTokenResponse);
+  rpc GetNotificationTokens(GetNotificationTokensRequest) returns (GetNotificationTokensResponse);
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+  rpc SendNotificationToManyDevices(SendNotificationToManyDevicesRequest) returns (SendNotificationResponse);
+  rpc SendManyNotifications(SendManyNotificationsRequest) returns (SendNotificationResponse);
+
+  // Legacy SMS endpoints
+  rpc SendSms(SendSmsRequest) returns (SendSmsResponse);
+  rpc SendVerificationCode(SendVerificationCodeRequest) returns (SendVerificationCodeResponse);
+  rpc Verify(VerifyRequest) returns (VerifyResponse);
+
+  // New unified endpoints
+  rpc SendCommunication(SendCommunicationRequest) returns (SendCommunicationResponse);
+  rpc SendToMultipleChannels(SendToMultipleChannelsRequest) returns (SendToMultipleChannelsResponse);
+  rpc SendWithFallback(SendWithFallbackRequest) returns (SendWithFallbackResponse);
+  rpc RegisterCommunicationTemplate(RegisterCommunicationTemplateRequest) returns (RegisterCommunicationTemplateResponse);
+  rpc GetMessageStatus(GetMessageStatusRequest) returns (GetMessageStatusResponse);
+}
