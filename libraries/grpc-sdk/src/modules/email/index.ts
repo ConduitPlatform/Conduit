@@ -1,14 +1,15 @@
 import { ConduitModule } from '../../classes/index.js';
-import { EmailDefinition } from '../../protoUtils/email.js';
+import { CommunicationsDefinition } from '../../protoUtils/index.js';
 
-export class Email extends ConduitModule<typeof EmailDefinition> {
+export class Email extends ConduitModule<typeof CommunicationsDefinition> {
   constructor(
     private readonly moduleName: string,
     url: string,
     grpcToken?: string,
   ) {
-    super(moduleName, 'email', url, grpcToken);
-    this.initializeClient(EmailDefinition);
+    // Connect to communications module instead of email
+    super(moduleName, 'communications', url, grpcToken);
+    this.initializeClient(CommunicationsDefinition);
   }
 
   registerTemplate(template: {
