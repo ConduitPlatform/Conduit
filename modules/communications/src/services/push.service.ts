@@ -13,15 +13,42 @@ import {
   ISendNotification,
   ISendNotificationToManyDevices,
 } from '../providers/push/interfaces/index.js';
+import { Config } from '../config/index.js';
+import { FirebaseProvider } from '../providers/push/Firebase.provider.js';
+import { OneSignalProvider } from '../providers/push/OneSignal.provider.js';
+import { AmazonSNSProvider } from '../providers/push/AmazonSNS.provider.js';
 
 export class PushService implements IChannel {
-  constructor(
-    private readonly grpcSdk: ConduitGrpcSdk,
-    private provider: BaseNotificationProvider<unknown>,
-  ) {}
+  private provider?: BaseNotificationProvider<unknown>;
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  updateProvider(provider: BaseNotificationProvider<unknown>) {
-    this.provider = provider;
+  public async initPushProvider(config: Config) {
+    const pushConfig = config.pushNotifications;
+
+    if (!pushConfig || !pushConfig.providerName) {
+      ConduitGrpcSdk.Logger.warn('Push notifications not configured');
+      return;
+    }
+
+    const name = pushConfig.providerName;
+    const settings = (pushConfig as any)[name];
+
+    try {
+      if (name === 'firebase') {
+        this.provider = new FirebaseProvider(settings);
+      } else if (name === 'onesignal') {
+        this.provider = new OneSignalProvider(settings);
+      } else if (name === 'basic') {
+        this.provider = new BaseNotificationProvider();
+      } else if (name === 'sns') {
+        this.provider = new AmazonSNSProvider(settings);
+      } else {
+        ConduitGrpcSdk.Logger.error(`Unknown push provider: ${name}`);
+      }
+    } catch (e) {
+      this.provider = undefined;
+      ConduitGrpcSdk.Logger.error('Failed to initialize push provider:', e);
+    }
   }
 
   isAvailable(): boolean {
@@ -30,6 +57,7 @@ export class PushService implements IChannel {
 
   async send(params: IChannelSendParams): Promise<ChannelResult> {
     try {
+      if (!this.isAvailable()) throw Error('Push not initialized');
       const { recipient, subject, body, data, platform, doNotStore, isSilent } = params;
 
       const notificationParams: ISendNotification = {
@@ -42,7 +70,7 @@ export class PushService implements IChannel {
         isSilent,
       };
 
-      await this.provider.sendToDevice(notificationParams);
+      await this.provider!.sendToDevice(notificationParams);
 
       return {
         success: true,
@@ -99,7 +127,7 @@ export class PushService implements IChannel {
   }
 
   async sendNotification(params: ISendNotification) {
-    if (!this.provider || !this.provider.isInitialized) {
+    if (!this.isAvailable()) {
       throw new Error('Provider not initialized');
     }
 
@@ -114,9 +142,9 @@ export class PushService implements IChannel {
       });
     }
 
-    if (this.provider.isBaseProvider) return;
+    if (this.provider!.isBaseProvider) return;
 
-    const notificationTokens = await this.provider.fetchTokens(
+    const notificationTokens = await this.provider!.fetchTokens(
       params.sendTo,
       params.platform,
     );
@@ -125,7 +153,7 @@ export class PushService implements IChannel {
     }
 
     const promises = notificationTokens.map(async notToken => {
-      await this.provider.sendMessage(notToken.token, {
+      await this.provider!.sendMessage(notToken.token, {
         ...params,
         platform: params.platform ?? notToken.platform,
       });
@@ -135,7 +163,7 @@ export class PushService implements IChannel {
   }
 
   async sendToManyDevices(params: ISendNotificationToManyDevices) {
-    if (!this.provider || !this.provider.isInitialized) {
+    if (!this.isAvailable()) {
       throw new Error('Provider not initialized');
     }
 
@@ -152,9 +180,9 @@ export class PushService implements IChannel {
       );
     }
 
-    if (this.provider.isBaseProvider) return;
+    if (this.provider!.isBaseProvider) return;
 
-    const notificationTokens = await this.provider.fetchTokens(
+    const notificationTokens = await this.provider!.fetchTokens(
       params.sendTo,
       params.platform,
     );
@@ -163,7 +191,7 @@ export class PushService implements IChannel {
     }
 
     const promises = notificationTokens.map(async notToken => {
-      await this.provider.sendMessage(notToken.token, {
+      await this.provider!.sendMessage(notToken.token, {
         ...params,
         platform: params.platform ?? notToken.platform,
       });
@@ -173,7 +201,7 @@ export class PushService implements IChannel {
   }
 
   async sendManyNotifications(notifications: ISendNotification[]) {
-    if (!this.provider || !this.provider.isInitialized) {
+    if (!this.isAvailable()) {
       throw new Error('Provider not initialized');
     }
 
@@ -201,7 +229,7 @@ export class PushService implements IChannel {
       await Notification.getInstance().createMany(notificationsToStore);
     }
 
-    if (this.provider.isBaseProvider) return;
+    if (this.provider!.isBaseProvider) return;
 
     const userIds = notifications.map(param => param.sendTo);
     const notificationsObj = notifications.reduce(
@@ -212,7 +240,7 @@ export class PushService implements IChannel {
       {} as Record<string, ISendNotification>,
     );
 
-    const notificationTokens = await this.provider.fetchTokens(userIds);
+    const notificationTokens = await this.provider!.fetchTokens(userIds);
     if (!notificationTokens || notificationTokens.length === 0) {
       throw new Error('Could not find tokens');
     }
@@ -221,14 +249,12 @@ export class PushService implements IChannel {
       const id = token.userId.toString();
       const data = notificationsObj[id];
       if (data.platform && data.platform !== token.platform) return;
-      await this.provider
-        .sendMessage(token.token, {
-          ...data,
-          platform: data.platform ?? token.platform,
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
+      await this.provider!.sendMessage(token.token, {
+        ...data,
+        platform: data.platform ?? token.platform,
+      }).catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
     });
 
     return Promise.all(promises);
