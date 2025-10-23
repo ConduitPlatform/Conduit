@@ -89,7 +89,7 @@ export default class Communications extends ManagedModule<Config> {
       sendVerificationCode: this.sendVerificationCode.bind(this),
       verify: this.verify.bind(this),
       // New unified endpoints
-      sendMessage: this.sendMessage.bind(this),
+      sendCommunication: this.sendCommunication.bind(this),
       sendToMultipleChannels: this.sendToMultipleChannels.bind(this),
       sendWithFallback: this.sendWithFallback.bind(this),
       registerCommunicationTemplate: this.registerCommunicationTemplate.bind(this),
@@ -437,7 +437,7 @@ export default class Communications extends ManagedModule<Config> {
   }
 
   // New Unified Service Methods
-  async sendMessage(
+  async sendCommunication(
     call: GrpcRequest<SendCommunicationRequest>,
     callback: GrpcCallback<SendCommunicationResponse>,
   ) {
@@ -470,6 +470,11 @@ export default class Communications extends ManagedModule<Config> {
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
+
+    if (typeof result === 'string') {
+      return callback({ code: status.INTERNAL, message: result });
+    }
+
     return callback(null, {
       messageId: result.messageId || '',
       sentMessageInfo: JSON.stringify(result),
@@ -511,6 +516,11 @@ export default class Communications extends ManagedModule<Config> {
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
+
+    if (typeof result === 'string') {
+      return callback({ code: status.INTERNAL, message: result });
+    }
+
     return callback(null, { results: result.results });
   }
 
@@ -551,6 +561,11 @@ export default class Communications extends ManagedModule<Config> {
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
+
+    if (typeof result === 'string') {
+      return callback({ code: status.INTERNAL, message: result });
+    }
+
     return callback(null, {
       successfulChannel: result.successfulChannel,
       messageId: result.messageId || '',

@@ -1,7 +1,12 @@
 import { isNil } from 'lodash-es';
 import { SmsRecord } from '../models/index.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import { IChannel, IChannelSendParams, ChannelResult } from '../interfaces/index.js';
+import {
+  IChannel,
+  IChannelSendParams,
+  ChannelResult,
+  ChannelStatus,
+} from '../interfaces/index.js';
 import { ISmsProvider } from '../providers/sms/interfaces/ISmsProvider.js';
 
 export class SmsService implements IChannel {
@@ -62,14 +67,12 @@ export class SmsService implements IChannel {
     return results;
   }
 
-  async getStatus(
-    messageId: string,
-  ): Promise<{ status: string; messageId: string; timestamp?: Date; error?: string }> {
+  async getStatus(messageId: string): Promise<ChannelStatus> {
     try {
       const smsRecord = await SmsRecord.getInstance().findOne({ _id: messageId });
       if (!smsRecord) {
         return {
-          status: 'not_found',
+          status: 'failed' as const,
           messageId,
           error: 'SMS record not found',
           timestamp: new Date(),
@@ -77,13 +80,15 @@ export class SmsService implements IChannel {
       }
 
       return {
-        status: smsRecord.status,
+        status:
+          (smsRecord.status as 'pending' | 'sent' | 'delivered' | 'failed' | 'bounced') ||
+          ('sent' as const),
         messageId,
         timestamp: smsRecord.updatedAt,
       };
     } catch (error) {
       return {
-        status: 'failed',
+        status: 'failed' as const,
         messageId,
         error: (error as Error).message,
         timestamp: new Date(),

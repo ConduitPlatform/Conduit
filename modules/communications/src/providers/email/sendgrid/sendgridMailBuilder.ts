@@ -1,7 +1,6 @@
-import { SendgridMailOptions } from '../../interfaces/sendgrid/SendgridEmailOptions.js';
-import { TemplateOptions } from '../../interfaces/TemplateOptions.js';
-import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
-import { Var } from '../../interfaces/Var.js';
+import { SendgridMailOptions } from '../interfaces/sendgrid/SendgridEmailOptions.js';
+import { EmailBuilderClass } from '../models/EmailBuilderClass.js';
+import { TemplateOptions, Var } from '../interfaces/index.js';
 
 export class SendgridMailBuilder extends EmailBuilderClass<SendgridMailOptions> {
   constructor() {

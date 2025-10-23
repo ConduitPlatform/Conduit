@@ -1,10 +1,11 @@
 import { createTransport, SentMessageInfo } from 'nodemailer';
 import { Options } from 'nodemailer/lib/mailer/index.js';
-import { Template } from '../../interfaces/Template.js';
-import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate.js';
-import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
-import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
-import { EmailProviderClass } from '../../models/EmailProviderClass.js';
+import {
+  DeleteEmailTemplate,
+  Template,
+  UpdateEmailTemplate,
+} from '../interfaces/index.js';
+import { EmailBuilderClass, EmailProviderClass } from '../models/index.js';
 import { NodemailerBuilder } from '../nodemailer/nodemailerBuilder.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 

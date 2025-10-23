@@ -1,10 +1,15 @@
 import { isEmpty, isNil } from 'lodash-es';
 import { EmailRecord, EmailTemplate } from '../models/index.js';
 import handlebars from 'handlebars';
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { IChannel, IChannelSendParams, ChannelResult } from '../interfaces/index.js';
+import {
+  ChannelResult,
+  ChannelStatus,
+  IChannel,
+  IChannelSendParams,
+} from '../interfaces/index.js';
 import { EmailProvider } from '../providers/email/index.js';
 import { CreateEmailTemplate } from '../providers/email/interfaces/CreateEmailTemplate.js';
 import { Attachment } from 'nodemailer/lib/mailer/index.js';
@@ -98,19 +103,22 @@ export class EmailService implements IChannel {
     return results;
   }
 
-  async getStatus(
-    messageId: string,
-  ): Promise<{ status: string; messageId: string; timestamp?: Date; error?: string }> {
+  async getStatus(messageId: string): Promise<ChannelStatus> {
     try {
       const statusInfo = await this.getEmailStatus(messageId);
       return {
-        status: statusInfo.status || 'unknown',
+        status: (statusInfo.status || 'unknown') as
+          | 'pending'
+          | 'sent'
+          | 'delivered'
+          | 'failed'
+          | 'bounced',
         messageId,
         timestamp: new Date(),
       };
     } catch (error) {
       return {
-        status: 'failed',
+        status: 'failed' as const,
         messageId,
         error: (error as Error).message,
         timestamp: new Date(),
@@ -228,7 +236,7 @@ export class EmailService implements IChannel {
       if (templateFound.externalManaged) {
         builder.setTemplate({
           id: templateFound.externalId!,
-          variables,
+          variables: variables as Indexable,
         });
       } else {
         bodyString = handlebars.compile(templateFound.body)(variables);
@@ -250,7 +258,7 @@ export class EmailService implements IChannel {
     }
     const config = ConfigController.getInstance().config;
     if (isNil(config.email?.sendingDomain) || isEmpty(config.email.sendingDomain)) {
-      if (senderAddress.includes('@')) {
+      if (senderAddress!.includes('@')) {
         ConduitGrpcSdk.Logger.warn(
           `Sending domain is not set, attempting to send email with provided address: ${senderAddress}`,
         );
@@ -259,7 +267,7 @@ export class EmailService implements IChannel {
           `Sending domain is not set, and sender address is not valid: ${senderAddress}`,
         );
       }
-    } else if (!senderAddress.includes(config.email.sendingDomain)) {
+    } else if (senderAddress && !senderAddress.includes(config.email.sendingDomain)) {
       if (senderAddress.includes('@')) {
         ConduitGrpcSdk.Logger.warn(
           `You are trying to send email from ${senderAddress} but it does not match sending domain ${config.email.sendingDomain}`,
@@ -268,7 +276,9 @@ export class EmailService implements IChannel {
         senderAddress = `${senderAddress}@${config.email.sendingDomain}`;
       }
     }
-    builder.setSender(senderAddress);
+    if (senderAddress) {
+      builder.setSender(senderAddress);
+    }
     builder.setContent(bodyString);
     builder.setReceiver(email);
     builder.setSubject(subjectString);

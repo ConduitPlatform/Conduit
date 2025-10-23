@@ -1,13 +1,10 @@
 import { BaseNotificationProvider } from './base.provider.js';
-import { IFirebaseSettings } from '../interfaces/IFirebaseSettings.js';
-import {
-  ISendNotification,
-  ISendNotificationToManyDevices,
-} from '../interfaces/ISendNotification.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { getMessaging, Message, Messaging } from 'firebase-admin/messaging';
 import { cert, initializeApp, ServiceAccount } from 'firebase-admin/app';
-import { NotificationToken } from '../models/index.js';
+import { NotificationToken } from '../../models/index.js';
+import { IFirebaseSettings } from '../../interfaces/index.js';
+import { ISendNotification, ISendNotificationToManyDevices } from './interfaces/index.js';
 
 export class FirebaseProvider extends BaseNotificationProvider<IFirebaseSettings> {
   private fcm?: Messaging;

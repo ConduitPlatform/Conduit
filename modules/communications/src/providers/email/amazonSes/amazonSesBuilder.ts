@@ -1,6 +1,5 @@
-import { EmailBuilderClass } from '../../models/EmailBuilderClass.js';
-import { TemplateOptions } from '../../interfaces/TemplateOptions.js';
-import { AmazonSesEmailOptions } from '../../interfaces/amazonSes/AmazonSesEmailOptions.js';
+import { EmailBuilderClass } from '../models/index.js';
+import { AmazonSesEmailOptions, TemplateOptions } from '../interfaces/index.js';
 
 export class AmazonSesBuilder extends EmailBuilderClass<AmazonSesEmailOptions> {
   constructor() {

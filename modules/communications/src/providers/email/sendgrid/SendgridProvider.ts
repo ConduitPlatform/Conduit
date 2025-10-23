@@ -1,16 +1,18 @@
-import { EmailProviderClass } from '../../models/EmailProviderClass.js';
+import { EmailProviderClass } from '../models/EmailProviderClass.js';
 import { SendGridConfig } from './sendgrid.config.js';
 import { createTransport, SentMessageInfo } from 'nodemailer';
 import { Client } from '@sendgrid/client';
-import { Template } from '../../interfaces/Template.js';
-import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate.js';
 import { SendgridMailBuilder } from './sendgridMailBuilder.js';
-import { getHandleBarsValues } from '../../utils/index.js';
-import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
+import { getHandleBarsValues } from '../utils/index.js';
+import {
+  CreateEmailTemplate,
+  Template,
+  UpdateEmailTemplate,
+} from '../interfaces/index.js';
 import {
   SendgridTemplate,
   TemplateVersion,
-} from '../../interfaces/sendgrid/SendgridTemplate.js';
+} from '../interfaces/sendgrid/SendgridTemplate.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 
 import sgTransport from 'nodemailer-sendgrid';

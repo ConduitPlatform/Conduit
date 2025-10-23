@@ -1,6 +1,6 @@
-import { ISmsProvider } from '../interfaces/ISmsProvider.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import twilio from 'twilio';
+import { ISmsProvider } from './interfaces/ISmsProvider.js';
 
 export class TwilioProvider implements ISmsProvider {
   private readonly phoneNumber: string;
