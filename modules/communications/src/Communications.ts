@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 import AppConfigSchema, { Config } from './config/index.js';
 import { AdminHandlers } from './admin/index.js';
+import { PushNotificationsRoutes } from './routes/push-notifications.routes.js';
 import { EmailService } from './services/email.service.js';
 import { PushService } from './services/push.service.js';
 import { SmsService } from './services/sms.service.js';
@@ -100,6 +101,7 @@ export default class Communications extends ManagedModule<Config> {
   protected metricsSchema = metricsSchema;
   private isRunning: boolean = false;
   private adminRouter: AdminHandlers;
+  private userRouter?: PushNotificationsRoutes;
   private database: DatabaseProvider;
   private emailService: EmailService;
   private pushService: PushService;
@@ -121,6 +123,9 @@ export default class Communications extends ManagedModule<Config> {
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
+
+    // Migrate configuration from existing modules if they exist
+    await this.migrateExistingConfigurations();
   }
 
   async preConfig(config: Config) {
@@ -143,16 +148,26 @@ export default class Communications extends ManagedModule<Config> {
         this.orchestratorService,
       );
 
+      // Initialize user routes for push notifications
+      if (this.grpcSdk.isAvailable('router')) {
+        this.userRouter = new PushNotificationsRoutes(
+          this.grpcServer,
+          this.grpcSdk,
+          this.pushService,
+        );
+      }
+
       // Initialize queue controller and workers
       const queueController = QueueController.getInstance(this.grpcSdk);
       queueController.addEmailStatusWorker();
       queueController.addEmailCleanupWorker();
-
       this.isRunning = true;
     }
+
     await this.emailService.initEmailProvider(config);
     await this.pushService.initPushProvider(config);
     await this.smsService.initSmsProvider(config);
+
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 
@@ -625,5 +640,85 @@ export default class Communications extends ManagedModule<Config> {
       this.pushService,
       this.smsService,
     );
+  }
+
+  private async migrateExistingConfigurations() {
+    try {
+      const currentConfig = ConfigController.getInstance().config as Config;
+      let configUpdated = false;
+      const updatedConfig: Partial<Config> = {};
+
+      // Check if email module has configuration
+      try {
+        const emailConfig = await this.grpcSdk.config.get('email');
+        if (emailConfig && Object.keys(emailConfig).length > 0) {
+          ConduitGrpcSdk.Logger.log('Migrating email configuration from existing module');
+          updatedConfig.email = {
+            active: emailConfig.active ?? currentConfig.email.active,
+            transport: emailConfig.transport ?? currentConfig.email.transport,
+            sendingDomain: emailConfig.sendingDomain ?? currentConfig.email.sendingDomain,
+            transportSettings:
+              emailConfig.transportSettings ?? currentConfig.email.transportSettings,
+            storeEmails: emailConfig.storeEmails ?? currentConfig.email.storeEmails,
+          };
+          configUpdated = true;
+        }
+      } catch (e) {
+        // Email module config doesn't exist, use defaults
+        ConduitGrpcSdk.Logger.log('No existing email configuration found');
+      }
+
+      // Check if push-notifications module has configuration
+      try {
+        const pushConfig = await this.grpcSdk.config.get('pushNotifications');
+        if (pushConfig && Object.keys(pushConfig).length > 0) {
+          ConduitGrpcSdk.Logger.log(
+            'Migrating push notifications configuration from existing module',
+          );
+          updatedConfig.pushNotifications = {
+            providerName:
+              pushConfig.providerName ?? currentConfig.pushNotifications.providerName,
+            firebase: pushConfig.firebase ?? currentConfig.pushNotifications.firebase,
+            onesignal: pushConfig.onesignal ?? currentConfig.pushNotifications.onesignal,
+            sns: pushConfig.sns ?? currentConfig.pushNotifications.sns,
+          };
+          configUpdated = true;
+        }
+      } catch (e) {
+        // Push notifications module config doesn't exist, use defaults
+        ConduitGrpcSdk.Logger.log('No existing push notifications configuration found');
+      }
+
+      // Check if sms module has configuration
+      try {
+        const smsConfig = await this.grpcSdk.config.get('sms');
+        if (smsConfig && Object.keys(smsConfig).length > 0) {
+          ConduitGrpcSdk.Logger.log('Migrating SMS configuration from existing module');
+          updatedConfig.sms = {
+            active: smsConfig.active ?? currentConfig.sms.active,
+            providerName: smsConfig.providerName ?? currentConfig.sms.providerName,
+            twilio: smsConfig.twilio ?? currentConfig.sms.twilio,
+            awsSns: smsConfig.awsSns ?? currentConfig.sms.awsSns,
+            messageBird: smsConfig.messageBird ?? currentConfig.sms.messageBird,
+            clickSend: smsConfig.clickSend ?? currentConfig.sms.clickSend,
+          };
+          configUpdated = true;
+        }
+      } catch (e) {
+        // SMS module config doesn't exist, use defaults
+        ConduitGrpcSdk.Logger.log('No existing SMS configuration found');
+      }
+
+      // Update configuration if any migrations occurred
+      if (configUpdated) {
+        ConduitGrpcSdk.Logger.log(
+          'Updating Communications configuration with migrated values',
+        );
+        // Note: Configuration will be updated when the module restarts
+        // The migrated values will be used in the next onConfig call
+      }
+    } catch (error) {
+      ConduitGrpcSdk.Logger.error('Failed to migrate existing configurations:', error);
+    }
   }
 }

@@ -55,6 +55,10 @@ export class PushService implements IChannel {
     return !!this.provider && this.provider.isInitialized;
   }
 
+  public getProvider(): BaseNotificationProvider<unknown> | undefined {
+    return this.provider;
+  }
+
   async send(params: IChannelSendParams): Promise<ChannelResult> {
     try {
       if (!this.isAvailable()) throw Error('Push not initialized');

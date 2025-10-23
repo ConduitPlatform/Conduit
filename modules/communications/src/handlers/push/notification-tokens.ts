@@ -7,17 +7,10 @@ import {
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash-es';
 import { Notification, NotificationToken } from '../../models/index.js';
-import { BaseNotificationProvider } from '../../providers/push/base.provider.js';
+import { PushService } from '../../services/push.service.js';
 
 export class NotificationTokensHandler {
-  private provider: BaseNotificationProvider<unknown>;
-
-  constructor(provider: BaseNotificationProvider<unknown>) {
-    this.provider = provider;
-  }
-  updateProvider(provider: BaseNotificationProvider<unknown>) {
-    this.provider = provider;
-  }
+  constructor(private readonly pushService: PushService) {}
 
   async setNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
@@ -28,10 +21,9 @@ export class NotificationTokensHandler {
       platform,
     });
 
-    const registeredToken = await this.provider.registerDeviceToken(
-      token,
-      platform as PlatformTypesEnum,
-    );
+    const registeredToken = await this.pushService
+      .getProvider()!
+      .registerDeviceToken(token, platform as PlatformTypesEnum);
 
     const newTokenDocument = await NotificationToken.getInstance().create({
       userId: context.user._id,

@@ -13,6 +13,7 @@ import AppConfigSchema, { Config } from './config/index.js';
 import { AdminHandlers } from './admin/index.js';
 import { AuthenticationRoutes } from './routes/index.js';
 import * as models from './models/index.js';
+import { Token, User } from './models/index.js';
 import { AuthUtils } from './utils/index.js';
 import { TokenType } from './constants/index.js';
 import { v4 as uuid } from 'uuid';
@@ -22,10 +23,13 @@ import {
   GetTeamRequest,
   InvitationDeleteRequest,
   InvitationDeleteResponse,
+  InviteUserToTeamRequest,
+  InviteUserToTeamResponse,
   ModifyTeamMembersRequest,
   Team as GrpcTeam,
   TeamDeleteRequest,
   TeamDeleteResponse,
+  UpdateTeamRequest,
   UserChangePass,
   UserCreateByUsernameRequest,
   UserCreateRequest,
@@ -39,15 +43,11 @@ import {
   ValidateAccessTokenRequest,
   ValidateAccessTokenResponse,
   ValidateAccessTokenResponse_Status,
-  InviteUserToTeamRequest,
-  InviteUserToTeamResponse,
-  UpdateTeamRequest,
 } from './protoTypes/authentication.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { runMigrations } from './migrations/index.js';
 import metricsSchema from './metrics/index.js';
 import { TokenProvider } from './handlers/tokenProvider.js';
-import { configMigration } from './migrations/configMigration.js';
 import {
   ConduitActiveSchema,
   ConfigController,
@@ -59,7 +59,6 @@ import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
-import { Token, User } from './models/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -182,16 +181,6 @@ export default class Authentication extends ManagedModule<Config> {
         }
       }
     }
-  }
-
-  async preRegister(): Promise<void> {
-    const config = await configMigration(this.grpcSdk);
-    if (config) {
-      this.config!.load(config);
-      this.configOverride = true;
-    }
-
-    return super.preRegister();
   }
 
   initMonitors() {
