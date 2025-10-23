@@ -25,6 +25,10 @@ export class SmsService implements IChannel {
       ConduitGrpcSdk.Logger.warn('SMS not configured');
       return;
     }
+    if (!smsConfig.active) {
+      this.provider = undefined;
+      return;
+    }
 
     const name = smsConfig.providerName;
     const settings = (smsConfig as any)[name];

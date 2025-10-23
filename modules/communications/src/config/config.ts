@@ -1,11 +1,11 @@
 export default {
   doc: 'The options for the conduit communications provider',
-  active: {
-    format: 'Boolean',
-    default: false,
-  },
   // Email configuration
   email: {
+    active: {
+      format: 'Boolean',
+      default: false,
+    },
     transport: {
       format: 'String',
       default: 'smtp',
@@ -217,6 +217,10 @@ export default {
   },
   // SMS configuration
   sms: {
+    active: {
+      format: 'Boolean',
+      default: false,
+    },
     providerName: {
       format: 'String',
       default: 'twilio',
