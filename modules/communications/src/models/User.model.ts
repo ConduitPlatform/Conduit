@@ -1,42 +1,35 @@
-import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import { DatabaseProvider, Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
-const schema: ConduitModel = {
-  _id: TYPE.ObjectId,
-  email: {
-    type: TYPE.String,
-    required: true,
-  },
-  phoneNumber: {
-    type: TYPE.String,
-    required: false,
-  },
-  createdAt: TYPE.Date,
-  updatedAt: TYPE.Date,
-};
-const modelOptions = {
-  timestamps: true,
-  conduit: {
-    permissions: {
-      extendable: true,
-      canCreate: false,
-      canModify: 'ExtensionOnly',
-      canDelete: false,
-    },
-  },
-} as const;
-const collectionName = undefined;
+interface AuthProvider {
+  id: string;
+  token: string;
+  tokenExpires?: Date;
+  data: Indexable;
+}
 
 export class User extends ConduitActiveSchema<User> {
   private static _instance: User;
   _id!: string;
   email!: string;
+  hashedPassword?: string;
+  google?: AuthProvider;
+  facebook?: AuthProvider;
+  twitch?: AuthProvider & { profile_image_url?: string };
+  slack?: AuthProvider;
+  figma?: AuthProvider;
+  microsoft?: AuthProvider;
+  github?: AuthProvider;
+  active!: boolean;
+  isVerified!: boolean;
+  hasTwoFA!: boolean;
+  twoFaMethod!: string;
   phoneNumber?: string;
   createdAt!: Date;
   updatedAt!: Date;
 
-  private constructor(database: DatabaseProvider) {
-    super(database, User.name, schema, modelOptions, collectionName);
+  constructor(database: DatabaseProvider) {
+    super(database, 'User');
   }
 
   static getInstance(database?: DatabaseProvider) {

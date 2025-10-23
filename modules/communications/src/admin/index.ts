@@ -55,27 +55,12 @@ export class AdminHandlers {
     emailService: EmailService,
     pushService: PushService,
     smsService: SmsService,
+    orchestratorService: OrchestratorService,
   ) {
     this.emailService = emailService;
     this.pushService = pushService;
     this.smsService = smsService;
-    this.orchestratorService = new OrchestratorService(
-      this.grpcSdk,
-      emailService,
-      pushService,
-      smsService,
-    );
-  }
-
-  updateServices(
-    emailService: EmailService,
-    pushService: PushService,
-    smsService: SmsService,
-  ) {
-    this.emailService = emailService;
-    this.pushService = pushService;
-    this.smsService = smsService;
-    this.orchestratorService.updateServices(emailService, pushService, smsService);
+    this.orchestratorService = orchestratorService;
   }
 
   // Email admin routes

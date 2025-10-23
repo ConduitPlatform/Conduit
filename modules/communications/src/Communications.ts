@@ -124,12 +124,7 @@ export default class Communications extends ManagedModule<Config> {
   }
 
   async preConfig(config: Config) {
-    if (
-      isNil(config.active) ||
-      isNil(config.email) ||
-      isNil(config.pushNotifications) ||
-      isNil(config.sms)
-    ) {
+    if (isNil(config.email) || isNil(config.pushNotifications) || isNil(config.sms)) {
       throw new Error('Invalid configuration given');
     }
     return config;
@@ -141,7 +136,12 @@ export default class Communications extends ManagedModule<Config> {
     if (!this.isRunning) {
       await this.initServices();
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      this.adminRouter.setServices(this.emailService, this.pushService, this.smsService);
+      this.adminRouter.setServices(
+        this.emailService,
+        this.pushService,
+        this.smsService,
+        this.orchestratorService,
+      );
 
       // Initialize queue controller and workers
       const queueController = QueueController.getInstance(this.grpcSdk);
@@ -605,8 +605,10 @@ export default class Communications extends ManagedModule<Config> {
   protected registerSchemas(): Promise<unknown> {
     const promises = Object.values(models).map(async model => {
       const modelInstance = model.getInstance(this.database);
-      await this.database.createSchemaFromAdapter(modelInstance);
-      return await this.database.migrate(modelInstance.name);
+      if (Object.keys(modelInstance.fields).length !== 0) {
+        await this.database.createSchemaFromAdapter(modelInstance);
+        return await this.database.migrate(modelInstance.name);
+      }
     });
     return Promise.all(promises);
   }
