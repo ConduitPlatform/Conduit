@@ -1,4 +1,4 @@
-import { NotificationTokensHandler } from '../handlers/notification-tokens.js';
+import { NotificationTokensHandler } from '../handlers/push/notification-tokens.js';
 import {
   ConduitGrpcSdk,
   ConduitRouteActions,
@@ -13,9 +13,8 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-
 import { Notification, NotificationToken } from '../models/index.js';
-import { BaseNotificationProvider } from '../providers/base.provider.js';
+import { PushService } from '../services/push.service.js';
 
 export class PushNotificationsRoutes {
   private readonly handlers: NotificationTokensHandler;
@@ -24,19 +23,17 @@ export class PushNotificationsRoutes {
   constructor(
     readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    provider: BaseNotificationProvider<unknown>,
+    pushService: PushService,
   ) {
-    this.handlers = new NotificationTokensHandler(provider);
+    this.handlers = new NotificationTokensHandler(pushService);
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
-    this.registeredRoutes();
+    this.registerRoutes();
   }
 
-  updateProvider(provider: BaseNotificationProvider<unknown>) {
-    this.handlers.updateProvider(provider);
-  }
-
-  async registeredRoutes() {
+  async registerRoutes() {
     this._routingManager.clear();
+
+    // Set notification token route
     this._routingManager.route(
       {
         bodyParams: {
@@ -44,28 +41,32 @@ export class PushNotificationsRoutes {
           platform: ConduitString.Required,
         },
         action: ConduitRouteActions.POST,
-        description: `Sets the given notification token for a user.`,
+        description: 'Sets the given notification token for a user.',
         middlewares: ['authMiddleware'],
         path: '/token',
       },
       new ConduitRouteReturnDefinition('SetNotificationTokenResponse', {
-        newTokenDocument: NotificationToken.getInstance().fields, // @type-inconsistency
+        newTokenDocument: NotificationToken.getInstance().fields,
       }),
       this.handlers.setNotificationToken.bind(this.handlers),
     );
+
+    // Clear notification token route
     this._routingManager.route(
       {
         queryParams: {
           platform: ConduitString.Optional,
         },
         action: ConduitRouteActions.DELETE,
-        description: `Removes tokens for a user (optionally for specific platform). This effectively disables push notifications for the user, but not the notification center.`,
+        description: 'Removes tokens for a user (optionally for specific platform).',
         middlewares: ['authMiddleware'],
         path: '/token',
       },
-      new ConduitRouteReturnDefinition('SetNotificationTokenResponse', 'String'),
+      new ConduitRouteReturnDefinition('ClearNotificationTokenResponse', 'String'),
       this.handlers.clearNotificationTokens.bind(this.handlers),
     );
+
+    // Get user notifications route
     this._routingManager.route(
       {
         queryParams: {
@@ -75,7 +76,7 @@ export class PushNotificationsRoutes {
           platform: ConduitString.Optional,
         },
         action: ConduitRouteActions.GET,
-        description: `Get User notifications`,
+        description: 'Get User notifications',
         middlewares: ['authMiddleware'],
         path: '/notifications',
       },
@@ -86,6 +87,8 @@ export class PushNotificationsRoutes {
       }),
       this.handlers.getUserNotifications.bind(this.handlers),
     );
+
+    // Mark notifications as read route
     this._routingManager.route(
       {
         bodyParams: {
@@ -93,13 +96,14 @@ export class PushNotificationsRoutes {
           id: ConduitString.Optional,
         },
         action: ConduitRouteActions.PATCH,
-        description: `Read user notifications. If before is provided, any notification before that date will be marked as read. If id is provided, only that notification will be marked as read.`,
+        description: 'Read user notifications.',
         middlewares: ['authMiddleware'],
         path: '/notifications',
       },
       new ConduitRouteReturnDefinition('ReadNotificationsResponse', 'String'),
       this.handlers.readUserNotification.bind(this.handlers),
     );
+
     await this._routingManager.registerRoutes();
   }
 }
