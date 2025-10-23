@@ -22,45 +22,46 @@ import { runMigrations } from './migrations/index.js';
 import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
+// Provider imports
+import { EmailProvider } from './providers/email/index.js';
+import { BaseNotificationProvider } from './providers/push/base.provider.js';
+import { ISmsProvider } from './providers/sms/interfaces/ISmsProvider.js';
+
 // Import all proto types
 import {
-  // Legacy Email
-  RegisterTemplateRequest,
-  RegisterTemplateResponse,
-  UpdateTemplateRequest,
-  SendEmailRequest,
-  SendEmailResponse,
-  ResendEmailRequest,
-  ResendEmailResponse,
   GetEmailStatusRequest,
   GetEmailStatusResponse,
-  // Legacy Push
-  SetNotificationTokenRequest,
-  SetNotificationTokenResponse,
+  GetMessageStatusRequest,
+  GetMessageStatusResponse,
   GetNotificationTokensRequest,
   GetNotificationTokensResponse,
+  RegisterCommunicationTemplateRequest,
+  RegisterCommunicationTemplateResponse,
+  RegisterTemplateRequest,
+  RegisterTemplateResponse,
+  ResendEmailRequest,
+  ResendEmailResponse,
+  SendCommunicationRequest,
+  SendCommunicationResponse,
+  SendEmailRequest,
+  SendEmailResponse,
+  SendManyNotificationsRequest,
   SendNotificationRequest,
   SendNotificationResponse,
   SendNotificationToManyDevicesRequest,
-  SendManyNotificationsRequest,
-  // Legacy SMS
   SendSmsRequest,
   SendSmsResponse,
-  SendVerificationCodeRequest,
-  SendVerificationCodeResponse,
-  VerifyRequest,
-  VerifyResponse,
-  // New unified
-  SendCommunicationRequest,
-  SendCommunicationResponse,
   SendToMultipleChannelsRequest,
   SendToMultipleChannelsResponse,
+  SendVerificationCodeRequest,
+  SendVerificationCodeResponse,
   SendWithFallbackRequest,
   SendWithFallbackResponse,
-  RegisterCommunicationTemplateRequest,
-  RegisterCommunicationTemplateResponse,
-  GetMessageStatusRequest,
-  GetMessageStatusResponse,
+  SetNotificationTokenRequest,
+  SetNotificationTokenResponse,
+  UpdateTemplateRequest,
+  VerifyRequest,
+  VerifyResponse,
 } from './protoTypes/communications.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -105,6 +106,11 @@ export default class Communications extends ManagedModule<Config> {
   private smsService: SmsService;
   private orchestratorService: OrchestratorService;
 
+  // Provider instances
+  private emailProvider: EmailProvider;
+  private pushProvider: BaseNotificationProvider<unknown> | undefined;
+  private smsProvider: ISmsProvider | undefined;
+
   constructor() {
     super('communications');
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
@@ -130,36 +136,24 @@ export default class Communications extends ManagedModule<Config> {
   }
 
   async onConfig() {
-    if (!ConfigController.getInstance().config.active) {
-      this.updateHealth(HealthCheckStatus.NOT_SERVING);
-    } else {
-      const config = ConfigController.getInstance().config as Config;
+    const config = ConfigController.getInstance().config as Config;
 
-      if (!this.isRunning) {
-        await this.initServices();
-        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-        this.adminRouter.setServices(
-          this.emailService,
-          this.pushService,
-          this.smsService,
-        );
+    if (!this.isRunning) {
+      await this.initServices();
+      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+      this.adminRouter.setServices(this.emailService, this.pushService, this.smsService);
 
-        // Initialize queue controller and workers
-        const queueController = QueueController.getInstance(this.grpcSdk);
-        queueController.addEmailStatusWorker();
-        queueController.addEmailCleanupWorker();
+      // Initialize queue controller and workers
+      const queueController = QueueController.getInstance(this.grpcSdk);
+      queueController.addEmailStatusWorker();
+      queueController.addEmailCleanupWorker();
 
-        this.isRunning = true;
-      } else {
-        await this.initServices();
-        this.adminRouter.updateServices(
-          this.emailService,
-          this.pushService,
-          this.smsService,
-        );
-      }
-      this.updateHealth(HealthCheckStatus.SERVING);
+      this.isRunning = true;
     }
+    await this.emailService.initEmailProvider(config);
+    await this.pushService.initPushProvider(config);
+    await this.smsService.initSmsProvider(config);
+    this.updateHealth(HealthCheckStatus.SERVING);
   }
 
   async initializeMetrics() {
@@ -521,7 +515,14 @@ export default class Communications extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: result });
     }
 
-    return callback(null, { results: result.results });
+    return callback(null, {
+      results: result.results.map(r => ({
+        success: r.success,
+        messageId: r.messageId || '',
+        error: r.error,
+        channel: r.channel,
+      })),
+    });
   }
 
   async sendWithFallback(
@@ -569,7 +570,12 @@ export default class Communications extends ManagedModule<Config> {
     return callback(null, {
       successfulChannel: result.successfulChannel,
       messageId: result.messageId || '',
-      attempts: result.attempts,
+      attempts: result.attempts.map(a => ({
+        success: a.success,
+        messageId: a.messageId || '',
+        error: a.error,
+        channel: a.channel,
+      })),
     });
   }
 
@@ -606,15 +612,11 @@ export default class Communications extends ManagedModule<Config> {
   }
 
   private async initServices() {
-    // Initialize email service
-    // Initialize push service
-    // Initialize SMS service
-    // Initialize orchestrator service
+    this.emailService = new EmailService(this.grpcSdk);
+    this.pushService = new PushService(this.grpcSdk);
+    this.smsService = new SmsService(this.grpcSdk);
 
-    // For now, create placeholder services
-    this.emailService = new EmailService(this.grpcSdk, null as any);
-    this.pushService = new PushService(this.grpcSdk, null as any);
-    this.smsService = new SmsService(this.grpcSdk, null as any);
+    // Initialize orchestrator service
     this.orchestratorService = new OrchestratorService(
       this.grpcSdk,
       this.emailService,

@@ -17,6 +17,7 @@ import { Template } from '../providers/email/interfaces/Template.js';
 import { getHandleBarsValues } from '../providers/email/utils/index.js';
 import { QueueController } from '../controllers/queue.controller.js';
 import { storeEmail } from '../utils/storeEmail.js';
+import { Config } from '../config/index.js';
 
 export interface IRegisterTemplateParams {
   name: string;
@@ -47,13 +48,23 @@ export interface ISendEmailParams {
 }
 
 export class EmailService implements IChannel {
-  constructor(
-    private readonly grpcSdk: ConduitGrpcSdk,
-    private emailer: EmailProvider,
-  ) {}
+  private emailer?: EmailProvider;
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  updateProvider(emailer: EmailProvider) {
-    this.emailer = emailer;
+  public async initEmailProvider(config: Config) {
+    const emailConfig = config.email;
+
+    if (!emailConfig || !emailConfig.transport || !emailConfig.transportSettings) {
+      ConduitGrpcSdk.Logger.warn('Email not configured');
+    }
+
+    const { transport, transportSettings } = emailConfig;
+    try {
+      this.emailer = new EmailProvider(transport, transportSettings);
+    } catch (e) {
+      this.emailer = undefined;
+      ConduitGrpcSdk.Logger.error('Failed to initialize Email provider:', e);
+    }
   }
 
   isAvailable(): boolean {
@@ -127,22 +138,26 @@ export class EmailService implements IChannel {
   }
 
   getExternalTemplates() {
-    return this.emailer._transport?.listTemplates();
+    if (!this.isAvailable()) throw new Error('Email not configured');
+    return this.emailer!._transport?.listTemplates();
   }
 
   getExternalTemplate(id: string) {
-    return this.emailer._transport?.getTemplateInfo(id);
+    if (!this.isAvailable()) throw new Error('Email not configured');
+    return this.emailer!._transport?.getTemplateInfo(id);
   }
 
   createExternalTemplate(data: CreateEmailTemplate): Promise<Template> {
+    if (!this.isAvailable()) throw new Error('Email not configured');
     return (
-      this.emailer._transport?.createTemplate(data) ??
+      this.emailer!._transport?.createTemplate(data) ??
       Promise.reject(new Error('Transport is not available'))
     );
   }
 
   deleteExternalTemplate(id: string) {
-    return this.emailer._transport?.deleteTemplate(id);
+    if (!this.isAvailable()) throw new Error('Email not configured');
+    return this.emailer!._transport?.deleteTemplate(id);
   }
 
   async registerTemplate(params: IRegisterTemplateParams) {
@@ -162,6 +177,7 @@ export class EmailService implements IChannel {
   }
 
   async updateTemplate(id: string, params: IUpdateTemplateParams) {
+    if (!this.isAvailable()) throw new Error('Email not configured');
     const templateDocument = await EmailTemplate.getInstance().findOne({
       _id: id,
     });
@@ -201,7 +217,7 @@ export class EmailService implements IChannel {
         body: updatedTemplate!.body,
         versionId: versionId,
       };
-      await this.emailer._transport?.updateTemplate(data).catch((e: Error) => {
+      await this.emailer!._transport?.updateTemplate(data).catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     }
@@ -214,8 +230,9 @@ export class EmailService implements IChannel {
     params: ISendEmailParams,
     contentFileId?: string,
   ) {
+    if (!this.isAvailable()) throw new Error('Email not configured');
     const { email, body, subject, variables, sender } = params;
-    const builder = this.emailer.emailBuilder();
+    const builder = this.emailer!.emailBuilder();
 
     if (!template && (!body || !subject)) {
       throw new Error(`Template/body+subject not provided`);
@@ -292,8 +309,8 @@ export class EmailService implements IChannel {
       builder.addAttachments(params.attachments as Attachment[]);
     }
 
-    const sentMessageInfo = await this.emailer.sendEmail(builder);
-    const messageId = this.emailer._transport?.getMessageId(sentMessageInfo);
+    const sentMessageInfo = await this.emailer!.sendEmail(builder);
+    const messageId = this.emailer!._transport?.getMessageId(sentMessageInfo);
 
     if (config.email?.storeEmails?.enabled) {
       const emailRecId = await storeEmail(
@@ -334,6 +351,7 @@ export class EmailService implements IChannel {
   }
 
   async getEmailStatus(messageId: string) {
-    return this.emailer.getEmailStatus(messageId);
+    if (!this.isAvailable()) return Promise.reject('Email not configured');
+    return this.emailer!.getEmailStatus(messageId);
   }
 }

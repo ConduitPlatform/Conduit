@@ -391,9 +391,9 @@ export class AdminHandlers {
         : emailRecord.template?.name || '',
       {
         email: emailRecord.receiver,
-        subject: emailRecord.subject,
-        body: emailRecord.body,
-        variables: emailRecord.variables || {},
+        subject: (emailRecord as any).subject || '',
+        body: (emailRecord as any).body || '',
+        variables: (emailRecord as any).variables || {},
       },
     );
   }
@@ -516,7 +516,7 @@ export class AdminHandlers {
         query = { _id: call.request.params.search };
       } else {
         identifier = escapeStringRegexp(call.request.params.search);
-        query = { receiver: { $regex: `.*${identifier}.*`, $options: 'i' } };
+        query = { recipient: { $regex: `.*${identifier}.*`, $options: 'i' } };
       }
     }
 

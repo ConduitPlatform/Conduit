@@ -1,24 +1,56 @@
-import { isNil } from 'lodash-es';
 import { SmsRecord } from '../models/index.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import {
-  IChannel,
-  IChannelSendParams,
   ChannelResult,
   ChannelStatus,
+  IChannel,
+  IChannelSendParams,
 } from '../interfaces/index.js';
 import { ISmsProvider } from '../providers/sms/interfaces/ISmsProvider.js';
+import { Config } from '../config/index.js';
+import { clickSendProvider } from '../providers/sms/clickSend.js';
+import { messageBirdProvider } from '../providers/sms/messageBird.js';
+import { AwsSnsProvider } from '../providers/sms/awsSns.js';
+import { TwilioProvider } from '../providers/sms/twilio.js';
 
 export class SmsService implements IChannel {
-  constructor(
-    private readonly grpcSdk: ConduitGrpcSdk,
-    private provider: ISmsProvider,
-  ) {}
+  private provider?: ISmsProvider;
 
-  updateProvider(provider: ISmsProvider) {
-    this.provider = provider;
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+
+  public async initSmsProvider(config: Config) {
+    const smsConfig = config.sms;
+
+    if (!smsConfig || !smsConfig.providerName) {
+      ConduitGrpcSdk.Logger.warn('SMS not configured');
+      return;
+    }
+
+    const name = smsConfig.providerName;
+    const settings = (smsConfig as any)[name];
+
+    try {
+      switch (name) {
+        case 'twilio':
+          this.provider = new TwilioProvider(settings);
+          break;
+        case 'awsSns':
+          this.provider = new AwsSnsProvider(settings, this.grpcSdk);
+          break;
+        case 'messageBird':
+          this.provider = new messageBirdProvider(settings);
+          break;
+        case 'clickSend':
+          this.provider = new clickSendProvider(settings, this.grpcSdk);
+          break;
+        default:
+          ConduitGrpcSdk.Logger.error(`Unknown SMS provider: ${name}`);
+      }
+    } catch (e) {
+      this.provider = undefined;
+      ConduitGrpcSdk.Logger.error('Failed to initialize SMS provider:', e);
+    }
   }
-
   isAvailable(): boolean {
     return !!this.provider;
   }
