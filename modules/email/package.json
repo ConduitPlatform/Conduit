@@ -45,7 +45,7 @@
     "mailersend": "^2.4.1",
     "mailgun-js": "^0.22.0",
     "mandrill-api": "^1.0.45",
-    "nodemailer": "^7.0.9",
+    "nodemailer": "^7.0.10",
     "nodemailer-mailgun-transport": "^2.1.5",
     "nodemailer-mandrill-transport": "^1.2.0",
     "nodemailer-sendgrid": "^1.0.3"
