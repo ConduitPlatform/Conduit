@@ -16,6 +16,7 @@ export function verifyQrCodeRoute() {
     {
       path: '/verify-qr-code',
       action: ConduitRouteActions.POST,
+      mcp: false,
       bodyParams: {
         code: ConduitString.Required,
       },
