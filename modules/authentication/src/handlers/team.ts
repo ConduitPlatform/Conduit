@@ -616,6 +616,45 @@ export class TeamsHandler implements IAuthenticationStrategy {
     return invitation.token;
   }
 
+  async deleteInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { teamId } = call.request.urlParams;
+    const { email } = call.request.queryParams;
+    const config: Config = ConfigController.getInstance().config;
+    if (!config.teams.invites.enabled) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Team invites are disabled');
+    }
+    const team = await Team.getInstance().findOne({ _id: teamId });
+    if (!team) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Could not create invite, team does not exist',
+      );
+    }
+
+    const can = await this.grpcSdk.authorization!.can({
+      subject: 'User:' + user._id,
+      actions: ['invite'],
+      resource: 'Team:' + teamId,
+    });
+    if (!can.allow) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'You do not have permission to delete invites from this team',
+      );
+    }
+
+    // Delete any existing invite for the same email and team
+    await Token.getInstance().deleteOne({
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
+      // @ts-expect-error Unsafe nested property access
+      'data.teamId': teamId,
+      'data.email': email,
+    });
+
+    return 'OK';
+  }
+
   async getTeamInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { teamId } = call.request.urlParams;
@@ -1020,6 +1059,22 @@ export class TeamsHandler implements IAuthenticationStrategy {
       },
       new ConduitRouteReturnDefinition('InvitationToken', 'String'),
       this.userInvite.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/teams/:teamId/invite',
+        description: `Deletes an invite previously sent.`,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        queryParams: {
+          email: ConduitString.Required,
+        },
+        action: ConduitRouteActions.DELETE,
+        middlewares: authRouteMiddlewares,
+      },
+      new ConduitRouteReturnDefinition('DeleteInvitation', 'String'),
+      this.deleteInvitation.bind(this),
     );
     routingManager.route(
       {
