@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.20](https://github.com/ConduitPlatform/Conduit/compare/v0.16.19...v0.16.20) (2025-11-21)
+
+
+### Features
+
+* **authentication:** delete invitation endpoint for teams ([1d6df18](https://github.com/ConduitPlatform/Conduit/commit/1d6df18e33705e88c9ca193ff116b54669e9440f))
+* **chat:** add system enum and optional message type in grpc function ([#1403](https://github.com/ConduitPlatform/Conduit/issues/1403)) ([0c6eaaf](https://github.com/ConduitPlatform/Conduit/commit/0c6eaaf2e34fee57dff119f6d03baeb29421c0b5))
+* **email:** send mail rpc was missing subject/body ([#1398](https://github.com/ConduitPlatform/Conduit/issues/1398)) ([9cccfa2](https://github.com/ConduitPlatform/Conduit/commit/9cccfa26b29e1c2e7bc4336fd0d5e66dd61c267e))
+* get pending invites in team ([#1400](https://github.com/ConduitPlatform/Conduit/issues/1400)) ([a265a1b](https://github.com/ConduitPlatform/Conduit/commit/a265a1bb7ff7f4f38fe92bd3101abacd3e7ed397))
+
 ### [0.16.19](https://github.com/ConduitPlatform/Conduit/compare/v0.16.18...v0.16.19) (2025-10-09)
 
 
