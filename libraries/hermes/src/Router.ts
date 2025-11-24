@@ -5,6 +5,7 @@ import {
   ConduitRouteParameters,
   GrpcError,
   Indexable,
+  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { ConduitMiddleware, MiddlewarePatch } from './interfaces/index.js';
@@ -46,6 +47,14 @@ export abstract class ConduitRouter {
     this.scheduleRouterRefresh();
   }
 
+  extractResult(returnTypeFields: string, result: any) {
+    switch (returnTypeFields) {
+      case TYPE.JSON:
+        return JSON.parse(result);
+      default:
+        return result;
+    }
+  }
   cleanupRoutes(routes: { action: string; path: string }[]) {
     const newRegisteredRoutes: Map<string, ConduitRoute> = new Map();
     routes.forEach(route => {
