@@ -13,7 +13,7 @@ const schema: ConduitModel = {
   },
   message: {
     type: TYPE.String,
-    required: true,
+    required: false,
   },
   files: [
     {
