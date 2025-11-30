@@ -16,6 +16,7 @@ export function toggleTwoFaRoute() {
     {
       path: '/toggle-twofa',
       action: ConduitRouteActions.UPDATE,
+      mcp: false,
       bodyParams: {
         enableTwoFa: ConduitBoolean.Required,
       },
