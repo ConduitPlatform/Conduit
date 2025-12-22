@@ -172,7 +172,7 @@ export class LocalStorage implements IStorageProvider {
     });
   }
 
-  getPublicUrl(fileName: string): Promise<any | Error> {
+  getPublicUrl(_fileName: string, _containerIsPublic?: boolean): Promise<string | Error> {
     throw new Error('Method not implemented!');
   }
 
@@ -189,8 +189,19 @@ export class LocalStorage implements IStorageProvider {
     return this.folderExists(name);
   }
 
-  createContainer(name: string): Promise<boolean | Error> {
+  createContainer(name: string, isPublic?: boolean): Promise<boolean | Error> {
+    if (isPublic) {
+      return Promise.reject(
+        new Error('Public containers are not supported with local storage provider'),
+      );
+    }
     this._activeContainer = name;
     return this.createFolder(name);
+  }
+
+  setContainerPublicAccess(_name: string, _isPublic: boolean): Promise<boolean | Error> {
+    return Promise.reject(
+      new Error('Public containers are not supported with local storage provider'),
+    );
   }
 }

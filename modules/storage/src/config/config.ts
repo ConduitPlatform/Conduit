@@ -83,4 +83,15 @@ export default {
     doc: 'Defines if a suffix should be appended to the name of a file, upon creation, when name already exists',
     default: false,
   },
+  /**
+   * cdnConfiguration: {
+   *   my_container: 'cdn.myhost.com'
+   * }
+   * Maps container names to their CDN host (single CDN per container)
+   */
+  cdnConfiguration: {
+    format: 'Object',
+    doc: 'Defines CDN host for each container (single CDN URL per container)',
+    default: {},
+  },
 };

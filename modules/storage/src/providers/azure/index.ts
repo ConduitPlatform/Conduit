@@ -4,7 +4,6 @@ import {
   BlobSASPermissions,
   BlobSASSignatureValues,
   BlobServiceClient,
-  SASProtocol,
 } from '@azure/storage-blob';
 import fs from 'fs';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
@@ -136,16 +135,19 @@ export class AzureStorage implements IStorageProvider {
     return this.blobClient(fileName).generateSasUrl(sasOptions);
   }
 
-  async getPublicUrl(fileName: string): Promise<any | Error> {
+  async getPublicUrl(fileName: string, containerIsPublic?: boolean): Promise<string> {
+    if (containerIsPublic) {
+      // Return direct URL without SAS token for public containers
+      return `${this._storage.url}${this._activeContainer}/${fileName}`;
+    }
+    // For private containers with public files, generate long-lived signed URL (99 years)
     const containerClient = this._storage.getContainerClient(this._activeContainer);
     const sasOptions: BlobSASSignatureValues = {
       containerName: containerClient.containerName,
       blobName: fileName,
-      protocol: SASProtocol.Https,
       expiresOn: new Date(new Date().setFullYear(new Date().getFullYear() + 99)),
       permissions: BlobSASPermissions.parse('r'),
     };
-
     return this.blobClient(fileName).generateSasUrl(sasOptions);
   }
 
@@ -165,10 +167,22 @@ export class AzureStorage implements IStorageProvider {
     return await this._storage.getContainerClient(name).exists();
   }
 
-  async createContainer(name: string): Promise<boolean | Error> {
-    await this._storage.getContainerClient(name).createIfNotExists();
+  async createContainer(name: string, isPublic?: boolean): Promise<boolean | Error> {
+    const containerClient = this._storage.getContainerClient(name);
+    await containerClient.createIfNotExists({
+      access: isPublic ? 'blob' : undefined,
+    });
     this._activeContainer = name;
     ConduitGrpcSdk.Metrics?.increment('containers_total');
+    return true;
+  }
+
+  async setContainerPublicAccess(
+    name: string,
+    isPublic: boolean,
+  ): Promise<boolean | Error> {
+    const containerClient = this._storage.getContainerClient(name);
+    await containerClient.setAccessPolicy(isPublic ? 'blob' : undefined);
     return true;
   }
 

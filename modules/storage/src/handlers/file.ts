@@ -15,6 +15,7 @@ import {
   _createFileUploadUrl,
   _updateFile,
   _updateFileUploadUrl,
+  applyCdnHost,
   deepPathHandler,
   normalizeFolderPath,
   storeNewFile,
@@ -279,9 +280,10 @@ export class FileHandlers {
         download: call.request.params.download ?? false,
         fileName: found.alias ?? found.name,
       };
-      const url = await this.storageProvider
+      const rawUrl = await this.storageProvider
         .container(found.container)
         .getSignedUrl((found.folder === '/' ? '' : found.folder) + found.name, options);
+      const url = applyCdnHost(rawUrl, found.container);
 
       if (!call.request.params.redirect) {
         return { result: url };
@@ -343,7 +345,7 @@ export class FileHandlers {
       }
       const exists = await this.storageProvider.containerExists(container);
       if (!exists) {
-        await this.storageProvider.createContainer(container);
+        await this.storageProvider.createContainer(container, isPublic);
       }
       await _StorageContainer.getInstance().create({
         name: container,

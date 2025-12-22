@@ -16,6 +16,12 @@ import path from 'path';
 import { status } from '@grpc/grpc-js';
 import { isEmpty, isNil } from 'lodash-es';
 import { runMigrations } from './migrations/index.js';
+import { migratePublicContainers } from './migrations/publicContainerMigration.js';
+import {
+  CdnConfiguration,
+  cdnConfigsAreEqual,
+  migrateCdnConfigChanges,
+} from './migrations/cdnConfigMigration.js';
 import {
   CreateFileByUrlRequest,
   CreateFileRequest,
@@ -71,6 +77,8 @@ export default class Storage extends ManagedModule<Config> {
   private _adminFileHandlers: AdminFileHandlers;
   private enableAuthRoutes: boolean = false;
   private storageParamAdapter: StorageParamAdapter;
+  private publicContainerMigrationRan: boolean = false;
+  private previousCdnConfig: CdnConfiguration = {};
 
   constructor() {
     super('storage');
@@ -129,6 +137,19 @@ export default class Storage extends ManagedModule<Config> {
       });
       this._fileHandlers.updateProvider(this.storageProvider);
       this._adminFileHandlers.updateProvider(this.storageProvider);
+      // Run the public container migration once after provider is configured
+      if (!this.publicContainerMigrationRan && provider !== 'local') {
+        this.publicContainerMigrationRan = true;
+        await migratePublicContainers(this.grpcSdk, this.storageProvider);
+      }
+      // Detect CDN config changes and run migration if needed (order-independent comparison)
+      const currentCdnConfig = (ConfigController.getInstance().config.cdnConfiguration ??
+        {}) as CdnConfiguration;
+      if (!cdnConfigsAreEqual(this.previousCdnConfig, currentCdnConfig)) {
+        await migrateCdnConfigChanges(this.grpcSdk, this.previousCdnConfig);
+        // Deep copy to store as previous
+        this.previousCdnConfig = { ...currentCdnConfig };
+      }
       this.adminRouter = new AdminRoutes(
         this.grpcServer,
         this.grpcSdk,
