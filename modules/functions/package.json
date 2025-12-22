@@ -36,7 +36,7 @@
     "escape-string-regexp": "^4.0.0",
     "convict": "^6.2.4",
     "lodash-es": "^4.17.21",
-    "vm2": "^3.9.19"
+    "vm2": "^3.10.0"
   },
   "devDependencies": {
     "@types/convict": "^6.1.6",
