@@ -3,11 +3,14 @@ import {
   CreateBucketCommand,
   DeleteBucketCommand,
   DeleteObjectCommand,
+  DeletePublicAccessBlockCommand,
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
   ListObjectsCommand,
+  PutBucketPolicyCommand,
   PutObjectCommand,
+  PutPublicAccessBlockCommand,
   S3Client,
   S3ClientConfig,
 } from '@aws-sdk/client-s3';
@@ -114,7 +117,7 @@ export class AWSS3Storage implements IStorageProvider {
     }
   }
 
-  async createContainer(name: string): Promise<boolean | Error> {
+  async createContainer(name: string, isPublic?: boolean): Promise<boolean | Error> {
     name = this.getFormattedContainerName(name);
     await this._storage.send(
       new CreateBucketCommand({
@@ -122,7 +125,58 @@ export class AWSS3Storage implements IStorageProvider {
       }),
     );
     this._activeContainer = name;
+    if (isPublic) {
+      await this.setContainerPublicAccess(name, true);
+    }
     ConduitGrpcSdk.Metrics?.increment('containers_total');
+    return true;
+  }
+
+  async setContainerPublicAccess(
+    name: string,
+    isPublic: boolean,
+  ): Promise<boolean | Error> {
+    const bucketName = this.getFormattedContainerName(name);
+    if (isPublic) {
+      // Disable public access block to allow public bucket policy
+      await this._storage.send(
+        new DeletePublicAccessBlockCommand({
+          Bucket: bucketName,
+        }),
+      );
+      // Set bucket policy for public read access
+      const policy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Sid: 'PublicReadGetObject',
+            Effect: 'Allow',
+            Principal: '*',
+            Action: 's3:GetObject',
+            Resource: `arn:aws:s3:::${bucketName}/*`,
+          },
+        ],
+      };
+      await this._storage.send(
+        new PutBucketPolicyCommand({
+          Bucket: bucketName,
+          Policy: JSON.stringify(policy),
+        }),
+      );
+    } else {
+      // Re-enable public access block
+      await this._storage.send(
+        new PutPublicAccessBlockCommand({
+          Bucket: bucketName,
+          PublicAccessBlockConfiguration: {
+            BlockPublicAcls: true,
+            IgnorePublicAcls: true,
+            BlockPublicPolicy: true,
+            RestrictPublicBuckets: true,
+          },
+        }),
+      );
+    }
     return true;
   }
 
@@ -213,7 +267,8 @@ export class AWSS3Storage implements IStorageProvider {
     });
   }
 
-  async getPublicUrl(fileName: string) {
+  async getPublicUrl(fileName: string, _containerIsPublic?: boolean) {
+    // AWS uses bucket-level ACLs, so public URL format is the same regardless
     const config: Config['aws'] = ConfigController.getInstance().config.aws;
     if (config.endpoint !== '') {
       // check if endpoint contains http/https or not

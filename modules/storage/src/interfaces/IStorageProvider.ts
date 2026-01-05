@@ -17,8 +17,16 @@ export interface IStorageProvider {
   /**
    * Used to create a new container
    * @param name For the container
+   * @param isPublic Whether the container should be publicly accessible
    */
-  createContainer(name: string): Promise<boolean | Error>;
+  createContainer(name: string, isPublic?: boolean): Promise<boolean | Error>;
+
+  /**
+   * Used to set the public access level of an existing container
+   * @param name For the container
+   * @param isPublic Whether the container should be publicly accessible
+   */
+  setContainerPublicAccess(name: string, isPublic: boolean): Promise<boolean | Error>;
 
   /**
    * Used to switch the current container.
@@ -41,7 +49,13 @@ export interface IStorageProvider {
 
   getSignedUrl(fileName: string, options?: UrlOptions): Promise<any | Error>;
 
-  getPublicUrl(fileName: string): Promise<any | Error>;
+  /**
+   * Gets a publicly accessible URL for a file.
+   * @param fileName The file name/path
+   * @param containerIsPublic Whether the container is publicly accessible.
+   *        If true, returns a plain URL. If false, returns a long-lived signed URL.
+   */
+  getPublicUrl(fileName: string, containerIsPublic?: boolean): Promise<string | Error>;
 
   getUploadUrl(fileName: string): Promise<string | Error>;
 }

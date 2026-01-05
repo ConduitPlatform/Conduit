@@ -452,7 +452,7 @@ export class AdminRoutes {
         const exists = await this.fileHandlers.storage.containerExists(name);
 
         if (!exists) {
-          await this.fileHandlers.storage.createContainer(name);
+          await this.fileHandlers.storage.createContainer(name, isPublic);
         }
         container = await _StorageContainer.getInstance().create({
           name,

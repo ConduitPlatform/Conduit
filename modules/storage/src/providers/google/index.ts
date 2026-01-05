@@ -26,11 +26,29 @@ export class GoogleCloudStorage implements IStorageProvider {
     throw new Error('Method not implemented.');
   }
 
-  async createContainer(name: string): Promise<boolean | Error> {
+  async createContainer(name: string, isPublic?: boolean): Promise<boolean | Error> {
     // Creates the new bucket
     await this._storage.createBucket(name);
     this._activeBucket = name;
+    if (isPublic) {
+      await this.setContainerPublicAccess(name, true);
+    }
     ConduitGrpcSdk.Metrics?.increment('containers_total');
+    return true;
+  }
+
+  async setContainerPublicAccess(
+    name: string,
+    isPublic: boolean,
+  ): Promise<boolean | Error> {
+    const bucket = this._storage.bucket(name);
+    if (isPublic) {
+      // Make all objects in the bucket publicly readable
+      await bucket.makePublic();
+    } else {
+      // Remove public access
+      await bucket.makePrivate({ includeFiles: true });
+    }
     return true;
   }
 
@@ -121,7 +139,11 @@ export class GoogleCloudStorage implements IStorageProvider {
       });
   }
 
-  async getPublicUrl(fileName: string): Promise<any | Error> {
+  async getPublicUrl(
+    fileName: string,
+    _containerIsPublic?: boolean,
+  ): Promise<string | Error> {
+    // GCS uses bucket/file-level ACLs, publicUrl() works regardless
     return this._storage.bucket(this._activeBucket).file(fileName).publicUrl();
   }
 

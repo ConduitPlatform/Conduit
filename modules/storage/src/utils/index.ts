@@ -7,7 +7,7 @@ import {
 } from '../interfaces/index.js';
 import { isNil } from 'lodash-es';
 import path from 'path';
-import { File } from '../models/index.js';
+import { File, _StorageContainer } from '../models/index.js';
 import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { randomUUID } from 'node:crypto';
 import { ConfigController } from '@conduitplatform/module-tools';
@@ -84,13 +84,30 @@ export async function storeNewFile(
   params: IFileParams,
 ): Promise<File> {
   const { name, alias, data, container, folder, mimeType, isPublic } = params;
+  // Validate file privacy against container settings
+  await validateFilePrivacy(container, isPublic);
   const buffer = Buffer.from(data as string, 'base64');
   const size = buffer.byteLength;
   const fileName = (folder === '/' ? '' : folder) + name;
   await storageProvider.container(container).store(fileName, buffer, isPublic);
-  const publicUrl = isPublic
-    ? await storageProvider.container(container).getPublicUrl(fileName)
-    : null;
+
+  // Get container public status for URL generation
+  const containerDoc = await _StorageContainer.getInstance().findOne({ name: container });
+  const containerIsPublic = containerDoc?.isPublic ?? false;
+
+  // Get raw storage URL (sourceUrl) and CDN-applied URL (url)
+  let sourceUrl: string | undefined;
+  if (isPublic) {
+    const publicUrlResult = await storageProvider
+      .container(container)
+      .getPublicUrl(fileName, containerIsPublic);
+    if (publicUrlResult instanceof Error) {
+      throw publicUrlResult;
+    }
+    sourceUrl = publicUrlResult;
+  }
+  const url = applyCdnHost(sourceUrl, container);
+
   ConduitGrpcSdk.Metrics?.increment('files_total');
   ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
   return await File.getInstance().create({
@@ -101,7 +118,8 @@ export async function storeNewFile(
     container: container,
     size,
     isPublic,
-    url: publicUrl,
+    sourceUrl,
+    url,
   });
 }
 
@@ -110,13 +128,30 @@ export async function _createFileUploadUrl(
   params: IFileParams,
 ): Promise<{ file: File; url: string }> {
   const { name, alias, container, folder, mimeType, isPublic, size } = params;
+  // Validate file privacy against container settings
+  await validateFilePrivacy(container, isPublic);
   const fileName = (folder === '/' ? '' : folder) + name;
   await storageProvider
     .container(container)
     .store(fileName, Buffer.from('PENDING UPLOAD'), isPublic);
-  const publicUrl = isPublic
-    ? await storageProvider.container(container).getPublicUrl(fileName)
-    : null;
+
+  // Get container public status for URL generation
+  const containerDoc = await _StorageContainer.getInstance().findOne({ name: container });
+  const containerIsPublic = containerDoc?.isPublic ?? false;
+
+  // Get raw storage URL (sourceUrl) and CDN-applied URL (url)
+  let sourceUrl: string | undefined;
+  if (isPublic) {
+    const publicUrlResult = await storageProvider
+      .container(container)
+      .getPublicUrl(fileName, containerIsPublic);
+    if (publicUrlResult instanceof Error) {
+      throw publicUrlResult;
+    }
+    sourceUrl = publicUrlResult;
+  }
+  const publicUrl = applyCdnHost(sourceUrl, container);
+
   ConduitGrpcSdk.Metrics?.increment('files_total');
   ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
   const file = await File.getInstance().create({
@@ -127,14 +162,15 @@ export async function _createFileUploadUrl(
     folder: folder,
     container: container,
     isPublic,
+    sourceUrl,
     url: publicUrl,
   });
-  const url = (await storageProvider
+  const uploadUrl = (await storageProvider
     .container(container)
     .getUploadUrl(fileName)) as string;
   return {
     file,
-    url,
+    url: uploadUrl,
   };
 }
 
@@ -154,16 +190,30 @@ export async function _updateFile(
       .container(file.container)
       .delete((file.folder === '/' ? '' : file.folder) + file.name);
   }
-  const url = file.isPublic
-    ? await storageProvider
-        .container(container)
-        .getPublicUrl((folder === '/' ? '' : folder) + name)
-    : null;
+
+  // Get container public status for URL generation
+  const containerDoc = await _StorageContainer.getInstance().findOne({ name: container });
+  const containerIsPublic = containerDoc?.isPublic ?? false;
+
+  // Get raw storage URL (sourceUrl) and CDN-applied URL (url)
+  let sourceUrl: string | undefined;
+  if (file.isPublic) {
+    const publicUrlResult = await storageProvider
+      .container(container)
+      .getPublicUrl((folder === '/' ? '' : folder) + name, containerIsPublic);
+    if (publicUrlResult instanceof Error) {
+      throw publicUrlResult;
+    }
+    sourceUrl = publicUrlResult;
+  }
+  const url = applyCdnHost(sourceUrl, container);
+
   const updatedFile = (await File.getInstance().findByIdAndUpdate(file._id, {
     name,
     alias,
     folder,
     container,
+    sourceUrl,
     url,
     mimeType,
   })) as File;
@@ -197,16 +247,32 @@ export async function _updateFileUploadUrl(
     await storageProvider
       .container(file.container)
       .delete((file.folder === '/' ? '' : file.folder) + file.name);
-    const url = file.isPublic
-      ? await storageProvider
-          .container(container)
-          .getPublicUrl((folder === '/' ? '' : folder) + name)
-      : null;
+
+    // Get container public status for URL generation
+    const containerDoc = await _StorageContainer.getInstance().findOne({
+      name: container,
+    });
+    const containerIsPublic = containerDoc?.isPublic ?? false;
+
+    // Get raw storage URL (sourceUrl) and CDN-applied URL (url)
+    let sourceUrl: string | undefined;
+    if (file.isPublic) {
+      const publicUrlResult = await storageProvider
+        .container(container)
+        .getPublicUrl((folder === '/' ? '' : folder) + name, containerIsPublic);
+      if (publicUrlResult instanceof Error) {
+        throw publicUrlResult;
+      }
+      sourceUrl = publicUrlResult;
+    }
+    const url = applyCdnHost(sourceUrl, container);
+
     updatedFile = await File.getInstance().findByIdAndUpdate(file._id, {
       name,
       alias,
       folder,
       container,
+      sourceUrl,
       url,
       mimeType,
       ...{ size: size ?? file.size },
@@ -274,3 +340,49 @@ export const constructDispositionHeader = (
   )}`;
   return `${disposition}${_fileName}${_fileNameUtf8}`;
 };
+
+/**
+ * Replaces the storage host in a URL with the configured CDN host for the container.
+ * @param url The original URL from the storage provider
+ * @param container The container name
+ * @returns The URL with CDN host if configured, otherwise the original URL
+ */
+export function applyCdnHost(
+  url: string | null | undefined,
+  container: string,
+): string | undefined {
+  if (!url) return undefined;
+  const config = ConfigController.getInstance().config;
+  const cdnHost = config.cdnConfiguration?.[container] as string | undefined;
+  if (!cdnHost) return url;
+
+  try {
+    const urlObj = new URL(url);
+    return url.replace(urlObj.host, cdnHost);
+  } catch {
+    // If URL parsing fails, return original URL
+    return url;
+  }
+}
+
+/**
+ * Validates file privacy settings against container's public status.
+ * Files in public containers cannot be marked as private.
+ * @param containerName The name of the container
+ * @param isFilePublic Whether the file is being marked as public
+ * @throws GrpcError if validation fails
+ */
+export async function validateFilePrivacy(
+  containerName: string,
+  isFilePublic?: boolean,
+): Promise<void> {
+  const container = await _StorageContainer.getInstance().findOne({
+    name: containerName,
+  });
+  if (container?.isPublic && isFilePublic === false) {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      'Files in public containers cannot be private',
+    );
+  }
+}

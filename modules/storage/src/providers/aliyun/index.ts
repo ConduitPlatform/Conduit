@@ -44,10 +44,21 @@ export class AliyunStorage implements IStorageProvider {
       });
   }
 
-  async createContainer(name: string): Promise<boolean | Error> {
+  async createContainer(name: string, isPublic?: boolean): Promise<boolean | Error> {
     await this._ossClient.putBucket(name);
     this.container(name);
+    if (isPublic) {
+      await this.setContainerPublicAccess(name, true);
+    }
     ConduitGrpcSdk.Metrics?.increment('containers_total');
+    return true;
+  }
+
+  async setContainerPublicAccess(
+    name: string,
+    isPublic: boolean,
+  ): Promise<boolean | Error> {
+    await this._ossClient.putBucketACL(name, isPublic ? 'public-read' : 'private');
     return true;
   }
 
@@ -146,12 +157,15 @@ export class AliyunStorage implements IStorageProvider {
     });
   }
 
-  async getPublicUrl(fileName: string): Promise<any | Error> {
-    const url = this._ossClient.signatureUrl(fileName, {
+  async getPublicUrl(fileName: string, containerIsPublic?: boolean): Promise<string> {
+    if (containerIsPublic) {
+      return this._ossClient.getObjectUrl(fileName);
+    }
+
+    // For private containers with public files, generate long-lived signed URL (100 years)
+    return this._ossClient.signatureUrl(fileName, {
       expires: 3600 * 24 * 365 * 100,
       method: 'GET',
     });
-
-    return url;
   }
 }
