@@ -193,11 +193,14 @@ export class SocketController extends ConduitRouter {
         }
       }
     } else if (isInstanceOfEventResponse(push)) {
-      if (isNil(push.receivers) || push.receivers!.length === 0) {
+      if (
+        (isNil(push.receivers) || push.receivers.length === 0) &&
+        push.rooms.length === 0
+      ) {
         ConduitGrpcSdk.Logger.info(
           `Emitting event: ${push.event} to all sockets in namespace: ${push.namespace}`,
         );
-        this.io.of(push.namespace).emit(push.event, JSON.parse(push.data));
+        this.io.of(push.namespace).emit(push.event, push.data);
       } else {
         if (push.rooms.length !== 0) {
           ConduitGrpcSdk.Logger.info(
@@ -205,10 +208,7 @@ export class SocketController extends ConduitRouter {
               ', ',
             )} in namespace: ${push.namespace}`,
           );
-          this.io
-            .of(push.namespace)
-            .to(push.rooms)
-            .emit(push.event, JSON.parse(push.data));
+          this.io.of(push.namespace).to(push.rooms).emit(push.event, push.data);
         }
         if (push.receivers.length !== 0) {
           const filteredSockets = await this.findAndFilterSockets(
@@ -219,7 +219,7 @@ export class SocketController extends ConduitRouter {
             ConduitGrpcSdk.Logger.info(
               `Emitting event: ${push.event} to socket: ${socket.id} in namespace: ${push.namespace}`,
             );
-            socket.emit(push.event, JSON.parse(push.data));
+            socket.emit(push.event, push.data);
           }
         }
       }
