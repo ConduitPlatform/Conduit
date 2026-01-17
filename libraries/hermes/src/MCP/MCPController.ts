@@ -10,6 +10,7 @@
  * - Admin authentication required
  * - Origin validation for security
  * - Automatic admin route to tool conversion
+ * - Module-based tool organization with lazy loading
  */
 
 import { NextFunction, Request, Response } from 'express';
@@ -18,11 +19,12 @@ import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { MCPConfig, MCPToolDefinition } from './types.js';
-import { ToolRegistry } from './ToolRegistry.js';
+import { CORE_MODULE, ToolRegistry } from './ToolRegistry.js';
 import { MCP_ERROR_CODES } from './MCPErrors.js';
 import { convertConduitRouteToMCPTool } from './RouteToTool.js';
 import { ConduitRoute } from '../classes/index.js';
 import { isNil } from 'lodash-es';
+import { registerMetaTools } from './MetaTools.js';
 
 export class MCPController extends ConduitRouter {
   private _mcpServer: McpServer;
@@ -53,6 +55,9 @@ export class MCPController extends ConduitRouter {
     // Initialize tool registry
     this._toolRegistry = new ToolRegistry(grpcSdk);
     this._toolRegistry.setMcpServer(this._mcpServer);
+
+    // Register meta-tools for module discovery (always enabled)
+    registerMetaTools(this._toolRegistry);
 
     this.initializeRouter();
   }
@@ -137,14 +142,50 @@ export class MCPController extends ConduitRouter {
    * Health check endpoint
    */
   private handleHealthCheck(req: Request, res: Response) {
+    const modules = this._toolRegistry.getModules();
     res.json({
       status: 'healthy',
       protocol: 'mcp',
       version: this._config.protocolVersion,
       serverInfo: this._config.serverInfo,
-      tools: this._toolRegistry.getToolCount(),
+      tools: {
+        total: this._toolRegistry.getToolCount(),
+        enabled: this._toolRegistry.getEnabledToolCount(),
+      },
+      modules: {
+        total: modules.length,
+        loaded: this._toolRegistry.getLoadedModules().length,
+        list: modules,
+      },
       uptime: process.uptime(),
     });
+  }
+
+  /**
+   * Extract module name from route path
+   * e.g., "/authentication/local/login" -> "authentication"
+   * e.g., "/storage/file/:id" -> "storage"
+   * e.g., "/config" -> "core"
+   */
+  private extractModuleFromPath(path: string): string {
+    // Remove leading slash and split by /
+    const segments = path.replace(/^\//, '').split('/');
+
+    // First segment is the module name
+    const firstSegment = segments[0];
+
+    // If path is just a single segment or empty, use core module
+    if (!firstSegment || segments.length === 1) {
+      return CORE_MODULE;
+    }
+
+    // Skip common prefixes that aren't module names
+    if (firstSegment === 'admin' || firstSegment === 'hook') {
+      // Use second segment as module
+      return segments[1] || CORE_MODULE;
+    }
+
+    return firstSegment;
   }
 
   /**
@@ -182,14 +223,18 @@ export class MCPController extends ConduitRouter {
    * Register a Conduit admin route as an MCP tool
    */
   registerRouteAsTool(route: ConduitRoute): void {
-    const tool = convertConduitRouteToMCPTool(route, this);
+    // Extract module from route path
+    const moduleName = this.extractModuleFromPath(route.input.path);
+
+    // Convert route to tool with module info
+    const tool = convertConduitRouteToMCPTool(route, this, { module: moduleName });
     this.registerTool(tool);
   }
 
   // Override ConduitRouter methods
   protected _refreshRouter() {
-    // Don't recreate server, just unregister and re-register tools
-    this._toolRegistry.clearAllTools(); // This now properly removes via handles
+    // Clear module tools but preserve meta-tools
+    this._toolRegistry.clearModuleTools();
 
     // Re-register all tools from registered routes
     this._registeredRoutes.forEach(route => {
@@ -197,7 +242,7 @@ export class MCPController extends ConduitRouter {
     });
 
     ConduitGrpcSdk.Logger.log(
-      `MCP tools refreshed: ${this._registeredRoutes.size} tools`,
+      `MCP tools refreshed: ${this._registeredRoutes.size} module tools + meta-tools`,
     );
   }
 
@@ -219,6 +264,13 @@ export class MCPController extends ConduitRouter {
     this._registeredRoutes.clear();
     this._registeredRoutes = newRegisteredRoutes;
     this.refreshRouter(); // Triggers _refreshRouter after delay
+  }
+
+  /**
+   * Get the tool registry (for testing/debugging)
+   */
+  getToolRegistry(): ToolRegistry {
+    return this._toolRegistry;
   }
 
   shutDown() {

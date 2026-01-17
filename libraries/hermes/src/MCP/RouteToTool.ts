@@ -26,9 +26,9 @@ export class RouteToToolConverter {
   ): MCPToolDefinition {
     const {
       prefix = 'admin',
-      includeModule = false,
       adminOnly = true,
       customDescriptions = {},
+      module,
     } = options;
 
     const toolName = this.generateToolName(routeInfo, prefix);
@@ -45,7 +45,9 @@ export class RouteToToolConverter {
       outputSchema,
       handler,
       adminOnly,
-      // module: includeModule ? routeInfo.module : undefined,
+      module,
+      // Module tools start disabled (lazy loading)
+      initiallyDisabled: true,
     };
   }
 

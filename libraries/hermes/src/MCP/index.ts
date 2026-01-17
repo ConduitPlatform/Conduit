@@ -11,6 +11,7 @@ export * from './ToolRegistry.js';
 export * from './RouteToTool.js';
 export * from './MCPParser.js';
 export * from './constants.js';
+export * from './MetaTools.js';
 export { MCPError, MCP_ERROR_CODES } from './MCPErrors.js';
 
 // Re-export useful SDK types and classes for convenience
