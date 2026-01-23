@@ -33,7 +33,7 @@
     "bluebird": "^3.7.2",
     "clicksend": "^5.0.79",
     "convict": "^6.2.4",
-    "lodash-es": "^4.17.21",
+    "lodash-es": "^4.17.23",
     "messagebird": "^4.0.1",
     "otp-generator": "^4.0.1",
     "twilio": "5.3.4"
