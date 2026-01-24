@@ -13,6 +13,7 @@ import { ConduitRoute } from '../classes/index.js';
 import { ConduitRouter } from '../Router.js';
 import { Cookie } from '../interfaces/index.js';
 import { MCPParser } from './MCPParser.js';
+import { CORE_MODULE } from './ToolRegistry.js';
 
 export class RouteToToolConverter {
   constructor(private readonly router: ConduitRouter) {}
@@ -46,8 +47,8 @@ export class RouteToToolConverter {
       handler,
       adminOnly,
       module,
-      // Module tools start disabled (lazy loading)
-      initiallyDisabled: true,
+      // Core module tools are always enabled, others start disabled (lazy loading)
+      initiallyDisabled: module !== CORE_MODULE,
     };
   }
 

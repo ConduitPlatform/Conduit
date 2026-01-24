@@ -38,8 +38,9 @@ export class ToolRegistry {
 
   constructor(grpcSdk: ConduitGrpcSdk) {
     this._grpcSdk = grpcSdk;
-    // Meta module is always loaded
+    // Meta module and core module are always loaded
     this._loadedModules.add(META_MODULE);
+    this._loadedModules.add(CORE_MODULE);
   }
 
   /**
@@ -106,10 +107,12 @@ export class ToolRegistry {
     if (handle !== undefined && handle !== null) {
       this._toolHandles.set(tool.name, handle);
 
-      // Disable the tool if it should start disabled (non-meta module tools)
+      // Disable the tool if it should start disabled (non-meta and non-core module tools)
       const shouldBeDisabled =
         tool.initiallyDisabled === true ||
-        (moduleName !== META_MODULE && !this._loadedModules.has(moduleName));
+        (moduleName !== META_MODULE &&
+          moduleName !== CORE_MODULE &&
+          !this._loadedModules.has(moduleName));
 
       if (shouldBeDisabled) {
         handle.disable();
@@ -184,13 +187,38 @@ export class ToolRegistry {
   }
 
   /**
+   * Enable multiple modules at once (batch operation)
+   * @param moduleNames - Array of module names to enable
+   * @returns Map of module name -> array of enabled tool names
+   */
+  enableModules(moduleNames: string[]): Map<string, string[]> {
+    const result = new Map<string, string[]>();
+
+    for (const moduleName of moduleNames) {
+      // Skip meta module and core module (always enabled)
+      if (moduleName === META_MODULE || moduleName === CORE_MODULE) continue;
+
+      const enabledTools = this.enableModule(moduleName);
+      if (enabledTools.length > 0) {
+        result.set(moduleName, enabledTools);
+      }
+    }
+
+    if (result.size > 0) {
+      ConduitGrpcSdk.Logger.log(`Enabled ${result.size} modules via batch operation`);
+    }
+
+    return result;
+  }
+
+  /**
    * Disable all tools for a specific module
    * @returns Array of tool names that were disabled
    */
   disableModule(moduleName: string): string[] {
-    // Prevent disabling meta module
-    if (moduleName === META_MODULE) {
-      ConduitGrpcSdk.Logger.warn('Cannot disable meta module');
+    // Prevent disabling meta module or core module
+    if (moduleName === META_MODULE || moduleName === CORE_MODULE) {
+      ConduitGrpcSdk.Logger.warn('Cannot disable meta or core module');
       return [];
     }
 

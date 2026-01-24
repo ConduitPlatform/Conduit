@@ -22,7 +22,11 @@ import { SchemaAdmin } from './schema.admin.js';
 import { SchemaController } from '../controllers/cms/schema.controller.js';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller.js';
 import { CustomEndpoints, DeclaredSchema, PendingSchemas } from '../models/index.js';
-import { ConduitOptions } from '../interfaces/index.js';
+import {
+  ConduitOptions,
+  SchemaFieldsRequired,
+  SchemaFieldsOptional,
+} from '../interfaces/index.js';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
@@ -163,7 +167,7 @@ export class AdminHandlers {
         description: `Creates a new schema.`,
         bodyParams: {
           name: ConduitString.Required,
-          fields: ConduitJson.Required,
+          fields: SchemaFieldsRequired,
           conduitOptions: ConduitOptions,
           timestamps: ConduitBoolean.Optional,
         },
@@ -180,7 +184,7 @@ export class AdminHandlers {
           id: { type: TYPE.String, required: true },
         },
         bodyParams: {
-          fields: ConduitJson.Optional,
+          fields: SchemaFieldsOptional,
           conduitOptions: ConduitOptions,
         },
       },
@@ -256,7 +260,7 @@ export class AdminHandlers {
           schemaId: { type: TYPE.String, required: true },
         },
         bodyParams: {
-          fields: ConduitJson.Required,
+          fields: SchemaFieldsRequired,
         },
       },
       new ConduitRouteReturnDefinition('SetSchemaExtension', DeclaredSchema.fields),

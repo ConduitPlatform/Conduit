@@ -7,6 +7,7 @@
  * Key features:
  * - Stateless transport (new transport per request)
  * - HTTP POST for client-to-server messages
+ * - HTTP GET for server-to-client SSE streams
  * - Admin authentication required
  * - Origin validation for security
  * - Automatic admin route to tool conversion
@@ -73,21 +74,24 @@ export class MCPController extends ConduitRouter {
     // OPTIONS for CORS preflight
     this._expressRouter.options(this._config.path, this.handleOptions.bind(this));
 
-    // POST endpoint for MCP messages (required by Streamable HTTP spec)
-    this._expressRouter.post(this._config.path, this.handleMCPRequest.bind(this));
-
-    // Health check endpoint
+    // Health check endpoint (register before main GET route to ensure correct matching)
     this._expressRouter.get(
       `${this._config.path}/health`,
       this.handleHealthCheck.bind(this),
     );
+
+    // POST endpoint for MCP messages (required by Streamable HTTP spec)
+    this._expressRouter.post(this._config.path, this.handleMCPRequest.bind(this));
+
+    // GET endpoint for SSE streams (required by Streamable HTTP spec)
+    this._expressRouter.get(this._config.path, this.handleMCPRequest.bind(this));
   }
 
   /**
    * Handle CORS preflight requests
    */
   private handleOptions(req: Request, res: Response) {
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader(
       'Access-Control-Allow-Headers',
       'Authorization, Content-Type, Origin, MCP-Protocol-Version',
@@ -97,11 +101,98 @@ export class MCPController extends ConduitRouter {
   }
 
   /**
-   * Handle MCP POST requests with stateless transport
+   * Parse modules from URL query parameters
+   * Extracts comma-separated module names from ?modules= query parameter
+   * @param req - Express request object
+   * @returns Array of module names, or empty array if not specified
+   */
+  private parseModulesFromQuery(req: Request): string[] {
+    const modulesParam = req.query.modules;
+
+    if (!modulesParam) {
+      return [];
+    }
+
+    // Handle both string and array formats
+    const modulesString =
+      typeof modulesParam === 'string'
+        ? modulesParam
+        : Array.isArray(modulesParam)
+        ? modulesParam.join(',')
+        : '';
+
+    if (!modulesString) {
+      return [];
+    }
+
+    // Split by comma and trim whitespace
+    const modules = modulesString
+      .split(',')
+      .map(m => m.trim())
+      .filter(m => m.length > 0);
+
+    return modules;
+  }
+
+  /**
+   * Enable modules specified in URL query parameters
+   * Validates module names against available modules
+   * @param moduleNames - Array of module names from query parameter
+   */
+  private enableModulesFromQuery(moduleNames: string[]): void {
+    if (moduleNames.length === 0) {
+      return;
+    }
+
+    // Get available modules for validation
+    const availableModules = this._toolRegistry.getModules();
+    const availableModuleNames = new Set(availableModules.map(m => m.name));
+
+    // Filter to only valid modules
+    const validModules = moduleNames.filter(moduleName => {
+      if (availableModuleNames.has(moduleName)) {
+        return true;
+      }
+      ConduitGrpcSdk.Logger.warn(
+        `Unknown module specified in URL: ${moduleName}. Available modules: ${Array.from(
+          availableModuleNames,
+        ).join(', ')}`,
+      );
+      return false;
+    });
+
+    if (validModules.length > 0) {
+      // Enable modules (only if not already enabled for efficiency)
+      const modulesToEnable = validModules.filter(
+        m => !this._toolRegistry.isModuleLoaded(m),
+      );
+
+      if (modulesToEnable.length > 0) {
+        this._toolRegistry.enableModules(modulesToEnable);
+        ConduitGrpcSdk.Logger.log(
+          `Enabled modules from URL query: ${modulesToEnable.join(', ')}`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Handle MCP POST and GET requests with stateless transport
    * Creates a new transport for each request to prevent request ID collisions
+   * - POST: Client-to-server messages (with JSON-RPC body)
+   * - GET: Server-to-client SSE streams (no body)
+   *
+   * Supports URL-based module specification via ?modules= query parameter
+   * Example: /mcp?modules=authentication,storage
    */
   private async handleMCPRequest(req: Request, res: Response, next: NextFunction) {
     try {
+      // Parse and enable modules from query parameters
+      const requestedModules = this.parseModulesFromQuery(req);
+      if (requestedModules.length > 0) {
+        this.enableModulesFromQuery(requestedModules);
+      }
+
       // Create stateless transport (new instance per request)
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, // Stateless mode
@@ -117,7 +208,10 @@ export class MCPController extends ConduitRouter {
       await this._mcpServer.connect(transport);
 
       // Handle the request
-      await transport.handleRequest(req, res, req.body);
+      // For GET requests, pass undefined as body (GET doesn't have a request body)
+      // For POST requests, pass req.body which contains the JSON-RPC message
+      const body = req.method === 'GET' ? undefined : req.body;
+      await transport.handleRequest(req, res, body);
     } catch (error) {
       ConduitGrpcSdk.Logger.error(
         'Error handling MCP request: ' + (error as Error).message,
