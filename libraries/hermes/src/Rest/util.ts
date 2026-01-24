@@ -22,14 +22,14 @@ export function extractRequestData(req: ConduitRequest) {
   if (req.query) {
     const newObj = {};
     Object.keys(req.query).forEach((k: string) => {
-      if (!req.query.hasOwnProperty(k)) return;
+      let fieldName = k.indexOf('[]') !== -1 ? k.split('[]')[0] : k;
       // @ts-ignore
       if (!Array.isArray(req.query) && req.query[k].indexOf(',') !== -1) {
         // @ts-ignore
-        newObj[k] = req.query[k].split(',');
+        newObj[fieldName] = req.query[k].split(',');
       } else {
         // @ts-ignore
-        newObj[k] = req.query[k];
+        newObj[fieldName] = req.query[k];
       }
     });
     Object.assign(queryParams, newObj);
