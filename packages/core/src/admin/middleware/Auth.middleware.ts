@@ -1,9 +1,8 @@
 import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash-es';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-// Removed ConduitCommons import - now using configManager directly
-import { Admin } from '../../models/index.js';
-import { verifyToken } from '../utils/auth.js';
+import { Admin, AdminApiToken } from '../../models/index.js';
+import { verifyToken, comparePasswords } from '../utils/auth.js';
 import { isDev } from '../utils/middleware.js';
 import { ConduitRequest } from '@conduitplatform/hermes';
 import { gql } from 'graphql-tag';
@@ -41,6 +40,101 @@ async function requestExcluded(req: ConduitRequest, configManager: any) {
   return false;
 }
 
+/**
+ * Handles authentication via API tokens (prefixed with cdt_).
+ * These are long-lived tokens created via the /api-tokens endpoint.
+ */
+async function handleApiToken(
+  token: string,
+  req: ConduitRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const tokenPrefix = token.substring(0, 12);
+
+    // Find tokens matching the prefix
+    const candidates = await AdminApiToken.getInstance().findMany(
+      { tokenPrefix },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      '+hashedToken',
+    );
+
+    for (const candidate of candidates) {
+      const isMatch = await comparePasswords(token, candidate.hashedToken);
+      if (isMatch) {
+        // Check expiration
+        if (candidate.expiresAt && new Date(candidate.expiresAt) < new Date()) {
+          res.status(401).json({ error: 'Token has expired' });
+          return;
+        }
+
+        // Get the admin user
+        const admin = await Admin.getInstance().findOne({ _id: candidate.adminId });
+        if (isNil(admin)) {
+          res.status(401).json({ error: 'No such user exists' });
+          return;
+        }
+
+        // Update lastUsedAt (fire and forget)
+        AdminApiToken.getInstance()
+          .findByIdAndUpdate(candidate._id, { lastUsedAt: new Date() })
+          .catch(() => {});
+
+        req.conduit!.admin = admin;
+        next();
+        return;
+      }
+    }
+
+    res.status(401).json({ error: 'Invalid token' });
+  } catch (error) {
+    ConduitGrpcSdk.Logger.error(error as Error);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+}
+
+/**
+ * Handles authentication via JWT tokens (session tokens from login).
+ */
+async function handleJwtToken(
+  token: string,
+  adminConfig: any,
+  req: ConduitRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  let decoded;
+  try {
+    decoded = verifyToken(token, adminConfig.auth.tokenSecret);
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid token' });
+    return;
+  }
+
+  const { id } = decoded;
+  if (decoded.twoFaRequired && req.path !== '/verify-twofa') {
+    res.status(401).json({ error: 'Two FA required' });
+    return;
+  }
+
+  try {
+    const admin = await Admin.getInstance().findOne({ _id: id });
+    if (isNil(admin)) {
+      res.status(401).json({ error: 'No such user exists' });
+      return;
+    }
+    req.conduit!.admin = admin;
+    next();
+  } catch (error) {
+    ConduitGrpcSdk.Logger.error(error as Error);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+}
+
 export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, configManager: any) {
   return async function authMiddleware(
     req: ConduitRequest,
@@ -66,29 +160,13 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, configManager: any) {
         .status(401)
         .json({ error: "The Authorization header must be prefixed by 'Bearer '" });
     }
-    let decoded;
-    try {
-      decoded = verifyToken(token, adminConfig.auth.tokenSecret);
-    } catch (error) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    const { id } = decoded;
-    if (decoded.twoFaRequired && req.path !== '/verify-twofa') {
-      return res.status(401).json({ error: 'Two FA required' });
+
+    // Check if this is an API token (starts with cdt_)
+    if (token.startsWith('cdt_')) {
+      return handleApiToken(token, req, res, next);
     }
 
-    Admin.getInstance()
-      .findOne({ _id: id })
-      .then(admin => {
-        if (isNil(admin)) {
-          return res.status(401).json({ error: 'No such user exists' });
-        }
-        req.conduit!.admin = admin;
-        next();
-      })
-      .catch((error: Error) => {
-        ConduitGrpcSdk.Logger.error(error);
-        res.status(500).json({ error: 'Something went wrong' });
-      });
+    // Otherwise, treat as JWT
+    return handleJwtToken(token, adminConfig, req, res, next);
   };
 }

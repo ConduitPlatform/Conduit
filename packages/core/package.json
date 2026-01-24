@@ -11,7 +11,9 @@
   "scripts": {
     "start": "node dist/bin/www.js",
     "lint": "./node_modules/.bin/eslint .",
+    "prebuild": "npm run generateTypes",
     "build": "rimraf dist && tsc",
+    "generateTypes": "sh build.sh",
     "postbuild": "copyfiles -u 1 src/*.proto ./dist/",
     "prepare": "npm run build",
     "prepublish": "npm run build"

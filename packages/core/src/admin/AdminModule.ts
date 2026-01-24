@@ -61,6 +61,9 @@ export default class AdminModule {
     adminRoutes.changeUsersPasswordRoute(),
     adminRoutes.patchRouteMiddlewares(this),
     adminRoutes.getRouteMiddlewares(this),
+    adminRoutes.createApiTokenRoute(),
+    adminRoutes.getApiTokensRoute(),
+    adminRoutes.deleteApiTokenRoute(),
     configRoutes.getModulesRoute(),
   ];
   private readonly _grpcRoutes: {
