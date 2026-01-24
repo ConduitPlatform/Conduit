@@ -68,6 +68,7 @@ export interface ConduitRouteOptions {
   description?: string;
   middlewares?: string[];
   cacheControl?: string;
+  mcp?: boolean;
   errors?: ModuleErrorDefinition[];
 }
 

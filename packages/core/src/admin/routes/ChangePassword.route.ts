@@ -16,6 +16,7 @@ export function changePasswordRoute() {
       path: '/change-password',
       action: ConduitRouteActions.UPDATE,
       description: `Changes authenticated admin user's password.`,
+      mcp: false,
       bodyParams: {
         oldPassword: ConduitString.Required,
         newPassword: ConduitString.Required,

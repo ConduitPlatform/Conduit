@@ -22,7 +22,11 @@ import { SchemaAdmin } from './schema.admin.js';
 import { SchemaController } from '../controllers/cms/schema.controller.js';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller.js';
 import { CustomEndpoints, DeclaredSchema, PendingSchemas } from '../models/index.js';
-import { ConduitOptions } from '../interfaces/index.js';
+import {
+  ConduitOptions,
+  SchemaFieldsRequired,
+  SchemaFieldsOptional,
+} from '../interfaces/index.js';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
@@ -73,6 +77,7 @@ export class AdminHandlers {
         path: '/schemas/import',
         action: ConduitRouteActions.POST,
         description: `Imports CMS schemas and extensions. Doesn't drop non-specified extensions.`,
+        mcp: false,
         bodyParams: {
           schemas: { type: [TYPE.JSON], required: true },
           extensions: { type: [TYPE.JSON], required: false },
@@ -162,7 +167,7 @@ export class AdminHandlers {
         description: `Creates a new schema.`,
         bodyParams: {
           name: ConduitString.Required,
-          fields: ConduitJson.Required,
+          fields: SchemaFieldsRequired,
           conduitOptions: ConduitOptions,
           timestamps: ConduitBoolean.Optional,
         },
@@ -179,7 +184,7 @@ export class AdminHandlers {
           id: { type: TYPE.String, required: true },
         },
         bodyParams: {
-          fields: ConduitJson.Optional,
+          fields: SchemaFieldsOptional,
           conduitOptions: ConduitOptions,
         },
       },
@@ -255,7 +260,7 @@ export class AdminHandlers {
           schemaId: { type: TYPE.String, required: true },
         },
         bodyParams: {
-          fields: ConduitJson.Required,
+          fields: SchemaFieldsRequired,
         },
       },
       new ConduitRouteReturnDefinition('SetSchemaExtension', DeclaredSchema.fields),
@@ -283,6 +288,7 @@ export class AdminHandlers {
       {
         path: '/introspection',
         action: ConduitRouteActions.GET,
+        mcp: false,
         description: `Returns introspection status.`,
       },
       new ConduitRouteReturnDefinition('GetIntrospectionStatus', {
@@ -299,6 +305,7 @@ export class AdminHandlers {
       {
         path: '/introspection',
         action: ConduitRouteActions.POST,
+        mcp: false,
         description: `Performs database introspection, registering any unknown
                         collections as pending schemas.`,
       },
@@ -309,6 +316,7 @@ export class AdminHandlers {
       {
         path: '/introspection/schemas/:id',
         action: ConduitRouteActions.GET,
+        mcp: false,
         description: `Returns a pending schema.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -321,6 +329,7 @@ export class AdminHandlers {
       {
         path: '/introspection/schemas',
         action: ConduitRouteActions.GET,
+        mcp: false,
         description: `Returns queried pending schemas.`,
         queryParams: {
           skip: ConduitNumber.Optional,
@@ -338,6 +347,7 @@ export class AdminHandlers {
       {
         path: '/introspection/schemas/finalize',
         action: ConduitRouteActions.POST,
+        mcp: false,
         description: `Converts a previously imported pending schema to a CMS schema.`,
         bodyParams: {
           schemas: { type: [PendingSchemas.fields as ArrayConduitModel], required: true },

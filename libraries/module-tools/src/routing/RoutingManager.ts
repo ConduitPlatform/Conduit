@@ -165,6 +165,11 @@ export class RoutingManager {
         routeObject.options[option] instanceof String
       )
         continue;
+      if (
+        typeof routeObject.options[option] === 'boolean' ||
+        routeObject.options[option] instanceof Boolean
+      )
+        continue;
       routeObject.options[option] = JSON.stringify(routeObject.options[option]);
     }
     return routeObject;
