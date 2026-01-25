@@ -41,7 +41,7 @@
     "graphql-tag": "^2.12.6",
     "helmet": "7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "lodash-es": "^4.17.21"
+    "lodash-es": "^4.17.23"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
