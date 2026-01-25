@@ -273,16 +273,6 @@ export default {
         default: '',
       },
     },
-    clickSend: {
-      username: {
-        format: 'String',
-        default: '',
-      },
-      clicksendApiKey: {
-        format: 'String',
-        default: '',
-      },
-    },
   },
   // Orchestration settings
   orchestration: {

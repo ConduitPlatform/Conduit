@@ -8,7 +8,6 @@ import {
 } from '../interfaces/index.js';
 import { ISmsProvider } from '../providers/sms/interfaces/ISmsProvider.js';
 import { Config } from '../config/index.js';
-import { clickSendProvider } from '../providers/sms/clickSend.js';
 import { messageBirdProvider } from '../providers/sms/messageBird.js';
 import { AwsSnsProvider } from '../providers/sms/awsSns.js';
 import { TwilioProvider } from '../providers/sms/twilio.js';
@@ -43,9 +42,6 @@ export class SmsService implements IChannel {
           break;
         case 'messageBird':
           this.provider = new messageBirdProvider(settings);
-          break;
-        case 'clickSend':
-          this.provider = new clickSendProvider(settings, this.grpcSdk);
           break;
         default:
           ConduitGrpcSdk.Logger.error(`Unknown SMS provider: ${name}`);

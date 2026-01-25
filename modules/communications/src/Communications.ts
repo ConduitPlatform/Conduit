@@ -700,7 +700,6 @@ export default class Communications extends ManagedModule<Config> {
             twilio: smsConfig.twilio ?? currentConfig.sms.twilio,
             awsSns: smsConfig.awsSns ?? currentConfig.sms.awsSns,
             messageBird: smsConfig.messageBird ?? currentConfig.sms.messageBird,
-            clickSend: smsConfig.clickSend ?? currentConfig.sms.clickSend,
           };
           configUpdated = true;
         }

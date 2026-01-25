@@ -41,7 +41,6 @@
     "axios": "^1.13.2",
     "bluebird": "^3.7.2",
     "bullmq": "^5.67.1",
-    "clicksend": "^5.0.79",
     "convict": "^6.2.4",
     "escape-string-regexp": "^5.0.0",
     "firebase-admin": "^13.6.0",
