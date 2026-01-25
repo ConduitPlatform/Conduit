@@ -4,7 +4,11 @@ WORKDIR /app
 
 COPY --from=conduit-base:latest /app/modules/database /app/modules/database
 
-RUN yarn install --production --pure-lockfile --non-interactive && yarn cache clean
+RUN apk update && \
+    apk add --no-cache --virtual .gyp python3 py3-setuptools make g++ && \
+    yarn install --production --pure-lockfile --non-interactive && \
+    yarn cache clean && \
+    apk del .gyp
 
 WORKDIR /app/modules/database
 

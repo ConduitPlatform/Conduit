@@ -9,7 +9,7 @@ else
 	TAG_SUFFIX = :$(IMAGE_TAG)
 endif
 
-IMAGE_DIRS = $(wildcard modules/*)
+IMAGE_DIRS = $(dir $(wildcard modules/*/Dockerfile))
 
 all: conduit $(IMAGE_DIRS)
 

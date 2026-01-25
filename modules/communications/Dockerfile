@@ -1,27 +1,21 @@
-FROM node:20-alpine
+FROM conduit-builder:latest
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json yarn.lock ./
-COPY modules/communications/package.json ./modules/communications/
-COPY libraries/grpc-sdk/package.json ./libraries/grpc-sdk/
-COPY libraries/module-tools/package.json ./libraries/module-tools/
+COPY --from=conduit-base:latest /app/modules/communications /app/modules/communications
 
-# Install dependencies
-RUN yarn install --frozen-lockfile
+RUN yarn install --production --pure-lockfile --non-interactive && yarn cache clean
 
-# Copy source code
-COPY modules/communications ./modules/communications
-COPY libraries/grpc-sdk ./libraries/grpc-sdk
-COPY libraries/module-tools ./libraries/module-tools
-
-# Build the module
 WORKDIR /app/modules/communications
-RUN npm run build
 
-# Expose port
+ENV NODE_ENV production
+
+ENV CONDUIT_SERVER conduit_server
+
+ENV SERVICE_URL 0.0.0.0:5000
+
+ENV GRPC_PORT 5000
+
 EXPOSE 5000
 
-# Start the service
-CMD ["npm", "start"]
+CMD ["node", "dist/index.js"]
