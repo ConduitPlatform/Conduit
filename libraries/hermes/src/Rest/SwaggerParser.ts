@@ -48,7 +48,8 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     isInput: boolean,
   ): ParseResult {
     if (!isInput) {
-      if (name === fields) this.requestedTypes.add(name); // implicit fields (db schema)
+      if (name === fields)
+        this.requestedTypes.add(name); // implicit fields (db schema)
       else this.knownTypes.add(name);
     }
     this.isInput = isInput;
@@ -163,6 +164,9 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     nestedType?: boolean,
     description?: string,
   ): void {
+    if (!processingObject.properties) {
+      processingObject.properties = {};
+    }
     processingObject.properties[name] = {
       type: 'array',
       description,

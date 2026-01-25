@@ -27,6 +27,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@bufbuild/protobuf": "^2.10.2",
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.14.3",

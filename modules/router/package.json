@@ -19,6 +19,7 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@bufbuild/protobuf": "^2.10.2",
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/hermes": "^1.0.1",
     "@conduitplatform/module-tools": "*",
