@@ -157,7 +157,8 @@ function createHandlerForRoute(
     options.path = `/${options.path}`;
   }
 
-  if (moduleName) {
+  // Skip module prefix for 'communications' to maintain backward compatibility
+  if (moduleName && moduleName !== 'communications') {
     if (
       !(
         options.path.startsWith(`/${moduleName}/`) ||
@@ -229,7 +230,8 @@ function createHandlerForSocket(
     eventHandlers.set(event, socketEvent);
   }
 
-  if (moduleName) {
+  // Skip module prefix for 'communications' to maintain backward compatibility
+  if (moduleName && moduleName !== 'communications') {
     if (!socket.options.path.startsWith('/')) {
       socket.options.path = `/${socket.options.path}`;
     }
