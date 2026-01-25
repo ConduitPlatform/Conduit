@@ -41,7 +41,7 @@
     "convict": "^6.2.4",
     "escape-string-regexp": "^4.0.0",
     "handlebars": "^4.7.8",
-    "lodash-es": "^4.17.21",
+    "lodash-es": "^4.17.23",
     "mailersend": "^2.4.1",
     "mailgun-js": "^0.22.0",
     "mandrill-api": "^1.0.45",
