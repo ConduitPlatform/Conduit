@@ -24,7 +24,7 @@ export class EmailProvider {
     if (transport === 'mailgun') {
       this._transportName = 'mailgun';
       const { apiKey, proxy, host } = transportSettings.mailgun;
-      let domain = ConfigController.getInstance().config.sendingDomain;
+      let domain = ConfigController.getInstance().config.email.sendingDomain;
       if (!isEmpty(transportSettings.mailgun.domain)) {
         domain = transportSettings.mailgun.domain;
       }
