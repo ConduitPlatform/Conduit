@@ -1,7 +1,9 @@
 GIT_SHA1 = $(shell git rev-parse --verify HEAD)
 IMAGE_TAG = $(shell git describe --tags `git rev-list --tags --max-count=1` 2> /dev/null || echo 'latest' )
 
-ifeq ($(DEV),TRUE)
+ifeq ($(NEXT),TRUE)
+	TAG_SUFFIX = :next
+else ifeq ($(DEV),TRUE)
 	TAG_SUFFIX = :dev
 else
 	TAG_SUFFIX = :$(IMAGE_TAG)
@@ -15,7 +17,7 @@ define build_docker_image
 	docker build --no-cache -t ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX) $(3)
 	docker push ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX)
 	$(eval SKIP_LATEST=$(if $(findstring $(2),alpha beta rc),true,false))
-	@if [ "$(SKIP_LATEST)" = "false" ] && [ "$(TAG_SUFFIX)" != ":dev" ]; then \
+	@if [ "$(SKIP_LATEST)" = "false" ] && [ "$(TAG_SUFFIX)" != ":dev" ] && [ "$(TAG_SUFFIX)" != ":next" ]; then \
 		docker tag ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX) conduitplatform/$(1):$(2) ; \
 		docker tag ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX) ghcr.io/conduitplatform/$(1):latest ; \
 		docker tag ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX) conduitplatform/$(1):latest ; \
@@ -23,7 +25,7 @@ define build_docker_image
 		docker push ghcr.io/conduitplatform/$(1):latest ; \
 		docker push conduitplatform/$(1):latest ; \
 	else \
-		echo "Skipping latest tag due to alpha, beta, or rc in IMAGE_TAG or DEV=TRUE" ; \
+		echo "Skipping latest tag due to alpha, beta, or rc in IMAGE_TAG or DEV=TRUE or NEXT=TRUE" ; \
 	fi
 endef
 
