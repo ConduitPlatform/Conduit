@@ -40,7 +40,7 @@
     "@types/nodemailer-sendgrid": "^1.0.3",
     "await-to-js": "^3.0.0",
     "axios": "^1.13.2",
-    "bluebird": "^3.7.2",
+    "bcrypt": "^6.0.0",
     "bullmq": "^5.67.1",
     "convict": "^6.2.4",
     "escape-string-regexp": "^5.0.0",

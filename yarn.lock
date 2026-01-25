@@ -7615,7 +7615,7 @@ blakejs@^1.1.0:
   resolved "https://registry.yarnpkg.com/blakejs/-/blakejs-1.2.1.tgz#5057e4206eadb4a97f7c0b6e197a505042fc3814"
   integrity sha512-QXUSXI3QVc/gJME0dBpXrag1kbzOqCjCX8/b54ntNyW6sjtoqxqRk3LTmXzaJoh71zMsDCjM+47jS7XiwN/+fQ==
 
-bluebird@^3.1.1, bluebird@^3.7.2:
+bluebird@^3.1.1:
   version "3.7.2"
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.7.2.tgz#9f229c15be272454ffa973ace0dbee79a1b0c36f"
   integrity sha512-XpNj6GDQzdfW+r2Wnn7xiSAd7TM3jzkxGXBGTtWKuSXv1xUV+azxAm8jdWZN06QTQk+2N2XB9jRDkvbmQmcRtg==
