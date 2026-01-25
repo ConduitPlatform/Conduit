@@ -1,0 +1,45 @@
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - next
+    paths:
+      - "modules/**"
+      - "libraries/**"
+      - "packages/**"
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    name: Build Conduit standalone
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to the Dockerhub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Build conduit base
+        run: |
+          docker build --no-cache -t conduit-base:latest -f ./Dockerfile .
+      - name: Build standalone
+        run: |
+          docker build -t ghcr.io/conduitplatform/conduit-standalone:next -f ./standalone.Dockerfile .
+      - name: Push image
+        run: |
+          docker tag ghcr.io/conduitplatform/conduit-standalone:next conduitplatform/conduit-standalone:next
+          docker push ghcr.io/conduitplatform/conduit-standalone:next
+          docker push conduitplatform/conduit-standalone:next
