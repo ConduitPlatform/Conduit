@@ -90,7 +90,7 @@ export class MCPParser {
       case TYPE.ObjectId:
         return z.string();
       case TYPE.JSON:
-        return z.record(z.any());
+        return z.record(z.any(), z.any());
       case TYPE.Relation:
         return z.string(); // Relations are represented as ID strings
       default:

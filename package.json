@@ -23,17 +23,17 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@commitlint/cli": "^20.1.0",
-    "@commitlint/config-conventional": "^20.0.0",
-    "@commitlint/config-lerna-scopes": "^20.0.0",
+    "@commitlint/cli": "^20.3.1",
+    "@commitlint/config-conventional": "^20.3.1",
+    "@commitlint/config-lerna-scopes": "^20.2.0",
     "copyfiles": "^2.4.1",
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^9.0.11",
-    "lerna": "^9.0.0",
-    "lint-staged": ">=15",
-    "prettier": "^3.0.3",
+    "lerna": "^9.0.3",
+    "lint-staged": ">=16.2.7",
+    "prettier": "^3.8.1",
     "standard-version": "^9.5.0",
-    "turbo": "^2.5.8"
+    "turbo": "^2.7.6"
   },
   "dependencies": {},
   "config": {
