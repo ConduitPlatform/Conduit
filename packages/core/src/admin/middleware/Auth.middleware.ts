@@ -56,10 +56,6 @@ async function handleApiToken(
     // Find tokens matching the prefix
     const candidates = await AdminApiToken.getInstance().findMany(
       { tokenPrefix },
-      undefined,
-      undefined,
-      undefined,
-      undefined,
       '+hashedToken',
     );
 
