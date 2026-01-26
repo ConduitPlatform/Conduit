@@ -44,7 +44,7 @@
     "@grpc/proto-loader": "^0.7.13",
     "ali-oss": "^6.21.0",
     "convict": "^6.2.4",
-    "lodash-es": "^4.17.21",
+    "lodash-es": "^4.17.23",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
