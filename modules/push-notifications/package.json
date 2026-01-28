@@ -39,7 +39,7 @@
     "@aws-sdk/client-sns": "^3.782.0",
     "convict": "^6.2.4",
     "firebase-admin": "^12.4.0",
-    "lodash-es": "^4.17.21"
+    "lodash-es": "^4.17.23"
   },
   "devDependencies": {
     "@types/convict": "^6.1.6",
