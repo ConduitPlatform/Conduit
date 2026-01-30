@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.21](https://github.com/ConduitPlatform/Conduit/compare/v0.16.20...v0.16.21) (2026-01-30)
+
+
+### Features
+
+* **storage:** change mechanics of public/private containers to be aligned with expectations ([#1414](https://github.com/ConduitPlatform/Conduit/issues/1414)) ([fae8a87](https://github.com/ConduitPlatform/Conduit/commit/fae8a8713a12e1109fb48cc50a94e620481cb241))
+
+
+### Bug Fixes
+
+* **chat:** make message not required to account for types that don't need it ([81b74fa](https://github.com/ConduitPlatform/Conduit/commit/81b74faaaafb516d836c914eba975cc214afb53d))
+* **hermes:** wrong emition case & json parse error ([#1419](https://github.com/ConduitPlatform/Conduit/issues/1419)) ([2fe456a](https://github.com/ConduitPlatform/Conduit/commit/2fe456a803f149fcec6858ddd481e89d978594c3))
+
 ### [0.16.20](https://github.com/ConduitPlatform/Conduit/compare/v0.16.19...v0.16.20) (2025-11-21)
 
 
