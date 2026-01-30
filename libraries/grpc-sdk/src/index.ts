@@ -46,6 +46,8 @@ import {
 
 type UrlRemap = { [url: string]: string };
 
+const COMMUNICATIONS_LEGACY_MODULES = ['email', 'sms', 'pushNotifications'] as const;
+
 class ConduitGrpcSdk {
   public readonly name: string;
   public readonly instance: string;
@@ -325,6 +327,12 @@ class ConduitGrpcSdk {
         if ((!found || found.length === 0) && this._modules[r]) {
           this._modules[r]?.closeConnection();
           emitter.emit(`module-connection-update:${r}`, false);
+          if (r === 'communications') {
+            for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
+              this._modules[legacyModule]?.closeConnection();
+              emitter.emit(`module-connection-update:${legacyModule}`, false);
+            }
+          }
         }
       });
       modules.forEach((m: ModuleListResponse_ModuleResponse) => {
@@ -337,6 +345,11 @@ class ConduitGrpcSdk {
           this.createModuleClient(m.moduleName, m.url);
         }
         emitter.emit(`module-connection-update:${m.moduleName}`, true);
+        if (m.moduleName === 'communications') {
+          for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
+            emitter.emit(`module-connection-update:${legacyModule}`, true);
+          }
+        }
       });
     });
     emitter.on('core-status-update', () => {
@@ -431,6 +444,11 @@ class ConduitGrpcSdk {
         r.forEach(m => {
           this.createModuleClient(m.moduleName, m.url);
           emitter.emit(`module-connection-update:${m.moduleName}`, m.serving);
+          if (m.moduleName === 'communications') {
+            for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
+              emitter.emit(`module-connection-update:${legacyModule}`, m.serving);
+            }
+          }
         });
         return 'ok';
       })
@@ -479,6 +497,20 @@ class ConduitGrpcSdk {
         this._grpcToken,
       );
       this._modules[moduleName].initializeClient(ConduitModuleDefinition);
+    }
+
+    // When communications is created, also create legacy module clients
+    if (moduleName === 'communications') {
+      for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
+        if (!this._modules[legacyModule] && this._availableModules[legacyModule]) {
+          ConduitGrpcSdk.Logger.info(`Creating gRPC client for ${legacyModule}`);
+          this._modules[legacyModule] = new this._availableModules[legacyModule](
+            this.name,
+            moduleUrl,
+            this._grpcToken,
+          );
+        }
+      }
     }
   }
 
