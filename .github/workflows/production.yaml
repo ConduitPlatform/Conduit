@@ -3,6 +3,9 @@ on:
     types:
       - created
 
+permissions:
+  id-token: write 
+  contents: read
 env:
   REGISTRY: ghcr.io
 
@@ -56,8 +59,6 @@ jobs:
       - name: actually_publish
         run: yarn publish --access public --new-version ${{ env.RELEASE_VERSION }}
         working-directory: ./libraries/grpc-sdk
-        env:
-          NODE_AUTH_TOKEN: "${{ secrets.NPM_PUBLISH_TOKEN }}"
   publish_module_tools:
     runs-on: ubuntu-22.04
     steps:
@@ -86,5 +87,3 @@ jobs:
       - name: actually_publish
         run: yarn publish --access public --new-version ${{ env.RELEASE_VERSION }}
         working-directory: ./libraries/module-tools
-        env:
-          NODE_AUTH_TOKEN: "${{ secrets.NPM_PUBLISH_TOKEN }}"
