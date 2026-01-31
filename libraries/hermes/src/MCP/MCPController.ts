@@ -19,8 +19,9 @@ import { ConduitRouter } from '../Router.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { MCPConfig, MCPToolDefinition } from './types.js';
+import { MCPConfig, MCPToolDefinition, SwaggerDocProvider } from './types.js';
 import { CORE_MODULE, ToolRegistry } from './ToolRegistry.js';
+import { ResourceRegistry } from './ResourceRegistry.js';
 import { MCP_ERROR_CODES } from './MCPErrors.js';
 import { convertConduitRouteToMCPTool } from './RouteToTool.js';
 import { ConduitRoute } from '../classes/index.js';
@@ -30,6 +31,7 @@ import { registerMetaTools } from './MetaTools.js';
 export class MCPController extends ConduitRouter {
   private _mcpServer: McpServer;
   private _toolRegistry: ToolRegistry;
+  private _resourceRegistry: ResourceRegistry;
   private _config: MCPConfig;
   private _grpcSdk: ConduitGrpcSdk;
 
@@ -56,6 +58,10 @@ export class MCPController extends ConduitRouter {
     // Initialize tool registry
     this._toolRegistry = new ToolRegistry(grpcSdk);
     this._toolRegistry.setMcpServer(this._mcpServer);
+
+    // Initialize resource registry
+    this._resourceRegistry = new ResourceRegistry(grpcSdk);
+    this._resourceRegistry.setMcpServer(this._mcpServer);
 
     // Register meta-tools for module discovery (always enabled)
     registerMetaTools(this._toolRegistry);
@@ -118,8 +124,8 @@ export class MCPController extends ConduitRouter {
       typeof modulesParam === 'string'
         ? modulesParam
         : Array.isArray(modulesParam)
-        ? modulesParam.join(',')
-        : '';
+          ? modulesParam.join(',')
+          : '';
 
     if (!modulesString) {
       return [];
@@ -237,6 +243,7 @@ export class MCPController extends ConduitRouter {
    */
   private handleHealthCheck(req: Request, res: Response) {
     const modules = this._toolRegistry.getModules();
+    const resources = this._resourceRegistry.listResources();
     res.json({
       status: 'healthy',
       protocol: 'mcp',
@@ -245,6 +252,10 @@ export class MCPController extends ConduitRouter {
       tools: {
         total: this._toolRegistry.getToolCount(),
         enabled: this._toolRegistry.getEnabledToolCount(),
+      },
+      resources: {
+        total: resources.length,
+        list: resources.map(r => ({ uri: r.uri, name: r.name })),
       },
       modules: {
         total: modules.length,
@@ -365,6 +376,37 @@ export class MCPController extends ConduitRouter {
    */
   getToolRegistry(): ToolRegistry {
     return this._toolRegistry;
+  }
+
+  /**
+   * Get the resource registry (for testing/debugging)
+   */
+  getResourceRegistry(): ResourceRegistry {
+    return this._resourceRegistry;
+  }
+
+  /**
+   * Set the Admin API Swagger documentation provider
+   * This enables the Admin API OpenAPI spec resource
+   */
+  setAdminSwaggerProvider(provider: SwaggerDocProvider): void {
+    this._resourceRegistry.setAdminSwaggerProvider(provider);
+  }
+
+  /**
+   * Set the Client/Router API Swagger documentation provider
+   * This enables the Client API OpenAPI spec resource
+   */
+  setClientSwaggerProvider(provider: SwaggerDocProvider): void {
+    this._resourceRegistry.setClientSwaggerProvider(provider);
+  }
+
+  /**
+   * Set the API guide content (markdown)
+   * This enables the API guide resource
+   */
+  setApiGuideContent(content: string): void {
+    this._resourceRegistry.setApiGuideContent(content);
   }
 
   shutDown() {

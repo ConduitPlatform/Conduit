@@ -19,9 +19,12 @@ export const MCP_CONSTANTS = {
     version: '1.0.0',
   },
 
-  // Capabilities - SDK format for tools-only server
+  // Capabilities - SDK format for tools and resources server
   CAPABILITIES: {
     tools: {
+      listChanged: true,
+    },
+    resources: {
       listChanged: true,
     },
   },

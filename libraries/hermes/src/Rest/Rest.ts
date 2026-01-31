@@ -322,6 +322,14 @@ export class RestController extends ConduitRouter {
     });
   }
 
+  /**
+   * Get the Swagger/OpenAPI document
+   * Used by MCP resources to expose API documentation
+   */
+  getSwaggerDoc(): Record<string, unknown> | null {
+    return this._swagger?.swaggerDoc ?? null;
+  }
+
   shutDown() {
     TypeRegistry.removeTransport('rest');
     super.shutDown();

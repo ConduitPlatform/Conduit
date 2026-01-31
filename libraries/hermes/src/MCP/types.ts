@@ -22,6 +22,9 @@ export interface MCPConfig {
     tools: {
       listChanged: boolean;
     };
+    resources: {
+      listChanged: boolean;
+    };
   };
 }
 
@@ -77,3 +80,25 @@ export interface MCPRouteToToolOptions {
   /** The module this tool belongs to */
   module?: string;
 }
+
+/**
+ * Resource definition for MCP resources
+ * Resources provide read-only data to MCP clients (e.g., documentation, schemas)
+ */
+export interface MCPResourceDefinition {
+  /** Unique URI for the resource (e.g., "conduit://docs/admin-api/swagger") */
+  uri: string;
+  /** Human-readable name for the resource */
+  name: string;
+  /** Description of what the resource contains */
+  description: string;
+  /** MIME type of the resource content */
+  mimeType: string;
+  /** Function that provides the resource content */
+  contentProvider: () => Promise<string> | string;
+}
+
+/**
+ * Provider function type for accessing Swagger documentation
+ */
+export type SwaggerDocProvider = () => Record<string, unknown> | null;

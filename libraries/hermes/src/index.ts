@@ -2,7 +2,13 @@ import express, { Express, NextFunction, Request, Response, Router } from 'expre
 import { RestController } from './Rest/index.js';
 import { GraphQLController } from './GraphQl/GraphQL.js';
 import { SocketController } from './Socket/Socket.js';
-import { MCP_CONSTANTS, MCPConfig, MCPController } from './MCP/index.js';
+import {
+  MCP_CONSTANTS,
+  MCPConfig,
+  MCPController,
+  SwaggerDocProvider,
+  API_GUIDE_CONTENT,
+} from './MCP/index.js';
 import {
   ConduitError,
   ConduitGrpcSdk,
@@ -139,6 +145,10 @@ export class ConduitRoutingController {
   initMCP(config?: {
     enabled?: boolean;
     transport?: { options?: { pingInterval?: number; sessionTimeout?: number } };
+    /** Optional provider for Client/Router API swagger documentation */
+    clientSwaggerProvider?: SwaggerDocProvider;
+    /** Optional API guide content (markdown) */
+    apiGuideContent?: string;
   }) {
     if (this._mcpRouter) return;
 
@@ -152,6 +162,20 @@ export class ConduitRoutingController {
     };
 
     this._mcpRouter = new MCPController(this.grpcSdk, fullConfig, this.metrics);
+
+    // Set up Admin API swagger provider (from this server's REST router)
+    // This provides the swagger doc for the Admin API that MCP tools correspond to
+    this._mcpRouter.setAdminSwaggerProvider(() => {
+      return this._restRouter?.getSwaggerDoc() ?? null;
+    });
+
+    // Set up Client API swagger provider if provided
+    if (config?.clientSwaggerProvider) {
+      this._mcpRouter.setClientSwaggerProvider(config.clientSwaggerProvider);
+    }
+
+    // Set up API guide content (use provided content or default)
+    this._mcpRouter.setApiGuideContent(config?.apiGuideContent ?? API_GUIDE_CONTENT);
   }
 
   stopRest() {
@@ -176,6 +200,22 @@ export class ConduitRoutingController {
     if (!this._mcpRouter) return;
     this._mcpRouter.shutDown();
     delete this._mcpRouter;
+  }
+
+  /**
+   * Set the API guide content for MCP resources
+   * This provides a markdown guide explaining Admin vs Client APIs
+   */
+  setMCPApiGuideContent(content: string): void {
+    this._mcpRouter?.setApiGuideContent(content);
+  }
+
+  /**
+   * Set the Client/Router API swagger provider for MCP resources
+   * This enables agents to access Client API documentation
+   */
+  setMCPClientSwaggerProvider(provider: SwaggerDocProvider): void {
+    this._mcpRouter?.setClientSwaggerProvider(provider);
   }
 
   registerMiddleware(
