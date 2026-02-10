@@ -24,7 +24,7 @@
     "@modelcontextprotocol/sdk": "^1.20.1",
     "@scalar/api-reference": "^1.43.15",
     "@scalar/express-api-reference": "^0.8.37",
-    "@socket.io/redis-adapter": "^8.3.0",
+    "@socket.io/redis-streams-adapter": "^0.3.0",
     "@types/object-hash": "^3.0.6",
     "@types/swagger-ui-express": "^4.1.6",
     "body-parser": "^2.2.2",
