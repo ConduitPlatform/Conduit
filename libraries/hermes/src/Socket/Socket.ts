@@ -118,10 +118,8 @@ export class SocketController extends ConduitRouter {
       self
         .checkMiddlewares(context, conduitSocket.input.middlewares)
         .then(r => {
-          if (context.context) {
-            socket.data = context.context;
-          }
           Object.assign(context.context, r);
+          socket.data = context.context;
           next();
         })
         .catch((err: Error | ConduitError) => {
