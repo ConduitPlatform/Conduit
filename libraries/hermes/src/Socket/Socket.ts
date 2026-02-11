@@ -309,7 +309,7 @@ export class SocketController extends ConduitRouter {
     userIds: string[],
     namespace: string,
   ): Promise<RemoteSocket<any, any>[]> {
-    const sockets = await this.io.in(namespace).fetchSockets();
+    const sockets = await this.io.of(namespace).fetchSockets();
     return sockets.filter(socket => {
       if (socket.data && socket.data.user) {
         return userIds.includes(socket.data.user._id);
