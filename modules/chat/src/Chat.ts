@@ -149,8 +149,13 @@ export default class Chat extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
     this.grpcSdk.router?.socketPush({
+      event: 'join-room',
+      receivers: room.participants as string[],
+      rooms: [room._id],
+    });
+    this.grpcSdk.router?.socketPush({
       event: 'room-joined',
-      receivers: participants,
+      receivers: room.participants as string[],
       rooms: [],
       data: JSON.stringify({ room: room._id, roomName: room.name }),
     });
