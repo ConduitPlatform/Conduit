@@ -140,8 +140,7 @@ export class SocketController extends ConduitRouter {
           .executeRequest({
             event: 'connect',
             socketId: socket.id,
-            // @ts-ignore
-            context: socket.request.conduit,
+            context: socket.data,
           })
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
@@ -157,8 +156,7 @@ export class SocketController extends ConduitRouter {
             event,
             socketId: socket.id,
             params: args,
-            // @ts-ignore
-            context: socket.request.conduit,
+            context: socket.data,
           })
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
@@ -175,8 +173,7 @@ export class SocketController extends ConduitRouter {
           .executeRequest({
             event: 'disconnect',
             socketId: socket.id,
-            // @ts-ignore
-            context: socket.request.conduit,
+            context: socket.data,
           })
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
