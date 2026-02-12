@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.22](https://github.com/ConduitPlatform/Conduit/compare/v0.16.21...v0.16.22) (2026-02-12)
+
+
+### Bug Fixes
+
+* **chat:** missing join-room event for grpc room creations ([f31f449](https://github.com/ConduitPlatform/Conduit/commit/f31f449d8100762c80a3b988583706ba0efd01b5))
+* **email:** empty subject in rpc was overriding template ([1048ac5](https://github.com/ConduitPlatform/Conduit/commit/1048ac5ecc93a92c9f25e9c4617ab5a2688b0f84))
+* **hermes:** context data not being added to socket data ([4ef5dce](https://github.com/ConduitPlatform/Conduit/commit/4ef5dce0328dab1625bfe1bfe7213173995da002))
+* **hermes:** namespace access on socket filtering using wrong operator ([c6a4ae0](https://github.com/ConduitPlatform/Conduit/commit/c6a4ae0473789872d92baa65e75b2cbead21354c))
+
 ### [0.16.21](https://github.com/ConduitPlatform/Conduit/compare/v0.16.20...v0.16.21) (2026-01-30)
 
 
