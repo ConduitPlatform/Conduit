@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.23](https://github.com/ConduitPlatform/Conduit/compare/v0.16.22...v0.16.23) (2026-02-13)
+
+
+### Bug Fixes
+
+* **grpc-sdk:** missing params in method signatures ([#1440](https://github.com/ConduitPlatform/Conduit/issues/1440)) ([ca2cf29](https://github.com/ConduitPlatform/Conduit/commit/ca2cf29a7c28536c61ab9dbcc1480ff511fd832b))
+
 ### [0.16.22](https://github.com/ConduitPlatform/Conduit/compare/v0.16.21...v0.16.22) (2026-02-12)
 
 
