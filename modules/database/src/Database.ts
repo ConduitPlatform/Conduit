@@ -8,6 +8,8 @@ import {
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin/index.js';
+import { SchemaAdmin } from './admin/schema.admin.js';
+import { CustomEndpointsAdmin } from './admin/customEndpoints/customEndpoints.admin.js';
 import { DatabaseRoutes } from './routes/index.js';
 import * as models from './models/index.js';
 import {
@@ -51,7 +53,12 @@ import metricsSchema from './metrics/index.js';
 import { isNil } from 'lodash-es';
 import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter/index.js';
 import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter/index.js';
-import { ManagedModule } from '@conduitplatform/module-tools';
+import {
+  ManagedModule,
+  type ExportableResource,
+  type ExportResult,
+  type ImportResult,
+} from '@conduitplatform/module-tools';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
@@ -92,6 +99,8 @@ export default class DatabaseModule extends ManagedModule<void> {
   private adminRouter?: AdminHandlers;
   private userRouter?: DatabaseRoutes;
   private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
+  private schemaController?: SchemaController;
+  private customEndpointController?: CustomEndpointController;
 
   constructor(dbType: string, dbUri: string) {
     super('database');
@@ -153,6 +162,92 @@ export default class DatabaseModule extends ManagedModule<void> {
       .getSchemaModel('CustomEndpoints')
       .model.countDocuments({});
     ConduitGrpcSdk.Metrics?.set('custom_endpoints_total', customEndpointsTotal);
+  }
+
+  // Framework export/import (GitOps)
+  protected getExportableResources(): ExportableResource[] {
+    return [
+      { type: 'schemas', description: 'CMS schemas', priority: 10 },
+      {
+        type: 'extensions',
+        description: 'Schema extensions (database-owned)',
+        priority: 11,
+      },
+      { type: 'customEndpoints', description: 'Custom endpoints', priority: 20 },
+    ];
+  }
+
+  protected async exportResources(resourceTypes?: string[]): Promise<ExportResult> {
+    if (!this.schemaController || !this.customEndpointController) return {};
+    const schemaAdmin = new SchemaAdmin(
+      this.grpcSdk,
+      this._activeAdapter,
+      this.schemaController,
+      this.customEndpointController,
+    );
+    const schemaExport = await schemaAdmin.exportSchemas();
+    const customEndpointsAdmin = new CustomEndpointsAdmin(
+      this.grpcSdk,
+      this._activeAdapter,
+      this.customEndpointController,
+    );
+    const endpointExport = await customEndpointsAdmin.exportCustomEndpoints();
+    const all: ExportResult = {
+      schemas: (schemaExport as { schemas: unknown[] }).schemas ?? [],
+      extensions: (schemaExport as { extensions: unknown[] }).extensions ?? [],
+      customEndpoints: (endpointExport as { endpoints: unknown[] }).endpoints ?? [],
+    };
+    if (!resourceTypes || resourceTypes.length === 0) return all;
+    const out: ExportResult = {};
+    for (const t of resourceTypes) {
+      if (all[t]) out[t] = all[t];
+    }
+    return out;
+  }
+
+  protected async importResources(data: ExportResult): Promise<ImportResult> {
+    if (!this.schemaController || !this.customEndpointController) return {};
+    const result: ImportResult = {
+      schemas: { created: 0, updated: 0, failed: 0, errors: [] },
+      extensions: { created: 0, updated: 0, failed: 0, errors: [] },
+      customEndpoints: { created: 0, updated: 0, failed: 0, errors: [] },
+    };
+    const schemaAdmin = new SchemaAdmin(
+      this.grpcSdk,
+      this._activeAdapter,
+      this.schemaController,
+      this.customEndpointController,
+    );
+    const customEndpointsAdmin = new CustomEndpointsAdmin(
+      this.grpcSdk,
+      this._activeAdapter,
+      this.customEndpointController,
+    );
+    if (data.schemas?.length || data.extensions?.length) {
+      try {
+        await schemaAdmin.importSchemas({
+          request: {
+            params: { schemas: data.schemas ?? [], extensions: data.extensions ?? [] },
+          },
+        } as any);
+      } catch (e) {
+        result.schemas.failed =
+          (data.schemas?.length ?? 0) + (data.extensions?.length ?? 0);
+        result.schemas.errors.push((e as Error).message);
+      }
+    }
+    if (data.customEndpoints?.length) {
+      try {
+        await customEndpointsAdmin.importCustomEndpoints({
+          request: { params: { endpoints: data.customEndpoints } },
+        } as any);
+        result.customEndpoints.created = data.customEndpoints.length;
+      } catch (e) {
+        result.customEndpoints.failed = data.customEndpoints.length;
+        result.customEndpoints.errors.push((e as Error).message);
+      }
+    }
+    return result;
   }
 
   // gRPC Service
@@ -839,8 +934,8 @@ export default class DatabaseModule extends ManagedModule<void> {
   private onCoreHealthChange(state: HealthCheckStatus) {
     const boundFunctionRef = this.onCoreHealthChange.bind(this);
     if (state === HealthCheckStatus.SERVING) {
-      const schemaController = new SchemaController(this.grpcSdk, this._activeAdapter);
-      const customEndpointController = new CustomEndpointController(
+      this.schemaController = new SchemaController(this.grpcSdk, this._activeAdapter);
+      this.customEndpointController = new CustomEndpointController(
         this.grpcSdk,
         this._activeAdapter,
       );
@@ -848,8 +943,8 @@ export default class DatabaseModule extends ManagedModule<void> {
         this.grpcServer,
         this.grpcSdk,
         this._activeAdapter,
-        schemaController,
-        customEndpointController,
+        this.schemaController,
+        this.customEndpointController,
       );
       this.grpcSdk
         .waitForExistence('router')
@@ -859,8 +954,8 @@ export default class DatabaseModule extends ManagedModule<void> {
             this._activeAdapter,
             this.grpcSdk,
           );
-          schemaController.setRouter(this.userRouter);
-          customEndpointController.setRouter(this.userRouter);
+          this.schemaController.setRouter(this.userRouter);
+          this.customEndpointController.setRouter(this.userRouter);
         })
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e.message);

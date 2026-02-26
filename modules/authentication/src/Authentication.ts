@@ -53,6 +53,10 @@ import {
   ConfigController,
   createParsedRouterRequest,
   ManagedModule,
+  sanitizeDocumentsForExport,
+  type ExportableResource,
+  type ExportResult,
+  type ImportResult,
 } from '@conduitplatform/module-tools';
 import { TeamsAdmin } from './admin/team.js';
 import { User as UserAuthz } from './authz/index.js';
@@ -116,6 +120,95 @@ export default class Authentication extends ManagedModule<Config> {
         continue;
       await this.database.migrate(modelInstance.name);
     }
+  }
+
+  // Framework export/import (GitOps)
+  protected getExportableResources(): ExportableResource[] {
+    return [
+      {
+        type: 'teams',
+        description: 'Team structure (name, parent, isDefault)',
+        priority: 35,
+      },
+    ];
+  }
+
+  protected async exportResources(resourceTypes?: string[]): Promise<ExportResult> {
+    if (!this.database) return {};
+    if (resourceTypes && resourceTypes.length > 0 && !resourceTypes.includes('teams'))
+      return {};
+    const teamModel = models.Team.getInstance(this.database);
+    const teams = (await teamModel.findMany({})) as (Indexable & {
+      parentTeam?: string;
+      name: string;
+    })[];
+    const parentIds = [
+      ...new Set(teams.map(t => t.parentTeam).filter(Boolean)),
+    ] as string[];
+    const parentTeams = parentIds.length
+      ? await teamModel.findMany({ _id: { $in: parentIds } })
+      : [];
+    const parentNameById = new Map(
+      (parentTeams as Indexable[]).map((p: Indexable) => [p._id, p.name]),
+    );
+    const forExport = teams.map(t => {
+      const { _id, parentTeam, createdAt, updatedAt, ...rest } = t;
+      const out = { ...rest };
+      if (parentTeam && parentNameById.has(parentTeam)) {
+        (out as Indexable).parentTeamName = parentNameById.get(parentTeam);
+      }
+      return out;
+    });
+    return { teams: sanitizeDocumentsForExport(forExport as Record<string, unknown>[]) };
+  }
+
+  protected async importResources(data: ExportResult): Promise<ImportResult> {
+    if (!this.database) return {};
+    const result: ImportResult = {
+      teams: { created: 0, updated: 0, failed: 0, errors: [] },
+    };
+    const teamModel = models.Team.getInstance(this.database);
+    const teams = (data.teams ?? []) as {
+      name: string;
+      parentTeamName?: string;
+      isDefault?: boolean;
+    }[];
+    for (const rec of teams) {
+      const name = rec.name;
+      if (name == null || name === '') {
+        result.teams.failed += 1;
+        result.teams.errors.push('Missing name');
+        continue;
+      }
+      try {
+        const existing = await teamModel.findOne({ name });
+        if (existing) {
+          await teamModel.updateOne({ name }, { isDefault: rec.isDefault ?? false });
+          result.teams.updated += 1;
+        } else {
+          await teamModel.create({ name, isDefault: rec.isDefault ?? false });
+          result.teams.created += 1;
+        }
+      } catch (e) {
+        result.teams.failed += 1;
+        result.teams.errors.push(`${name}: ${(e as Error).message}`);
+      }
+    }
+    for (const rec of teams) {
+      if (!rec.parentTeamName) continue;
+      try {
+        const parent = await teamModel.findOne({ name: rec.parentTeamName });
+        if (parent) {
+          await teamModel.updateOne(
+            { name: rec.name },
+            { parentTeam: (parent as Indexable)._id },
+          );
+        }
+      } catch (_) {
+        // ignore
+      }
+    }
+    return result;
   }
 
   async preConfig(config: Config) {

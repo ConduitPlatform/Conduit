@@ -21,7 +21,14 @@ import { QueueController } from './controllers/queue.controller.js';
 import * as models from './models/index.js';
 import { runMigrations } from './migrations/index.js';
 import metricsSchema from './metrics/index.js';
-import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import {
+  ConfigController,
+  ManagedModule,
+  sanitizeDocumentsForExport,
+  type ExportableResource,
+  type ExportResult,
+  type ImportResult,
+} from '@conduitplatform/module-tools';
 
 // Provider imports
 import { EmailProvider } from './providers/email/index.js';
@@ -174,6 +181,95 @@ export default class Communications extends ManagedModule<Config> {
   async initializeMetrics() {
     const templatesTotal = await models.EmailTemplate.getInstance().countDocuments({});
     ConduitGrpcSdk.Metrics?.set('email_templates_total', templatesTotal);
+  }
+
+  // Framework export/import (GitOps)
+  protected getExportableResources(): ExportableResource[] {
+    return [
+      { type: 'emailTemplates', description: 'Email templates', priority: 30 },
+      {
+        type: 'communicationTemplates',
+        description: 'Unified communication templates',
+        priority: 30,
+      },
+    ];
+  }
+
+  protected async exportResources(resourceTypes?: string[]): Promise<ExportResult> {
+    if (!this.database) return {};
+    const out: ExportResult = {};
+    const wantAll = !resourceTypes || resourceTypes.length === 0;
+    if (wantAll || resourceTypes!.includes('emailTemplates')) {
+      const email = await models.EmailTemplate.getInstance(this.database).findMany({});
+      out.emailTemplates = sanitizeDocumentsForExport(email as Record<string, unknown>[]);
+    }
+    if (wantAll || resourceTypes!.includes('communicationTemplates')) {
+      const comm = await models.CommunicationTemplate.getInstance(this.database).findMany(
+        {},
+      );
+      out.communicationTemplates = sanitizeDocumentsForExport(
+        comm as Record<string, unknown>[],
+      );
+    }
+    return out;
+  }
+
+  protected async importResources(data: ExportResult): Promise<ImportResult> {
+    if (!this.database) return {};
+    const result: ImportResult = {
+      emailTemplates: { created: 0, updated: 0, failed: 0, errors: [] },
+      communicationTemplates: { created: 0, updated: 0, failed: 0, errors: [] },
+    };
+    const emailModel = models.EmailTemplate.getInstance(this.database);
+    const commModel = models.CommunicationTemplate.getInstance(this.database);
+
+    for (const rec of data.emailTemplates ?? []) {
+      const r = rec as Record<string, unknown>;
+      const name = r.name;
+      if (name == null || name === '') {
+        result.emailTemplates.failed += 1;
+        result.emailTemplates.errors.push('Missing name');
+        continue;
+      }
+      try {
+        const existing = await emailModel.findOne({ name });
+        if (existing) {
+          await emailModel.updateOne({ name }, r);
+          result.emailTemplates.updated += 1;
+        } else {
+          await emailModel.create(r);
+          result.emailTemplates.created += 1;
+        }
+      } catch (e) {
+        result.emailTemplates.failed += 1;
+        result.emailTemplates.errors.push(`${String(name)}: ${(e as Error).message}`);
+      }
+    }
+    for (const rec of data.communicationTemplates ?? []) {
+      const r = rec as Record<string, unknown>;
+      const name = r.name;
+      if (name == null || name === '') {
+        result.communicationTemplates.failed += 1;
+        result.communicationTemplates.errors.push('Missing name');
+        continue;
+      }
+      try {
+        const existing = await commModel.findOne({ name });
+        if (existing) {
+          await commModel.updateOne({ name }, r);
+          result.communicationTemplates.updated += 1;
+        } else {
+          await commModel.create(r);
+          result.communicationTemplates.created += 1;
+        }
+      } catch (e) {
+        result.communicationTemplates.failed += 1;
+        result.communicationTemplates.errors.push(
+          `${String(name)}: ${(e as Error).message}`,
+        );
+      }
+    }
+    return result;
   }
 
   // Legacy Email Service Methods

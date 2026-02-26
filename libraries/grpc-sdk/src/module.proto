@@ -9,8 +9,33 @@ message SetConfigResponse {
   string updatedConfig = 1;
 }
 
+message GetExportableResourcesRequest {}
+
+message GetExportableResourcesResponse {
+  string resources = 1;
+}
+
+message ExportResourcesRequest {
+  repeated string resourceTypes = 1;
+}
+
+message ExportResourcesResponse {
+  string data = 1;
+}
+
+message ImportResourcesRequest {
+  string data = 1;
+}
+
+message ImportResourcesResponse {
+  string result = 1;
+}
+
 service ConduitModule {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  rpc GetExportableResources(GetExportableResourcesRequest) returns (GetExportableResourcesResponse);
+  rpc ExportResources(ExportResourcesRequest) returns (ExportResourcesResponse);
+  rpc ImportResources(ImportResourcesRequest) returns (ImportResourcesResponse);
 }
 
 service ClientRouter {

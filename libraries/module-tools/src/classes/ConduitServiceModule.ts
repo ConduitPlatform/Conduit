@@ -1,6 +1,7 @@
 import path from 'path';
 import { EventEmitter } from 'events';
 import { camelCase } from 'lodash-es';
+import { status } from '@grpc/grpc-js';
 import { ServerWritableStream } from '@grpc/grpc-js';
 import { GrpcServer } from './GrpcServer.js';
 import {
@@ -14,8 +15,19 @@ import {
   HealthCheckStatus,
   SetConfigRequest,
   SetConfigResponse,
+  GetExportableResourcesRequest,
+  GetExportableResourcesResponse,
+  ExportResourcesRequest,
+  ExportResourcesResponse,
+  ImportResourcesRequest,
+  ImportResourcesResponse,
 } from '@conduitplatform/grpc-sdk';
 import { RoutingManager } from '../routing/index.js';
+import type {
+  ExportableResource,
+  ExportResult,
+  ImportResult,
+} from '../interfaces/ResourceExporter.js';
 
 export abstract class ConduitServiceModule {
   protected readonly _moduleName: string;
@@ -131,6 +143,67 @@ export abstract class ConduitServiceModule {
     callback: GrpcResponse<SetConfigResponse>,
   ): Promise<void>;
 
+  /** Override to declare which resource types this module can export/import. Default: none. */
+  protected getExportableResources(): ExportableResource[] {
+    return [];
+  }
+
+  /** Override to export resources. resourceTypes empty = export all. Default: empty. */
+  protected async exportResources(_resourceTypes: string[]): Promise<ExportResult> {
+    return {};
+  }
+
+  /** Override to import resources. Default: no-op. */
+  protected async importResources(_resources: ExportResult): Promise<ImportResult> {
+    return {};
+  }
+
+  protected getExportableResourcesHandler(
+    _call: GrpcRequest<GetExportableResourcesRequest>,
+    callback: GrpcResponse<GetExportableResourcesResponse>,
+  ): void {
+    try {
+      const resources = this.getExportableResources();
+      callback(null, { resources: JSON.stringify(resources) });
+    } catch (e) {
+      callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  protected async exportResourcesHandler(
+    call: GrpcRequest<ExportResourcesRequest>,
+    callback: GrpcResponse<ExportResourcesResponse>,
+  ): Promise<void> {
+    try {
+      const resourceTypes = call.request.resourceTypes ?? [];
+      const data = await this.exportResources(resourceTypes);
+      callback(null, { data: JSON.stringify(data) });
+    } catch (e) {
+      callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  protected async importResourcesHandler(
+    call: GrpcRequest<ImportResourcesRequest>,
+    callback: GrpcResponse<ImportResourcesResponse>,
+  ): Promise<void> {
+    try {
+      const data = JSON.parse(call.request.data) as ExportResult;
+      const result = await this.importResources(data);
+      callback(null, { result: JSON.stringify(result) });
+    } catch (e) {
+      const err = e as Error;
+      if (err instanceof SyntaxError) {
+        callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Invalid JSON in import data',
+        });
+      } else {
+        callback({ code: status.INTERNAL, message: err.message });
+      }
+    }
+  }
+
   protected async addHealthCheckService() {
     await this.grpcServer.addService(
       path.resolve(__dirname, './grpc_health_check.proto'),
@@ -149,6 +222,9 @@ export abstract class ConduitServiceModule {
       'conduit.module.v1.ConduitModule',
       {
         SetConfig: this.setConfig.bind(this),
+        GetExportableResources: this.getExportableResourcesHandler.bind(this),
+        ExportResources: this.exportResourcesHandler.bind(this),
+        ImportResources: this.importResourcesHandler.bind(this),
       },
     );
     await this.grpcServer.addService(

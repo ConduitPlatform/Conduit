@@ -65,6 +65,9 @@ export default class AdminModule {
     adminRoutes.getApiTokensRoute(),
     adminRoutes.deleteApiTokenRoute(),
     configRoutes.getModulesRoute(),
+    adminRoutes.getStateExportRoute(this.grpcSdk),
+    adminRoutes.getStateImportRoute(this.grpcSdk, this.configManager),
+    adminRoutes.getConfigImportRoute(this.grpcSdk, this.configManager),
   ];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];

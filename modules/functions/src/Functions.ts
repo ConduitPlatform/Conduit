@@ -8,7 +8,14 @@ import { AdminHandlers } from './admin/index.js';
 import * as models from './models/index.js';
 import AppConfigSchema, { Config } from './config/index.js';
 import { FunctionController } from './controllers/function.controller.js';
-import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import {
+  ConfigController,
+  ManagedModule,
+  sanitizeDocumentsForExport,
+  type ExportableResource,
+  type ExportResult,
+  type ImportResult,
+} from '@conduitplatform/module-tools';
 
 export default class Functions extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -65,5 +72,57 @@ export default class Functions extends ManagedModule<Config> {
         .then(() => this.database.migrate(modelInstance.name));
     });
     return Promise.all(promises);
+  }
+
+  // Framework export/import (GitOps)
+  protected getExportableResources(): ExportableResource[] {
+    return [{ type: 'functions', description: 'Function definitions', priority: 40 }];
+  }
+
+  protected async exportResources(resourceTypes?: string[]): Promise<ExportResult> {
+    if (!this.database) return {};
+    if (resourceTypes && resourceTypes.length > 0 && !resourceTypes.includes('functions'))
+      return {};
+    const docs = await models.Functions.getInstance(this.database).findMany({});
+    return {
+      functions: sanitizeDocumentsForExport(docs as Record<string, unknown>[]),
+    };
+  }
+
+  protected async importResources(data: ExportResult): Promise<ImportResult> {
+    if (!this.database) return {};
+    const result: ImportResult = {
+      functions: { created: 0, updated: 0, failed: 0, errors: [] },
+    };
+    const model = models.Functions.getInstance(this.database);
+    for (const rec of data.functions ?? []) {
+      const r = rec as Record<string, unknown>;
+      const name = r.name;
+      if (name == null || name === '') {
+        result.functions.failed += 1;
+        result.functions.errors.push('Missing name');
+        continue;
+      }
+      try {
+        const existing = await model.findOne({ name });
+        if (existing) {
+          await model.updateOne({ name }, r);
+          result.functions.updated += 1;
+        } else {
+          await model.create(r);
+          result.functions.created += 1;
+        }
+      } catch (e) {
+        result.functions.failed += 1;
+        result.functions.errors.push(`${String(name)}: ${(e as Error).message}`);
+      }
+    }
+    if (
+      result.functions.created + result.functions.updated > 0 &&
+      this.functionsController
+    ) {
+      await this.functionsController.refreshRoutes();
+    }
+    return result;
   }
 }

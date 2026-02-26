@@ -43,6 +43,10 @@ import {
   ConfigController,
   createParsedRouterRequest,
   ManagedModule,
+  sanitizeDocumentsForExport,
+  type ExportableResource,
+  type ExportResult,
+  type ImportResult,
 } from '@conduitplatform/module-tools';
 import { StorageParamAdapter } from './adapter/StorageParamAdapter.js';
 import { FileResource } from './authz/index.js';
@@ -94,6 +98,103 @@ export default class Storage extends ManagedModule<Config> {
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
     this._adminFileHandlers = new AdminFileHandlers(this.grpcSdk, this.storageProvider);
     this.storageParamAdapter = new StorageParamAdapter();
+  }
+
+  // Framework export/import (GitOps)
+  protected getExportableResources(): ExportableResource[] {
+    return [
+      { type: 'containers', description: 'Storage containers (buckets)', priority: 25 },
+      {
+        type: 'folders',
+        description: 'Storage folders (paths within containers)',
+        priority: 26,
+      },
+    ];
+  }
+
+  protected async exportResources(resourceTypes?: string[]): Promise<ExportResult> {
+    if (!this.database) return {};
+    const out: ExportResult = {};
+    const wantAll = !resourceTypes || resourceTypes.length === 0;
+    if (wantAll || resourceTypes!.includes('containers')) {
+      const containers = await models._StorageContainer
+        .getInstance(this.database)
+        .findMany({});
+      out.containers = sanitizeDocumentsForExport(
+        containers as Record<string, unknown>[],
+      );
+    }
+    if (wantAll || resourceTypes!.includes('folders')) {
+      const folders = await models._StorageFolder.getInstance(this.database).findMany({});
+      const forExport = (folders as Record<string, unknown>[]).map(
+        ({ url, ...rest }) => rest,
+      );
+      out.folders = sanitizeDocumentsForExport(forExport);
+    }
+    return out;
+  }
+
+  protected async importResources(data: ExportResult): Promise<ImportResult> {
+    if (!this.database) return {};
+    const result: ImportResult = {
+      containers: { created: 0, updated: 0, failed: 0, errors: [] },
+      folders: { created: 0, updated: 0, failed: 0, errors: [] },
+    };
+    const containerModel = models._StorageContainer.getInstance(this.database);
+    const folderModel = models._StorageFolder.getInstance(this.database);
+    for (const rec of data.containers ?? []) {
+      const r = rec as Record<string, unknown>;
+      const name = r.name;
+      if (name == null || name === '') {
+        result.containers.failed += 1;
+        result.containers.errors.push('Missing name');
+        continue;
+      }
+      try {
+        const existing = await containerModel.findOne({ name });
+        if (existing) {
+          await containerModel.updateOne({ name }, { isPublic: r.isPublic ?? false });
+          result.containers.updated += 1;
+        } else {
+          await containerModel.create({ name, isPublic: r.isPublic ?? false });
+          result.containers.created += 1;
+        }
+      } catch (e) {
+        result.containers.failed += 1;
+        result.containers.errors.push(`${String(name)}: ${(e as Error).message}`);
+      }
+    }
+    for (const rec of data.folders ?? []) {
+      const r = rec as Record<string, unknown>;
+      const name = r.name;
+      const container = r.container;
+      if (name == null || name === '' || container == null || container === '') {
+        result.folders.failed += 1;
+        result.folders.errors.push('Missing name or container');
+        continue;
+      }
+      try {
+        const existing = await folderModel.findOne({ name, container });
+        if (existing) {
+          await folderModel.updateOne(
+            { name, container },
+            { isPublic: r.isPublic ?? false },
+          );
+          result.folders.updated += 1;
+        } else {
+          await folderModel.create({
+            name,
+            container,
+            isPublic: r.isPublic ?? false,
+          });
+          result.folders.created += 1;
+        }
+      } catch (e) {
+        result.folders.failed += 1;
+        result.folders.errors.push(`${String(name)}: ${(e as Error).message}`);
+      }
+    }
+    return result;
   }
 
   async preConfig(config: Config) {

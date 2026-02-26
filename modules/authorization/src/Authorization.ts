@@ -36,7 +36,14 @@ import {
 } from './controllers/index.js';
 import { AdminHandlers } from './admin/index.js';
 import { status } from '@grpc/grpc-js';
-import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import {
+  ConfigController,
+  ManagedModule,
+  sanitizeDocumentsForExport,
+  type ExportableResource,
+  type ExportResult,
+  type ImportResult,
+} from '@conduitplatform/module-tools';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { AuthorizationRouter } from './router/index.js';
 import { fileURLToPath } from 'node:url';
@@ -103,6 +110,64 @@ export default class Authorization extends ManagedModule<Config> {
       this.clientRouter = new AuthorizationRouter(this.grpcServer, this.grpcSdk);
       this.updateHealth(HealthCheckStatus.SERVING);
     }
+  }
+
+  // Framework export/import (GitOps)
+  protected getExportableResources(): ExportableResource[] {
+    return [
+      {
+        type: 'resourceDefinitions',
+        description: 'Authorization resource definitions',
+        priority: 5,
+      },
+    ];
+  }
+
+  protected async exportResources(resourceTypes?: string[]): Promise<ExportResult> {
+    if (!this.database) return {};
+    if (
+      resourceTypes &&
+      resourceTypes.length > 0 &&
+      !resourceTypes.includes('resourceDefinitions')
+    )
+      return {};
+    const docs = await models.ResourceDefinition.getInstance(this.database).findMany({});
+    return {
+      resourceDefinitions: sanitizeDocumentsForExport(docs as Record<string, unknown>[]),
+    };
+  }
+
+  protected async importResources(data: ExportResult): Promise<ImportResult> {
+    if (!this.database) return {};
+    const result: ImportResult = {
+      resourceDefinitions: { created: 0, updated: 0, failed: 0, errors: [] },
+    };
+    const model = models.ResourceDefinition.getInstance(this.database);
+    for (const rec of data.resourceDefinitions ?? []) {
+      const r = rec as Record<string, unknown>;
+      const name = r.name;
+      if (name == null || name === '') {
+        result.resourceDefinitions.failed += 1;
+        result.resourceDefinitions.errors.push('Missing name');
+        continue;
+      }
+      try {
+        const existing = await model.findOne({ name });
+        if (existing) {
+          await model.updateOne({ name }, r);
+          result.resourceDefinitions.updated += 1;
+        } else {
+          await model.create(r);
+          result.resourceDefinitions.created += 1;
+        }
+      } catch (e) {
+        result.resourceDefinitions.failed += 1;
+        result.resourceDefinitions.errors.push(
+          `${String(name)}: ${(e as Error).message}`,
+        );
+      }
+    }
+    return result;
   }
 
   async defineResource(
