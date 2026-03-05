@@ -1,16 +1,19 @@
 import {
-  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
+  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitJson } from '@conduitplatform/module-tools';
 import { ConduitRoute } from '@conduitplatform/hermes';
+import AdminModule from '../AdminModule.js';
 
 type SetConfig = (config: { newConfig: string }) => Promise<{ updatedConfig: string }>;
 type ModuleConfigClient = { setConfig: SetConfig };
 
-export function getConfigImportRoute(grpcSdk: ConduitGrpcSdk, configManager: any) {
+export function getConfigImportRoute(admin: AdminModule) {
+  const { grpcSdk, configManager } = admin;
+
   return new ConduitRoute(
     {
       path: '/config/import',
@@ -18,7 +21,7 @@ export function getConfigImportRoute(grpcSdk: ConduitGrpcSdk, configManager: any
       description:
         'Imports module configs in bulk. Same shape as GET /config (config.modules).',
       bodyParams: {
-        config: { type: 'Object', required: true },
+        config: { type: TYPE.JSON, required: true },
       },
     },
     new ConduitRouteReturnDefinition('ConfigImportRoute', {

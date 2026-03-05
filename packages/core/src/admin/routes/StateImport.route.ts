@@ -1,12 +1,12 @@
 import {
-  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
+  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitJson } from '@conduitplatform/module-tools';
 import { ConduitRoute } from '@conduitplatform/hermes';
-import { ServiceRegistry } from '../../service-discovery/ServiceRegistry.js';
+import AdminModule from '../AdminModule.js';
 
 type ModuleImportClient = {
   getExportableResources: (req: object) => Promise<{ resources: string }>;
@@ -18,7 +18,8 @@ interface StateImportBody {
   modules?: Record<string, Record<string, unknown[]>>;
 }
 
-export function getStateImportRoute(grpcSdk: ConduitGrpcSdk, configManager: any) {
+export function getStateImportRoute(admin: AdminModule) {
+  const { grpcSdk, configManager } = admin;
   return new ConduitRoute(
     {
       path: '/state/import',
@@ -26,8 +27,8 @@ export function getStateImportRoute(grpcSdk: ConduitGrpcSdk, configManager: any)
       description:
         'Imports full Conduit state: applies configs first, then module resources in priority order.',
       bodyParams: {
-        configs: { type: 'Object', required: false },
-        modules: { type: 'Object', required: false },
+        configs: { type: TYPE.JSON, required: false },
+        modules: { type: TYPE.JSON, required: false },
       },
     },
     new ConduitRouteReturnDefinition('StateImportRoute', {

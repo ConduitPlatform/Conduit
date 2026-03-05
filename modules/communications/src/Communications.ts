@@ -201,14 +201,16 @@ export default class Communications extends ManagedModule<Config> {
     const wantAll = !resourceTypes || resourceTypes.length === 0;
     if (wantAll || resourceTypes!.includes('emailTemplates')) {
       const email = await models.EmailTemplate.getInstance(this.database).findMany({});
-      out.emailTemplates = sanitizeDocumentsForExport(email as Record<string, unknown>[]);
+      out.emailTemplates = sanitizeDocumentsForExport(
+        email as unknown as Record<string, unknown>[],
+      );
     }
     if (wantAll || resourceTypes!.includes('communicationTemplates')) {
       const comm = await models.CommunicationTemplate.getInstance(this.database).findMany(
         {},
       );
       out.communicationTemplates = sanitizeDocumentsForExport(
-        comm as Record<string, unknown>[],
+        comm as unknown as Record<string, unknown>[],
       );
     }
     return out;
@@ -772,6 +774,7 @@ export default class Communications extends ManagedModule<Config> {
             'Migrating push notifications configuration from existing module',
           );
           updatedConfig.pushNotifications = {
+            active: true,
             providerName:
               pushConfig.providerName ?? currentConfig.pushNotifications.providerName,
             firebase: pushConfig.firebase ?? currentConfig.pushNotifications.firebase,

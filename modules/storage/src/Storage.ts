@@ -121,12 +121,12 @@ export default class Storage extends ManagedModule<Config> {
         .getInstance(this.database)
         .findMany({});
       out.containers = sanitizeDocumentsForExport(
-        containers as Record<string, unknown>[],
+        containers as unknown as Record<string, unknown>[],
       );
     }
     if (wantAll || resourceTypes!.includes('folders')) {
       const folders = await models._StorageFolder.getInstance(this.database).findMany({});
-      const forExport = (folders as Record<string, unknown>[]).map(
+      const forExport = (folders as unknown as Record<string, unknown>[]).map(
         ({ url, ...rest }) => rest,
       );
       out.folders = sanitizeDocumentsForExport(forExport);

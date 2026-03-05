@@ -954,8 +954,8 @@ export default class DatabaseModule extends ManagedModule<void> {
             this._activeAdapter,
             this.grpcSdk,
           );
-          this.schemaController.setRouter(this.userRouter);
-          this.customEndpointController.setRouter(this.userRouter);
+          this.schemaController?.setRouter(this.userRouter);
+          this.customEndpointController?.setRouter(this.userRouter);
         })
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e.message);

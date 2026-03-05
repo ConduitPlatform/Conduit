@@ -85,7 +85,7 @@ export default class Functions extends ManagedModule<Config> {
       return {};
     const docs = await models.Functions.getInstance(this.database).findMany({});
     return {
-      functions: sanitizeDocumentsForExport(docs as Record<string, unknown>[]),
+      functions: sanitizeDocumentsForExport(docs as unknown as Record<string, unknown>[]),
     };
   }
 

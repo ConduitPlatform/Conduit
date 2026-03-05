@@ -65,9 +65,9 @@ export default class AdminModule {
     adminRoutes.getApiTokensRoute(),
     adminRoutes.deleteApiTokenRoute(),
     configRoutes.getModulesRoute(),
-    adminRoutes.getStateExportRoute(this.grpcSdk),
-    adminRoutes.getStateImportRoute(this.grpcSdk, this.configManager),
-    adminRoutes.getConfigImportRoute(this.grpcSdk, this.configManager),
+    adminRoutes.getStateExportRoute(this),
+    adminRoutes.getStateImportRoute(this),
+    adminRoutes.getConfigImportRoute(this),
   ];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
@@ -75,7 +75,7 @@ export default class AdminModule {
   private databaseHandled = false;
   private hasAppliedMiddleware: string[] = [];
   private _refreshTimeout: NodeJS.Timeout | null = null;
-  private configManager: any;
+  readonly configManager: any;
 
   constructor(grpcSdk: ConduitGrpcSdk, configManager: any) {
     this.grpcSdk = grpcSdk;

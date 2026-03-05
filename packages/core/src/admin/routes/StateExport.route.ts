@@ -1,18 +1,19 @@
 import {
-  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitJson } from '@conduitplatform/module-tools';
 import { ConduitRoute } from '@conduitplatform/hermes';
 import { ServiceRegistry } from '../../service-discovery/ServiceRegistry.js';
+import AdminModule from '../AdminModule.js';
 
 type ModuleExportClient = {
   getExportableResources: (req: object) => Promise<{ resources: string }>;
   exportResources: (req: { resourceTypes: string[] }) => Promise<{ data: string }>;
 };
 
-export function getStateExportRoute(grpcSdk: ConduitGrpcSdk) {
+export function getStateExportRoute(admin: AdminModule) {
+  const { grpcSdk } = admin;
   return new ConduitRoute(
     {
       path: '/state/export',

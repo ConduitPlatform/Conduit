@@ -133,7 +133,9 @@ export default class Authorization extends ManagedModule<Config> {
       return {};
     const docs = await models.ResourceDefinition.getInstance(this.database).findMany({});
     return {
-      resourceDefinitions: sanitizeDocumentsForExport(docs as Record<string, unknown>[]),
+      resourceDefinitions: sanitizeDocumentsForExport(
+        docs as unknown as Record<string, unknown>[],
+      ),
     };
   }
 
@@ -183,8 +185,8 @@ export default class Authorization extends ManagedModule<Config> {
         res.status === 'processed'
           ? ResourceModificationAcknowledgement_Status.PROCESSED
           : res.status === 'acknowledged'
-          ? ResourceModificationAcknowledgement_Status.ACKNOWLEDGED
-          : ResourceModificationAcknowledgement_Status.IGNORED,
+            ? ResourceModificationAcknowledgement_Status.ACKNOWLEDGED
+            : ResourceModificationAcknowledgement_Status.IGNORED,
     });
   }
 
@@ -203,8 +205,8 @@ export default class Authorization extends ManagedModule<Config> {
         res.status === 'processed'
           ? ResourceModificationAcknowledgement_Status.PROCESSED
           : res.status === 'acknowledged'
-          ? ResourceModificationAcknowledgement_Status.ACKNOWLEDGED
-          : ResourceModificationAcknowledgement_Status.IGNORED,
+            ? ResourceModificationAcknowledgement_Status.ACKNOWLEDGED
+            : ResourceModificationAcknowledgement_Status.IGNORED,
     });
   }
 
