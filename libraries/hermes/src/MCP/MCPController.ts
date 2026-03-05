@@ -27,8 +27,14 @@ import { convertConduitRouteToMCPTool } from './RouteToTool.js';
 import { ConduitRoute } from '../classes/index.js';
 import { isNil } from 'lodash-es';
 import { registerMetaTools } from './MetaTools.js';
+import { MCP_CONSTANTS } from './constants.js';
 
 export class MCPController extends ConduitRouter {
+  /** Module name -> list of module names to enable (e.g. communications -> email, push, sms) */
+  private static readonly MODULE_ALIASES: Record<string, string[]> = {
+    communications: ['email', 'push', 'sms'],
+  };
+
   private _mcpServer: McpServer;
   private _toolRegistry: ToolRegistry;
   private _resourceRegistry: ResourceRegistry;
@@ -48,12 +54,18 @@ export class MCPController extends ConduitRouter {
     this._grpcSdk = grpcSdk;
     this._config = config;
 
-    // Initialize MCP server with SDK
-    this._mcpServer = new McpServer({
-      name: this._config.serverInfo.name,
-      title: this._config.serverInfo.title,
-      version: this._config.serverInfo.version,
-    });
+    // Initialize MCP server with SDK (instructions + capabilities sent to clients on initialize)
+    this._mcpServer = new McpServer(
+      {
+        name: this._config.serverInfo.name,
+        title: this._config.serverInfo.title,
+        version: this._config.serverInfo.version,
+      },
+      {
+        instructions: MCP_CONSTANTS.INSTRUCTIONS,
+        capabilities: this._config.capabilities,
+      },
+    );
 
     // Initialize tool registry
     this._toolRegistry = new ToolRegistry(grpcSdk);
@@ -150,12 +162,17 @@ export class MCPController extends ConduitRouter {
       return;
     }
 
+    // Expand module aliases (e.g. "communications" -> ["email", "push", "sms"])
+    const expandedModules = moduleNames.flatMap(
+      m => MCPController.MODULE_ALIASES[m] ?? [m],
+    );
+
     // Get available modules for validation
     const availableModules = this._toolRegistry.getModules();
     const availableModuleNames = new Set(availableModules.map(m => m.name));
 
     // Filter to only valid modules
-    const validModules = moduleNames.filter(moduleName => {
+    const validModules = expandedModules.filter(moduleName => {
       if (availableModuleNames.has(moduleName)) {
         return true;
       }
@@ -285,7 +302,11 @@ export class MCPController extends ConduitRouter {
     }
 
     // Skip common prefixes that aren't module names
-    if (firstSegment === 'admin' || firstSegment === 'hook') {
+    if (
+      firstSegment === 'admin' ||
+      firstSegment === 'hook' ||
+      firstSegment === 'config'
+    ) {
       // Use second segment as module
       return segments[1] || CORE_MODULE;
     }

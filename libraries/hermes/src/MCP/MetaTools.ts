@@ -24,8 +24,11 @@ export function createListModulesTool(registry: ToolRegistry): MCPToolDefinition
     name: 'list_modules',
     title: 'List Available Modules',
     description:
-      'Lists all available modules with their tool counts. Use this to discover what capabilities are available. ' +
-      'Note: The preferred way to enable modules is via URL query parameters: /mcp?modules=authentication,storage',
+      'Lists all available modules with their tool counts and loaded status. Call this first to discover capabilities. ' +
+      'If a module you need has loaded: false, you cannot enable it at runtime. Instruct the user to update their MCP server URL: ' +
+      'append ?modules=module1,module2 to the base URL (e.g. https://host:port/mcp?modules=authentication,database). ' +
+      'In Cursor, edit .cursor/mcp.json and set the server url to include ?modules= and the required module names. ' +
+      "Each enabled module also exposes get_config_<module> and patch_config_<module> for reading and updating that module's configuration.",
     module: META_MODULE,
     initiallyDisabled: false,
     inputSchema: {},

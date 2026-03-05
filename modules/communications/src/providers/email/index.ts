@@ -1,7 +1,7 @@
 import Mail from 'nodemailer/lib/mailer/index.js';
 import { SentMessageInfo } from 'nodemailer';
 import { MailgunConfig } from './mailgun/mailgun.config.js';
-import { isEmpty } from 'lodash-es';
+import { isEmpty, isNil } from 'lodash-es';
 import { MandrillConfig } from './mandrill/mandrill.config.js';
 import { EmailBuilderClass } from './models/EmailBuilderClass.js';
 import { SendGridConfig } from './sendgrid/sendgrid.config.js';
@@ -45,7 +45,7 @@ export class EmailProvider {
 
       const { smtp } = transportSettings;
       const { port, host } = smtp;
-      if (isEmpty(port) || isEmpty(host)) {
+      if (isNil(port) || port <= 0 || isEmpty(host)) {
         throw new Error('Smtp transport settings are missing');
       }
       smtp.auth.user = smtp.auth.username;
@@ -65,7 +65,7 @@ export class EmailProvider {
       });
     } else if (transport === 'mandrill') {
       this._transportName = 'mandrill';
-      const { apiKey } = transportSettings.mandrill.apiKey;
+      const { apiKey } = transportSettings.mandrill;
       if (isEmpty(apiKey)) {
         throw new Error('Mandrill transport settings are missing');
       }

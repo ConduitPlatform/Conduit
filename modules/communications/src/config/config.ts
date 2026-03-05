@@ -164,6 +164,10 @@ export default {
   },
   // Push Notifications configuration
   pushNotifications: {
+    active: {
+      format: 'Boolean',
+      default: false,
+    },
     providerName: {
       format: 'String',
       default: 'basic',

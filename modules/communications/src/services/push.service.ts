@@ -29,6 +29,10 @@ export class PushService implements IChannel {
       ConduitGrpcSdk.Logger.warn('Push notifications not configured');
       return;
     }
+    if (!pushConfig.active) {
+      this.provider = undefined;
+      return;
+    }
 
     const name = pushConfig.providerName;
     const settings = (pushConfig as any)[name];
