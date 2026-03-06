@@ -25,7 +25,9 @@ export function getAdminMiddleware(configManager: any) {
     if (req.originalUrl.indexOf('/ready') === 0) {
       return next();
     }
-    if (req.originalUrl.indexOf('/mcp') === 0) {
+    // Allow API tokens (cdt_*) to bypass masterkey; Auth.middleware will validate the token
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer cdt_')) {
       return next();
     }
     const masterKey = req.headers.masterkey;
