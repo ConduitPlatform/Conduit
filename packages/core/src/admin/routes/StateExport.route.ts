@@ -13,7 +13,6 @@ type ModuleExportClient = {
 };
 
 export function getStateExportRoute(admin: AdminModule) {
-  const { grpcSdk } = admin;
   return new ConduitRoute(
     {
       path: '/state/export',
@@ -26,6 +25,7 @@ export function getStateExportRoute(admin: AdminModule) {
       modules: ConduitJson.Required,
     }),
     async () => {
+      const { grpcSdk } = admin;
       const configs: { modules: Record<string, object> } = { modules: {} };
       const sortedConfigModules = [
         'core',

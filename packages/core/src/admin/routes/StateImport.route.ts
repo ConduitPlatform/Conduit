@@ -19,7 +19,6 @@ interface StateImportBody {
 }
 
 export function getStateImportRoute(admin: AdminModule) {
-  const { grpcSdk, configManager } = admin;
   return new ConduitRoute(
     {
       path: '/state/import',
@@ -36,6 +35,8 @@ export function getStateImportRoute(admin: AdminModule) {
       moduleResults: ConduitJson.Required,
     }),
     async (params: ConduitRouteParameters) => {
+      const { grpcSdk, configManager } = admin;
+
       const body = (params.params ?? {}) as StateImportBody;
       const configResults: Record<string, { success: boolean; error?: string }> = {};
       const moduleResults: Record<string, Record<string, unknown>> = {};
