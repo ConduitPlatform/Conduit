@@ -237,6 +237,10 @@ export default class Chat extends ManagedModule<Config> {
     if (!isNil(errorMessage)) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
+    if (isNil(room)) {
+      return callback({ code: status.NOT_FOUND, message: 'Room not found' });
+    }
+
     await models.ChatRoom.getInstance()
       .deleteOne({ _id })
       .catch((e: Error) => {
