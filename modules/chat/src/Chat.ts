@@ -227,8 +227,14 @@ export default class Chat extends ManagedModule<Config> {
   async deleteRoom(call: GrpcRequest<DeleteRoomRequest>, callback: GrpcCallback<Room>) {
     const { _id } = call.request;
 
+    const room = await models.ChatRoom.getInstance()
+      .findOne({ _id })
+      .catch((e: Error) => null);
+    if (isNil(room)) {
+      return callback({ code: status.NOT_FOUND, message: 'Room not found' });
+    }
     let errorMessage: string | null = null;
-    const room: models.ChatRoom = await models.ChatRoom.getInstance()
+    await models.ChatRoom.getInstance()
       .deleteOne({ _id })
       .catch((e: Error) => {
         errorMessage = e.message;
