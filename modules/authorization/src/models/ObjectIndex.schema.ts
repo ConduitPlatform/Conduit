@@ -1,5 +1,6 @@
 import {
   ConduitModel,
+  ConduitSchemaOptions,
   DatabaseProvider,
   MongoIndexType,
   TYPE,
@@ -73,12 +74,23 @@ const schema: ConduitModel = {
   inheritanceTree: {
     type: [TYPE.String],
     default: [],
+    index: {
+      type: MongoIndexType.Ascending,
+    },
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
-const schemaOptions = {
+const schemaOptions: ConduitSchemaOptions = {
   timestamps: true,
+  indexes: [
+    {
+      fields: ['subjectType', 'subjectPermission', 'entity'],
+    },
+    {
+      fields: ['entityType', 'entityId', 'entityPermission'],
+    },
+  ],
   conduit: {
     permissions: {
       extendable: false,
@@ -87,7 +99,7 @@ const schemaOptions = {
       canDelete: false,
     },
   },
-} as const;
+};
 const collectionName = undefined;
 
 export class ObjectIndex extends ConduitActiveSchema<ObjectIndex> {

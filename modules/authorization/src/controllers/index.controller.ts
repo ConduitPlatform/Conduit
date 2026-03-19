@@ -10,8 +10,74 @@ import { QueueController } from './queue.controller.js';
 
 export class IndexController {
   private static _instance: IndexController;
+  private static readonly ENTITY_CHUNK_SIZE = 250;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+
+  private escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private chunkArray<T>(items: T[], chunkSize: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += chunkSize) {
+      chunks.push(items.slice(i, i + chunkSize));
+    }
+    return chunks;
+  }
+
+  private uniqueEntities(entities: string[]) {
+    return [...new Set(entities.filter(entity => !!entity))];
+  }
+
+  private async resolveActorEntities(subject: string) {
+    const subjectIndexes = await ActorIndex.getInstance().findMany({
+      subject: subject,
+    });
+    return this.uniqueEntities(subjectIndexes.map(index => index.entity));
+  }
+
+  private extractResourceId(subjectPermissionTuple: string) {
+    const [resourceTuple] = subjectPermissionTuple.split('#');
+    const [, resourceId = ''] = resourceTuple.split(':');
+    return resourceId;
+  }
+
+  private async findObjectIndexesByEntities(
+    baseQuery: Record<string, unknown>,
+    entities: string[],
+  ) {
+    const uniqueEntities = this.uniqueEntities(entities);
+    if (!uniqueEntities.length) {
+      return [];
+    }
+
+    if (uniqueEntities.length <= IndexController.ENTITY_CHUNK_SIZE) {
+      return ObjectIndex.getInstance().findMany({
+        ...baseQuery,
+        entity: { $in: uniqueEntities },
+      });
+    }
+
+    const chunks = this.chunkArray(uniqueEntities, IndexController.ENTITY_CHUNK_SIZE);
+    const merged = [];
+    const seen = new Set<string>();
+    for (const chunk of chunks) {
+      const chunkResults = await ObjectIndex.getInstance().findMany({
+        ...baseQuery,
+        entity: { $in: chunk },
+      });
+      for (const result of chunkResults) {
+        const key = `${result.subject}|${result.entity}|${(
+          result.inheritanceTree ?? []
+        ).join(',')}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push(result);
+      }
+    }
+    return merged;
+  }
 
   static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (IndexController._instance) return IndexController._instance;
@@ -153,6 +219,7 @@ export class IndexController {
   }
 
   async removeResource(resourceName: string) {
+    const escapedResourceName = this.escapeRegex(resourceName);
     const query = {
       $or: [
         {
@@ -168,14 +235,12 @@ export class IndexController {
       $or: [
         {
           inheritanceTree: {
-            $regex: `${resourceName}.*`,
-            $options: 'i',
+            $regex: `^${escapedResourceName}:`,
           },
         },
         {
           inheritanceTree: {
-            $regex: `.*@${resourceName}.*`,
-            $options: 'i',
+            $regex: `@${escapedResourceName}:`,
           },
         },
       ],
@@ -183,47 +248,80 @@ export class IndexController {
   }
 
   async findIndex(subject: string, action: string, object: string) {
-    const subjectIndexes = await ActorIndex.getInstance().findMany({
-      subject: subject,
+    const objectSubject = `${object}#${action}`;
+    const wildcardIndex = await ObjectIndex.getInstance().findOne({
+      subject: objectSubject,
+      entity: '*',
     });
+    if (wildcardIndex) return true;
 
-    const objectDefinition = await ObjectIndex.getInstance().findOne({
-      subject: object + '#' + action,
-      entity: { $in: [...subjectIndexes.map(index => index.entity), '*'] },
+    const objectIndexes = await ObjectIndex.getInstance().findMany({
+      subject: objectSubject,
     });
-    return !!objectDefinition;
+    if (!objectIndexes.length) return false;
+
+    const candidateEntities = this.uniqueEntities(
+      objectIndexes.map(index => index.entity).filter(entity => entity !== '*'),
+    );
+    if (!candidateEntities.length) return false;
+
+    const matchingActorIndex = await ActorIndex.getInstance().findOne({
+      subject: subject,
+      entity: { $in: candidateEntities },
+    });
+    return !!matchingActorIndex;
   }
 
   async evaluateIndex(subject: string, action: string, object: string) {
-    const subjectIndexes = await ActorIndex.getInstance().findMany({
-      subject: subject,
+    const objectSubject = `${object}#${action}`;
+    const wildcardIndex = await ObjectIndex.getInstance().findOne({
+      subject: objectSubject,
+      entity: '*',
     });
+    if (wildcardIndex) {
+      return {
+        subject: null,
+        object: wildcardIndex,
+      };
+    }
 
-    const objectIndex = await ObjectIndex.getInstance().findOne({
-      subject: object + '#' + action,
-      entity: { $in: [...subjectIndexes.map(index => index.entity), '*'] },
+    const objectIndexes = await ObjectIndex.getInstance().findMany({
+      subject: objectSubject,
     });
-    if (!objectIndex) {
+    if (!objectIndexes.length) {
       return {
         subject: null,
         object: null,
       };
-    } else if (objectIndex.entity === '*') {
+    }
+
+    const candidateEntities = this.uniqueEntities(
+      objectIndexes.map(index => index.entity).filter(entity => entity !== '*'),
+    );
+    if (!candidateEntities.length) {
       return {
         subject: null,
-        object: objectIndex,
-      };
-    } else {
-      // find which subject indexes are applicable to this object index
-      const subjectIndex = subjectIndexes.find(
-        index => index.entity === objectIndex?.entity,
-      );
-
-      return {
-        subject: subjectIndex,
-        object: objectIndex,
+        object: null,
       };
     }
+
+    const subjectIndex = await ActorIndex.getInstance().findOne({
+      subject: subject,
+      entity: { $in: candidateEntities },
+    });
+    if (!subjectIndex) {
+      return {
+        subject: null,
+        object: null,
+      };
+    }
+
+    const objectIndex =
+      objectIndexes.find(index => index.entity === subjectIndex.entity) ?? null;
+    return {
+      subject: subjectIndex,
+      object: objectIndex,
+    };
   }
 
   async findGeneralIndex(
@@ -233,32 +331,30 @@ export class IndexController {
     skip: number,
     limit: number,
   ) {
-    const subjectDefinition = await ActorIndex.getInstance().findMany({
-      subject: subject,
-    });
-
-    const objectDefinition = await ObjectIndex.getInstance().findMany(
+    const actorEntities = await this.resolveActorEntities(subject);
+    const objectIndexes = await this.findObjectIndexesByEntities(
       {
         subjectType: objectType,
         subjectPermission: action,
-        entity: { $in: [...subjectDefinition.map(index => index.entity), '*'] },
       },
-      undefined,
-      skip,
-      limit,
+      [...actorEntities, '*'],
     );
-    return objectDefinition.map(index => index.subject.split('#')[0].split(':')[1]);
+    const uniqueResourceIds = [
+      ...new Set(objectIndexes.map(index => this.extractResourceId(index.subject))),
+    ];
+    return uniqueResourceIds.slice(skip, skip + limit);
   }
 
   async findGeneralIndexCount(subject: string, action: string, objectType: string) {
-    const subjectDefinition = await ActorIndex.getInstance().findMany({
-      subject: subject,
-    });
-
-    return await ObjectIndex.getInstance().countDocuments({
-      subjectType: objectType,
-      subjectPermission: action,
-      entity: { $in: [...subjectDefinition.map(index => index.entity), '*'] },
-    });
+    const actorEntities = await this.resolveActorEntities(subject);
+    const objectIndexes = await this.findObjectIndexesByEntities(
+      {
+        subjectType: objectType,
+        subjectPermission: action,
+      },
+      [...actorEntities, '*'],
+    );
+    return new Set(objectIndexes.map(index => this.extractResourceId(index.subject)))
+      .size;
   }
 }
