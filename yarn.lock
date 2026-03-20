@@ -6755,11 +6755,6 @@ cli-width@^3.0.0:
   resolved "https://registry.yarnpkg.com/cli-width/-/cli-width-3.0.0.tgz#a2f48437a2caa9a22436e794bf071ec9e61cedf6"
   integrity sha512-FxqpkPPwu1HjuN93Omfm4h8uIanXofW0RxVEW3k5RKx+mJJYSthzNhp32Kzxxy3YAEZ/Dc/EWN1vZRY0+kOhbw==
 
-clicksend@^5.0.79:
-  version "5.0.79"
-  resolved "https://registry.yarnpkg.com/clicksend/-/clicksend-5.0.79.tgz#f7cd9b62659169fb333857ccddecee22bf2df398"
-  integrity sha512-g860ungpSzPkAAYkTew+joNnC/20bvz1d9xW0qn8+u9kGD3TsTTeLycIkg4C2OoFWdaMh2UWCIUQZoYRdLroWQ==
-
 cliui@^7.0.2:
   version "7.0.4"
   resolved "https://registry.yarnpkg.com/cliui/-/cliui-7.0.4.tgz#a0265ee655476fc807aea9df3df8df7783808b4f"
