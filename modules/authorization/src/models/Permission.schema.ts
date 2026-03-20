@@ -60,6 +60,12 @@ const schema: ConduitModel = {
   computedTuple: {
     type: TYPE.String,
     required: true,
+    index: {
+      type: MongoIndexType.Ascending,
+      options: {
+        unique: true,
+      },
+    },
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,

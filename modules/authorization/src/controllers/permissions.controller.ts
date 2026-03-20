@@ -11,6 +11,10 @@ import { isEmpty, isNil } from 'lodash-es';
 import { Permission } from '../models/index.js';
 import { createHash } from 'crypto';
 
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export class PermissionsController {
   private static _instance: PermissionsController;
 
@@ -41,6 +45,7 @@ export class PermissionsController {
       resourceType: resource.split(':')[0],
       computedTuple,
     });
+    await RuleCache.invalidate(this.grpcSdk);
   }
 
   async removePermission(subject: string, action: string, resource: string) {
@@ -54,6 +59,7 @@ export class PermissionsController {
       throw new Error(`Permission does not exist!`);
     }
     await Permission.getInstance().deleteOne({ _id: permission._id });
+    await RuleCache.invalidate(this.grpcSdk);
   }
 
   async can(subject: string, action: string, object: string) {
@@ -152,6 +158,8 @@ export class PermissionsController {
     requestedViewName?: string,
   ) {
     const computedTuple = `${subject}#${action}@${objectType}`;
+    const computedTuplePrefix = `${computedTuple}:`;
+    const escapedComputedTuplePrefix = `^${escapeRegex(computedTuplePrefix)}`;
     const objectTypeCollection = await this.grpcSdk
       .database!.getSchema(objectType)
       .then(r => r.collectionName);
@@ -169,94 +177,95 @@ export class PermissionsController {
       ['Permission', 'ActorIndex', 'ObjectIndex'],
       {
         mongoQuery: [
-          // permissions lookup won't work this way
+          // Use a single seed document so auth index lookups run once per query.
+          { $limit: 1 },
+          { $project: { _id: 0 } },
           {
             $lookup: {
               from: 'cnd_permissions',
-              let: { x_id: { $toString: '$_id' } },
               pipeline: [
                 {
                   $match: {
-                    $expr: {
-                      $eq: [
-                        '$computedTuple',
-                        { $concat: [`${subject}#${action}@${objectType}:`, '$$x_id'] },
-                      ],
+                    computedTuple: {
+                      $regex: escapedComputedTuplePrefix,
                     },
                   },
                 },
+                { $project: { _id: 0, resourceId: 1 } },
               ],
-              as: 'permissions',
+              as: 'directPermissions',
             },
           },
           {
             $lookup: {
               from: 'cnd_actorindexes',
-              let: {
-                subject: subject,
-              },
               pipeline: [
                 {
                   $match: {
-                    $expr: {
-                      $eq: ['$subject', '$$subject'],
-                    },
+                    subject: subject,
                   },
                 },
+                { $project: { _id: 0, entity: 1 } },
               ],
               as: 'actors',
             },
           },
           {
-            $lookup: {
-              from: 'cnd_objectindexes',
-              let: {
-                id_action: {
-                  $concat: [`${objectType}:`, { $toString: '$_id' }, `#${action}`],
-                },
-                entities: { $concatArrays: ['$actors.entity', ['*']] },
+            $project: {
+              directIds: '$directPermissions.resourceId',
+              actorEntities: {
+                $setUnion: ['$actors.entity', ['*']],
               },
-              pipeline: [
-                {
-                  $match: {
-                    $and: [
-                      {
-                        $expr: {
-                          $eq: ['$subject', '$$id_action'],
-                        },
-                      },
-                      {
-                        $expr: {
-                          $in: ['$entity', '$$entities'],
-                        },
-                      },
-                    ],
-                  },
-                },
-              ],
-              as: 'intersection',
             },
           },
           {
-            $match: {
-              $or: [
+            $lookup: {
+              from: 'cnd_objectindexes',
+              let: { actorEntities: '$actorEntities' },
+              pipeline: [
                 {
-                  'intersection.0': { $exists: true },
+                  $match: {
+                    subjectType: objectType,
+                    subjectPermission: action,
+                  },
                 },
                 {
-                  'permissions.0': { $exists: true },
+                  $match: {
+                    $expr: {
+                      $in: ['$entity', '$$actorEntities'],
+                    },
+                  },
                 },
+                { $project: { _id: 0, subjectId: 1 } },
               ],
+              as: 'indexedPermissions',
             },
           },
           {
             $project: {
-              actors: 0,
-              objects: 0,
-              permissions: 0,
-              intersection: 0,
+              authorizedIds: {
+                $setUnion: ['$directIds', '$indexedPermissions.subjectId'],
+              },
             },
           },
+          {
+            $lookup: {
+              from: objectTypeCollection,
+              let: { ids: '$authorizedIds' },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $in: [{ $toString: '$_id' }, '$$ids'],
+                    },
+                  },
+                },
+              ],
+              as: 'authorizedDocs',
+            },
+          },
+          { $unwind: '$authorizedDocs' },
+          { $replaceRoot: { newRoot: '$authorizedDocs' } },
         ],
         sqlQuery:
           dbType === 'PostgreSQL'
