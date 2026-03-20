@@ -34,6 +34,7 @@
     "convict": "^6.2.4",
     "lodash-es": "^4.17.21",
     "messagebird": "^4.0.1",
+    "bcrypt": "^6.0.0",
     "otp-generator": "^4.0.1",
     "twilio": "5.3.4"
   },
