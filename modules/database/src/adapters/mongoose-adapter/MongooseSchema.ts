@@ -24,6 +24,15 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isNil } from 'lodash-es';
 import { parseQuery } from './parser/index.js';
+import { AuthzBulkMaxTotalIdsError } from '../utils/authorizedBulkConfig.js';
+import {
+  iterateAuthorizedMongoIdBatches,
+  mergeMongoBulkFilterWithIdIn,
+} from '../utils/authorizedBulkMongo.js';
+import {
+  recordAuthorizedBulkCapErrorMetrics,
+  recordAuthorizedBulkOperationMetrics,
+} from '../utils/authorizedBulkMetrics.js';
 
 export class MongooseSchema extends SchemaAdapter<Model<any>> {
   model: Model<any>;
@@ -195,6 +204,62 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     },
   ) {
     let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
+    let parsedQuery: Indexable = this.parseStringToQuery(query);
+    if (parsedQuery.hasOwnProperty('$set')) {
+      parsedQuery = parsedQuery['$set'];
+    }
+
+    if (
+      this.authzEnabled &&
+      this.adapter.getDatabaseType() === 'MongoDB' &&
+      (!isNil(options?.userId) || !isNil(options?.scope))
+    ) {
+      try {
+        const view = await this.permissionCheck('edit', options?.userId, options?.scope);
+        if (view && view instanceof MongooseSchema) {
+          const start = Date.now();
+          let chunkCount = 0;
+          let matchedCount = 0;
+          let modifiedCount = 0;
+          for await (const idBatch of iterateAuthorizedMongoIdBatches(
+            view.model,
+            parsedFilter!,
+          )) {
+            chunkCount++;
+            const chunkFilter = mergeMongoBulkFilterWithIdIn(parsedFilter!, idBatch);
+            const r = await this.model.updateMany(chunkFilter, parsedQuery).exec();
+            matchedCount += r.matchedCount ?? (r as { n?: number }).n ?? 0;
+            modifiedCount +=
+              r.modifiedCount ?? (r as { nModified?: number }).nModified ?? 0;
+          }
+          if (chunkCount > 0) {
+            recordAuthorizedBulkOperationMetrics({
+              operation: 'updateMany',
+              schemaName: this.originalSchema.name,
+              chunkCount,
+              durationMs: Date.now() - start,
+            });
+          }
+          if (chunkCount === 0) {
+            return [];
+          }
+          return {
+            acknowledged: true,
+            matchedCount,
+            modifiedCount,
+          };
+        }
+      } catch (e) {
+        if (e instanceof AuthzBulkMaxTotalIdsError) {
+          recordAuthorizedBulkCapErrorMetrics({
+            operation: 'updateMany',
+            schemaName: this.originalSchema.name,
+          });
+        }
+        throw e;
+      }
+    }
+
     parsedFilter = await this.getAuthorizedQuery(
       'edit',
       parsedFilter,
@@ -204,10 +269,6 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     );
     if (isNil(parsedFilter)) {
       return [];
-    }
-    let parsedQuery: Indexable = this.parseStringToQuery(query);
-    if (parsedQuery.hasOwnProperty('$set')) {
-      parsedQuery = parsedQuery['$set'];
     }
     return this.model.updateMany(parsedFilter, parsedQuery).exec();
   }
@@ -244,6 +305,52 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     },
   ) {
     let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
+
+    if (
+      this.authzEnabled &&
+      this.adapter.getDatabaseType() === 'MongoDB' &&
+      (!isNil(options?.userId) || !isNil(options?.scope))
+    ) {
+      try {
+        const view = await this.permissionCheck(
+          'delete',
+          options?.userId,
+          options?.scope,
+        );
+        if (view && view instanceof MongooseSchema) {
+          const start = Date.now();
+          let chunkCount = 0;
+          let deletedCount = 0;
+          for await (const idBatch of iterateAuthorizedMongoIdBatches(
+            view.model,
+            parsedQuery!,
+          )) {
+            chunkCount++;
+            const chunkFilter = mergeMongoBulkFilterWithIdIn(parsedQuery!, idBatch);
+            const r = await this.model.deleteMany(chunkFilter).exec();
+            deletedCount += r.deletedCount ?? 0;
+          }
+          if (chunkCount > 0) {
+            recordAuthorizedBulkOperationMetrics({
+              operation: 'deleteMany',
+              schemaName: this.originalSchema.name,
+              chunkCount,
+              durationMs: Date.now() - start,
+            });
+          }
+          return { deletedCount };
+        }
+      } catch (e) {
+        if (e instanceof AuthzBulkMaxTotalIdsError) {
+          recordAuthorizedBulkCapErrorMetrics({
+            operation: 'deleteMany',
+            schemaName: this.originalSchema.name,
+          });
+        }
+        throw e;
+      }
+    }
+
     parsedQuery = await this.getAuthorizedQuery(
       'delete',
       parsedQuery,
@@ -272,9 +379,36 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ): Promise<any> {
+    const parsedFilter = parseQuery(this.parseStringToQuery(query));
+    // View-direct reads: one query against the auth view with user filter + pagination (no giant _id $in).
+    if (
+      this.authzEnabled &&
+      this.adapter.getDatabaseType() === 'MongoDB' &&
+      (!isNil(options?.userId) || !isNil(options?.scope))
+    ) {
+      const view = await this.permissionCheck('read', options?.userId, options?.scope);
+      if (view && view instanceof MongooseSchema) {
+        ConduitGrpcSdk.Metrics?.increment('database_authorized_view_reads_total');
+        let finalQuery = view.model.find(parsedFilter, options?.select);
+        if (!isNil(options?.skip)) {
+          finalQuery = finalQuery.skip(options!.skip!);
+        }
+        if (!isNil(options?.limit)) {
+          finalQuery = finalQuery.limit(options!.limit!);
+        }
+        if (!isNil(options?.sort)) {
+          finalQuery = finalQuery.sort(this.parseSort(options!.sort));
+        }
+        if (!isNil(options?.populate)) {
+          finalQuery = this.populate(finalQuery, options!.populate ?? []);
+        }
+        return finalQuery.lean().exec();
+      }
+    }
+
     const { query: filter, modified } = await this.getPaginatedAuthorizedQuery(
       'read',
-      parseQuery(this.parseStringToQuery(query)),
+      parsedFilter,
       options?.userId,
       options?.scope,
       options?.skip,
@@ -310,6 +444,22 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     },
   ): Promise<any> {
     const parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
+    if (
+      this.authzEnabled &&
+      this.adapter.getDatabaseType() === 'MongoDB' &&
+      (!isNil(options?.userId) || !isNil(options?.scope))
+    ) {
+      const view = await this.permissionCheck('read', options?.userId, options?.scope);
+      if (view && view instanceof MongooseSchema) {
+        ConduitGrpcSdk.Metrics?.increment('database_authorized_view_reads_total');
+        let finalQuery = view.model.findOne(parsedQuery!, options?.select);
+        if (options?.populate !== undefined && options?.populate !== null) {
+          finalQuery = this.populate(finalQuery, options?.populate);
+        }
+        return finalQuery.lean().exec();
+      }
+    }
+
     const filter = await this.getAuthorizedQuery(
       'read',
       parsedQuery,

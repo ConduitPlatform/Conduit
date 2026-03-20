@@ -65,7 +65,7 @@ export class RelationsController {
       'authorization:create:relation',
       JSON.stringify(relationResource),
     );
-    await RuleCache.invalidate(this.grpcSdk);
+    await RuleCache.invalidateSubject(this.grpcSdk, subject);
     return relationResource;
   }
 
@@ -128,7 +128,7 @@ export class RelationsController {
     relationDocs.forEach(rel => {
       this.grpcSdk.bus?.publish('authorization:create:relation', JSON.stringify(rel));
     });
-    await RuleCache.invalidate(this.grpcSdk);
+    await RuleCache.invalidateSubject(this.grpcSdk, subject);
     return relationDocs;
   }
 
@@ -143,7 +143,7 @@ export class RelationsController {
     });
 
     await IndexController.getInstance().removeRelation(subject, relation, object);
-    await RuleCache.invalidate(this.grpcSdk);
+    await RuleCache.invalidateSubject(this.grpcSdk, subject);
 
     return;
   }
@@ -159,7 +159,10 @@ export class RelationsController {
         relationResource.resource,
       );
     }
-    await RuleCache.invalidate(this.grpcSdk);
+    const subjects = [...new Set(relationResources.map(r => r.subject))];
+    for (const s of subjects) {
+      await RuleCache.invalidateSubject(this.grpcSdk, s);
+    }
     return;
   }
 
@@ -172,7 +175,7 @@ export class RelationsController {
       relationResource.relation,
       relationResource.resource,
     );
-    await RuleCache.invalidate(this.grpcSdk);
+    await RuleCache.invalidateSubject(this.grpcSdk, relationResource.subject);
     return;
   }
 
@@ -186,7 +189,7 @@ export class RelationsController {
         { resourceType: name },
       ],
     });
-    await RuleCache.invalidate(this.grpcSdk);
+    await RuleCache.invalidateGlobal(this.grpcSdk);
   }
 
   async getRelation(subject: string, relation: string, object: string) {

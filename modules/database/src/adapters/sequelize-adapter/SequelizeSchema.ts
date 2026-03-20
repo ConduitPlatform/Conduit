@@ -2,6 +2,7 @@ import {
   FindAttributeOptions,
   FindOptions,
   ModelStatic,
+  Op,
   Order,
   OrderItem,
   Sequelize,
@@ -32,6 +33,12 @@ import {
   includeRelations,
   parseQueryFilter,
 } from './utils/query.js';
+import { AuthzBulkMaxTotalIdsError } from '../utils/authorizedBulkConfig.js';
+import { iterateAuthorizedSequelizeIdBatches } from '../utils/authorizedBulkSequelize.js';
+import {
+  recordAuthorizedBulkCapErrorMetrics,
+  recordAuthorizedBulkOperationMetrics,
+} from '../utils/authorizedBulkMetrics.js';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
@@ -467,10 +474,53 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       scope?: string;
     },
   ) {
-    const { filter, parsingResult } = parseQueryFilter(
-      this,
-      this.parseStringToQuery(query),
-    );
+    const rawParsed = this.parseStringToQuery(query);
+    const { filter, parsingResult } = parseQueryFilter(this, rawParsed);
+
+    if (this.authzEnabled && (!isNil(options?.userId) || !isNil(options?.scope))) {
+      const view = await this.permissionCheck('delete', options?.userId, options?.scope);
+      if (view && view instanceof SequelizeSchema) {
+        const start = Date.now();
+        let chunkCount = 0;
+        let deletedCount = 0;
+        try {
+          const { filter: viewWhere } = parseQueryFilter(view, rawParsed);
+          for await (const idBatch of iterateAuthorizedSequelizeIdBatches(
+            view.model,
+            viewWhere,
+            '_id',
+          )) {
+            chunkCount++;
+            incrementDbQueries();
+            const docs = await this.model.findAll({
+              where: { _id: { [Op.in]: idBatch } },
+              include: includeRelations(this, parsingResult.requiredRelations, []),
+            });
+            incrementDbQueries();
+            await Promise.all(docs.map(doc => doc.destroy({ returning: true })));
+            deletedCount += docs.length;
+          }
+          if (chunkCount > 0) {
+            recordAuthorizedBulkOperationMetrics({
+              operation: 'deleteMany',
+              schemaName: this.originalSchema.name,
+              chunkCount,
+              durationMs: Date.now() - start,
+            });
+          }
+          return { deletedCount };
+        } catch (e) {
+          if (e instanceof AuthzBulkMaxTotalIdsError) {
+            recordAuthorizedBulkCapErrorMetrics({
+              operation: 'deleteMany',
+              schemaName: this.originalSchema.name,
+            });
+          }
+          throw e;
+        }
+      }
+    }
+
     const parsedFilter = await this.getAuthorizedQuery(
       'delete',
       filter,
@@ -576,9 +626,64 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     },
   ) {
     const parsedQuery: ParsedQuery = this.parseStringToQuery(query);
+    const rawFilter = this.parseStringToQuery(filterQuery);
+
+    if (this.authzEnabled && (!isNil(options?.userId) || !isNil(options?.scope))) {
+      const view = await this.permissionCheck('edit', options?.userId, options?.scope);
+      if (view && view instanceof SequelizeSchema) {
+        const start = Date.now();
+        let chunkCount = 0;
+        const data: Indexable[] = [];
+        const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
+        try {
+          const { filter: viewWhere } = parseQueryFilter(view, rawFilter);
+          for await (const idBatch of iterateAuthorizedSequelizeIdBatches(
+            view.model,
+            viewWhere,
+            '_id',
+          )) {
+            chunkCount++;
+            const batchResults = await Promise.all(
+              idBatch.map(id =>
+                this.findByIdAndUpdate(String(id), parsedQuery, {
+                  populate: options?.populate,
+                  transaction: t,
+                  userId: options?.userId,
+                  scope: options?.scope,
+                }),
+              ),
+            );
+            data.push(...batchResults);
+          }
+          await t.commit();
+          if (chunkCount > 0) {
+            recordAuthorizedBulkOperationMetrics({
+              operation: 'updateMany',
+              schemaName: this.originalSchema.name,
+              chunkCount,
+              durationMs: Date.now() - start,
+            });
+          }
+          if (chunkCount === 0) {
+            return [];
+          }
+          return data;
+        } catch (e) {
+          await t.rollback();
+          if (e instanceof AuthzBulkMaxTotalIdsError) {
+            recordAuthorizedBulkCapErrorMetrics({
+              operation: 'updateMany',
+              schemaName: this.originalSchema.name,
+            });
+          }
+          throw e;
+        }
+      }
+    }
+
     const parsedFilterQuery = await this.getAuthorizedQuery(
       'edit',
-      this.parseStringToQuery(filterQuery),
+      rawFilter,
       true,
       options?.userId,
       options?.scope,
@@ -602,7 +707,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     });
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     try {
-      const data = await Promise.all(
+      const rows = await Promise.all(
         docs.map(doc =>
           this.findByIdAndUpdate(doc._id, parsedQuery, {
             populate: options?.populate,
@@ -611,7 +716,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         ),
       );
       await t.commit();
-      return data;
+      return rows;
     } catch (e) {
       await t.rollback();
       throw e;
