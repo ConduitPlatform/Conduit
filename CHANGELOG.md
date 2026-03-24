@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.24](https://github.com/ConduitPlatform/Conduit/compare/v0.16.23...v0.16.24) (2026-03-24)
+
+
+### Bug Fixes
+
+* **authentication:** phone handlers mishandling existing user case ([1e665e6](https://github.com/ConduitPlatform/Conduit/commit/1e665e6f9176f3404abeabbdfa99e96a99d46bb5))
+* **chat:** deleteRoom sockets params ([#1446](https://github.com/ConduitPlatform/Conduit/issues/1446)) ([c7ce92c](https://github.com/ConduitPlatform/Conduit/commit/c7ce92c3ac5bab7dd3e2d8e8bb8e22cd6a9b1e31))
+* **email:** handle multi-line Handlebars tags in getHandleBarsValues ([e8f7120](https://github.com/ConduitPlatform/Conduit/commit/e8f71201bd947c27a88e6bd4c7bc0d8a3846283e))
+* **email:** sender overrides broken ([c991391](https://github.com/ConduitPlatform/Conduit/commit/c9913911c5e29cb2eebf890f0f5e76655ed13876))
+* **sms:** missing package ([afedfeb](https://github.com/ConduitPlatform/Conduit/commit/afedfeb32e162017c1e41aa5892368eed9df6c93))
+
 ### [0.16.23](https://github.com/ConduitPlatform/Conduit/compare/v0.16.22...v0.16.23) (2026-02-13)
 
 
