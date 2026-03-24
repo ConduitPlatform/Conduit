@@ -146,6 +146,9 @@ export class EmailService {
         senderAddress = templateFound.sender;
       }
     }
+    if (!isEmpty(sender)) {
+      senderAddress = sender;
+    }
 
     if (isNil(senderAddress) || isEmpty(senderAddress)) {
       if (!isEmpty(sender)) {
