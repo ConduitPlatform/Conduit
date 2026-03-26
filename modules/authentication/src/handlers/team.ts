@@ -547,7 +547,15 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async userInvite(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { teamId, email, role, redirectUri, userData } = call.request.params;
+    const {
+      teamId,
+      email,
+      role,
+      redirectUri,
+      userData,
+      inviteEmailTemplateName,
+      inviteEmailVariables,
+    } = call.request.params;
     const config: Config = ConfigController.getInstance().config;
     if (!config.teams.invites.enabled) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Team invites are disabled');
@@ -577,6 +585,23 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'You do not have permission to invite users to this team',
       );
     }
+    if (isEmpty(inviteEmailTemplateName) && inviteEmailVariables !== undefined) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'inviteEmailTemplateName is required when inviteEmailVariables are provided',
+      );
+    }
+    if (
+      inviteEmailVariables !== undefined &&
+      (typeof inviteEmailVariables !== 'object' ||
+        inviteEmailVariables === null ||
+        Array.isArray(inviteEmailVariables))
+    ) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'inviteEmailVariables must be a JSON object',
+      );
+    }
 
     // Delete any existing invite for the same email and team
     await Token.getInstance().deleteOne({
@@ -598,20 +623,40 @@ export class TeamsHandler implements IAuthenticationStrategy {
         ? AuthUtils.validateRedirectUri(redirectUri)
         : config.teams.invites.inviteUrl;
       link += `?invitationToken=${invitation.token}`;
+      const customInviteTemplateName =
+        typeof inviteEmailTemplateName === 'string' ? inviteEmailTemplateName.trim() : '';
 
-      await this.grpcSdk
-        .emailProvider!.sendEmail('TeamInvite', {
-          email: email,
-          variables: {
-            link,
-            teamName: team.name,
-            inviterName: user.name,
-            userData,
-          },
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
+      if (!isEmpty(customInviteTemplateName)) {
+        const customInviteVariables: Indexable = {
+          link,
+          ...(inviteEmailVariables as Indexable),
+        };
+        try {
+          await this.grpcSdk.emailProvider!.sendEmail(customInviteTemplateName, {
+            email,
+            variables: customInviteVariables,
+          });
+        } catch (e) {
+          throw new GrpcError(
+            status.INVALID_ARGUMENT,
+            `Failed to send custom invite email with template "${customInviteTemplateName}"`,
+          );
+        }
+      } else {
+        await this.grpcSdk
+          .emailProvider!.sendEmail('TeamInvite', {
+            email: email,
+            variables: {
+              link,
+              teamName: team.name,
+              inviterName: user.name,
+              userData,
+            },
+          })
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
+          });
+      }
     }
     return invitation.token;
   }
@@ -1053,6 +1098,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
           email: ConduitString.Required,
           redirectUri: ConduitString.Optional,
           userData: ConduitJson.Optional,
+          inviteEmailTemplateName: ConduitString.Optional,
+          inviteEmailVariables: ConduitJson.Optional,
         },
         action: ConduitRouteActions.POST,
         middlewares: authRouteMiddlewares,

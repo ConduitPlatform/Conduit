@@ -701,7 +701,16 @@ export default class Authentication extends ManagedModule<Config> {
     call: GrpcRequest<InviteUserToTeamRequest>,
     callback: GrpcCallback<InviteUserToTeamResponse>,
   ) {
-    const { teamId, email, role, redirectUri, inviterUserId, userData } = call.request;
+    const {
+      teamId,
+      email,
+      role,
+      redirectUri,
+      inviterUserId,
+      userData,
+      inviteEmailTemplateName,
+      inviteEmailVariables,
+    } = call.request;
     if (isEmpty(teamId) || isEmpty(email) || isEmpty(role) || isEmpty(inviterUserId)) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -726,12 +735,38 @@ export default class Authentication extends ManagedModule<Config> {
           });
         }
       }
+      let parsedInviteEmailVariables: Indexable | undefined = undefined;
+      if (!isNil(inviteEmailVariables) && inviteEmailVariables !== '') {
+        try {
+          parsedInviteEmailVariables = JSON.parse(inviteEmailVariables) as Indexable;
+        } catch (e) {
+          return callback({
+            code: status.INVALID_ARGUMENT,
+            message: 'inviteEmailVariables must be valid JSON',
+          });
+        }
+      }
 
       const request = createParsedRouterRequest(
-        { teamId, email, role, redirectUri, userData: parsedUserData },
+        {
+          teamId,
+          email,
+          role,
+          redirectUri,
+          userData: parsedUserData,
+          inviteEmailTemplateName,
+          inviteEmailVariables: parsedInviteEmailVariables,
+        },
         { teamId },
         undefined,
-        { email, role, redirectUri, userData: parsedUserData },
+        {
+          email,
+          role,
+          redirectUri,
+          userData: parsedUserData,
+          inviteEmailTemplateName,
+          inviteEmailVariables: parsedInviteEmailVariables,
+        },
         undefined,
         undefined,
         { user: inviter },

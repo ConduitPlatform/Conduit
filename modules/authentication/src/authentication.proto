@@ -118,6 +118,8 @@ message InviteUserToTeamRequest {
   string inviterUserId = 5;
   optional string redirectUri = 4;
   optional string userData = 6;
+  optional string inviteEmailTemplateName = 7;
+  optional string inviteEmailVariables = 8;
 }
 
 message InviteUserToTeamResponse {
