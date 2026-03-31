@@ -137,6 +137,8 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       scope?: string;
       populate?: string[];
       transaction?: Transaction;
+      /** Skip ReBAC lookup; caller already scoped IDs (e.g. batched updateMany). */
+      preAuthorized?: boolean;
     },
   ): Promise<Indexable> {
     const { t, parsedQuery, transactionProvided } = await getTransactionAndParsedQuery(
@@ -144,18 +146,20 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       query,
       this.sequelize,
     );
-    const parsedId = await this.getAuthorizedQuery(
-      'edit',
-      { _id: id },
-      false,
-      options?.userId,
-      options?.scope,
-    ).then(r => {
-      if (!r) {
-        throw new Error("Document doesn't exist or can't be modified by user.");
-      }
-      return r._id;
-    });
+    const parsedId = options?.preAuthorized
+      ? id
+      : await this.getAuthorizedQuery(
+          'edit',
+          { _id: id },
+          false,
+          options?.userId,
+          options?.scope,
+        ).then(r => {
+          if (!r) {
+            throw new Error("Document doesn't exist or can't be modified by user.");
+          }
+          return r._id;
+        });
     try {
       const parentDoc = await this.model.findByPk(parsedId, {
         nest: true,
@@ -648,8 +652,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
                 this.findByIdAndUpdate(String(id), parsedQuery, {
                   populate: options?.populate,
                   transaction: t,
-                  userId: options?.userId,
-                  scope: options?.scope,
+                  preAuthorized: true,
                 }),
               ),
             );

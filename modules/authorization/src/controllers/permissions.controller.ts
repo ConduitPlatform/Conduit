@@ -260,19 +260,23 @@ export class PermissionsController {
                 },
               },
             },
+            // Convert string IDs to ObjectIds so $lookup can use _id index (localField/foreignField).
+            {
+              $addFields: {
+                authorizedObjectIds: {
+                  $map: {
+                    input: '$authorizedIds',
+                    as: 'id',
+                    in: { $toObjectId: '$$id' },
+                  },
+                },
+              },
+            },
             {
               $lookup: {
                 from: objectTypeCollection,
-                let: { ids: '$authorizedIds' },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $in: [{ $toString: '$_id' }, '$$ids'],
-                      },
-                    },
-                  },
-                ],
+                localField: 'authorizedObjectIds',
+                foreignField: '_id',
                 as: 'authorizedDocs',
               },
             },
