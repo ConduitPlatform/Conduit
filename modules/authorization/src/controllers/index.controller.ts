@@ -7,6 +7,7 @@ import {
 } from '../models/index.js';
 import { constructObjectIndex } from '../utils/index.js';
 import { QueueController } from './queue.controller.js';
+import { RuleCache } from './cache.controller.js';
 
 export class IndexController {
   private static _instance: IndexController;
@@ -124,6 +125,7 @@ export class IndexController {
         })),
       );
     }
+    await RuleCache.invalidateGlobal(this.grpcSdk);
   }
 
   async createOrUpdateObject(subject: string, entity: string) {

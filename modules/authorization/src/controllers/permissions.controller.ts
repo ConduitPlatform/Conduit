@@ -45,7 +45,7 @@ export class PermissionsController {
       resourceType: resource.split(':')[0],
       computedTuple,
     });
-    await RuleCache.invalidate(this.grpcSdk);
+    await RuleCache.invalidateSubject(this.grpcSdk, subject);
   }
 
   async removePermission(subject: string, action: string, resource: string) {
@@ -59,35 +59,45 @@ export class PermissionsController {
       throw new Error(`Permission does not exist!`);
     }
     await Permission.getInstance().deleteOne({ _id: permission._id });
-    await RuleCache.invalidate(this.grpcSdk);
+    await RuleCache.invalidateSubject(this.grpcSdk, subject);
   }
 
   async can(subject: string, action: string, object: string) {
-    checkRelation(subject, action, object);
-    const computedTuple = computePermissionTuple(subject, action, object);
-    const cachedResponse = await RuleCache.findResolution(this.grpcSdk, computedTuple);
-    if (!isNil(cachedResponse)) {
-      return cachedResponse;
+    const started = Date.now();
+    try {
+      checkRelation(subject, action, object);
+      const computedTuple = computePermissionTuple(subject, action, object);
+      const cachedResponse = await RuleCache.findResolution(this.grpcSdk, computedTuple);
+      if (!isNil(cachedResponse)) {
+        ConduitGrpcSdk.Metrics?.increment('authorization_rule_cache_hit_total');
+        return cachedResponse;
+      }
+      ConduitGrpcSdk.Metrics?.increment('authorization_rule_cache_miss_total');
+      // if the actor is the object itself, all permissions are provided
+      if (subject === object) {
+        await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
+        return true;
+      }
+
+      const permission = await Permission.getInstance().findOne({
+        computedTuple,
+      });
+      if (permission) {
+        await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
+        return true;
+      }
+
+      const index = await this.indexController.findIndex(subject, action, object);
+
+      await RuleCache.storeResolution(this.grpcSdk, computedTuple, index ?? false);
+
+      return index ?? false;
+    } finally {
+      ConduitGrpcSdk.Metrics?.observe(
+        'authorization_can_duration_ms',
+        Date.now() - started,
+      );
     }
-    // if the actor is the object itself, all permissions are provided
-    if (subject === object) {
-      await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
-      return true;
-    }
-
-    const permission = await Permission.getInstance().findOne({
-      computedTuple,
-    });
-    if (permission) {
-      await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
-      return true;
-    }
-
-    const index = await this.indexController.findIndex(subject, action, object);
-
-    await RuleCache.storeResolution(this.grpcSdk, computedTuple, index ?? false);
-
-    return index ?? false;
   }
 
   async evaluatePermission(subject: string, action: string, object: string) {
@@ -157,134 +167,146 @@ export class PermissionsController {
     objectType: string,
     requestedViewName?: string,
   ) {
-    const computedTuple = `${subject}#${action}@${objectType}`;
-    const computedTuplePrefix = `${computedTuple}:`;
-    const escapedComputedTuplePrefix = `^${escapeRegex(computedTuplePrefix)}`;
-    const objectTypeCollection = await this.grpcSdk
-      .database!.getSchema(objectType)
-      .then(r => r.collectionName);
-    let viewName = requestedViewName;
-    if (!viewName || isEmpty(viewName)) {
-      viewName = createHash('sha256')
-        .update(`${objectType}_${subject}_${action}`)
-        .digest('hex');
-    }
+    const started = Date.now();
+    try {
+      const computedTuple = `${subject}#${action}@${objectType}`;
+      const computedTuplePrefix = `${computedTuple}:`;
+      const escapedComputedTuplePrefix = `^${escapeRegex(computedTuplePrefix)}`;
+      const objectTypeCollection = await this.grpcSdk
+        .database!.getSchema(objectType)
+        .then(r => r.collectionName);
+      let viewName = requestedViewName;
+      if (!viewName || isEmpty(viewName)) {
+        viewName = createHash('sha256')
+          .update(`${objectType}_${subject}_${action}`)
+          .digest('hex');
+      }
 
-    const dbType = await this.grpcSdk.database!.getDatabaseType().then(r => r.result);
-    await this.grpcSdk.database?.createView(
-      objectType,
-      viewName,
-      ['Permission', 'ActorIndex', 'ObjectIndex'],
-      {
-        mongoQuery: [
-          // Use a single seed document so auth index lookups run once per query.
-          { $limit: 1 },
-          { $project: { _id: 0 } },
-          {
-            $lookup: {
-              from: 'cnd_permissions',
-              pipeline: [
-                {
-                  $match: {
-                    computedTuple: {
-                      $regex: escapedComputedTuplePrefix,
+      const dbType = await this.grpcSdk.database!.getDatabaseType().then(r => r.result);
+      await this.grpcSdk.database?.createView(
+        objectType,
+        viewName,
+        ['Permission', 'ActorIndex', 'ObjectIndex'],
+        {
+          mongoQuery: [
+            // Use a single seed document so auth index lookups run once per query.
+            { $limit: 1 },
+            { $project: { _id: 0 } },
+            {
+              $lookup: {
+                from: 'cnd_permissions',
+                pipeline: [
+                  {
+                    $match: {
+                      computedTuple: {
+                        $regex: escapedComputedTuplePrefix,
+                      },
                     },
                   },
-                },
-                { $project: { _id: 0, resourceId: 1 } },
-              ],
-              as: 'directPermissions',
-            },
-          },
-          {
-            $lookup: {
-              from: 'cnd_actorindexes',
-              pipeline: [
-                {
-                  $match: {
-                    subject: subject,
-                  },
-                },
-                { $project: { _id: 0, entity: 1 } },
-              ],
-              as: 'actors',
-            },
-          },
-          {
-            $project: {
-              directIds: '$directPermissions.resourceId',
-              actorEntities: {
-                $setUnion: ['$actors.entity', ['*']],
+                  { $project: { _id: 0, resourceId: 1 } },
+                ],
+                as: 'directPermissions',
               },
             },
-          },
-          {
-            $lookup: {
-              from: 'cnd_objectindexes',
-              let: { actorEntities: '$actorEntities' },
-              pipeline: [
-                {
-                  $match: {
-                    subjectType: objectType,
-                    subjectPermission: action,
-                  },
-                },
-                {
-                  $match: {
-                    $expr: {
-                      $in: ['$entity', '$$actorEntities'],
+            {
+              $lookup: {
+                from: 'cnd_actorindexes',
+                pipeline: [
+                  {
+                    $match: {
+                      subject: subject,
                     },
                   },
-                },
-                { $project: { _id: 0, subjectId: 1 } },
-              ],
-              as: 'indexedPermissions',
-            },
-          },
-          {
-            $project: {
-              authorizedIds: {
-                $setUnion: ['$directIds', '$indexedPermissions.subjectId'],
+                  { $project: { _id: 0, entity: 1 } },
+                ],
+                as: 'actors',
               },
             },
-          },
-          {
-            $lookup: {
-              from: objectTypeCollection,
-              let: { ids: '$authorizedIds' },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $in: [{ $toString: '$_id' }, '$$ids'],
+            {
+              $project: {
+                directIds: '$directPermissions.resourceId',
+                actorEntities: {
+                  $setUnion: ['$actors.entity', ['*']],
+                },
+              },
+            },
+            {
+              $lookup: {
+                from: 'cnd_objectindexes',
+                let: { actorEntities: '$actorEntities' },
+                pipeline: [
+                  {
+                    $match: {
+                      subjectType: objectType,
+                      subjectPermission: action,
                     },
                   },
-                },
-              ],
-              as: 'authorizedDocs',
+                  {
+                    $match: {
+                      $expr: {
+                        $in: ['$entity', '$$actorEntities'],
+                      },
+                    },
+                  },
+                  { $project: { _id: 0, subjectId: 1 } },
+                ],
+                as: 'indexedPermissions',
+              },
             },
-          },
-          { $unwind: '$authorizedDocs' },
-          { $replaceRoot: { newRoot: '$authorizedDocs' } },
-        ],
-        sqlQuery:
-          dbType === 'PostgreSQL'
-            ? getPostgresAccessListQuery(
-                objectTypeCollection,
-                computedTuple,
-                subject,
-                objectType,
-                action,
-              )
-            : getSQLAccessListQuery(
-                objectTypeCollection,
-                computedTuple,
-                subject,
-                objectType,
-                action,
-              ),
-      },
-    );
-    return viewName;
+            {
+              $project: {
+                authorizedIds: {
+                  $setUnion: ['$directIds', '$indexedPermissions.subjectId'],
+                },
+              },
+            },
+            // Convert string IDs to ObjectIds so $lookup can use _id index (localField/foreignField).
+            {
+              $addFields: {
+                authorizedObjectIds: {
+                  $map: {
+                    input: '$authorizedIds',
+                    as: 'id',
+                    in: { $toObjectId: '$$id' },
+                  },
+                },
+              },
+            },
+            {
+              $lookup: {
+                from: objectTypeCollection,
+                localField: 'authorizedObjectIds',
+                foreignField: '_id',
+                as: 'authorizedDocs',
+              },
+            },
+            { $unwind: '$authorizedDocs' },
+            { $replaceRoot: { newRoot: '$authorizedDocs' } },
+          ],
+          sqlQuery:
+            dbType === 'PostgreSQL'
+              ? getPostgresAccessListQuery(
+                  objectTypeCollection,
+                  computedTuple,
+                  subject,
+                  objectType,
+                  action,
+                )
+              : getSQLAccessListQuery(
+                  objectTypeCollection,
+                  computedTuple,
+                  subject,
+                  objectType,
+                  action,
+                ),
+        },
+      );
+      return viewName;
+    } finally {
+      ConduitGrpcSdk.Metrics?.observe(
+        'authorization_access_list_duration_ms',
+        Date.now() - started,
+      );
+    }
   }
 }

@@ -31,4 +31,36 @@ export default {
       help: 'Tracks the total number of custom endpoints',
     },
   },
+  authorizedViewReads: {
+    type: MetricType.Counter,
+    config: {
+      name: 'database_authorized_view_reads_total',
+      help: 'MongoDB reads executed directly against an authorization view (no intermediate id $in)',
+    },
+  },
+  authorizedBulkChunks: {
+    type: MetricType.Counter,
+    config: {
+      name: 'database_authorized_bulk_chunks_total',
+      help: 'Chunks processed for authorized bulk writes (bounded _id $in per command)',
+      labelNames: ['operation', 'schema'],
+    },
+  },
+  authorizedBulkDurationMs: {
+    type: MetricType.Histogram,
+    config: {
+      name: 'database_authorized_bulk_duration_ms',
+      help: 'Wall time for authorized bulk write paths that iterate ID batches from the auth view',
+      labelNames: ['operation', 'schema'],
+      buckets: [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 15000, 60000],
+    },
+  },
+  authorizedBulkMaxTotalIdsErrors: {
+    type: MetricType.Counter,
+    config: {
+      name: 'database_authorized_bulk_max_total_ids_errors_total',
+      help: 'Authorized bulk operations aborted because CONDUIT_AUTHZ_BULK_MAX_TOTAL_IDS would be exceeded',
+      labelNames: ['operation', 'schema'],
+    },
+  },
 };
