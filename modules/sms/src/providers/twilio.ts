@@ -3,14 +3,14 @@ import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import twilio from 'twilio';
 
 export class TwilioProvider implements ISmsProvider {
-  private readonly phoneNumber: string;
+  private readonly phoneNumber?: string;
   private readonly accountSID: string;
   private readonly authToken: string;
   private readonly serviceSid: string | undefined;
   private client: twilio.Twilio;
 
   constructor(settings: {
-    phoneNumber: string;
+    phoneNumber?: string;
     accountSID: string;
     authToken: string;
     verify: { active: boolean; serviceSid: string | undefined };
@@ -26,6 +26,8 @@ export class TwilioProvider implements ISmsProvider {
   }
 
   sendSms(to: string, message: string) {
+    if (!this.phoneNumber)
+      return Promise.reject(Error('Phone number missing from settings'));
     return this.client.messages.create({
       body: message,
       to,
