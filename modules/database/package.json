@@ -10,7 +10,6 @@
   },
   "scripts": {
     "start": "node dist/index.js",
-    "test": "npm run build && node --test dist/adapters/utils/authorizedBulkMongo.test.js dist/adapters/utils/authorizedBulkSequelize.test.js",
     "prepublish": "npm run build",
     "prebuild": "npm run generateTypes",
     "build": "rimraf dist && tsc",

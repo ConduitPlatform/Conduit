@@ -233,19 +233,13 @@ export class PermissionsController {
             {
               $lookup: {
                 from: 'cnd_objectindexes',
-                let: { actorEntities: '$actorEntities' },
+                localField: 'actorEntities',
+                foreignField: 'entity',
                 pipeline: [
                   {
                     $match: {
                       subjectType: objectType,
                       subjectPermission: action,
-                    },
-                  },
-                  {
-                    $match: {
-                      $expr: {
-                        $in: ['$entity', '$$actorEntities'],
-                      },
                     },
                   },
                   { $project: { _id: 0, subjectId: 1 } },
