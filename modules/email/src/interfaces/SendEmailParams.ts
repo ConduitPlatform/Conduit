@@ -1,4 +1,5 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
+import { Attachment } from 'nodemailer/lib/mailer';
 
 export interface ISendEmailParams {
   email: string;
@@ -8,5 +9,5 @@ export interface ISendEmailParams {
   sender: string;
   cc?: string[];
   replyTo?: string;
-  attachments?: string[];
+  attachments?: Attachment[];
 }
