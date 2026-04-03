@@ -5,7 +5,7 @@ import {
   Relationship,
   ResourceDefinition,
 } from '../models/index.js';
-import { constructObjectIndex } from '../utils/index.js';
+import { constructObjectIndex, escapeRegex } from '../utils/index.js';
 import { QueueController } from './queue.controller.js';
 import { RuleCache } from './cache.controller.js';
 
@@ -14,10 +14,6 @@ export class IndexController {
   private static readonly ENTITY_CHUNK_SIZE = 250;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
-
-  private escapeRegex(value: string) {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
 
   private chunkArray<T>(items: T[], chunkSize: number): T[][] {
     const chunks: T[][] = [];
@@ -218,10 +214,21 @@ export class IndexController {
     await ObjectIndex.getInstance().deleteMany({
       inheritanceTree: `${subject}#${relation}@${object}`,
     });
+    // When no edges of this type remain on the object, drop base ObjectIndex rows for this entity
+    const remaining = await Relationship.getInstance().countDocuments({
+      resource: object,
+      relation,
+    });
+    if (remaining === 0) {
+      await ObjectIndex.getInstance().deleteMany({
+        entity: `${object}#${relation}`,
+        $or: [{ inheritanceTree: [] }, { inheritanceTree: { $exists: false } }],
+      });
+    }
   }
 
   async removeResource(resourceName: string) {
-    const escapedResourceName = this.escapeRegex(resourceName);
+    const escapedResourceName = escapeRegex(resourceName);
     const query = {
       $or: [
         {
@@ -326,6 +333,27 @@ export class IndexController {
     };
   }
 
+  /**
+   * All unique resource ids the subject may access for action on objectType via the object index graph.
+   */
+  async findGeneralIndexAllResourceIds(
+    subject: string,
+    action: string,
+    objectType: string,
+  ): Promise<string[]> {
+    const actorEntities = await this.resolveActorEntities(subject);
+    const objectIndexes = await this.findObjectIndexesByEntities(
+      {
+        subjectType: objectType,
+        subjectPermission: action,
+      },
+      [...actorEntities, '*'],
+    );
+    return [
+      ...new Set(objectIndexes.map(index => this.extractResourceId(index.subject))),
+    ].sort();
+  }
+
   async findGeneralIndex(
     subject: string,
     action: string,
@@ -333,30 +361,16 @@ export class IndexController {
     skip: number,
     limit: number,
   ) {
-    const actorEntities = await this.resolveActorEntities(subject);
-    const objectIndexes = await this.findObjectIndexesByEntities(
-      {
-        subjectType: objectType,
-        subjectPermission: action,
-      },
-      [...actorEntities, '*'],
+    const uniqueResourceIds = await this.findGeneralIndexAllResourceIds(
+      subject,
+      action,
+      objectType,
     );
-    const uniqueResourceIds = [
-      ...new Set(objectIndexes.map(index => this.extractResourceId(index.subject))),
-    ];
     return uniqueResourceIds.slice(skip, skip + limit);
   }
 
   async findGeneralIndexCount(subject: string, action: string, objectType: string) {
-    const actorEntities = await this.resolveActorEntities(subject);
-    const objectIndexes = await this.findObjectIndexesByEntities(
-      {
-        subjectType: objectType,
-        subjectPermission: action,
-      },
-      [...actorEntities, '*'],
-    );
-    return new Set(objectIndexes.map(index => this.extractResourceId(index.subject)))
-      .size;
+    const ids = await this.findGeneralIndexAllResourceIds(subject, action, objectType);
+    return ids.length;
   }
 }

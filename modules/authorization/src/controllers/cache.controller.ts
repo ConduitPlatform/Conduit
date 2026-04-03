@@ -2,6 +2,8 @@ import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash-es';
 
 const RULE_CACHE_TTL_MS = 60000;
+/** Version keys are bumped on invalidation; TTL prevents unbounded Redis growth for inactive subjects. */
+const RULE_CACHE_SUBJECT_VER_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** Bumps invalidate all cached `can()` resolutions (e.g. resource delete, reindex). */
 const RULE_CACHE_GLOBAL_VERSION_KEY = 'ruleCache:globalVer';
 const RULE_CACHE_SUBJECT_VER_PREFIX = 'ruleCache:subjVer:';
@@ -54,6 +56,7 @@ export namespace RuleCache {
     await grpcSdk.state!.setKey(
       `${RULE_CACHE_SUBJECT_VER_PREFIX}${subject}`,
       Date.now().toString(),
+      RULE_CACHE_SUBJECT_VER_TTL_MS,
     );
   }
 
@@ -80,7 +83,7 @@ export namespace RuleCache {
     const key = `${RULE_CACHE_SUBJECT_VER_PREFIX}${subject}`;
     const version = await grpcSdk.state!.getKey(key);
     if (isNil(version)) {
-      await grpcSdk.state!.setKey(key, '0');
+      await grpcSdk.state!.setKey(key, '0', RULE_CACHE_SUBJECT_VER_TTL_MS);
       return '0';
     }
     return version;

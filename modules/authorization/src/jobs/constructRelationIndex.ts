@@ -2,6 +2,7 @@ import { SandboxedJob } from 'bullmq';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ActorIndex, ObjectIndex, ResourceDefinition } from '../models/index.js';
 import { IndexController, QueueController } from '../controllers/index.js';
+import { RuleCache } from '../controllers/cache.controller.js';
 
 let grpcSdk: ConduitGrpcSdk | undefined = undefined;
 
@@ -28,4 +29,5 @@ export default async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
     relation.relation,
     relation.object,
   );
+  await RuleCache.invalidateSubject(grpcSdk!, relation.subject);
 };

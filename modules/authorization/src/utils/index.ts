@@ -17,6 +17,24 @@ export const checkRelation = (subject: string, relation: string, object: string)
   return;
 };
 
+/** Validates subject/action/object for permission checks (allows subject === object for self-access). */
+export const checkPermissionTuple = (subject: string, action: string, object: string) => {
+  if (!subject.includes(':')) {
+    throw new Error('Subject must be a valid resource identifier');
+  }
+  if (!object.includes(':')) {
+    throw new Error('Object must be a valid resource identifier');
+  }
+  if (!/^[a-zA-Z]+$/.test(action)) {
+    throw new Error('Relation must be a plain string');
+  }
+};
+
+/** Escape a string for use inside a RegExp literal (e.g. $regex in Mongo). */
+export function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export const computeRelationTuple = (
   subject: string,
   relation: string,
@@ -76,11 +94,17 @@ export function getPostgresAccessListQuery(
       WHERE CAST(s._id AS TEXT) IN (
           SELECT oi."subjectId"
           FROM "cnd_ObjectIndex" AS oi
-                   INNER JOIN "cnd_ActorIndex" AS ai
-                              ON (ai.entity = oi.entity OR oi.entity = '*')
+                   INNER JOIN "cnd_ActorIndex" AS ai ON ai.entity = oi.entity
           WHERE oi."subjectType" = '${ot}'
             AND oi."subjectPermission" = '${a}'
             AND ai.subject = '${s}'
+            AND oi.entity <> '*'
+          UNION
+          SELECT oi."subjectId"
+          FROM "cnd_ObjectIndex" AS oi
+          WHERE oi."subjectType" = '${ot}'
+            AND oi."subjectPermission" = '${a}'
+            AND oi.entity = '*'
           UNION
           SELECT p."resourceId"
           FROM "cnd_Permission" AS p
@@ -105,11 +129,17 @@ export function getSQLAccessListQuery(
           WHERE CAST(${objectTypeCollection}._id AS CHAR) IN (
               SELECT oi.subjectId
               FROM cnd_ObjectIndex AS oi
-                       INNER JOIN cnd_ActorIndex AS ai
-                                  ON (ai.entity = oi.entity OR oi.entity = '*')
+                       INNER JOIN cnd_ActorIndex AS ai ON ai.entity = oi.entity
               WHERE oi.subjectType = '${ot}'
                 AND oi.subjectPermission = '${a}'
                 AND ai.subject = '${s}'
+                AND oi.entity <> '*'
+              UNION
+              SELECT oi.subjectId
+              FROM cnd_ObjectIndex AS oi
+              WHERE oi.subjectType = '${ot}'
+                AND oi.subjectPermission = '${a}'
+                AND oi.entity = '*'
               UNION
               SELECT p.resourceId
               FROM cnd_Permission AS p

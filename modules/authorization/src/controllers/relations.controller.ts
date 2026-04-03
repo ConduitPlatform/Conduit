@@ -97,7 +97,7 @@ export class RelationsController {
       ) {
         throw new Error('Relation not allowed');
       }
-      if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
+      if (resourceDefinition.relations[relation].indexOf('*') !== -1) continue;
       if (resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1) {
         throw new Error('Relation not allowed');
       }
@@ -128,7 +128,7 @@ export class RelationsController {
     relationDocs.forEach(rel => {
       this.grpcSdk.bus?.publish('authorization:create:relation', JSON.stringify(rel));
     });
-    await RuleCache.invalidateSubject(this.grpcSdk, subject);
+    // Rule cache is invalidated in constructRelationIndex worker after indexes are built
     return relationDocs;
   }
 

@@ -88,6 +88,9 @@ const schemaOptions: ConduitSchemaOptions = {
       fields: ['subjectType', 'subjectPermission', 'entity'],
     },
     {
+      fields: ['entity', 'subjectType', 'subjectPermission'],
+    },
+    {
       fields: ['entityType', 'entityId', 'entityPermission'],
     },
   ],

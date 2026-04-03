@@ -1,7 +1,9 @@
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import {
+  checkPermissionTuple,
   checkRelation,
   computePermissionTuple,
+  escapeRegex,
   getPostgresAccessListQuery,
   getSQLAccessListQuery,
 } from '../utils/index.js';
@@ -10,10 +12,6 @@ import { RuleCache } from './cache.controller.js';
 import { isEmpty, isNil } from 'lodash-es';
 import { Permission } from '../models/index.js';
 import { createHash } from 'crypto';
-
-function escapeRegex(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 export class PermissionsController {
   private static _instance: PermissionsController;
@@ -65,7 +63,7 @@ export class PermissionsController {
   async can(subject: string, action: string, object: string) {
     const started = Date.now();
     try {
-      checkRelation(subject, action, object);
+      checkPermissionTuple(subject, action, object);
       const computedTuple = computePermissionTuple(subject, action, object);
       const cachedResponse = await RuleCache.findResolution(this.grpcSdk, computedTuple);
       if (!isNil(cachedResponse)) {
@@ -101,8 +99,12 @@ export class PermissionsController {
   }
 
   async evaluatePermission(subject: string, action: string, object: string) {
-    checkRelation(subject, action, object);
+    checkPermissionTuple(subject, action, object);
     const computedTuple = computePermissionTuple(subject, action, object);
+
+    if (subject === object) {
+      return { assigned: true };
+    }
 
     const permission = await Permission.getInstance().findOne({
       computedTuple,
@@ -126,39 +128,23 @@ export class PermissionsController {
     limit: number,
   ) {
     const computedTuple = `${subject}#${action}@${objectType}`;
-    const allowedIds = [];
     const permission = await Permission.getInstance().findMany({
       computedTuple: { $like: `${computedTuple}%` },
     });
-    for (const perm of permission) {
-      allowedIds.push(perm.resource.split(':')[1]);
-    }
-    let count = await this.indexController.findGeneralIndexCount(
+    const directIds = [
+      ...new Set(permission.map(perm => perm.resource.split(':')[1]).filter(Boolean)),
+    ];
+    const indexIds = await this.indexController.findGeneralIndexAllResourceIds(
       subject,
       action,
       objectType,
     );
-    count += allowedIds.length;
-    /**
-     * allowedIds may contain ids to return which could be enough to satisfy the skip/limit
-     * requirements. If not, we need to query the index for the rest of the ids.
-     *
-     */
-    if (allowedIds.length >= skip + limit) {
-      return { resources: allowedIds.slice(skip, skip + limit), count: count };
-    } else {
-      skip -= allowedIds.length;
-      limit -= allowedIds.length;
-    }
-
-    const index = await this.indexController.findGeneralIndex(
-      subject,
-      action,
-      objectType,
-      skip,
-      limit,
-    );
-    return { resources: allowedIds.concat(index), count };
+    const merged = [...new Set([...directIds, ...indexIds])].sort();
+    const count = merged.length;
+    return {
+      resources: merged.slice(skip, skip + limit),
+      count,
+    };
   }
 
   async createAccessList(
@@ -254,14 +240,27 @@ export class PermissionsController {
                 },
               },
             },
-            // Convert string IDs to ObjectIds so $lookup can use _id index (localField/foreignField).
+            // Convert string IDs to ObjectIds so $lookup can use _id index; skip invalid ids.
             {
               $addFields: {
                 authorizedObjectIds: {
-                  $map: {
-                    input: '$authorizedIds',
-                    as: 'id',
-                    in: { $toObjectId: '$$id' },
+                  $filter: {
+                    input: {
+                      $map: {
+                        input: '$authorizedIds',
+                        as: 'id',
+                        in: {
+                          $convert: {
+                            input: '$$id',
+                            to: 'objectId',
+                            onError: null,
+                            onNull: null,
+                          },
+                        },
+                      },
+                    },
+                    as: 'oid',
+                    cond: { $ne: ['$$oid', null] },
                   },
                 },
               },
