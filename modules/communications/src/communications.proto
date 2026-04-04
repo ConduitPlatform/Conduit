@@ -24,6 +24,14 @@ message RegisterTemplateResponse {
   string template = 1;
 }
 
+message Attachment {
+  string filename = 1;
+  optional string contentType = 2;
+  optional bytes content = 3;
+  optional string href = 4;
+  optional string httpHeaders = 5;
+}
+
 message SendEmailRequest {
   string templateName = 1;
   SendEmailParams params = 2;
@@ -35,7 +43,7 @@ message SendEmailRequest {
     optional string sender = 3;
     repeated string cc = 4;
     optional string replyTo = 5;
-    repeated string attachments = 6;
+    repeated Attachment attachments = 6;
   }
 }
 

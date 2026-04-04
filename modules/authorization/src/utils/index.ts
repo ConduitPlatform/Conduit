@@ -17,6 +17,24 @@ export const checkRelation = (subject: string, relation: string, object: string)
   return;
 };
 
+/** Validates subject/action/object for permission checks (allows subject === object for self-access). */
+export const checkPermissionTuple = (subject: string, action: string, object: string) => {
+  if (!subject.includes(':')) {
+    throw new Error('Subject must be a valid resource identifier');
+  }
+  if (!object.includes(':')) {
+    throw new Error('Object must be a valid resource identifier');
+  }
+  if (!/^[a-zA-Z]+$/.test(action)) {
+    throw new Error('Relation must be a plain string');
+  }
+};
+
+/** Escape a string for use inside a RegExp literal (e.g. $regex in Mongo). */
+export function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export const computeRelationTuple = (
   subject: string,
   relation: string,
@@ -54,6 +72,11 @@ export const constructObjectIndex = (
   };
 };
 
+/** Escape single quotes for safe literal interpolation in generated SQL views. */
+function escapeSqlLiteral(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
 export function getPostgresAccessListQuery(
   objectTypeCollection: string,
   computedTuple: string,
@@ -61,23 +84,32 @@ export function getPostgresAccessListQuery(
   objectType: string,
   action: string,
 ) {
+  const s = escapeSqlLiteral(subject);
+  const ot = escapeSqlLiteral(objectType);
+  const a = escapeSqlLiteral(action);
+  const ct = escapeSqlLiteral(computedTuple);
   return `
       SELECT s.*
-      FROM "${objectTypeCollection}" as s
-               INNER JOIN ((SELECT obj.entity
-                            FROM (SELECT *
-                                  FROM "cnd_ActorIndex"
-                                  WHERE subject = '${subject}') as actors
-                                     INNER JOIN (SELECT *
-                                                 FROM "cnd_ObjectIndex"
-                                                 WHERE "subjectType" = '${objectType}'
-                                                   AND "subjectPermission" = '${action}') as obj
-                                                ON actors.entity = obj.entity OR obj.entity = '*')
-                           UNION
-                           (SELECT "computedTuple"
-                            FROM "cnd_Permission"
-                            WHERE "computedTuple" LIKE '${computedTuple}%')) idx
-                          ON idx.entity LIKE '%' || TEXT(s._id) || '%'
+      FROM "${objectTypeCollection}" AS s
+      WHERE CAST(s._id AS TEXT) IN (
+          SELECT oi."subjectId"
+          FROM "cnd_ObjectIndex" AS oi
+                   INNER JOIN "cnd_ActorIndex" AS ai ON ai.entity = oi.entity
+          WHERE oi."subjectType" = '${ot}'
+            AND oi."subjectPermission" = '${a}'
+            AND ai.subject = '${s}'
+            AND oi.entity <> '*'
+          UNION
+          SELECT oi."subjectId"
+          FROM "cnd_ObjectIndex" AS oi
+          WHERE oi."subjectType" = '${ot}'
+            AND oi."subjectPermission" = '${a}'
+            AND oi.entity = '*'
+          UNION
+          SELECT p."resourceId"
+          FROM "cnd_Permission" AS p
+          WHERE p."computedTuple" LIKE '${ct}%'
+      )
   `;
 }
 
@@ -88,18 +120,29 @@ export function getSQLAccessListQuery(
   objectType: string,
   action: string,
 ) {
+  const s = escapeSqlLiteral(subject);
+  const ot = escapeSqlLiteral(objectType);
+  const a = escapeSqlLiteral(action);
+  const ct = escapeSqlLiteral(computedTuple);
   return `SELECT ${objectTypeCollection}.*
           FROM ${objectTypeCollection}
-                   INNER JOIN (SELECT *
-                               FROM cnd_Permission
-                               WHERE computedTuple LIKE '${computedTuple}%') permissions
-                              ON permissions.computedTuple = '${computedTuple}:' || ${objectTypeCollection}._id
-                   INNER JOIN (SELECT *
-                               FROM cnd_ActorIndex
-                               WHERE subject = '${subject}') actors ON 1 = 1
-                   INNER JOIN (SELECT *
-                               FROM cnd_ObjectIndex
-                               WHERE "subjectType" = '${objectType}'
-                                 AND "subjectPermission" = '${action}') objects
-                              ON actors.entity = obj.entity OR obj.entity = '*';`;
+          WHERE CAST(${objectTypeCollection}._id AS CHAR) IN (
+              SELECT oi.subjectId
+              FROM cnd_ObjectIndex AS oi
+                       INNER JOIN cnd_ActorIndex AS ai ON ai.entity = oi.entity
+              WHERE oi.subjectType = '${ot}'
+                AND oi.subjectPermission = '${a}'
+                AND ai.subject = '${s}'
+                AND oi.entity <> '*'
+              UNION
+              SELECT oi.subjectId
+              FROM cnd_ObjectIndex AS oi
+              WHERE oi.subjectType = '${ot}'
+                AND oi.subjectPermission = '${a}'
+                AND oi.entity = '*'
+              UNION
+              SELECT p.resourceId
+              FROM cnd_Permission AS p
+              WHERE p.computedTuple LIKE '${ct}%'
+          )`;
 }

@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.24](https://github.com/ConduitPlatform/Conduit/compare/v0.16.23...v0.16.24) (2026-03-24)
+
+
+### Bug Fixes
+
+* **authentication:** phone handlers mishandling existing user case ([1e665e6](https://github.com/ConduitPlatform/Conduit/commit/1e665e6f9176f3404abeabbdfa99e96a99d46bb5))
+* **chat:** deleteRoom sockets params ([#1446](https://github.com/ConduitPlatform/Conduit/issues/1446)) ([c7ce92c](https://github.com/ConduitPlatform/Conduit/commit/c7ce92c3ac5bab7dd3e2d8e8bb8e22cd6a9b1e31))
+* **email:** handle multi-line Handlebars tags in getHandleBarsValues ([e8f7120](https://github.com/ConduitPlatform/Conduit/commit/e8f71201bd947c27a88e6bd4c7bc0d8a3846283e))
+* **email:** sender overrides broken ([c991391](https://github.com/ConduitPlatform/Conduit/commit/c9913911c5e29cb2eebf890f0f5e76655ed13876))
+* **sms:** missing package ([afedfeb](https://github.com/ConduitPlatform/Conduit/commit/afedfeb32e162017c1e41aa5892368eed9df6c93))
+
+### [0.16.23](https://github.com/ConduitPlatform/Conduit/compare/v0.16.22...v0.16.23) (2026-02-13)
+
+
+### Bug Fixes
+
+* **grpc-sdk:** missing params in method signatures ([#1440](https://github.com/ConduitPlatform/Conduit/issues/1440)) ([ca2cf29](https://github.com/ConduitPlatform/Conduit/commit/ca2cf29a7c28536c61ab9dbcc1480ff511fd832b))
+
+### [0.16.22](https://github.com/ConduitPlatform/Conduit/compare/v0.16.21...v0.16.22) (2026-02-12)
+
+
+### Bug Fixes
+
+* **chat:** missing join-room event for grpc room creations ([f31f449](https://github.com/ConduitPlatform/Conduit/commit/f31f449d8100762c80a3b988583706ba0efd01b5))
+* **email:** empty subject in rpc was overriding template ([1048ac5](https://github.com/ConduitPlatform/Conduit/commit/1048ac5ecc93a92c9f25e9c4617ab5a2688b0f84))
+* **hermes:** context data not being added to socket data ([4ef5dce](https://github.com/ConduitPlatform/Conduit/commit/4ef5dce0328dab1625bfe1bfe7213173995da002))
+* **hermes:** namespace access on socket filtering using wrong operator ([c6a4ae0](https://github.com/ConduitPlatform/Conduit/commit/c6a4ae0473789872d92baa65e75b2cbead21354c))
+
+### [0.16.21](https://github.com/ConduitPlatform/Conduit/compare/v0.16.20...v0.16.21) (2026-01-30)
+
+
+### Features
+
+* **storage:** change mechanics of public/private containers to be aligned with expectations ([#1414](https://github.com/ConduitPlatform/Conduit/issues/1414)) ([fae8a87](https://github.com/ConduitPlatform/Conduit/commit/fae8a8713a12e1109fb48cc50a94e620481cb241))
+
+
+### Bug Fixes
+
+* **chat:** make message not required to account for types that don't need it ([81b74fa](https://github.com/ConduitPlatform/Conduit/commit/81b74faaaafb516d836c914eba975cc214afb53d))
+* **hermes:** wrong emition case & json parse error ([#1419](https://github.com/ConduitPlatform/Conduit/issues/1419)) ([2fe456a](https://github.com/ConduitPlatform/Conduit/commit/2fe456a803f149fcec6858ddd481e89d978594c3))
+
 ### [0.16.20](https://github.com/ConduitPlatform/Conduit/compare/v0.16.19...v0.16.20) (2025-11-21)
 
 

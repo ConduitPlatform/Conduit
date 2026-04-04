@@ -43,6 +43,8 @@ export class PushNotifications extends ConduitModule<typeof CommunicationsDefini
     body?: string,
     data?: string,
     platform?: string,
+    doNotStore?: boolean,
+    isSilent?: boolean,
   ): Promise<SendNotificationResponse>;
 
   sendNotification(
@@ -57,10 +59,12 @@ export class PushNotifications extends ConduitModule<typeof CommunicationsDefini
     bodyOrOptions?: string | SendNotificationOptions,
     data?: string,
     platform?: string,
+    doNotStore?: boolean,
+    isSilent?: boolean,
   ) {
     let options: SendNotificationOptions;
     if (typeof bodyOrOptions === 'string' || isNil(bodyOrOptions)) {
-      options = { body: bodyOrOptions, data, platform };
+      options = { body: bodyOrOptions, data, platform, doNotStore, isSilent };
     } else {
       options = bodyOrOptions;
     }
@@ -73,7 +77,15 @@ export class PushNotifications extends ConduitModule<typeof CommunicationsDefini
 
   sendManyNotifications(
     notifications: [
-      { sendTo: string; title: string; body?: string; data?: string; platform?: string },
+      {
+        sendTo: string;
+        title: string;
+        body?: string;
+        data?: string;
+        platform?: string;
+        doNotStore?: boolean;
+        isSilent?: boolean;
+      },
     ],
   ) {
     return this.client!.sendManyNotifications({
@@ -87,6 +99,8 @@ export class PushNotifications extends ConduitModule<typeof CommunicationsDefini
     body?: string,
     data?: string,
     platform?: string,
+    doNotStore?: boolean,
+    isSilent?: boolean,
   ): Promise<SendNotificationResponse>;
 
   sendNotificationToManyDevices(
@@ -101,10 +115,12 @@ export class PushNotifications extends ConduitModule<typeof CommunicationsDefini
     bodyOrOptions?: string | SendNotificationOptions,
     data?: string,
     platform?: string,
+    doNotStore?: boolean,
+    isSilent?: boolean,
   ) {
     let options: SendNotificationOptions;
     if (typeof bodyOrOptions === 'string' || isNil(bodyOrOptions)) {
-      options = { body: bodyOrOptions, data, platform };
+      options = { body: bodyOrOptions, data, platform, doNotStore, isSilent };
     } else {
       options = bodyOrOptions;
     }

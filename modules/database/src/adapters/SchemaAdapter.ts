@@ -38,6 +38,13 @@ export abstract class SchemaAdapter<T> {
     return this.originalSchema.modelOptions.conduit?.authorization?.enabled;
   }
 
+  /** Warn when row-level auth is enabled but no subject was provided (intentional for internal calls). */
+  protected warnAuthzWithoutContext(operation: string): void {
+    ConduitGrpcSdk.Logger.warn(
+      `Database schema "${this.originalSchema.name}": authorization enabled but ${operation} was invoked without userId or scope; row-level authorization is skipped.`,
+    );
+  }
+
   transformViewName(...names: string[]): string {
     return createHash('sha256').update(names.join('_')).digest('hex');
   }
@@ -98,7 +105,12 @@ export abstract class SchemaAdapter<T> {
     if (this.isView) {
       throw new Error('Cannot create on view');
     }
-    if ((!userId && !scope) || !this.authzEnabled) return;
+    if ((!userId && !scope) || !this.authzEnabled) {
+      if (this.authzEnabled && !userId && !scope) {
+        this.warnAuthzWithoutContext('createPermissionCheck');
+      }
+      return;
+    }
     const isAvailable = this.grpcSdk.isAvailable('authorization');
     if (!isAvailable) {
       throw new Error('Authorization service is not available');
@@ -133,7 +145,12 @@ export abstract class SchemaAdapter<T> {
     userId?: string,
     scope?: string,
   ) {
-    if (!this.authzEnabled || (isNil(userId) && isNil(scope))) return query;
+    if (!this.authzEnabled || (isNil(userId) && isNil(scope))) {
+      if (this.authzEnabled && isNil(userId) && isNil(scope)) {
+        this.warnAuthzWithoutContext('getAuthorizedQuery');
+      }
+      return query;
+    }
     const view = await this.permissionCheck(operation, userId, scope);
     if (!view) return query;
     if (many) {
@@ -171,8 +188,12 @@ export abstract class SchemaAdapter<T> {
     limit?: number,
     sort?: Indexable,
   ) {
-    if (!this.authzEnabled || (isNil(userId) && isNil(scope)))
+    if (!this.authzEnabled || (isNil(userId) && isNil(scope))) {
+      if (this.authzEnabled && isNil(userId) && isNil(scope)) {
+        this.warnAuthzWithoutContext('getPaginatedAuthorizedQuery');
+      }
       return { query, modified: false };
+    }
     const view = await this.permissionCheck(operation, userId, scope);
     if (!view) return { query, modified: false };
     const docs = await view.findMany(query, {
@@ -219,6 +240,9 @@ export abstract class SchemaAdapter<T> {
       throw new Error('Cannot update a view');
     }
     if (!userId && !scope) {
+      if (this.authzEnabled) {
+        this.warnAuthzWithoutContext('canUpdate');
+      }
       return true;
     }
     const allowed = await this.grpcSdk.authorization?.can({

@@ -90,7 +90,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
 
   async phoneLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { token, code, userData } = call.request.params;
-    const { anonymousUser } = call.request.context;
+    const { anonymousUser, user: existingUser } = call.request.context;
     const config = ConfigController.getInstance().config;
 
     const existingToken: Token | null = await Token.getInstance().findOne({
@@ -106,7 +106,11 @@ export class PhoneHandlers implements IAuthenticationStrategy {
 
     let user: User | null;
     if (existingToken.tokenType === TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN) {
-      user = await this.handlePhoneRegistration(anonymousUser, existingToken, userData);
+      user = await this.handlePhoneRegistration(
+        existingUser ?? anonymousUser,
+        existingToken,
+        userData,
+      );
     } else {
       user = await User.getInstance().findOne({ _id: existingToken.user as string });
       if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
@@ -201,12 +205,12 @@ export class PhoneHandlers implements IAuthenticationStrategy {
   }
 
   private async handlePhoneRegistration(
-    anonymousUser: User | undefined,
+    anonymousOrExisting: User | undefined,
     existingToken: Token,
     userData?: Indexable,
   ) {
-    if (anonymousUser) {
-      return (await User.getInstance().findByIdAndUpdate(anonymousUser._id, {
+    if (anonymousOrExisting) {
+      return (await User.getInstance().findByIdAndUpdate(anonymousOrExisting._id, {
         phoneNumber: existingToken.data.phone,
       })) as User;
     }

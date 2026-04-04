@@ -1,12 +1,14 @@
 import { set } from 'lodash-es';
 
 export function getHandleBarsValues(text: any) {
-  const re = /{{[{]?(.*?)[}]?}}/g;
+  const re = /{{[{]?(.*?)[}]?}}/gs;
   const tags = [];
   let matches;
   while (Boolean((matches = re.exec(text)))) {
     if (matches) {
-      tags.push(matches[1]);
+      const raw = matches[1];
+      const normalized = raw.replace(/\s+/g, ' ').trim();
+      tags.push(normalized);
     }
   }
   const root: any = {};
@@ -22,7 +24,7 @@ export function getHandleBarsValues(text: any) {
     }
   };
   for (const tag of tags) {
-    if (tag.startsWith('! ')) {
+    if (tag.startsWith('!')) {
       continue;
     }
     if (tag == 'else') {
@@ -42,7 +44,7 @@ export function getHandleBarsValues(text: any) {
       continue;
     }
     if (tag.startsWith('/if')) {
-      context = stack.pop();
+      if (stack.length > 0) context = stack.pop();
       continue;
     }
     if (tag.startsWith('#with ')) {
@@ -54,7 +56,7 @@ export function getHandleBarsValues(text: any) {
       continue;
     }
     if (tag.startsWith('/with')) {
-      context = stack.pop();
+      if (stack.length > 0) context = stack.pop();
       continue;
     }
     if (tag.startsWith('#unless ')) {
@@ -64,7 +66,7 @@ export function getHandleBarsValues(text: any) {
       continue;
     }
     if (tag.startsWith('/unless')) {
-      context = stack.pop();
+      if (stack.length > 0) context = stack.pop();
       continue;
     }
     if (tag.startsWith('#each ')) {
@@ -76,11 +78,14 @@ export function getHandleBarsValues(text: any) {
       continue;
     }
     if (tag.startsWith('/each')) {
-      context = stack.pop();
+      if (stack.length > 0) context = stack.pop();
       continue;
     }
     if (tag.startsWith('/')) {
-      context = stack.pop();
+      if (stack.length > 0) context = stack.pop();
+      continue;
+    }
+    if (tag.startsWith('@') || tag === 'this') {
       continue;
     }
     setVar(tag, '');

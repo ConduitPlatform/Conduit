@@ -60,7 +60,13 @@ export class Email extends ConduitModule<typeof CommunicationsDefinition> {
       sender?: string;
       replyTo?: string;
       cc?: string[];
-      attachments?: string[];
+      attachments?: {
+        filename: string;
+        contentType?: string;
+        content?: Buffer;
+        href?: string;
+        httpHeaders?: Record<string, string>;
+      }[];
     },
   ) {
     return this.client!.sendEmail({
@@ -71,7 +77,14 @@ export class Email extends ConduitModule<typeof CommunicationsDefinition> {
         sender: params.sender,
         replyTo: params.replyTo,
         cc: params.cc ?? [],
-        attachments: params.attachments ?? [],
+        attachments:
+          params.attachments?.map(attachment => ({
+            ...attachment,
+            content: attachment.content ? new Uint8Array(attachment.content) : undefined,
+            httpHeaders: attachment.httpHeaders
+              ? JSON.stringify(attachment.httpHeaders)
+              : undefined,
+          })) ?? [],
       },
     }).then(res => {
       return res.sentMessageInfo;

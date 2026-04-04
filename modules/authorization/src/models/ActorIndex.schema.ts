@@ -1,5 +1,6 @@
 import {
   ConduitModel,
+  ConduitSchemaOptions,
   DatabaseProvider,
   MongoIndexType,
   TYPE,
@@ -63,8 +64,13 @@ const schema: ConduitModel = {
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
-const schemaOptions = {
+const schemaOptions: ConduitSchemaOptions = {
   timestamps: true,
+  indexes: [
+    {
+      fields: ['subject', 'entity'],
+    },
+  ],
   conduit: {
     permissions: {
       extendable: false,
@@ -73,7 +79,7 @@ const schemaOptions = {
       canDelete: false,
     },
   },
-} as const;
+};
 const collectionName = undefined;
 
 export class ActorIndex extends ConduitActiveSchema<ActorIndex> {

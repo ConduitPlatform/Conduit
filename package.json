@@ -1,9 +1,10 @@
 {
   "name": "conduit",
-  "version": "0.16.20",
+  "version": "0.16.24",
   "description": "",
   "main": "index.js",
   "private": true,
+  "packageManager": "yarn@1.22.22",
   "engines": {
     "node": ">=22"
   },

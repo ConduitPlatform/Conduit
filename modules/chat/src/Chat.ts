@@ -149,8 +149,13 @@ export default class Chat extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
     this.grpcSdk.router?.socketPush({
+      event: 'join-room',
+      receivers: room.participants as string[],
+      rooms: [room._id],
+    });
+    this.grpcSdk.router?.socketPush({
       event: 'room-joined',
-      receivers: participants,
+      receivers: room.participants as string[],
       rooms: [],
       data: JSON.stringify({ room: room._id, roomName: room.name }),
     });
@@ -221,9 +226,22 @@ export default class Chat extends ManagedModule<Config> {
 
   async deleteRoom(call: GrpcRequest<DeleteRoomRequest>, callback: GrpcCallback<Room>) {
     const { _id } = call.request;
-
     let errorMessage: string | null = null;
-    const room: models.ChatRoom = await models.ChatRoom.getInstance()
+
+    const room = await models.ChatRoom.getInstance()
+      .findOne({ _id })
+      .catch((e: Error) => {
+        errorMessage = e.message;
+        return null;
+      });
+    if (!isNil(errorMessage)) {
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    }
+    if (isNil(room)) {
+      return callback({ code: status.NOT_FOUND, message: 'Room not found' });
+    }
+
+    await models.ChatRoom.getInstance()
       .deleteOne({ _id })
       .catch((e: Error) => {
         errorMessage = e.message;

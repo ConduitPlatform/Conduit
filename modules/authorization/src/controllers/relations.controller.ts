@@ -3,6 +3,7 @@ import { checkRelation, computeRelationTuple } from '../utils/index.js';
 import { Relationship, ResourceDefinition } from '../models/index.js';
 import { IndexController } from './index.controller.js';
 import { QueueController } from './queue.controller.js';
+import { RuleCache } from './cache.controller.js';
 
 export class RelationsController {
   private static _instance: RelationsController;
@@ -64,6 +65,7 @@ export class RelationsController {
       'authorization:create:relation',
       JSON.stringify(relationResource),
     );
+    await RuleCache.invalidateSubject(this.grpcSdk, subject);
     return relationResource;
   }
 
@@ -95,7 +97,7 @@ export class RelationsController {
       ) {
         throw new Error('Relation not allowed');
       }
-      if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
+      if (resourceDefinition.relations[relation].indexOf('*') !== -1) continue;
       if (resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1) {
         throw new Error('Relation not allowed');
       }
@@ -126,6 +128,7 @@ export class RelationsController {
     relationDocs.forEach(rel => {
       this.grpcSdk.bus?.publish('authorization:create:relation', JSON.stringify(rel));
     });
+    // Rule cache is invalidated in constructRelationIndex worker after indexes are built
     return relationDocs;
   }
 
@@ -140,6 +143,7 @@ export class RelationsController {
     });
 
     await IndexController.getInstance().removeRelation(subject, relation, object);
+    await RuleCache.invalidateSubject(this.grpcSdk, subject);
 
     return;
   }
@@ -155,6 +159,10 @@ export class RelationsController {
         relationResource.resource,
       );
     }
+    const subjects = [...new Set(relationResources.map(r => r.subject))];
+    for (const s of subjects) {
+      await RuleCache.invalidateSubject(this.grpcSdk, s);
+    }
     return;
   }
 
@@ -167,6 +175,7 @@ export class RelationsController {
       relationResource.relation,
       relationResource.resource,
     );
+    await RuleCache.invalidateSubject(this.grpcSdk, relationResource.subject);
     return;
   }
 
@@ -180,6 +189,7 @@ export class RelationsController {
         { resourceType: name },
       ],
     });
+    await RuleCache.invalidateGlobal(this.grpcSdk);
   }
 
   async getRelation(subject: string, relation: string, object: string) {

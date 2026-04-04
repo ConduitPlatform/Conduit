@@ -335,7 +335,13 @@ export default class Communications extends ManagedModule<Config> {
       sender: call.request.params!.sender ?? '',
       cc: call.request.params!.cc,
       replyTo: call.request.params!.replyTo,
-      attachments: call.request.params!.attachments,
+      attachments: call.request.params!.attachments.map(attachment => ({
+        ...attachment,
+        content: attachment.content ? Buffer.from(attachment.content) : undefined,
+        httpHeaders: attachment.httpHeaders
+          ? JSON.parse(attachment.httpHeaders)
+          : undefined,
+      })),
     };
 
     let errorMessage: string | null = null;

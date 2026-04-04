@@ -44,7 +44,7 @@ export interface ISendEmailParams {
   sender?: string;
   cc?: string[];
   replyTo?: string;
-  attachments?: string[];
+  attachments?: Attachment[];
 }
 
 export class EmailService implements IChannel {
@@ -88,7 +88,7 @@ export class EmailService implements IChannel {
         sender,
         cc,
         replyTo,
-        attachments,
+        attachments: attachments?.map(a => ({ path: a })),
       };
 
       const result = await this.sendEmail(undefined, emailParams);
@@ -241,7 +241,6 @@ export class EmailService implements IChannel {
     if (!template && (!body || !subject)) {
       throw new Error(`Template/body+subject not provided`);
     }
-
     let subjectString = subject!;
     let bodyString = body!;
     let templateFound: EmailTemplate | null = null;
@@ -251,9 +250,6 @@ export class EmailService implements IChannel {
       if (isNil(templateFound)) {
         throw new Error(`Template ${template} not found`);
       }
-      if (isNil(templateFound.subject) && isNil(subject)) {
-        throw new Error(`Subject is missing both in body params and template.`);
-      }
       if (templateFound.externalManaged) {
         builder.setTemplate({
           id: templateFound.externalId!,
@@ -262,12 +258,15 @@ export class EmailService implements IChannel {
       } else {
         bodyString = handlebars.compile(templateFound.body)(variables);
       }
-      if (!isNil(templateFound.subject) && isNil(subject)) {
+      if (!isNil(templateFound.subject)) {
         subjectString = handlebars.compile(templateFound.subject)(variables);
       }
       if (!isEmpty(templateFound.sender)) {
         senderAddress = templateFound.sender;
       }
+    }
+    if (!isEmpty(sender)) {
+      senderAddress = sender;
     }
 
     if (isNil(senderAddress) || isEmpty(senderAddress)) {
