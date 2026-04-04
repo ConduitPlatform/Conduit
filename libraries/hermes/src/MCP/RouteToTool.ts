@@ -11,6 +11,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { MCPRouteToToolOptions, MCPSession, MCPToolDefinition } from './types.js';
 import { ConduitRoute } from '../classes/index.js';
 import { ConduitRouter } from '../Router.js';
+import { extractClientIp } from '../utils/extractClientIp.js';
 import { Cookie } from '../interfaces/index.js';
 import { ZodParser } from '../classes/ZodParser.js';
 import { CORE_MODULE } from './ToolRegistry.js';
@@ -240,8 +241,8 @@ export class RouteToToolConverter {
           bodyParams: this.extractBodyParams(args, routeInfo.input.bodyParams),
         };
 
-        // Execute route middlewares like GraphQL does
-        await this.router.checkMiddlewares(context, routeInfo.input.middlewares);
+        const ip = extractClientIp(context.headers);
+        await this.router.preHandle(routeInfo.input, context, ip);
 
         // Execute the actual route
         const r = await routeInfo.executeRequest(context);

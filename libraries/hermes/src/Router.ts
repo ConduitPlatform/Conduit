@@ -1,7 +1,9 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import {
+  ConduitError,
   ConduitGrpcSdk,
   ConduitRouteActions,
+  ConduitRouteOptions,
   ConduitRouteParameters,
   GrpcError,
   Indexable,
@@ -116,6 +118,49 @@ export abstract class ConduitRouter {
       }
     });
     return primaryPromise;
+  }
+
+  private async checkRouteRateLimit(
+    route: ConduitRouteOptions,
+    ip: string,
+  ): Promise<void> {
+    if (!route.rateLimit) return;
+    const { maxRequests, resetInterval } = route.rateLimit;
+    const key = `limiter:route:${route.action}:${route.path}:${ip}`;
+    const redis = this.grpcSdk.redisManager.getClient();
+    let requests: number;
+    try {
+      const count = await redis.incr(key);
+      requests = count;
+      if (count === 1) {
+        await redis.expire(key, resetInterval);
+      }
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(
+        new Error(
+          `Per-route rate limit: Redis unavailable, rejecting request: ${(err as Error).message}`,
+        ),
+      );
+      throw new ConduitError('RATE_LIMIT', 429, 'Rate limit check unavailable');
+    }
+    if (requests > maxRequests) {
+      throw new ConduitError('RATE_LIMIT', 429, 'Too Many Requests');
+    }
+  }
+
+  /**
+   * Runs per-route rate limiting (when configured) then named route middlewares.
+   * Middlewares mutate `params.context` in place, same as `checkMiddlewares`.
+   */
+  async preHandle(
+    route: ConduitRouteOptions,
+    params: ConduitRouteParameters,
+    ip?: string,
+  ): Promise<void> {
+    if (ip) {
+      await this.checkRouteRateLimit(route, ip);
+    }
+    await this.checkMiddlewares(params, route.middlewares);
   }
 
   scheduleRouterRefresh() {

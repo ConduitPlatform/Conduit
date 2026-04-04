@@ -60,6 +60,12 @@ export enum ConduitRouteActions {
   DELETE = 'DELETE',
 }
 
+export interface RateLimitOptions {
+  maxRequests: number;
+  /** Window length in seconds */
+  resetInterval: number;
+}
+
 export interface ConduitRouteOptions {
   queryParams?: ConduitQueryParams;
   bodyParams?: ConduitModel;
@@ -74,6 +80,8 @@ export interface ConduitRouteOptions {
   errors?: ModuleErrorDefinition[];
   /** When false, unknown body/query/url keys are allowed. Defaults to strict when unset. */
   strictParams?: boolean;
+  /** Per-route rate limit (per client IP). Fails closed if Redis is unavailable. */
+  rateLimit?: RateLimitOptions;
 }
 
 export interface ConduitRouteObject {

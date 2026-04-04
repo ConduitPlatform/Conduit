@@ -19,6 +19,7 @@ import {
   Params,
 } from '@conduitplatform/grpc-sdk';
 import { validateParams } from '../Rest/util.js';
+import { extractClientIp } from '../utils/extractClientIp.js';
 import { ConduitRoute, TypeRegistry } from '../classes/index.js';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@as-integrations/express5';
@@ -367,10 +368,10 @@ export class GraphQLController extends ConduitRouter {
       args = self.shouldPopulate(args, info);
       context.path = route.input.path;
       let hashKey: string;
+      const ip = extractClientIp(context.headers);
       return self
-        .checkMiddlewares(context, route.input.middlewares)
-        .then(r => {
-          Object.assign(context.context, r);
+        .preHandle(route.input, context, ip)
+        .then(() => {
           const { urlParams, queryParams, bodyParams } =
             this.splitParamsToPathAndUrlParams(args, route.input.urlParams);
           const strict = route.input.strictParams !== false;
@@ -457,10 +458,10 @@ export class GraphQLController extends ConduitRouter {
     ) => {
       args = self.shouldPopulate(args, info);
       context.path = route.input.path;
+      const ip = extractClientIp(context.headers);
       return self
-        .checkMiddlewares(context, route.input.middlewares)
-        .then(r => {
-          Object.assign(context.context, r);
+        .preHandle(route.input, context, ip)
+        .then(() => {
           const { urlParams, queryParams, bodyParams } =
             this.splitParamsToPathAndUrlParams(args, route.input.urlParams);
           const strict = route.input.strictParams !== false;

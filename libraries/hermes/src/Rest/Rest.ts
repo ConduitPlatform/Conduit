@@ -8,6 +8,7 @@ import {
 } from 'express';
 import { SwaggerGenerator } from './Swagger.js';
 import { extractRequestData, mapGrpcErrorToHttp, validateParams } from './util.js';
+import { extractClientIp } from '../utils/extractClientIp.js';
 import { createHashKey, extractCaching } from '../cache.utils.js';
 import { ConduitRouter } from '../Router.js';
 import {
@@ -162,8 +163,9 @@ export class RestController extends ConduitRouter {
         ...context.queryParams,
         ...context.urlParams,
       };
+      const ip = extractClientIp(req.headers, req.ip);
       self
-        .checkMiddlewares(context, route.input.middlewares)
+        .preHandle(route.input, context, ip)
         .then(() => {
           if (route.input.action !== ConduitRouteActions.GET) {
             return route.executeRequest(context);

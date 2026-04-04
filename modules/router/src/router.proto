@@ -53,6 +53,7 @@ message RegisterConduitRouteRequest {
     repeated ErrorDefinition errors = 10;
     optional bool mcp = 11;
     optional bool strictParams = 12;
+    optional string rateLimit = 13;
   }
 
 
