@@ -55,27 +55,58 @@ export class ZodParser {
     const validate = field?.validate as Record<string, unknown> | undefined;
     if (!validate) return zodType;
 
+    const msg = validate.message as string | undefined;
+
     if (zodType instanceof z.ZodString) {
       let s = zodType as z.ZodString;
-      if (validate.format === 'email') s = s.email();
-      if (validate.format === 'url') s = s.url();
-      if (validate.format === 'uuid') s = s.uuid();
-      if (validate.format === 'objectId')
-        s = s.regex(/^[a-f\d]{24}$/i, 'Invalid ObjectId format');
-      if (validate.minLength != null) s = s.min(validate.minLength as number);
-      if (validate.maxLength != null) s = s.max(validate.maxLength as number);
-      if (validate.length != null) s = s.length(validate.length as number);
-      if (validate.pattern) s = s.regex(new RegExp(validate.pattern as string));
+      if (validate.format === 'email') s = msg ? s.email(msg) : s.email();
+      if (validate.format === 'url') s = msg ? s.url(msg) : s.url();
+      if (validate.format === 'uuid') s = msg ? s.uuid(msg) : s.uuid();
+      if (validate.format === 'objectId') {
+        const oidMsg = msg ?? 'Invalid ObjectId format';
+        s = s.regex(
+          /^([a-f\d]{24}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+          oidMsg,
+        );
+      }
+      if (validate.minLength != null) {
+        const n = validate.minLength as number;
+        s = msg ? s.min(n, msg) : s.min(n);
+      }
+      if (validate.maxLength != null) {
+        const n = validate.maxLength as number;
+        s = msg ? s.max(n, msg) : s.max(n);
+      }
+      if (validate.length != null) {
+        const n = validate.length as number;
+        s = msg ? s.length(n, msg) : s.length(n);
+      }
+      if (validate.pattern) {
+        const re = new RegExp(validate.pattern as string);
+        s = msg ? s.regex(re, msg) : s.regex(re);
+      }
       return s;
     }
 
     if (zodType instanceof z.ZodNumber) {
       let n = zodType as z.ZodNumber;
-      if (validate.min != null) n = n.gte(validate.min as number);
-      if (validate.max != null) n = n.lte(validate.max as number);
-      if (validate.exclusiveMin != null) n = n.gt(validate.exclusiveMin as number);
-      if (validate.exclusiveMax != null) n = n.lt(validate.exclusiveMax as number);
-      if (validate.integer) n = n.int();
+      if (validate.min != null) {
+        const v = validate.min as number;
+        n = msg ? n.gte(v, msg) : n.gte(v);
+      }
+      if (validate.max != null) {
+        const v = validate.max as number;
+        n = msg ? n.lte(v, msg) : n.lte(v);
+      }
+      if (validate.exclusiveMin != null) {
+        const v = validate.exclusiveMin as number;
+        n = msg ? n.gt(v, msg) : n.gt(v);
+      }
+      if (validate.exclusiveMax != null) {
+        const v = validate.exclusiveMax as number;
+        n = msg ? n.lt(v, msg) : n.lt(v);
+      }
+      if (validate.integer) n = msg ? n.int(msg) : n.int();
       return n;
     }
 
@@ -191,8 +222,15 @@ export class ZodParser {
     let arrayType = z.array(itemType);
     const v = parentField?.validate as Record<string, unknown> | undefined;
     if (v) {
-      if (v.minItems != null) arrayType = arrayType.min(v.minItems as number);
-      if (v.maxItems != null) arrayType = arrayType.max(v.maxItems as number);
+      const arrMsg = v.message as string | undefined;
+      if (v.minItems != null) {
+        const n = v.minItems as number;
+        arrayType = arrMsg ? arrayType.min(n, arrMsg) : arrayType.min(n);
+      }
+      if (v.maxItems != null) {
+        const n = v.maxItems as number;
+        arrayType = arrMsg ? arrayType.max(n, arrMsg) : arrayType.max(n);
+      }
     }
     return arrayType;
   }

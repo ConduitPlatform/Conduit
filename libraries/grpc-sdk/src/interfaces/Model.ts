@@ -49,6 +49,8 @@ export interface ConduitStringValidation {
   maxLength?: number;
   length?: number;
   pattern?: string;
+  /** Custom error text when any string validation rule fails (REST/GraphQL/MCP). */
+  message?: string;
 }
 
 export interface ConduitNumberValidation {
@@ -57,11 +59,15 @@ export interface ConduitNumberValidation {
   exclusiveMin?: number;
   exclusiveMax?: number;
   integer?: boolean;
+  /** Custom error text when any number validation rule fails (REST/GraphQL/MCP). */
+  message?: string;
 }
 
 export interface ConduitArrayValidation {
   minItems?: number;
   maxItems?: number;
+  /** Custom error text when minItems/maxItems validation fails (REST/GraphQL/MCP). */
+  message?: string;
 }
 
 export type ConduitValidationRules =
