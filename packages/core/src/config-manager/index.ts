@@ -199,7 +199,8 @@ export default class ConfigManager implements IConfigManager {
     if (call.request.override) {
       await this.set(moduleName, config);
     } else {
-      const existingConfig = await this.get(moduleName);
+      let existingConfig = await this.get(moduleName);
+      existingConfig = await this.applyDbConfigPreference(moduleName, existingConfig);
       if (!existingConfig) {
         await this.set(moduleName, config);
       }
@@ -211,7 +212,8 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async configurePackage(moduleName: string, config: any, schema: any) {
-    const existingConfig = await this.get(moduleName);
+    let existingConfig = await this.get(moduleName);
+    existingConfig = await this.applyDbConfigPreference(moduleName, existingConfig);
     if (!existingConfig) {
       await this.set(moduleName, config);
     }
@@ -236,6 +238,34 @@ export default class ConfigManager implements IConfigManager {
       return false;
     }
     return true;
+  }
+
+  private async applyDbConfigPreference(moduleName: string, existingConfig: any) {
+    if (!this.grpcSdk.isAvailable('database')) {
+      return existingConfig;
+    }
+    const meta = await this._configStorage.getConfigVersionMeta(moduleName);
+    const dbDoc = await models.Config.getInstance()
+      .findOne({ name: moduleName })
+      .catch(() => null);
+    if (dbDoc?.config == null) {
+      return existingConfig;
+    }
+    const dbVersion = dbDoc.version ?? 0;
+    const preferDb =
+      !existingConfig ||
+      dbVersion > meta.version ||
+      (!meta.explicit && dbVersion >= meta.version);
+    if (!preferDb) {
+      return existingConfig;
+    }
+    await this._configStorage.setConfigAtVersion(
+      moduleName,
+      JSON.stringify(dbDoc.config),
+      dbVersion,
+      true,
+    );
+    return dbDoc.config;
   }
 
   private registerAdminRoutes() {
