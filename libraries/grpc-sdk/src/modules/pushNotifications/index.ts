@@ -3,7 +3,7 @@ import {
   CommunicationsDefinition,
   SendNotificationResponse,
 } from '../../protoUtils/index.js';
-import { SendNotificationOptions } from './types';
+import { SendNotificationOptions } from './types.js';
 import { isNil } from 'lodash-es';
 
 export class PushNotifications extends ConduitModule<typeof CommunicationsDefinition> {

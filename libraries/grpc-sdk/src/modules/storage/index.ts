@@ -7,14 +7,14 @@ import {
   GetFileUrlResponse,
   StorageDefinition,
 } from '../../protoUtils/storage.js';
-import { AuthzOptions } from '../../types';
-import { normalizeAuthzOptions } from '../../utilities/normalizeOptions';
+import { AuthzOptions } from '../../types/options.js';
+import { normalizeAuthzOptions } from '../../utilities/normalizeOptions.js';
 import {
   CreateFileByURLOptions,
   CreateFileOptions,
   UpdateFileByURLOptions,
   UpdateFileOptions,
-} from './types';
+} from './types.js';
 import { isNil } from 'lodash-es';
 
 export class Storage extends ConduitModule<typeof StorageDefinition> {

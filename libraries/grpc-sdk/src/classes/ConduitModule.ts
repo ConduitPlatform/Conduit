@@ -2,8 +2,13 @@ import {
   getGrpcSignedTokenInterceptor,
   getModuleNameInterceptor,
 } from '../interceptors/index.js';
-import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
-import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
+import {
+  Channel,
+  Client,
+  CompatServiceDefinition,
+  createChannel,
+  createClientFactory,
+} from 'nice-grpc';
 import { retryMiddleware } from 'nice-grpc-client-middleware-retry';
 import {
   ConduitModuleDefinition,

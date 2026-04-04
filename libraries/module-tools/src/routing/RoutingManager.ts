@@ -17,7 +17,7 @@ import {
   Router,
   SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
-import { GrpcServer } from '../classes';
+import { GrpcServer } from '../classes/index.js';
 import { RoutingController } from './RoutingController.js';
 
 export class RoutingManager {

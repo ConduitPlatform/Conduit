@@ -9,8 +9,12 @@ import {
 import { RouteBuilder } from '@conduitplatform/module-tools';
 import { FunctionExecutions, Functions } from '../models/index.js';
 import { isNil } from 'lodash-es';
-import { NodeVM, VMScript } from 'vm2';
 import { status } from '@grpc/grpc-js';
+import type { CompiledUserFunction } from '../sandbox/functionSandbox.js';
+import {
+  compileUserFunctionScript,
+  runUserFunctionInSandbox,
+} from '../sandbox/functionSandbox.js';
 
 function getOperation(op: string) {
   switch (op) {
@@ -32,50 +36,51 @@ function getOperation(op: string) {
 async function executeFunction(
   func: Functions,
   call: ParsedRouterRequest,
-  functionCodeCompiled: VMScript,
+  functionCodeCompiled: CompiledUserFunction,
   timeout: number,
   name: string,
   grpcSdk: ConduitGrpcSdk,
 ): Promise<UnparsedRouterResponse> {
   const logs: string[] | undefined = [];
-  const vm = new NodeVM({
-    console: 'redirect',
-    sandbox: {},
-    timeout: timeout,
-    require: {
-      external: true,
-      import: ['lodash', 'axios'],
-    },
-  });
-  vm.on('console.log', data => {
-    logs?.push(data);
-  });
 
   let duration;
   const start = process.hrtime();
   try {
-    const functionInSandbox = vm.run(functionCodeCompiled);
-    return new Promise((resolve, reject) => {
-      functionInSandbox(grpcSdk, call.request, (data: any) => {
-        const end = process.hrtime(start);
-        duration = end[0] * 1e3 + end[1] / 1e6;
-        addFunctionExecutions(func._id, duration, true, undefined, logs).then();
-        ConduitGrpcSdk.Metrics?.increment('executed_functions_total');
-        ConduitGrpcSdk.Metrics?.observe('function_execution_time', duration, {
-          function_name: name,
+    return await new Promise<UnparsedRouterResponse>((resolve, reject) => {
+      try {
+        runUserFunctionInSandbox({
+          compiled: functionCodeCompiled,
+          grpcSdk,
+          request: call.request,
+          timeoutMs: timeout,
+          onConsoleLog: line => {
+            logs?.push(line);
+          },
+          onUserCallback: (data: unknown) => {
+            const end = process.hrtime(start);
+            duration = end[0] * 1e3 + end[1] / 1e6;
+            addFunctionExecutions(func._id, duration, true, undefined, logs).then();
+            ConduitGrpcSdk.Metrics?.increment('executed_functions_total');
+            ConduitGrpcSdk.Metrics?.observe('function_execution_time', duration, {
+              function_name: name,
+            });
+            if (func.returns === 'String') {
+              resolve({ result: data });
+            } else {
+              // returns is a Proxy object, so we need to parse it to JSON
+              // the values inside proxy are defined by the func.returns object
+              const actualReturns: Indexable = {};
+              const payload = data as Indexable;
+              for (const key in func.returns as Indexable) {
+                actualReturns[key] = payload[key];
+              }
+              resolve(actualReturns);
+            }
+          },
         });
-        if (func.returns === 'String') {
-          resolve({ result: data });
-        } else {
-          // returns is a Proxy object, so we need to parse it to JSON
-          // the values inside proxy are defined by the func.returns object
-          const actualReturns: Indexable = {};
-          for (const key in func.returns as Indexable) {
-            actualReturns[key] = data[key];
-          }
-          resolve(actualReturns);
-        }
-      });
+      } catch (syncErr) {
+        reject(syncErr);
+      }
     });
   } catch (e) {
     const end = process.hrtime(start);
@@ -237,7 +242,7 @@ async function addFunctionExecutions(
   logs?: string[],
 ) {
   const query = {
-    function: functionId,
+    serverlessFunction: functionId,
     duration,
     success,
     error,
@@ -246,13 +251,10 @@ async function addFunctionExecutions(
   await FunctionExecutions.getInstance().create(query);
 }
 
-export function compileFunctionCode(functionCode: string) {
-  const script = `module.exports = function(grpcSdk,req,res) { ${functionCode} }`;
-  let functionScriptCompiled;
+export function compileFunctionCode(functionCode: string): CompiledUserFunction {
   try {
-    functionScriptCompiled = new VMScript(script).compile();
-  } catch (e) {
+    return compileUserFunctionScript(functionCode);
+  } catch {
     throw new GrpcError(status.INTERNAL, 'Compilation failed');
   }
-  return functionScriptCompiled;
 }

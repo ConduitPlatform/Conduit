@@ -10,6 +10,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint .",
     "build": "turbo run build",
     "prepare": "husky",
     "release": "standard-version"
@@ -18,17 +19,20 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@commitlint/cli": "^20.3.1",
-    "@commitlint/config-conventional": "^20.3.1",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@eslint/js": "^10.0.1",
     "copyfiles": "^2.4.1",
     "cz-conventional-changelog": "^3.3.0",
+    "eslint": "^10.2.0",
+    "globals": "^17.4.0",
     "husky": "^9.0.11",
-    "lint-staged": ">=16.2.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "standard-version": "^9.5.0",
-    "turbo": "^2.7.6"
+    "turbo": "^2.9.3",
+    "typescript-eslint": "^8.58.0"
   },
-  "dependencies": {},
   "config": {
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
@@ -38,6 +42,9 @@
     "*.ts": "prettier --write"
   },
   "pnpm": {
+    "overrides": {
+      "minimist": ">=1.2.6"
+    },
     "onlyBuiltDependencies": [
       "@apollo/protobufjs",
       "@firebase/util",

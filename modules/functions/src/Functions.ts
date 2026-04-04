@@ -21,6 +21,8 @@ export default class Functions extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
   protected metricsSchema = metricsSchema;
   private isRunning: boolean = false;
+  /** Avoid repeating the trust-model notice on every config refresh while active. */
+  private trustModelNoticeLoggedForActiveSession: boolean = false;
   private adminRouter: AdminHandlers;
 
   private functionsController: FunctionController;
@@ -38,8 +40,15 @@ export default class Functions extends ManagedModule<Config> {
   }
 
   async onConfig() {
-    if (!ConfigController.getInstance().config.active) {
+    const configActive = ConfigController.getInstance().config.active;
+    if (!configActive) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
+      this.trustModelNoticeLoggedForActiveSession = false;
+    } else if (!this.trustModelNoticeLoggedForActiveSession) {
+      ConduitGrpcSdk.Logger.log(
+        'Functions module active: user-defined code runs with full server privileges. Only deploy code you trust.',
+      );
+      this.trustModelNoticeLoggedForActiveSession = true;
     }
     if (!this.isRunning) {
       this.grpcSdk

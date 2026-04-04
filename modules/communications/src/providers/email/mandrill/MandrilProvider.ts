@@ -1,32 +1,32 @@
 import { createTransport, SentMessageInfo } from 'nodemailer';
 import { EmailProviderClass } from '../models/EmailProviderClass.js';
 import { MandrillConfig } from './mandrill.config.js';
-import { Mandrill } from 'mandrill-api';
 import { Template } from '../interfaces/Template.js';
 import { CreateEmailTemplate, UpdateEmailTemplate } from '../interfaces/index.js';
 import { MandrillBuilder } from './mandrillBuilder.js';
 import { getHandleBarsValues } from '../utils/index.js';
 import { MandrillTemplate } from '../interfaces/mandrill/MandrillTemplate.js';
 
+// @ts-expect-error — CJS package without bundled types
+import mailchimpFactory from '@mailchimp/mailchimp_transactional';
+
 // @ts-expect-error
 // missing typings for nodemailer-mandrill-transport
 import mandrillTransport from 'nodemailer-mandrill-transport';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 
+type MailchimpTransactional = ReturnType<typeof mailchimpFactory>;
+
 export class MandrillProvider extends EmailProviderClass {
-  private _mandrillSdk?: Mandrill;
-  private apiKey: string;
+  private _mailchimp: MailchimpTransactional;
 
   constructor(mandrillSettings: MandrillConfig) {
     super(createTransport(mandrillTransport(mandrillSettings)));
-    this._mandrillSdk = new Mandrill(mandrillSettings.auth.apiKey);
-    this.apiKey = mandrillSettings.auth.apiKey;
+    this._mailchimp = mailchimpFactory(mandrillSettings.auth.apiKey);
   }
 
   async listTemplates(): Promise<Template[]> {
-    const response: MandrillTemplate[] = await new Promise<any>(resolve =>
-      this._mandrillSdk?.templates.list({ key: this.apiKey }, resolve),
-    );
+    const response: MandrillTemplate[] = await this._mailchimp.templates.list({});
     const retList = response.map(
       async element => await this.getTemplateInfo(element.slug),
     );
@@ -34,15 +34,9 @@ export class MandrillProvider extends EmailProviderClass {
   }
 
   async getTemplateInfo(template_name: string): Promise<Template> {
-    const response: MandrillTemplate = await new Promise<MandrillTemplate>(resolve =>
-      this._mandrillSdk?.templates.info(
-        {
-          key: this.apiKey,
-          name: template_name,
-        },
-        resolve as (json: object) => void,
-      ),
-    );
+    const response: MandrillTemplate = await this._mailchimp.templates.info({
+      name: template_name,
+    });
     return {
       id: response.slug,
       name: response.name,
@@ -62,52 +56,34 @@ export class MandrillProvider extends EmailProviderClass {
   }
 
   async createTemplate(data: CreateEmailTemplate): Promise<Template> {
-    const response = await new Promise<any>(resolve =>
-      this._mandrillSdk?.templates.add(
-        {
-          key: this.apiKey,
-          subject: data.subject,
-          code: data.body,
-          publish: true,
-          name: data.name,
-        },
-        resolve,
-      ),
-    );
+    const response: { slug: string } = await this._mailchimp.templates.add({
+      name: data.name,
+      subject: data.subject,
+      code: data.body,
+      publish: true,
+    });
     const created = await this.getTemplateInfo(response.slug);
     created.versions[0].variables = Object.keys(getHandleBarsValues(data.body));
     return created;
   }
 
   async updateTemplate(data: UpdateEmailTemplate) {
-    const response = await new Promise<{ slug: string }>(resolve =>
-      this._mandrillSdk?.templates.update(
-        {
-          key: this.apiKey,
-          name: data.id,
-          code: data.body,
-          subject: data.subject,
-        },
-        resolve as (json: object) => void,
-      ),
-    );
+    const response: { slug: string } = await this._mailchimp.templates.update({
+      name: data.id,
+      code: data.body,
+      subject: data.subject,
+    });
 
     return this.getTemplateInfo(response.slug);
   }
 
   async deleteTemplate(id: string) {
-    const response = await new Promise<{ slug: string }>(resolve =>
-      this._mandrillSdk?.templates.delete(
-        {
-          key: this.apiKey,
-          name: id,
-        },
-        resolve as (json: object) => void,
-      ),
-    );
+    await this._mailchimp.templates.delete({
+      name: id,
+    });
 
     return {
-      message: 'Template ' + response.slug + ' deleted!',
+      message: 'Template ' + id + ' deleted!',
       id: id,
     };
   }
@@ -117,14 +93,9 @@ export class MandrillProvider extends EmailProviderClass {
   }
 
   async getEmailStatus(messageId: string): Promise<Indexable> {
-    return new Promise<Indexable>(resolve =>
-      this._mandrillSdk?.messages.info(
-        {
-          id: messageId,
-        },
-        resolve as (json: object) => void,
-      ),
-    );
+    return (await this._mailchimp.messages.info({
+      id: messageId,
+    })) as Indexable;
   }
 
   getMessageId(info: SentMessageInfo): string | undefined {

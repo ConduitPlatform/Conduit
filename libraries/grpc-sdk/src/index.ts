@@ -29,9 +29,8 @@ import {
   setLogger,
   setMetrics,
 } from './utilities/GrpcSdkContext.js';
-import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { checkModuleHealth, ConduitModule } from './classes/index.js';
-import { Client } from 'nice-grpc';
+import { Client, CompatServiceDefinition } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
 import { GrpcError, HealthCheckStatus } from './types/index.js';
 import { createSigner } from 'fast-jwt';
