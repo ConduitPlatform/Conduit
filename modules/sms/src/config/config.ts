@@ -12,6 +12,7 @@ export default {
     phoneNumber: {
       format: 'String',
       default: '',
+      optional: true,
     },
     accountSID: {
       format: 'String',
