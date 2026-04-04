@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "engines": {
-    "node": ">=14"
+    "node": ">=24"
   },
   "scripts": {
     "start": "node dist/index.js",
@@ -28,8 +28,8 @@
   "license": "ISC",
   "dependencies": {
     "@bufbuild/protobuf": "^2.10.2",
-    "@conduitplatform/grpc-sdk": "*",
-    "@conduitplatform/module-tools": "*",
+    "@conduitplatform/grpc-sdk": "workspace:*",
+    "@conduitplatform/module-tools": "workspace:*",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "convict": "^6.2.4",
@@ -38,6 +38,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@types/convict": "^6.1.6",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "24.9.1",
     "@types/uuid": "^11.0.0",

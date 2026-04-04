@@ -39,7 +39,6 @@ export class AmazonSesProvider extends EmailProviderClass {
 
     super(
       createTransport(
-        //@ts-expect-error type mismatch between mailer and ses
         new SESTransport({ SES: { sesClient, SendEmailCommand: SendEmailCommand } }),
       ),
     );

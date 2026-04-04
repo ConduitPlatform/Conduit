@@ -37,7 +37,8 @@ Before submitting your contribution, please make sure to take a moment and read 
 ## Development Setup 🔨
 
 ### Requirements:
-- Node.js >=16
+- Node.js >=24
+- [pnpm](https://pnpm.io/installation) 10.9.x (same major/minor as root `package.json` `packageManager`). Install via Corepack, npm global, or another supported method; match Node in `.nvmrc` (24+)
 - [protoc](https://grpc.io/docs/protoc-installation)
 - MongoDB or PostgreSQL
 - Redis
@@ -46,16 +47,16 @@ Before submitting your contribution, please make sure to take a moment and read 
 After cloning the repo, run:
 
 ``` bash
-yarn --frozen-lockfile
-npx lerna run build
-REDIS_HOST=localhost REDIS_PORT=6379 yarn --cwd ./packages/core start
-CONDUIT_SERVER=0.0.0.0:55152 SERVICE_URL=0.0.0.0:55165 DB_CONN_URI=mongodb://localhost:27017 yarn --cwd ./modules/database start
+pnpm install --frozen-lockfile
+turbo run build
+REDIS_HOST=localhost REDIS_PORT=6379 pnpm --filter @conduitplatform/core start
+CONDUIT_SERVER=0.0.0.0:55152 SERVICE_URL=0.0.0.0:55165 DB_CONN_URI=mongodb://localhost:27017 pnpm --filter @conduitplatform/database start
 ```
 
-Then repeat the following step for every additional module you wish to bring online, specifying any additional env vars.
+Then repeat the following step for every additional module you wish to bring online, specifying any additional env vars. Replace the filter segment with the package name for that module (the folder name under `modules/`, e.g. `chat`, `router`, `storage` — not the literal word `MODULE`).
 
 ``` bash
-CONDUIT_SERVER=0.0.0.0:55152 SERVICE_URL=0.0.0.0:PORT yarn --cwd ./modules/MODULE start
+CONDUIT_SERVER=0.0.0.0:55152 SERVICE_URL=0.0.0.0:PORT pnpm --filter @conduitplatform/chat start
 ```
 
 You may look up supported envs and configuration options for your modules in the [modules section of the documentation](https://getconduit.dev/docs/modules).
@@ -68,17 +69,17 @@ Commit messages should follow the [commit message convention](https://github.com
 
 ``` bash
 # Building Everything
-npx lerna run build
+turbo run build
 
 # Building Individual Modules (eg: Database)
-npx lerna run build --scope=@conduitplatform/database
+turbo run build --filter=@conduitplatform/database
 
 # Running a module with env vars
 CONDUIT_SERVER="0.0.0.0:55152" SERVICE_IP="0.0.0.0:55183" \
-npx lerna run start --scope=@conduitplatform/database
+pnpm --filter @conduitplatform/database start
 ```
 
-Find out more about [Lerna](https://lerna.js.org/).
+Find out more about [pnpm workspaces](https://pnpm.io/workspaces) and [Turborepo](https://turbo.build/repo/docs).
 
 You may find additional scripts in the `scripts` section of the `package.json` file.
 

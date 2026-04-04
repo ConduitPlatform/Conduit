@@ -5,8 +5,11 @@
         "^build"
       ],
       "outputs": [
-        ".dist/**"
+        "dist/**"
       ]
+    },
+    "build:docker": {
+      "cache": false
     }
   }
 }

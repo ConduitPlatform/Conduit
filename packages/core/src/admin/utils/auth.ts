@@ -15,7 +15,11 @@ export function verifyToken(token: string, secret: string): any {
   return jwt.verify(token, secret);
 }
 
-export function verifyTwoFactorToken(secret: string, token?: string, window?: number) {
+export function verifyTwoFactorToken(
+  secret: string,
+  token?: string,
+  window?: number,
+): ReturnType<typeof twoFactor.verifyToken> {
   return twoFactor.verifyToken(secret, token, window);
 }
 

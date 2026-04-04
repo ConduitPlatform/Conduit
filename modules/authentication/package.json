@@ -6,7 +6,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=14"
+    "node": ">=24"
   },
   "scripts": {
     "start": "node dist/index.js",
@@ -29,9 +29,9 @@
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.10.2",
-    "@conduitplatform/grpc-sdk": "*",
-    "@conduitplatform/module-tools": "*",
-    "@conduitplatform/node-2fa": "^1.0.0",
+    "@conduitplatform/grpc-sdk": "workspace:*",
+    "@conduitplatform/module-tools": "workspace:*",
+    "@conduitplatform/node-2fa": "workspace:*",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "axios": "^1.13.2",

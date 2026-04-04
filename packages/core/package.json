@@ -6,7 +6,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=16"
+    "node": ">=24"
   },
   "scripts": {
     "start": "node dist/bin/www.js",
@@ -21,24 +21,27 @@
   "license": "ISC",
   "dependencies": {
     "@bufbuild/protobuf": "^2.10.2",
-    "@conduitplatform/grpc-sdk": "*",
-    "@conduitplatform/hermes": "*",
-    "@conduitplatform/module-tools": "*",
-    "@conduitplatform/node-2fa": "*",
+    "@conduitplatform/grpc-sdk": "workspace:*",
+    "@conduitplatform/hermes": "workspace:*",
+    "@conduitplatform/module-tools": "workspace:*",
+    "@conduitplatform/node-2fa": "workspace:*",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "bcrypt": "^6.0.0",
     "convict": "^6.2.4",
     "cors": "^2.8.6",
+    "deepdash-es": "^5.3.9",
     "fs-extra": "^11.3.3",
     "graphql-tag": "^2.12.6",
     "helmet": "8.1.0",
+    "ioredis": "^5.9.2",
     "jsonwebtoken": "^9.0.3",
     "lodash-es": "^4.17.23"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/convict": "^6.1.6",
+    "@types/cors": "^2.8.19",
     "@types/express": "~5.0.6",
     "@types/is-natural-number": "^4.0.4",
     "@types/jest": "^30.0.0",

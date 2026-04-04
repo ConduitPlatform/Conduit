@@ -6,7 +6,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=14"
+    "node": ">=24"
   },
   "scripts": {
     "start": "node dist/index.js",
@@ -31,8 +31,8 @@
     "@aws-sdk/client-sesv2": "^3.975.0",
     "@aws-sdk/client-sns": "^3.975.0",
     "@bufbuild/protobuf": "^2.10.2",
-    "@conduitplatform/grpc-sdk": "*",
-    "@conduitplatform/module-tools": "*",
+    "@conduitplatform/grpc-sdk": "workspace:*",
+    "@conduitplatform/module-tools": "workspace:*",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "@onesignal/node-onesignal": "^5.3.1-beta1",
@@ -46,6 +46,7 @@
     "escape-string-regexp": "^5.0.0",
     "firebase-admin": "^13.6.0",
     "handlebars": "^4.7.8",
+    "ioredis": "^5.9.2",
     "lodash-es": "^4.17.23",
     "mailersend": "^2.4.1",
     "mailgun-js": "^0.22.0",
@@ -59,6 +60,7 @@
     "twilio": "5.12.0"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/bluebird": "^3.5.42",
     "@types/convict": "^6.1.6",
     "@types/lodash-es": "^4.17.12",

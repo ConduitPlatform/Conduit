@@ -10,7 +10,7 @@
   "types": "dist/index.d.ts",
   "private": true,
   "engines": {
-    "node": ">=14"
+    "node": ">=24"
   },
   "scripts": {
     "prepublish": "npm run build",
@@ -26,6 +26,7 @@
     "tslib": "^2.6.2"
   },
   "devDependencies": {
+    "rimraf": "^6.1.2",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.9.1",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
