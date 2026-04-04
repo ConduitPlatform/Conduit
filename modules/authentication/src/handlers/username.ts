@@ -18,6 +18,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { authenticateChecks, changePassword } from './utils.js';
 import { Config } from '../config/index.js';
+import { ALT_STRATEGY_AUTH } from '../constants/index.js';
 
 export class UsernameHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -41,6 +42,7 @@ export class UsernameHandlers implements IAuthenticationStrategy {
           captchaConfig.enabled && captchaConfig.routes.login
             ? ['captchaMiddleware']
             : undefined,
+        rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('LoginResponse', {
         accessToken: ConduitString.Optional,

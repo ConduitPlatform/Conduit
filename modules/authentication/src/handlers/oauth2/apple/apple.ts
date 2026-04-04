@@ -29,6 +29,7 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { OAUTH_CALLBACK } from '../../../constants/index.js';
 import { AuthUtils } from '../../../utils/index.js';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
@@ -267,6 +268,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
           id_token: ConduitString.Required,
           state: ConduitString.Required,
         },
+        rateLimit: OAUTH_CALLBACK,
       },
       new ConduitRouteReturnDefinition(`AppleResponse`, {
         accessToken: ConduitString.Optional,

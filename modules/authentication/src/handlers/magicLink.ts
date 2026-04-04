@@ -17,6 +17,11 @@ import {
 } from '@conduitplatform/module-tools';
 import { Client, Token, User } from '../models/index.js';
 import { status } from '@grpc/grpc-js';
+import {
+  EMAIL_SEND_STRICT,
+  MAGIC_LINK_EXCHANGE,
+  OAUTH_CALLBACK,
+} from '../constants/index.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import { MagicLinkTemplate as magicLinkTemplate } from '../templates/index.js';
@@ -59,6 +64,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
           email: ConduitString.Required,
           redirectUri: ConduitString.Optional,
         },
+        rateLimit: EMAIL_SEND_STRICT,
       },
       new ConduitRouteReturnDefinition('MagicLinkSendResponse', 'String'),
       this.sendMagicLink.bind(this),
@@ -71,6 +77,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
         urlParams: {
           verificationToken: ConduitString.Required,
         },
+        rateLimit: OAUTH_CALLBACK,
       },
       new ConduitRouteReturnDefinition('VerifyMagicLinkLoginResponse', {
         accessToken: ConduitString.Optional,
@@ -87,6 +94,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
           urlParams: {
             magicToken: ConduitString.Required,
           },
+          rateLimit: MAGIC_LINK_EXCHANGE,
         },
         new ConduitRouteReturnDefinition('MagicLinkExchangeResponse', {
           accessToken: ConduitString.Optional,

@@ -17,7 +17,7 @@ import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { Token, TwoFactorBackUpCodes, TwoFactorSecret, User } from '../models/index.js';
 import { AuthUtils } from '../utils/index.js';
-import { TokenType } from '../constants/index.js';
+import { TokenType, TWO_FA_CHALLENGE } from '../constants/index.js';
 import * as node2fa from '@conduitplatform/node-2fa';
 import { v4 as uuid } from 'uuid';
 import { TokenProvider } from './tokenProvider.js';
@@ -60,6 +60,7 @@ export class TwoFa implements IAuthenticationStrategy {
                       or returns a message to check authenticator app.
                       User's 2FA mechanism has to be enabled.`,
         middlewares: ['authMiddleware'],
+        rateLimit: TWO_FA_CHALLENGE,
       },
       new ConduitRouteReturnDefinition('BeginTwoFaResponse', {
         method: ConduitString.Required,
@@ -78,6 +79,7 @@ export class TwoFa implements IAuthenticationStrategy {
         bodyParams: {
           code: ConduitString.Required,
         },
+        rateLimit: TWO_FA_CHALLENGE,
       },
       new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
         accessToken: ConduitString.Optional,
@@ -95,6 +97,7 @@ export class TwoFa implements IAuthenticationStrategy {
         bodyParams: {
           code: ConduitString.Required,
         },
+        rateLimit: TWO_FA_CHALLENGE,
       },
       new ConduitRouteReturnDefinition('VerifyAuthenticatorResponse', 'String'),
       this.verifyCode.bind(this),
@@ -149,6 +152,7 @@ export class TwoFa implements IAuthenticationStrategy {
           bodyParams: {
             code: ConduitString.Required,
           },
+          rateLimit: TWO_FA_CHALLENGE,
         },
         new ConduitRouteReturnDefinition('RecoverTwoFaAccessResponse', {
           accessToken: ConduitString.Optional,

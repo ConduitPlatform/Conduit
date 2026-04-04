@@ -15,7 +15,7 @@ import {
 import { status } from '@grpc/grpc-js';
 import { Token, User } from '../models/index.js';
 import { AuthUtils } from '../utils/index.js';
-import { TokenType } from '../constants/index.js';
+import { ALT_STRATEGY_AUTH, TokenType } from '../constants/index.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
@@ -50,6 +50,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
           encryptedData: ConduitString.Required,
           keyId: ConduitString.Required,
         },
+        rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('BiometricsAuthenticateResponse', {
         accessToken: ConduitString.Optional,

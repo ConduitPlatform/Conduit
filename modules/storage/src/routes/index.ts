@@ -13,6 +13,7 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { File } from '../models/index.js';
+import { STORAGE_WRITE } from '../constants/routeRateLimits.js';
 
 export class StorageRoutes {
   private _routingManager: RoutingManager;
@@ -84,6 +85,7 @@ export class StorageRoutes {
           path: '/storage/file',
           description: `Creates a new file.`,
           middlewares: ['authMiddleware'],
+          rateLimit: STORAGE_WRITE,
         },
         new ConduitRouteReturnDefinition('CreateFile', File.name),
         this.fileHandlers.createFile.bind(this.fileHandlers),
@@ -106,6 +108,7 @@ export class StorageRoutes {
           path: '/storage/upload',
           description: `Creates a new file and provides a URL to upload it to.`,
           middlewares: ['authMiddleware'],
+          rateLimit: STORAGE_WRITE,
         },
         new ConduitRouteReturnDefinition('CreateFileByUrl', {
           file: File.getInstance().fields,
@@ -133,6 +136,7 @@ export class StorageRoutes {
           path: '/storage/upload/:id',
           description: `Updates a file and provides a URL to upload its data to.`,
           middlewares: ['authMiddleware'],
+          rateLimit: STORAGE_WRITE,
         },
         new ConduitRouteReturnDefinition('PatchFileByUrl', {
           file: File.getInstance().fields,
@@ -198,6 +202,7 @@ export class StorageRoutes {
           path: '/storage/file/:id',
           description: `Updates a file.`,
           middlewares: ['authMiddleware'],
+          rateLimit: STORAGE_WRITE,
         },
         new ConduitRouteReturnDefinition('PatchFile', File.name),
         this.fileHandlers.updateFile.bind(this.fileHandlers),

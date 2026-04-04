@@ -26,7 +26,7 @@ import { TeamInviteTemplate } from '../templates/index.js';
 import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/index.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
-import { TokenType } from '../constants/index.js';
+import { OAUTH_CALLBACK, TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
 import { isEmpty } from 'lodash-es';
 
@@ -1034,6 +1034,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           invitationToken: ConduitString.Required,
         },
         action: ConduitRouteActions.GET,
+        rateLimit: OAUTH_CALLBACK,
       },
       new ConduitRouteReturnDefinition('GetInvitationTokenUserData', {
         email: ConduitString.Required,

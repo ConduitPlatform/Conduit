@@ -18,6 +18,7 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { Config } from '../config/index.js';
+import { ALT_STRATEGY_AUTH } from '../constants/index.js';
 import ethUtil from 'ethereumjs-util';
 
 export class MetamaskHandlers implements IAuthenticationStrategy {
@@ -31,6 +32,7 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
         description:
           'Returns a nonce for the user to sign using their wallet. If no user exists with the provided public address, a new user will be created.',
         bodyParams: { ethPublicAddress: ConduitString.Required },
+        rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('MetamaskNonce', {
         nonce: ConduitString.Required,
@@ -47,6 +49,7 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
           ethPublicAddress: ConduitString.Required,
           signature: ConduitString.Required,
         },
+        rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('MetamaskAuthentication', {
         accessToken: ConduitString.Optional,

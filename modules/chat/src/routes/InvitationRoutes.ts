@@ -32,6 +32,10 @@ export class InvitationRoutes {
           answer: ConduitString.Required,
           invitationToken: ConduitString.Required,
         },
+        rateLimit: {
+          maxRequests: 50,
+          resetInterval: 3600,
+        },
       },
       new ConduitRouteReturnDefinition('InvitationResponse', 'String'),
       this.answerInvitationFromHook.bind(this),

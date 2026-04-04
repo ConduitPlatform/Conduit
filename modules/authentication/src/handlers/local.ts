@@ -1,6 +1,13 @@
 import { isNil, merge } from 'lodash-es';
 import { AuthUtils } from '../utils/index.js';
-import { TokenType } from '../constants/index.js';
+import {
+  AUTH_CREDENTIALS,
+  EMAIL_CODE_VERIFY,
+  EMAIL_SEND_STRICT,
+  EMAIL_VERIFY_HOOK,
+  PASSWORD_RESET_SUBMIT,
+  TokenType,
+} from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
 import {
   ConduitGrpcSdk,
@@ -62,6 +69,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           errors.INVITATION_REQUIRED,
           errors.INVALID_INVITATION,
         ],
+        rateLimit: AUTH_CREDENTIALS,
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
@@ -75,6 +83,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
             userData: ConduitJson.Optional,
           },
           description: `Creates a new anonymous user.`,
+          rateLimit: AUTH_CREDENTIALS,
         },
         new ConduitRouteReturnDefinition('LoginResponse', {
           accessToken: ConduitString.Optional,
@@ -99,6 +108,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           captchaConfig.enabled && captchaConfig.routes.login
             ? ['captchaMiddleware']
             : undefined,
+        rateLimit: AUTH_CREDENTIALS,
       },
       new ConduitRouteReturnDefinition('LoginResponse', {
         accessToken: ConduitString.Optional,
@@ -117,6 +127,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
             email: ConduitString.Required,
             redirectUri: ConduitString.Optional,
           },
+          rateLimit: EMAIL_SEND_STRICT,
         },
         new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
         this.forgotPassword.bind(this),
@@ -132,6 +143,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           passwordResetToken: ConduitString.Required,
           password: ConduitString.Required,
         },
+        rateLimit: PASSWORD_RESET_SUBMIT,
       },
       new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
       this.resetPassword.bind(this),
@@ -145,6 +157,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           bodyParams: {
             email: ConduitString.Required,
           },
+          rateLimit: EMAIL_SEND_STRICT,
         },
         new ConduitRouteReturnDefinition('ResendVerificationEmailResponse', 'String'),
         this.resendVerificationEmail.bind(this),
@@ -190,6 +203,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
             email: ConduitString.Required,
             code: ConduitString.Required,
           },
+          rateLimit: EMAIL_CODE_VERIFY,
         },
         new ConduitRouteReturnDefinition('VerifyEmailWithCode', 'String'),
         this.verifyEmailWithCode.bind(this),
@@ -204,6 +218,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         urlParams: {
           verificationToken: ConduitString.Required,
         },
+        rateLimit: EMAIL_VERIFY_HOOK,
       },
       new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
       this.verifyEmail.bind(this),
@@ -217,6 +232,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         urlParams: {
           verificationToken: ConduitString.Required,
         },
+        rateLimit: EMAIL_VERIFY_HOOK,
       },
       new ConduitRouteReturnDefinition('VerifyChangeEmailResponse', 'String'),
       this.verifyChangeEmail.bind(this),

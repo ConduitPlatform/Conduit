@@ -6,6 +6,7 @@ import {
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
+import { OAUTH_NATIVE_COMPLETE } from '../../../constants/index.js';
 import { status } from '@grpc/grpc-js';
 import facebookParameters from './facebook.json' with { type: 'json' };
 import axios, { AxiosRequestConfig } from 'axios';
@@ -87,6 +88,7 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
           scopes: [ConduitString.Optional],
         },
         middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
+        rateLimit: OAUTH_NATIVE_COMPLETE,
       },
       new ConduitRouteReturnDefinition('FacebookResponse', {
         userId: ConduitString.Required,

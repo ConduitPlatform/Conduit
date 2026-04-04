@@ -30,6 +30,7 @@ import { TeamsHandler } from '../handlers/team.js';
 import { BiometricHandlers } from '../handlers/biometric.js';
 import { UsernameHandlers } from '../handlers/username.js';
 import { MetamaskHandlers } from '../handlers/metamask.js';
+import { SERVICE_ACCOUNT } from '../constants/index.js';
 
 type OAuthHandler = typeof oauth2;
 
@@ -150,6 +151,7 @@ export class AuthenticationRoutes {
             serviceName: ConduitString.Required,
             token: ConduitString.Required,
           },
+          rateLimit: SERVICE_ACCOUNT,
         },
         new ConduitRouteReturnDefinition('VerifyServiceResponse', returnField),
         this.serviceHandler.authenticate.bind(this.serviceHandler),

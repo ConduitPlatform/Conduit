@@ -19,7 +19,7 @@ import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { Token, User } from '../models/index.js';
 import { AuthUtils } from '../utils/index.js';
-import { TokenType } from '../constants/index.js';
+import { PHONE_CODE_VERIFY, PHONE_SMS_SEND, TokenType } from '../constants/index.js';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy.js';
 import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
@@ -62,6 +62,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
           captchaConfig.enabled && captchaConfig.routes.login
             ? ['captchaMiddleware']
             : undefined,
+        rateLimit: PHONE_SMS_SEND,
       },
       new ConduitRouteReturnDefinition('PhoneAuthenticateResponse', {
         token: ConduitString.Required,
@@ -79,6 +80,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
           userData: ConduitJson.Optional,
         },
         middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
+        rateLimit: PHONE_CODE_VERIFY,
       },
       new ConduitRouteReturnDefinition('VerifyPhoneLoginResponse', {
         accessToken: ConduitString.Optional,
