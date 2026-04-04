@@ -6,6 +6,7 @@ import {
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitParser } from '../classes/index.js';
+import { applyOpenApiFieldValidation } from './SimpleTypeParamUtils.js';
 
 export interface ParseResult {
   type: string;
@@ -115,6 +116,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     isArray: boolean,
     parentField: string,
     description?: string,
+    sourceField?: unknown,
   ): void {
     if (!isArray && (name === value || name === parentField)) {
       Object.keys(processingObject).forEach(field => {
@@ -122,12 +124,22 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
         delete processingObject[field];
       });
       Object.assign(processingObject, this.getType(value));
+      const v = (sourceField as { validate?: unknown })?.validate;
+      applyOpenApiFieldValidation(
+        processingObject as unknown as Record<string, unknown>,
+        v as any,
+      );
     } else {
       if (!processingObject.properties) {
         processingObject.properties = {};
       }
       processingObject.properties[name] = this.getType(value);
       if (description) processingObject.properties[name].description = description;
+      const v = (sourceField as { validate?: unknown })?.validate;
+      applyOpenApiFieldValidation(
+        processingObject.properties[name] as Record<string, unknown>,
+        v as any,
+      );
     }
     this.addFieldToRequired(processingObject, name, isRequired);
   }
@@ -140,6 +152,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     isRequired: boolean = false,
     isArray: boolean,
     description?: string,
+    _sourceField?: unknown,
   ): void {
     if (description && name === 'body') {
       processingObject.properties[fieldName] = {
@@ -163,6 +176,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     isRequired: boolean = false,
     nestedType?: boolean,
     description?: string,
+    sourceField?: unknown,
   ): void {
     if (!processingObject.properties) {
       processingObject.properties = {};
@@ -173,6 +187,11 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
       // @ts-ignore
       items: super.arrayHandler(resolverName, name, value).properties[name],
     };
+    const v = (sourceField as { validate?: unknown })?.validate;
+    applyOpenApiFieldValidation(
+      processingObject.properties[name] as Record<string, unknown>,
+      v as any,
+    );
     this.addFieldToRequired(processingObject, name, isRequired);
   }
 
@@ -183,11 +202,17 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     value: any,
     isRequired: boolean = false,
     isArray: boolean,
+    sourceField?: unknown,
   ): void {
     if (this.isInput) {
       processingObject.properties[name] = {
         type: 'string',
       };
+      const v = (sourceField as { validate?: unknown })?.validate;
+      applyOpenApiFieldValidation(
+        processingObject.properties[name] as Record<string, unknown>,
+        v as any,
+      );
     } else {
       this.requestedTypes.add(value);
       processingObject.properties[name] = {

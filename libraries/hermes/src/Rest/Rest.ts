@@ -140,11 +140,23 @@ export class RestController extends ConduitRouter {
         route,
         req.headers['cache-control'],
       );
+      const strict = route.input.strictParams !== false;
       if (route.input.bodyParams)
-        validateParams(context.bodyParams, route.input.bodyParams);
+        context.bodyParams = validateParams(context.bodyParams, route.input.bodyParams, {
+          strict,
+          coerce: false,
+        });
       if (route.input.queryParams)
-        validateParams(context.queryParams, route.input.queryParams);
-      if (route.input.urlParams) validateParams(context.urlParams, route.input.urlParams);
+        context.queryParams = validateParams(
+          context.queryParams,
+          route.input.queryParams,
+          { strict, coerce: true },
+        );
+      if (route.input.urlParams)
+        context.urlParams = validateParams(context.urlParams, route.input.urlParams, {
+          strict,
+          coerce: true,
+        });
       context.params = {
         ...context.bodyParams,
         ...context.queryParams,

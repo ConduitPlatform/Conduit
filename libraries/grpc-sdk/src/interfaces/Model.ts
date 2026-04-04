@@ -43,6 +43,32 @@ export enum PostgresIndexType {
 
 export type Array = any[];
 
+export interface ConduitStringValidation {
+  format?: 'email' | 'url' | 'uuid' | 'objectId';
+  minLength?: number;
+  maxLength?: number;
+  length?: number;
+  pattern?: string;
+}
+
+export interface ConduitNumberValidation {
+  min?: number;
+  max?: number;
+  exclusiveMin?: number;
+  exclusiveMax?: number;
+  integer?: boolean;
+}
+
+export interface ConduitArrayValidation {
+  minItems?: number;
+  maxItems?: number;
+}
+
+export type ConduitValidationRules =
+  | ConduitStringValidation
+  | ConduitNumberValidation
+  | ConduitArrayValidation;
+
 type BaseConduitModelField = {
   type?: TYPE | TYPE[] | ConduitModel | ArrayConduitModel[];
   sqlType?: SQLDataType;
@@ -50,6 +76,7 @@ type BaseConduitModelField = {
   description?: string;
   required?: boolean;
   select?: boolean;
+  validate?: ConduitValidationRules;
 };
 
 type UniqueAndRequiredField = {

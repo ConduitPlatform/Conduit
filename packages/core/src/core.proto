@@ -54,6 +54,7 @@ message RegisterAdminRouteRequest {
     optional string cacheControl = 9;
     repeated ErrorDefinition errors = 10;
     optional bool mcp = 11;
+    optional bool strictParams = 12;
   }
 
   message ProxyRouteOptions {

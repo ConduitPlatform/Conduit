@@ -183,6 +183,7 @@ export class AdminHandlers {
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
+          populate: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('GetRooms', {
@@ -228,6 +229,7 @@ export class AdminHandlers {
           senderUser: ConduitString.Optional,
           roomId: ConduitString.Optional,
           search: ConduitString.Optional,
+          populate: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('GetMessages', {

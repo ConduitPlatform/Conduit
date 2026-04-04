@@ -16,7 +16,9 @@ import {
   ConduitRouteActions,
   ConduitRouteOptions,
   Indexable,
+  Params,
 } from '@conduitplatform/grpc-sdk';
+import { validateParams } from '../Rest/util.js';
 import { ConduitRoute, TypeRegistry } from '../classes/index.js';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@as-integrations/express5';
@@ -26,6 +28,18 @@ import { parseResolveInfo } from 'graphql-parse-resolve-info';
 
 import cookiePlugin from './utils/cookie.plugin.js';
 import { GraphQLResolveInfo } from 'graphql/index.js';
+
+function mergeValidatedBucket(
+  bucket: Indexable,
+  def: Params | undefined,
+  strict: boolean,
+  coerce: boolean,
+) {
+  if (!def) return;
+  const next = validateParams({ ...bucket } as Params, def, { strict, coerce });
+  for (const k of Object.keys(bucket)) delete bucket[k];
+  Object.assign(bucket, next);
+}
 
 export class GraphQLController extends ConduitRouter {
   typeDefs!: string;
@@ -359,6 +373,10 @@ export class GraphQLController extends ConduitRouter {
           Object.assign(context.context, r);
           const { urlParams, queryParams, bodyParams } =
             this.splitParamsToPathAndUrlParams(args, route.input.urlParams);
+          const strict = route.input.strictParams !== false;
+          mergeValidatedBucket(bodyParams, route.input.bodyParams, strict, false);
+          mergeValidatedBucket(queryParams, route.input.queryParams, strict, true);
+          mergeValidatedBucket(urlParams, route.input.urlParams, strict, true);
           const params = Object.assign(args, args.params);
           delete params.params;
           if (caching) {
@@ -445,8 +463,10 @@ export class GraphQLController extends ConduitRouter {
           Object.assign(context.context, r);
           const { urlParams, queryParams, bodyParams } =
             this.splitParamsToPathAndUrlParams(args, route.input.urlParams);
-          const params = Object.assign(args, args.params);
-          delete params.params;
+          const strict = route.input.strictParams !== false;
+          mergeValidatedBucket(bodyParams, route.input.bodyParams, strict, false);
+          mergeValidatedBucket(queryParams, route.input.queryParams, strict, true);
+          mergeValidatedBucket(urlParams, route.input.urlParams, strict, true);
 
           return route.executeRequest.bind(route)({
             ...context,

@@ -1,6 +1,6 @@
 /**
  * Shared utilities for parsing Conduit type definitions
- * Used by SwaggerParser, GraphQlParser, and MCPParser
+ * Used by SwaggerParser, GraphQlParser, and ZodParser
  */
 
 import { TYPE } from '@conduitplatform/grpc-sdk';

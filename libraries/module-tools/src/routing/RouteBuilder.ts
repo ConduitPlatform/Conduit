@@ -82,6 +82,11 @@ export class RouteBuilder {
     return this;
   }
 
+  strictParams(strict: boolean): RouteBuilder {
+    this._options.strictParams = strict;
+    return this;
+  }
+
   return(name: string, fields: ConduitReturn): RouteBuilder {
     this._returns = new ConduitRouteReturnDefinition(name, fields);
     return this;

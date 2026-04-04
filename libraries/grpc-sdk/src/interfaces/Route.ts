@@ -1,4 +1,4 @@
-import { allowedTypes, ConduitModel, TYPE } from './Model.js';
+import { allowedTypes, ConduitModel, ConduitValidationRules, TYPE } from './Model.js';
 import { Indexable } from './Indexable.js';
 
 export interface ModuleErrorDefinition {
@@ -21,12 +21,14 @@ export interface ConduitRouteParameters {
 
 type AllowedTypes = TYPE.String | TYPE.Number | TYPE.Boolean | TYPE.Date | TYPE.ObjectId;
 
-export type ConduitUrlParam = AllowedTypes | { type: AllowedTypes; required?: boolean };
+export type ConduitUrlParam =
+  | AllowedTypes
+  | { type: AllowedTypes; required?: boolean; validate?: ConduitValidationRules };
 export type ConduitQueryParam =
   | ConduitUrlParam
   | AllowedTypes[]
-  | { type: AllowedTypes[]; required: boolean }
-  | { type: AllowedTypes; required?: boolean }[];
+  | { type: AllowedTypes[]; required: boolean; validate?: ConduitValidationRules }
+  | { type: AllowedTypes; required?: boolean; validate?: ConduitValidationRules }[];
 
 export type ConduitUrlParams = {
   [field in string]: ConduitUrlParam;
@@ -70,6 +72,8 @@ export interface ConduitRouteOptions {
   cacheControl?: string;
   mcp?: boolean;
   errors?: ModuleErrorDefinition[];
+  /** When false, unknown body/query/url keys are allowed. Defaults to strict when unset. */
+  strictParams?: boolean;
 }
 
 export interface ConduitRouteObject {

@@ -2,6 +2,7 @@ import {
   ConduitGrpcSdk,
   ConduitError,
   ConduitModel,
+  ConduitReturn,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
@@ -32,7 +33,7 @@ export function setModuleConfigRoute(
       `Set${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}ConfigRoute`,
       {
         config: configSchema,
-      },
+      } as ConduitReturn,
     ),
     async (params: ConduitRouteParameters) => {
       let updatedConfig = params.params!.config;

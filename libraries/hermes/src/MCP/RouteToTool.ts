@@ -12,7 +12,7 @@ import { MCPRouteToToolOptions, MCPSession, MCPToolDefinition } from './types.js
 import { ConduitRoute } from '../classes/index.js';
 import { ConduitRouter } from '../Router.js';
 import { Cookie } from '../interfaces/index.js';
-import { MCPParser } from './MCPParser.js';
+import { ZodParser } from '../classes/ZodParser.js';
 import { CORE_MODULE } from './ToolRegistry.js';
 
 export class RouteToToolConverter {
@@ -119,10 +119,10 @@ export class RouteToToolConverter {
   }
 
   /**
-   * Generate Zod schema from route parameters using MCPParser
+   * Generate Zod schema from route parameters using ZodParser
    */
   private generateZodSchema(routeInfo: ConduitRoute): Record<string, z.ZodTypeAny> {
-    const parser = new MCPParser();
+    const parser = new ZodParser();
     const schema: Record<string, z.ZodTypeAny> = {};
 
     // Parse bodyParams (required by default)

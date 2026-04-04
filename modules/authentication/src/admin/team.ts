@@ -34,6 +34,7 @@ export class TeamsAdmin {
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
           parentTeam: ConduitObjectId.Optional,
+          populate: [ConduitString.Optional],
         },
         name: 'GetTeams',
         description: 'Gets all available teams',
@@ -65,6 +66,9 @@ export class TeamsAdmin {
         action: ConduitRouteActions.GET,
         urlParams: {
           teamId: ConduitObjectId.Required,
+        },
+        queryParams: {
+          populate: [ConduitString.Optional],
         },
         name: 'GetTeam',
         description: 'Gets the specified team',

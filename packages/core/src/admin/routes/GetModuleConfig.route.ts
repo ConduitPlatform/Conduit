@@ -1,5 +1,6 @@
 import {
   ConduitGrpcSdk,
+  ConduitReturn,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
@@ -21,7 +22,7 @@ export function getModuleConfigRoute(
       `Get${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}ConfigRoute`,
       {
         config: configSchema,
-      },
+      } as ConduitReturn,
     ),
     async () => {
       let finalConfig;

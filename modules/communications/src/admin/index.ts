@@ -793,7 +793,7 @@ export class AdminHandlers {
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
           platform: ConduitString.Optional,
-          populate: ConduitString.Optional,
+          populate: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('GetNotificationTokens', {
@@ -812,7 +812,7 @@ export class AdminHandlers {
           id: ConduitString.Required,
         },
         queryParams: {
-          populate: ConduitString.Optional,
+          populate: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('GetNotificationToken', 'NotificationToken'),

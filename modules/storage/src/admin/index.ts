@@ -330,6 +330,7 @@ export class AdminRoutes {
         },
         queryParams: {
           redirect: ConduitBoolean.Optional,
+          download: ConduitBoolean.Optional,
         },
       },
       new ConduitRouteReturnDefinition('GetFileUrl', {

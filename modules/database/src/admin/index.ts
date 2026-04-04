@@ -366,6 +366,9 @@ export class AdminHandlers {
           schemaName: { type: TYPE.String, required: true },
           id: { type: TYPE.String, required: true },
         },
+        queryParams: {
+          populate: [ConduitString.Optional],
+        },
       },
       new ConduitRouteReturnDefinition('GetDocument', TYPE.JSON),
       this.documentsAdmin.getDocument.bind(this.documentsAdmin),
@@ -379,8 +382,8 @@ export class AdminHandlers {
           schemaName: { type: TYPE.String, required: true },
         },
         queryParams: {
-          skip: ConduitNumber.Optional,
-          limit: ConduitNumber.Optional,
+          skip: ConduitNumber.OptionalWith({ min: 0, integer: true }),
+          limit: ConduitNumber.OptionalWith({ min: 1, max: 1000, integer: true }),
           sort: ConduitString.Optional,
         },
         bodyParams: {

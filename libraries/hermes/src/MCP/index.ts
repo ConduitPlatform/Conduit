@@ -10,7 +10,6 @@ export * from './MCPController.js';
 export * from './ToolRegistry.js';
 export * from './ResourceRegistry.js';
 export * from './RouteToTool.js';
-export * from './MCPParser.js';
 export * from './constants.js';
 export * from './MetaTools.js';
 export { MCPError, MCP_ERROR_CODES } from './MCPErrors.js';

@@ -88,6 +88,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     isArray: boolean,
     parentField: string,
     description?: string,
+    _sourceField?: unknown,
   ): void {
     if (!isArray && name === parentField) {
       const typeFields = TypeRegistry.getInstance().getType(value);
@@ -117,6 +118,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     isRequired: boolean = false,
     isArray: boolean,
     description?: string,
+    _sourceField?: unknown,
   ): void {
     // object of some kind
     const nestedName = this.constructName(name, fieldName);
@@ -140,6 +142,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     isRequired: boolean = false,
     nestedType?: boolean,
     description?: string,
+    _sourceField?: unknown,
   ): void {
     const arrayProcessing = super.arrayHandler(resolverName, name, value);
     if (nestedType) {
@@ -161,6 +164,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     value: string,
     isRequired: boolean = false,
     isArray: boolean,
+    _sourceField?: unknown,
   ): void {
     this.addToRelation(this.result, value);
     this.requestedTypes.add(value);

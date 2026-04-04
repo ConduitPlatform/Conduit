@@ -49,6 +49,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     isArray: boolean,
     parentField: string,
     description?: string,
+    sourceField?: unknown,
   ): void;
 
   protected abstract getResultFromObject(
@@ -59,6 +60,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     isRequired: boolean,
     isArray: boolean,
     description?: string,
+    sourceField?: unknown,
   ): void;
 
   protected abstract getResultFromArray(
@@ -69,6 +71,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     isRequired: boolean,
     nestedType?: boolean,
     description?: string,
+    sourceField?: unknown,
   ): void;
 
   protected abstract getResultFromRelation(
@@ -78,6 +81,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     value: any,
     isRequired: boolean,
     isArray: boolean,
+    sourceField?: unknown,
   ): void;
 
   protected extractTypesInternal(
@@ -117,6 +121,9 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
             field,
             fields[field] as Array,
             false,
+            undefined,
+            undefined,
+            fields[field],
           );
         } else if (typeof fields[field] === 'object') {
           // if it has "type" as a property we assume that the value is a string
@@ -136,6 +143,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                   model!,
                   isRequired,
                   false,
+                  fields[field],
                 );
               } else {
                 this.getResultFromString(
@@ -146,6 +154,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                   false,
                   name,
                   description,
+                  fields[field],
                 );
               }
             }
@@ -159,6 +168,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                 isRequired,
                 true,
                 description,
+                fields[field],
               );
             } else {
               this.getResultFromObject(
@@ -169,6 +179,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                 isRequired,
                 false,
                 description,
+                fields[field],
               );
             }
           } else {
@@ -180,6 +191,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
               false,
               false,
               ParserUtils.getFieldDescription(fields[field]),
+              fields[field],
             );
           }
         }
@@ -209,6 +221,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           model!,
           isRequired,
           true,
+          value[0],
         );
       } else if (typeof baseType === 'string') {
         this.getResultFromString(
@@ -219,6 +232,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           true,
           name,
           description,
+          value[0],
         );
       } else if (Array.isArray(baseType)) {
         this.getResultFromArray(
@@ -229,6 +243,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           isRequired,
           true,
           description,
+          value[0],
         );
       }
       // if the array has "type" but is an object
@@ -241,12 +256,22 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           isRequired,
           true,
           description,
+          value[0],
         );
       }
     }
     // if array contains an object
     else {
-      this.getResultFromObject(processingObject, name, field, value[0], false, true);
+      this.getResultFromObject(
+        processingObject,
+        name,
+        field,
+        value[0],
+        false,
+        true,
+        undefined,
+        value[0],
+      );
     }
     return processingObject;
   }
