@@ -3,8 +3,9 @@ import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import * as models from '../models/index.js';
 import { ServiceDiscovery } from '../service-discovery/index.js';
 import { clearInterval } from 'timers';
-import { merge } from 'lodash-es';
 import { ServiceRegistry } from '../service-discovery/ServiceRegistry.js';
+
+export type ConfigVersionMeta = { version: number; explicit: boolean };
 
 export class ConfigStorage {
   toBeReconciled: string[] = [];
@@ -46,6 +47,24 @@ export class ConfigStorage {
     this.grpcSdk.bus!.publish('config', reconciling ? 'reconciling' : 'reconcile-done');
   }
 
+  versionKey(moduleName: string) {
+    return `moduleConfigs.${moduleName}:version`;
+  }
+
+  async getConfigVersionMeta(moduleName: string): Promise<ConfigVersionMeta> {
+    const raw = await this.grpcSdk.state!.getKey(this.versionKey(moduleName));
+    if (raw == null || raw === '') {
+      return { version: 0, explicit: false };
+    }
+    const parsed = parseInt(String(raw), 10);
+    return { version: Number.isFinite(parsed) ? parsed : 0, explicit: true };
+  }
+
+  async getConfigVersion(moduleName: string): Promise<number> {
+    const meta = await this.getConfigVersionMeta(moduleName);
+    return meta.version;
+  }
+
   async firstSync() {
     this.changeState(true);
     const configDocs = await models.Config.getInstance().findMany({});
@@ -55,29 +74,52 @@ export class ConfigStorage {
       for (const key of ServiceRegistry.getInstance().getRegisteredModules()) {
         try {
           moduleConfig = await this.getConfig(key, false);
-          await models.Config.getInstance().create({ name: key, config: moduleConfig });
+          const version = await this.getConfigVersion(key);
+          await models.Config.getInstance().create({
+            name: key,
+            config: moduleConfig,
+            version,
+          });
         } catch {}
       }
       for (const key of ['core', 'admin']) {
         try {
           moduleConfig = await this.getConfig(key, false);
-          await models.Config.getInstance().create({ name: key, config: moduleConfig });
+          const version = await this.getConfigVersion(key);
+          await models.Config.getInstance().create({
+            name: key,
+            config: moduleConfig,
+            version,
+          });
         } catch {}
       }
     } else {
-      // patch database with new config keys
       for (const config of configDocs) {
-        let redisConfig;
+        const dbVersion = config.version ?? 0;
+        let redisVersion = 0;
+        let redisConfig: unknown;
         try {
           redisConfig = await this.getConfig(config.name, false);
-          redisConfig = merge(redisConfig, config.config);
+          redisVersion = await this.getConfigVersion(config.name);
+        } catch {
+          redisConfig = null;
+        }
+
+        if (!redisConfig || dbVersion >= redisVersion) {
+          await this.grpcSdk.state!.setKey(
+            `moduleConfigs.${config.name}`,
+            JSON.stringify(config.config),
+          );
+          await this.grpcSdk.state!.setKey(
+            this.versionKey(config.name),
+            String(dbVersion),
+          );
+        } else {
           await models.Config.getInstance().findByIdAndUpdate(config._id, {
             config: redisConfig,
+            version: redisVersion,
           });
-        } catch (e) {
-          redisConfig = config.config;
         }
-        await this.setConfig(config.name, JSON.stringify(redisConfig), false);
       }
     }
     // Update Admin and all active modules
@@ -118,16 +160,24 @@ export class ConfigStorage {
   reconcile() {
     this.changeState(true);
     const promises = this.toBeReconciled.map(moduleName => {
-      return this.getConfig(moduleName, false).then(async config => {
+      return Promise.all([
+        this.getConfig(moduleName, false),
+        this.getConfigVersion(moduleName),
+      ]).then(async ([config, version]) => {
         const moduleConfig = await models.Config.getInstance().findOne({
           name: moduleName,
         });
         if (moduleConfig) {
           await models.Config.getInstance().findByIdAndUpdate(moduleConfig._id, {
             config: config,
+            version,
           });
         } else {
-          await models.Config.getInstance().create({ name: moduleName, config: config });
+          await models.Config.getInstance().create({
+            name: moduleName,
+            config: config,
+            version,
+          });
         }
       });
     });
@@ -166,11 +216,36 @@ export class ConfigStorage {
     return JSON.parse(config);
   }
 
-  async setConfig(moduleName: string, config: string, waitReconcile: boolean = true) {
+  async setConfigAtVersion(
+    moduleName: string,
+    config: string,
+    version: number,
+    waitReconcile: boolean = true,
+  ) {
     if (waitReconcile) {
       await this.waitForReconcile();
     }
     await this.grpcSdk.state!.setKey(`moduleConfigs.${moduleName}`, config);
+    await this.grpcSdk.state!.setKey(this.versionKey(moduleName), String(version));
+  }
+
+  async setConfig(moduleName: string, config: string, waitReconcile: boolean = true) {
+    if (waitReconcile) {
+      await this.waitForReconcile();
+    }
+    const meta = await this.getConfigVersionMeta(moduleName);
+    let currentVersion = meta.version;
+    if (this.grpcSdk.isAvailable('database')) {
+      const dbDoc = await models.Config.getInstance()
+        .findOne({ name: moduleName })
+        .catch(() => null);
+      if (dbDoc) {
+        currentVersion = Math.max(currentVersion, dbDoc.version ?? 0);
+      }
+    }
+    const newVersion = currentVersion + 1;
+    await this.grpcSdk.state!.setKey(`moduleConfigs.${moduleName}`, config);
+    await this.grpcSdk.state!.setKey(this.versionKey(moduleName), String(newVersion));
     if (!this.toBeReconciled.includes(moduleName) && waitReconcile) {
       this.toBeReconciled.push(moduleName);
     }

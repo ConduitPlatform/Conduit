@@ -9,6 +9,11 @@ const schema: ConduitModel = {
     default: {},
     required: true,
   },
+  version: {
+    type: TYPE.Number,
+    default: 0,
+    required: true,
+  },
 };
 const modelOptions = {
   timestamps: true,
@@ -29,6 +34,7 @@ export class Config extends ConduitActiveSchema<Config> {
   //todo rename
   declare name: string;
   config!: any;
+  declare version: number;
 
   private constructor(database: DatabaseProvider) {
     super(database, Config.name, schema, modelOptions, collectionName);
