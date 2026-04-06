@@ -168,7 +168,7 @@ export class ZodParser {
     }
 
     if (ParserUtils.isArrayType(field)) {
-      return this.parseArrayField(fieldName, field as UntypedArray);
+      return this.parseArrayField(fieldName, field as UntypedArray).optional();
     }
 
     if (typeof field === 'object' && field !== null) {
