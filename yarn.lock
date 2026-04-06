@@ -4775,10 +4775,10 @@
     "@tufjs/canonical-json" "2.0.0"
     minimatch "^9.0.4"
 
-"@types/ali-oss@^6.16.7":
-  version "6.16.7"
-  resolved "https://registry.yarnpkg.com/@types/ali-oss/-/ali-oss-6.16.7.tgz#57638621e7893f4dbf76aa8f60fdfff324d299f3"
-  integrity sha512-o3jORqeXEgooIkOfXk1r77BaIZtPHaPRJvTus/yvFDrjRVt65POGalmt9w72d1amGq39mag/t7Rd99MLs3nasw==
+"@types/ali-oss@^6.23.3":
+  version "6.23.3"
+  resolved "https://registry.yarnpkg.com/@types/ali-oss/-/ali-oss-6.23.3.tgz#3a46cbd63384bdd2df7f0540baac3ccb9a584465"
+  integrity sha512-huSf6njkqhSeR37OMJTGMCyUg2d9Zp2AioefhYuUMeh0vNM+WybctrBor7bO/RcCbLCQI6sHn6NtPBIWALYVJg==
 
 "@types/babel__core@^7.1.14":
   version "7.1.19"
@@ -5804,10 +5804,10 @@ ajv@^8.11.0:
     require-from-string "^2.0.2"
     uri-js "^4.2.2"
 
-ali-oss@^6.21.0:
-  version "6.21.0"
-  resolved "https://registry.yarnpkg.com/ali-oss/-/ali-oss-6.21.0.tgz#48053f563d31e8c92c8fc6eacceb68f919282b6a"
-  integrity sha512-dRvKWO/GJEa6dlsCnvmgHIbU5+yE/SmZsE4kZRGNU7Uotr9uIkQWGqv4szLTxRSxWv3YgL+BZgt+swIgitYGjA==
+ali-oss@^6.23.0:
+  version "6.23.0"
+  resolved "https://registry.yarnpkg.com/ali-oss/-/ali-oss-6.23.0.tgz#0bb236428307986ece0bf9243d77d7029d7b6ed2"
+  integrity sha512-FipRmyd16Pr/tEey/YaaQ/24Pc3HEpLM9S1DRakEuXlSLXNIJnu1oJtHM53eVYpvW3dXapSjrip3xylZUTIZVQ==
   dependencies:
     address "^1.2.2"
     agentkeepalive "^3.4.1"
@@ -14207,14 +14207,14 @@ qs@6.11.0:
   dependencies:
     side-channel "^1.0.4"
 
-qs@6.13.0, qs@^6.4.0, qs@^6.9.4:
+qs@6.13.0:
   version "6.13.0"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.13.0.tgz#6ca3bd58439f7e245655798997787b0d88a51906"
   integrity sha512-+38qI9SOr8tfZ4QmJNplMUxqjbe7LKvvZgWdExBOmd+egZTtjLB67Gu0HRX3u/XOq7UU2Nx6nsjvS16Z9uwfpg==
   dependencies:
     side-channel "^1.0.6"
 
-qs@^6.11.0, qs@~6.14.0:
+qs@^6.11.0, qs@^6.4.0, qs@^6.9.4, qs@~6.14.0:
   version "6.14.0"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.14.0.tgz#c63fa40680d2c5c941412a0e899c89af60c0a930"
   integrity sha512-YWWTjgABSKcvs/nWBi9PycY/JiPJqOD4JA6o9Sej2AtvSGarXxKC3OQSk4pAarbdQlKAh5D4FCQkJNkW+GAn3w==
@@ -16570,18 +16570,7 @@ util-deprecate@^1.0.1, util-deprecate@^1.0.2, util-deprecate@~1.0.1:
   resolved "https://registry.yarnpkg.com/util-deprecate/-/util-deprecate-1.0.2.tgz#450d4dc9fa70de732762fbd2d4a28981419a0ccf"
   integrity sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==
 
-utility@^1.16.1:
-  version "1.17.0"
-  resolved "https://registry.npmmirror.com/utility/-/utility-1.17.0.tgz#60819f712a6e0ce774f52fb1d691992a5f59d362"
-  integrity sha512-KdVkF9An/0239BJ4+dqOa7NPrPIOeQE9AGfx0XS16O9DBiHNHRJMoeU5nL6pRGAkgJOqdOu8R4gBRcXnAocJKw==
-  dependencies:
-    copy-to "^2.0.1"
-    escape-html "^1.0.3"
-    mkdirp "^0.5.1"
-    mz "^2.7.0"
-    unescape "^1.0.1"
-
-utility@^1.18.0:
+utility@^1.16.1, utility@^1.18.0:
   version "1.18.0"
   resolved "https://registry.yarnpkg.com/utility/-/utility-1.18.0.tgz#af55f62e6d5a272e0cb02b0ab3e7f37c46435f36"
   integrity sha512-PYxZDA+6QtvRvm//++aGdmKG/cI07jNwbROz0Ql+VzFV1+Z0Dy55NI4zZ7RHc9KKpBePNFwoErqIuqQv/cjiTA==
