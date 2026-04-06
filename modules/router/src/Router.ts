@@ -68,6 +68,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private database: DatabaseProvider;
   private hasAppliedMiddleware: string[] = [];
   private _refreshTimeout: NodeJS.Timeout | null = null;
+  private _haInitialized = false;
 
   constructor() {
     super('router');
@@ -147,19 +148,21 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   async highAvailability() {
+    if (this._haInitialized) return;
+    this._haInitialized = true;
     await this.recoverFromState();
-    this.grpcSdk.bus!.subscribe('router', (message: string) => {
-      const messageParsed = JSON.parse(message);
-      try {
-        this.internalRegisterRoute(
-          messageParsed.protofile,
-          messageParsed.routes,
-          messageParsed.url,
-        );
-      } catch (err) {
-        ConduitGrpcSdk.Logger.error(err as Error);
-      }
-    });
+    this.grpcSdk.bus!.subscribe(
+      'router',
+      (message: string) => {
+        const messageParsed = JSON.parse(message);
+        try {
+          this.internalRegisterRoute(messageParsed.routes, messageParsed.url);
+        } catch (err) {
+          ConduitGrpcSdk.Logger.error(err as Error);
+        }
+      },
+      'router-ha',
+    );
     this.scheduleMiddlewareApply();
   }
 
@@ -168,16 +171,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       .state!.modifyState(async (existingState: Indexable) => {
         const state = existingState ?? {};
         if (!state.routes) state.routes = [];
-        let index;
-        (state.routes as UntypedArray).forEach((val, i) => {
-          if (val.url === url) {
-            index = i;
-          }
-        });
-        if (index) {
-          state.routes[index] = { routes, url };
+        const routesArr = state.routes as UntypedArray;
+        const index = routesArr.findIndex((val: { url?: string }) => val.url === url);
+        if (index !== -1) {
+          routesArr[index] = { routes, url };
         } else {
-          state.routes.push({
+          routesArr.push({
             routes,
             url,
           });

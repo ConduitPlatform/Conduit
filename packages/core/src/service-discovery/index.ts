@@ -132,10 +132,21 @@ export class ServiceDiscovery {
   }
 
   watchModules(call: ServerWritableStream<void, ModuleListResponse>) {
-    this.moduleRegister.on('serving-modules-update', () => {
-      const modules = this._serviceRegistry.getModuleDetailsList();
-      call.write({ modules });
-    });
+    const listener = () => {
+      try {
+        const modules = this._serviceRegistry.getModuleDetailsList();
+        call.write({ modules });
+      } catch {
+        this.moduleRegister.removeListener('serving-modules-update', listener);
+      }
+    };
+    this.moduleRegister.on('serving-modules-update', listener);
+    const detach = () => {
+      this.moduleRegister.removeListener('serving-modules-update', listener);
+    };
+    call.on('cancelled', detach);
+    call.on('close', detach);
+    call.on('error', detach);
   }
 
   async _recoverModule(moduleName: string, moduleUrl: string) {

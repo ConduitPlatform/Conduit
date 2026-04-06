@@ -96,6 +96,8 @@ export default class Authentication extends ManagedModule<Config> {
   private database: DatabaseProvider;
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
   private monitorsActive = false;
+  /** Last known serving flag per monitored module; avoids redundant route refreshes */
+  private _monitoredServingStatus: Record<string, boolean> = {};
 
   constructor() {
     super('authentication');
@@ -279,27 +281,41 @@ export default class Authentication extends ManagedModule<Config> {
   initMonitors() {
     if (this.monitorsActive) return;
     this.monitorsActive = true;
-    this.grpcSdk.monitorModule('email', async () => {
-      this.refreshAppRoutes();
+    this._monitoredServingStatus = {};
+
+    const onPeerServing = (moduleName: string, serving: boolean) => {
+      if (serving === this._monitoredServingStatus[moduleName]) return;
+      this._monitoredServingStatus[moduleName] = serving;
+      if (serving) this.refreshAppRoutes();
+    };
+
+    this.grpcSdk.monitorModule('email', (serving: boolean) => {
+      onPeerServing('email', serving);
     });
-    this.grpcSdk.monitorModule('authorization', async () => {
-      this.refreshAppRoutes();
-      this.adminRouter.registerAdminRoutes();
+    this.grpcSdk.monitorModule('authorization', (serving: boolean) => {
+      if (serving === this._monitoredServingStatus['authorization']) return;
+      this._monitoredServingStatus['authorization'] = serving;
+      if (serving) {
+        this.refreshAppRoutes();
+        this.adminRouter.registerAdminRoutes();
+      }
     });
-    this.grpcSdk.monitorModule('sms', async () => {
-      this.refreshAppRoutes();
+    this.grpcSdk.monitorModule('sms', (serving: boolean) => {
+      onPeerServing('sms', serving);
     });
-    this.grpcSdk.monitorModule('router', async () => {
-      this.refreshAppRoutes();
+    this.grpcSdk.monitorModule('router', (serving: boolean) => {
+      onPeerServing('router', serving);
     });
   }
 
   destroyMonitors() {
     if (!this.monitorsActive) return;
     this.monitorsActive = false;
+    this._monitoredServingStatus = {};
     this.grpcSdk.unmonitorModule('email');
     this.grpcSdk.unmonitorModule('sms');
     this.grpcSdk.unmonitorModule('router');
+    this.grpcSdk.unmonitorModule('authorization');
   }
 
   async initializeMetrics() {

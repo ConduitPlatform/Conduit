@@ -309,22 +309,38 @@ export class ConduitRoutingController {
     await this._socketRouter?.handleSocketPush(data);
   }
 
+  /** True if any enabled transport would change this route (new or definition changed). */
+  private anyTransportRouteChanged(route: ConduitRoute): boolean {
+    const rest = this._restRouter?.routeChanged(route);
+    const gql = this._graphQLRouter?.routeChanged(route);
+    const mcp = this._mcpRouter?.routeChanged(route);
+    if (rest === true || gql === true || mcp === true) return true;
+    if (rest === undefined && gql === undefined && mcp === undefined) return true;
+    return false;
+  }
+
   registerRoutes(
     processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[],
     url?: string,
   ) {
+    let needsRouterRefresh = false;
     processedRoutes.forEach(r => {
       if (r instanceof ConduitMiddleware) {
+        needsRouterRefresh = true;
         ConduitGrpcSdk.Logger.log(
           'New middleware registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerRouteMiddleware(r, url!);
       } else if (r instanceof ConduitSocket) {
+        needsRouterRefresh = true;
         ConduitGrpcSdk.Logger.log(
           'New socket registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerConduitSocket(r);
       } else {
+        if (this.anyTransportRouteChanged(r)) {
+          needsRouterRefresh = true;
+        }
         ConduitGrpcSdk.Logger.log(
           'New route registered: ' +
             r.input.action +
@@ -336,9 +352,11 @@ export class ConduitRoutingController {
         this.registerConduitRoute(r);
       }
     });
-    this._restRouter?.scheduleRouterRefresh();
-    this._graphQLRouter?.scheduleRouterRefresh();
-    this._mcpRouter?.scheduleRouterRefresh();
+    if (needsRouterRefresh) {
+      this._restRouter?.scheduleRouterRefresh();
+      this._graphQLRouter?.scheduleRouterRefresh();
+      this._mcpRouter?.scheduleRouterRefresh();
+    }
   }
 
   onError(error: any) {

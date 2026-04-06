@@ -49,6 +49,7 @@ export class GraphQLController extends ConduitRouter {
   mutations!: string;
   resolvers: any;
   private _apollo?: express.RequestHandler;
+  private _apolloServer?: ApolloServer;
   private _relationTypes: string[] = [];
   private _apolloRefreshTimeout: NodeJS.Timeout | null = null;
   private readonly _parser: GraphQlParser;
@@ -74,6 +75,7 @@ export class GraphQLController extends ConduitRouter {
     if (!this.typeDefs || this.typeDefs === ' ' || !this.resolvers) return;
     this.importDbTypes();
 
+    const prevServer = this._apolloServer;
     const server = new ApolloServer({
       typeDefs: this.typeDefs,
       resolvers: this.resolvers,
@@ -81,6 +83,7 @@ export class GraphQLController extends ConduitRouter {
       // @ts-ignore
       plugins: [cookiePlugin],
     });
+    this._apolloServer = server;
     server.start().then(() => {
       this._apollo = expressMiddleware(server, {
         context: async ({ req, res }) => {
@@ -90,6 +93,9 @@ export class GraphQLController extends ConduitRouter {
           return { context, headers, cookies, setCookie: [], removeCookie: [], res };
         },
       });
+      if (prevServer && prevServer !== server) {
+        prevServer.stop().catch(() => {});
+      }
     });
   }
 
@@ -537,6 +543,8 @@ export class GraphQLController extends ConduitRouter {
     if (this._apolloRefreshTimeout) {
       clearTimeout(this._apolloRefreshTimeout);
     }
+    this._apolloServer?.stop().catch(() => {});
+    delete this._apolloServer;
     delete this._apollo;
   }
 
