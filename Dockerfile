@@ -27,4 +27,4 @@ RUN if [  -z "$BUILDING_SERVICE" ] ; then npx turbo run build ;  \
     --filter=@conduitplatform/node-2fa; \
     else cd /app/$BUILDING_SERVICE && pnpm build && cd /app ; fi
 
-RUN pnpm store prune && pnpm -r exec rm -rf dist && rm -rf node_modules
+RUN pnpm store prune && pnpm -r exec rm -rf node_modules && rm -rf node_modules
