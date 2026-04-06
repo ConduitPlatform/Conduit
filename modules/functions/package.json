@@ -9,6 +9,12 @@
   "engines": {
     "node": ">=24"
   },
+  "conduit": {
+    "peers": {
+      "await": ["database"],
+      "watch": [{ "module": "router", "edge": "rising" }]
+    }
+  },
   "scripts": {
     "start": "node dist/index.js",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",

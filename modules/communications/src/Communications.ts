@@ -120,13 +120,13 @@ export default class Communications extends ManagedModule<Config> {
   private pushProvider: BaseNotificationProvider<unknown> | undefined;
   private smsProvider: ISmsProvider | undefined;
 
-  constructor() {
-    super('communications');
+  constructor(peerManifestRoot?: string) {
+    super('communications', peerManifestRoot);
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
+    await this.awaitPeersFromManifest();
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);

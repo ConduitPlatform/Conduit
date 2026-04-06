@@ -9,6 +9,15 @@
   "engines": {
     "node": ">=24"
   },
+  "conduit": {
+    "peers": {
+      "await": ["database"],
+      "watch": [
+        { "module": "authentication", "edge": "both" },
+        { "module": "router", "edge": "rising" }
+      ]
+    }
+  },
   "scripts": {
     "start": "node dist/index.js",
     "prepublish": "npm run build",

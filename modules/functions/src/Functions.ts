@@ -28,13 +28,13 @@ export default class Functions extends ManagedModule<Config> {
   private functionsController: FunctionController;
   private database: DatabaseProvider;
 
-  constructor() {
-    super('functions');
+  constructor(peerManifestRoot?: string) {
+    super('functions', peerManifestRoot);
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
+    await this.awaitPeersFromManifest();
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
   }
@@ -42,6 +42,8 @@ export default class Functions extends ManagedModule<Config> {
   async onConfig() {
     const configActive = ConfigController.getInstance().config.active;
     if (!configActive) {
+      this.disposeDeclaredPeerWatches();
+      this.isRunning = false;
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
       this.trustModelNoticeLoggedForActiveSession = false;
     } else if (!this.trustModelNoticeLoggedForActiveSession) {
@@ -50,27 +52,25 @@ export default class Functions extends ManagedModule<Config> {
       );
       this.trustModelNoticeLoggedForActiveSession = true;
     }
-    if (!this.isRunning) {
-      this.grpcSdk
-        .waitForExistence('router')
-        .then(() => {
-          this.isRunning = true;
-          this.functionsController = new FunctionController(
-            this.grpcServer,
-            this.grpcSdk,
-          );
-          this.adminRouter = new AdminHandlers(
-            this.grpcServer,
-            this.grpcSdk,
-            this.functionsController,
-          );
-          return this.functionsController.refreshRoutes();
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e.message);
-        });
+    if (configActive) {
+      this.registerDeclaredPeerWatches();
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
-    this.updateHealth(HealthCheckStatus.SERVING);
+  }
+
+  protected override onDeclaredPeerConnectionUpdate(
+    moduleName: string,
+    serving: boolean,
+  ): void {
+    if (moduleName !== 'router' || !serving || this.isRunning) return;
+    this.isRunning = true;
+    this.functionsController = new FunctionController(this.grpcServer, this.grpcSdk);
+    this.adminRouter = new AdminHandlers(
+      this.grpcServer,
+      this.grpcSdk,
+      this.functionsController,
+    );
+    void this.functionsController.refreshRoutes();
   }
 
   protected registerSchemas(): Promise<unknown> {

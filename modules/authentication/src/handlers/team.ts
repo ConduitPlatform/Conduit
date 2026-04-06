@@ -33,6 +33,7 @@ import { isEmpty } from 'lodash-es';
 export class TeamsHandler implements IAuthenticationStrategy {
   private static _instance?: TeamsHandler;
   private initialized = false;
+  private _teamInviteEmailDispose: (() => void) | null = null;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
@@ -1153,7 +1154,9 @@ export class TeamsHandler implements IAuthenticationStrategy {
           );
         }
         if (config.teams.invites.sendEmail) {
-          this.grpcSdk.onceModuleUp('email', async () => {
+          this._teamInviteEmailDispose?.();
+          this._teamInviteEmailDispose = this.grpcSdk.oncePeerUp('email', async () => {
+            this._teamInviteEmailDispose = null;
             await this.grpcSdk.emailProvider!.registerTemplate(TeamInviteTemplate);
           });
         }

@@ -17,20 +17,22 @@ import { isEmpty } from 'lodash-es';
 import { Status } from '@grpc/grpc-js/build/src/constants.js';
 
 export class AuthorizationRouter {
-  private _routingManager: RoutingManager;
+  private _routingManager?: RoutingManager;
   private _permissionsController: PermissionsController;
+  private _clientRoutesRegistered = false;
 
   constructor(
     readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
   ) {
     this._permissionsController = PermissionsController.getInstance(this.grpcSdk);
-    this.registeredRoutes();
   }
 
-  async registeredRoutes() {
-    await this.grpcSdk.waitForExistence('router');
-    this._routingManager = new RoutingManager(this.grpcSdk.router!, this.server);
+  /** Call when the `router` peer is serving (e.g. from {@link ManagedModule.onDeclaredPeerConnectionUpdate}). */
+  async registerClientRoutes(): Promise<void> {
+    if (this._clientRoutesRegistered || !this.grpcSdk.router) return;
+    this._clientRoutesRegistered = true;
+    this._routingManager = new RoutingManager(this.grpcSdk.router, this.server);
     this._routingManager.clear();
     this._routingManager.route(
       {

@@ -32,7 +32,14 @@ import {
 import { checkModuleHealth, ConduitModule } from './classes/index.js';
 import { Client, CompatServiceDefinition } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
-import { GrpcError, HealthCheckStatus } from './types/index.js';
+import {
+  AwaitPeerOptions,
+  GrpcError,
+  HealthCheckStatus,
+  PeerWatchBatchOptions,
+  PeerWatchOptions,
+  PeerWatchSpec,
+} from './types/index.js';
 import { createSigner } from 'fast-jwt';
 import { ClusterOptions, RedisOptions } from 'ioredis';
 import { IConduitLogger, IConduitMetrics } from './interfaces/index.js';
@@ -76,6 +83,7 @@ class ConduitGrpcSdk {
   private readonly _serviceHealthStatusGetter: () => HealthCheckStatus;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
+  private readonly _moduleMonitorListeners = new Map<string, Set<(s: boolean) => void>>();
 
   constructor(
     serverUrl: string,
@@ -378,13 +386,166 @@ class ConduitGrpcSdk {
       })
       .then(() => {
         const emitter = this.config.getModuleWatcher();
-        emitter.on(`module-connection-update:${moduleName}`, callback);
+        const event = `module-connection-update:${moduleName}`;
+        emitter.on(event, callback);
+        let set = this._moduleMonitorListeners.get(moduleName);
+        if (!set) {
+          set = new Set();
+          this._moduleMonitorListeners.set(moduleName, set);
+        }
+        set.add(callback);
       });
   }
 
   unmonitorModule(moduleName: string) {
     const emitter = this.config.getModuleWatcher();
-    emitter.removeAllListeners(`module-connection-update:${moduleName}`);
+    const event = `module-connection-update:${moduleName}`;
+    const set = this._moduleMonitorListeners.get(moduleName);
+    if (set) {
+      for (const cb of set) {
+        emitter.off(event, cb);
+      }
+      this._moduleMonitorListeners.delete(moduleName);
+    }
+  }
+
+  async awaitPeer(moduleName: string, options?: AwaitPeerOptions): Promise<void> {
+    const onlyIfServing = options?.onlyIfServing ?? true;
+    if (this.isAvailable(moduleName)) return;
+    if (options?.timeoutMs != null) {
+      await Promise.race([
+        this.waitForExistence(moduleName, onlyIfServing),
+        sleep(options.timeoutMs).then(() => {
+          throw new GrpcError(
+            status.DEADLINE_EXCEEDED,
+            `awaitPeer(${moduleName}) timed out after ${options.timeoutMs}ms`,
+          );
+        }),
+      ]);
+      return;
+    }
+    await this.waitForExistence(moduleName, onlyIfServing);
+  }
+
+  watchPeer(
+    moduleName: string,
+    handler: (serving: boolean) => void,
+    options?: PeerWatchOptions,
+  ): () => void {
+    const edge = options?.edge ?? 'both';
+    const dedupe = options?.dedupe ?? (edge === 'rising' || edge === 'falling');
+    let last: boolean | undefined;
+    const event = `module-connection-update:${moduleName}`;
+    const emitter = this.config.getModuleWatcher();
+
+    const listener = (serving: boolean) => {
+      if (dedupe && last === serving) return;
+      let fire = false;
+      if (edge === 'both') {
+        fire = true;
+      } else if (edge === 'rising') {
+        fire = serving === true && last !== true;
+      } else {
+        fire = serving === false && last !== false;
+      }
+      last = serving;
+      if (fire) handler(serving);
+    };
+
+    let attached = false;
+    const attach = () => {
+      if (attached) return;
+      attached = true;
+      emitter.on(event, listener);
+    };
+
+    if (options?.syncInitialState !== false) {
+      Promise.resolve()
+        .then(() => this._modules[moduleName]?.healthClient?.check({}))
+        .then(res => {
+          const serving = res?.status === HealthCheckResponse_ServingStatus.SERVING;
+          last = serving;
+          let fire = false;
+          if (edge === 'both') fire = true;
+          else if (edge === 'rising') fire = serving === true;
+          else fire = serving === false;
+          if (fire) handler(serving);
+        })
+        .catch(() => {
+          last = false;
+          if (edge === 'both' || edge === 'falling') handler(false);
+        })
+        .finally(() => attach());
+    } else {
+      attach();
+    }
+
+    return () => {
+      emitter.off(event, listener);
+    };
+  }
+
+  oncePeerUp(moduleName: string, callback: () => void | Promise<void>): () => void {
+    let done = false;
+    const dispose = this.watchPeer(
+      moduleName,
+      () => {
+        if (done) return;
+        done = true;
+        dispose();
+        void Promise.resolve(callback());
+      },
+      { edge: 'rising', syncInitialState: true },
+    );
+    return () => {
+      if (done) return;
+      done = true;
+      dispose();
+    };
+  }
+
+  getKnownModuleNames(): string[] {
+    return Object.keys(this._availableModules);
+  }
+
+  watchPeers(
+    specs: PeerWatchSpec[],
+    handler: (statuses: Record<string, boolean>) => void,
+    options?: PeerWatchBatchOptions,
+  ): () => void {
+    if (specs.length === 0) {
+      return () => {};
+    }
+    const debounceMs = options?.debounceMs ?? 100;
+    const syncInitial = options?.syncInitialState !== false;
+    const statuses: Record<string, boolean> = {};
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const flush = () => {
+      timer = null;
+      handler({ ...statuses });
+    };
+    const schedule = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(flush, debounceMs);
+    };
+
+    const disposers = specs.map(spec =>
+      this.watchPeer(
+        spec.module,
+        serving => {
+          statuses[spec.module] = serving;
+          schedule();
+        },
+        { edge: spec.edge ?? 'both', syncInitialState: syncInitial },
+      ),
+    );
+
+    return () => {
+      for (const d of disposers) {
+        d();
+      }
+      if (timer) clearTimeout(timer);
+    };
   }
 
   initializeEventBus(): Promise<EventBus> {

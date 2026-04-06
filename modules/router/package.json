@@ -8,6 +8,11 @@
   "engines": {
     "node": ">=24"
   },
+  "conduit": {
+    "peers": {
+      "await": ["database"]
+    }
+  },
   "scripts": {
     "start": "node dist/index.js",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",

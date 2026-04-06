@@ -8,6 +8,17 @@
   "engines": {
     "node": ">=24"
   },
+  "conduit": {
+    "peers": {
+      "await": ["database"],
+      "watch": [
+        { "module": "email", "edge": "rising" },
+        { "module": "authorization", "edge": "rising" },
+        { "module": "sms", "edge": "rising" },
+        { "module": "router", "edge": "rising" }
+      ]
+    }
+  },
   "scripts": {
     "start": "node dist/index.js",
     "prepare": "npm run build",

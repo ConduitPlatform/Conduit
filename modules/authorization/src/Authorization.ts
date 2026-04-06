@@ -82,19 +82,20 @@ export default class Authorization extends ManagedModule<Config> {
   private database: DatabaseProvider;
   private queueController: QueueController;
 
-  constructor() {
-    super('authorization');
+  constructor(peerManifestRoot?: string) {
+    super('authorization', peerManifestRoot);
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
+    await this.awaitPeersFromManifest();
     this.database = this.grpcSdk.database!;
   }
 
   async onConfig() {
     const config = ConfigController.getInstance().config;
     if (!config.active) {
+      this.disposeDeclaredPeerWatches();
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       await this.registerSchemas();
@@ -108,7 +109,17 @@ export default class Authorization extends ManagedModule<Config> {
       this.resourceController = ResourceController.getInstance(this.grpcSdk);
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       this.clientRouter = new AuthorizationRouter(this.grpcServer, this.grpcSdk);
+      this.registerDeclaredPeerWatches();
       this.updateHealth(HealthCheckStatus.SERVING);
+    }
+  }
+
+  protected override onDeclaredPeerConnectionUpdate(
+    moduleName: string,
+    serving: boolean,
+  ): void {
+    if (moduleName === 'router' && serving) {
+      void this.clientRouter?.registerClientRoutes();
     }
   }
 

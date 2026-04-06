@@ -83,14 +83,15 @@ export default class Storage extends ManagedModule<Config> {
   private storageParamAdapter: StorageParamAdapter;
   private publicContainerMigrationRan: boolean = false;
   private previousCdnConfig: CdnConfiguration = {};
+  private _storageAuthzResourceDispose: (() => void) | null = null;
 
-  constructor() {
-    super('storage');
+  constructor(peerManifestRoot?: string) {
+    super('storage', peerManifestRoot);
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
+    await this.awaitPeersFromManifest();
     this.database = this.grpcSdk.databaseProvider!;
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
@@ -212,22 +213,26 @@ export default class Storage extends ManagedModule<Config> {
 
   async onConfig() {
     if (!ConfigController.getInstance().config.active) {
+      this._storageAuthzResourceDispose?.();
+      this._storageAuthzResourceDispose = null;
+      this.disposeDeclaredPeerWatches();
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
-      await this.grpcSdk.monitorModule(
-        'authentication',
-        serving => {
-          this.enableAuthRoutes = serving;
-          this.refreshAppRoutes();
-        },
-        false,
-      );
+      this.registerDeclaredPeerWatches();
       const { provider, local, google, azure, aws, aliyun, authorization } =
         ConfigController.getInstance().config;
       if (authorization.enabled) {
-        this.grpcSdk.onceModuleUp('authorization', () => {
-          this.grpcSdk.authorization!.defineResource(FileResource);
-        });
+        this._storageAuthzResourceDispose?.();
+        this._storageAuthzResourceDispose = this.grpcSdk.oncePeerUp(
+          'authorization',
+          () => {
+            this._storageAuthzResourceDispose = null;
+            this.grpcSdk.authorization!.defineResource(FileResource);
+          },
+        );
+      } else {
+        this._storageAuthzResourceDispose?.();
+        this._storageAuthzResourceDispose = null;
       }
       this.storageProvider = createStorageProvider(provider, {
         local,
@@ -258,6 +263,19 @@ export default class Storage extends ManagedModule<Config> {
       );
       await this.refreshAppRoutes();
       this.updateHealth(HealthCheckStatus.SERVING);
+    }
+  }
+
+  protected override onDeclaredPeerConnectionUpdate(
+    moduleName: string,
+    serving: boolean,
+  ): void {
+    if (moduleName === 'authentication') {
+      this.enableAuthRoutes = serving;
+      void this.refreshAppRoutes();
+    }
+    if (moduleName === 'router' && serving) {
+      void this.refreshAppRoutes();
     }
   }
 
@@ -514,19 +532,19 @@ export default class Storage extends ManagedModule<Config> {
   }
 
   private async refreshAppRoutes() {
-    this.grpcSdk
-      .waitForExistence('router')
-      .then(() => {
-        this.userRouter = new StorageRoutes(
-          this.grpcServer,
-          this.grpcSdk,
-          this._fileHandlers,
-          this.enableAuthRoutes,
-        );
-        return this.userRouter.registerRoutes();
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
+    if (this.userRouter) {
+      await this.userRouter.registerRoutes();
+      return;
+    }
+    if (!this.grpcSdk.isAvailable('router')) {
+      return;
+    }
+    this.userRouter = new StorageRoutes(
+      this.grpcServer,
+      this.grpcSdk,
+      this._fileHandlers,
+      this.enableAuthRoutes,
+    );
+    await this.userRouter.registerRoutes();
   }
 }

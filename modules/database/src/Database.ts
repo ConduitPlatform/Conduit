@@ -101,9 +101,11 @@ export default class DatabaseModule extends ManagedModule<void> {
   private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
   private schemaController?: SchemaController;
   private customEndpointController?: CustomEndpointController;
+  private _authorizationDefinitionsRegistered = false;
+  private _databaseRouterWatchDispose: (() => void) | null = null;
 
-  constructor(dbType: string, dbUri: string) {
-    super('database');
+  constructor(dbType: string, dbUri: string, peerManifestRoot?: string) {
+    super('database', peerManifestRoot);
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(dbUri);
@@ -152,9 +154,19 @@ export default class DatabaseModule extends ManagedModule<void> {
     const coreHealth = (await this.grpcSdk.core.check()) as unknown as HealthCheckStatus;
     this.onCoreHealthChange(coreHealth);
     this.grpcSdk.core.watch('');
-    this.grpcSdk.onceModuleUp('authorization', async () => {
-      await this._activeAdapter.registerAuthorizationDefinitions();
-    });
+    this.registerDeclaredPeerWatches();
+  }
+
+  protected onDeclaredPeerConnectionUpdate(moduleName: string, serving: boolean): void {
+    if (
+      moduleName !== 'authorization' ||
+      !serving ||
+      this._authorizationDefinitionsRegistered
+    ) {
+      return;
+    }
+    this._authorizationDefinitionsRegistered = true;
+    void this._activeAdapter.registerAuthorizationDefinitions();
   }
 
   async initializeMetrics() {
@@ -946,9 +958,11 @@ export default class DatabaseModule extends ManagedModule<void> {
         this.schemaController,
         this.customEndpointController,
       );
-      this.grpcSdk
-        .waitForExistence('router')
-        .then(() => {
+      this._databaseRouterWatchDispose?.();
+      this._databaseRouterWatchDispose = this.grpcSdk.watchPeer(
+        'router',
+        serving => {
+          if (!serving || this.userRouter) return;
           this.userRouter = new DatabaseRoutes(
             this.grpcServer,
             this._activeAdapter,
@@ -956,11 +970,12 @@ export default class DatabaseModule extends ManagedModule<void> {
           );
           this.schemaController?.setRouter(this.userRouter);
           this.customEndpointController?.setRouter(this.userRouter);
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e.message);
-        });
+        },
+        { edge: 'rising', syncInitialState: true },
+      );
     } else {
+      this._databaseRouterWatchDispose?.();
+      this._databaseRouterWatchDispose = null;
       this.grpcSdk.core.healthCheckWatcher.once(
         'grpc-health-change:Core',
         boundFunctionRef,

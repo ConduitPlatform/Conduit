@@ -70,15 +70,15 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private _refreshTimeout: NodeJS.Timeout | null = null;
   private _haInitialized = false;
 
-  constructor() {
-    super('router');
+  constructor(peerManifestRoot?: string) {
+    super('router', peerManifestRoot);
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     this._routes = [];
     this._globalMiddlewares = [];
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
+    await this.awaitPeersFromManifest();
     this.database = this.grpcSdk.databaseProvider!;
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);

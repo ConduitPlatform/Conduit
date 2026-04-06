@@ -96,19 +96,22 @@ export default class Authentication extends ManagedModule<Config> {
   private database: DatabaseProvider;
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
   private monitorsActive = false;
-  /** Last known serving flag per monitored module; avoids redundant route refreshes */
-  private _monitoredServingStatus: Record<string, boolean> = {};
+  private _authzUserResourceDispose: (() => void) | null = null;
 
-  constructor() {
-    super('authentication');
+  constructor(peerManifestRoot?: string) {
+    super('authentication', peerManifestRoot);
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
-    this.grpcSdk.onceModuleUp('authorization', async () => {
-      await this.grpcSdk.authorization!.defineResource(UserAuthz);
-    });
+    await this.awaitPeersFromManifest();
+    this._authzUserResourceDispose = this.grpcSdk.oncePeerUp(
+      'authorization',
+      async () => {
+        this._authzUserResourceDispose = null;
+        await this.grpcSdk.authorization!.defineResource(UserAuthz);
+      },
+    );
     this.database = this.grpcSdk.database!;
     TokenProvider.getInstance(this.grpcSdk);
     await this.registerSchemas();
@@ -281,41 +284,35 @@ export default class Authentication extends ManagedModule<Config> {
   initMonitors() {
     if (this.monitorsActive) return;
     this.monitorsActive = true;
-    this._monitoredServingStatus = {};
-
-    const onPeerServing = (moduleName: string, serving: boolean) => {
-      if (serving === this._monitoredServingStatus[moduleName]) return;
-      this._monitoredServingStatus[moduleName] = serving;
-      if (serving) this.refreshAppRoutes();
-    };
-
-    this.grpcSdk.monitorModule('email', (serving: boolean) => {
-      onPeerServing('email', serving);
-    });
-    this.grpcSdk.monitorModule('authorization', (serving: boolean) => {
-      if (serving === this._monitoredServingStatus['authorization']) return;
-      this._monitoredServingStatus['authorization'] = serving;
-      if (serving) {
-        this.refreshAppRoutes();
-        this.adminRouter.registerAdminRoutes();
-      }
-    });
-    this.grpcSdk.monitorModule('sms', (serving: boolean) => {
-      onPeerServing('sms', serving);
-    });
-    this.grpcSdk.monitorModule('router', (serving: boolean) => {
-      onPeerServing('router', serving);
-    });
+    this.registerDeclaredPeerWatches();
   }
 
   destroyMonitors() {
     if (!this.monitorsActive) return;
     this.monitorsActive = false;
-    this._monitoredServingStatus = {};
-    this.grpcSdk.unmonitorModule('email');
-    this.grpcSdk.unmonitorModule('sms');
-    this.grpcSdk.unmonitorModule('router');
-    this.grpcSdk.unmonitorModule('authorization');
+    this.disposeDeclaredPeerWatches();
+    this._authzUserResourceDispose?.();
+    this._authzUserResourceDispose = null;
+  }
+
+  protected override onDeclaredPeerConnectionUpdate(
+    moduleName: string,
+    serving: boolean,
+  ): void {
+    if (moduleName === 'router' && serving) {
+      if (!this.userRouter) {
+        this.userRouter = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
+      }
+      this.scheduleAppRouteRefresh();
+      return;
+    }
+    if (!serving) return;
+    if (moduleName === 'authorization') {
+      this.refreshAppRoutes();
+      this.adminRouter?.registerAdminRoutes();
+      return;
+    }
+    this.refreshAppRoutes();
   }
 
   async initializeMetrics() {
@@ -956,16 +953,6 @@ export default class Authentication extends ManagedModule<Config> {
       this.scheduleAppRouteRefresh();
       return;
     }
-    const self = this;
-    this.grpcSdk
-      .waitForExistence('router')
-      .then(() => {
-        self.userRouter = new AuthenticationRoutes(self.grpcServer, self.grpcSdk);
-        this.scheduleAppRouteRefresh();
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
   }
 
   private scheduleAppRouteRefresh() {

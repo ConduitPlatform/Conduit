@@ -10,7 +10,8 @@ import {
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
-import { initializeSdk, merge } from './utilities/index.js';
+import { initializeSdk, merge, readConduitPeersManifest } from './utilities/index.js';
+import type { ConduitPeersManifest } from './utilities/conduitPeers.js';
 import { convictConfigParser } from './utilities/convictConfigParser.js';
 import { RoutingManager } from './routing/index.js';
 import { RoutingController } from './routing/RoutingController.js';
@@ -24,9 +25,14 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   private readonly serviceAddress: string;
   private readonly servicePort: string;
   private _moduleState: ModuleLifecycleStage;
+  private _declaredPeerWatchDisposers: (() => void)[] = [];
+  private _cachedPeersManifest: ConduitPeersManifest | null | undefined;
+  private _lastPeerBatchStates: Record<string, boolean> = {};
+  private readonly _peerManifestRoot?: string;
 
-  protected constructor(moduleName: string) {
+  protected constructor(moduleName: string, peerManifestRoot?: string) {
     super(moduleName);
+    this._peerManifestRoot = peerManifestRoot;
     this._moduleState = ModuleLifecycleStage.CREATE_GRPC;
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
@@ -150,6 +156,74 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
    * Implemented by individual modules.
    */
   async initializeMetrics() {}
+
+  protected getPeerManifestRoot(): string {
+    return this._peerManifestRoot ?? process.cwd();
+  }
+
+  protected loadConduitPeersManifest(): ConduitPeersManifest | null {
+    if (this._cachedPeersManifest === undefined) {
+      this._cachedPeersManifest = readConduitPeersManifest(this.getPeerManifestRoot());
+    }
+    return this._cachedPeersManifest;
+  }
+
+  private validateDeclaredPeerNames(names: string[]): void {
+    const known = new Set(this.grpcSdk.getKnownModuleNames());
+    for (const n of names) {
+      if (!known.has(n)) {
+        ConduitGrpcSdk.Logger.warn(
+          `Declared Conduit peer "${n}" is not a known built-in module (see ConduitGrpcSdk.getKnownModuleNames).`,
+        );
+      }
+    }
+  }
+
+  protected async awaitPeersFromManifest(): Promise<void> {
+    const manifest = this.loadConduitPeersManifest();
+    const peers = manifest?.peers?.await;
+    if (!peers?.length) return;
+    this.validateDeclaredPeerNames(peers);
+    await Promise.all(peers.map(m => this.grpcSdk.awaitPeer(m)));
+  }
+
+  protected registerDeclaredPeerWatches(): void {
+    this.disposeDeclaredPeerWatches();
+    const manifest = this.loadConduitPeersManifest();
+    const watch = manifest?.peers?.watch;
+    if (!watch?.length) return;
+    this.validateDeclaredPeerNames(watch.map(w => w.module));
+    const specs = watch.map(entry => ({
+      module: entry.module,
+      edge: entry.edge ?? 'rising',
+    }));
+    const dispose = this.grpcSdk.watchPeers(
+      specs,
+      statuses => {
+        for (const [mod, s] of Object.entries(statuses)) {
+          if (this._lastPeerBatchStates[mod] !== s) {
+            this.onDeclaredPeerConnectionUpdate(mod, s);
+            this._lastPeerBatchStates[mod] = s;
+          }
+        }
+      },
+      { debounceMs: 100, syncInitialState: true },
+    );
+    this._declaredPeerWatchDisposers.push(dispose);
+  }
+
+  protected disposeDeclaredPeerWatches(): void {
+    for (const d of this._declaredPeerWatchDisposers) {
+      d();
+    }
+    this._declaredPeerWatchDisposers = [];
+    this._lastPeerBatchStates = {};
+  }
+
+  protected onDeclaredPeerConnectionUpdate(
+    _moduleName: string,
+    _serving: boolean,
+  ): void {}
 
   async createGrpcServer() {
     this.grpcServer = new GrpcServer(this._port);
