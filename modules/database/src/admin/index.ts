@@ -519,6 +519,18 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
+        path: '/customEndpoints/:id',
+        action: ConduitRouteActions.GET,
+        description: `Returns a custom endpoint.`,
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('GetCustomEndpoint', CustomEndpoints.fields),
+      this.customEndpointsAdmin.getCustomEndpoint.bind(this.customEndpointsAdmin),
+    );
+    this.routingManager.route(
+      {
         path: '/customEndpoints',
         action: ConduitRouteActions.GET,
         description: `Returns queried custom endpoints and their total count.`,
@@ -572,7 +584,7 @@ export class AdminHandlers {
           query: ConduitJson.Optional,
           inputs: { type: [TYPE.JSON], required: false },
           assignments: { type: [TYPE.JSON], required: false },
-          // authentication: ConduitBoolean.Optional, // TODO: Support modifying auth
+          authentication: ConduitBoolean.Optional,
           sorted: ConduitBoolean.Optional,
           paginated: ConduitBoolean.Optional,
         },

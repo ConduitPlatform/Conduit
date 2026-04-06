@@ -157,6 +157,16 @@ export class CustomEndpointsAdmin {
     return { customEndpoints, count };
   }
 
+  async getCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const customEndpoint = await this.database
+      .getSchemaModel('CustomEndpoints')
+      .model.findOne({ _id: call.request.params.id });
+    if (isNil(customEndpoint)) {
+      throw new GrpcError(status.NOT_FOUND, 'Custom endpoint does not exist');
+    }
+    return customEndpoint;
+  }
+
   async createCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const {
       name,
@@ -180,6 +190,7 @@ export class CustomEndpointsAdmin {
     }
     const { schemaId, schemaName, fields, compiledFields } =
       await this.getAccessibleSchemaFields(operation, selectedSchema, selectedSchemaName);
+    await this.assertAuthenticationAllowedForSchema(authentication, schemaId, schemaName);
     let error = paramValidation(call.request.params);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
@@ -292,6 +303,12 @@ export class CustomEndpointsAdmin {
     });
     found.returns = schemaName;
     found.selectedSchemaName = schemaName;
+
+    await this.assertAuthenticationAllowedForSchema(
+      found.authentication,
+      found.selectedSchema?.toString?.() ?? String(found.selectedSchema),
+      found.selectedSchemaName,
+    );
 
     const customEndpoint = await this.database
       .getSchemaModel('CustomEndpoints')
@@ -443,10 +460,10 @@ export class CustomEndpointsAdmin {
     return canModify === 'Everything'
       ? schema.compiledFields
       : canModify === 'ExtensionOnly'
-      ? perms.extendable
-        ? schema.extensions.find(ext => ext.ownerModule === 'database')?.fields ?? {}
-        : {}
-      : {};
+        ? perms.extendable
+          ? (schema.extensions.find(ext => ext.ownerModule === 'database')?.fields ?? {})
+          : {}
+        : {};
   }
 
   private checkCanModify(perms: ConduitPermissions | undefined) {
@@ -455,5 +472,34 @@ export class CustomEndpointsAdmin {
     } else {
       return null;
     }
+  }
+
+  private async assertAuthenticationAllowedForSchema(
+    authentication: boolean | undefined,
+    schemaId: string,
+    schemaName: string,
+  ): Promise<void> {
+    if (authentication !== false) {
+      return;
+    }
+    const schema = await this.findDeclaredSchemaForCustomEndpoint(schemaId, schemaName);
+    if (schema?.modelOptions?.conduit?.authorization?.enabled) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Custom endpoints for schemas with authorization enabled must require authentication',
+      );
+    }
+  }
+
+  private async findDeclaredSchemaForCustomEndpoint(
+    schemaId: string,
+    schemaName: string,
+  ): Promise<IDeclaredSchema | null> {
+    return await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
+      $and: [
+        { name: { $nin: this.database.systemSchemas } },
+        schemaId ? { _id: schemaId } : { name: schemaName },
+      ],
+    });
   }
 }
