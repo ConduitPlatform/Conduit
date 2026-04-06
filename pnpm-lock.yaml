@@ -289,6 +289,9 @@ importers:
 
   libraries/module-tools:
     dependencies:
+      '@conduitplatform/grpc-sdk':
+        specifier: workspace:*
+        version: link:../grpc-sdk
       '@grpc/grpc-js':
         specifier: ^1.14.3
         version: 1.14.3
@@ -326,9 +329,6 @@ importers:
         specifier: ^6.1.4
         version: 6.1.4
     devDependencies:
-      '@conduitplatform/grpc-sdk':
-        specifier: workspace:*
-        version: link:../grpc-sdk
       '@types/convict':
         specifier: ^6.1.6
         version: 6.1.6
