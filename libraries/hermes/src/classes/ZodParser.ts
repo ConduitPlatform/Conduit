@@ -232,6 +232,12 @@ export class ZodParser {
         arrayType = arrMsg ? arrayType.max(n, arrMsg) : arrayType.max(n);
       }
     }
+    if (this.useCoercion) {
+      return z.preprocess(
+        val => (Array.isArray(val) ? val : val != null ? [val] : val),
+        arrayType,
+      );
+    }
     return arrayType;
   }
 
