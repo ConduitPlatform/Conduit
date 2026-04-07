@@ -211,11 +211,11 @@ export default class Chat extends ManagedModule<Config> {
 
   async sendMessage(call: GrpcRequest<SendMessageRequest>, callback: GrpcCallback<null>) {
     const userId = call.request.userId;
-    const { roomId, message, messageType } = call.request;
+    const { roomId, message, messageType, persist } = call.request;
 
     let errorMessage: string | null = null;
     const room = await models.ChatRoom.getInstance()
-      .findOne({ _id: roomId })
+      .findOne({ _id: roomId, deleted: false, participants: userId })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -223,41 +223,45 @@ export default class Chat extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
-    // @ts-ignore
-    if (isNil(room) || !room.participants.includes(userId)) {
+    if (isNil(room)) {
       return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
     }
 
-    models.ChatMessage.getInstance()
-      .create({
-        message,
-        messageType: messageType || MessageType.Text,
-        senderUser: userId,
-        room: roomId,
-        readBy: [userId],
-      })
-      .then(() => {
-        return this.grpcSdk.router?.socketPush({
-          event: 'message',
-          receivers: [],
-          rooms: [roomId],
-          data: JSON.stringify({
-            sender: userId,
-            message,
-            room: roomId,
-            contentType: messageType || MessageType.Text,
-          }),
+    const shouldPersist = persist !== false;
+    let messageId: string | undefined;
+
+    try {
+      if (shouldPersist) {
+        const created = await models.ChatMessage.getInstance().create({
+          message,
+          messageType: messageType || MessageType.Text,
+          senderUser: userId,
+          room: roomId,
+          readBy: [userId],
         });
-      })
-      .then(() => {
-        callback(null, null);
-      })
-      .catch((e: Error) => {
-        callback({
-          code: status.INTERNAL,
-          message: e.message,
-        });
+        messageId = created._id;
+      }
+
+      await this.grpcSdk.router?.socketPush({
+        event: 'message',
+        receivers: [],
+        rooms: [roomId],
+        data: JSON.stringify({
+          _id: messageId,
+          sender: userId,
+          message,
+          room: roomId,
+          contentType: messageType || MessageType.Text,
+        }),
       });
+
+      callback(null, null);
+    } catch (e: unknown) {
+      callback({
+        code: status.INTERNAL,
+        message: (e as Error).message,
+      });
+    }
   }
 
   async deleteRoom(call: GrpcRequest<DeleteRoomRequest>, callback: GrpcCallback<Room>) {
