@@ -12,6 +12,7 @@ message SendMessageRequest {
   string userId = 2;
   string roomId = 3;
   optional string messageType = 4;
+  optional bool persist = 5;
 }
 
 message DeleteRoomRequest {
