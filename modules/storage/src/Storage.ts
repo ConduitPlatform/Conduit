@@ -84,6 +84,7 @@ export default class Storage extends ManagedModule<Config> {
   private publicContainerMigrationRan: boolean = false;
   private previousCdnConfig: CdnConfiguration = {};
   private _storageAuthzResourceDispose: (() => void) | null = null;
+  private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
 
   constructor(peerManifestRoot?: string) {
     super('storage', peerManifestRoot);
@@ -213,6 +214,10 @@ export default class Storage extends ManagedModule<Config> {
 
   async onConfig() {
     if (!ConfigController.getInstance().config.active) {
+      if (this.refreshAppRoutesTimeout) {
+        clearTimeout(this.refreshAppRoutesTimeout);
+        this.refreshAppRoutesTimeout = null;
+      }
       this._storageAuthzResourceDispose?.();
       this._storageAuthzResourceDispose = null;
       this.disposeDeclaredPeerWatches();
@@ -261,7 +266,7 @@ export default class Storage extends ManagedModule<Config> {
         this.grpcSdk,
         this._adminFileHandlers,
       );
-      await this.refreshAppRoutes();
+      this.scheduleAppRouteRefresh();
       this.updateHealth(HealthCheckStatus.SERVING);
     }
   }
@@ -272,10 +277,10 @@ export default class Storage extends ManagedModule<Config> {
   ): void {
     if (moduleName === 'authentication') {
       this.enableAuthRoutes = serving;
-      void this.refreshAppRoutes();
+      this.scheduleAppRouteRefresh();
     }
     if (moduleName === 'router' && serving) {
-      void this.refreshAppRoutes();
+      this.scheduleAppRouteRefresh();
     }
   }
 
@@ -531,9 +536,24 @@ export default class Storage extends ManagedModule<Config> {
     return Promise.all(promises);
   }
 
+  private scheduleAppRouteRefresh() {
+    if (this.refreshAppRoutesTimeout) {
+      clearTimeout(this.refreshAppRoutesTimeout);
+      this.refreshAppRoutesTimeout = null;
+    }
+    this.refreshAppRoutesTimeout = setTimeout(async () => {
+      try {
+        await this.refreshAppRoutes();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this.refreshAppRoutesTimeout = null;
+    }, 800);
+  }
+
   private async refreshAppRoutes() {
     if (this.userRouter) {
-      await this.userRouter.registerRoutes();
+      await this.userRouter.registerRoutes(this.enableAuthRoutes);
       return;
     }
     if (!this.grpcSdk.isAvailable('router')) {
@@ -543,8 +563,7 @@ export default class Storage extends ManagedModule<Config> {
       this.grpcServer,
       this.grpcSdk,
       this._fileHandlers,
-      this.enableAuthRoutes,
     );
-    await this.userRouter.registerRoutes();
+    await this.userRouter.registerRoutes(this.enableAuthRoutes);
   }
 }

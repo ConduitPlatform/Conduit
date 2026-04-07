@@ -22,12 +22,11 @@ export class StorageRoutes {
     readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly fileHandlers: FileHandlers,
-    private readonly enableAuthRoutes: boolean,
   ) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
   }
 
-  async registerRoutes() {
+  async registerRoutes(enableAuthRoutes: boolean) {
     this._routingManager.clear();
     const authzEnabled = ConfigController.getInstance().config.authorization.enabled;
     this._routingManager.route(
@@ -66,7 +65,7 @@ export class StorageRoutes {
       this.fileHandlers.getFileUrl.bind(this.fileHandlers),
     );
 
-    if (this.enableAuthRoutes) {
+    if (enableAuthRoutes) {
       this._routingManager.route(
         {
           bodyParams: {

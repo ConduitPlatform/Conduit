@@ -28,12 +28,13 @@ import { MessageType } from '../enums/messageType.enum.js';
 export class ChatRoutes {
   private readonly _routingManager: RoutingManager;
   private invitationRoutes: InvitationRoutes;
+  /** Updated on each registerRoutes — used by handlers so invitation sends follow live peer state. */
+  private inviteSendEmail = false;
+  private inviteSendPush = false;
 
   constructor(
     readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly sendEmail: boolean,
-    private readonly sendPushNotification: boolean,
   ) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.invitationRoutes = new InvitationRoutes(this.grpcSdk, this._routingManager);
@@ -98,8 +99,8 @@ export class ChatRoutes {
         user,
         room,
         serverConfig.hostUrl,
-        this.sendEmail,
-        this.sendPushNotification,
+        this.inviteSendEmail,
+        this.inviteSendPush,
         this.grpcSdk,
       ).catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
@@ -186,8 +187,8 @@ export class ChatRoutes {
         user,
         room,
         serverConfig.hostUrl,
-        this.sendEmail,
-        this.sendPushNotification,
+        this.inviteSendEmail,
+        this.inviteSendPush,
         this.grpcSdk,
       ).catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
@@ -618,7 +619,9 @@ export class ChatRoutes {
     };
   }
 
-  async registerRoutes() {
+  async registerRoutes(sendEmail: boolean, sendPushNotification: boolean) {
+    this.inviteSendEmail = sendEmail;
+    this.inviteSendPush = sendPushNotification;
     this._routingManager.clear();
 
     this._routingManager.route(
@@ -771,7 +774,7 @@ export class ChatRoutes {
     }
 
     if (config.explicit_room_joins.enabled) {
-      if (this.sendEmail) await this.registerTemplates();
+      if (sendEmail) await this.registerTemplates();
       this.invitationRoutes.declareRoutes();
     }
 

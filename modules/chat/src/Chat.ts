@@ -53,6 +53,7 @@ export default class Chat extends ManagedModule<Config> {
   private _pushNotificationsServing: boolean;
   private _emailWatchDispose: (() => void) | null = null;
   private _pushWatchDispose: (() => void) | null = null;
+  private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
 
   constructor(peerManifestRoot?: string) {
     super('chat', peerManifestRoot);
@@ -88,27 +89,26 @@ export default class Chat extends ManagedModule<Config> {
       );
     }
     if (moduleName === 'router' && serving) {
-      void this.ensureUserRouterAndRefresh();
+      this.scheduleAppRouteRefresh();
     }
   }
 
   private async ensureUserRouterAndRefresh() {
     if (this.userRouter) {
-      await this.userRouter.registerRoutes();
+      await this.userRouter.registerRoutes(this.sendEmail, this.sendPushNotification);
       return;
     }
-    this.userRouter = new ChatRoutes(
-      this.grpcServer,
-      this.grpcSdk,
-      this.sendEmail,
-      this.sendPushNotification,
-    );
-    await this.userRouter.registerRoutes();
+    this.userRouter = new ChatRoutes(this.grpcServer, this.grpcSdk);
+    await this.userRouter.registerRoutes(this.sendEmail, this.sendPushNotification);
   }
 
   async onConfig() {
     const config = await ConfigController.getInstance().config;
     if (!config.active) {
+      if (this.refreshAppRoutesTimeout) {
+        clearTimeout(this.refreshAppRoutesTimeout);
+        this.refreshAppRoutesTimeout = null;
+      }
       this.disposeDeclaredPeerWatches();
       this._emailWatchDispose?.();
       this._emailWatchDispose = null;
@@ -126,7 +126,7 @@ export default class Chat extends ManagedModule<Config> {
           'email',
           serving => {
             this._emailServing = serving;
-            this.refreshAppRoutes();
+            this.scheduleAppRouteRefresh();
           },
           { edge: 'both', dedupe: false, syncInitialState: true },
         );
@@ -141,16 +141,13 @@ export default class Chat extends ManagedModule<Config> {
           'pushNotifications',
           serving => {
             this._pushNotificationsServing = serving;
-            this.refreshAppRoutes();
+            this.scheduleAppRouteRefresh();
           },
           { edge: 'both', dedupe: false, syncInitialState: true },
         );
       }
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      if (!this._sendEmail && !this._sendPushNotification) {
-        // avoid redundant refreshes
-        await this.refreshAppRoutes();
-      }
+      this.scheduleAppRouteRefresh();
       this.updateHealth(HealthCheckStatus.SERVING);
     }
   }
@@ -347,9 +344,24 @@ export default class Chat extends ManagedModule<Config> {
     return Promise.all(promises);
   }
 
+  private scheduleAppRouteRefresh() {
+    if (this.refreshAppRoutesTimeout) {
+      clearTimeout(this.refreshAppRoutesTimeout);
+      this.refreshAppRoutesTimeout = null;
+    }
+    this.refreshAppRoutesTimeout = setTimeout(async () => {
+      try {
+        await this.refreshAppRoutes();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this.refreshAppRoutesTimeout = null;
+    }, 800);
+  }
+
   private async refreshAppRoutes() {
     if (this.userRouter) {
-      await this.userRouter.registerRoutes();
+      await this.userRouter.registerRoutes(this.sendEmail, this.sendPushNotification);
       return;
     }
     if (!this.grpcSdk.isAvailable('router')) {
