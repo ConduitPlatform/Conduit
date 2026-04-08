@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { parse as secureJsonParse } from 'secure-json-parse';
 import {
   ConduitModel,
   ConduitReturn,
@@ -13,6 +14,11 @@ import {
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { ParserUtils } from './ParserUtils.js';
+
+const secureJsonParseOptions = {
+  protoAction: 'error' as const,
+  constructorAction: 'error' as const,
+};
 
 export interface ZodParseResult {
   [fieldName: string]: z.ZodTypeAny;
@@ -115,6 +121,50 @@ export class ZodParser {
     return zodType;
   }
 
+  private conduitJsonZodType(): z.ZodTypeAny {
+    const fromString = z.string().transform((s, ctx) => {
+      const trimmed = s.trim();
+      if (trimmed === '') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'JSON string must not be empty',
+        });
+        return z.NEVER;
+      }
+      let parsed: unknown;
+      try {
+        parsed = secureJsonParse(trimmed, null, secureJsonParseOptions);
+      } catch (e) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: e instanceof Error ? e.message : 'Invalid JSON',
+        });
+        return z.NEVER;
+      }
+      if (Array.isArray(parsed) || (typeof parsed === 'object' && parsed !== null)) {
+        return parsed;
+      }
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'JSON must be an object or array',
+      });
+      return z.NEVER;
+    });
+
+    return z.union([z.array(z.any()), z.record(z.string(), z.any()), fromString]);
+  }
+
+  private finalizeJsonRouteParam(
+    schema: z.ZodTypeAny,
+    isOptional: boolean,
+  ): z.ZodTypeAny {
+    if (!isOptional) return schema;
+    return z.preprocess(
+      (val: unknown) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+      schema.optional(),
+    );
+  }
+
   private getZodType(conduitType: TYPE): z.ZodTypeAny {
     switch (conduitType) {
       case TYPE.String:
@@ -128,7 +178,7 @@ export class ZodParser {
       case TYPE.ObjectId:
         return z.string();
       case TYPE.JSON:
-        return z.record(z.any(), z.any());
+        return this.conduitJsonZodType();
       case TYPE.Relation:
         return z.string();
       default:
@@ -143,7 +193,11 @@ export class ZodParser {
     const result: ZodParseResult = {};
 
     if (typeof fields === 'string') {
-      const zodType = this.getZodType(fields as TYPE);
+      const t = fields as TYPE;
+      let zodType = this.getZodType(t);
+      if (t === TYPE.JSON) {
+        zodType = this.finalizeJsonRouteParam(zodType, true);
+      }
       result[name] = zodType;
     } else {
       for (const fieldName in fields) {
@@ -163,8 +217,13 @@ export class ZodParser {
     const description = ParserUtils.getFieldDescription(field);
 
     if (typeof field === 'string') {
-      let zodType = this.getZodType(field as TYPE);
-      if (!isRequired) zodType = zodType.optional();
+      const t = field as TYPE;
+      let zodType = this.getZodType(t);
+      if (t === TYPE.JSON) {
+        zodType = this.finalizeJsonRouteParam(zodType, !isRequired);
+      } else if (!isRequired) {
+        zodType = zodType.optional();
+      }
       if (description) zodType = zodType.describe(description);
       return zodType;
     }
@@ -256,7 +315,11 @@ export class ZodParser {
       if (ParserUtils.isRelationType(field)) {
         zodType = z.string();
       } else if (typeof field.type === 'string') {
-        zodType = this.getZodType(field.type as TYPE);
+        const t = field.type as TYPE;
+        zodType = this.getZodType(t);
+        if (t === TYPE.JSON) {
+          zodType = this.finalizeJsonRouteParam(zodType, !isRequired);
+        }
       } else if (Array.isArray(field.type)) {
         zodType = this.parseArrayField(fieldName, field.type, field);
       } else {
@@ -270,7 +333,7 @@ export class ZodParser {
 
       zodType = this.applyValidation(zodType, field);
 
-      if (!isRequired) {
+      if (!isRequired && !(typeof field.type === 'string' && field.type === TYPE.JSON)) {
         zodType = zodType.optional();
       }
 

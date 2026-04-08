@@ -122,7 +122,15 @@ export class CustomEndpointHandler {
       sort = constructSortObj(params.sort);
     }
 
-    const createObj = JSON.parse(`{${createString}}`);
+    let createObj: Indexable;
+    try {
+      createObj = JSON.parse(`{${createString}}`) as Indexable;
+    } catch {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Invalid document payload built from custom endpoint assignments',
+      );
+    }
     let promise;
     if (endpoint.operation === OperationsEnum.GET) {
       if (endpoint.paginated) {

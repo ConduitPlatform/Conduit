@@ -27,6 +27,7 @@ import { validateStateToken } from './utils/index.js';
 import { IAuthenticationStrategy } from '../../interfaces/index.js';
 import { TokenType } from '../../constants/index.js';
 import {
+  ConduitJson,
   ConduitString,
   ConfigController,
   RoutingManager,
@@ -406,6 +407,7 @@ export abstract class OAuth2<
             code: ConduitString.Required,
             id_token: ConduitString.Required,
             state: ConduitString.Required,
+            user: ConduitJson.Optional,
           },
           rateLimit: OAUTH_NATIVE_COMPLETE,
         },

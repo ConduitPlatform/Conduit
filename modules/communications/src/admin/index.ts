@@ -136,7 +136,7 @@ export class AdminHandlers {
       recipient,
       subject,
       body,
-      variables: variables ? JSON.parse(variables) : undefined,
+      variables,
     };
 
     const result = await this.orchestratorService
@@ -156,14 +156,14 @@ export class AdminHandlers {
     const { fallbackChain, recipient, subject, body, variables } = call.request.params;
 
     const sendParams = {
-      fallbackChain: fallbackChain.map((step: any) => ({
+      fallbackChain: fallbackChain.map((step: { channel: string; timeout?: number }) => ({
         channel: step.channel as 'email' | 'push' | 'sms',
         timeout: step.timeout,
       })),
       recipient,
       subject,
       body,
-      variables: variables ? JSON.parse(variables) : undefined,
+      variables,
     };
 
     const result = await this.orchestratorService
@@ -547,7 +547,7 @@ export class AdminHandlers {
           body: ConduitString.Optional,
           subject: ConduitString.Optional,
           email: ConduitString.Required,
-          variables: ConduitString.Optional,
+          variables: ConduitJson.Optional,
           sender: ConduitString.Optional,
         },
       },
@@ -565,7 +565,7 @@ export class AdminHandlers {
           userId: ConduitString.Required,
           title: ConduitString.Required,
           body: ConduitString.Optional,
-          data: ConduitString.Optional,
+          data: ConduitJson.Optional,
           platform: ConduitString.Optional,
           doNotStore: ConduitString.Optional,
           isSilent: ConduitString.Optional,
@@ -597,12 +597,12 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: 'Sends message to multiple channels.',
         bodyParams: {
-          channels: ConduitString.Required,
+          channels: ConduitJson.Required,
           strategy: ConduitString.Required,
           recipient: ConduitString.Required,
           subject: ConduitString.Optional,
           body: ConduitString.Optional,
-          variables: ConduitString.Optional,
+          variables: ConduitJson.Optional,
         },
       },
       new ConduitRouteReturnDefinition('SendToMultipleChannels', 'Object'),
@@ -615,11 +615,11 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: 'Sends message with fallback chain.',
         bodyParams: {
-          fallbackChain: ConduitString.Required,
+          fallbackChain: ConduitJson.Required,
           recipient: ConduitString.Required,
           subject: ConduitString.Optional,
           body: ConduitString.Optional,
-          variables: ConduitString.Optional,
+          variables: ConduitJson.Optional,
         },
       },
       new ConduitRouteReturnDefinition('SendWithFallback', 'Object'),

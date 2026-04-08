@@ -847,6 +847,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           limit: ConduitNumber.Optional,
           search: ConduitString.Optional,
           sort: ConduitString.Optional,
+          populate: [ConduitString.Optional],
         },
         action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
@@ -926,6 +927,9 @@ export class TeamsHandler implements IAuthenticationStrategy {
         description: `Gets a team.`,
         urlParams: {
           teamId: ConduitObjectId.Required,
+        },
+        queryParams: {
+          populate: [ConduitString.Optional],
         },
         action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],

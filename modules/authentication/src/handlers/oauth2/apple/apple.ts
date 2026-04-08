@@ -25,6 +25,7 @@ import jwksRsa from 'jwks-rsa';
 
 import { validateStateToken } from '../utils/index.js';
 import {
+  ConduitJson,
   ConduitString,
   ConfigController,
   RoutingManager,
@@ -131,12 +132,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     if (decoded_id_token!.payload.sub !== payload.sub) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
     }
-    let userData = params.user;
-    try {
-      userData = JSON.parse(params.user);
-    } catch (e) {
-      // already a valid object
-    }
+    const userData = (params.user ?? {}) as Indexable;
 
     const userParams = {
       id: payload.sub!,
@@ -227,12 +223,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     if (decoded_id_token!.payload.sub !== payload.sub) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
     }
-    let userData = params.user;
-    try {
-      userData = JSON.parse(params.user);
-    } catch (e) {
-      // already a valid object
-    }
+    const userData = (params.user ?? {}) as Indexable;
 
     const userParams = {
       id: payload.sub!,
@@ -267,6 +258,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
           code: ConduitString.Required,
           id_token: ConduitString.Required,
           state: ConduitString.Required,
+          user: ConduitJson.Optional,
         },
         rateLimit: OAUTH_CALLBACK,
       },
