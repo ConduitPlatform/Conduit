@@ -34,15 +34,17 @@ export class ZodParser {
 
   buildZodSchema(
     params: Record<string, unknown>,
-    options: { strict?: boolean; coerce?: boolean } = {},
+    options: { unknownKeys?: 'strict' | 'strip' | 'passthrough'; coerce?: boolean } = {},
   ): z.ZodObject<Record<string, z.ZodTypeAny>> {
-    const { strict = true, coerce = false } = options;
+    const { unknownKeys = 'strip', coerce = false } = options;
     const prevCoerce = this.useCoercion;
     try {
       if (coerce) this.useCoercion = true;
       const fields = this.extractTypes('params', params as ConduitModel, true);
       const schema = z.object(fields);
-      return strict ? schema.strict() : schema.passthrough();
+      if (unknownKeys === 'strict') return schema.strict();
+      if (unknownKeys === 'passthrough') return schema.passthrough();
+      return schema;
     } finally {
       this.useCoercion = prevCoerce;
     }

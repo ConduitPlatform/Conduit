@@ -78,7 +78,12 @@ export interface ConduitRouteOptions {
   cacheControl?: string;
   mcp?: boolean;
   errors?: ModuleErrorDefinition[];
-  /** When false, unknown body/query/url keys are allowed. Defaults to strict when unset. */
+  /**
+   * How unknown body/query/url keys are handled during Zod validation:
+   * - `true`: reject with USER_INPUT_ERROR (strict mode)
+   * - `false`: allow through to the handler (passthrough)
+   * - unset: strip unknown keys from validated params (default; prevents pollution without errors)
+   */
   strictParams?: boolean;
   /** Per-route rate limit (per client IP). Fails closed if Redis is unavailable. */
   rateLimit?: RateLimitOptions;

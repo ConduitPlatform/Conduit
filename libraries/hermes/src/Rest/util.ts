@@ -56,12 +56,12 @@ export function extractRequestData(req: ConduitRequest) {
 export function validateParams(
   params: Params,
   routeDefinedParams: Params,
-  options: { strict?: boolean; coerce?: boolean } = {},
+  options: { unknownKeys?: 'strict' | 'strip' | 'passthrough'; coerce?: boolean } = {},
 ): Params {
-  const { strict = true, coerce = false } = options;
+  const { unknownKeys = 'strip', coerce = false } = options;
   const parser = new ZodParser();
   const schema = parser.buildZodSchema(routeDefinedParams as Record<string, unknown>, {
-    strict,
+    unknownKeys,
     coerce,
   });
   const result = schema.safeParse(params);
