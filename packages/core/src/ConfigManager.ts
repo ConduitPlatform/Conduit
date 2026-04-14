@@ -256,10 +256,14 @@ export default class ConfigManager {
     if (!this.grpcSdk.isAvailable('database')) {
       return existingConfig;
     }
+    let configModel: ReturnType<typeof models.Config.getInstance>;
+    try {
+      configModel = models.Config.getInstance();
+    } catch {
+      return existingConfig;
+    }
     const meta = await this._configStorage.getConfigVersionMeta(moduleName);
-    const dbDoc = await models.Config.getInstance()
-      .findOne({ name: moduleName })
-      .catch(() => null);
+    const dbDoc = await configModel.findOne({ name: moduleName }).catch(() => null);
     if (dbDoc?.config == null) {
       return existingConfig;
     }

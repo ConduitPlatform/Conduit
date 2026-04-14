@@ -100,10 +100,19 @@ export class GrpcServer {
     );
   }
 
-  private bootstrapSdkComponents() {
+  private async bootstrapSdkComponents() {
     this.adminModule = new AdminModule(this._grpcSdk, this.configManager);
     this.configManager.setAdminModule(this.adminModule);
     this.initializeMetrics();
+
+    await this.configManager.configurePackage(
+      'core',
+      convict(AppConfigSchema).getProperties(),
+      CoreConfigSchema,
+    );
+    await this.adminModule.initialize(this.server);
+    this.configManager.initConfigAdminRoutes();
+    await this.adminModule.subscribeToBusEvents();
 
     this._initialized = true;
     this.serviceHealthState = HealthCheckStatus.SERVING;
@@ -113,14 +122,6 @@ export class GrpcServer {
       .then(async () => {
         await this.configManager.initializeModels();
         this.adminModule.handleDatabase();
-        await this.configManager.configurePackage(
-          'core',
-          convict(AppConfigSchema).getProperties(),
-          CoreConfigSchema,
-        );
-        await this.adminModule.initialize(this.server);
-        this.configManager.initConfigAdminRoutes();
-        await this.adminModule.subscribeToBusEvents();
       })
       .catch(err => {
         ConduitGrpcSdk.Logger.error(err);
