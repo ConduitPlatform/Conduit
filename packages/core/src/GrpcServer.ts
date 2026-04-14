@@ -105,10 +105,9 @@ export class GrpcServer {
     this.adminModule = new AdminModule(this._grpcSdk, this.configManager);
     this.configManager.setAdminModule(this.adminModule);
     this.initializeMetrics();
-    this._grpcSdk
-      .waitForExistence('database')
-      .then(() => this.configManager.initializeModels())
-      .then(() => this.adminModule.handleDatabase());
+    await this._grpcSdk.waitForExistence('database');
+    await this.configManager.initializeModels();
+    this.adminModule.handleDatabase();
     await this.configManager.configurePackage(
       'core',
       convict(AppConfigSchema).getProperties(),
