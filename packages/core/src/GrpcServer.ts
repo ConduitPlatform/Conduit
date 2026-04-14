@@ -49,7 +49,6 @@ export class GrpcServer {
           await this.configManager.initialize(this.server);
           await this.bootstrapSdkComponents();
           this.server.start();
-          await this.adminModule.subscribeToBusEvents();
           ConduitGrpcSdk.Logger.log(`gRPC server listening on: ${_url}`);
         });
       })
@@ -101,24 +100,31 @@ export class GrpcServer {
     );
   }
 
-  private async bootstrapSdkComponents() {
+  private bootstrapSdkComponents() {
     this.adminModule = new AdminModule(this._grpcSdk, this.configManager);
     this.configManager.setAdminModule(this.adminModule);
     this.initializeMetrics();
-    await this._grpcSdk.waitForExistence('database');
-    await this.configManager.initializeModels();
-    this.adminModule.handleDatabase();
-    await this.configManager.configurePackage(
-      'core',
-      convict(AppConfigSchema).getProperties(),
-      CoreConfigSchema,
-    );
-
-    await this.adminModule.initialize(this.server);
-    this.configManager.initConfigAdminRoutes();
 
     this._initialized = true;
     this.serviceHealthState = HealthCheckStatus.SERVING;
+
+    this._grpcSdk
+      .waitForExistence('database')
+      .then(async () => {
+        await this.configManager.initializeModels();
+        this.adminModule.handleDatabase();
+        await this.configManager.configurePackage(
+          'core',
+          convict(AppConfigSchema).getProperties(),
+          CoreConfigSchema,
+        );
+        await this.adminModule.initialize(this.server);
+        this.configManager.initConfigAdminRoutes();
+        await this.adminModule.subscribeToBusEvents();
+      })
+      .catch(err => {
+        ConduitGrpcSdk.Logger.error(err);
+      });
   }
 
   private initializeMetrics() {

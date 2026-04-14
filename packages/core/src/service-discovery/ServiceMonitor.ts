@@ -16,6 +16,8 @@ export class ServiceMonitor {
   private monitorIntervalMs = 5000;
   private serviceReconnectionInitMs = 500;
   private serviceReconnectionRetries = 10;
+  private readonly _consecutiveFailures: Map<string, number> = new Map();
+  private readonly maxConsecutiveFailures = 3;
 
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
@@ -174,13 +176,29 @@ export class ServiceMonitor {
       if (!registeredModule) continue;
       try {
         await this.healthCheckService(module, registeredModule.address);
-      } catch (e) {
-        if (this._serviceRegistry.getModule(module)) {
-          this.handleUnresponsiveModule(
-            module,
-            registeredModule.address,
-            HealthCheckStatus.SERVICE_UNKNOWN,
-          );
+        this._consecutiveFailures.delete(module);
+      } catch {
+        const failures = (this._consecutiveFailures.get(module) ?? 0) + 1;
+        this._consecutiveFailures.set(module, failures);
+        ConduitGrpcSdk.Logger.warn(
+          `SD/health: check threw for ${module} (${failures}/${this.maxConsecutiveFailures})`,
+        );
+        if (failures >= this.maxConsecutiveFailures) {
+          this._consecutiveFailures.delete(module);
+          if (this._serviceRegistry.getModule(module)) {
+            this.handleUnresponsiveModule(
+              module,
+              registeredModule.address,
+              HealthCheckStatus.SERVICE_UNKNOWN,
+            );
+          }
+        } else {
+          const existing = this._serviceRegistry.getModule(module);
+          if (existing) {
+            existing.serving = false;
+            this._serviceRegistry.updateModule(module, existing);
+            this.grpcSdk.updateModuleHealth(module, false);
+          }
         }
       }
     }

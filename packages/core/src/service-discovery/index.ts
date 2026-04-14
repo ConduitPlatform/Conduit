@@ -47,34 +47,9 @@ export class ServiceDiscovery {
     if (state && !isEmpty(state)) {
       const parsedState = JSON.parse(state) as { modules: IModuleConfig[] };
       if (parsedState.modules) {
-        const success: IModuleConfig[] = [];
         for (const module of parsedState.modules) {
-          try {
-            await this._recoverModule(module.name, module.url);
-            success.push({
-              name: module.name,
-              url: module.url,
-              ...(module.configSchema && { configSchema: module.configSchema }),
-            });
-          } catch (e) {
-            ConduitGrpcSdk.Logger.error(
-              `SD: failed to recover: ${module.name} ${module.url}`,
-            );
-            ConduitGrpcSdk.Logger.error(`SD: recovery error: ${e}`);
-          }
+          await this._recoverModule(module.name, module.url);
         }
-        await this.grpcSdk
-          .state!.modifyState(async (existingState: Indexable) => {
-            const state = existingState ?? {};
-            state.modules = success;
-            return state;
-          })
-          .then(() => {
-            ConduitGrpcSdk.Logger.log('Recovered state');
-          })
-          .catch(() => {
-            ConduitGrpcSdk.Logger.error('Failed to recover state');
-          });
       }
     }
     this.grpcSdk.bus!.subscribe('config', (message: string) => {
@@ -150,14 +125,21 @@ export class ServiceDiscovery {
   }
 
   async _recoverModule(moduleName: string, moduleUrl: string) {
-    let healthResponse;
+    let healthStatus: HealthCheckStatus = HealthCheckStatus.NOT_SERVING;
+
+    try {
+      const rawStatus = await this.grpcSdk.isModuleUp(moduleName, moduleUrl);
+      healthStatus = rawStatus as unknown as HealthCheckStatus;
+    } catch {
+      ConduitGrpcSdk.Logger.warn(
+        `SD: health check failed during recovery for ${moduleName} ${moduleUrl}, registering as NOT_SERVING`,
+      );
+    }
 
     if (!this.grpcSdk.getModule(moduleName)) {
-      healthResponse = await this.grpcSdk.isModuleUp(moduleName, moduleUrl);
       this.grpcSdk.createModuleClient(moduleName, moduleUrl);
     }
 
-    const healthStatus = healthResponse.status as unknown as HealthCheckStatus;
     ConduitGrpcSdk.Logger.log(
       `SD: registering: ${moduleName} ${moduleUrl} ${healthStatus}`,
     );
