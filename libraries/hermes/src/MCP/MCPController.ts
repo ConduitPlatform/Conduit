@@ -5,7 +5,7 @@
  * with Streamable HTTP transport as defined in MCP specification 2025-06-18.
  *
  * Key features:
- * - Stateless transport (new transport per request)
+ * - Stateless transport and a fresh McpServer per request (one SDK transport per Protocol)
  * - HTTP POST for client-to-server messages
  * - HTTP GET for server-to-client SSE streams
  * - Admin authentication required
@@ -35,7 +35,6 @@ export class MCPController extends ConduitRouter {
     communications: ['email', 'push', 'sms'],
   };
 
-  private _mcpServer: McpServer;
   private _toolRegistry: ToolRegistry;
   private _resourceRegistry: ResourceRegistry;
   private _config: MCPConfig;
@@ -54,26 +53,11 @@ export class MCPController extends ConduitRouter {
     this._grpcSdk = grpcSdk;
     this._config = config;
 
-    // Initialize MCP server with SDK (instructions + capabilities sent to clients on initialize)
-    this._mcpServer = new McpServer(
-      {
-        name: this._config.serverInfo.name,
-        title: this._config.serverInfo.title,
-        version: this._config.serverInfo.version,
-      },
-      {
-        instructions: MCP_CONSTANTS.INSTRUCTIONS,
-        capabilities: this._config.capabilities,
-      },
-    );
-
-    // Initialize tool registry
+    // Initialize tool registry (definitions only; each request builds a new McpServer)
     this._toolRegistry = new ToolRegistry(grpcSdk);
-    this._toolRegistry.setMcpServer(this._mcpServer);
 
     // Initialize resource registry
     this._resourceRegistry = new ResourceRegistry(grpcSdk);
-    this._resourceRegistry.setMcpServer(this._mcpServer);
 
     // Register meta-tools for module discovery (always enabled)
     registerMetaTools(this._toolRegistry);
@@ -84,6 +68,21 @@ export class MCPController extends ConduitRouter {
   initializeRouter() {
     this.createRouter();
     this.setupRoutes();
+  }
+
+  /** New SDK server instance per HTTP request (Protocol allows one transport per instance). */
+  private createMcpServer(): McpServer {
+    return new McpServer(
+      {
+        name: this._config.serverInfo.name,
+        title: this._config.serverInfo.title,
+        version: this._config.serverInfo.version,
+      },
+      {
+        instructions: MCP_CONSTANTS.INSTRUCTIONS,
+        capabilities: this._config.capabilities,
+      },
+    );
   }
 
   private setupRoutes() {
@@ -210,29 +209,28 @@ export class MCPController extends ConduitRouter {
    */
   private async handleMCPRequest(req: Request, res: Response, next: NextFunction) {
     try {
-      // Parse and enable modules from query parameters
       const requestedModules = this.parseModulesFromQuery(req);
       if (requestedModules.length > 0) {
         this.enableModulesFromQuery(requestedModules);
       }
 
-      // Create stateless transport (new instance per request)
+      const enabledModules = this._toolRegistry.getLoadedModulesFull();
+
+      const mcpServer = this.createMcpServer();
+      this._toolRegistry.populateServer(mcpServer, enabledModules);
+      this._resourceRegistry.populateServer(mcpServer);
+
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, // Stateless mode
         enableJsonResponse: true,
       });
 
-      // Clean up transport when response closes
       res.on('close', () => {
         transport.close();
       });
 
-      // Connect server to transport (creates new session internally)
-      await this._mcpServer.connect(transport);
+      await mcpServer.connect(transport);
 
-      // Handle the request
-      // For GET requests, pass undefined as body (GET doesn't have a request body)
-      // For POST requests, pass req.body which contains the JSON-RPC message
       const body = req.method === 'GET' ? undefined : req.body;
       await transport.handleRequest(req, res, body);
     } catch (error) {

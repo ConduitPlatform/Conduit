@@ -5,13 +5,16 @@
  * Manages tool registration, validation, and integration with Conduit's admin system.
  *
  * Supports module-based tool organization with lazy loading:
- * - Tools are grouped by module (e.g., 'authentication', 'storage')
+ * - Tools are grouped by module (e.g. 'authentication', 'storage')
  * - Module tools start disabled and can be enabled/disabled on-demand
  * - Meta-tools (list_modules, load_module, etc.) are always enabled
+ *
+ * Definitions are stored here; each HTTP request creates a fresh McpServer and calls
+ * populateServer() to register tools on that instance (one transport per McpServer).
  */
 
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { MCPModuleInfo, MCPSession, MCPToolDefinition } from './types.js';
 
 /** Special module name for meta-tools that are always enabled */
@@ -24,17 +27,16 @@ export class ToolRegistry {
   /** All registered tool definitions */
   private _tools: Map<string, MCPToolDefinition> = new Map();
 
-  /** SDK RegisteredTool handles for enable/disable/remove operations */
-  private _toolHandles: Map<string, RegisteredTool> = new Map();
-
   /** Map of module name -> Set of tool names belonging to that module */
   private _moduleTools: Map<string, Set<string>> = new Map();
 
   /** Set of currently loaded (enabled) modules */
   private _loadedModules: Set<string> = new Set();
 
+  /** Optional fixed session bound at registerTool() time (rare) */
+  private _sessions: Map<string, MCPSession> = new Map();
+
   private _grpcSdk: ConduitGrpcSdk;
-  private _mcpServer: McpServer | null = null;
 
   constructor(grpcSdk: ConduitGrpcSdk) {
     this._grpcSdk = grpcSdk;
@@ -44,22 +46,11 @@ export class ToolRegistry {
   }
 
   /**
-   * Set the MCP server instance (must be called before registering tools)
-   */
-  setMcpServer(server: McpServer): void {
-    this._mcpServer = server;
-  }
-
-  /**
-   * Register a tool with the MCP server
+   * Register a tool definition (SDK registration happens in populateServer per request)
    * @param tool - The tool definition
    * @param session - Optional session for tool execution context
    */
   registerTool(tool: MCPToolDefinition, session?: MCPSession): void {
-    if (!this._mcpServer) {
-      throw new Error('MCP server not initialized. Call setMcpServer() first.');
-    }
-
     // Unregister existing tool if it exists
     if (this._tools.has(tool.name)) {
       ConduitGrpcSdk.Logger.warn(
@@ -81,64 +72,71 @@ export class ToolRegistry {
     }
     this._moduleTools.get(moduleName)!.add(tool.name);
 
-    // Register with SDK and store the handle
-    const handle = this._mcpServer.registerTool(
-      tool.name,
-      {
-        title: tool.title,
-        description: tool.description,
-        inputSchema: tool.inputSchema,
-        outputSchema: tool.outputSchema,
-      },
-      async (args: Record<string, unknown>) => {
-        // Create a minimal session if not provided
-        const execSession = session || {
-          headers: {},
-          context: {},
-          authenticated: false,
-        };
+    if (session) {
+      this._sessions.set(tool.name, session);
+    } else {
+      this._sessions.delete(tool.name);
+    }
 
-        // Execute the Conduit handler
-        return await tool.handler(args, execSession, this._grpcSdk);
-      },
+    ConduitGrpcSdk.Logger.log(
+      `Stored MCP tool definition: ${tool.name} [module: ${moduleName}]`,
     );
+  }
 
-    // Store the handle if it exists
-    if (handle !== undefined && handle !== null) {
-      this._toolHandles.set(tool.name, handle);
+  /**
+   * Register all tool definitions on a per-request McpServer instance.
+   * @param mcpServer - Fresh server instance for this HTTP request
+   * @param enabledModules - Modules whose tools should be enabled (includes meta/core when loaded)
+   */
+  populateServer(mcpServer: McpServer, enabledModules: Set<string>): void {
+    for (const tool of this._tools.values()) {
+      const moduleName = tool.module || CORE_MODULE;
 
-      // Disable the tool if it should start disabled (non-meta and non-core module tools)
-      const shouldBeDisabled =
-        tool.initiallyDisabled === true ||
-        (moduleName !== META_MODULE &&
-          moduleName !== CORE_MODULE &&
-          !this._loadedModules.has(moduleName));
+      const handle = mcpServer.registerTool(
+        tool.name,
+        {
+          title: tool.title,
+          description: tool.description,
+          inputSchema: tool.inputSchema,
+          outputSchema: tool.outputSchema,
+        },
+        async (args: Record<string, unknown>) => {
+          const execSession = this._sessions.get(tool.name) ?? {
+            headers: {},
+            context: {},
+            authenticated: false,
+          };
 
-      if (shouldBeDisabled) {
-        handle.disable();
-        ConduitGrpcSdk.Logger.log(
-          `Registered MCP tool (disabled): ${tool.name} [module: ${moduleName}]`,
-        );
-      } else {
-        ConduitGrpcSdk.Logger.log(
-          `Registered MCP tool (enabled): ${tool.name} [module: ${moduleName}]`,
-        );
+          return await tool.handler(args, execSession, this._grpcSdk);
+        },
+      );
+
+      if (handle !== undefined && handle !== null) {
+        const shouldBeDisabled =
+          tool.initiallyDisabled === true ||
+          (moduleName !== META_MODULE &&
+            moduleName !== CORE_MODULE &&
+            !enabledModules.has(moduleName));
+
+        if (shouldBeDisabled) {
+          handle.disable();
+        }
       }
     }
   }
 
   /**
-   * Unregister a tool from the MCP server
+   * All module names that are currently marked loaded (for populateServer)
+   */
+  getLoadedModulesFull(): Set<string> {
+    return new Set(this._loadedModules);
+  }
+
+  /**
+   * Unregister a tool from the registry (definitions only)
    */
   unregisterTool(name: string): boolean {
     const tool = this._tools.get(name);
-
-    // Remove from SDK using the handle
-    const handle = this._toolHandles.get(name);
-    if (handle !== undefined && handle !== null) {
-      handle.remove();
-    }
-    this._toolHandles.delete(name);
 
     // Remove from module tracking
     if (tool?.module) {
@@ -151,7 +149,8 @@ export class ToolRegistry {
       }
     }
 
-    // Remove from our registry
+    this._sessions.delete(name);
+
     const removed = this._tools.delete(name);
     if (removed) {
       ConduitGrpcSdk.Logger.log(`Unregistered MCP tool: ${name}`);
@@ -160,8 +159,8 @@ export class ToolRegistry {
   }
 
   /**
-   * Enable all tools for a specific module
-   * @returns Array of tool names that were enabled
+   * Enable all tools for a specific module (bookkeeping; SDK state is per-request)
+   * @returns Array of tool names that belong to the module
    */
   enableModule(moduleName: string): string[] {
     const toolNames = this._moduleTools.get(moduleName);
@@ -170,16 +169,8 @@ export class ToolRegistry {
       return [];
     }
 
-    const enabledTools: string[] = [];
-    for (const toolName of toolNames) {
-      const handle = this._toolHandles.get(toolName);
-      if (handle) {
-        handle.enable();
-        enabledTools.push(toolName);
-      }
-    }
-
     this._loadedModules.add(moduleName);
+    const enabledTools = Array.from(toolNames);
     ConduitGrpcSdk.Logger.log(
       `Enabled module ${moduleName}: ${enabledTools.length} tools`,
     );
@@ -189,13 +180,12 @@ export class ToolRegistry {
   /**
    * Enable multiple modules at once (batch operation)
    * @param moduleNames - Array of module names to enable
-   * @returns Map of module name -> array of enabled tool names
+   * @returns Map of module name -> array of tool names in that module
    */
   enableModules(moduleNames: string[]): Map<string, string[]> {
     const result = new Map<string, string[]>();
 
     for (const moduleName of moduleNames) {
-      // Skip meta module and core module (always enabled)
       if (moduleName === META_MODULE || moduleName === CORE_MODULE) continue;
 
       const enabledTools = this.enableModule(moduleName);
@@ -212,11 +202,10 @@ export class ToolRegistry {
   }
 
   /**
-   * Disable all tools for a specific module
-   * @returns Array of tool names that were disabled
+   * Disable all tools for a specific module (bookkeeping)
+   * @returns Array of tool names that belonged to the module
    */
   disableModule(moduleName: string): string[] {
-    // Prevent disabling meta module or core module
     if (moduleName === META_MODULE || moduleName === CORE_MODULE) {
       ConduitGrpcSdk.Logger.warn('Cannot disable meta or core module');
       return [];
@@ -228,15 +217,7 @@ export class ToolRegistry {
       return [];
     }
 
-    const disabledTools: string[] = [];
-    for (const toolName of toolNames) {
-      const handle = this._toolHandles.get(toolName);
-      if (handle) {
-        handle.disable();
-        disabledTools.push(toolName);
-      }
-    }
-
+    const disabledTools = Array.from(toolNames);
     this._loadedModules.delete(moduleName);
     ConduitGrpcSdk.Logger.log(
       `Disabled module ${moduleName}: ${disabledTools.length} tools`,
@@ -251,7 +232,6 @@ export class ToolRegistry {
     const modules: MCPModuleInfo[] = [];
 
     for (const [moduleName, toolNames] of this._moduleTools) {
-      // Skip meta module from public listing
       if (moduleName === META_MODULE) continue;
 
       modules.push({
@@ -261,12 +241,11 @@ export class ToolRegistry {
       });
     }
 
-    // Sort by name for consistent ordering
     return modules.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   /**
-   * Get list of currently loaded (enabled) modules
+   * Get list of currently loaded (enabled) modules (excludes meta from listing)
    */
   getLoadedModules(): string[] {
     return Array.from(this._loadedModules).filter(m => m !== META_MODULE);
@@ -310,55 +289,41 @@ export class ToolRegistry {
 
   /**
    * Clear all registered tools
-   * Used during router refresh to prevent duplicates
    */
   clearAllTools(): void {
-    // Properly unregister each tool using SDK handles
-    this._toolHandles.forEach((handle, name) => {
-      if (handle !== undefined && handle !== null) {
-        handle.remove();
-      }
-    });
-
-    this._toolHandles.clear();
     this._tools.clear();
     this._moduleTools.clear();
+    this._sessions.clear();
 
-    // Reset loaded modules but keep meta
     this._loadedModules.clear();
     this._loadedModules.add(META_MODULE);
+    this._loadedModules.add(CORE_MODULE);
 
     ConduitGrpcSdk.Logger.log('Cleared all MCP tools');
   }
 
   /**
    * Clear module tools only (preserve meta-tools)
-   * Used during router refresh
    */
   clearModuleTools(): void {
     for (const [moduleName, toolNames] of this._moduleTools) {
       if (moduleName === META_MODULE) continue;
 
       for (const toolName of toolNames) {
-        const handle = this._toolHandles.get(toolName);
-        if (handle) {
-          handle.remove();
-        }
-        this._toolHandles.delete(toolName);
         this._tools.delete(toolName);
+        this._sessions.delete(toolName);
       }
     }
 
-    // Clear module tracking except meta
     const metaTools = this._moduleTools.get(META_MODULE);
     this._moduleTools.clear();
     if (metaTools) {
       this._moduleTools.set(META_MODULE, metaTools);
     }
 
-    // Reset loaded modules but keep meta
     this._loadedModules.clear();
     this._loadedModules.add(META_MODULE);
+    this._loadedModules.add(CORE_MODULE);
 
     ConduitGrpcSdk.Logger.log('Cleared module MCP tools (meta-tools preserved)');
   }

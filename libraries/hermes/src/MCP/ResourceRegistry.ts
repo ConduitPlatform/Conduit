@@ -5,18 +5,16 @@
  * Resources are used to provide documentation, schemas, and other
  * reference data to AI agents.
  *
+ * Definitions are stored here; each HTTP request calls populateServer() on a fresh McpServer.
+ *
  * Key resources:
  * - Admin API Swagger/OpenAPI specification
- * - Client/Router API Swagger/OpenAPI specification
+ * - Client/Router API OpenAPI specification
  * - API usage guide explaining the difference between APIs
  */
 
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import {
-  McpServer,
-  RegisteredResource,
-  ResourceMetadata,
-} from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer, ResourceMetadata } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { MCPResourceDefinition, SwaggerDocProvider } from './types.js';
 
 /** Resource URI prefix for Conduit documentation */
@@ -33,12 +31,6 @@ export class ResourceRegistry {
   /** All registered resource definitions */
   private _resources: Map<string, MCPResourceDefinition> = new Map();
 
-  /** SDK RegisteredResource handles for enable/disable/remove operations */
-  private _resourceHandles: Map<string, RegisteredResource> = new Map();
-
-  private _grpcSdk: ConduitGrpcSdk;
-  private _mcpServer: McpServer | null = null;
-
   /** Provider for Admin API Swagger documentation */
   private _adminSwaggerProvider: SwaggerDocProvider | null = null;
 
@@ -48,15 +40,8 @@ export class ResourceRegistry {
   /** API guide content (markdown) */
   private _apiGuideContent: string = '';
 
-  constructor(grpcSdk: ConduitGrpcSdk) {
-    this._grpcSdk = grpcSdk;
-  }
-
-  /**
-   * Set the MCP server instance
-   */
-  setMcpServer(server: McpServer): void {
-    this._mcpServer = server;
+  constructor(_grpcSdk: ConduitGrpcSdk) {
+    // grpcSdk reserved for future use (e.g. dynamic resources)
   }
 
   /**
@@ -84,17 +69,11 @@ export class ResourceRegistry {
   }
 
   /**
-   * Register default documentation resources
+   * Register default documentation resources (definitions only)
    */
   private registerDefaultResources(): void {
-    if (!this._mcpServer) return;
-
-    // Register Admin API Swagger resource if provider is available
-    if (
-      this._adminSwaggerProvider &&
-      !this._resourceHandles.has(RESOURCE_URIS.ADMIN_SWAGGER)
-    ) {
-      this.registerResourceWithSDK({
+    if (this._adminSwaggerProvider && !this._resources.has(RESOURCE_URIS.ADMIN_SWAGGER)) {
+      this._resources.set(RESOURCE_URIS.ADMIN_SWAGGER, {
         uri: RESOURCE_URIS.ADMIN_SWAGGER,
         name: 'Admin API OpenAPI Specification',
         description:
@@ -107,14 +86,16 @@ export class ResourceRegistry {
           return doc ? JSON.stringify(doc, null, 2) : '{}';
         },
       });
+      ConduitGrpcSdk.Logger.log(
+        `Registered MCP resource definition: ${RESOURCE_URIS.ADMIN_SWAGGER}`,
+      );
     }
 
-    // Register Client API Swagger resource if provider is available
     if (
       this._clientSwaggerProvider &&
-      !this._resourceHandles.has(RESOURCE_URIS.CLIENT_SWAGGER)
+      !this._resources.has(RESOURCE_URIS.CLIENT_SWAGGER)
     ) {
-      this.registerResourceWithSDK({
+      this._resources.set(RESOURCE_URIS.CLIENT_SWAGGER, {
         uri: RESOURCE_URIS.CLIENT_SWAGGER,
         name: 'Client/Router API OpenAPI Specification',
         description:
@@ -127,11 +108,13 @@ export class ResourceRegistry {
           return doc ? JSON.stringify(doc, null, 2) : '{}';
         },
       });
+      ConduitGrpcSdk.Logger.log(
+        `Registered MCP resource definition: ${RESOURCE_URIS.CLIENT_SWAGGER}`,
+      );
     }
 
-    // Register API guide resource if content is available
-    if (this._apiGuideContent && !this._resourceHandles.has(RESOURCE_URIS.API_GUIDE)) {
-      this.registerResourceWithSDK({
+    if (this._apiGuideContent && !this._resources.has(RESOURCE_URIS.API_GUIDE)) {
+      this._resources.set(RESOURCE_URIS.API_GUIDE, {
         uri: RESOURCE_URIS.API_GUIDE,
         name: 'Conduit API Usage Guide',
         description:
@@ -140,39 +123,23 @@ export class ResourceRegistry {
         mimeType: 'text/markdown',
         contentProvider: () => this._apiGuideContent,
       });
+      ConduitGrpcSdk.Logger.log(
+        `Registered MCP resource definition: ${RESOURCE_URIS.API_GUIDE}`,
+      );
     }
   }
 
   /**
-   * Register a resource with the MCP SDK
+   * Register all resource definitions on a per-request McpServer instance.
    */
-  private registerResourceWithSDK(resource: MCPResourceDefinition): void {
-    if (!this._mcpServer) {
-      throw new Error('MCP server not initialized. Call setMcpServer() first.');
-    }
+  populateServer(mcpServer: McpServer): void {
+    for (const resource of this._resources.values()) {
+      const metadata: ResourceMetadata = {
+        description: resource.description,
+        mimeType: resource.mimeType,
+      };
 
-    // Remove existing resource if it exists
-    if (this._resourceHandles.has(resource.uri)) {
-      const existingHandle = this._resourceHandles.get(resource.uri);
-      existingHandle?.remove();
-      this._resourceHandles.delete(resource.uri);
-    }
-
-    // Store the resource definition
-    this._resources.set(resource.uri, resource);
-
-    // Build metadata for SDK
-    const metadata: ResourceMetadata = {
-      description: resource.description,
-      mimeType: resource.mimeType,
-    };
-
-    // Register with SDK
-    const handle = this._mcpServer.registerResource(
-      resource.name,
-      resource.uri,
-      metadata,
-      async () => {
+      mcpServer.registerResource(resource.name, resource.uri, metadata, async () => {
         const content = await Promise.resolve(resource.contentProvider());
         return {
           contents: [
@@ -183,31 +150,22 @@ export class ResourceRegistry {
             },
           ],
         };
-      },
-    );
-
-    // Store the handle
-    this._resourceHandles.set(resource.uri, handle);
-    ConduitGrpcSdk.Logger.log(`Registered MCP resource: ${resource.uri}`);
+      });
+    }
   }
 
   /**
-   * Register a resource with the registry (public API)
+   * Register a resource definition (public API)
    */
   registerResource(resource: MCPResourceDefinition): void {
-    this.registerResourceWithSDK(resource);
+    this._resources.set(resource.uri, resource);
+    ConduitGrpcSdk.Logger.log(`Registered MCP resource definition: ${resource.uri}`);
   }
 
   /**
    * Unregister a resource from the registry
    */
   unregisterResource(uri: string): boolean {
-    const handle = this._resourceHandles.get(uri);
-    if (handle) {
-      handle.remove();
-      this._resourceHandles.delete(uri);
-    }
-
     const removed = this._resources.delete(uri);
     if (removed) {
       ConduitGrpcSdk.Logger.log(`Unregistered MCP resource: ${uri}`);
@@ -240,11 +198,6 @@ export class ResourceRegistry {
    * Clear all registered resources
    */
   clearAllResources(): void {
-    // Remove all resources from SDK
-    this._resourceHandles.forEach(handle => {
-      handle.remove();
-    });
-    this._resourceHandles.clear();
     this._resources.clear();
     ConduitGrpcSdk.Logger.log('Cleared all MCP resources');
   }
