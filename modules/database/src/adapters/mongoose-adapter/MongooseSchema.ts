@@ -144,7 +144,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       parsedQuery = parsedQuery['$set'];
     }
     let finalQuery = this.model.findOneAndReplace(parsedFilter!, parsedQuery, {
-      new: true,
+      returnDocument: 'after',
     });
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
@@ -177,7 +177,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       parsedQuery = parsedQuery['$set'];
     }
     let finalQuery = this.model.findOneAndUpdate(parsedFilter!, parsedQuery, {
-      new: true,
+      returnDocument: 'after',
     });
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);

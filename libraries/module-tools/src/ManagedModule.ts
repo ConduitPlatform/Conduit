@@ -29,6 +29,9 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   private _cachedPeersManifest: ConduitPeersManifest | null | undefined;
   private _lastPeerBatchStates: Record<string, boolean> = {};
   private readonly _peerManifestRoot?: string;
+  private _configInitialized = false;
+  private _pendingConfigUpdates: string[] = [];
+  private _processingConfig = false;
 
   protected constructor(moduleName: string, peerManifestRoot?: string) {
     super(moduleName);
@@ -278,12 +281,10 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
           message: 'Invalid configuration values: ' + (e as Error).message,
         });
       }
-      ConfigController.getInstance().config = config;
-      await this.onConfig();
-      this.grpcSdk.bus?.publish(
-        kebabCase(this.name) + ':config:update',
-        JSON.stringify(config),
-      );
+      const configJson = JSON.stringify(config);
+      this._pendingConfigUpdates.push(configJson);
+      await this._drainConfigQueue();
+      this.grpcSdk.bus?.publish(kebabCase(this.name) + ':config:update', configJson);
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
@@ -295,10 +296,25 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
     this.grpcSdk.bus!.subscribe(
       `${kebabCase(this.name)}:config:update`,
       async (message: string) => {
-        ConfigController.getInstance().config = await this.preConfig(JSON.parse(message));
-        await this.onConfig();
+        this._pendingConfigUpdates.push(message);
+        await this._drainConfigQueue();
       },
     );
+  }
+
+  /** Serializes config updates; waits for initial lifecycle before draining. */
+  private async _drainConfigQueue() {
+    if (!this._configInitialized || this._processingConfig) return;
+    this._processingConfig = true;
+    try {
+      while (this._pendingConfigUpdates.length > 0) {
+        const message = this._pendingConfigUpdates.shift()!;
+        ConfigController.getInstance().config = await this.preConfig(JSON.parse(message));
+        await this.onConfig();
+      }
+    } finally {
+      this._processingConfig = false;
+    }
   }
 
   private async preRegisterLifecycle(): Promise<void> {
@@ -337,5 +353,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       if (!config || config.active || !config.hasOwnProperty('active'))
         await this.onConfig();
     }
+    this._configInitialized = true;
+    await this._drainConfigQueue();
   }
 }

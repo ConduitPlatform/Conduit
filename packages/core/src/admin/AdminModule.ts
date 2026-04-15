@@ -285,6 +285,7 @@ export default class AdminModule {
     }
     this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(config));
     ConfigController.getInstance().config = config;
+    this.onConfig();
     return config;
   }
 
@@ -313,7 +314,7 @@ export default class AdminModule {
     } else {
       this._router.stopSockets();
     }
-    if (ConfigController.getInstance().config.transports.mcp) {
+    if (ConfigController.getInstance().config.transports.mcp !== false) {
       this._router.initMCP();
     } else {
       this._router.stopMCP();

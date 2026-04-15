@@ -44,6 +44,8 @@ export class ConduitRoutingController {
   private _middlewareRouter: Router;
   private readonly _cleanupTimeoutMs: number;
   private _cleanupTimeout: NodeJS.Timeout | null = null;
+  /** Routes registered before MCP starts; replayed in initMCP. */
+  private readonly _conduitRoutesByKey: Map<string, ConduitRoute> = new Map();
   private readonly routeTrie: RouteTrie = new RouteTrie();
   readonly expressApp: Express = express();
   readonly server = http.createServer(this.expressApp);
@@ -176,6 +178,10 @@ export class ConduitRoutingController {
 
     // Set up API guide content (use provided content or default)
     this._mcpRouter.setApiGuideContent(config?.apiGuideContent ?? API_GUIDE_CONTENT);
+
+    for (const route of this._conduitRoutesByKey.values()) {
+      this._mcpRouter.registerConduitRoute(route);
+    }
   }
 
   stopRest() {
@@ -270,6 +276,8 @@ export class ConduitRoutingController {
   }
 
   registerConduitRoute(route: ConduitRoute) {
+    const key = `${route.input.action}-${route.input.path}`;
+    this._conduitRoutesByKey.set(key, route);
     this.routeTrie.insert(route.input.action, route.input.path);
     this._graphQLRouter?.registerConduitRoute(route);
     this._restRouter?.registerConduitRoute(route);
@@ -300,9 +308,16 @@ export class ConduitRoutingController {
   }
 
   private _cleanupRoutes(routes: UntypedArray) {
-    this._restRouter?.cleanupRoutes(routes);
-    this._graphQLRouter?.cleanupRoutes(routes);
-    this._mcpRouter?.cleanupRoutes(routes);
+    const typed = routes as { action: string; path: string }[];
+    const keepKeys = new Set(typed.map(r => `${r.action}-${r.path}`));
+    for (const key of [...this._conduitRoutesByKey.keys()]) {
+      if (!keepKeys.has(key)) {
+        this._conduitRoutesByKey.delete(key);
+      }
+    }
+    this._restRouter?.cleanupRoutes(typed);
+    this._graphQLRouter?.cleanupRoutes(typed);
+    this._mcpRouter?.cleanupRoutes(typed);
   }
 
   async socketPush(data: SocketPush) {

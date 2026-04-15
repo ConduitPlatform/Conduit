@@ -84,11 +84,32 @@ export class ToolRegistry {
   }
 
   /**
-   * Register all tool definitions on a per-request McpServer instance.
-   * @param mcpServer - Fresh server instance for this HTTP request
-   * @param enabledModules - Modules whose tools should be enabled (includes meta/core when loaded)
+   * Merge per-request session (from Express auth) with optional per-tool registration session.
    */
-  populateServer(mcpServer: McpServer, enabledModules: Set<string>): void {
+  private mergeSession(
+    requestSession: MCPSession | undefined,
+    registered?: MCPSession,
+  ): MCPSession {
+    const reqHeaders = requestSession?.headers ?? {};
+    const regHeaders = registered?.headers ?? {};
+    const reqContext = requestSession?.context ?? {};
+    const regContext = registered?.context ?? {};
+    return {
+      headers: { ...reqHeaders, ...regHeaders },
+      context: { ...reqContext, ...regContext },
+      authenticated:
+        registered?.authenticated ??
+        requestSession?.authenticated ??
+        Boolean(requestSession?.context?.admin),
+      user: registered?.user ?? requestSession?.user,
+    };
+  }
+
+  populateServer(
+    mcpServer: McpServer,
+    enabledModules: Set<string>,
+    requestSession?: MCPSession,
+  ): void {
     for (const tool of this._tools.values()) {
       const moduleName = tool.module || CORE_MODULE;
 
@@ -101,11 +122,8 @@ export class ToolRegistry {
           outputSchema: tool.outputSchema,
         },
         async (args: Record<string, unknown>) => {
-          const execSession = this._sessions.get(tool.name) ?? {
-            headers: {},
-            context: {},
-            authenticated: false,
-          };
+          const registered = this._sessions.get(tool.name);
+          const execSession = this.mergeSession(requestSession, registered);
 
           return await tool.handler(args, execSession, this._grpcSdk);
         },
@@ -113,10 +131,9 @@ export class ToolRegistry {
 
       if (handle !== undefined && handle !== null) {
         const shouldBeDisabled =
-          tool.initiallyDisabled === true ||
-          (moduleName !== META_MODULE &&
-            moduleName !== CORE_MODULE &&
-            !enabledModules.has(moduleName));
+          moduleName !== META_MODULE &&
+          moduleName !== CORE_MODULE &&
+          !enabledModules.has(moduleName);
 
         if (shouldBeDisabled) {
           handle.disable();

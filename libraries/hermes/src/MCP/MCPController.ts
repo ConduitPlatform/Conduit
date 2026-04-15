@@ -14,12 +14,18 @@
  * - Module-based tool organization with lazy loading
  */
 
-import { NextFunction, Request, Response } from 'express';
+import {
+  NextFunction,
+  Request as ExpressRequest,
+  Response as ExpressResponse,
+} from 'express';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { ConduitRouter } from '../Router.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { MCPConfig, MCPToolDefinition, SwaggerDocProvider } from './types.js';
+import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import { MCPConfig, MCPSession, MCPToolDefinition, SwaggerDocProvider } from './types.js';
 import { CORE_MODULE, ToolRegistry } from './ToolRegistry.js';
 import { ResourceRegistry } from './ResourceRegistry.js';
 import { MCP_ERROR_CODES } from './MCPErrors.js';
@@ -28,6 +34,7 @@ import { ConduitRoute } from '../classes/index.js';
 import { isNil } from 'lodash-es';
 import { registerMetaTools } from './MetaTools.js';
 import { MCP_CONSTANTS } from './constants.js';
+import { ConduitRequest } from '../interfaces/ConduitRequest.js';
 
 export class MCPController extends ConduitRouter {
   /** Module name -> list of module names to enable (e.g. communications -> email, push, sms) */
@@ -107,7 +114,7 @@ export class MCPController extends ConduitRouter {
   /**
    * Handle CORS preflight requests
    */
-  private handleOptions(req: Request, res: Response) {
+  private handleOptions(req: ExpressRequest, res: ExpressResponse) {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader(
       'Access-Control-Allow-Headers',
@@ -123,7 +130,7 @@ export class MCPController extends ConduitRouter {
    * @param req - Express request object
    * @returns Array of module names, or empty array if not specified
    */
-  private parseModulesFromQuery(req: Request): string[] {
+  private parseModulesFromQuery(req: ExpressRequest): string[] {
     const modulesParam = req.query.modules;
 
     if (!modulesParam) {
@@ -198,6 +205,99 @@ export class MCPController extends ConduitRouter {
     }
   }
 
+  private buildMCPSessionFromRequest(req: ExpressRequest): MCPSession {
+    const conduit = (req as ConduitRequest).conduit;
+    const headers: Record<string, string | string[] | undefined> = { ...req.headers };
+    const context: Record<string, unknown> =
+      conduit && typeof conduit === 'object' ? { ...conduit } : {};
+    return {
+      headers,
+      context,
+      authenticated: Boolean(context.admin),
+    };
+  }
+
+  private expressToWebRequest(req: ExpressRequest): globalThis.Request {
+    const host = req.get('host') ?? 'localhost';
+    const proto = req.protocol ?? 'http';
+    const url = `${proto}://${host}${req.originalUrl}`;
+    return new globalThis.Request(url, {
+      method: req.method,
+      headers: new Headers(req.headers as HeadersInit),
+    });
+  }
+
+  private async logMcpTransportErrorResponse(
+    webResponse: globalThis.Response,
+  ): Promise<void> {
+    if (webResponse.status < 400) return;
+    const ct = webResponse.headers.get('content-type') ?? '';
+    const clone = webResponse.clone();
+    try {
+      if (ct.includes('application/json') || ct.includes('text/plain')) {
+        const text = await clone.text();
+        ConduitGrpcSdk.Logger.warn(
+          `MCP Web transport error response ${webResponse.status}: ${text.slice(0, 4000)}`,
+        );
+      } else {
+        ConduitGrpcSdk.Logger.warn(
+          `MCP Web transport error response ${webResponse.status} content-type=${ct}`,
+        );
+      }
+    } catch (e) {
+      ConduitGrpcSdk.Logger.warn(
+        `MCP Web transport error response ${webResponse.status} (body read failed: ${(e as Error).message})`,
+      );
+    }
+  }
+
+  private async sendWebResponseToExpress(
+    webResponse: globalThis.Response,
+    res: ExpressResponse,
+  ): Promise<void> {
+    if (res.headersSent) {
+      ConduitGrpcSdk.Logger.warn(
+        'MCP: sendWebResponseToExpress called after Express headers were already sent',
+      );
+      return;
+    }
+
+    res.status(webResponse.status);
+
+    const skip = new Set(['content-encoding', 'transfer-encoding']);
+    webResponse.headers.forEach((value, key) => {
+      if (skip.has(key.toLowerCase())) return;
+      try {
+        if (key.toLowerCase() === 'set-cookie') {
+          res.appendHeader(key, value);
+        } else {
+          res.setHeader(key, value);
+        }
+      } catch {
+        /* invalid header name/value */
+      }
+    });
+
+    if (!webResponse.body) {
+      res.end();
+      return;
+    }
+
+    const readable = Readable.fromWeb(
+      webResponse.body as import('stream/web').ReadableStream<Uint8Array>,
+    );
+    try {
+      await pipeline(readable, res);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(
+        'MCP: error piping Web Response to Express: ' + (err as Error).message,
+      );
+      if (!res.writableEnded) {
+        res.destroy(err as Error);
+      }
+    }
+  }
+
   /**
    * Handle MCP POST and GET requests with stateless transport
    * Creates a new transport for each request to prevent request ID collisions
@@ -207,7 +307,11 @@ export class MCPController extends ConduitRouter {
    * Supports URL-based module specification via ?modules= query parameter
    * Example: /mcp?modules=authentication,storage
    */
-  private async handleMCPRequest(req: Request, res: Response, next: NextFunction) {
+  private async handleMCPRequest(
+    req: ExpressRequest,
+    res: ExpressResponse,
+    next: NextFunction,
+  ) {
     try {
       const requestedModules = this.parseModulesFromQuery(req);
       if (requestedModules.length > 0) {
@@ -215,30 +319,45 @@ export class MCPController extends ConduitRouter {
       }
 
       const enabledModules = this._toolRegistry.getLoadedModulesFull();
+      const requestSession = this.buildMCPSessionFromRequest(req);
 
       const mcpServer = this.createMcpServer();
-      this._toolRegistry.populateServer(mcpServer, enabledModules);
+      this._toolRegistry.populateServer(mcpServer, enabledModules, requestSession);
       this._resourceRegistry.populateServer(mcpServer);
 
-      const transport = new StreamableHTTPServerTransport({
+      const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined, // Stateless mode
         enableJsonResponse: true,
       });
 
+      transport.onerror = (err: Error) => {
+        ConduitGrpcSdk.Logger.error(
+          'MCP WebStandardStreamableHTTPServerTransport error: ' +
+            (err?.message ?? String(err)),
+        );
+      };
+
       res.on('close', () => {
-        transport.close();
+        void transport.close();
       });
 
       await mcpServer.connect(transport);
 
       const body = req.method === 'GET' ? undefined : req.body;
-      await transport.handleRequest(req, res, body);
-    } catch (error) {
-      ConduitGrpcSdk.Logger.error(
-        'Error handling MCP request: ' + (error as Error).message,
-      );
+      const webRequest = this.expressToWebRequest(req);
+      const webResponse = await transport.handleRequest(webRequest, {
+        parsedBody: body,
+      });
 
-      // Only send error response if headers haven't been sent
+      await this.logMcpTransportErrorResponse(webResponse);
+      await this.sendWebResponseToExpress(webResponse, res);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      ConduitGrpcSdk.Logger.error(
+        'Error handling MCP request: ' +
+          err.message +
+          (err.stack ? '\n' + err.stack : ''),
+      );
       if (!res.headersSent) {
         const message = req.body;
         res.status(500).json({
@@ -246,7 +365,7 @@ export class MCPController extends ConduitRouter {
           id: message?.id || null,
           error: {
             code: MCP_ERROR_CODES.INTERNAL_ERROR,
-            message: error instanceof Error ? error.message : 'Internal server error',
+            message: err.message,
           },
         });
       }
@@ -256,7 +375,7 @@ export class MCPController extends ConduitRouter {
   /**
    * Health check endpoint
    */
-  private handleHealthCheck(req: Request, res: Response) {
+  private handleHealthCheck(req: ExpressRequest, res: ExpressResponse) {
     const modules = this._toolRegistry.getModules();
     const resources = this._resourceRegistry.listResources();
     res.json({

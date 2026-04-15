@@ -236,11 +236,15 @@ export class ConfigStorage {
     const meta = await this.getConfigVersionMeta(moduleName);
     let currentVersion = meta.version;
     if (this.grpcSdk.isAvailable('database')) {
-      const dbDoc = await models.Config.getInstance()
-        .findOne({ name: moduleName })
-        .catch(() => null);
-      if (dbDoc) {
-        currentVersion = Math.max(currentVersion, dbDoc.version ?? 0);
+      try {
+        const dbDoc = await models.Config.getInstance()
+          .findOne({ name: moduleName })
+          .catch(() => null);
+        if (dbDoc) {
+          currentVersion = Math.max(currentVersion, dbDoc.version ?? 0);
+        }
+      } catch {
+        // Config model singleton not yet initialized (initializeModels pending)
       }
     }
     const newVersion = currentVersion + 1;

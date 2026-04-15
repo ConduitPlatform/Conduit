@@ -305,7 +305,6 @@ export class RouteToToolConverter {
               text: JSON.stringify(output, null, 2),
             },
           ],
-          structuredContent: output,
         };
       } catch (error) {
         ConduitGrpcSdk.Logger.error(

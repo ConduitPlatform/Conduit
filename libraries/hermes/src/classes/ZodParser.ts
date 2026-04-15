@@ -174,7 +174,7 @@ export class ZodParser {
       case TYPE.Boolean:
         return this.useCoercion ? z.coerce.boolean() : z.boolean();
       case TYPE.Date:
-        return z.string().datetime().or(z.date());
+        return z.string().datetime({ offset: true });
       case TYPE.ObjectId:
         return z.string();
       case TYPE.JSON:
