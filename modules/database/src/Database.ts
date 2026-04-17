@@ -86,6 +86,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       columnExistence: this.columnExistence.bind(this),
       migrate: this.migrate.bind(this),
       getDatabaseType: this.getDatabaseType.bind(this),
+      generateId: this.generateId.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -809,6 +810,14 @@ export default class DatabaseModule extends ManagedModule<void> {
     callback: GrpcResponse<GetDatabaseTypeResponse>,
   ) {
     const result = this._activeAdapter.getDatabaseType();
+    callback(null, { result });
+  }
+
+  async generateId(
+    call: GrpcRequest<Empty>,
+    callback: GrpcResponse<GetDatabaseTypeResponse>,
+  ) {
+    const result = this._activeAdapter.generateId();
     callback(null, { result });
   }
 

@@ -1,4 +1,4 @@
-import { ConnectOptions, Mongoose } from 'mongoose';
+import { ConnectOptions, Mongoose, Types } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema.js';
 import { schemaConverter } from './SchemaConverter.js';
 import {
@@ -260,6 +260,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   getDatabaseType(): string {
     return 'MongoDB';
+  }
+
+  generateId(): string {
+    return new Types.ObjectId().toHexString();
   }
 
   async createIndexes(

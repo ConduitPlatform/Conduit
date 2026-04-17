@@ -161,6 +161,7 @@ service DatabaseProvider {
   rpc SetSchemaExtension(SchemaExtension) returns (Schema);
   rpc Migrate(MigrateRequest) returns (google.protobuf.Empty);
   rpc GetDatabaseType(google.protobuf.Empty) returns (GetDatabaseTypeResponse);
+  rpc GenerateId(google.protobuf.Empty) returns (GetDatabaseTypeResponse);
   // Database queries
   rpc findOne(FindOneRequest) returns (QueryResponse);
   rpc findMany(FindRequest) returns (QueryResponse);

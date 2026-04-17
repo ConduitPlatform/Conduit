@@ -605,6 +605,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     return this.client!.getDatabaseType({});
   }
 
+  generateId(): Promise<string> {
+    return this.client!.generateId({}).then(res => res.result);
+  }
+
   private constructSortObj(sort: string[]) {
     const sortObj: { [field: string]: -1 | 1 } = {};
     sort.forEach((sortVal: string) => {
