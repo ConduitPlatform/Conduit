@@ -345,6 +345,14 @@ export class ZodParser {
     }
 
     const nestedResult = this.extractTypesInternal(fieldName, field as ConduitModel);
-    return Object.keys(nestedResult).length > 0 ? z.object(nestedResult) : z.object({});
+    let zodType: z.ZodTypeAny =
+      Object.keys(nestedResult).length > 0 ? z.object(nestedResult) : z.object({});
+    if (!isRequired) {
+      zodType = zodType.optional();
+    }
+    if (description) {
+      zodType = zodType.describe(description);
+    }
+    return zodType;
   }
 }
