@@ -229,29 +229,50 @@ export default class Chat extends ManagedModule<Config> {
 
     const shouldPersist = persist !== false;
     let messageId: string | undefined;
+    const createdAt = new Date().toISOString();
+    const resolvedType = messageType || MessageType.Text;
 
     try {
       if (shouldPersist) {
-        const created = await models.ChatMessage.getInstance().create({
-          message,
-          messageType: messageType || MessageType.Text,
-          senderUser: userId,
-          room: roomId,
-          readBy: [userId],
-        });
-        messageId = created._id;
+        messageId = await this.grpcSdk.database!.generateId();
+        models.ChatMessage.getInstance()
+          .create({
+            _id: messageId,
+            message,
+            messageType: resolvedType,
+            senderUser: userId,
+            room: roomId,
+            readBy: [userId],
+          })
+          .catch(err => {
+            ConduitGrpcSdk.Logger.error(
+              `Failed to persist message ${messageId} in room ${roomId}: ${err.message}`,
+            );
+            this.grpcSdk.router?.socketPush({
+              event: 'message:error',
+              receivers: [userId],
+              rooms: [],
+              data: JSON.stringify({
+                _id: messageId,
+                room: roomId,
+                error: 'Message could not be saved',
+              }),
+            });
+          });
       }
 
-      await this.grpcSdk.router?.socketPush({
+      this.grpcSdk.router?.socketPush({
         event: 'message',
         receivers: [],
         rooms: [roomId],
         data: JSON.stringify({
           _id: messageId,
           sender: userId,
+          content: message,
           message,
           room: roomId,
-          contentType: messageType || MessageType.Text,
+          contentType: resolvedType,
+          createdAt,
         }),
       });
 

@@ -346,6 +346,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     return type;
   }
 
+  generateId(): string {
+    return crypto.randomUUID();
+  }
+
   async createIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],

@@ -47,6 +47,10 @@ const schema: ConduitModel = {
 };
 const modelOptions = {
   timestamps: true,
+  indexes: [
+    { fields: ['room', 'createdAt'] },
+    { fields: ['room', 'deleted', 'createdAt'] },
+  ],
   conduit: {
     permissions: {
       extendable: true,

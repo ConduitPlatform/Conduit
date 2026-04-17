@@ -628,33 +628,56 @@ export class ChatRoutes {
       }
     }
 
-    const created = await ChatMessage.getInstance().create({
+    const messageId = await this.grpcSdk.database!.generateId();
+    const createdAt = new Date().toISOString();
+
+    const createPayload = {
+      _id: messageId,
       message: formattedMessage.content ?? '',
       messageType: formattedMessage.contentType || MessageType.Text,
       files: formattedMessage.files || [],
       senderUser: user._id,
       room: roomId,
       readBy: [user._id],
-    });
+    };
 
-    if (nonce) {
-      await this.recordNonce(roomId as string, user._id, nonce, created._id);
-    }
-
-    ConduitGrpcSdk.Metrics?.increment('messages_sent_total');
+    ChatMessage.getInstance()
+      .create(createPayload)
+      .then(created => {
+        if (nonce) {
+          this.recordNonce(roomId as string, user._id, nonce, created._id);
+        }
+        ConduitGrpcSdk.Metrics?.increment('messages_sent_total');
+      })
+      .catch(err => {
+        ConduitGrpcSdk.Logger.error(
+          `Failed to persist message ${messageId} in room ${roomId}: ${err.message}`,
+        );
+        this.grpcSdk.router?.socketPush({
+          event: 'message:error',
+          receivers: [user._id],
+          rooms: [],
+          data: JSON.stringify({
+            _id: messageId,
+            room: roomId,
+            error: 'Message could not be saved',
+          }),
+        });
+      });
 
     return {
       event: 'message',
       receivers: [],
       rooms: [roomId as string],
       data: {
-        _id: created._id,
+        _id: messageId,
         nonce,
         sender: user._id,
         contentType: formattedMessage.contentType,
         content: formattedMessage.content,
         files: formattedMessage.files,
         room: roomId,
+        createdAt,
       },
     };
   }
@@ -874,6 +897,7 @@ export class ChatRoutes {
             contentType: ConduitString.Optional,
             files: [ConduitString.Optional],
             room: TYPE.String,
+            createdAt: ConduitString.Optional,
           }),
         },
         messagesRead: {
