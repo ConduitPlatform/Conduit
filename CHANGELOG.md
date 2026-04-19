@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.26](https://github.com/ConduitPlatform/Conduit/compare/v0.16.25...v0.16.26) (2026-04-19)
+
+
+### Features
+
+* **database,grpc-sdk:** allow creation of ids through rpc to defer db ops ([425de8f](https://github.com/ConduitPlatform/Conduit/commit/425de8f47d7fa0de1da41572469f19ad2da2ac07))
+
+
+### Bug Fixes
+
+* **chat:** build issue ([02fbb8b](https://github.com/ConduitPlatform/Conduit/commit/02fbb8be9270de336dda1cb1bd9e5db2735cb1aa))
+
 ### [0.16.25](https://github.com/ConduitPlatform/Conduit/compare/v0.16.24...v0.16.25) (2026-04-16)
 
 

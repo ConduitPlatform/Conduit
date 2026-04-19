@@ -1,6 +1,6 @@
 {
   "name": "conduit",
-  "version": "0.16.25",
+  "version": "0.16.26",
   "description": "",
   "main": "index.js",
   "private": true,
