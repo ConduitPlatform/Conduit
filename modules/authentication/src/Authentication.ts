@@ -92,6 +92,7 @@ export default class Authentication extends ManagedModule<Config> {
   private userRouter: AuthenticationRoutes;
   private database: DatabaseProvider;
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
+  private tokenCleanupInterval: ReturnType<typeof setInterval> | null = null;
   private monitorsActive = false;
 
   constructor() {
@@ -167,12 +168,14 @@ export default class Authentication extends ManagedModule<Config> {
       );
     }
     if (!config.active) {
+      this.stopTokenCleanup();
       this.destroyMonitors();
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       this.refreshAppRoutes();
       this.initMonitors();
+      this.startTokenCleanup();
       this.updateHealth(HealthCheckStatus.SERVING);
       if (config.local.verification.send_email) {
         if (!this.grpcSdk.isAvailable('email')) {
@@ -832,6 +835,26 @@ export default class Authentication extends ManagedModule<Config> {
       });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  private startTokenCleanup() {
+    if (this.tokenCleanupInterval) return;
+    const cleanup = () => {
+      models.AccessToken.getInstance()
+        .deleteMany({ expiresOn: { $lte: new Date() } })
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(`Token cleanup failed: ${e.message}`);
+        });
+    };
+    cleanup();
+    this.tokenCleanupInterval = setInterval(cleanup, 5 * 60 * 1000);
+  }
+
+  private stopTokenCleanup() {
+    if (this.tokenCleanupInterval) {
+      clearInterval(this.tokenCleanupInterval);
+      this.tokenCleanupInterval = null;
     }
   }
 

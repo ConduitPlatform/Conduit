@@ -1,4 +1,9 @@
-import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  ConduitSchemaOptions,
+  DatabaseProvider,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 import { User } from './User.model.js';
 import { ChatParticipantsLog } from './ChatParticipantsLog.schema.js';
@@ -33,8 +38,9 @@ const schema: ConduitModel = {
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
-const modelOptions = {
+const modelOptions: ConduitSchemaOptions = {
   timestamps: true,
+  indexes: [{ fields: ['participants'] }, { fields: ['participants', 'deleted'] }],
   conduit: {
     permissions: {
       extendable: true,
@@ -43,7 +49,7 @@ const modelOptions = {
       canDelete: false,
     },
   },
-} as const;
+};
 const collectionName = undefined;
 
 export class ChatRoom extends ConduitActiveSchema<ChatRoom> {

@@ -28,10 +28,15 @@ import { MessageType } from '../enums/messageType.enum.js';
 
 // Redis TTL for chat message nonce deduplication.
 const CHAT_NONCE_TTL_MS = 5 * 60 * 1000;
+const MEMBERSHIP_CACHE_TTL_MS = 30 * 1000;
 
 export class ChatRoutes {
   private readonly _routingManager: RoutingManager;
   private invitationRoutes: InvitationRoutes;
+  private pendingReads = new Map<
+    string,
+    { userIds: Set<string>; timer: ReturnType<typeof setTimeout> }
+  >();
 
   constructor(
     readonly server: GrpcServer,
@@ -216,6 +221,7 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
+      await this.invalidateMembershipCache(room._id);
       this.grpcSdk.router?.socketPush({
         event: 'join-room',
         receivers: users,
@@ -281,6 +287,7 @@ export class ChatRoutes {
             throw new GrpcError(status.INTERNAL, e.message);
           });
       }
+      await this.invalidateMembershipCache(room._id);
       this.grpcSdk.router?.socketPush({
         event: 'leave-room',
         receivers: [user._id],
@@ -494,7 +501,10 @@ export class ChatRoutes {
 
   async connect(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
-    const rooms = await ChatRoom.getInstance().findMany({ participants: user._id });
+    const rooms = await ChatRoom.getInstance().findMany(
+      { participants: user._id },
+      '_id',
+    );
     return { event: 'join-room', rooms: rooms.map((room: ChatRoom) => room._id) };
   }
 
@@ -517,13 +527,7 @@ export class ChatRoutes {
   async onMessage(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
     const [roomId, message] = call.request.params;
-    const room = await ChatRoom.getInstance().findOne({
-      _id: roomId,
-      deleted: false,
-      participants: user._id,
-    });
-
-    if (isNil(room)) {
+    if (!(await this.verifyRoomMembership(roomId as string, user._id))) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
         "Room does not exist or you don't have access",
@@ -684,31 +688,19 @@ export class ChatRoutes {
   async onMessagesRead(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const user: User = call.request.context.user;
     const [roomId] = call.request.params;
-    const room = await ChatRoom.getInstance().findOne({
-      _id: roomId,
-      deleted: false,
-      participants: user._id,
-    });
-    if (isNil(room)) {
+    if (!(await this.verifyRoomMembership(roomId as string, user._id))) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
         "Room does not exist or you don't have access",
       );
     }
 
-    const filterQuery = {
-      room: room._id,
-      readBy: { $ne: user._id },
-    };
-
-    await ChatMessage.getInstance().updateMany(filterQuery, {
-      $push: { readBy: user._id },
-    });
+    this.scheduleReadFlush(roomId as string, user._id);
     return {
       event: 'messagesRead',
       receivers: [],
-      rooms: [room._id],
-      data: { room: room._id, readBy: user._id },
+      rooms: [roomId as string],
+      data: { room: roomId as string, readBy: user._id },
     };
   }
 
@@ -937,6 +929,65 @@ export class ChatRoutes {
     if (!this.grpcSdk.state) return;
     const key = `chat:nonce:${roomId}:${userId}:${nonce}`;
     await this.grpcSdk.state.setKey(key, messageId, CHAT_NONCE_TTL_MS);
+  }
+
+  private async verifyRoomMembership(roomId: string, userId: string): Promise<boolean> {
+    const cacheKey = `chat:membership:${roomId}`;
+    if (this.grpcSdk.state) {
+      const cached = await this.grpcSdk.state.getKey(cacheKey);
+      if (cached) {
+        const participants: string[] = JSON.parse(cached);
+        return participants.includes(userId);
+      }
+    }
+    const room = await ChatRoom.getInstance().findOne({
+      _id: roomId,
+      deleted: false,
+      participants: userId,
+    });
+    if (!room) return false;
+    if (this.grpcSdk.state) {
+      await this.grpcSdk.state.setKey(
+        cacheKey,
+        JSON.stringify(room.participants),
+        MEMBERSHIP_CACHE_TTL_MS,
+      );
+    }
+    return true;
+  }
+
+  private async invalidateMembershipCache(roomId: string): Promise<void> {
+    if (!this.grpcSdk.state) return;
+    await this.grpcSdk.state.clearKey(`chat:membership:${roomId}`);
+  }
+
+  private scheduleReadFlush(roomId: string, userId: string): void {
+    let entry = this.pendingReads.get(roomId);
+    if (!entry) {
+      entry = {
+        userIds: new Set(),
+        timer: setTimeout(() => this.flushReads(roomId), 500),
+      };
+      this.pendingReads.set(roomId, entry);
+    }
+    entry.userIds.add(userId);
+  }
+
+  private flushReads(roomId: string): void {
+    const entry = this.pendingReads.get(roomId);
+    if (!entry) return;
+    this.pendingReads.delete(roomId);
+    const promises = [...entry.userIds].map(userId =>
+      ChatMessage.getInstance().updateMany(
+        { room: roomId, readBy: { $ne: userId } },
+        { $push: { readBy: userId } },
+      ),
+    );
+    Promise.all(promises).catch(e => {
+      ConduitGrpcSdk.Logger.error(
+        `Failed to flush read receipts for room ${roomId}: ${e.message}`,
+      );
+    });
   }
 
   private async fetchAndValidateRoomById(

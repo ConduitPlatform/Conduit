@@ -45,6 +45,7 @@ export class SocketController extends ConduitRouter {
         origin: '*',
         methods: ['GET', 'POST'],
       },
+      maxHttpBufferSize: 1e6,
       connectionStateRecovery: {
         // the backup duration of the sessions and the packets
         maxDisconnectionDuration: 2 * 60 * 1000,
@@ -310,9 +311,10 @@ export class SocketController extends ConduitRouter {
     namespace: string,
   ): Promise<RemoteSocket<any, any>[]> {
     const sockets = await this.io.of(namespace).fetchSockets();
+    const userIdSet = new Set(userIds);
     return sockets.filter(socket => {
       if (socket.data && socket.data.user) {
-        return userIds.includes(socket.data.user._id);
+        return userIdSet.has(socket.data.user._id);
       }
     });
   }
