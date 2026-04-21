@@ -790,6 +790,12 @@ importers:
       bson:
         specifier: ^7.2.0
         version: 7.2.0
+      bullmq:
+        specifier: ^5.21.2
+        version: 5.73.0
+      convict:
+        specifier: ^6.2.4
+        version: 6.2.5
       deepdash-es:
         specifier: ^5.3.9
         version: 5.3.9
@@ -833,6 +839,9 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
     devDependencies:
+      '@types/convict':
+        specifier: ^6.1.6
+        version: 6.1.6
       '@types/dottie':
         specifier: ^2.0.7
         version: 2.0.7

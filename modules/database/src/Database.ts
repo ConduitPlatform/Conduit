@@ -61,12 +61,13 @@ import {
   type ImportResult,
 } from '@conduitplatform/module-tools';
 import AppConfigSchema from './config/index.js';
+import { QueueController } from './controllers/queue.controller.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default class DatabaseModule extends ManagedModule<any> {
+export default class DatabaseModule extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),
@@ -163,6 +164,36 @@ export default class DatabaseModule extends ManagedModule<any> {
         readConcern: config.readConcern ?? 'local',
       });
     }
+    if (!config.viewCleanup.enabled) {
+      try {
+        await QueueController.getInstance().drainViewCleanupQueue();
+      } catch {
+        // Queue was never initialized (cleanup stayed disabled).
+      }
+      return;
+    }
+    const queueController = QueueController.getInstance(this.grpcSdk);
+    await queueController.drainViewCleanupQueue();
+    queueController.addViewCleanupWorker(job =>
+      this._activeAdapter.cleanUpStaleViews(
+        job.data.stalenessThresholdMs,
+        job.data.batchSize,
+      ),
+    );
+    if (!config.viewCleanup.cronPattern) {
+      ConduitGrpcSdk.Logger.warn(
+        'View cleanup is enabled but no cronPattern is set. Skipping job scheduling.',
+      );
+      return;
+    }
+    const repeatOptions = {
+      pattern: config.viewCleanup.cronPattern,
+    };
+    await queueController.addViewCleanupJob(
+      config.viewCleanup.stalenessThresholdMs,
+      config.viewCleanup.batchSize,
+      repeatOptions,
+    );
   }
 
   async onRegister() {
@@ -964,6 +995,12 @@ export default class DatabaseModule extends ManagedModule<any> {
       });
       this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
         await this._activeAdapter.deleteSchema(schemaName, false, '', true);
+      });
+      this.grpcSdk.bus?.subscribe('database:delete:view', async (viewName: string) => {
+        delete this._activeAdapter.views[viewName];
+        if (this._activeAdapter instanceof MongooseAdapter) {
+          delete this._activeAdapter.mongoose.models[viewName];
+        }
       });
     } catch {
       ConduitGrpcSdk.Logger.error('Failed to synchronize schema');

@@ -12,6 +12,7 @@
 **/protoTypes/**
 **/tests/coverage
 .vscode
+.cursor/commands/
 **/resourceRegistry.log
 .turbo
 .DS_Store
