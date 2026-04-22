@@ -3,6 +3,8 @@ import {
   ConduitSchema,
   ConduitSchemaOptions,
   DatabaseProvider,
+  FindManyOptions,
+  FindOneOptions,
   Query,
 } from '@conduitplatform/grpc-sdk';
 
@@ -20,15 +22,41 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     this.dbInstance = dbInstance;
   }
 
+  findOne(query: Query<T>, options: FindOneOptions): Promise<T | null>;
+
   findOne(
     query: Query<T>,
     select?: string,
     populate?: string | string[],
     userId?: string,
     scope?: string,
+  ): Promise<T | null>;
+
+  findOne(
+    query: Query<T>,
+    selectOrOptions?: string | FindOneOptions,
+    populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ): Promise<T | null> {
-    return this.dbInstance.findOne<T>(this.name, query, select, populate, userId, scope);
+    if (
+      typeof selectOrOptions === 'object' &&
+      selectOrOptions !== null &&
+      !Array.isArray(selectOrOptions)
+    ) {
+      return this.dbInstance.findOne<T>(this.name, query, selectOrOptions);
+    }
+    return this.dbInstance.findOne<T>(
+      this.name,
+      query,
+      selectOrOptions,
+      populate,
+      userId,
+      scope,
+    );
   }
+
+  findMany(query: Query<T>, options: FindManyOptions): Promise<T[]>;
 
   findMany(
     query: Query<T>,
@@ -39,11 +67,29 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     populate?: string | string[],
     userId?: string,
     scope?: string,
+  ): Promise<T[]>;
+
+  findMany(
+    query: Query<T>,
+    selectOrOptions?: string | FindManyOptions,
+    skip?: number,
+    limit?: number,
+    sort?: { [field: string]: -1 | 1 } | string[] | string,
+    populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ): Promise<T[]> {
+    if (
+      typeof selectOrOptions === 'object' &&
+      selectOrOptions !== null &&
+      !Array.isArray(selectOrOptions)
+    ) {
+      return this.dbInstance.findMany<T>(this.name, query, selectOrOptions);
+    }
     return this.dbInstance.findMany<T>(
       this.name,
       query,
-      select,
+      selectOrOptions,
       skip,
       limit,
       sort,
@@ -154,7 +200,23 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     return this.dbInstance.deleteMany(this.name, query, userId, scope);
   }
 
-  countDocuments(query: Query<T>, userId?: string, scope?: string): Promise<number> {
-    return this.dbInstance.countDocuments(this.name, query, userId, scope);
+  countDocuments(
+    query: Query<T>,
+    options: { userId?: string; scope?: string; readPreference?: string },
+  ): Promise<number>;
+
+  countDocuments(query: Query<T>, userId?: string, scope?: string): Promise<number>;
+
+  countDocuments(
+    query: Query<T>,
+    userIdOrOptions?:
+      | string
+      | { userId?: string; scope?: string; readPreference?: string },
+    scope?: string,
+  ): Promise<number> {
+    if (typeof userIdOrOptions === 'object' && userIdOrOptions !== null) {
+      return this.dbInstance.countDocuments(this.name, query, userIdOrOptions);
+    }
+    return this.dbInstance.countDocuments(this.name, query, userIdOrOptions, scope);
   }
 }

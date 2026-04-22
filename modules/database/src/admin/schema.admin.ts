@@ -269,7 +269,9 @@ export class SchemaAdmin {
     await this.schemaController.createSchema(
       new ConduitSchema(name, fields, modelOptions),
     );
-    return await this.database.getSchemaModel('_DeclaredSchema').model.findOne({ name });
+    return await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ name }, { readPreference: 'primary' });
   }
 
   async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

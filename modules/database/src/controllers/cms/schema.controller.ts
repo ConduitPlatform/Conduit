@@ -42,7 +42,10 @@ export class SchemaController {
     }
     this.database
       .getSchemaModel('_DeclaredSchema')
-      .model.findMany({ 'modelOptions.conduit.cms.enabled': true })
+      .model.findMany(
+        { 'modelOptions.conduit.cms.enabled': true },
+        { readPreference: 'primary' },
+      )
       .then(r => {
         if (r) {
           const routeSchemas: Indexable = {};

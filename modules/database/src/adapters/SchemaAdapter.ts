@@ -270,6 +270,7 @@ export abstract class SchemaAdapter<T> {
       scope?: string;
       select?: string;
       populate?: string[];
+      readPreference?: string;
     },
   ): Promise<any>;
 
@@ -288,6 +289,7 @@ export abstract class SchemaAdapter<T> {
       populate?: string[];
       userId?: string;
       scope?: string;
+      readPreference?: string;
     },
   ): Promise<any>;
 
@@ -383,6 +385,7 @@ export abstract class SchemaAdapter<T> {
     options?: {
       userId?: string;
       scope?: string;
+      readPreference?: string;
     },
   ): Promise<number>;
 

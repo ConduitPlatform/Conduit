@@ -11,7 +11,8 @@ import {
   UntypedArray,
 } from '../../interfaces/index.js';
 import { Query } from '../../types/db.js';
-import { FindOneOptions, FindManyOptions } from './types.js';
+import type { FindOneOptions, FindManyOptions } from './types.js';
+export type { FindOneOptions, FindManyOptions } from './types.js';
 import { AuthzOptions, PopulateAuthzOptions } from '../../types/options.js';
 import { isNil } from 'lodash-es';
 import {
@@ -537,16 +538,21 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   countDocuments<T>(
     schemaName: string,
     query: Query<T>,
-    options?: AuthzOptions,
+    options?: AuthzOptions & { readPreference?: string },
   ): Promise<number>;
 
   countDocuments<T>(
     schemaName: string,
     query: Query<T>,
-    userIdOrOptions?: string | AuthzOptions,
+    userIdOrOptions?: string | (AuthzOptions & { readPreference?: string }),
     scope?: string,
   ): Promise<number> {
-    const options = normalizeAuthzOptions(userIdOrOptions, scope);
+    let options: AuthzOptions & { readPreference?: string };
+    if (typeof userIdOrOptions === 'string' || isNil(userIdOrOptions)) {
+      options = { userId: userIdOrOptions as string | undefined, scope };
+    } else {
+      options = userIdOrOptions;
+    }
     return this.client!.countDocuments({
       schemaName,
       query: this.processQuery(query),

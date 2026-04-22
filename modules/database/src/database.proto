@@ -44,6 +44,7 @@ message FindOneRequest {
   repeated string populate = 4;
   optional string userId = 5;
   optional string scope = 6;
+  optional string readPreference = 7;
 }
 
 message FindRequest {
@@ -56,6 +57,7 @@ message FindRequest {
   repeated string populate = 7;
   optional string userId = 8;
   optional string scope = 9;
+  optional string readPreference = 10;
 }
 
 message QueryResponse {
@@ -67,6 +69,7 @@ message QueryRequest {
   string query = 2;
   optional string userId = 3;
   optional string scope = 4;
+  optional string readPreference = 5;
 }
 
 message RawQueryRequest {

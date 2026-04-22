@@ -27,6 +27,15 @@ export abstract class DatabaseAdapter<T extends Schema> {
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
   protected readonly maxConnTimeoutMs: number;
   protected grpcSdk: ConduitGrpcSdk;
+  protected queryDefaults: {
+    readPreference: string;
+    writeConcern: string;
+    readConcern: string;
+  } = {
+    readPreference: 'primary',
+    writeConcern: '1',
+    readConcern: 'local',
+  };
   private legacyDeployment = false; // unprefixed declared schema collection
   private readonly _systemSchemas: Set<string> = new Set();
 
@@ -41,6 +50,18 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   get systemSchemas() {
     return Array.from(this._systemSchemas);
+  }
+
+  updateQueryDefaults(config: {
+    readPreference: string;
+    writeConcern: string;
+    readConcern: string;
+  }) {
+    this.queryDefaults = config;
+  }
+
+  getQueryDefaults() {
+    return this.queryDefaults;
   }
 
   async init(grpcSdk: ConduitGrpcSdk) {
@@ -280,17 +301,20 @@ export abstract class DatabaseAdapter<T extends Schema> {
   }
 
   async recoverSchemasFromDatabase() {
-    let models = await this.models!['_DeclaredSchema'].findMany({
-      $or: [
-        {
-          parentSchema: '',
-        },
-        {
-          parentSchema: null,
-        },
-        { parentSchema: { $exists: false } },
-      ],
-    });
+    let models = await this.models!['_DeclaredSchema'].findMany(
+      {
+        $or: [
+          {
+            parentSchema: '',
+          },
+          {
+            parentSchema: null,
+          },
+          { parentSchema: { $exists: false } },
+        ],
+      },
+      { readPreference: 'primary' },
+    );
     models = models
       // do not recover system schemas as they have already been
       .filter((model: _ConduitSchema) => {
@@ -325,7 +349,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   }
 
   async recoverViewsFromDatabase() {
-    let views = await this.models!['Views'].findMany({});
+    let views = await this.models!['Views'].findMany({}, { readPreference: 'primary' });
     views = views.map((view: IView) => {
       return this.createView(
         view.originalSchema,
@@ -439,7 +463,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
-    const model = await this.models['_DeclaredSchema'].findOne({ name: schema.name });
+    const model = await this.models['_DeclaredSchema'].findOne(
+      { name: schema.name },
+      { readPreference: 'primary' },
+    );
     if (model) {
       await this.models['_DeclaredSchema'].findByIdAndUpdate(model._id, {
         name: schema.name,

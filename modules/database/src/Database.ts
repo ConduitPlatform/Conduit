@@ -54,18 +54,20 @@ import { isNil } from 'lodash-es';
 import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter/index.js';
 import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter/index.js';
 import {
+  ConfigController,
   ManagedModule,
   type ExportableResource,
   type ExportResult,
   type ImportResult,
 } from '@conduitplatform/module-tools';
+import AppConfigSchema from './config/index.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default class DatabaseModule extends ManagedModule<void> {
-  configSchema = undefined;
+export default class DatabaseModule extends ManagedModule<any> {
+  configSchema = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),
     protoDescription: 'database.DatabaseProvider',
@@ -148,6 +150,19 @@ export default class DatabaseModule extends ManagedModule<void> {
     });
     await Promise.all(modelPromises);
     this.updateHealth(HealthCheckStatus.SERVING);
+  }
+
+  async onConfig() {
+    const config = ConfigController.getInstance().config;
+    if (!config) return;
+
+    if (this._activeAdapter.getDatabaseType() === 'MongoDB') {
+      this._activeAdapter.updateQueryDefaults({
+        readPreference: config.readPreference ?? 'primary',
+        writeConcern: config.writeConcern ?? '1',
+        readConcern: config.readConcern ?? 'local',
+      });
+    }
   }
 
   async onRegister() {
@@ -449,6 +464,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         populate: call.request.populate,
         userId: call.request.userId,
         scope: call.request.scope,
+        readPreference: call.request.readPreference,
       });
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
@@ -485,6 +501,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         populate,
         userId: call.request.userId,
         scope: call.request.scope,
+        readPreference: call.request.readPreference,
       });
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
@@ -832,6 +849,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.countDocuments(call.request.query, {
         userId: call.request.userId,
         scope: call.request.scope,
+        readPreference: call.request.readPreference,
       });
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {

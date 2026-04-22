@@ -41,6 +41,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   async retrieveForeignSchemas(): Promise<void> {
     const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
       {},
+      { readPreference: 'primary' },
     );
     const collectionNames: string[] = [];
     (await this.mongoose.connection?.db?.listCollections()?.toArray())?.forEach(c =>

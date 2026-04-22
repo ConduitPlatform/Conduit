@@ -51,6 +51,7 @@ export async function getUpdatedDocument(
         populate: options.populate,
         userId: options.userId,
         scope: options.scope,
+        readPreference: 'primary',
       },
     )
     .catch((e: Error) => {

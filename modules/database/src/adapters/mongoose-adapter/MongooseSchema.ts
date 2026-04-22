@@ -1,3 +1,4 @@
+import type { ReadConcernLevel, ReadPreferenceMode } from 'mongodb';
 import {
   Model,
   Mongoose,
@@ -66,6 +67,29 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     return typeof query === 'string' ? JSON.parse(query) : query;
   }
 
+  private get effectiveWriteConcern(): { w: number | string } | undefined {
+    const wc = this.adapter.getQueryDefaults().writeConcern;
+    if (!wc || wc === '1') return undefined;
+    return { w: wc === 'majority' ? 'majority' : parseInt(wc, 10) };
+  }
+
+  private applyReplicaReadRouting(
+    q: MongooseQuery<any, any, {}, any>,
+    readPreference?: string,
+  ) {
+    const d = this.adapter.getQueryDefaults();
+    const effectiveReadPref = readPreference ?? d.readPreference;
+    let out = q;
+    if (effectiveReadPref && effectiveReadPref !== 'primary') {
+      out = out.read(effectiveReadPref as ReadPreferenceMode);
+    }
+    const rc = d.readConcern;
+    if (rc && rc !== 'local') {
+      out = out.readConcern(rc as ReadConcernLevel);
+    }
+    return out;
+  }
+
   async create(
     query: SingleDocQuery,
     options?: {
@@ -76,7 +100,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     await this.createPermissionCheck(options?.userId, options?.scope);
     const parsedQuery = this.parseStringToQuery(query);
 
-    const obj = await this.model.create(parsedQuery).then(r => r.toObject());
+    const wc = this.effectiveWriteConcern;
+    const obj = await this.model
+      .create(wc ? [parsedQuery] : parsedQuery, wc ? { writeConcern: wc } : undefined)
+      .then(r => (Array.isArray(r) ? r[0].toObject() : r.toObject()));
     await this.addPermissionToData(obj, options);
     return obj;
   }
@@ -90,7 +117,11 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   ) {
     await this.createPermissionCheck(options?.userId, options?.scope);
     const docs = this.parseStringToQuery(query);
-    const addedDocs = await this.model.insertMany(docs);
+    const wc = this.effectiveWriteConcern;
+    const addedDocs = await this.model.insertMany(
+      docs,
+      wc ? { writeConcern: wc } : undefined,
+    );
     await this.addPermissionToData(addedDocs, options);
     return addedDocs;
   }
@@ -143,8 +174,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
+    const wc = this.effectiveWriteConcern;
     let finalQuery = this.model.findOneAndReplace(parsedFilter!, parsedQuery, {
       returnDocument: 'after',
+      ...(wc && { writeConcern: wc }),
     });
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
@@ -176,8 +209,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
+    const wc = this.effectiveWriteConcern;
     let finalQuery = this.model.findOneAndUpdate(parsedFilter!, parsedQuery, {
       returnDocument: 'after',
+      ...(wc && { writeConcern: wc }),
     });
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
@@ -209,7 +244,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    return this.model.updateMany(parsedFilter, parsedQuery).exec();
+    const wc = this.effectiveWriteConcern;
+    return this.model
+      .updateMany(parsedFilter, parsedQuery, wc ? { writeConcern: wc } : undefined)
+      .exec();
   }
 
   async deleteOne(
@@ -230,8 +268,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (isNil(parsedQuery)) {
       return { deletedCount: 0 };
     }
+    const wc = this.effectiveWriteConcern;
     return this.model
-      .deleteOne(parsedQuery!)
+      .deleteOne(parsedQuery!, wc ? { writeConcern: wc } : undefined)
       .exec()
       .then(r => ({ deletedCount: r.deletedCount }));
   }
@@ -254,8 +293,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (isNil(parsedQuery)) {
       return { deletedCount: 0 };
     }
+    const wc = this.effectiveWriteConcern;
     return this.model
-      .deleteMany(parsedQuery)
+      .deleteMany(parsedQuery, wc ? { writeConcern: wc } : undefined)
       .exec()
       .then(r => ({ deletedCount: r.deletedCount }));
   }
@@ -270,6 +310,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
       userId?: string;
       scope?: string;
+      readPreference?: string;
     },
   ): Promise<any> {
     const { query: filter, modified } = await this.getPaginatedAuthorizedQuery(
@@ -297,6 +338,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (!isNil(options?.sort)) {
       finalQuery = finalQuery.sort(this.parseSort(options!.sort));
     }
+    finalQuery = this.applyReplicaReadRouting(finalQuery, options?.readPreference);
     return finalQuery.lean().exec();
   }
 
@@ -307,6 +349,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
       select?: string;
       populate?: string[];
+      readPreference?: string;
     },
   ): Promise<any> {
     const parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
@@ -324,6 +367,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
     }
+    finalQuery = this.applyReplicaReadRouting(finalQuery, options?.readPreference);
     return finalQuery.lean().exec();
   }
 
@@ -332,6 +376,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     options?: {
       userId?: string;
       scope?: string;
+      readPreference?: string;
     },
   ) {
     if (!isNil(options?.userId) || !isNil(options?.scope)) {
@@ -340,11 +385,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
         return view.countDocuments(query, {
           userId: undefined,
           scope: undefined,
+          readPreference: options?.readPreference,
         });
       }
     }
     const parsedQuery = parseQuery(this.parseStringToQuery(query));
-    return this.model.find(parsedQuery).countDocuments().exec();
+    let query_ = this.applyReplicaReadRouting(
+      this.model.find(parsedQuery),
+      options?.readPreference,
+    );
+    return query_.countDocuments().exec();
   }
 
   async columnExistence(columns: string[]): Promise<boolean> {

@@ -41,6 +41,7 @@ export class CustomEndpointController {
         { enabled: true },
         {
           populate: ['selectedSchema'],
+          readPreference: 'primary',
         },
       )
       .then((r: PopulatedCustomEndpoint[]) => {
