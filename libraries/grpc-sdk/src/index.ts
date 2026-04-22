@@ -326,8 +326,10 @@ class ConduitGrpcSdk {
     const emitter = this.config.getModuleWatcher();
     this.config.watchModules().then();
     emitter.on('serving-modules-update', modules => {
+      const legacySet = new Set<string>(COMMUNICATIONS_LEGACY_MODULES);
       Object.keys(this._modules).forEach(r => {
         if (r === this.name) return;
+        if (legacySet.has(r)) return;
         const found = modules.filter(
           (m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving,
         );
@@ -354,6 +356,7 @@ class ConduitGrpcSdk {
         emitter.emit(`module-connection-update:${m.moduleName}`, true);
         if (m.moduleName === 'communications') {
           for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
+            this._modules[legacyModule]?.openConnection();
             emitter.emit(`module-connection-update:${legacyModule}`, true);
           }
         }
@@ -659,7 +662,6 @@ class ConduitGrpcSdk {
       this._modules[moduleName].initializeClient(ConduitModuleDefinition);
     }
 
-    // When communications is created, also create legacy module clients
     if (moduleName === 'communications') {
       for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
         if (!this._modules[legacyModule] && this._availableModules[legacyModule]) {
