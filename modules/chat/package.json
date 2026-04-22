@@ -34,7 +34,7 @@
     "convict": "^6.2.4",
     "escape-string-regexp": "^4.0.0",
     "lodash-es": "^4.17.21",
-    "uuid": "^9.0.1"
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@types/node": "20.11.24",
