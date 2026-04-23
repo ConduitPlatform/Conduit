@@ -7,6 +7,7 @@ import {
   ConduitRouteParameters,
   GrpcError,
   ConduitRouteReturnDefinition,
+  type FindOneOptions,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
 import { ConduitRoute } from '@conduitplatform/hermes';
@@ -37,7 +38,10 @@ export function getLoginRoute() {
         );
       }
 
-      const admin = await Admin.getInstance().findOne({ username }, '+password');
+      const admin = await Admin.getInstance().findOne(
+        { username },
+        { select: '+password' },
+      );
       if (isNil(admin)) {
         throw new ConduitError('UNAUTHORIZED', 401, 'Invalid username/password');
       }
@@ -46,9 +50,10 @@ export function getLoginRoute() {
         throw new ConduitError('UNAUTHORIZED', 401, 'Invalid username/password');
       }
       if (admin.hasTwoFA) {
-        const secret = await AdminTwoFactorSecret.getInstance().findOne({
-          adminId: admin._id,
-        });
+        const secret = await AdminTwoFactorSecret.getInstance().findOne(
+          { adminId: admin._id },
+          { readPreference: 'primary' } satisfies FindOneOptions,
+        );
         if (isNil(secret))
           throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
 

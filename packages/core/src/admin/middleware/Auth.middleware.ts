@@ -1,6 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash-es';
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, type FindManyOptions } from '@conduitplatform/grpc-sdk';
 import { Admin, AdminApiToken } from '../../models/index.js';
 import { verifyToken, comparePasswords } from '../utils/auth.js';
 import { isDev } from '../utils/middleware.js';
@@ -54,10 +54,10 @@ async function handleApiToken(
     const tokenPrefix = token.substring(0, 12);
 
     // Find tokens matching the prefix
-    const candidates = await AdminApiToken.getInstance().findMany(
-      { tokenPrefix },
-      '+hashedToken',
-    );
+    const candidates = await AdminApiToken.getInstance().findMany({ tokenPrefix }, {
+      select: '+hashedToken',
+      readPreference: 'primary',
+    } satisfies FindManyOptions);
 
     for (const candidate of candidates) {
       const isMatch = await comparePasswords(token, candidate.hashedToken);

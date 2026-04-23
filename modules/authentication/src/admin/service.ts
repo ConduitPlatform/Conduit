@@ -18,10 +18,7 @@ export class ServiceAdmin {
     const { limit } = call.request.params ?? 25;
     const services: Service[] = await Service.getInstance().findMany(
       {},
-      undefined,
-      skip,
-      limit,
-      sort,
+      { skip, limit, sort },
     );
     const count: number = await Service.getInstance().countDocuments({});
     return { services, count };

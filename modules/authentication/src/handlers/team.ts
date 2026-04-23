@@ -53,10 +53,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
       ConduitGrpcSdk.Logger.error('TeamsHandler not initialized');
       return false;
     }
-    const inviteToken = await Token.getInstance().findOne({
-      tokenType: TokenType.TEAM_INVITE_TOKEN,
-      token: invitationToken,
-    });
+    const inviteToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.TEAM_INVITE_TOKEN,
+        token: invitationToken,
+      },
+      { readPreference: 'primary' },
+    );
     if (!inviteToken) {
       return false;
     }
@@ -79,10 +82,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
       ConduitGrpcSdk.Logger.error('TeamsHandler not initialized');
       return false;
     }
-    const inviteToken = await Token.getInstance().findOne({
-      tokenType: TokenType.TEAM_INVITE_TOKEN,
-      token: invitationToken,
-    });
+    const inviteToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.TEAM_INVITE_TOKEN,
+        token: invitationToken,
+      },
+      { readPreference: 'primary' },
+    );
     if (!inviteToken) {
       return false;
     }
@@ -97,10 +103,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async addUserToTeam(user: User, invitationToken: string) {
     if (!this.initialized) return;
-    const inviteToken = await Token.getInstance().findOne({
-      tokenType: TokenType.TEAM_INVITE_TOKEN,
-      token: invitationToken,
-    });
+    const inviteToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.TEAM_INVITE_TOKEN,
+        token: invitationToken,
+      },
+      { readPreference: 'primary' },
+    );
     if (!inviteToken) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -226,10 +235,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
     const { invitationToken } = call.request.params;
-    const inviteToken = await Token.getInstance().findOne({
-      tokenType: TokenType.TEAM_INVITE_TOKEN,
-      token: invitationToken,
-    });
+    const inviteToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.TEAM_INVITE_TOKEN,
+        token: invitationToken,
+      },
+      { readPreference: 'primary' },
+    );
     if (!inviteToken) {
       throw new GrpcError(status.NOT_FOUND, 'Invitation token not found');
     }
@@ -475,8 +487,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     }
     const team: Team | null = await Team.getInstance().findOne(
       { _id: teamId },
-      undefined,
-      populate,
+      { populate },
     );
     return team || 'Team not found';
   }
@@ -762,10 +773,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'You do not have permission to invite users to this team',
       );
     }
-    const foundToken = await Token.getInstance().findOne({
-      token: invitationToken,
-      'data.teamId': teamId,
-    } as Query<Token>);
+    const foundToken = await Token.getInstance().findOne(
+      {
+        token: invitationToken,
+        'data.teamId': teamId,
+      } as Query<Token>,
+      { readPreference: 'primary' },
+    );
     if (!foundToken) {
       throw new GrpcError(status.NOT_FOUND, 'Token not found');
     }

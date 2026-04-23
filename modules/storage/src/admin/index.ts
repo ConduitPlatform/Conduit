@@ -55,7 +55,7 @@ export class AdminRoutes {
       });
     }
 
-    const files = await File.getInstance().findMany(query, undefined, skip, limit, sort);
+    const files = await File.getInstance().findMany(query, { skip, limit, sort });
     const filesCount = await File.getInstance().countDocuments(query);
 
     return { files, filesCount };
@@ -90,7 +90,7 @@ export class AdminRoutes {
     }
     const folders = await _StorageFolder
       .getInstance()
-      .findMany(query, undefined, skip, limit, sort);
+      .findMany(query, { skip, limit, sort });
     const folderCount = await _StorageFolder.getInstance().countDocuments(query);
     return { folders, folderCount };
   }
@@ -150,7 +150,7 @@ export class AdminRoutes {
     const { limit } = call.request.params ?? 25;
     const containers = await _StorageContainer
       .getInstance()
-      .findMany({}, undefined, skip, limit, sort);
+      .findMany({}, { skip, limit, sort });
     const containersCount = await _StorageContainer.getInstance().countDocuments({});
 
     return { containers, containersCount };

@@ -29,10 +29,7 @@ export function getAdminsRoute() {
       const sort = req.params!.sort;
       const adminsPromise = Admin.getInstance().findMany(
         {},
-        '-password',
-        skip,
-        limit,
-        sort,
+        { select: '-password', skip, limit, sort },
       );
       const adminsCountPromise = Admin.getInstance().countDocuments({});
       const [admins, count] = await Promise.all([adminsPromise, adminsCountPromise]);

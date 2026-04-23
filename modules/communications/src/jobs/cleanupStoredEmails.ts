@@ -18,10 +18,7 @@ export default async (
   const { limit, deleteStorageFiles } = job.data;
   const emailsToDelete = await EmailRecord.getInstance().findMany(
     {},
-    undefined,
-    undefined,
-    limit,
-    'createdAt',
+    { limit, sort: 'createdAt' },
   );
   if (emailsToDelete.length === 0) return;
   const emailIdsToDelete = emailsToDelete.map(record => record._id);

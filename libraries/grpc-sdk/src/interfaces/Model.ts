@@ -190,8 +190,11 @@ export interface ConduitSchemaOptions {
     authorization?: {
       enabled: boolean;
     };
+    /** Mongoose read preference for this schema (ignored by SQL); per-query wins. */
+    readPreference?: string;
   };
-  indexes?: ModelOptionsIndexes[];
+  /** Includes readonly/const-asserted index arrays (e.g. `as const` in schema definitions). */
+  indexes?: ReadonlyArray<ModelOptionsIndexes>;
 }
 
 export interface SchemaFieldIndex {
@@ -202,7 +205,7 @@ export interface SchemaFieldIndex {
 }
 
 export interface ModelOptionsIndexes {
-  fields: string[];
+  fields: string[] | readonly string[];
   types?: MongoIndexType[] | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
 

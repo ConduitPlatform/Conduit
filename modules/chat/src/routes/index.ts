@@ -311,14 +311,12 @@ export class ChatRoutes {
         room: { $in: rooms.map((room: ChatRoom) => room._id) },
         deleted: false,
       };
-      messagesPromise = ChatMessage.getInstance().findMany(
-        query,
-        undefined,
+      messagesPromise = ChatMessage.getInstance().findMany(query, {
         skip,
         limit,
-        { createdAt: -1 },
+        sort: { createdAt: -1 },
         populate,
-      );
+      });
       countPromise = ChatMessage.getInstance().countDocuments(query);
     } else {
       const room = await this.fetchAndValidateRoomById(roomId, user._id).catch(
@@ -335,11 +333,12 @@ export class ChatRoutes {
             room: roomId,
             deleted: false,
           },
-          undefined,
-          skip,
-          limit,
-          { createdAt: -1 },
-          populate,
+          {
+            skip,
+            limit,
+            sort: { createdAt: -1 },
+            populate,
+          },
         )
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
@@ -362,7 +361,7 @@ export class ChatRoutes {
     const { messageId } = call.request.params;
     const { user } = call.request.context;
     const message = await ChatMessage.getInstance()
-      .findOne({ _id: messageId, deleted: false }, undefined, ['room'])
+      .findOne({ _id: messageId, deleted: false }, { populate: ['room'] })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -379,14 +378,7 @@ export class ChatRoutes {
     const { skip, limit, populate } = call.request.params;
     const { user } = call.request.context;
     const rooms = await ChatRoom.getInstance()
-      .findMany(
-        { participants: user._id, deleted: false },
-        undefined,
-        skip,
-        limit,
-        undefined,
-        populate,
-      )
+      .findMany({ participants: user._id, deleted: false }, { skip, limit, populate })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -402,7 +394,7 @@ export class ChatRoutes {
     const { id, populate } = call.request.params;
     const { user } = call.request.context;
     const room = await ChatRoom.getInstance()
-      .findOne({ _id: id, participants: user._id, deleted: false }, undefined, populate)
+      .findOne({ _id: id, participants: user._id, deleted: false }, { populate })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -922,12 +914,15 @@ export class ChatRoutes {
     const key = `chat:nonce:${roomId}:${userId}:${nonce}`;
     const existingId = await this.grpcSdk.state.getKey(key);
     if (!existingId) return null;
-    const existing = await ChatMessage.getInstance().findOne({
-      _id: existingId,
-      deleted: false,
-      senderUser: userId,
-      room: roomId,
-    });
+    const existing = await ChatMessage.getInstance().findOne(
+      {
+        _id: existingId,
+        deleted: false,
+        senderUser: userId,
+        room: roomId,
+      },
+      { readPreference: 'primary' },
+    );
     return existing ?? null;
   }
 

@@ -161,10 +161,13 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   private async redeemMagicToken(
     magicToken: string,
   ): Promise<{ user: User; data: Token['data'] & { clientId: Client['clientId'] } }> {
-    const token: Token | null = await Token.getInstance().findOne({
-      tokenType: TokenType.MAGIC_LINK,
-      token: magicToken,
-    });
+    const token: Token | null = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.MAGIC_LINK,
+        token: magicToken,
+      },
+      { readPreference: 'primary' },
+    );
     if (isNil(token)) {
       throw new GrpcError(status.NOT_FOUND, 'Magic link token does not exist');
     }

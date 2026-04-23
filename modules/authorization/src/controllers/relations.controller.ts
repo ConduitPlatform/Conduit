@@ -231,7 +231,7 @@ export class RelationsController {
       query['resourceType'] = searchQuery.resourceType;
     }
     return Promise.all([
-      Relationship.getInstance().findMany(query, undefined, skip, limit),
+      Relationship.getInstance().findMany(query, { skip, limit }),
       Relationship.getInstance().countDocuments(query),
     ]);
   }

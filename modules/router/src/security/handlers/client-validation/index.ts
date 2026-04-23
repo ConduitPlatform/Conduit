@@ -4,6 +4,7 @@ import {
   ConduitGrpcSdk,
   ConduitError,
   DatabaseProvider,
+  type FindOneOptions,
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { Client } from '../../../models/index.js';
@@ -82,7 +83,10 @@ export class ClientValidator {
       // for the possibility of a secret refresh
     }
     Client.getInstance()
-      .findOne({ clientId: clientid as string }, 'clientSecret platform domain')
+      .findOne({ clientId: clientid as string }, {
+        select: 'clientSecret platform domain',
+        readPreference: 'primary',
+      } satisfies FindOneOptions)
       .then(async client => {
         if (isNil(client)) {
           return {

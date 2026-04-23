@@ -53,15 +53,21 @@ export class BaseNotificationProvider<T> {
 
   fetchTokens(users: string | string[], platform?: string): Promise<NotificationToken[]> {
     if (Array.isArray(users)) {
-      return NotificationToken.getInstance().findMany({
-        userId: { $in: users },
-        ...(platform ? { platform } : {}),
-      });
+      return NotificationToken.getInstance().findMany(
+        {
+          userId: { $in: users },
+          ...(platform ? { platform } : {}),
+        },
+        { readPreference: 'primary' },
+      );
     }
-    return NotificationToken.getInstance().findMany({
-      userId: users as string,
-      ...(platform ? { platform } : {}),
-    });
+    return NotificationToken.getInstance().findMany(
+      {
+        userId: users as string,
+        ...(platform ? { platform } : {}),
+      },
+      { readPreference: 'primary' },
+    );
   }
 
   async sendMany(params: ISendNotification[]): Promise<any> {

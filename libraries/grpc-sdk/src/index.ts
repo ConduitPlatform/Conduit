@@ -775,6 +775,8 @@ class ConduitGrpcSdk {
 }
 
 export { ConduitGrpcSdk };
+export type { CountDocumentsOptions } from './modules/database/index.js';
+export type { FindManyOptions, FindOneOptions } from './modules/database/types.js';
 export * from './interfaces/index.js';
 export * from './classes/index.js';
 export * from './modules/index.js';

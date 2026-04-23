@@ -75,8 +75,7 @@ export async function handleAuthentication(
       token,
       clientId: context.clientId,
     },
-    undefined,
-    ['user'],
+    { populate: ['user'], readPreference: 'primary' },
   );
   if (!accessToken) {
     throw new GrpcError(

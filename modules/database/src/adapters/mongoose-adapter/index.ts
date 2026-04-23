@@ -107,7 +107,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     });
     this.views[viewName] = viewModel;
 
-    const foundView = await this.models['Views'].findOne({ name: viewName });
+    const foundView = await this.models['Views'].findOne(
+      { name: viewName },
+      { readPreference: 'primary' },
+    );
     if (isNil(foundView)) {
       await this.models['Views'].create({
         name: viewName,
@@ -261,7 +264,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   async createIndexes(
     schemaName: string,
-    indexes: ModelOptionsIndexes[],
+    indexes: readonly ModelOptionsIndexes[],
     callerModule: string,
   ): Promise<string> {
     if (!this.models[schemaName])
@@ -453,7 +456,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   private checkIndexes(
     schemaName: string,
-    indexes: ModelOptionsIndexes[],
+    indexes: readonly ModelOptionsIndexes[],
     callerModule: string,
   ) {
     for (const index of indexes) {

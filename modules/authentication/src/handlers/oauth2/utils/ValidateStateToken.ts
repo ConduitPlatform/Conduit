@@ -5,9 +5,10 @@ import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 
 export async function validateStateToken(state: string): Promise<Token> {
-  const stateToken: Token | null = await Token.getInstance().findOne({
-    token: state,
-  });
+  const stateToken: Token | null = await Token.getInstance().findOne(
+    { token: state },
+    { readPreference: 'primary' },
+  );
   if (isNil(stateToken))
     throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
   if (moment().isAfter(moment(stateToken.data.expiresAt))) {

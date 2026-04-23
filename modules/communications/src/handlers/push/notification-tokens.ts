@@ -61,15 +61,11 @@ export class NotificationTokensHandler {
     if (!isNil(read)) {
       query = { ...query, read };
     }
-    const notifications = await Notification.getInstance().findMany(
-      query,
-      undefined,
-      skip ?? 0,
+    const notifications = await Notification.getInstance().findMany(query, {
+      skip: skip ?? 0,
       limit,
-      {
-        createdAt: -1,
-      },
-    );
+      sort: { createdAt: -1 },
+    });
 
     const notificationCount = await Notification.getInstance().countDocuments(query);
     const unreadCount = await Notification.getInstance().countDocuments({

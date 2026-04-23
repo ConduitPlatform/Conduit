@@ -91,7 +91,9 @@ export class UsernameHandlers implements IAuthenticationStrategy {
 
     const user: User | null = await User.getInstance().findOne(
       { username },
-      '+hashedPassword',
+      {
+        select: '+hashedPassword',
+      },
     );
 
     if (isNil(user)) {

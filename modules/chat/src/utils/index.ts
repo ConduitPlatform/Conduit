@@ -59,7 +59,7 @@ export async function sendInvitations(
     });
     const safeUser = await User.getInstance().findOne(
       { _id: invitedUser._id },
-      '-hashedPassword',
+      { select: '-hashedPassword' },
     );
     if (sendEmail) {
       const result = { invitationToken, hostUrl: url };

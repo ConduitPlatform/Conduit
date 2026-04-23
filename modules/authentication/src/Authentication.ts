@@ -202,7 +202,10 @@ export default class Authentication extends ManagedModule<Config> {
     for (const rec of teams) {
       if (!rec.parentTeamName) continue;
       try {
-        const parent = await teamModel.findOne({ name: rec.parentTeamName });
+        const parent = await teamModel.findOne(
+          { name: rec.parentTeamName },
+          { readPreference: 'primary' },
+        );
         if (parent) {
           await teamModel.updateOne(
             { name: rec.name },

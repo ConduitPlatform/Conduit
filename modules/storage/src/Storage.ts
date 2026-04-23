@@ -289,7 +289,7 @@ export default class Storage extends ManagedModule<Config> {
       .getInstance()
       .countDocuments({});
     const foldersTotal = await models._StorageFolder.getInstance().countDocuments({});
-    const files = await models.File.getInstance().findMany({}, 'size');
+    const files = await models.File.getInstance().findMany({}, { select: 'size' });
     let filesTotalSize = 0;
     if (files.length > 0) {
       filesTotalSize = files

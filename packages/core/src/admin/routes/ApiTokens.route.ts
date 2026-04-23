@@ -104,7 +104,9 @@ export function getApiTokensRoute() {
       const admin = req.context!.admin;
       const tokens = await AdminApiToken.getInstance().findMany(
         { adminId: admin._id },
-        '_id name tokenPrefix expiresAt lastUsedAt createdAt',
+        {
+          select: '_id name tokenPrefix expiresAt lastUsedAt createdAt',
+        },
       );
       return { tokens };
     },

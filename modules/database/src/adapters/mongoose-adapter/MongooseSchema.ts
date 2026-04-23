@@ -31,6 +31,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   // todo rename
   declare fieldHash: string;
 
+  /** Per-schema MongoDB read preference from `modelOptions.conduit.readPreference`. */
+  private readonly schemaLevelReadPreference?: string;
+
   constructor(
     grpcSdk: ConduitGrpcSdk,
     mongoose: Mongoose,
@@ -49,8 +52,19 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     } else {
       (schema as _ConduitSchema).collectionName = schema.name; //restore collectionName
     }
+    const mo = cloneDeep(schema.modelOptions ?? {}) as Indexable;
+    let schemaRp: string | undefined;
+    if (mo.conduit && typeof mo.conduit === 'object') {
+      const conduit = mo.conduit as Indexable;
+      const rawRp = conduit.readPreference;
+      if (rawRp != null && String(rawRp).length > 0) {
+        schemaRp = String(rawRp);
+        delete conduit.readPreference;
+      }
+    }
+    this.schemaLevelReadPreference = schemaRp;
     const mongooseSchema = new Schema(cloneDeep(schema.fields as Indexable), {
-      ...cloneDeep(schema.modelOptions),
+      ...mo,
       ...(isView
         ? {
             autoCreate: false,
@@ -67,10 +81,11 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     return typeof query === 'string' ? JSON.parse(query) : query;
   }
 
-  private get effectiveWriteConcern(): { w: number | string } | undefined {
+  private get effectiveWriteConcern(): { w: 'majority' } | { w: number } | undefined {
     const wc = this.adapter.getQueryDefaults().writeConcern;
     if (!wc || wc === '1') return undefined;
-    return { w: wc === 'majority' ? 'majority' : parseInt(wc, 10) };
+    if (wc === 'majority') return { w: 'majority' };
+    return { w: parseInt(wc, 10) };
   }
 
   private applyReplicaReadRouting(
@@ -78,7 +93,8 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     readPreference?: string,
   ) {
     const d = this.adapter.getQueryDefaults();
-    const effectiveReadPref = readPreference ?? d.readPreference;
+    const effectiveReadPref =
+      readPreference ?? this.schemaLevelReadPreference ?? d.readPreference;
     let out = q;
     if (effectiveReadPref && effectiveReadPref !== 'primary') {
       out = out.read(effectiveReadPref as ReadPreferenceMode);
@@ -101,9 +117,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     const parsedQuery = this.parseStringToQuery(query);
 
     const wc = this.effectiveWriteConcern;
-    const obj = await this.model
-      .create(wc ? [parsedQuery] : parsedQuery, wc ? { writeConcern: wc } : undefined)
-      .then(r => (Array.isArray(r) ? r[0].toObject() : r.toObject()));
+    const created = wc
+      ? await this.model.create([parsedQuery] as object[], { writeConcern: wc })
+      : await this.model.create(parsedQuery as object);
+    const obj = (Array.isArray(created) ? created[0] : created).toObject();
     await this.addPermissionToData(obj, options);
     return obj;
   }
@@ -114,14 +131,14 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
       userId?: string;
     },
-  ) {
+  ): Promise<any> {
     await this.createPermissionCheck(options?.userId, options?.scope);
-    const docs = this.parseStringToQuery(query);
+    const parsed = this.parseStringToQuery(query);
+    const docs = Array.isArray(parsed) ? parsed : [parsed];
     const wc = this.effectiveWriteConcern;
-    const addedDocs = await this.model.insertMany(
-      docs,
-      wc ? { writeConcern: wc } : undefined,
-    );
+    const addedDocs = wc
+      ? await this.model.insertMany(docs, { writeConcern: wc } as any)
+      : await this.model.insertMany(docs);
     await this.addPermissionToData(addedDocs, options);
     return addedDocs;
   }
@@ -404,7 +421,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     }
     const result = await this.model.db
       .collection(this.originalSchema.collectionName)
-      .findOne({ $and: array });
+      .findOne({ $and: array }, { readPreference: 'primary' });
     return result !== null;
   }
 

@@ -14,11 +14,13 @@ import { Query } from '../../types/db.js';
 import type { FindOneOptions, FindManyOptions } from './types.js';
 export type { FindOneOptions, FindManyOptions } from './types.js';
 import { AuthzOptions, PopulateAuthzOptions } from '../../types/options.js';
-import { isNil } from 'lodash-es';
-import {
-  normalizeAuthzOptions,
-  normalizePopulateAuthzOptions,
-} from '../../utilities/normalizeOptions.js';
+
+export type CountDocumentsOptions = AuthzOptions & { readPreference?: string };
+
+function toPopulateArray(populate?: string | string[]): string[] {
+  if (!populate) return [];
+  return Array.isArray(populate) ? populate : [populate];
+}
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(
@@ -113,202 +115,80 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
-  processQuery<T>(query: Query<T>) {
+  processQuery<T>(query: Query<T> | Query<T>[]) {
     return JSON.stringify(query);
   }
 
-  findOne<T>(
-    schemaName: string,
-    query: Query<T>,
-    select?: string,
-    populate?: string | string[],
-    userId?: string,
-    scope?: string,
-  ): Promise<T>;
-
-  findOne<T>(schemaName: string, query: Query<T>, options?: FindOneOptions): Promise<T>;
-
-  findOne<T>(
-    schemaName: string,
-    query: Query<T>,
-    selectOrOptions?: string | FindOneOptions,
-    populate?: string | string[],
-    userId?: string,
-    scope?: string,
-  ): Promise<T> {
-    let options: FindOneOptions;
-    if (typeof selectOrOptions === 'string' || isNil(selectOrOptions)) {
-      options = { select: selectOrOptions, populate, userId, scope };
-    } else {
-      options = selectOrOptions;
-    }
-    let populateArray = options.populate;
-    if (options.populate && !Array.isArray(options.populate)) {
-      populateArray = [options.populate];
-    }
-
+  findOne<T>(schemaName: string, query: Query<T>, options?: FindOneOptions): Promise<T> {
+    const o = options ?? {};
+    const populateArray = toPopulateArray(o.populate);
     return this.client!.findOne({
       schemaName,
       query: this.processQuery(query),
-      ...options,
-      select: options.select === null ? undefined : options.select,
-      populate: (populateArray as string[]) ?? [],
+      ...o,
+      select: o.select === null ? undefined : o.select,
+      populate: populateArray,
     }).then(res => JSON.parse(res.result));
   }
 
   findMany<T>(
     schemaName: string,
     query: Query<T>,
-    select?: string,
-    skip?: number,
-    limit?: number,
-    sort?: { [field: string]: -1 | 1 } | string[] | string,
-    populate?: string | string[],
-    userId?: string,
-    scope?: string,
-  ): Promise<T[]>;
-
-  findMany<T>(
-    schemaName: string,
-    query: Query<T>,
     options?: FindManyOptions,
-  ): Promise<T[]>;
-
-  findMany<T>(
-    schemaName: string,
-    query: Query<T>,
-    selectOrOptions?: string | FindManyOptions,
-    skip?: number,
-    limit?: number,
-    sort?: { [field: string]: -1 | 1 } | string[] | string,
-    populate?: string | string[],
-    userId?: string,
-    scope?: string,
   ): Promise<T[]> {
-    let options: FindManyOptions;
-    if (typeof selectOrOptions === 'string' || isNil(selectOrOptions)) {
-      options = {
-        select: selectOrOptions,
-        skip,
-        limit,
-        sort,
-        populate,
-        userId,
-        scope,
-      };
-    } else {
-      options = selectOrOptions;
-    }
-    if (typeof options.sort === 'string') options.sort = [options.sort];
-    const sortObj = Array.isArray(options.sort)
-      ? this.constructSortObj(options.sort)
-      : options.sort;
-    let populateArray = options.populate;
-    if (options.populate && !Array.isArray(options.populate)) {
-      populateArray = [options.populate];
-    }
+    const o: FindManyOptions = { ...(options ?? {}) };
+    if (typeof o.sort === 'string') o.sort = [o.sort];
+    const sortObj = Array.isArray(o.sort) ? this.constructSortObj(o.sort) : o.sort;
+    const populateArray = toPopulateArray(o.populate);
 
     return this.client!.findMany({
       schemaName,
       query: this.processQuery(query),
-      ...options,
-      select: options.select === null ? undefined : options.select,
+      ...o,
+      select: o.select === null ? undefined : o.select,
       sort: sortObj,
-      populate: (populateArray as string[]) ?? [],
-    }).then(res => {
-      return JSON.parse(res.result);
-    });
+      populate: populateArray,
+    }).then(res => JSON.parse(res.result));
   }
 
-  create<T>(
-    schemaName: string,
-    query: Query<T>,
-    userId?: string,
-    scope?: string,
-  ): Promise<T>;
-
-  create<T>(schemaName: string, query: Query<T>, options?: AuthzOptions): Promise<T>;
-
-  create<T>(
-    schemaName: string,
-    query: Query<T>,
-    userIdOrOptions?: string | AuthzOptions,
-    scope?: string,
-  ): Promise<T> {
-    const options = normalizeAuthzOptions(userIdOrOptions, scope);
+  create<T>(schemaName: string, query: Query<T>, options?: AuthzOptions): Promise<T> {
     return this.client!.create({
       schemaName,
       query: this.processQuery(query),
-      ...options,
+      ...(options ?? {}),
     }).then(res => {
       return JSON.parse(res.result);
     });
   }
-
-  createMany<T>(
-    schemaName: string,
-    query: Query<T>[],
-    userId?: string,
-    scope?: string,
-  ): Promise<T[] | UntypedArray>;
 
   createMany<T>(
     schemaName: string,
     query: Query<T>[],
     options?: AuthzOptions,
-  ): Promise<T[] | UntypedArray>;
-
-  createMany<T>(
-    schemaName: string,
-    query: Query<T>,
-    userIdOrOptions?: string | AuthzOptions,
-    scope?: string,
   ): Promise<T[] | UntypedArray> {
-    const options = normalizeAuthzOptions(userIdOrOptions, scope);
     return this.client!.createMany({
       schemaName,
       query: this.processQuery(query),
-      ...options,
+      ...(options ?? {}),
     }).then(res => {
       return JSON.parse(res.result);
     });
   }
-
-  findByIdAndUpdate<T>(
-    schemaName: string,
-    id: string,
-    document: Query<T>,
-    populate?: string | string[],
-    userId?: string,
-    scope?: string,
-  ): Promise<T | any>;
 
   findByIdAndUpdate<T>(
     schemaName: string,
     id: string,
     document: Query<T>,
     options?: PopulateAuthzOptions,
-  ): Promise<T | any>;
-
-  findByIdAndUpdate<T>(
-    schemaName: string,
-    id: string,
-    document: Query<T>,
-    populateOrOptions?: string | string[] | PopulateAuthzOptions,
-    userId?: string,
-    scope?: string,
   ): Promise<T | any> {
-    const options = normalizePopulateAuthzOptions(populateOrOptions, userId, scope);
-    let populateArray = options.populate;
-    if (options.populate && !Array.isArray(options.populate)) {
-      populateArray = [options.populate];
-    }
+    const o = options ?? {};
+    const populateArray = toPopulateArray(o.populate);
     return this.client!.findByIdAndUpdate({
       schemaName,
       id,
       query: this.processQuery(document),
-      ...options,
-      populate: (populateArray as string[]) ?? [],
+      ...o,
+      populate: populateArray,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -318,37 +198,16 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     schemaName: string,
     id: string,
     document: Query<T>,
-    populate?: string | string[],
-    userId?: string,
-    scope?: string,
-  ): Promise<T | any>;
-
-  findByIdAndReplace<T>(
-    schemaName: string,
-    id: string,
-    document: Query<T>,
     options?: PopulateAuthzOptions,
-  ): Promise<T | any>;
-
-  findByIdAndReplace<T>(
-    schemaName: string,
-    id: string,
-    document: Query<T>,
-    populateOrOptions?: string | string[] | PopulateAuthzOptions,
-    userId?: string,
-    scope?: string,
   ): Promise<T | any> {
-    const options = normalizePopulateAuthzOptions(populateOrOptions, userId, scope);
-    let populateArray = options.populate;
-    if (options.populate && !Array.isArray(options.populate)) {
-      populateArray = [options.populate];
-    }
+    const o = options ?? {};
+    const populateArray = toPopulateArray(o.populate);
     return this.client!.findByIdAndReplace({
       schemaName,
       id,
       query: this.processQuery(document),
-      ...options,
-      populate: (populateArray as string[]) ?? [],
+      ...o,
+      populate: populateArray,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -358,37 +217,16 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     schemaName: string,
     filterQuery: Query<T>,
     query: Query<T>,
-    populate?: string | string[],
-    userId?: string,
-    scope?: string,
-  ): Promise<any>;
-
-  updateMany<T>(
-    schemaName: string,
-    filterQuery: Query<T>,
-    query: Query<T>,
     options?: PopulateAuthzOptions,
-  ): Promise<any>;
-
-  updateMany<T>(
-    schemaName: string,
-    filterQuery: Query<T>,
-    query: Query<T>,
-    populateOrOptions?: string | string[] | PopulateAuthzOptions,
-    userId?: string,
-    scope?: string,
   ) {
-    const options = normalizePopulateAuthzOptions(populateOrOptions, userId, scope);
-    let populateArray = options.populate;
-    if (options.populate && !Array.isArray(options.populate)) {
-      populateArray = [options.populate];
-    }
+    const o = options ?? {};
+    const populateArray = toPopulateArray(o.populate);
     return this.client!.updateMany({
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
-      ...options,
-      populate: (populateArray as string[]) ?? [],
+      ...o,
+      populate: populateArray,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -398,131 +236,55 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     schemaName: string,
     filterQuery: Query<T>,
     query: Query<T>,
-    populate?: string | string[],
-    userId?: string,
-    scope?: string,
-  ): Promise<any>;
-
-  updateOne<T>(
-    schemaName: string,
-    filterQuery: Query<T>,
-    query: Query<T>,
     options?: PopulateAuthzOptions,
-  ): Promise<any>;
-
-  updateOne<T>(
-    schemaName: string,
-    filterQuery: Query<T>,
-    query: Query<T>,
-    populateOrOptions?: string | string[] | PopulateAuthzOptions,
-    userId?: string,
-    scope?: string,
   ) {
-    const options = normalizePopulateAuthzOptions(populateOrOptions, userId, scope);
-    let populateArray = options.populate;
-    if (options.populate && !Array.isArray(options.populate)) {
-      populateArray = [options.populate];
-    }
+    const o = options ?? {};
+    const populateArray = toPopulateArray(o.populate);
     return this.client!.updateOne({
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
-      ...options,
-      populate: (populateArray as string[]) ?? [],
+      ...o,
+      populate: populateArray,
     }).then(res => {
       return JSON.parse(res.result);
     });
   }
-
-  replaceOne<T>(
-    schemaName: string,
-    filterQuery: Query<T>,
-    query: Query<T>,
-    populate?: string | string[],
-    userId?: string,
-    scope?: string,
-  ): Promise<any>;
 
   replaceOne<T>(
     schemaName: string,
     filterQuery: Query<T>,
     query: Query<T>,
     options?: PopulateAuthzOptions,
-  ): Promise<any>;
-
-  replaceOne<T>(
-    schemaName: string,
-    filterQuery: Query<T>,
-    query: Query<T>,
-    populateOrOptions?: string | string[] | PopulateAuthzOptions,
-    userId?: string,
-    scope?: string,
   ) {
-    const options = normalizePopulateAuthzOptions(populateOrOptions, userId, scope);
-    let populateArray = options.populate;
-    if (options.populate && !Array.isArray(options.populate)) {
-      populateArray = [options.populate];
-    }
+    const o = options ?? {};
+    const populateArray = toPopulateArray(o.populate);
     return this.client!.replaceOne({
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
-      ...options,
-      populate: (populateArray as string[]) ?? [],
+      ...o,
+      populate: populateArray,
     }).then(res => {
       return JSON.parse(res.result);
     });
   }
 
-  deleteOne<T>(
-    schemaName: string,
-    query: Query<T>,
-    userId?: string,
-    scope?: string,
-  ): Promise<any>;
-
-  deleteOne<T>(schemaName: string, query: Query<T>, options?: AuthzOptions): Promise<any>;
-
-  deleteOne<T>(
-    schemaName: string,
-    query: Query<T>,
-    userIdOrOptions?: string | AuthzOptions,
-    scope?: string,
-  ) {
-    const options = normalizeAuthzOptions(userIdOrOptions, scope);
+  deleteOne<T>(schemaName: string, query: Query<T>, options?: AuthzOptions) {
     return this.client!.deleteOne({
       schemaName,
       query: this.processQuery(query),
-      ...options,
+      ...(options ?? {}),
     }).then(res => {
       return JSON.parse(res.result);
     });
   }
 
-  deleteMany<T>(
-    schemaName: string,
-    query: Query<T>,
-    userId?: string,
-    scope?: string,
-  ): Promise<any>;
-
-  deleteMany<T>(
-    schemaName: string,
-    query: Query<T>,
-    options?: AuthzOptions,
-  ): Promise<any>;
-
-  deleteMany<T>(
-    schemaName: string,
-    query: Query<T>,
-    userIdOrOptions?: string | AuthzOptions,
-    scope?: string,
-  ) {
-    const options = normalizeAuthzOptions(userIdOrOptions, scope);
+  deleteMany<T>(schemaName: string, query: Query<T>, options?: AuthzOptions) {
     return this.client!.deleteMany({
       schemaName,
       query: this.processQuery(query),
-      ...options,
+      ...(options ?? {}),
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -531,32 +293,12 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   countDocuments<T>(
     schemaName: string,
     query: Query<T>,
-    userId?: string,
-    scope?: string,
-  ): Promise<number>;
-
-  countDocuments<T>(
-    schemaName: string,
-    query: Query<T>,
-    options?: AuthzOptions & { readPreference?: string },
-  ): Promise<number>;
-
-  countDocuments<T>(
-    schemaName: string,
-    query: Query<T>,
-    userIdOrOptions?: string | (AuthzOptions & { readPreference?: string }),
-    scope?: string,
+    options?: CountDocumentsOptions,
   ): Promise<number> {
-    let options: AuthzOptions & { readPreference?: string };
-    if (typeof userIdOrOptions === 'string' || isNil(userIdOrOptions)) {
-      options = { userId: userIdOrOptions as string | undefined, scope };
-    } else {
-      options = userIdOrOptions;
-    }
     return this.client!.countDocuments({
       schemaName,
       query: this.processQuery(query),
-      ...options,
+      ...(options ?? {}),
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -570,7 +312,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       }
     }
     if (query.sqlQuery?.options) {
-      processed.sqlQuery.options = JSON.stringify(processed.sqlQuery.options);
+      processed.sqlQuery.options = JSON.stringify(query.sqlQuery.options);
     }
     return this.client!.rawQuery({ schemaName, query: processed }).then(res => {
       return JSON.parse(res.result);
@@ -585,7 +327,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   ) {
     const processed: any = query;
     if (query.mongoQuery) {
-      processed.mongoQuery = JSON.stringify(processed.mongoQuery);
+      processed.mongoQuery = JSON.stringify(query.mongoQuery);
     }
     return this.client!.createView({
       schemaName,

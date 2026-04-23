@@ -39,9 +39,12 @@ export default async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
     name: subject.split(':')[0],
   }))!;
   const obj = [];
-  const possibleConnections = await ObjectIndex.getInstance().findMany({
-    subject: { $in: Object.keys(relatedPermissions).map(i => `${subject}#${i}`) },
-  });
+  const possibleConnections = await ObjectIndex.getInstance().findMany(
+    {
+      subject: { $in: Object.keys(relatedPermissions).map(i => `${subject}#${i}`) },
+    },
+    { readPreference: 'primary' },
+  );
   for (const action in relatedPermissions) {
     for (const connection of possibleConnections) {
       if (connection.subjectPermission !== action) continue;
@@ -89,12 +92,15 @@ export default async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
       keys.indexOf(`${i.subject}#${i.entity}${i.inheritanceTree!.join('')}`) === index,
   );
 
-  const indexes = await ObjectIndex.getInstance().findMany({
-    $and: [
-      { subject: { $in: unique.map(i => i.subject) } },
-      { entity: { $in: unique.map(i => i.entity) } },
-    ],
-  });
+  const indexes = await ObjectIndex.getInstance().findMany(
+    {
+      $and: [
+        { subject: { $in: unique.map(i => i.subject) } },
+        { entity: { $in: unique.map(i => i.entity) } },
+      ],
+    },
+    { readPreference: 'primary' },
+  );
   const toCreate = unique.filter(
     i =>
       !indexes.find(
@@ -115,12 +121,15 @@ export default async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
   }
   for (const objectPermission in objectsByPermission) {
     const childObj: Partial<ObjectIndex>[] = [];
-    const childIndexes = await ObjectIndex.getInstance().findMany({
-      subject: { $ne: `${object}#${objectPermission}` },
-      entityId: object.split(':')[1],
-      entityType: object.split(':')[0],
-      entityPermission: objectPermission,
-    });
+    const childIndexes = await ObjectIndex.getInstance().findMany(
+      {
+        subject: { $ne: `${object}#${objectPermission}` },
+        entityId: object.split(':')[1],
+        entityType: object.split(':')[0],
+        entityPermission: objectPermission,
+      },
+      { readPreference: 'primary' },
+    );
     for (const childIndex of childIndexes) {
       const copy = omit(childIndex, ['_id', 'createdAt', 'updatedAt', '__v']);
       for (const childObject of objectsByPermission[objectPermission]) {
@@ -144,12 +153,15 @@ export default async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
         childKeys.indexOf(`${i.subject}#${i.entity}${i.inheritanceTree!.join('')}`) ===
         index,
     );
-    const childIndexes2 = await ObjectIndex.getInstance().findMany({
-      $and: [
-        { subject: { $in: childUnique.map(i => i.subject) } },
-        { entity: { $in: childUnique.map(i => i.entity) } },
-      ],
-    });
+    const childIndexes2 = await ObjectIndex.getInstance().findMany(
+      {
+        $and: [
+          { subject: { $in: childUnique.map(i => i.subject) } },
+          { entity: { $in: childUnique.map(i => i.entity) } },
+        ],
+      },
+      { readPreference: 'primary' },
+    );
     const childToCreate = childUnique.filter(
       i =>
         !childIndexes2.find(

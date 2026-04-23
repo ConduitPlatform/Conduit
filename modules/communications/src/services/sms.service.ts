@@ -101,7 +101,10 @@ export class SmsService implements IChannel {
 
   async getStatus(messageId: string): Promise<ChannelStatus> {
     try {
-      const smsRecord = await SmsRecord.getInstance().findOne({ _id: messageId });
+      const smsRecord = await SmsRecord.getInstance().findOne(
+        { _id: messageId },
+        { readPreference: 'primary' },
+      );
       if (!smsRecord) {
         return {
           status: 'failed' as const,

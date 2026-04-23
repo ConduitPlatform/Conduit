@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { compare, hash } from 'bcrypt';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { GrpcError, type FindOneOptions } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { Admin, AdminTwoFactorSecret } from '../../models/index.js';
 import { isNil } from 'lodash-es';
@@ -36,9 +36,10 @@ export function generateToken(secret: string) {
 }
 
 export async function verify2Fa(admin: Admin, code: string) {
-  const secret = await AdminTwoFactorSecret.getInstance().findOne({
-    adminId: admin._id,
-  });
+  const secret = await AdminTwoFactorSecret.getInstance().findOne(
+    { adminId: admin._id },
+    { readPreference: 'primary' } satisfies FindOneOptions,
+  );
   if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
   const verification = verifyTwoFactorToken(secret.secret, code, 1);

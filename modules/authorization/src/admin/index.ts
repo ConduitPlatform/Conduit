@@ -67,12 +67,10 @@ export class AdminHandlers {
         `Found ${relationsCount} relations for ${resource.name}...`,
       );
       let processed = 0;
-      let relations = await Relationship.getInstance().findMany(
-        query,
-        undefined,
-        processed,
-        1000,
-      );
+      let relations = await Relationship.getInstance().findMany(query, {
+        skip: processed,
+        limit: 1000,
+      });
       while (relations.length > 0) {
         ConduitGrpcSdk.Logger.info(
           `Reconstructing index for ${resource.name}... ${relations.length} remaining`,
@@ -83,12 +81,10 @@ export class AdminHandlers {
           }),
         );
         processed += relations.length;
-        relations = await Relationship.getInstance().findMany(
-          query,
-          undefined,
-          processed,
-          1000,
-        );
+        relations = await Relationship.getInstance().findMany(query, {
+          skip: processed,
+          limit: 1000,
+        });
       }
     }
   }

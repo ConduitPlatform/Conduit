@@ -1,5 +1,5 @@
 // Removed ConduitCommons import - now using core directly
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, type FindManyOptions } from '@conduitplatform/grpc-sdk';
 import * as models from '../models/index.js';
 import { ServiceDiscovery } from '../service-discovery/index.js';
 import { clearInterval } from 'timers';
@@ -124,7 +124,9 @@ export class ConfigStorage {
     }
     // Update Admin and all active modules
     const registeredModules = ServiceRegistry.getInstance().getRegisteredModules();
-    const moduleConfigs = await models.Config.getInstance().findMany({});
+    const moduleConfigs = await models.Config.getInstance().findMany({}, {
+      readPreference: 'primary',
+    } satisfies FindManyOptions);
     for (const config of moduleConfigs) {
       if (config.name === 'core') continue;
       if (config.name === 'admin') {

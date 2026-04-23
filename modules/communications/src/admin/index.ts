@@ -195,13 +195,11 @@ export class AdminHandlers {
       }
     }
 
-    const templateDocumentsPromise = EmailTemplate.getInstance().findMany(
-      query,
-      undefined,
+    const templateDocumentsPromise = EmailTemplate.getInstance().findMany(query, {
       skip,
       limit,
       sort,
-    );
+    });
     const totalCountPromise = EmailTemplate.getInstance().countDocuments(query);
     const [templateDocuments, count] = await Promise.all([
       templateDocumentsPromise,
@@ -398,13 +396,11 @@ export class AdminHandlers {
       }
     }
 
-    const emailDocumentsPromise = EmailRecord.getInstance().findMany(
-      query,
-      undefined,
+    const emailDocumentsPromise = EmailRecord.getInstance().findMany(query, {
       skip,
       limit,
       sort,
-    );
+    });
     const totalCountPromise = EmailRecord.getInstance().countDocuments(query);
     const [emailDocuments, count] = await Promise.all([
       emailDocumentsPromise,
@@ -443,14 +439,12 @@ export class AdminHandlers {
       query[platform] = platform;
     }
 
-    const tokens: any[] = await NotificationToken.getInstance().findMany(
-      query,
-      undefined,
+    const tokens: any[] = await NotificationToken.getInstance().findMany(query, {
       skip,
       limit,
       sort,
       populate,
-    );
+    });
     const count: number = await NotificationToken.getInstance().countDocuments(query);
 
     return { tokens, count };
@@ -461,8 +455,7 @@ export class AdminHandlers {
       {
         _id: call.request.urlParams.id,
       },
-      undefined,
-      call.request.queryParams.populate,
+      { populate: call.request.queryParams.populate },
     );
     if (isNil(tokenDocuments)) {
       throw new GrpcError(status.NOT_FOUND, 'Could not find a token for user');
@@ -505,13 +498,11 @@ export class AdminHandlers {
       }
     }
 
-    const smsDocumentsPromise = SmsRecord.getInstance().findMany(
-      query,
-      undefined,
+    const smsDocumentsPromise = SmsRecord.getInstance().findMany(query, {
       skip,
       limit,
       sort,
-    );
+    });
     const totalCountPromise = SmsRecord.getInstance().countDocuments(query);
     const [smsDocuments, count] = await Promise.all([
       smsDocumentsPromise,

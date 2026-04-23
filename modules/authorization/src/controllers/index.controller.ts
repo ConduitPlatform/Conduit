@@ -184,12 +184,15 @@ export class IndexController {
       }
     }
 
-    const indexes = await ObjectIndex.getInstance().findMany({
-      $and: [
-        { subject: { $in: obj.map(i => i.subject) } },
-        { entity: { $in: obj.map(i => i.entity) } },
-      ],
-    });
+    const indexes = await ObjectIndex.getInstance().findMany(
+      {
+        $and: [
+          { subject: { $in: obj.map(i => i.subject) } },
+          { entity: { $in: obj.map(i => i.entity) } },
+        ],
+      },
+      { readPreference: 'primary' },
+    );
     const toCreate = obj.filter(
       i => !indexes.find(j => j.subject === i.subject && j.entity === i.entity),
     );

@@ -95,9 +95,10 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const { anonymousUser, user: existingUser } = call.request.context;
     const config = ConfigController.getInstance().config;
 
-    const existingToken: Token | null = await Token.getInstance().findOne({
-      token: token,
-    });
+    const existingToken: Token | null = await Token.getInstance().findOne(
+      { token: token },
+      { readPreference: 'primary' },
+    );
     if (!existingToken) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid token provided');
     }
@@ -132,9 +133,10 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
     let foundInvitationToken;
     if (invitationToken) {
-      foundInvitationToken = await Token.getInstance().findOne({
-        token: invitationToken,
-      });
+      foundInvitationToken = await Token.getInstance().findOne(
+        { token: invitationToken },
+        { readPreference: 'primary' },
+      );
     }
     if (!user) {
       const teams = ConfigController.getInstance().config.teams;
@@ -158,17 +160,20 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         }
       }
     }
-    const existingToken = await Token.getInstance().findOne({
-      tokenType: {
-        $in: [
-          TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
-          TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN,
-        ],
+    const existingToken = await Token.getInstance().findOne(
+      {
+        tokenType: {
+          $in: [
+            TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
+            TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN,
+          ],
+        },
+        data: {
+          phone,
+        },
       },
-      data: {
-        phone,
-      },
-    });
+      { readPreference: 'primary' },
+    );
     if (existingToken) {
       AuthUtils.checkResendThreshold(existingToken);
       await Token.getInstance().deleteMany({

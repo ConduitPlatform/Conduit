@@ -229,7 +229,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this.fixDatabaseSchemaOwnership(schema);
     if (schema.name === '_DeclaredSchema') return true;
 
-    const model = await this.models['_DeclaredSchema'].findOne({ name: schema.name });
+    const model = await this.models['_DeclaredSchema'].findOne(
+      { name: schema.name },
+      { readPreference: 'primary' },
+    );
     if (model && model.parentSchema) return false;
     if (model && model.ownerModule === schema.ownerModule) {
       return true;
@@ -243,9 +246,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
     if (['_DeclaredSchema', 'MigratedSchemas'].includes(schema.name)) {
       return;
     }
-    const storedSchema = await this.models['_DeclaredSchema'].findOne({
-      name: schema.name,
-    });
+    const storedSchema = await this.models['_DeclaredSchema'].findOne(
+      {
+        name: schema.name,
+      },
+      { readPreference: 'primary' },
+    );
     if (isNil(storedSchema)) {
       return;
     }
@@ -254,7 +260,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     const lastMigratedSchemas = await this.models['MigratedSchemas'].findMany(
       { name: storedSchema.name },
-      { skip: 1, sort: { version: -1 } },
+      { skip: 1, sort: { version: -1 }, readPreference: 'primary' },
     );
     const lastVersion =
       lastMigratedSchemas.length === 0 ? 0 : lastMigratedSchemas[0].version;
@@ -267,9 +273,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
   }
 
   async registerAuthorizationDefinitions() {
-    const models = await this.models!['_DeclaredSchema'].findMany({
-      'modelOptions.conduit.authorization.enabled': true,
-    });
+    const models = await this.models!['_DeclaredSchema'].findMany(
+      {
+        'modelOptions.conduit.authorization.enabled': true,
+      },
+      { readPreference: 'primary' },
+    );
     for (const model of models) {
       this.grpcSdk.authorization?.defineResource({
         name: model.name,
@@ -540,9 +549,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
           ? `cnd${collectionName}`
           : `cnd_${collectionName}`;
       } else if (schema.name !== '_DeclaredSchema') {
-        const declaredSchema = await this.models['_DeclaredSchema'].findOne({
-          name: schema.name,
-        });
+        const declaredSchema = await this.models['_DeclaredSchema'].findOne(
+          { name: schema.name },
+          { readPreference: 'primary' },
+        );
         if (!declaredSchema) {
           if (!collectionName.startsWith('cnd_')) {
             collectionName = collectionName.startsWith('_')
@@ -568,9 +578,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   private async addExtensionsFromSchemaModel(schema: ConduitSchema, gRPC: boolean) {
     if (schema.name !== '_DeclaredSchema' && gRPC) {
-      const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
-        name: schema.name,
-      });
+      const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne(
+        {
+          name: schema.name,
+        },
+        { readPreference: 'primary' },
+      );
       if (schemaModel?.extensions?.length > 0) {
         (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
       }

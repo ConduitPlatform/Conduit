@@ -126,13 +126,11 @@ export class RelationHandler {
       ...(subjectType ? { subjectType } : {}),
     };
 
-    const relations = await Relationship.getInstance().findMany(
-      query,
-      undefined,
+    const relations = await Relationship.getInstance().findMany(query, {
       skip,
       limit,
       sort,
-    );
+    });
     if (isNil(relations)) {
       throw new Error('Relations not found');
     }

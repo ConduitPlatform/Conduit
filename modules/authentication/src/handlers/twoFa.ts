@@ -289,9 +289,12 @@ export class TwoFa implements IAuthenticationStrategy {
         message: 'Verification code sent',
       };
     } else if (user.twoFaMethod === 'authenticator') {
-      const secret = await TwoFactorSecret.getInstance().findOne({
-        user: user._id,
-      });
+      const secret = await TwoFactorSecret.getInstance().findOne(
+        {
+          user: user._id,
+        },
+        { readPreference: 'primary' },
+      );
       if (isNil(secret))
         throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
       await Token.getInstance()
@@ -322,10 +325,13 @@ export class TwoFa implements IAuthenticationStrategy {
     clientId: string,
   ): Promise<{ userId?: string; accessToken?: string; refreshToken?: string }> {
     if (user.twoFaMethod === 'phone') {
-      const token = await Token.getInstance().findOne({
-        tokenType: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
-        user: user._id,
-      });
+      const token = await Token.getInstance().findOne(
+        {
+          tokenType: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
+          user: user._id,
+        },
+        { readPreference: 'primary' },
+      );
       if (!token) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
       }
@@ -352,9 +358,12 @@ export class TwoFa implements IAuthenticationStrategy {
     if (user.hasTwoFA) {
       return '2FA already enabled';
     }
-    const secret = await TwoFactorSecret.getInstance().findOne({
-      user: user._id,
-    });
+    const secret = await TwoFactorSecret.getInstance().findOne(
+      {
+        user: user._id,
+      },
+      { readPreference: 'primary' },
+    );
     if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
     const verification = node2fa.verifyToken(secret.secret, code, 1);
     if (isNil(verification) || verification.delta !== 0) {
@@ -375,10 +384,13 @@ export class TwoFa implements IAuthenticationStrategy {
     if (user.hasTwoFA) {
       return '2FA already enabled';
     }
-    const verificationRecord: Token | null = await Token.getInstance().findOne({
-      user: user._id,
-      tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-    });
+    const verificationRecord: Token | null = await Token.getInstance().findOne(
+      {
+        user: user._id,
+        tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+      },
+      { readPreference: 'primary' },
+    );
     if (isNil(verificationRecord))
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -431,7 +443,10 @@ export class TwoFa implements IAuthenticationStrategy {
     if (!reg.test(code)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Incorrect code format');
     }
-    const codeSet = await TwoFactorBackUpCodes.getInstance().findOne({ user: user._id });
+    const codeSet = await TwoFactorBackUpCodes.getInstance().findOne(
+      { user: user._id },
+      { readPreference: 'primary' },
+    );
     if (isNil(codeSet)) {
       throw new GrpcError(status.NOT_FOUND, 'User has no back up codes');
     }
@@ -470,10 +485,13 @@ export class TwoFa implements IAuthenticationStrategy {
     user: User,
     phoneNumber: string,
   ): Promise<string> {
-    const existingToken = await Token.getInstance().findOne({
-      tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-      user: user._id,
-    });
+    const existingToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+        user: user._id,
+      },
+      { readPreference: 'primary' },
+    );
     if (existingToken) {
       AuthUtils.checkResendThreshold(existingToken);
       await Token.getInstance().deleteMany({
@@ -532,9 +550,12 @@ export class TwoFa implements IAuthenticationStrategy {
     user: User,
     code: string,
   ): Promise<{ userId?: string; accessToken?: string; refreshToken?: string }> {
-    const secret = await TwoFactorSecret.getInstance().findOne({
-      user: user._id,
-    });
+    const secret = await TwoFactorSecret.getInstance().findOne(
+      {
+        user: user._id,
+      },
+      { readPreference: 'primary' },
+    );
     if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
     const verification = node2fa.verifyToken(secret.secret, code);
@@ -557,7 +578,10 @@ export class TwoFa implements IAuthenticationStrategy {
       codes[i] = (randomInt(1000, 10000) + ' ' + randomInt(1000, 10000)).toString();
       hashedCodes[i] = await AuthUtils.hashPassword(codes[i].split(' ').join(''));
     }
-    const codeSet = await TwoFactorBackUpCodes.getInstance().findOne({ user: user._id });
+    const codeSet = await TwoFactorBackUpCodes.getInstance().findOne(
+      { user: user._id },
+      { readPreference: 'primary' },
+    );
     if (isNil(codeSet)) {
       await TwoFactorBackUpCodes.getInstance().create({
         user: user._id,

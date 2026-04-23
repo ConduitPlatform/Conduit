@@ -3,6 +3,7 @@ import {
   ConduitRouteParameters,
   GrpcError,
   ConduitRouteReturnDefinition,
+  type FindOneOptions,
 } from '@conduitplatform/grpc-sdk';
 import { isEmpty, isNil } from 'lodash-es';
 import { ConduitRoute } from '@conduitplatform/hermes';
@@ -37,9 +38,10 @@ export function verifyQrCodeRoute() {
         return '2FA already enabled';
       }
 
-      const secret = await AdminTwoFactorSecret.getInstance().findOne({
-        adminId: admin._id,
-      });
+      const secret = await AdminTwoFactorSecret.getInstance().findOne(
+        { adminId: admin._id },
+        { readPreference: 'primary' } satisfies FindOneOptions,
+      );
       if (isNil(secret))
         throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 

@@ -238,11 +238,12 @@ export class InvitationRoutes {
     const invitations = await InvitationToken.getInstance()
       .findMany(
         { receiver: user._id },
-        'room createdAt updatedAt sender',
-        skip,
-        limit,
-        undefined,
-        'sender',
+        {
+          select: 'room createdAt updatedAt sender',
+          skip,
+          limit,
+          populate: 'sender',
+        },
       )
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
@@ -259,11 +260,12 @@ export class InvitationRoutes {
     const invitations = await InvitationToken.getInstance()
       .findMany(
         { sender: user._id },
-        'room createdAt updatedAt receiver',
-        skip,
-        limit,
-        undefined,
-        'receiver',
+        {
+          select: 'room createdAt updatedAt receiver',
+          skip,
+          limit,
+          populate: 'receiver',
+        },
       )
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);

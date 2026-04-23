@@ -42,13 +42,11 @@ export class UserAdmin {
       }
     }
 
-    const users: User[] = await User.getInstance().findMany(
-      query,
-      undefined,
+    const users: User[] = await User.getInstance().findMany(query, {
       skip,
       limit,
       sort,
-    );
+    });
     const count: number = await User.getInstance().countDocuments(query);
 
     return { users, count };

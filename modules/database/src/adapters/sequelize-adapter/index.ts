@@ -361,7 +361,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     const queryInterface = this.sequelize.getQueryInterface();
     for (const index of indexes) {
       await queryInterface
-        .addIndex('cnd_' + schemaName, index.fields, index.options)
+        .addIndex('cnd_' + schemaName, [...index.fields], index.options)
         .catch(() => {
           throw new GrpcError(status.INTERNAL, 'Unsuccessful index creation');
         });

@@ -250,6 +250,7 @@ export class SchemaAdmin {
       cms: call.request.params.conduitOptions?.cms,
       permissions: call.request.params.conduitOptions?.permissions,
       authorization: call.request.params.conduitOptions?.authorization,
+      readPreference: call.request.params.conduitOptions?.readPreference,
       timestamps: call.request.params.timestamps,
     });
     if (
@@ -290,6 +291,7 @@ export class SchemaAdmin {
       cms: call.request.params.conduitOptions?.cms,
       authorization: call.request.params.conduitOptions?.authorization,
       permissions: call.request.params.conduitOptions?.permissions,
+      readPreference: call.request.params.conduitOptions?.readPreference,
       existingModelOptions: requestedSchema.modelOptions,
     });
     if (

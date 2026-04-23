@@ -265,14 +265,12 @@ export class TeamsAdmin {
       query['$or'] = [{ parentTeam: null }, { parentTeam: { $exists: false } }];
     }
 
-    const teams: Team[] = await Team.getInstance().findMany(
-      query,
-      undefined,
+    const teams: Team[] = await Team.getInstance().findMany(query, {
       skip,
       limit,
       sort,
       populate,
-    );
+    });
     const count: number = await Team.getInstance().countDocuments(query);
 
     return { teams, count };
@@ -282,8 +280,7 @@ export class TeamsAdmin {
     const { teamId, populate } = call.request.params;
     const team: Team | null = await Team.getInstance().findOne(
       { _id: teamId },
-      undefined,
-      populate,
+      { populate },
     );
     return team || 'Team not found';
   }
@@ -482,13 +479,11 @@ export class TeamsAdmin {
       tokenType: TokenType.TEAM_INVITE_TOKEN,
       'data.teamId': teamId,
     };
-    const invites = await Token.getInstance().findMany(
-      query,
-      undefined,
+    const invites = await Token.getInstance().findMany(query, {
       skip,
       limit,
-      '-createdAt',
-    );
+      sort: '-createdAt',
+    });
     const count = await Token.getInstance().countDocuments(query);
     return { invites, count };
   }
@@ -521,10 +516,13 @@ export class TeamsAdmin {
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
     }
-    const foundToken = await Token.getInstance().findOne({
-      token: invitationToken,
-      'data.teamId': teamId,
-    } as Query<Token>);
+    const foundToken = await Token.getInstance().findOne(
+      {
+        token: invitationToken,
+        'data.teamId': teamId,
+      } as Query<Token>,
+      { readPreference: 'primary' },
+    );
     if (!foundToken) {
       throw new GrpcError(status.NOT_FOUND, 'Token not found');
     }

@@ -102,13 +102,11 @@ export class AdminHandlers {
         query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
       }
     }
-    const functions = await Functions.getInstance().findMany(
-      query,
-      undefined,
+    const functions = await Functions.getInstance().findMany(query, {
       skip,
       limit,
       sort,
-    );
+    });
     const count = await Functions.getInstance().countDocuments(query);
     return { functions, count };
   }
@@ -154,9 +152,7 @@ export class AdminHandlers {
 
     const functionsExecutions = await FunctionExecutions.getInstance().findMany(
       {},
-      skip,
-      limit,
-      sort,
+      { skip, limit, sort },
     );
     const count = await FunctionExecutions.getInstance().countDocuments({});
     return { functionsExecutions, count };
