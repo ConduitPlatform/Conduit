@@ -30,6 +30,7 @@
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "bson": "^7.2.0",
+    "convict": "^6.2.5",
     "deepdash-es": "^5.3.9",
     "dottie": "^2.0.7",
     "escape-string-regexp": "^5.0.0",
@@ -55,6 +56,7 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "devDependencies": {
+    "@types/convict": "^6.1.6",
     "@types/dottie": "^2.0.7",
     "@types/object-hash": "^3.0.4",
     "@types/lodash-es": "^4.17.12",

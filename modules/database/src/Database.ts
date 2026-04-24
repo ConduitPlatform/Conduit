@@ -60,13 +60,13 @@ import {
   type ExportResult,
   type ImportResult,
 } from '@conduitplatform/module-tools';
-import AppConfigSchema from './config/index.js';
+import AppConfigSchema, { Config } from './config/index.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default class DatabaseModule extends ManagedModule<any> {
+export default class DatabaseModule extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),
