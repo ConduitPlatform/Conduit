@@ -90,7 +90,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     );
 
     if (existingView && !isQueryEqual) {
-      await this.deleteView(viewName);
+      await this.deleteView(viewName, true);
     }
     const viewModel = new MongooseSchema(
       this.grpcSdk,
@@ -117,6 +117,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         originalSchema: modelName,
         joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
         query,
+        lastAccessedAt: new Date(),
       });
     }
   }
@@ -132,13 +133,18 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return this.views[viewName];
   }
 
-  async deleteView(viewName: string): Promise<void> {
+  async deleteView(viewName: string, instanceSync = false): Promise<void> {
     if (this.views[viewName]) {
-      await this.views[viewName].model.collection.drop();
+      await this.views[viewName].model.collection.drop().catch((e: Error) => {
+        if (!e.message.includes('ns not found')) throw e;
+      });
     }
     await this.models['Views'].deleteOne({ name: viewName });
     delete this.views[viewName];
     delete this.mongoose.models[viewName];
+    if (!instanceSync) {
+      this.publishViewDeletion(viewName);
+    }
   }
 
   async introspectDatabase(): Promise<ConduitSchema[]> {

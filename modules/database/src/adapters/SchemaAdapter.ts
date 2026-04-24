@@ -86,6 +86,7 @@ export abstract class SchemaAdapter<T> {
           view = await this.adapter.guaranteeView(viewName);
         }
       }
+      this.adapter.touchViewAccess(viewName).catch(() => {});
       return view;
     } else {
       const viewName = this.transformViewName(model, 'User:' + userId!, operation);
@@ -97,7 +98,41 @@ export abstract class SchemaAdapter<T> {
           view = await this.adapter.guaranteeView(viewName);
         }
       }
+      this.adapter.touchViewAccess(viewName).catch(() => {});
       return view;
+    }
+  }
+
+  private isStaleViewQueryError(error: unknown): boolean {
+    const err = error as { code?: number; message?: string; name?: string };
+    if (err?.code === 26) return true;
+    const msg = err?.message ?? '';
+    if (/ns not found|namespace not found/i.test(msg)) return true;
+    if (/could not find view|unknown view/i.test(msg)) return true;
+    if (
+      err?.name === 'SequelizeDatabaseError' &&
+      /relation.*does not exist|doesn't exist|no such table/i.test(msg)
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  private async runAuthorizedViewQuery<R>(
+    operation: string,
+    userId: string | undefined,
+    scope: string | undefined,
+    view: SchemaAdapter<T>,
+    run: (v: SchemaAdapter<T>) => Promise<R>,
+  ): Promise<R> {
+    try {
+      return await run(view);
+    } catch (e) {
+      if (!this.isStaleViewQueryError(e)) throw e;
+      await this.guaranteeView(operation, userId, scope);
+      const recreated = await this.permissionCheck(operation, userId, scope);
+      if (!recreated) throw e;
+      return await run(recreated);
     }
   }
 
@@ -154,11 +189,13 @@ export abstract class SchemaAdapter<T> {
     const view = await this.permissionCheck(operation, userId, scope);
     if (!view) return query;
     if (many) {
-      const docs = await view.findMany(query, {
-        select: '_id',
-        userId: undefined,
-        scope: undefined,
-      });
+      const docs = await this.runAuthorizedViewQuery(operation, userId, scope, view, v =>
+        v.findMany(query, {
+          select: '_id',
+          userId: undefined,
+          scope: undefined,
+        }),
+      );
       if (isEmpty(docs)) {
         return null;
       }
@@ -168,10 +205,12 @@ export abstract class SchemaAdapter<T> {
         return { _id: { [Op.in]: docs.map((doc: any) => doc._id) } };
       }
     } else {
-      const doc = await view.findOne(query, {
-        userId: undefined,
-        scope: undefined,
-      });
+      const doc = await this.runAuthorizedViewQuery(operation, userId, scope, view, v =>
+        v.findOne(query, {
+          userId: undefined,
+          scope: undefined,
+        }),
+      );
       if (isNil(doc)) {
         return null;
       }
@@ -196,14 +235,16 @@ export abstract class SchemaAdapter<T> {
     }
     const view = await this.permissionCheck(operation, userId, scope);
     if (!view) return { query, modified: false };
-    const docs = await view.findMany(query, {
-      select: '_id',
-      skip,
-      limit,
-      sort,
-      userId: undefined,
-      scope: undefined,
-    });
+    const docs = await this.runAuthorizedViewQuery(operation, userId, scope, view, v =>
+      v.findMany(query, {
+        select: '_id',
+        skip,
+        limit,
+        sort,
+        userId: undefined,
+        scope: undefined,
+      }),
+    );
     if (!docs?.length) {
       return { query: null, modified: false };
     }
