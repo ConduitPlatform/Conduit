@@ -60,8 +60,8 @@ import {
   type ExportResult,
   type ImportResult,
 } from '@conduitplatform/module-tools';
-import AppConfigSchema from './config/index.js';
 import { QueueController } from './controllers/queue.controller.js';
+import AppConfigSchema, { Config } from './config/index.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);

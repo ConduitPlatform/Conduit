@@ -794,7 +794,7 @@ importers:
         specifier: ^5.21.2
         version: 5.73.0
       convict:
-        specifier: ^6.2.4
+        specifier: ^6.2.5
         version: 6.2.5
       deepdash-es:
         specifier: ^5.3.9
