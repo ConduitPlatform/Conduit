@@ -36,12 +36,12 @@
     "@grpc/grpc-js": "^1.13.3",
     "@grpc/proto-loader": "^0.7.13",
     "bcrypt": "^6.0.0",
-    "convict": "^6.2.4",
+    "convict": "^6.2.5",
     "cors": "^2.8.5",
     "graphql-tag": "^2.12.6",
     "helmet": "7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "lodash-es": "^4.17.21"
+    "lodash-es": "^4.18.1"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
