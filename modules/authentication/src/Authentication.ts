@@ -270,11 +270,15 @@ export default class Authentication extends ManagedModule<Config> {
       this.destroyMonitors();
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
+      const shouldSendVerificationEmail = config.local.verification.send_email;
+      if (shouldSendVerificationEmail && !this.grpcSdk.isAvailable('email')) {
+        await this.grpcSdk.refreshModules(true);
+      }
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       this.refreshAppRoutes();
       this.initMonitors();
       this.updateHealth(HealthCheckStatus.SERVING);
-      if (config.local.verification.send_email) {
+      if (shouldSendVerificationEmail) {
         if (!this.grpcSdk.isAvailable('email')) {
           ConduitGrpcSdk.Logger.warn(
             'Failed to enable email verification for local authentication strategy. Email module not serving.',
@@ -956,6 +960,11 @@ export default class Authentication extends ManagedModule<Config> {
       this.scheduleAppRouteRefresh();
       return;
     }
+    if (!this.grpcSdk.isAvailable('router')) {
+      return;
+    }
+    this.userRouter = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
+    this.scheduleAppRouteRefresh();
   }
 
   private scheduleAppRouteRefresh() {
