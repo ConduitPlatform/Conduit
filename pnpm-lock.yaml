@@ -814,6 +814,9 @@ importers:
       mariadb:
         specifier: ^3.5.2
         version: 3.5.2
+      mongodb:
+        specifier: ^7.2.0
+        version: 7.2.0(snappy@7.3.3)(socks@2.8.7)
       mongodb-schema:
         specifier: ^12.7.0
         version: 12.7.0(snappy@7.3.3)(socks@2.8.7)
@@ -6939,8 +6942,8 @@ packages:
     resolution: {integrity: sha512-TPfop6c2AAQJP1QhQwi/uJnuPEeLhMvN9ouJAZ6M9mouH6fCr0WOHLJWx5Z0dSeXJIVy//WTXxZB6yiol1bGEA==}
     hasBin: true
 
-  mongodb@7.0.0:
-    resolution: {integrity: sha512-vG/A5cQrvGGvZm2mTnCSz1LUcbOPl83hfB6bxULKQ8oFZauyox/2xbZOoGNl+64m8VBrETkdGCDBdOsCr3F3jg==}
+  mongodb@7.1.1:
+    resolution: {integrity: sha512-067DXiMjcpYQl6bGjWQoTUEE9UoRViTtKFcoqX7z08I+iDZv/emH1g8XEFiO3qiDfXAheT5ozl1VffDTKhIW/w==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@aws-sdk/credential-providers': ^3.806.0
@@ -6966,8 +6969,8 @@ packages:
       socks:
         optional: true
 
-  mongodb@7.1.1:
-    resolution: {integrity: sha512-067DXiMjcpYQl6bGjWQoTUEE9UoRViTtKFcoqX7z08I+iDZv/emH1g8XEFiO3qiDfXAheT5ozl1VffDTKhIW/w==}
+  mongodb@7.2.0:
+    resolution: {integrity: sha512-F/2+BMZtLVhY30ioZp0dAmZ+IRZMBqI+nrv6t5+9/1AIwCa8sMRC3jBf81lpxMhnZgqq8CoUD503Z1oZWq1/sw==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@aws-sdk/credential-providers': ^3.806.0
@@ -16347,7 +16350,7 @@ snapshots:
       bson: 7.2.0
       cli-table: 0.3.11
       js-yaml: 4.1.1
-      mongodb: 7.0.0(snappy@7.3.3)(socks@2.8.7)
+      mongodb: 7.2.0(snappy@7.3.3)(socks@2.8.7)
       mongodb-ns: 3.0.3
       numeral: 2.0.6
       progress: 2.0.3
@@ -16362,7 +16365,7 @@ snapshots:
       - snappy
       - socks
 
-  mongodb@7.0.0(snappy@7.3.3)(socks@2.8.7):
+  mongodb@7.1.1(snappy@7.3.3)(socks@2.8.7):
     dependencies:
       '@mongodb-js/saslprep': 1.3.2
       bson: 7.2.0
@@ -16370,9 +16373,8 @@ snapshots:
     optionalDependencies:
       snappy: 7.3.3
       socks: 2.8.7
-    optional: true
 
-  mongodb@7.1.1(snappy@7.3.3)(socks@2.8.7):
+  mongodb@7.2.0(snappy@7.3.3)(socks@2.8.7):
     dependencies:
       '@mongodb-js/saslprep': 1.3.2
       bson: 7.2.0

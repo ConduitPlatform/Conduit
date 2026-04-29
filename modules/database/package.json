@@ -43,6 +43,7 @@
     "ioredis": "^5.10.1",
     "lodash-es": "^4.18.1",
     "mariadb": "^3.5.2",
+    "mongodb": "^7.2.0",
     "mongodb-schema": "^12.7.0",
     "mongoose": "^9.4.1",
     "mysql2": "^3.20.0",

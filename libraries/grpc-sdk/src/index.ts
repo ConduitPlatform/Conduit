@@ -84,6 +84,7 @@ class ConduitGrpcSdk {
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
   private readonly _moduleMonitorListeners = new Map<string, Set<(s: boolean) => void>>();
+  private readonly _communicationsLegacyConnectionStates = new Map<string, boolean>();
 
   constructor(
     serverUrl: string,
@@ -337,28 +338,24 @@ class ConduitGrpcSdk {
           this._modules[r]?.closeConnection();
           emitter.emit(`module-connection-update:${r}`, false);
           if (r === 'communications') {
-            for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
-              this._modules[legacyModule]?.closeConnection();
-              emitter.emit(`module-connection-update:${legacyModule}`, false);
-            }
+            this.syncCommunicationsLegacyClients(false, emitter);
           }
         }
       });
       modules.forEach((m: ModuleListResponse_ModuleResponse) => {
         if (m.moduleName === this.name || !m.serving) return;
         const alreadyActive = this._modules[m.moduleName]?.active;
-        if (alreadyActive) return;
-        if (this._availableModules[m.moduleName] && this._modules[m.moduleName]) {
-          this._modules[m.moduleName].openConnection();
-        } else {
-          this.createModuleClient(m.moduleName, m.url);
-        }
-        emitter.emit(`module-connection-update:${m.moduleName}`, true);
-        if (m.moduleName === 'communications') {
-          for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
-            this._modules[legacyModule]?.openConnection();
-            emitter.emit(`module-connection-update:${legacyModule}`, true);
+        if (alreadyActive && m.moduleName !== 'communications') return;
+        if (!alreadyActive) {
+          if (this._availableModules[m.moduleName] && this._modules[m.moduleName]) {
+            this._modules[m.moduleName].openConnection();
+          } else {
+            this.createModuleClient(m.moduleName, m.url);
           }
+          emitter.emit(`module-connection-update:${m.moduleName}`, true);
+        }
+        if (m.moduleName === 'communications') {
+          this.syncCommunicationsLegacyClients(true, emitter, m.url);
         }
       });
     });
@@ -608,9 +605,7 @@ class ConduitGrpcSdk {
           this.createModuleClient(m.moduleName, m.url);
           emitter.emit(`module-connection-update:${m.moduleName}`, m.serving);
           if (m.moduleName === 'communications') {
-            for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
-              emitter.emit(`module-connection-update:${legacyModule}`, m.serving);
-            }
+            this.syncCommunicationsLegacyClients(m.serving, emitter, m.url);
           }
         });
         return 'ok';
@@ -628,12 +623,13 @@ class ConduitGrpcSdk {
   }
 
   createModuleClient(moduleName: string, moduleUrl: string) {
-    if (this._modules[moduleName]) return;
-    moduleUrl =
-      this.urlRemap?.[moduleUrl] ??
-      (this.urlRemap?.['*']
-        ? `${this.urlRemap['*']}:${moduleUrl.split(':')[1]}`
-        : moduleUrl);
+    moduleUrl = this.resolveModuleUrl(moduleUrl);
+    if (this._modules[moduleName]) {
+      if (moduleName === 'communications') {
+        this.createCommunicationsLegacyClients(moduleUrl);
+      }
+      return;
+    }
     if (this._availableModules[moduleName]) {
       ConduitGrpcSdk.Logger.info(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new this._availableModules[moduleName](
@@ -663,15 +659,49 @@ class ConduitGrpcSdk {
     }
 
     if (moduleName === 'communications') {
-      for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
-        if (!this._modules[legacyModule] && this._availableModules[legacyModule]) {
-          ConduitGrpcSdk.Logger.info(`Creating gRPC client for ${legacyModule}`);
-          this._modules[legacyModule] = new this._availableModules[legacyModule](
-            this.name,
-            moduleUrl,
-            this._grpcToken,
-          );
-        }
+      this.createCommunicationsLegacyClients(moduleUrl);
+    }
+  }
+
+  private resolveModuleUrl(moduleUrl: string) {
+    return (
+      this.urlRemap?.[moduleUrl] ??
+      (this.urlRemap?.['*']
+        ? `${this.urlRemap['*']}:${moduleUrl.split(':')[1]}`
+        : moduleUrl)
+    );
+  }
+
+  private createCommunicationsLegacyClients(moduleUrl: string) {
+    for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
+      if (!this._modules[legacyModule] && this._availableModules[legacyModule]) {
+        ConduitGrpcSdk.Logger.info(`Creating gRPC client for ${legacyModule}`);
+        this._modules[legacyModule] = new this._availableModules[legacyModule](
+          this.name,
+          moduleUrl,
+          this._grpcToken,
+        );
+      }
+    }
+  }
+
+  private syncCommunicationsLegacyClients(
+    serving: boolean,
+    emitter: ReturnType<Config['getModuleWatcher']>,
+    moduleUrl?: string,
+  ) {
+    if (serving && moduleUrl) {
+      this.createCommunicationsLegacyClients(this.resolveModuleUrl(moduleUrl));
+    }
+    for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
+      if (serving) {
+        this._modules[legacyModule]?.openConnection();
+      } else {
+        this._modules[legacyModule]?.closeConnection();
+      }
+      if (this._communicationsLegacyConnectionStates.get(legacyModule) !== serving) {
+        this._communicationsLegacyConnectionStates.set(legacyModule, serving);
+        emitter.emit(`module-connection-update:${legacyModule}`, serving);
       }
     }
   }
