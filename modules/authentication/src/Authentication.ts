@@ -222,11 +222,14 @@ export default class Authentication extends ManagedModule<Config> {
     this.grpcSdk.unmonitorModule('sms');
     this.grpcSdk.unmonitorModule('router');
   }
-
   async initializeMetrics() {
-    // @improve-metrics
-    // TODO: This should initialize 'logged_in_users_total' based on valid tokens
-    // Gauge value should also decrease on latest token expiry.
+    const validTokens = await models.RefreshToken.getInstance(this.database).findMany({
+      expiresOn: { $gt: new Date() },
+    });
+
+    const count = validTokens.length;
+
+    ConduitGrpcSdk.Metrics?.set('logged_in_users_total', count);
   }
 
   // produces login credentials for a user without them having to login
@@ -256,6 +259,7 @@ export default class Authentication extends ManagedModule<Config> {
         clientId,
         config,
       });
+      ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
       return callback(null, {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken ?? undefined,
@@ -458,6 +462,7 @@ export default class Authentication extends ManagedModule<Config> {
       config,
       isRefresh: false,
     });
+    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return callback(null, {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken ?? undefined,
@@ -665,7 +670,13 @@ export default class Authentication extends ManagedModule<Config> {
     await User.getInstance().findByIdAndUpdate(user._id, { active });
     callback(null, { message: 'ok' });
     if (!active) {
-      TokenProvider.getInstance().deleteUserTokens({ user: id });
+      const [deletedAccessTokens] = await TokenProvider.getInstance().deleteUserTokens({
+        user: id,
+      });
+
+      for (let i = 0; i < deletedAccessTokens.deletedCount; i++) {
+        ConduitGrpcSdk.Metrics?.decrement('logged_in_users_total');
+      }
     }
   }
 
@@ -840,12 +851,15 @@ export default class Authentication extends ManagedModule<Config> {
 
   private startTokenCleanup() {
     if (this.tokenCleanupInterval) return;
-    const cleanup = () => {
-      models.AccessToken.getInstance()
-        .deleteMany({ expiresOn: { $lte: new Date() } })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(`Token cleanup failed: ${e.message}`);
+    const cleanup = async () => {
+      try {
+        await models.AccessToken.getInstance().deleteMany({
+          expiresOn: { $lte: new Date() },
         });
+        await this.initializeMetrics();
+      } catch (e) {
+        ConduitGrpcSdk.Logger.error(`Token cleanup failed: ${(e as Error).message}`);
+      }
     };
     cleanup();
     this.tokenCleanupInterval = setInterval(cleanup, 5 * 60 * 1000);

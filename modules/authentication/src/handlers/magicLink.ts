@@ -128,6 +128,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const redirectUri =
       AuthUtils.validateRedirectUri(data.redirectUri) ??
       config.magic_link.redirect_uri.replace(/\/$/, '');
+    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return TokenProvider.getInstance().provideUserTokens(
       {
         user,
@@ -143,6 +144,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   ): Promise<UnparsedRouterResponse> {
     const { magicToken } = call.request.urlParams;
     const { user, data } = await this.redeemMagicToken(magicToken);
+    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: data.clientId,
