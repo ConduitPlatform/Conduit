@@ -23,11 +23,11 @@ export namespace AuthUtils {
   }
 
   export async function reconcileLoggedInUsersMetric() {
-    const validTokens = await AccessToken.getInstance().findMany({
+    const count = await AccessToken.getInstance().countDocuments({
       expiresOn: { $gt: new Date() },
     });
 
-    ConduitGrpcSdk.Metrics?.set('logged_in_users_total', validTokens.length);
+    ConduitGrpcSdk.Metrics?.set('logged_in_users_total', count);
   }
 
   export function getToken(
