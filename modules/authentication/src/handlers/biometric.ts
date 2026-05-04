@@ -117,6 +117,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     if (!verificationResult) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
+    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return TokenProvider.getInstance().provideUserTokens({
       user: key.user as User,
       clientId: call.request.context.clientId,

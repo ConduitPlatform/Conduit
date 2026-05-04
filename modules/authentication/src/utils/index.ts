@@ -9,7 +9,7 @@ import {
   Indexable,
   SMS,
 } from '@conduitplatform/grpc-sdk';
-import { Team, Token, User } from '../models/index.js';
+import { AccessToken, Team, Token, User } from '../models/index.js';
 import { isEmpty, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
@@ -20,6 +20,14 @@ import { ConfigController } from '@conduitplatform/module-tools';
 export namespace AuthUtils {
   export function randomToken(size = 64) {
     return crypto.randomBytes(size).toString('base64');
+  }
+
+  export async function reconcileLoggedInUsersMetric() {
+    const count = await AccessToken.getInstance().countDocuments({
+      expiresOn: { $gt: new Date() },
+    });
+
+    ConduitGrpcSdk.Metrics?.set('logged_in_users_total', count);
   }
 
   export function getToken(

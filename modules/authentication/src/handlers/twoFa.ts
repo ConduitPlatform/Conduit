@@ -330,6 +330,7 @@ export class TwoFa implements IAuthenticationStrategy {
         throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
       }
       const config = ConfigController.getInstance().config;
+      ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
       return TokenProvider.getInstance().provideUserTokens({
         user,
         clientId,
@@ -451,6 +452,7 @@ export class TwoFa implements IAuthenticationStrategy {
       });
     }
     const config = ConfigController.getInstance().config;
+    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     const result: any = await TokenProvider.getInstance().provideUserTokens({
       user,
       clientId,
@@ -538,6 +540,7 @@ export class TwoFa implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Code is not correct');
     }
     const config = ConfigController.getInstance().config;
+    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId,

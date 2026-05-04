@@ -115,7 +115,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       user = await User.getInstance().findOne({ _id: existingToken.user as string });
       if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
     }
-
+    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: existingToken.data.clientId,
