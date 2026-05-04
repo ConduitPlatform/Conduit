@@ -223,13 +223,7 @@ export default class Authentication extends ManagedModule<Config> {
     this.grpcSdk.unmonitorModule('router');
   }
   async initializeMetrics() {
-    const validTokens = await models.RefreshToken.getInstance(this.database).findMany({
-      expiresOn: { $gt: new Date() },
-    });
-
-    const count = validTokens.length;
-
-    ConduitGrpcSdk.Metrics?.set('logged_in_users_total', count);
+    await AuthUtils.reconcileLoggedInUsersMetric();
   }
 
   // produces login credentials for a user without them having to login
@@ -670,13 +664,11 @@ export default class Authentication extends ManagedModule<Config> {
     await User.getInstance().findByIdAndUpdate(user._id, { active });
     callback(null, { message: 'ok' });
     if (!active) {
-      const [deletedAccessTokens] = await TokenProvider.getInstance().deleteUserTokens({
+      await TokenProvider.getInstance().deleteUserTokens({
         user: id,
       });
 
-      for (let i = 0; i < deletedAccessTokens.deletedCount; i++) {
-        ConduitGrpcSdk.Metrics?.decrement('logged_in_users_total');
-      }
+      await AuthUtils.reconcileLoggedInUsersMetric();
     }
   }
 
@@ -856,7 +848,7 @@ export default class Authentication extends ManagedModule<Config> {
         await models.AccessToken.getInstance().deleteMany({
           expiresOn: { $lte: new Date() },
         });
-        await this.initializeMetrics();
+        await AuthUtils.reconcileLoggedInUsersMetric();
       } catch (e) {
         ConduitGrpcSdk.Logger.error(`Token cleanup failed: ${(e as Error).message}`);
       }

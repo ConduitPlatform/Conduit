@@ -513,13 +513,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
     await User.getInstance().findByIdAndUpdate(user._id, { hashedPassword });
     await Token.getInstance().deleteOne(passwordResetTokenDoc);
 
-    const [deletedAccessTokens] = await TokenProvider.getInstance().deleteUserTokens({
+    await TokenProvider.getInstance().deleteUserTokens({
       user: user._id,
     });
 
-    for (let i = 0; i < deletedAccessTokens.deletedCount; i++) {
-      ConduitGrpcSdk.Metrics?.decrement('logged_in_users_total');
-    }
+    await AuthUtils.reconcileLoggedInUsersMetric();
 
     return 'Password reset successful';
   }
