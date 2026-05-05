@@ -34,6 +34,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     connectTimeoutMS: this.maxConnTimeoutMs,
     serverSelectionTimeoutMS: this.maxConnTimeoutMs,
   };
+  private pendingViewCreations = new Map<string, Promise<void>>();
 
   constructor(connectionString: string) {
     super();
@@ -73,6 +74,32 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     joinedSchemas: string[],
     query: any,
   ): Promise<void> {
+    if (this.views[viewName] && isEqual(this.views[viewName]?.viewQuery, query)) {
+      return;
+    }
+
+    const pending = this.pendingViewCreations.get(viewName);
+    if (pending) {
+      await pending;
+      return;
+    }
+
+    const promise = this.createViewImpl(
+      modelName,
+      viewName,
+      joinedSchemas,
+      query,
+    ).finally(() => this.pendingViewCreations.delete(viewName));
+    this.pendingViewCreations.set(viewName, promise);
+    return promise;
+  }
+
+  private async createViewImpl(
+    modelName: string,
+    viewName: string,
+    joinedSchemas: string[],
+    query: any,
+  ): Promise<void> {
     if (!this.models[modelName]) {
       throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
     }
@@ -101,10 +128,20 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       true,
       query,
     );
-    await viewModel.model.createCollection({
-      viewOn: model.originalSchema.collectionName,
-      pipeline: JSON.parse(query.mongoQuery),
-    });
+    await viewModel.model
+      .createCollection({
+        viewOn: model.originalSchema.collectionName,
+        pipeline: JSON.parse(query.mongoQuery),
+      })
+      .catch((err: any) => {
+        if (
+          err.codeName === 'NamespaceExists' ||
+          err.message?.includes('already exists')
+        ) {
+          return;
+        }
+        throw err;
+      });
     this.views[viewName] = viewModel;
 
     const foundView = await this.models['Views'].findOne({ name: viewName });
