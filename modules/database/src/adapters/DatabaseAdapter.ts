@@ -472,16 +472,27 @@ export abstract class DatabaseAdapter<T extends Schema> {
       canModify: 'Everything',
       canDelete: true,
     } as const;
+
+    const setDefaultPermission = <K extends keyof typeof defaultPermissions>(
+      permissions: NonNullable<ConduitSchema['modelOptions']['conduit']>['permissions'],
+      key: K,
+    ) => {
+      if (!permissions!.hasOwnProperty(key)) {
+        permissions![key] = defaultPermissions[key];
+      }
+    };
+
     if (isNil(schema.modelOptions.conduit)) schema.modelOptions.conduit = {};
+
     if (isNil(schema.modelOptions.conduit.permissions)) {
-      schema.modelOptions.conduit!.permissions = defaultPermissions;
+      schema.modelOptions.conduit.permissions = { ...defaultPermissions };
     } else {
-      Object.keys(defaultPermissions).forEach(perm => {
-        if (!schema.modelOptions.conduit!.permissions!.hasOwnProperty(perm)) {
-          // @ts-ignore
-          schema.modelOptions.conduit!.permissions![perm] =
-            defaultPermissions[perm as keyof typeof defaultPermissions];
-        }
+      const permissions = schema.modelOptions.conduit.permissions;
+      const defaultPermissionKeys = Object.keys(defaultPermissions) as Array<
+        keyof typeof defaultPermissions
+      >;
+      defaultPermissionKeys.forEach(perm => {
+        setDefaultPermission(permissions, perm);
       });
     }
     return schema;
