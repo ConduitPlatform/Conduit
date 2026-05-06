@@ -5,6 +5,7 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
+  Indexable,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -70,10 +71,11 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     const { ethPublicAddress } = call.request.params;
     const normalizedEthPublicAddress = ethPublicAddress.toLowerCase();
 
-    const existingUser: User | null = await User.getInstance().findOne({
-      // @ts-expect-error Unsafe nested property access
+    const metamaskQuery: Indexable = {
       'metamask.ethPublicAddress': normalizedEthPublicAddress,
-    });
+    };
+
+    const existingUser: User | null = await User.getInstance().findOne(metamaskQuery);
 
     if (existingUser) {
       return { nonce: existingUser.metamask!.nonce };
@@ -100,10 +102,11 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     }
 
-    const user = await User.getInstance().findOne({
-      // @ts-expect-error Unsafe nested property access
+    const metamaskQuery: Indexable = {
       'metamask.ethPublicAddress': normalizedEthPublicAddress,
-    });
+    };
+
+    const user = await User.getInstance().findOne(metamaskQuery);
 
     if (isNil(user)) {
       throw new GrpcError(
@@ -145,10 +148,11 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
       );
     }
 
-    await User.getInstance().findByIdAndUpdate(user._id, {
-      // @ts-expect-error Unsafe nested property access
+    const nonceUpdate: Indexable = {
       'metamask.nonce': uuid(),
-    });
+    };
+
+    await User.getInstance().findByIdAndUpdate(user._id, nonceUpdate);
 
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     const config = ConfigController.getInstance().config;

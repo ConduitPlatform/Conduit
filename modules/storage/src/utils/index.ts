@@ -13,17 +13,25 @@ import { randomUUID } from 'node:crypto';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 
-export async function streamToBuffer(readableStream: any): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
+export async function streamToBuffer(
+  readableStream?: NodeJS.ReadableStream,
+): Promise<Buffer> {
+  return new Promise<Buffer>((resolve, reject) => {
+    if (!readableStream) {
+      reject(new Error('Readable stream is undefined'));
+      return;
+    }
+
     const chunks: Buffer[] = [];
-    readableStream.on('data', (data: any) => {
-      chunks.push(data instanceof Buffer ? data : Buffer.from(data));
+
+    readableStream.on('data', (data: string | Buffer | Uint8Array) => {
+      chunks.push(Buffer.isBuffer(data) ? data : Buffer.from(data));
     });
+
     readableStream.on('end', () => {
-      // shouldn't really provide an error
-      // @ts-expect-error
-      resolve(Buffer.concat(chunks));
+      resolve(Buffer.concat(chunks as unknown as readonly Uint8Array[]));
     });
+
     readableStream.on('error', reject);
   });
 }
