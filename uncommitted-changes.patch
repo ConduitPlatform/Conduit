@@ -1,0 +1,154 @@
+diff --git a/modules/authentication/src/Authentication.ts b/modules/authentication/src/Authentication.ts
+index e34dafdd..8a881d1b 100644
+--- a/modules/authentication/src/Authentication.ts
++++ b/modules/authentication/src/Authentication.ts
+@@ -676,11 +676,12 @@ export default class Authentication extends ManagedModule<Config> {
+     const { email, teamId } = call.request;
+ 
+     try {
+-      const deletedToken = await Token.getInstance().deleteOne({
+-        // @ts-expect-error Unsafe nested property access
++      const invitationQuery: Indexable = {
+         'data.teamId': teamId,
+         'data.email': email,
+-      });
++      };
++
++      const deletedToken = await Token.getInstance().deleteOne(invitationQuery);
+ 
+       if (deletedToken.deletedCount === 0) {
+         return callback({
+diff --git a/modules/authentication/src/handlers/metamask.ts b/modules/authentication/src/handlers/metamask.ts
+index c6139440..025e187e 100644
+--- a/modules/authentication/src/handlers/metamask.ts
++++ b/modules/authentication/src/handlers/metamask.ts
+@@ -5,6 +5,7 @@ import {
+   ConduitRouteActions,
+   ConduitRouteReturnDefinition,
+   GrpcError,
++  Indexable,
+   ParsedRouterRequest,
+   UnparsedRouterResponse,
+ } from '@conduitplatform/grpc-sdk';
+@@ -70,10 +71,11 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
+     const { ethPublicAddress } = call.request.params;
+     const normalizedEthPublicAddress = ethPublicAddress.toLowerCase();
+ 
+-    const existingUser: User | null = await User.getInstance().findOne({
+-      // @ts-expect-error Unsafe nested property access
++    const metamaskQuery: Indexable = {
+       'metamask.ethPublicAddress': normalizedEthPublicAddress,
+-    });
++    };
++
++    const existingUser: User | null = await User.getInstance().findOne(metamaskQuery);
+ 
+     if (existingUser) {
+       return { nonce: existingUser.metamask!.nonce };
+@@ -100,10 +102,11 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
+       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
+     }
+ 
+-    const user = await User.getInstance().findOne({
+-      // @ts-expect-error Unsafe nested property access
++    const metamaskQuery: Indexable = {
+       'metamask.ethPublicAddress': normalizedEthPublicAddress,
+-    });
++    };
++
++    const user = await User.getInstance().findOne(metamaskQuery);
+ 
+     if (isNil(user)) {
+       throw new GrpcError(
+@@ -145,10 +148,11 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
+       );
+     }
+ 
+-    await User.getInstance().findByIdAndUpdate(user._id, {
+-      // @ts-expect-error Unsafe nested property access
++    const nonceUpdate: Indexable = {
+       'metamask.nonce': uuid(),
+-    });
++    };
++
++    await User.getInstance().findByIdAndUpdate(user._id, nonceUpdate);
+ 
+     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
+     const config = ConfigController.getInstance().config;
+diff --git a/modules/authentication/src/handlers/team.ts b/modules/authentication/src/handlers/team.ts
+index 63a9455b..6fa2c271 100644
+--- a/modules/authentication/src/handlers/team.ts
++++ b/modules/authentication/src/handlers/team.ts
+@@ -134,11 +134,12 @@ export class TeamsHandler implements IAuthenticationStrategy {
+   }
+ 
+   async getUserInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+-    const invites = await Token.getInstance().findMany({
++    const userInvitesQuery: Indexable = {
+       tokenType: TokenType.TEAM_INVITE_TOKEN,
+-      // @ts-ignore
+       'data.email': call.request.context.user.email,
+-    });
++    };
++
++    const invites = await Token.getInstance().findMany(userInvitesQuery);
+     return {
+       invites: invites.map(invite => ({
+         teamId: invite.data.teamId,
+@@ -579,12 +580,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
+     }
+ 
+     // Delete any existing invite for the same email and team
+-    await Token.getInstance().deleteOne({
++    const existingInviteQuery: Indexable = {
+       tokenType: TokenType.TEAM_INVITE_TOKEN,
+-      // @ts-expect-error Unsafe nested property access
+       'data.teamId': teamId,
+       'data.email': email,
+-    });
++    };
++
++    await Token.getInstance().deleteOne(existingInviteQuery);
+ 
+     const invitation = await this.createUserInvitation({
+       teamId,
+@@ -645,12 +647,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
+     }
+ 
+     // Delete any existing invite for the same email and team
+-    await Token.getInstance().deleteOne({
++    const invitationQuery: Indexable = {
+       tokenType: TokenType.TEAM_INVITE_TOKEN,
+-      // @ts-expect-error Unsafe nested property access
+       'data.teamId': teamId,
+       'data.email': email,
+-    });
++    };
++
++    await Token.getInstance().deleteOne(invitationQuery);
+ 
+     return 'OK';
+   }
+@@ -682,17 +685,14 @@ export class TeamsHandler implements IAuthenticationStrategy {
+       );
+     }
+ 
+-    const invites = await Token.getInstance().findMany({
++    const teamInvitesQuery: Indexable = {
+       tokenType: TokenType.TEAM_INVITE_TOKEN,
+-      // @ts-expect-error Unsafe nested property access
+       'data.teamId': teamId,
+-    });
++    };
+ 
+-    const count = await Token.getInstance().countDocuments({
+-      tokenType: TokenType.TEAM_INVITE_TOKEN,
+-      // @ts-expect-error Unsafe nested property access
+-      'data.teamId': teamId,
+-    });
++    const invites = await Token.getInstance().findMany(teamInvitesQuery);
++
++    const count = await Token.getInstance().countDocuments(teamInvitesQuery);
+ 
+     return {
+       invites,

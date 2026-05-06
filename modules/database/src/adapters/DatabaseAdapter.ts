@@ -474,11 +474,13 @@ export abstract class DatabaseAdapter<T extends Schema> {
     } as const;
 
     const setDefaultPermission = <K extends keyof typeof defaultPermissions>(
-      permissions: NonNullable<ConduitSchema['modelOptions']['conduit']>['permissions'],
+      permissions: NonNullable<
+        NonNullable<ConduitSchema['modelOptions']['conduit']>['permissions']
+      >,
       key: K,
     ) => {
-      if (!permissions!.hasOwnProperty(key)) {
-        permissions![key] = defaultPermissions[key];
+      if (!Object.prototype.hasOwnProperty.call(permissions, key)) {
+        permissions[key] = defaultPermissions[key];
       }
     };
 
