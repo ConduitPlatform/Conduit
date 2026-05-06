@@ -3,11 +3,14 @@ import {
   ConduitModel,
   ConduitSchema,
   GrpcError,
+  Indexable,
   ModelOptionsIndexes,
   RawMongoQuery,
   RawSQLQuery,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
+import type { Config } from '../config/index.js';
 import {
   _ConduitSchema,
   ConduitDatabaseSchema,
@@ -38,6 +41,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   };
   private legacyDeployment = false; // unprefixed declared schema collection
   private readonly _systemSchemas: Set<string> = new Set();
+  private viewAccessTimestamps: Map<string, number> = new Map();
 
   protected constructor() {
     this.registeredSchemas = new Map();
@@ -207,7 +211,83 @@ export abstract class DatabaseAdapter<T extends Schema> {
     query: any,
   ): Promise<void>;
 
-  abstract deleteView(viewName: string): Promise<void>;
+  abstract deleteView(viewName: string, instanceSync?: boolean): Promise<void>;
+
+  /**
+   * Finds stale authorization views and deletes each via {@link deleteView}.
+   * @param batchSize Maximum rows to process; use 0 for no limit.
+   */
+  async cleanUpStaleViews(
+    stalenessThresholdMs: number,
+    batchSize: number,
+  ): Promise<void> {
+    const threshold = new Date(Date.now() - stalenessThresholdMs);
+    const staleQuery: Indexable = {
+      $or: [
+        { lastAccessedAt: { $lt: threshold } },
+        { lastAccessedAt: { $exists: false }, updatedAt: { $lt: threshold } },
+      ],
+    };
+    const limit = batchSize === 0 ? undefined : batchSize;
+    const staleViews = (await this.models['Views'].findMany(staleQuery, {
+      select: 'name',
+      limit,
+      sort: { lastAccessedAt: 1 },
+    })) as { name: string }[];
+
+    const failed: string[] = [];
+    let firstError: Error | undefined;
+
+    for (const view of staleViews) {
+      await this.deleteView(view.name).catch((err: Error) => {
+        failed.push(view.name);
+        if (!firstError) firstError = err;
+      });
+    }
+
+    const deletedCount = staleViews.length - failed.length;
+    if (deletedCount > 0) {
+      ConduitGrpcSdk.Logger.info(
+        `Deleted ${deletedCount} stale view(s) (batch queried: ${staleViews.length})`,
+      );
+    }
+    if (failed.length > 0) {
+      ConduitGrpcSdk.Logger.warn(
+        `Failed to delete ${failed.length}/${
+          staleViews.length
+        } stale views: ${failed.join(', ')}`,
+      );
+      ConduitGrpcSdk.Logger.error(firstError!);
+    }
+  }
+
+  /**
+   * Throttled update of Views.lastAccessedAt (interval from module config).
+   */
+  async touchViewAccess(viewName: string): Promise<void> {
+    const cfg = ConfigController.getInstance().config as Config | undefined;
+    const accessUpdateIntervalMs =
+      cfg?.viewCleanup?.accessUpdateIntervalMs ?? 60 * 60 * 1000;
+    const now = Date.now();
+    const lastTouch = this.viewAccessTimestamps.get(viewName) ?? 0;
+    if (now - lastTouch <= accessUpdateIntervalMs) {
+      return;
+    }
+    this.viewAccessTimestamps.set(viewName, now);
+    const viewsModel = this.models['Views'];
+    if (!viewsModel) return;
+    const view = await viewsModel.findOne({ name: viewName });
+    if (view) {
+      await viewsModel.findByIdAndUpdate(view._id, {
+        lastAccessedAt: new Date(now),
+      });
+    }
+  }
+
+  /** Notifies other database instances to drop an authorization view from in-memory caches. */
+  protected publishViewDeletion(viewName: string) {
+    this.grpcSdk.bus?.publish('database:delete:view', viewName);
+  }
 
   abstract deleteIndexes(schemaName: string, indexNames: string[]): Promise<string>;
 

@@ -60,6 +60,7 @@ import {
   type ExportResult,
   type ImportResult,
 } from '@conduitplatform/module-tools';
+import { QueueController } from './controllers/queue.controller.js';
 import AppConfigSchema, { Config } from './config/index.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
@@ -163,6 +164,36 @@ export default class DatabaseModule extends ManagedModule<Config> {
         readConcern: config.readConcern ?? 'local',
       });
     }
+    if (!config.viewCleanup.enabled) {
+      try {
+        await QueueController.getInstance().drainViewCleanupQueue();
+      } catch {
+        // Queue was never initialized (cleanup stayed disabled).
+      }
+      return;
+    }
+    const queueController = QueueController.getInstance(this.grpcSdk);
+    await queueController.drainViewCleanupQueue();
+    queueController.addViewCleanupWorker(job =>
+      this._activeAdapter.cleanUpStaleViews(
+        job.data.stalenessThresholdMs,
+        job.data.batchSize,
+      ),
+    );
+    if (!config.viewCleanup.cronPattern) {
+      ConduitGrpcSdk.Logger.warn(
+        'View cleanup is enabled but no cronPattern is set. Skipping job scheduling.',
+      );
+      return;
+    }
+    const repeatOptions = {
+      pattern: config.viewCleanup.cronPattern,
+    };
+    await queueController.addViewCleanupJob(
+      config.viewCleanup.stalenessThresholdMs,
+      config.viewCleanup.batchSize,
+      repeatOptions,
+    );
   }
 
   async onRegister() {
@@ -964,6 +995,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
         await this._activeAdapter.deleteSchema(schemaName, false, '', true);
+      });
+      this.grpcSdk.bus?.subscribe('database:delete:view', async (viewName: string) => {
+        delete this._activeAdapter.views[viewName];
+        if (this._activeAdapter instanceof MongooseAdapter) {
+          delete this._activeAdapter.mongoose.models[viewName];
+        }
       });
     } catch {
       ConduitGrpcSdk.Logger.error('Failed to synchronize schema');

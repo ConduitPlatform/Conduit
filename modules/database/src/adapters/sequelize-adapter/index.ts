@@ -63,7 +63,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     newSchema.collectionName = viewName;
 
     if (existingView && !isQueryEqual) {
-      await this.deleteView(viewName);
+      await this.deleteView(viewName, true);
     }
     const viewModel = new SequelizeSchema(
       this.grpcSdk,
@@ -99,6 +99,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
           originalSchema: modelName,
           joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
           query,
+          lastAccessedAt: new Date(),
         })
         .catch(err => {
           if (err.name !== 'SequelizeUniqueConstraintError') {
@@ -119,12 +120,15 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     return this.views[viewName];
   }
 
-  async deleteView(viewName: string): Promise<void> {
+  async deleteView(viewName: string, instanceSync = false): Promise<void> {
     if (this.views[viewName]) {
       await this.sequelize.query(`DROP VIEW IF EXISTS "${viewName}"`);
     }
     await this.models['Views'].deleteOne({ name: viewName });
     delete this.views[viewName];
+    if (!instanceSync) {
+      this.publishViewDeletion(viewName);
+    }
   }
 
   async retrieveForeignSchemas(): Promise<void> {
