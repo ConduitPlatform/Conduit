@@ -120,9 +120,8 @@ export function extractFieldProperties(
   } else if (objectField.hasOwnProperty('unique') && objectField.unique) {
     res.unique = objectField.unique ?? false;
     res.allowNull = false;
-  } else if (objectField.hasOwnProperty('required') && objectField.required) {
-    // @ts-expect-error
-    res.allowNull = !objectField.required ?? true;
+  } else if (objectField.hasOwnProperty('required') && isBoolean(objectField.required)) {
+    res.allowNull = !objectField.required;
   }
 
   return res;
