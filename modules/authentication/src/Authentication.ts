@@ -676,11 +676,12 @@ export default class Authentication extends ManagedModule<Config> {
     const { email, teamId } = call.request;
 
     try {
-      const deletedToken = await Token.getInstance().deleteOne({
-        // @ts-expect-error Unsafe nested property access
+      const invitationQuery: Indexable = {
         'data.teamId': teamId,
         'data.email': email,
-      });
+      };
+
+      const deletedToken = await Token.getInstance().deleteOne(invitationQuery);
 
       if (deletedToken.deletedCount === 0) {
         return callback({

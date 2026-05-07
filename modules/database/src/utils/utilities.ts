@@ -199,22 +199,28 @@ function validateCrudOperations(crudOperations: CrudOperations) {
     throw new Error(`CMS field 'crudOperations' must be of type Object`);
 
   Object.keys(crudOperations).forEach(op => {
-    if (!allowedCrudOperations.includes(op as keyof CrudOperations)) {
+    const crudOperation = op as keyof CrudOperations;
+
+    if (!allowedCrudOperations.includes(crudOperation)) {
       throw new Error(`Unrecognized CRUD operation '${op}' provided`);
     }
-    // @ts-ignore
-    if (!isObject(crudOperations[op])) {
+
+    const operationConfig = crudOperations[crudOperation];
+
+    if (!isObject(operationConfig)) {
       throw new Error(`Crud operation field '${op}' must be of type Object`);
     }
-    // @ts-ignore
-    Object.keys(crudOperations[op]).forEach(opField => {
-      if (!['enabled', 'authenticated'].includes(opField)) {
+
+    Object.keys(operationConfig).forEach(opField => {
+      const crudOperationField = opField as keyof typeof operationConfig;
+
+      if (!['enabled', 'authenticated'].includes(crudOperationField)) {
         throw new Error(
           `Unrecognized crud operation field '${opField}' for operation '${op}' provided`,
         );
       }
-      // @ts-ignore
-      if (!isBoolean(crudOperations[op][opField])) {
+
+      if (!isBoolean(operationConfig[crudOperationField])) {
         throw new Error(
           `Crud operation field '${opField}' for operation '${op}' must be of type Boolean`,
         );
