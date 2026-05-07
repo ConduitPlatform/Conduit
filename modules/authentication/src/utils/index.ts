@@ -9,7 +9,8 @@ import {
   Indexable,
   SMS,
 } from '@conduitplatform/grpc-sdk';
-import { AccessToken, Team, Token, User } from '../models/index.js';
+import { Team, Token, User } from '../models/index.js';
+import { Redis, Cluster } from 'ioredis';
 import { isEmpty, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
@@ -22,11 +23,42 @@ export namespace AuthUtils {
     return crypto.randomBytes(size).toString('base64');
   }
 
-  export async function reconcileLoggedInUsersMetric() {
-    const count = await AccessToken.getInstance().countDocuments({
-      expiresOn: { $gt: new Date() },
-    });
+  let redisClient: Redis | Cluster;
+  const LOGGED_IN_USERS_KEY = 'logged_in_users';
 
+  export function initMetricsRedis(grpcSdk: ConduitGrpcSdk) {
+    redisClient = grpcSdk.redisManager.getClient({
+      keyPrefix: 'auth_metrics_',
+    });
+  }
+
+  export async function addLoggedInUser(userId: string, tokenExpiresOn: Date) {
+    await redisClient.zadd(
+      LOGGED_IN_USERS_KEY,
+      'GT',
+      tokenExpiresOn.getTime().toString(),
+      userId,
+    );
+  }
+
+  export async function removeLoggedInUser(userId: string) {
+    await redisClient.zrem(LOGGED_IN_USERS_KEY, userId);
+  }
+
+  export async function getLoggedInUsersCount(): Promise<number> {
+    return redisClient.zcount(LOGGED_IN_USERS_KEY, Date.now().toString(), '+inf');
+  }
+
+  export async function cleanupExpiredUsers() {
+    await redisClient.zremrangebyscore(
+      LOGGED_IN_USERS_KEY,
+      '-inf',
+      Date.now().toString(),
+    );
+  }
+
+  export async function reconcileLoggedInUsersMetric() {
+    const count = await getLoggedInUsersCount();
     ConduitGrpcSdk.Metrics?.set('logged_in_users_total', count);
   }
 

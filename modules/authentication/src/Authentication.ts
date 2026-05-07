@@ -223,6 +223,7 @@ export default class Authentication extends ManagedModule<Config> {
     this.grpcSdk.unmonitorModule('router');
   }
   async initializeMetrics() {
+    AuthUtils.initMetricsRedis(this.grpcSdk);
     await AuthUtils.reconcileLoggedInUsersMetric();
   }
 
@@ -253,7 +254,11 @@ export default class Authentication extends ManagedModule<Config> {
         clientId,
         config,
       });
-      ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
+      await AuthUtils.addLoggedInUser(
+        user._id,
+        new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
+      );
+      await AuthUtils.reconcileLoggedInUsersMetric();
       return callback(null, {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken ?? undefined,
@@ -456,7 +461,11 @@ export default class Authentication extends ManagedModule<Config> {
       config,
       isRefresh: false,
     });
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
+    await AuthUtils.addLoggedInUser(
+      anonymousUser._id,
+      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
+    );
+    await AuthUtils.reconcileLoggedInUsersMetric();
     return callback(null, {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken ?? undefined,
@@ -668,6 +677,7 @@ export default class Authentication extends ManagedModule<Config> {
         user: id,
       });
 
+      await AuthUtils.removeLoggedInUser(id);
       await AuthUtils.reconcileLoggedInUsersMetric();
     }
   }
@@ -848,6 +858,7 @@ export default class Authentication extends ManagedModule<Config> {
         await models.AccessToken.getInstance().deleteMany({
           expiresOn: { $lte: new Date() },
         });
+        await AuthUtils.cleanupExpiredUsers();
         await AuthUtils.reconcileLoggedInUsersMetric();
       } catch (e) {
         ConduitGrpcSdk.Logger.error(`Token cleanup failed: ${(e as Error).message}`);

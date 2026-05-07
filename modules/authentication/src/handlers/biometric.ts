@@ -117,12 +117,19 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     if (!verificationResult) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-    return TokenProvider.getInstance().provideUserTokens({
-      user: key.user as User,
+    const user = key.user as User;
+    const result = await TokenProvider.getInstance().provideUserTokens({
+      user,
       clientId: call.request.context.clientId,
       config,
     });
+    await AuthUtils.addLoggedInUser(
+      user._id,
+      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
+    );
+    await AuthUtils.reconcileLoggedInUsersMetric();
+
+    return result;
   }
 
   async enroll(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
