@@ -18,6 +18,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { authenticateChecks, changePassword } from './utils.js';
 import { Config } from '../config/index.js';
+import { AuthUtils } from '../utils/index.js';
 
 export class UsernameHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -97,13 +98,18 @@ export class UsernameHandlers implements IAuthenticationStrategy {
     }
 
     await authenticateChecks(password, config, user);
-
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-
-    return TokenProvider.getInstance().provideUserTokens({
+    const result = await TokenProvider.getInstance().provideUserTokens({
       user,
       clientId,
       config,
     });
+
+    await AuthUtils.addLoggedInUser(
+      user._id,
+      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
+    );
+    await AuthUtils.reconcileLoggedInUsersMetric();
+
+    return result;
   }
 }

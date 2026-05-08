@@ -19,6 +19,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { Config } from '../config/index.js';
 import ethUtil from 'ethereumjs-util';
+import { AuthUtils } from '../utils/index.js';
 
 export class MetamaskHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -150,12 +151,19 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
       'metamask.nonce': uuid(),
     });
 
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     const config = ConfigController.getInstance().config;
-    return TokenProvider.getInstance().provideUserTokens({
+    const result = await TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: context.clientId,
       config,
     });
+
+    await AuthUtils.addLoggedInUser(
+      user._id,
+      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
+    );
+    await AuthUtils.reconcileLoggedInUsersMetric();
+
+    return result;
   }
 }

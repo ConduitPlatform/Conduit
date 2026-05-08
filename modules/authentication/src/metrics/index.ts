@@ -12,7 +12,7 @@ export default {
     type: MetricType.Gauge,
     config: {
       name: 'logged_in_users_total',
-      help: 'Tracks the total number of active tokens',
+      help: 'Tracks the total number of unique logged in users',
     },
   },
 };

@@ -144,14 +144,13 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       stateToken.data.anonymousUserId,
     );
     await Token.getInstance().deleteOne(stateToken);
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       this.settings.finalRedirect;
     const conduitClientId = stateToken.data.clientId;
 
-    return TokenProvider.getInstance()!.provideUserTokens(
+    const result = await TokenProvider.getInstance()!.provideUserTokens(
       {
         user,
         clientId: conduitClientId,
@@ -159,6 +158,14 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       },
       redirectUri,
     );
+
+    await AuthUtils.addLoggedInUser(
+      user._id,
+      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
+    );
+    await AuthUtils.reconcileLoggedInUsersMetric();
+
+    return result;
   }
 
   async nativeAuthorize(call: ParsedRouterRequest) {
@@ -238,15 +245,22 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       stateToken.data.anonymousUserId,
     );
     await Token.getInstance().deleteOne(stateToken);
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
     const conduitClientId = stateToken.data.clientId;
 
-    return TokenProvider.getInstance()!.provideUserTokens({
+    const result = await TokenProvider.getInstance()!.provideUserTokens({
       user,
       clientId: conduitClientId,
       config,
     });
+
+    await AuthUtils.addLoggedInUser(
+      user._id,
+      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
+    );
+    await AuthUtils.reconcileLoggedInUsersMetric();
+
+    return result;
   }
 
   declareRoutes(routingManager: RoutingManager) {

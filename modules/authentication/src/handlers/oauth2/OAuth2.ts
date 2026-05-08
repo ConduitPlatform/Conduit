@@ -204,12 +204,11 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       stateToken.data.invitationToken,
       stateToken.data.anonymousUserId,
     );
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       this.settings.finalRedirect;
-    return TokenProvider.getInstance().provideUserTokens(
+
+    const result = await TokenProvider.getInstance().provideUserTokens(
       {
         user,
         clientId,
@@ -217,6 +216,14 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       },
       redirectUri,
     );
+
+    await AuthUtils.addLoggedInUser(
+      user._id,
+      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
+    );
+    await AuthUtils.reconcileLoggedInUsersMetric();
+
+    return result;
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -235,13 +242,19 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       call.request.context.anonymousUser?._id,
     );
     const config = ConfigController.getInstance().config;
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-
-    return TokenProvider.getInstance().provideUserTokens({
+    const result = await TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: call.request.context.clientId,
       config,
     });
+
+    await AuthUtils.addLoggedInUser(
+      user._id,
+      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
+    );
+    await AuthUtils.reconcileLoggedInUsersMetric();
+
+    return result;
   }
 
   async createOrUpdateUser(
