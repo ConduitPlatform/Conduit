@@ -19,7 +19,6 @@ import {
 } from '@conduitplatform/module-tools';
 import { Config } from '../config/index.js';
 import ethUtil from 'ethereumjs-util';
-import { AuthUtils } from '../utils/index.js';
 
 export class MetamaskHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}

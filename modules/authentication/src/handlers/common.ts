@@ -64,7 +64,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
     const user = oldRefreshToken.user as User;
 
     return TokenProvider.getInstance().provideUserTokens({
-      user: oldRefreshToken.user as User,
+      user,
       clientId,
       config,
       twoFaPass: true,
