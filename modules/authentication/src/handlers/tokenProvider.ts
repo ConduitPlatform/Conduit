@@ -35,7 +35,7 @@ export class TokenProvider {
       tokenOptions.clientId,
     );
     const [accessToken, refreshToken] = await this.createUserTokens(tokenOptions);
-    await this.trackLoggedInUserMetric(tokenOptions, accessToken);
+    this.trackLoggedInUserMetric(tokenOptions, accessToken);
     const cookies: { accessToken?: Cookie; refreshToken?: Cookie } =
       this.constructCookies(tokenOptions, [accessToken, refreshToken]);
     if (Object.keys(cookies).length > 0) {
@@ -89,7 +89,7 @@ export class TokenProvider {
 
     const [accessToken, refreshToken] = await this.createUserTokens(internalTokenOptions);
 
-    await this.trackLoggedInUserMetric(internalTokenOptions, accessToken);
+    this.trackLoggedInUserMetric(internalTokenOptions, accessToken);
 
     return {
       userId: tokenOptions.user._id.toString(),
@@ -146,18 +146,38 @@ export class TokenProvider {
 
     return Promise.all([promise1, promise2]);
   }
+
   private async trackLoggedInUserMetric(
     tokenOptions: TokenOptions,
     accessToken: AccessToken,
   ) {
-    const authorized =
-      !tokenOptions.user.hasTwoFA ||
-      tokenOptions.isRefresh ||
-      (tokenOptions.user.hasTwoFA && tokenOptions.twoFaPass);
-    if (!authorized) return;
+    try {
+      const authorized =
+        !tokenOptions.user.hasTwoFA ||
+        tokenOptions.isRefresh ||
+        (tokenOptions.user.hasTwoFA && tokenOptions.twoFaPass);
 
-    await AuthUtils.addLoggedInUser(tokenOptions.user._id, accessToken.expiresOn);
-    await AuthUtils.reconcileLoggedInUsersMetric();
+      if (!authorized) return;
+
+      await AuthUtils.addLoggedInUser(tokenOptions.user._id, accessToken.expiresOn);
+      await AuthUtils.reconcileLoggedInUsersMetric();
+    } catch (err) {
+      ConduitGrpcSdk.Logger.warn('Logged-in user metric tracking failed');
+      ConduitGrpcSdk.Logger.warn((err as Error).message);
+    }
+  }
+  public trackLoggedOutUserMetric(userId: string) {
+    this.removeLoggedInUserMetric(userId);
+  }
+
+  private async removeLoggedInUserMetric(userId: string) {
+    try {
+      await AuthUtils.removeLoggedInUser(userId);
+      await AuthUtils.reconcileLoggedInUsersMetric();
+    } catch (err) {
+      ConduitGrpcSdk.Logger.warn('Logged-in user metric cleanup failed');
+      ConduitGrpcSdk.Logger.warn((err as Error).message);
+    }
   }
   private async createUserTokens(
     tokenOptions: TokenOptions,

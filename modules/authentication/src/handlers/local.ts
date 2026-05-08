@@ -515,8 +515,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       user: user._id,
     });
 
-    await AuthUtils.removeLoggedInUser(user._id);
-    await AuthUtils.reconcileLoggedInUsersMetric();
+    TokenProvider.getInstance().trackLoggedOutUserMetric(user._id);
 
     return 'Password reset successful';
   }

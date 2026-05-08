@@ -88,8 +88,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
     );
 
     if (!clientConfig.multipleUserSessions) {
-      await AuthUtils.removeLoggedInUser(user._id);
-      await AuthUtils.reconcileLoggedInUsersMetric();
+      TokenProvider.getInstance().trackLoggedOutUserMetric(user._id);
     }
     const removeCookies = [];
     if (config.refreshTokens.enabled && config.refreshTokens.setCookie) {

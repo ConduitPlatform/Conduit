@@ -128,7 +128,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const redirectUri =
       AuthUtils.validateRedirectUri(data.redirectUri) ??
       config.magic_link.redirect_uri.replace(/\/$/, '');
-    return TokenProvider.getInstance()!.provideUserTokens(
+    return TokenProvider.getInstance().provideUserTokens(
       {
         user,
         clientId: data.clientId,

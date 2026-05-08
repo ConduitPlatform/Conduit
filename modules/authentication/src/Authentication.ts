@@ -669,8 +669,7 @@ export default class Authentication extends ManagedModule<Config> {
         user: id,
       });
 
-      await AuthUtils.removeLoggedInUser(id);
-      await AuthUtils.reconcileLoggedInUsersMetric();
+      TokenProvider.getInstance().trackLoggedOutUserMetric(id);
     }
   }
 
