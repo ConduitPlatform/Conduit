@@ -373,20 +373,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
       .catch(err => {
         ConduitGrpcSdk.Logger.error(err);
       });
-    const result = await TokenProvider.getInstance().provideUserTokens({
+    return TokenProvider.getInstance().provideUserTokens({
       user: anonymousUser,
       clientId: context.clientId,
       config,
       isRefresh: false,
     });
-
-    await AuthUtils.addLoggedInUser(
-      anonymousUser._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
-    return result;
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -412,19 +404,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
     await authenticateChecks(password, config, user);
-    const result = await TokenProvider.getInstance().provideUserTokens({
+    return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId,
       config,
     });
-
-    await AuthUtils.addLoggedInUser(
-      user._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
-    return result;
   }
 
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

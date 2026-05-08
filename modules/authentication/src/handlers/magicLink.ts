@@ -128,7 +128,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const redirectUri =
       AuthUtils.validateRedirectUri(data.redirectUri) ??
       config.magic_link.redirect_uri.replace(/\/$/, '');
-    const result = await TokenProvider.getInstance().provideUserTokens(
+    return TokenProvider.getInstance()!.provideUserTokens(
       {
         user,
         clientId: data.clientId,
@@ -136,14 +136,6 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       },
       redirectUri,
     );
-
-    await AuthUtils.addLoggedInUser(
-      user._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
-    return result;
   }
 
   private async exchangeMagicToken(
@@ -152,19 +144,11 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const { magicToken } = call.request.urlParams;
     const { user, data } = await this.redeemMagicToken(magicToken);
     const config = ConfigController.getInstance().config;
-    const result = await TokenProvider.getInstance().provideUserTokens({
+    return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: data.clientId,
       config,
     });
-
-    await AuthUtils.addLoggedInUser(
-      user._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
-    return result;
   }
 
   private async redeemMagicToken(

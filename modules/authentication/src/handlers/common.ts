@@ -63,21 +63,13 @@ export class CommonHandlers implements IAuthenticationStrategy {
       .catch();
     const user = oldRefreshToken.user as User;
 
-    const result = await TokenProvider.getInstance().provideUserTokens({
-      user,
+    return TokenProvider.getInstance().provideUserTokens({
+      user: oldRefreshToken.user as User,
       clientId,
       config,
       twoFaPass: true,
       isRefresh: true,
     });
-
-    await AuthUtils.addLoggedInUser(
-      user._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
-    return result;
   }
 
   async logOut(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

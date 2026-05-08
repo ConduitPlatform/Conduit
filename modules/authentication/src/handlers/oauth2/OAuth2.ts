@@ -208,7 +208,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       this.settings.finalRedirect;
 
-    const result = await TokenProvider.getInstance().provideUserTokens(
+    return TokenProvider.getInstance().provideUserTokens(
       {
         user,
         clientId,
@@ -216,14 +216,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       },
       redirectUri,
     );
-
-    await AuthUtils.addLoggedInUser(
-      user._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
-    return result;
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -242,19 +234,11 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       call.request.context.anonymousUser?._id,
     );
     const config = ConfigController.getInstance().config;
-    const result = await TokenProvider.getInstance().provideUserTokens({
+    return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: call.request.context.clientId,
       config,
     });
-
-    await AuthUtils.addLoggedInUser(
-      user._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
-    return result;
   }
 
   async createOrUpdateUser(

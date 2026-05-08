@@ -152,18 +152,10 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     });
 
     const config = ConfigController.getInstance().config;
-    const result = await TokenProvider.getInstance().provideUserTokens({
+    return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: context.clientId,
       config,
     });
-
-    await AuthUtils.addLoggedInUser(
-      user._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
-    return result;
   }
 }

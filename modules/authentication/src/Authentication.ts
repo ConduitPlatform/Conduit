@@ -254,11 +254,7 @@ export default class Authentication extends ManagedModule<Config> {
         clientId,
         config,
       });
-      await AuthUtils.addLoggedInUser(
-        user._id,
-        new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-      );
-      await AuthUtils.reconcileLoggedInUsersMetric();
+
       return callback(null, {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken ?? undefined,
@@ -461,11 +457,7 @@ export default class Authentication extends ManagedModule<Config> {
       config,
       isRefresh: false,
     });
-    await AuthUtils.addLoggedInUser(
-      anonymousUser._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
+
     return callback(null, {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken ?? undefined,

@@ -330,20 +330,12 @@ export class TwoFa implements IAuthenticationStrategy {
         throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
       }
       const config = ConfigController.getInstance().config;
-      const result = await TokenProvider.getInstance().provideUserTokens({
+      return TokenProvider.getInstance().provideUserTokens({
         user,
         clientId,
         config,
         twoFaPass: true,
       });
-
-      await AuthUtils.addLoggedInUser(
-        user._id,
-        new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-      );
-      await AuthUtils.reconcileLoggedInUsersMetric();
-
-      return result;
     } else if (user.twoFaMethod == 'authenticator') {
       return this.verifyAuthenticatorCodeForLogin(clientId, user, code);
     } else {
@@ -466,12 +458,6 @@ export class TwoFa implements IAuthenticationStrategy {
       twoFaPass: true,
     });
 
-    await AuthUtils.addLoggedInUser(
-      user._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
     result.message = `You have ${codeSet.codes.length} back up codes left`;
     return result;
   }
@@ -553,20 +539,12 @@ export class TwoFa implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Code is not correct');
     }
     const config = ConfigController.getInstance().config;
-    const result = await TokenProvider.getInstance().provideUserTokens({
+    return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId,
       config,
       twoFaPass: true,
     });
-
-    await AuthUtils.addLoggedInUser(
-      user._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
-    return result;
   }
 
   private async codeGenerator(user: User): Promise<string[]> {

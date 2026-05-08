@@ -150,7 +150,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       this.settings.finalRedirect;
     const conduitClientId = stateToken.data.clientId;
 
-    const result = await TokenProvider.getInstance()!.provideUserTokens(
+    return TokenProvider.getInstance()!.provideUserTokens(
       {
         user,
         clientId: conduitClientId,
@@ -158,14 +158,6 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       },
       redirectUri,
     );
-
-    await AuthUtils.addLoggedInUser(
-      user._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
-    return result;
   }
 
   async nativeAuthorize(call: ParsedRouterRequest) {
@@ -248,19 +240,11 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
 
     const conduitClientId = stateToken.data.clientId;
 
-    const result = await TokenProvider.getInstance()!.provideUserTokens({
+    return TokenProvider.getInstance()!.provideUserTokens({
       user,
       clientId: conduitClientId,
       config,
     });
-
-    await AuthUtils.addLoggedInUser(
-      user._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
-    return result;
   }
 
   declareRoutes(routingManager: RoutingManager) {

@@ -53,20 +53,11 @@ export class ServiceHandler implements IAuthenticationStrategy {
 
     const config = ConfigController.getInstance().config;
 
-    const user = serviceUser as unknown as User;
-    const result = await TokenProvider.getInstance().provideUserTokens({
-      user,
+    return TokenProvider.getInstance().provideUserTokens({
+      user: serviceUser as unknown as User,
       clientId,
       config,
     });
-
-    await AuthUtils.addLoggedInUser(
-      user._id,
-      new Date(Date.now() + config.accessTokens.expiryPeriod * 1000),
-    );
-    await AuthUtils.reconcileLoggedInUsersMetric();
-
-    return result;
   }
 
   declareRoutes(routingManager: RoutingManager): void {}
