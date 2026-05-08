@@ -32,11 +32,14 @@ export namespace AuthUtils {
     });
   }
 
-  export async function addLoggedInUser(userId: string, tokenExpiresOn: Date) {
+  export async function addLoggedInUser(userId: string, tokenExpiresOn: Date | string) {
+    const expiresOn =
+      tokenExpiresOn instanceof Date ? tokenExpiresOn : new Date(tokenExpiresOn);
+
     await redisClient.zadd(
       LOGGED_IN_USERS_KEY,
       'GT',
-      tokenExpiresOn.getTime().toString(),
+      expiresOn.getTime().toString(),
       userId,
     );
   }
