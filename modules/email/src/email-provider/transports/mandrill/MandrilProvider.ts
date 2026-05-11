@@ -9,8 +9,6 @@ import { getHandleBarsValues } from '../../utils/index.js';
 import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
 import { MandrillTemplate } from '../../interfaces/mandrill/MandrillTemplate.js';
 
-// @ts-expect-error
-// missing typings for nodemailer-mandrill-transport
 import mandrillTransport from 'nodemailer-mandrill-transport';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 
