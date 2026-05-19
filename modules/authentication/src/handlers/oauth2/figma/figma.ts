@@ -10,7 +10,7 @@ import {
   Payload,
   ProviderConfig,
 } from '../interfaces/index.js';
-import figmaParameters from './figma.json' assert { type: 'json' };
+import figmaParameters from './figma.json' with { type: 'json' };
 
 export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { figma: ProviderConfig }) {

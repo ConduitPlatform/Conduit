@@ -13,6 +13,7 @@ import AppConfigSchema, { Config } from './config/index.js';
 import { AdminHandlers } from './admin/index.js';
 import { AuthenticationRoutes } from './routes/index.js';
 import * as models from './models/index.js';
+import { Token, User } from './models/index.js';
 import { AuthUtils } from './utils/index.js';
 import { TokenType } from './constants/index.js';
 import { v4 as uuid } from 'uuid';
@@ -22,10 +23,13 @@ import {
   GetTeamRequest,
   InvitationDeleteRequest,
   InvitationDeleteResponse,
+  InviteUserToTeamRequest,
+  InviteUserToTeamResponse,
   ModifyTeamMembersRequest,
   Team as GrpcTeam,
   TeamDeleteRequest,
   TeamDeleteResponse,
+  UpdateTeamRequest,
   UserChangePass,
   UserCreateByUsernameRequest,
   UserCreateRequest,
@@ -39,27 +43,26 @@ import {
   ValidateAccessTokenRequest,
   ValidateAccessTokenResponse,
   ValidateAccessTokenResponse_Status,
-  InviteUserToTeamRequest,
-  InviteUserToTeamResponse,
-  UpdateTeamRequest,
 } from './protoTypes/authentication.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { runMigrations } from './migrations/index.js';
 import metricsSchema from './metrics/index.js';
 import { TokenProvider } from './handlers/tokenProvider.js';
-import { configMigration } from './migrations/configMigration.js';
 import {
   ConduitActiveSchema,
   ConfigController,
   createParsedRouterRequest,
   ManagedModule,
+  sanitizeDocumentsForExport,
+  type ExportableResource,
+  type ExportResult,
+  type ImportResult,
 } from '@conduitplatform/module-tools';
 import { TeamsAdmin } from './admin/team.js';
 import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
-import { Token, User } from './models/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,17 +97,22 @@ export default class Authentication extends ManagedModule<Config> {
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
   private tokenCleanupInterval: ReturnType<typeof setInterval> | null = null;
   private monitorsActive = false;
+  private _authzUserResourceDispose: (() => void) | null = null;
 
-  constructor() {
-    super('authentication');
+  constructor(peerManifestRoot?: string) {
+    super('authentication', peerManifestRoot);
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
-    this.grpcSdk.onceModuleUp('authorization', async () => {
-      await this.grpcSdk.authorization!.defineResource(UserAuthz);
-    });
+    await this.awaitPeersFromManifest();
+    this._authzUserResourceDispose = this.grpcSdk.oncePeerUp(
+      'authorization',
+      async () => {
+        this._authzUserResourceDispose = null;
+        await this.grpcSdk.authorization!.defineResource(UserAuthz);
+      },
+    );
     this.database = this.grpcSdk.database!;
     TokenProvider.getInstance(this.grpcSdk);
     await this.registerSchemas();
@@ -118,6 +126,98 @@ export default class Authentication extends ManagedModule<Config> {
         continue;
       await this.database.migrate(modelInstance.name);
     }
+  }
+
+  // Framework export/import (GitOps)
+  protected getExportableResources(): ExportableResource[] {
+    return [
+      {
+        type: 'teams',
+        description: 'Team structure (name, parent, isDefault)',
+        priority: 35,
+      },
+    ];
+  }
+
+  protected async exportResources(resourceTypes?: string[]): Promise<ExportResult> {
+    if (!this.database) return {};
+    if (resourceTypes && resourceTypes.length > 0 && !resourceTypes.includes('teams'))
+      return {};
+    const teamModel = models.Team.getInstance(this.database);
+    const teams = (await teamModel.findMany({})) as (Indexable & {
+      parentTeam?: string;
+      name: string;
+    })[];
+    const parentIds = [
+      ...new Set(teams.map(t => t.parentTeam).filter(Boolean)),
+    ] as string[];
+    const parentTeams = parentIds.length
+      ? await teamModel.findMany({ _id: { $in: parentIds } })
+      : [];
+    const parentNameById = new Map(
+      (parentTeams as Indexable[]).map((p: Indexable) => [p._id, p.name]),
+    );
+    const forExport = teams.map(t => {
+      const { _id, parentTeam, createdAt, updatedAt, ...rest } = t;
+      const out = { ...rest };
+      if (parentTeam && parentNameById.has(parentTeam)) {
+        (out as Indexable).parentTeamName = parentNameById.get(parentTeam);
+      }
+      return out;
+    });
+    return { teams: sanitizeDocumentsForExport(forExport as Record<string, unknown>[]) };
+  }
+
+  protected async importResources(data: ExportResult): Promise<ImportResult> {
+    if (!this.database) return {};
+    const result: ImportResult = {
+      teams: { created: 0, updated: 0, failed: 0, errors: [] },
+    };
+    const teamModel = models.Team.getInstance(this.database);
+    const teams = (data.teams ?? []) as {
+      name: string;
+      parentTeamName?: string;
+      isDefault?: boolean;
+    }[];
+    for (const rec of teams) {
+      const name = rec.name;
+      if (name == null || name === '') {
+        result.teams.failed += 1;
+        result.teams.errors.push('Missing name');
+        continue;
+      }
+      try {
+        const existing = await teamModel.findOne({ name });
+        if (existing) {
+          await teamModel.updateOne({ name }, { isDefault: rec.isDefault ?? false });
+          result.teams.updated += 1;
+        } else {
+          await teamModel.create({ name, isDefault: rec.isDefault ?? false });
+          result.teams.created += 1;
+        }
+      } catch (e) {
+        result.teams.failed += 1;
+        result.teams.errors.push(`${name}: ${(e as Error).message}`);
+      }
+    }
+    for (const rec of teams) {
+      if (!rec.parentTeamName) continue;
+      try {
+        const parent = await teamModel.findOne(
+          { name: rec.parentTeamName },
+          { readPreference: 'primary' },
+        );
+        if (parent) {
+          await teamModel.updateOne(
+            { name: rec.name },
+            { parentTeam: (parent as Indexable)._id },
+          );
+        }
+      } catch (_) {
+        // ignore
+      }
+    }
+    return result;
   }
 
   async preConfig(config: Config) {
@@ -172,12 +272,16 @@ export default class Authentication extends ManagedModule<Config> {
       this.destroyMonitors();
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
+      const shouldSendVerificationEmail = config.local.verification.send_email;
+      if (shouldSendVerificationEmail && !this.grpcSdk.isAvailable('email')) {
+        await this.grpcSdk.refreshModules(true);
+      }
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       this.refreshAppRoutes();
       this.initMonitors();
       this.startTokenCleanup();
       this.updateHealth(HealthCheckStatus.SERVING);
-      if (config.local.verification.send_email) {
+      if (shouldSendVerificationEmail) {
         if (!this.grpcSdk.isAvailable('email')) {
           ConduitGrpcSdk.Logger.warn(
             'Failed to enable email verification for local authentication strategy. Email module not serving.',
@@ -187,40 +291,38 @@ export default class Authentication extends ManagedModule<Config> {
     }
   }
 
-  async preRegister(): Promise<void> {
-    const config = await configMigration(this.grpcSdk);
-    if (config) {
-      this.config!.load(config);
-      this.configOverride = true;
-    }
-
-    return super.preRegister();
-  }
-
   initMonitors() {
     if (this.monitorsActive) return;
     this.monitorsActive = true;
-    this.grpcSdk.monitorModule('email', async () => {
-      this.refreshAppRoutes();
-    });
-    this.grpcSdk.monitorModule('authorization', async () => {
-      this.refreshAppRoutes();
-      this.adminRouter.registerAdminRoutes();
-    });
-    this.grpcSdk.monitorModule('sms', async () => {
-      this.refreshAppRoutes();
-    });
-    this.grpcSdk.monitorModule('router', async () => {
-      this.refreshAppRoutes();
-    });
+    this.registerDeclaredPeerWatches();
   }
 
   destroyMonitors() {
     if (!this.monitorsActive) return;
     this.monitorsActive = false;
-    this.grpcSdk.unmonitorModule('email');
-    this.grpcSdk.unmonitorModule('sms');
-    this.grpcSdk.unmonitorModule('router');
+    this.disposeDeclaredPeerWatches();
+    this._authzUserResourceDispose?.();
+    this._authzUserResourceDispose = null;
+  }
+
+  protected override onDeclaredPeerConnectionUpdate(
+    moduleName: string,
+    serving: boolean,
+  ): void {
+    if (moduleName === 'router' && serving) {
+      if (!this.userRouter) {
+        this.userRouter = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
+      }
+      this.scheduleAppRouteRefresh();
+      return;
+    }
+    if (!serving) return;
+    if (moduleName === 'authorization') {
+      this.refreshAppRoutes();
+      this.adminRouter?.registerAdminRoutes();
+      return;
+    }
+    this.refreshAppRoutes();
   }
 
   async initializeMetrics() {
@@ -881,16 +983,11 @@ export default class Authentication extends ManagedModule<Config> {
       this.scheduleAppRouteRefresh();
       return;
     }
-    const self = this;
-    this.grpcSdk
-      .waitForExistence('router')
-      .then(() => {
-        self.userRouter = new AuthenticationRoutes(self.grpcServer, self.grpcSdk);
-        this.scheduleAppRouteRefresh();
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
+    if (!this.grpcSdk.isAvailable('router')) {
+      return;
+    }
+    this.userRouter = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
+    this.scheduleAppRouteRefresh();
   }
 
   private scheduleAppRouteRefresh() {

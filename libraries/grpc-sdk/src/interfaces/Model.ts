@@ -43,6 +43,38 @@ export enum PostgresIndexType {
 
 export type Array = any[];
 
+export interface ConduitStringValidation {
+  format?: 'email' | 'url' | 'uuid' | 'objectId';
+  minLength?: number;
+  maxLength?: number;
+  length?: number;
+  pattern?: string;
+  /** Custom error text when any string validation rule fails (REST/GraphQL/MCP). */
+  message?: string;
+}
+
+export interface ConduitNumberValidation {
+  min?: number;
+  max?: number;
+  exclusiveMin?: number;
+  exclusiveMax?: number;
+  integer?: boolean;
+  /** Custom error text when any number validation rule fails (REST/GraphQL/MCP). */
+  message?: string;
+}
+
+export interface ConduitArrayValidation {
+  minItems?: number;
+  maxItems?: number;
+  /** Custom error text when minItems/maxItems validation fails (REST/GraphQL/MCP). */
+  message?: string;
+}
+
+export type ConduitValidationRules =
+  | ConduitStringValidation
+  | ConduitNumberValidation
+  | ConduitArrayValidation;
+
 type BaseConduitModelField = {
   type?: TYPE | TYPE[] | ConduitModel | ArrayConduitModel[];
   sqlType?: SQLDataType;
@@ -50,6 +82,7 @@ type BaseConduitModelField = {
   description?: string;
   required?: boolean;
   select?: boolean;
+  validate?: ConduitValidationRules;
 };
 
 type UniqueAndRequiredField = {
@@ -157,8 +190,11 @@ export interface ConduitSchemaOptions {
     authorization?: {
       enabled: boolean;
     };
+    /** Mongoose read preference for this schema (ignored by SQL); per-query wins. */
+    readPreference?: string;
   };
-  indexes?: ModelOptionsIndexes[];
+  /** Includes readonly/const-asserted index arrays (e.g. `as const` in schema definitions). */
+  indexes?: ReadonlyArray<ModelOptionsIndexes>;
 }
 
 export interface SchemaFieldIndex {
@@ -169,7 +205,7 @@ export interface SchemaFieldIndex {
 }
 
 export interface ModelOptionsIndexes {
-  fields: string[];
+  fields: string[] | readonly string[];
   types?: MongoIndexType[] | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
 

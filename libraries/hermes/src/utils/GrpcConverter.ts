@@ -20,11 +20,10 @@ import {
   EventResponse,
   instanceOfSocketProtoDescription,
   JoinRoomResponse,
-  ProxyRouteT,
   RouteT,
   SocketProtoDescription,
 } from '../interfaces/index.js';
-import { ConduitRoute, instanceOfConduitProxy, ProxyRoute } from '../classes/index.js';
+import { ConduitRoute } from '../classes/index.js';
 
 import protoLoader from '@grpc/proto-loader';
 import { fileURLToPath } from 'node:url';
@@ -46,12 +45,12 @@ function getDescriptor() {
 export function grpcToConduitRoute(
   routerName: string,
   request: {
-    routes: RouteT[] | ProxyRouteT[];
+    routes: RouteT[];
     routerUrl: string;
   },
   moduleName?: string,
   grpcToken?: string,
-): (ConduitRoute | ConduitMiddleware | ConduitSocket | ProxyRoute)[] {
+): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
   const routes = request.routes;
 
   let routerDescriptor: any = getDescriptor();
@@ -81,21 +80,13 @@ export function grpcToConduitRoute(
   return createHandlers(routes, client, moduleName, grpcToken);
 }
 
-export function proxyToConduitRoute(
-  routes: ProxyRouteT[],
-  moduleName?: string,
-): ProxyRoute[] {
-  return routes.map(r => createHandlerForProxy(r, moduleName));
-}
-
 function createHandlers(
-  routes: RouteT[] | ProxyRouteT[],
+  routes: RouteT[],
   client: Client,
   moduleName?: string,
   grpcToken?: string,
 ) {
-  const finalRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket | ProxyRoute)[] =
-    [];
+  const finalRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = [];
 
   routes.forEach(r => {
     let route;
@@ -105,8 +96,6 @@ function createHandlers(
     }
     if (instanceOfSocketProtoDescription(r)) {
       route = createHandlerForSocket(r, client, metadata, moduleName);
-    } else if (instanceOfConduitProxy(r)) {
-      route = createHandlerForProxy(r.options, moduleName);
     } else {
       route = createHandlerForRoute(r as RouteT, client, metadata, moduleName);
     }
@@ -168,7 +157,8 @@ function createHandlerForRoute(
     options.path = `/${options.path}`;
   }
 
-  if (moduleName) {
+  // Skip module prefix for 'communications' to maintain backward compatibility
+  if (moduleName && moduleName !== 'communications') {
     if (
       !(
         options.path.startsWith(`/${moduleName}/`) ||
@@ -240,7 +230,8 @@ function createHandlerForSocket(
     eventHandlers.set(event, socketEvent);
   }
 
-  if (moduleName) {
+  // Skip module prefix for 'communications' to maintain backward compatibility
+  if (moduleName && moduleName !== 'communications') {
     if (!socket.options.path.startsWith('/')) {
       socket.options.path = `/${socket.options.path}`;
     }
@@ -250,22 +241,4 @@ function createHandlerForSocket(
   }
 
   return new ConduitSocket(socket.options, eventHandlers);
-}
-
-export function createHandlerForProxy(route: ProxyRouteT, moduleName?: string) {
-  if (!route.options.path.startsWith('/')) {
-    route.options.path = `/${route.options.path}`;
-  }
-  if (moduleName && !route.options.path.startsWith(`/${moduleName}/`)) {
-    if (route.options.path.startsWith('/proxy')) {
-      route.options.path = route.options.path.replace('/proxy', `/proxy/${moduleName}`);
-    } else {
-      route.options.path = `/${moduleName}${route.options.path}`;
-    }
-  }
-  if (!route.options.path.startsWith('/proxy')) {
-    route.options.path = `/proxy${route.options.path}`;
-  }
-  const routeInput = { options: route.options, proxy: route.proxy };
-  return new ProxyRoute(routeInput);
 }

@@ -9,7 +9,6 @@ import {
   PostgresIndexOptions,
   PostgresIndexType,
   RawSQLQuery,
-  sleep,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
@@ -64,7 +63,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     newSchema.collectionName = viewName;
 
     if (existingView && !isQueryEqual) {
-      await this.deleteView(viewName);
+      await this.deleteView(viewName, true);
     }
     const viewModel = new SequelizeSchema(
       this.grpcSdk,
@@ -100,6 +99,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
           originalSchema: modelName,
           joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
           query,
+          lastAccessedAt: new Date(),
         })
         .catch(err => {
           if (err.name !== 'SequelizeUniqueConstraintError') {
@@ -120,12 +120,15 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     return this.views[viewName];
   }
 
-  async deleteView(viewName: string): Promise<void> {
+  async deleteView(viewName: string, instanceSync = false): Promise<void> {
     if (this.views[viewName]) {
       await this.sequelize.query(`DROP VIEW IF EXISTS "${viewName}"`);
     }
     await this.models['Views'].deleteOne({ name: viewName });
     delete this.views[viewName];
+    if (!instanceSync) {
+      this.publishViewDeletion(viewName);
+    }
   }
 
   async retrieveForeignSchemas(): Promise<void> {
@@ -362,7 +365,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     const queryInterface = this.sequelize.getQueryInterface();
     for (const index of indexes) {
       await queryInterface
-        .addIndex('cnd_' + schemaName, index.fields, index.options)
+        .addIndex('cnd_' + schemaName, [...index.fields], index.options)
         .catch(() => {
           throw new GrpcError(status.INTERNAL, 'Unsuccessful index creation');
         });
@@ -450,7 +453,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       } catch (err: any) {
         error = err;
         if (error.original.code !== 'ECONNREFUSED') break;
-        await sleep(200);
+        await ConduitGrpcSdk.Sleep(200);
       }
     }
     if (error) {

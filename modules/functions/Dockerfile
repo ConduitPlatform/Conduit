@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY --from=conduit-base:latest /app/modules/functions /app/modules/functions
 
-RUN yarn install --production --pure-lockfile --non-interactive && yarn cache clean
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts && pnpm store prune
 
 WORKDIR /app/modules/functions
 

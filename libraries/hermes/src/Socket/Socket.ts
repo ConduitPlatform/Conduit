@@ -50,7 +50,7 @@ export class SocketController extends ConduitRouter {
         // the backup duration of the sessions and the packets
         maxDisconnectionDuration: 2 * 60 * 1000,
         // whether to skip middlewares upon successful recovery
-        skipMiddlewares: false,
+        skipMiddlewares: true,
       },
     };
     this.io = new IOServer(this.httpServer, this.options);
@@ -119,8 +119,10 @@ export class SocketController extends ConduitRouter {
       self
         .checkMiddlewares(context, conduitSocket.input.middlewares)
         .then(r => {
+          if (context.context) {
+            socket.data = context.context;
+          }
           Object.assign(context.context, r);
-          socket.data = context.context;
           next();
         })
         .catch((err: Error | ConduitError) => {
@@ -141,7 +143,8 @@ export class SocketController extends ConduitRouter {
           .executeRequest({
             event: 'connect',
             socketId: socket.id,
-            context: socket.data,
+            // @ts-ignore
+            context: socket.request.conduit,
           })
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
@@ -157,7 +160,8 @@ export class SocketController extends ConduitRouter {
             event,
             socketId: socket.id,
             params: args,
-            context: socket.data,
+            // @ts-ignore
+            context: socket.request.conduit,
           })
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
@@ -174,7 +178,8 @@ export class SocketController extends ConduitRouter {
           .executeRequest({
             event: 'disconnect',
             socketId: socket.id,
-            context: socket.data,
+            // @ts-ignore
+            context: socket.request.conduit,
           })
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {

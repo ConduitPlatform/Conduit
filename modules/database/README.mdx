@@ -43,6 +43,41 @@ since the latter need to go through parsers that are otherwise unnecessary for M
 |   `DB_CONN_URI`      | DB Connection URI  |  False   | `postgres://conduit:pass@localhost:5432/conduit` | `mongodb://localhost:27017` |
 |     `DB_TYPE`        | DB Engine Type     |  False   |                    `postgres`                    | `mongodb`                   |
 
+## Replica Set Configuration
+
+When using MongoDB with a replica set (e.g., MongoDB Atlas), the database module supports configuring read preference, write concern, and read concern through the admin panel at `PATCH /config/database`.
+
+### Configuration Options
+
+|      Setting      | Values                                                                    | Default   | Description                                              |
+| :---------------: | :------------------------------------------------------------------------ | :-------: | :------------------------------------------------------- |
+| `readPreference`  | `primary`, `primaryPreferred`, `secondary`, `secondaryPreferred`, `nearest` | `primary` | Controls which replica set members receive read queries  |
+| `writeConcern`    | `1`, `majority`                                                           |    `1`    | How many members must acknowledge a write                |
+| `readConcern`     | `local`, `available`, `majority`, `linearizable`, `snapshot`              |  `local`  | Consistency level for read operations                    |
+
+### Recommended Production Settings
+
+For MongoDB Atlas deployments with read replicas:
+- **readPreference**: `secondaryPreferred` — distributes reads across replicas, falls back to primary
+- **writeConcern**: `majority` — ensures writes survive replica set elections
+- **readConcern**: `local` — suitable for most workloads
+
+### Per-Query Override
+
+Modules can override the configured readPreference on individual queries when they need read-after-write consistency:
+
+```typescript
+const doc = await MySchema.getInstance().findOne(
+  { _id: someId },
+  { readPreference: 'primary' }
+);
+```
+
+### Standalone MongoDB
+
+All defaults match the MongoDB driver defaults.<br />
+Standalone deployments (without replicas) work identically regardless of these settings — `secondaryPreferred` gracefully falls back to `primary` when no secondaries are available.
+
 ## Supported Operators
 
 |  Operator  | Description                                                                                                              |

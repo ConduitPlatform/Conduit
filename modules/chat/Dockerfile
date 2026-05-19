@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY --from=conduit-base:latest /app/modules/chat /app/modules/chat
 
-RUN yarn install --production --pure-lockfile --non-interactive && yarn cache clean
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts && pnpm store prune
 
 WORKDIR /app/modules/chat
 

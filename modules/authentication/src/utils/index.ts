@@ -166,11 +166,7 @@ export namespace AuthUtils {
 
     const members: (User & { role?: string })[] = await User.getInstance().findMany(
       query,
-      undefined,
-      skip,
-      limit,
-      sort,
-      populate,
+      { skip, limit, sort, populate },
     );
     const count = await User.getInstance().countDocuments(query);
     members.forEach(member => {
@@ -208,14 +204,7 @@ export namespace AuthUtils {
     }
 
     const count = relations.count;
-    const teams = await Team.getInstance().findMany(
-      query,
-      undefined,
-      undefined,
-      undefined,
-      sort,
-      populate,
-    );
+    const teams = await Team.getInstance().findMany(query, { sort, populate });
     return { teams, count };
   }
 

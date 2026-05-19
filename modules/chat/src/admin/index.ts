@@ -46,14 +46,12 @@ export class AdminHandlers {
       query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
     }
 
-    const chatRoomDocumentsPromise = ChatRoom.getInstance().findMany(
-      query,
-      undefined,
+    const chatRoomDocumentsPromise = ChatRoom.getInstance().findMany(query, {
       skip,
       limit,
       sort,
-      populates,
-    );
+      populate: populates,
+    });
     const totalCountPromise = ChatRoom.getInstance().countDocuments(query);
 
     const [chatRoomDocuments, count] = await Promise.all([
@@ -136,14 +134,12 @@ export class AdminHandlers {
       }
     }
 
-    const messagesPromise = ChatMessage.getInstance().findMany(
-      query,
-      undefined,
+    const messagesPromise = ChatMessage.getInstance().findMany(query, {
       skip,
       limit,
       sort,
-      populates,
-    );
+      populate: populates,
+    });
     const countPromise = ChatMessage.getInstance().countDocuments(query);
     const [messages, count] = await Promise.all([messagesPromise, countPromise]).catch(
       (e: Error) => {
@@ -183,6 +179,7 @@ export class AdminHandlers {
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
+          populate: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('GetRooms', {
@@ -228,6 +225,7 @@ export class AdminHandlers {
           senderUser: ConduitString.Optional,
           roomId: ConduitString.Optional,
           search: ConduitString.Optional,
+          populate: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('GetMessages', {

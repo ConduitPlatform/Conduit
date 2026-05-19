@@ -3,6 +3,7 @@ export type FindOneOptions = {
   populate?: string | string[];
   userId?: string;
   scope?: string;
+  readPreference?: string;
 };
 
 export type FindManyOptions = {
@@ -13,4 +14,5 @@ export type FindManyOptions = {
   populate?: string | string[];
   userId?: string;
   scope?: string;
+  readPreference?: string;
 };

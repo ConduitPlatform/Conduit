@@ -45,6 +45,7 @@ export namespace SchemaConverter {
       canDelete?: boolean;
     };
     timestamps?: boolean;
+    readPreference?: string;
     existingModelOptions?: ConduitSchemaOptions;
     importedSchema?: boolean;
   }) {
@@ -60,64 +61,64 @@ export namespace SchemaConverter {
           explicit.cms?.enabled !== undefined
             ? explicit.cms.enabled
             : existing?.cms?.enabled !== undefined
-            ? existing.cms.enabled
-            : defaults.conduit!.cms.enabled,
+              ? existing.cms.enabled
+              : defaults.conduit!.cms.enabled,
         crudOperations: {
           create: {
             enabled:
               explicit.cms?.crudOperations?.create?.enabled !== undefined
                 ? explicit.cms.crudOperations?.create.enabled
                 : existing?.cms?.crudOperations?.create?.enabled !== undefined
-                ? existing.cms.crudOperations.create.enabled
-                : defaults.conduit!.cms.crudOperations.create.enabled,
+                  ? existing.cms.crudOperations.create.enabled
+                  : defaults.conduit!.cms.crudOperations.create.enabled,
             authenticated:
               explicit.cms?.crudOperations?.create?.authenticated !== undefined
                 ? explicit.cms.crudOperations?.create.authenticated
                 : existing?.cms?.crudOperations?.create?.authenticated !== undefined
-                ? existing.cms.crudOperations.create.authenticated
-                : defaults.conduit!.cms.crudOperations.create.authenticated,
+                  ? existing.cms.crudOperations.create.authenticated
+                  : defaults.conduit!.cms.crudOperations.create.authenticated,
           },
           read: {
             enabled:
               explicit.cms?.crudOperations?.read?.enabled !== undefined
                 ? explicit.cms.crudOperations?.read.enabled
                 : existing?.cms?.crudOperations?.read?.enabled !== undefined
-                ? existing.cms.crudOperations.read.enabled
-                : defaults.conduit!.cms.crudOperations.read.enabled,
+                  ? existing.cms.crudOperations.read.enabled
+                  : defaults.conduit!.cms.crudOperations.read.enabled,
             authenticated:
               explicit.cms?.crudOperations?.read?.authenticated !== undefined
                 ? explicit.cms.crudOperations?.read.authenticated
                 : existing?.cms?.crudOperations?.read?.authenticated !== undefined
-                ? existing.cms.crudOperations.read.authenticated
-                : defaults.conduit!.cms.crudOperations.read.authenticated,
+                  ? existing.cms.crudOperations.read.authenticated
+                  : defaults.conduit!.cms.crudOperations.read.authenticated,
           },
           update: {
             enabled:
               explicit.cms?.crudOperations?.update?.enabled !== undefined
                 ? explicit.cms.crudOperations?.update.enabled
                 : existing?.cms?.crudOperations?.update?.enabled !== undefined
-                ? existing.cms.crudOperations.update.enabled
-                : defaults.conduit!.cms.crudOperations.update.enabled,
+                  ? existing.cms.crudOperations.update.enabled
+                  : defaults.conduit!.cms.crudOperations.update.enabled,
             authenticated:
               explicit.cms?.crudOperations?.update?.authenticated !== undefined
                 ? explicit.cms.crudOperations?.update.authenticated
                 : existing?.cms?.crudOperations?.update?.authenticated !== undefined
-                ? existing.cms.crudOperations.update.authenticated
-                : defaults.conduit!.cms.crudOperations.update.authenticated,
+                  ? existing.cms.crudOperations.update.authenticated
+                  : defaults.conduit!.cms.crudOperations.update.authenticated,
           },
           delete: {
             enabled:
               explicit.cms?.crudOperations?.delete?.enabled !== undefined
                 ? explicit.cms.crudOperations?.delete.enabled
                 : existing?.cms?.crudOperations?.delete?.enabled !== undefined
-                ? existing.cms.crudOperations.delete.enabled
-                : defaults.conduit!.cms.crudOperations.delete.enabled,
+                  ? existing.cms.crudOperations.delete.enabled
+                  : defaults.conduit!.cms.crudOperations.delete.enabled,
             authenticated:
               explicit.cms?.crudOperations?.delete?.authenticated !== undefined
                 ? explicit.cms.crudOperations?.delete.authenticated
                 : existing?.cms?.crudOperations?.delete?.authenticated !== undefined
-                ? existing.cms.crudOperations.delete.authenticated
-                : defaults.conduit!.cms.crudOperations.delete.authenticated,
+                  ? existing.cms.crudOperations.delete.authenticated
+                  : defaults.conduit!.cms.crudOperations.delete.authenticated,
           },
         },
       };
@@ -134,29 +135,38 @@ export namespace SchemaConverter {
         explicit.permissions?.extendable !== undefined
           ? explicit.permissions.extendable
           : existing?.permissions?.extendable !== undefined
-          ? existing.permissions.extendable
-          : defaults.conduit!.permissions!.extendable,
+            ? existing.permissions.extendable
+            : defaults.conduit!.permissions!.extendable,
       canCreate:
         explicit.permissions?.canCreate !== undefined
           ? explicit.permissions.canCreate
           : existing?.permissions?.canCreate !== undefined
-          ? existing.permissions.canCreate
-          : defaults.conduit!.permissions!.canCreate,
+            ? existing.permissions.canCreate
+            : defaults.conduit!.permissions!.canCreate,
       canModify:
         explicit.permissions?.canModify !== undefined
           ? explicit.permissions.canModify
           : existing?.permissions?.canModify !== undefined
-          ? existing.permissions.canModify
-          : defaults.conduit!.permissions!.canModify,
+            ? existing.permissions.canModify
+            : defaults.conduit!.permissions!.canModify,
       canDelete:
         explicit.permissions?.canDelete !== undefined
           ? explicit.permissions.canDelete
           : existing?.permissions?.canDelete !== undefined
-          ? existing.permissions.canDelete
-          : defaults.conduit!.permissions!.canDelete,
+            ? existing.permissions.canDelete
+            : defaults.conduit!.permissions!.canDelete,
     };
     modelOptions.timestamps =
       opts.timestamps ?? opts.existingModelOptions?.timestamps ?? defaults.timestamps;
+
+    if (opts.readPreference !== undefined) {
+      if (opts.readPreference === '') {
+        delete modelOptions.conduit.readPreference;
+      } else {
+        modelOptions.conduit.readPreference = opts.readPreference;
+      }
+    }
+
     return modelOptions;
   }
 

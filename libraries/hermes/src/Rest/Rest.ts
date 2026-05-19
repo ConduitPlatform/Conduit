@@ -8,6 +8,7 @@ import {
 } from 'express';
 import { SwaggerGenerator } from './Swagger.js';
 import { extractRequestData, mapGrpcErrorToHttp, validateParams } from './util.js';
+import { extractClientIp } from '../utils/extractClientIp.js';
 import { createHashKey, extractCaching } from '../cache.utils.js';
 import { ConduitRouter } from '../Router.js';
 import {
@@ -90,15 +91,6 @@ export class RestController extends ConduitRouter {
     }
   }
 
-  private extractResult(returnTypeFields: string, result: any) {
-    switch (returnTypeFields) {
-      case TYPE.JSON:
-        return JSON.parse(result);
-      default:
-        return result;
-    }
-  }
-
   private addRoute(
     path: string,
     router:
@@ -149,18 +141,36 @@ export class RestController extends ConduitRouter {
         route,
         req.headers['cache-control'],
       );
+      const unknownKeys: 'strict' | 'strip' | 'passthrough' =
+        route.input.strictParams === true
+          ? 'strict'
+          : route.input.strictParams === false
+            ? 'passthrough'
+            : 'strip';
       if (route.input.bodyParams)
-        validateParams(context.bodyParams, route.input.bodyParams);
+        context.bodyParams = validateParams(context.bodyParams, route.input.bodyParams, {
+          unknownKeys,
+          coerce: false,
+        });
       if (route.input.queryParams)
-        validateParams(context.queryParams, route.input.queryParams);
-      if (route.input.urlParams) validateParams(context.urlParams, route.input.urlParams);
+        context.queryParams = validateParams(
+          context.queryParams,
+          route.input.queryParams,
+          { unknownKeys, coerce: true },
+        );
+      if (route.input.urlParams)
+        context.urlParams = validateParams(context.urlParams, route.input.urlParams, {
+          unknownKeys,
+          coerce: true,
+        });
       context.params = {
         ...context.bodyParams,
         ...context.queryParams,
         ...context.urlParams,
       };
+      const ip = extractClientIp(req.headers, req.ip);
       self
-        .checkMiddlewares(context, route.input.middlewares)
+        .preHandle(route.input, context, ip)
         .then(() => {
           if (route.input.action !== ConduitRouteActions.GET) {
             return route.executeRequest(context);
@@ -315,9 +325,12 @@ export class RestController extends ConduitRouter {
     this._expressRouter!.use(
       '/reference',
       apiReference({
-        spec: {
-          url: '/swagger.json',
-        },
+        sources: [
+          {
+            url: '/swagger.json',
+            default: true,
+          },
+        ],
       }),
     );
     this._expressRouter!.get('/swagger.json', (req, res) => {
@@ -326,6 +339,14 @@ export class RestController extends ConduitRouter {
     this._expressRouter!.use((req: Request, res: Response, next: NextFunction) => {
       next();
     });
+  }
+
+  /**
+   * Get the Swagger/OpenAPI document
+   * Used by MCP resources to expose API documentation
+   */
+  getSwaggerDoc(): Record<string, unknown> | null {
+    return this._swagger?.swaggerDoc ?? null;
   }
 
   shutDown() {

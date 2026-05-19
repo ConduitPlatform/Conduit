@@ -40,8 +40,8 @@ module.exports = {
       },
     },
     {
-      name: 'email',
-      script: './modules/email/dist/index.js',
+      name: 'communications',
+      script: './modules/communications/dist/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
         GRPC_PORT: '55164',
@@ -56,11 +56,11 @@ module.exports = {
       },
     },
     {
-      name: 'push-notifications',
-      script: './modules/push-notifications/dist/index.js',
+      name: 'chat',
+      script: './modules/chat/dist/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
-        GRPC_PORT: '55166',
+        GRPC_PORT: '55170',
       },
     },
   ],

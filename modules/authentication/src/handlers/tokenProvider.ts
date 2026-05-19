@@ -126,7 +126,10 @@ export class TokenProvider {
         user: userId,
       });
     } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {
-      const accessToken = await AccessToken.getInstance().findOne({ token: authToken });
+      const accessToken = await AccessToken.getInstance().findOne(
+        { token: authToken },
+        { readPreference: 'primary' },
+      );
       if (accessToken) {
         await AccessToken.getInstance().deleteOne({ token: authToken });
         await RefreshToken.getInstance().deleteOne({ accessToken: accessToken._id });

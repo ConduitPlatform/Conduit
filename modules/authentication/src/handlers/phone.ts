@@ -19,7 +19,7 @@ import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { Token, User } from '../models/index.js';
 import { AuthUtils } from '../utils/index.js';
-import { TokenType } from '../constants/index.js';
+import { PHONE_CODE_VERIFY, PHONE_SMS_SEND, TokenType } from '../constants/index.js';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy.js';
 import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
@@ -62,6 +62,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
           captchaConfig.enabled && captchaConfig.routes.login
             ? ['captchaMiddleware']
             : undefined,
+        rateLimit: PHONE_SMS_SEND,
       },
       new ConduitRouteReturnDefinition('PhoneAuthenticateResponse', {
         token: ConduitString.Required,
@@ -79,6 +80,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
           userData: ConduitJson.Optional,
         },
         middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
+        rateLimit: PHONE_CODE_VERIFY,
       },
       new ConduitRouteReturnDefinition('VerifyPhoneLoginResponse', {
         accessToken: ConduitString.Optional,
@@ -93,9 +95,10 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const { anonymousUser, user: existingUser } = call.request.context;
     const config = ConfigController.getInstance().config;
 
-    const existingToken: Token | null = await Token.getInstance().findOne({
-      token: token,
-    });
+    const existingToken: Token | null = await Token.getInstance().findOne(
+      { token: token },
+      { readPreference: 'primary' },
+    );
     if (!existingToken) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid token provided');
     }
@@ -130,9 +133,10 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
     let foundInvitationToken;
     if (invitationToken) {
-      foundInvitationToken = await Token.getInstance().findOne({
-        token: invitationToken,
-      });
+      foundInvitationToken = await Token.getInstance().findOne(
+        { token: invitationToken },
+        { readPreference: 'primary' },
+      );
     }
     if (!user) {
       const teams = ConfigController.getInstance().config.teams;
@@ -156,17 +160,20 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         }
       }
     }
-    const existingToken = await Token.getInstance().findOne({
-      tokenType: {
-        $in: [
-          TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
-          TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN,
-        ],
+    const existingToken = await Token.getInstance().findOne(
+      {
+        tokenType: {
+          $in: [
+            TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
+            TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN,
+          ],
+        },
+        data: {
+          phone,
+        },
       },
-      data: {
-        phone,
-      },
-    });
+      { readPreference: 'primary' },
+    );
     if (existingToken) {
       AuthUtils.checkResendThreshold(existingToken);
       await Token.getInstance().deleteMany({

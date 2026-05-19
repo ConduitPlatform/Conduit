@@ -3,11 +3,14 @@ import {
   ConduitModel,
   ConduitSchema,
   GrpcError,
+  Indexable,
   ModelOptionsIndexes,
   RawMongoQuery,
   RawSQLQuery,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
+import type { Config } from '../config/index.js';
 import {
   _ConduitSchema,
   ConduitDatabaseSchema,
@@ -27,8 +30,18 @@ export abstract class DatabaseAdapter<T extends Schema> {
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
   protected readonly maxConnTimeoutMs: number;
   protected grpcSdk: ConduitGrpcSdk;
+  protected queryDefaults: {
+    readPreference: string;
+    writeConcern: string;
+    readConcern: string;
+  } = {
+    readPreference: 'primary',
+    writeConcern: '1',
+    readConcern: 'local',
+  };
   private legacyDeployment = false; // unprefixed declared schema collection
   private readonly _systemSchemas: Set<string> = new Set();
+  private viewAccessTimestamps: Map<string, number> = new Map();
 
   protected constructor() {
     this.registeredSchemas = new Map();
@@ -41,6 +54,18 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   get systemSchemas() {
     return Array.from(this._systemSchemas);
+  }
+
+  updateQueryDefaults(config: {
+    readPreference: string;
+    writeConcern: string;
+    readConcern: string;
+  }) {
+    this.queryDefaults = config;
+  }
+
+  getQueryDefaults() {
+    return this.queryDefaults;
   }
 
   async init(grpcSdk: ConduitGrpcSdk) {
@@ -186,7 +211,83 @@ export abstract class DatabaseAdapter<T extends Schema> {
     query: any,
   ): Promise<void>;
 
-  abstract deleteView(viewName: string): Promise<void>;
+  abstract deleteView(viewName: string, instanceSync?: boolean): Promise<void>;
+
+  /**
+   * Finds stale authorization views and deletes each via {@link deleteView}.
+   * @param batchSize Maximum rows to process; use 0 for no limit.
+   */
+  async cleanUpStaleViews(
+    stalenessThresholdMs: number,
+    batchSize: number,
+  ): Promise<void> {
+    const threshold = new Date(Date.now() - stalenessThresholdMs);
+    const staleQuery: Indexable = {
+      $or: [
+        { lastAccessedAt: { $lt: threshold } },
+        { lastAccessedAt: { $exists: false }, updatedAt: { $lt: threshold } },
+      ],
+    };
+    const limit = batchSize === 0 ? undefined : batchSize;
+    const staleViews = (await this.models['Views'].findMany(staleQuery, {
+      select: 'name',
+      limit,
+      sort: { lastAccessedAt: 1 },
+    })) as { name: string }[];
+
+    const failed: string[] = [];
+    let firstError: Error | undefined;
+
+    for (const view of staleViews) {
+      await this.deleteView(view.name).catch((err: Error) => {
+        failed.push(view.name);
+        if (!firstError) firstError = err;
+      });
+    }
+
+    const deletedCount = staleViews.length - failed.length;
+    if (deletedCount > 0) {
+      ConduitGrpcSdk.Logger.info(
+        `Deleted ${deletedCount} stale view(s) (batch queried: ${staleViews.length})`,
+      );
+    }
+    if (failed.length > 0) {
+      ConduitGrpcSdk.Logger.warn(
+        `Failed to delete ${failed.length}/${
+          staleViews.length
+        } stale views: ${failed.join(', ')}`,
+      );
+      ConduitGrpcSdk.Logger.error(firstError!);
+    }
+  }
+
+  /**
+   * Throttled update of Views.lastAccessedAt (interval from module config).
+   */
+  async touchViewAccess(viewName: string): Promise<void> {
+    const cfg = ConfigController.getInstance().config as Config | undefined;
+    const accessUpdateIntervalMs =
+      cfg?.viewCleanup?.accessUpdateIntervalMs ?? 60 * 60 * 1000;
+    const now = Date.now();
+    const lastTouch = this.viewAccessTimestamps.get(viewName) ?? 0;
+    if (now - lastTouch <= accessUpdateIntervalMs) {
+      return;
+    }
+    this.viewAccessTimestamps.set(viewName, now);
+    const viewsModel = this.models['Views'];
+    if (!viewsModel) return;
+    const view = await viewsModel.findOne({ name: viewName });
+    if (view) {
+      await viewsModel.findByIdAndUpdate(view._id, {
+        lastAccessedAt: new Date(now),
+      });
+    }
+  }
+
+  /** Notifies other database instances to drop an authorization view from in-memory caches. */
+  protected publishViewDeletion(viewName: string) {
+    this.grpcSdk.bus?.publish('database:delete:view', viewName);
+  }
 
   abstract deleteIndexes(schemaName: string, indexNames: string[]): Promise<string>;
 
@@ -208,7 +309,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this.fixDatabaseSchemaOwnership(schema);
     if (schema.name === '_DeclaredSchema') return true;
 
-    const model = await this.models['_DeclaredSchema'].findOne({ name: schema.name });
+    const model = await this.models['_DeclaredSchema'].findOne(
+      { name: schema.name },
+      { readPreference: 'primary' },
+    );
     if (model && model.parentSchema) return false;
     if (model && model.ownerModule === schema.ownerModule) {
       return true;
@@ -222,9 +326,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
     if (['_DeclaredSchema', 'MigratedSchemas'].includes(schema.name)) {
       return;
     }
-    const storedSchema = await this.models['_DeclaredSchema'].findOne({
-      name: schema.name,
-    });
+    const storedSchema = await this.models['_DeclaredSchema'].findOne(
+      {
+        name: schema.name,
+      },
+      { readPreference: 'primary' },
+    );
     if (isNil(storedSchema)) {
       return;
     }
@@ -233,7 +340,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     const lastMigratedSchemas = await this.models['MigratedSchemas'].findMany(
       { name: storedSchema.name },
-      { skip: 1, sort: { version: -1 } },
+      { skip: 1, sort: { version: -1 }, readPreference: 'primary' },
     );
     const lastVersion =
       lastMigratedSchemas.length === 0 ? 0 : lastMigratedSchemas[0].version;
@@ -246,9 +353,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
   }
 
   async registerAuthorizationDefinitions() {
-    const models = await this.models!['_DeclaredSchema'].findMany({
-      'modelOptions.conduit.authorization.enabled': true,
-    });
+    const models = await this.models!['_DeclaredSchema'].findMany(
+      {
+        'modelOptions.conduit.authorization.enabled': true,
+      },
+      { readPreference: 'primary' },
+    );
     for (const model of models) {
       this.grpcSdk.authorization?.defineResource({
         name: model.name,
@@ -280,17 +390,20 @@ export abstract class DatabaseAdapter<T extends Schema> {
   }
 
   async recoverSchemasFromDatabase() {
-    let models = await this.models!['_DeclaredSchema'].findMany({
-      $or: [
-        {
-          parentSchema: '',
-        },
-        {
-          parentSchema: null,
-        },
-        { parentSchema: { $exists: false } },
-      ],
-    });
+    let models = await this.models!['_DeclaredSchema'].findMany(
+      {
+        $or: [
+          {
+            parentSchema: '',
+          },
+          {
+            parentSchema: null,
+          },
+          { parentSchema: { $exists: false } },
+        ],
+      },
+      { readPreference: 'primary' },
+    );
     models = models
       // do not recover system schemas as they have already been
       .filter((model: _ConduitSchema) => {
@@ -325,7 +438,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   }
 
   async recoverViewsFromDatabase() {
-    let views = await this.models!['Views'].findMany({});
+    let views = await this.models!['Views'].findMany({}, { readPreference: 'primary' });
     views = views.map((view: IView) => {
       return this.createView(
         view.originalSchema,
@@ -439,7 +552,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
-    const model = await this.models['_DeclaredSchema'].findOne({ name: schema.name });
+    const model = await this.models['_DeclaredSchema'].findOne(
+      { name: schema.name },
+      { readPreference: 'primary' },
+    );
     if (model) {
       await this.models['_DeclaredSchema'].findByIdAndUpdate(model._id, {
         name: schema.name,
@@ -513,9 +629,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
           ? `cnd${collectionName}`
           : `cnd_${collectionName}`;
       } else if (schema.name !== '_DeclaredSchema') {
-        const declaredSchema = await this.models['_DeclaredSchema'].findOne({
-          name: schema.name,
-        });
+        const declaredSchema = await this.models['_DeclaredSchema'].findOne(
+          { name: schema.name },
+          { readPreference: 'primary' },
+        );
         if (!declaredSchema) {
           if (!collectionName.startsWith('cnd_')) {
             collectionName = collectionName.startsWith('_')
@@ -541,9 +658,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   private async addExtensionsFromSchemaModel(schema: ConduitSchema, gRPC: boolean) {
     if (schema.name !== '_DeclaredSchema' && gRPC) {
-      const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
-        name: schema.name,
-      });
+      const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne(
+        {
+          name: schema.name,
+        },
+        { readPreference: 'primary' },
+      );
       if (schemaModel?.extensions?.length > 0) {
         (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
       }

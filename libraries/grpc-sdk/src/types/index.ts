@@ -2,6 +2,7 @@ import { Metadata, status } from '@grpc/grpc-js';
 
 export * from './db.js';
 export * from './options.js';
+export * from './peers.js';
 
 export type GrpcRequest<T> = { request: T; metadata?: Metadata };
 export type GrpcResponse<T> = (

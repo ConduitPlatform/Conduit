@@ -20,6 +20,10 @@ export const Views = new ConduitSchema(
       type: TYPE.JSON,
       required: true,
     },
+    lastAccessedAt: {
+      type: TYPE.Date,
+      required: false,
+    },
   },
   {
     timestamps: true,

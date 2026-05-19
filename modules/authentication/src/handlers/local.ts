@@ -1,6 +1,13 @@
 import { isNil, merge } from 'lodash-es';
 import { AuthUtils } from '../utils/index.js';
-import { TokenType } from '../constants/index.js';
+import {
+  AUTH_CREDENTIALS,
+  EMAIL_CODE_VERIFY,
+  EMAIL_SEND_STRICT,
+  EMAIL_VERIFY_HOOK,
+  PASSWORD_RESET_SUBMIT,
+  TokenType,
+} from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
 import {
   ConduitGrpcSdk,
@@ -62,6 +69,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           errors.INVITATION_REQUIRED,
           errors.INVALID_INVITATION,
         ],
+        rateLimit: AUTH_CREDENTIALS,
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
@@ -75,6 +83,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
             userData: ConduitJson.Optional,
           },
           description: `Creates a new anonymous user.`,
+          rateLimit: AUTH_CREDENTIALS,
         },
         new ConduitRouteReturnDefinition('LoginResponse', {
           accessToken: ConduitString.Optional,
@@ -99,6 +108,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           captchaConfig.enabled && captchaConfig.routes.login
             ? ['captchaMiddleware']
             : undefined,
+        rateLimit: AUTH_CREDENTIALS,
       },
       new ConduitRouteReturnDefinition('LoginResponse', {
         accessToken: ConduitString.Optional,
@@ -117,6 +127,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
             email: ConduitString.Required,
             redirectUri: ConduitString.Optional,
           },
+          rateLimit: EMAIL_SEND_STRICT,
         },
         new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
         this.forgotPassword.bind(this),
@@ -132,6 +143,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           passwordResetToken: ConduitString.Required,
           password: ConduitString.Required,
         },
+        rateLimit: PASSWORD_RESET_SUBMIT,
       },
       new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
       this.resetPassword.bind(this),
@@ -145,6 +157,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           bodyParams: {
             email: ConduitString.Required,
           },
+          rateLimit: EMAIL_SEND_STRICT,
         },
         new ConduitRouteReturnDefinition('ResendVerificationEmailResponse', 'String'),
         this.resendVerificationEmail.bind(this),
@@ -190,6 +203,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
             email: ConduitString.Required,
             code: ConduitString.Required,
           },
+          rateLimit: EMAIL_CODE_VERIFY,
         },
         new ConduitRouteReturnDefinition('VerifyEmailWithCode', 'String'),
         this.verifyEmailWithCode.bind(this),
@@ -204,6 +218,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         urlParams: {
           verificationToken: ConduitString.Required,
         },
+        rateLimit: EMAIL_VERIFY_HOOK,
       },
       new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
       this.verifyEmail.bind(this),
@@ -217,6 +232,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         urlParams: {
           verificationToken: ConduitString.Required,
         },
+        rateLimit: EMAIL_VERIFY_HOOK,
       },
       new ConduitRouteReturnDefinition('VerifyChangeEmailResponse', 'String'),
       this.verifyChangeEmail.bind(this),
@@ -281,10 +297,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
         email,
       );
       userInvitationExtensionData = await Token.getInstance()
-        .findOne({
-          tokenType: TokenType.TEAM_INVITE_TOKEN,
-          token: invitationToken,
-        })
+        .findOne(
+          {
+            tokenType: TokenType.TEAM_INVITE_TOKEN,
+            token: invitationToken,
+          },
+          { readPreference: 'primary' },
+        )
         .then(token => {
           if (token?.data?.userData) {
             AuthUtils.checkUserData(token.data.userData);
@@ -399,7 +418,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const user: User | null = await User.getInstance().findOne(
       { email },
-      '+hashedPassword',
+      {
+        select: '+hashedPassword',
+      },
     );
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
@@ -421,7 +442,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const user: User | null = await User.getInstance().findOne(
       { email },
-      '+hashedPassword',
+      {
+        select: '+hashedPassword',
+      },
     );
 
     if (isNil(user))
@@ -435,10 +458,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
         'User does not use password authentication',
       );
 
-    const oldToken: Token | null = await Token.getInstance().findOne({
-      tokenType: TokenType.PASSWORD_RESET_TOKEN,
-      user: user._id,
-    });
+    const oldToken: Token | null = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.PASSWORD_RESET_TOKEN,
+        user: user._id,
+      },
+      { readPreference: 'primary' },
+    );
     if (!isNil(oldToken) && AuthUtils.checkResendThreshold(oldToken)) {
       await Token.getInstance().deleteOne(oldToken);
     }
@@ -479,16 +505,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const { passwordResetToken: passwordResetTokenParam, password: newPassword } =
       call.request.params;
 
-    const passwordResetTokenDoc: Token | null = await Token.getInstance().findOne({
-      tokenType: TokenType.PASSWORD_RESET_TOKEN,
-      token: passwordResetTokenParam,
-    });
+    const passwordResetTokenDoc: Token | null = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.PASSWORD_RESET_TOKEN,
+        token: passwordResetTokenParam,
+      },
+      { readPreference: 'primary' },
+    );
     if (isNil(passwordResetTokenDoc))
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
 
     const user: User | null = await User.getInstance().findOne(
       { _id: passwordResetTokenDoc.user as string },
-      '+hashedPassword',
+      { select: '+hashedPassword' },
     );
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (isNil(user.hashedPassword))
@@ -596,8 +625,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         tokenType: TokenType.VERIFICATION_TOKEN,
         token: verificationTokenParam,
       },
-      undefined,
-      ['user'],
+      { populate: ['user'], readPreference: 'primary' },
     );
     if (isNil(verificationTokenDoc)) {
       const redisToken = await this.grpcSdk.state!.getKey(
@@ -644,8 +672,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         tokenType: TokenType.CHANGE_EMAIL_TOKEN,
         token: verificationToken,
       },
-      undefined,
-      ['user'],
+      { populate: ['user'], readPreference: 'primary' },
     );
     if (isNil(token)) {
       throw new GrpcError(status.NOT_FOUND, 'Change email token does not exist');
@@ -679,10 +706,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.FAILED_PRECONDITION, 'User already verified');
     if (user.isAnonymous) throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
 
-    const verificationToken: Token | null = await Token.getInstance().findOne({
-      tokenType: TokenType.VERIFICATION_TOKEN,
-      user: user._id,
-    });
+    const verificationToken: Token | null = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.VERIFICATION_TOKEN,
+        user: user._id,
+      },
+      { readPreference: 'primary' },
+    );
     if (!isNil(verificationToken) && AuthUtils.checkResendThreshold(verificationToken)) {
       await Token.getInstance().deleteMany({
         user: user._id,
@@ -705,10 +735,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (foundUser.isAnonymous) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
     }
-    const verificationTokenDoc: Token | null = await Token.getInstance().findOne({
-      tokenType: TokenType.VERIFICATION_TOKEN,
-      user: foundUser._id,
-    });
+    const verificationTokenDoc: Token | null = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.VERIFICATION_TOKEN,
+        user: foundUser._id,
+      },
+      { readPreference: 'primary' },
+    );
     if (isNil(verificationTokenDoc)) {
       throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
     }

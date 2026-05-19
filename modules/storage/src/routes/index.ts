@@ -13,6 +13,7 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { File } from '../models/index.js';
+import { STORAGE_WRITE } from '../constants/routeRateLimits.js';
 
 export class StorageRoutes {
   private _routingManager: RoutingManager;
@@ -21,12 +22,11 @@ export class StorageRoutes {
     readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly fileHandlers: FileHandlers,
-    private readonly enableAuthRoutes: boolean,
   ) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
   }
 
-  async registerRoutes() {
+  async registerRoutes(enableAuthRoutes: boolean) {
     this._routingManager.clear();
     const authzEnabled = ConfigController.getInstance().config.authorization.enabled;
     this._routingManager.route(
@@ -65,7 +65,7 @@ export class StorageRoutes {
       this.fileHandlers.getFileUrl.bind(this.fileHandlers),
     );
 
-    if (this.enableAuthRoutes) {
+    if (enableAuthRoutes) {
       this._routingManager.route(
         {
           bodyParams: {
@@ -84,6 +84,7 @@ export class StorageRoutes {
           path: '/storage/file',
           description: `Creates a new file.`,
           middlewares: ['authMiddleware'],
+          rateLimit: STORAGE_WRITE,
         },
         new ConduitRouteReturnDefinition('CreateFile', File.name),
         this.fileHandlers.createFile.bind(this.fileHandlers),
@@ -106,6 +107,7 @@ export class StorageRoutes {
           path: '/storage/upload',
           description: `Creates a new file and provides a URL to upload it to.`,
           middlewares: ['authMiddleware'],
+          rateLimit: STORAGE_WRITE,
         },
         new ConduitRouteReturnDefinition('CreateFileByUrl', {
           file: File.getInstance().fields,
@@ -133,6 +135,7 @@ export class StorageRoutes {
           path: '/storage/upload/:id',
           description: `Updates a file and provides a URL to upload its data to.`,
           middlewares: ['authMiddleware'],
+          rateLimit: STORAGE_WRITE,
         },
         new ConduitRouteReturnDefinition('PatchFileByUrl', {
           file: File.getInstance().fields,
@@ -198,6 +201,7 @@ export class StorageRoutes {
           path: '/storage/file/:id',
           description: `Updates a file.`,
           middlewares: ['authMiddleware'],
+          rateLimit: STORAGE_WRITE,
         },
         new ConduitRouteReturnDefinition('PatchFile', File.name),
         this.fileHandlers.updateFile.bind(this.fileHandlers),

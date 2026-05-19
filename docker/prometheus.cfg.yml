@@ -36,17 +36,8 @@ scrape_configs:
           module: 'Chat'
         targets: ['conduit-chat:9095']
       - labels:
-          module: 'Email'
-        targets: ['conduit-email:9096']
-      - labels:
-          module: 'Forms'
-        targets: ['conduit-forms:9097']
-      - labels:
-          module: 'Push Notifications'
-        targets: ['conduit-push-notifications:9098']
-      - labels:
-          module: 'SMS'
-        targets: ['conduit-sms:9099']
+          module: 'Communications'
+        targets: ['conduit-communications:9096']
       - labels:
           module: 'Storage'
         targets: ['conduit-storage:9190']

@@ -9,7 +9,7 @@ else
 	TAG_SUFFIX = :$(IMAGE_TAG)
 endif
 
-IMAGE_DIRS = $(wildcard modules/*)
+IMAGE_DIRS = $(dir $(wildcard modules/*/Dockerfile))
 
 all: conduit $(IMAGE_DIRS)
 
@@ -38,7 +38,7 @@ conduit-builder: Dockerfile scripts/Dockerfile.builder
 	docker build --no-cache -t conduit-builder:latest -f ./scripts/Dockerfile.builder ./scripts
 
 conduit: conduit-builder
-	$(call build_docker_image,conduit,$(IMAGE_TAG),./packages)
+	$(call build_docker_image,conduit,$(IMAGE_TAG),./packages/core)
 
 $(IMAGE_DIRS): conduit-builder
 	$(eval IMAGE_NAME := $(word 2,$(subst /, ,$@)))

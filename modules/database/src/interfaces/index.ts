@@ -10,3 +10,4 @@ export * from './CmsOptions.js';
 export * from './ConduitOptions.js';
 export * from './ConduitPermissions.js';
 export * from './View.js';
+export * from './SchemaFieldTypes.js';

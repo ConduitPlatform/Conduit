@@ -17,6 +17,13 @@ protoc \
   --ts_proto_opt=snakeToCamel=false \
   ./*.proto
 
+echo "Post-processing generated files"
+# Export MessageFns interface in empty.ts to fix TS4023 errors
+if [ -f "./google/protobuf/empty.ts" ]; then
+  sed -i.bak 's/^interface MessageFns<T>/export interface MessageFns<T>/' "./google/protobuf/empty.ts"
+  rm "./google/protobuf/empty.ts.bak"
+fi
+
 # Initialize the content of the index.ts file
 INDEX_CONTENT=""
 

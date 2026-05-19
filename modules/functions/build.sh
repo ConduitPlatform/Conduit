@@ -1,6 +1,10 @@
 rm -rf ./src/protoTypes
 mkdir ./src/protoTypes
 
+if ! ls ./src/*.proto >/dev/null 2>&1; then
+  echo "No .proto files in src; skipping protoc code generation"
+  exit 0
+fi
 
 cp ./src/*.proto ./src/protoTypes
 

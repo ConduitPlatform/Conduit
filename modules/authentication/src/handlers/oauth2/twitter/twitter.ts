@@ -8,7 +8,7 @@ import {
   Payload,
   ProviderConfig,
 } from '../interfaces/index.js';
-import twitterParameters from './twitter.json' assert { type: 'json' };
+import twitterParameters from './twitter.json' with { type: 'json' };
 import { TwitterUser } from './twitter.user.js';
 
 export class TwitterHandlers extends OAuth2<TwitterUser, OAuth2Settings> {

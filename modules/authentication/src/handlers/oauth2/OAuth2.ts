@@ -27,15 +27,22 @@ import { validateStateToken } from './utils/index.js';
 import { IAuthenticationStrategy } from '../../interfaces/index.js';
 import { TokenType } from '../../constants/index.js';
 import {
+  ConduitJson,
   ConduitString,
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import {
+  OAUTH_CALLBACK,
+  OAUTH_INIT,
+  OAUTH_NATIVE_COMPLETE,
+} from '../../constants/index.js';
 import { AuthUtils } from '../../utils/index.js';
 
-export abstract class OAuth2<T, S extends OAuth2Settings>
-  implements IAuthenticationStrategy
-{
+export abstract class OAuth2<
+  T,
+  S extends OAuth2Settings,
+> implements IAuthenticationStrategy {
   grpcSdk: ConduitGrpcSdk;
   initialized: boolean = false;
   mapScopes: { [key: string]: string };
@@ -363,6 +370,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           redirectUri: ConduitString.Optional,
         },
         middlewares: initRouteMiddleware,
+        rateLimit: OAUTH_INIT,
       },
       new ConduitRouteReturnDefinition(
         `${this.capitalizeProvider()}InitResponse`,
@@ -382,6 +390,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
             captchaToken: ConduitString.Optional,
           },
           middlewares: initRouteMiddleware,
+          rateLimit: OAUTH_INIT,
         },
         new ConduitRouteReturnDefinition(
           `${this.capitalizeProvider()}InitNativeResponse`,
@@ -398,7 +407,9 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
             code: ConduitString.Required,
             id_token: ConduitString.Required,
             state: ConduitString.Required,
+            user: ConduitJson.Optional,
           },
+          rateLimit: OAUTH_NATIVE_COMPLETE,
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
           accessToken: ConduitString.Optional,
@@ -418,6 +429,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
             code: ConduitString.Required,
             state: ConduitString.Required,
           },
+          rateLimit: OAUTH_CALLBACK,
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
           accessToken: ConduitString.Optional,
@@ -435,6 +447,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
             code: ConduitString.Required,
             state: ConduitString.Required,
           },
+          rateLimit: OAUTH_CALLBACK,
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
           accessToken: ConduitString.Optional,

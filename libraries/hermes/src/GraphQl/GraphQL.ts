@@ -16,17 +16,31 @@ import {
   ConduitRouteActions,
   ConduitRouteOptions,
   Indexable,
-  TYPE,
+  Params,
 } from '@conduitplatform/grpc-sdk';
+import { validateParams } from '../Rest/util.js';
+import { extractClientIp } from '../utils/extractClientIp.js';
 import { ConduitRoute, TypeRegistry } from '../classes/index.js';
 import { ApolloServer } from '@apollo/server';
-import { expressMiddleware } from '@apollo/server/express4';
+import { expressMiddleware } from '@as-integrations/express5';
 import { isArray } from 'lodash-es';
 
 import { parseResolveInfo } from 'graphql-parse-resolve-info';
 
 import cookiePlugin from './utils/cookie.plugin.js';
 import { GraphQLResolveInfo } from 'graphql/index.js';
+
+function mergeValidatedBucket(
+  bucket: Indexable,
+  def: Params | undefined,
+  unknownKeys: 'strict' | 'strip' | 'passthrough',
+  coerce: boolean,
+) {
+  if (!def) return;
+  const next = validateParams({ ...bucket } as Params, def, { unknownKeys, coerce });
+  for (const k of Object.keys(bucket)) delete bucket[k];
+  Object.assign(bucket, next);
+}
 
 export class GraphQLController extends ConduitRouter {
   typeDefs!: string;
@@ -35,6 +49,7 @@ export class GraphQLController extends ConduitRouter {
   mutations!: string;
   resolvers: any;
   private _apollo?: express.RequestHandler;
+  private _apolloServer?: ApolloServer;
   private _relationTypes: string[] = [];
   private _apolloRefreshTimeout: NodeJS.Timeout | null = null;
   private readonly _parser: GraphQlParser;
@@ -60,6 +75,7 @@ export class GraphQLController extends ConduitRouter {
     if (!this.typeDefs || this.typeDefs === ' ' || !this.resolvers) return;
     this.importDbTypes();
 
+    const prevServer = this._apolloServer;
     const server = new ApolloServer({
       typeDefs: this.typeDefs,
       resolvers: this.resolvers,
@@ -67,6 +83,7 @@ export class GraphQLController extends ConduitRouter {
       // @ts-ignore
       plugins: [cookiePlugin],
     });
+    this._apolloServer = server;
     server.start().then(() => {
       this._apollo = expressMiddleware(server, {
         context: async ({ req, res }) => {
@@ -76,6 +93,9 @@ export class GraphQLController extends ConduitRouter {
           return { context, headers, cookies, setCookie: [], removeCookie: [], res };
         },
       });
+      if (prevServer && prevServer !== server) {
+        prevServer.stop().catch(() => {});
+      }
     });
   }
 
@@ -332,15 +352,6 @@ export class GraphQLController extends ConduitRouter {
     });
   }
 
-  private extractResult(returnTypeFields: string, result: Indexable | string) {
-    switch (returnTypeFields) {
-      case TYPE.JSON:
-        return JSON.parse(result as string);
-      default:
-        return result;
-    }
-  }
-
   private constructQuery(actionName: string, route: ConduitRoute) {
     if (!this.resolvers['Query']) {
       this.resolvers['Query'] = {};
@@ -363,12 +374,21 @@ export class GraphQLController extends ConduitRouter {
       args = self.shouldPopulate(args, info);
       context.path = route.input.path;
       let hashKey: string;
+      const ip = extractClientIp(context.headers);
       return self
-        .checkMiddlewares(context, route.input.middlewares)
-        .then(r => {
-          Object.assign(context.context, r);
+        .preHandle(route.input, context, ip)
+        .then(() => {
           const { urlParams, queryParams, bodyParams } =
             this.splitParamsToPathAndUrlParams(args, route.input.urlParams);
+          const unknownKeys: 'strict' | 'strip' | 'passthrough' =
+            route.input.strictParams === true
+              ? 'strict'
+              : route.input.strictParams === false
+                ? 'passthrough'
+                : 'strip';
+          mergeValidatedBucket(bodyParams, route.input.bodyParams, unknownKeys, false);
+          mergeValidatedBucket(queryParams, route.input.queryParams, unknownKeys, true);
+          mergeValidatedBucket(urlParams, route.input.urlParams, unknownKeys, true);
           const params = Object.assign(args, args.params);
           delete params.params;
           if (caching) {
@@ -449,14 +469,21 @@ export class GraphQLController extends ConduitRouter {
     ) => {
       args = self.shouldPopulate(args, info);
       context.path = route.input.path;
+      const ip = extractClientIp(context.headers);
       return self
-        .checkMiddlewares(context, route.input.middlewares)
-        .then(r => {
-          Object.assign(context.context, r);
+        .preHandle(route.input, context, ip)
+        .then(() => {
           const { urlParams, queryParams, bodyParams } =
             this.splitParamsToPathAndUrlParams(args, route.input.urlParams);
-          const params = Object.assign(args, args.params);
-          delete params.params;
+          const unknownKeys: 'strict' | 'strip' | 'passthrough' =
+            route.input.strictParams === true
+              ? 'strict'
+              : route.input.strictParams === false
+                ? 'passthrough'
+                : 'strip';
+          mergeValidatedBucket(bodyParams, route.input.bodyParams, unknownKeys, false);
+          mergeValidatedBucket(queryParams, route.input.queryParams, unknownKeys, true);
+          mergeValidatedBucket(urlParams, route.input.urlParams, unknownKeys, true);
 
           return route.executeRequest.bind(route)({
             ...context,
@@ -526,6 +553,8 @@ export class GraphQLController extends ConduitRouter {
     if (this._apolloRefreshTimeout) {
       clearTimeout(this._apolloRefreshTimeout);
     }
+    this._apolloServer?.stop().catch(() => {});
+    delete this._apolloServer;
     delete this._apollo;
   }
 

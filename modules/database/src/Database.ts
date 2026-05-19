@@ -8,6 +8,8 @@ import {
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin/index.js';
+import { SchemaAdmin } from './admin/schema.admin.js';
+import { CustomEndpointsAdmin } from './admin/customEndpoints/customEndpoints.admin.js';
 import { DatabaseRoutes } from './routes/index.js';
 import * as models from './models/index.js';
 import {
@@ -51,14 +53,22 @@ import metricsSchema from './metrics/index.js';
 import { isNil } from 'lodash-es';
 import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter/index.js';
 import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter/index.js';
-import { ManagedModule } from '@conduitplatform/module-tools';
+import {
+  ConfigController,
+  ManagedModule,
+  type ExportableResource,
+  type ExportResult,
+  type ImportResult,
+} from '@conduitplatform/module-tools';
+import { QueueController } from './controllers/queue.controller.js';
+import AppConfigSchema, { Config } from './config/index.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default class DatabaseModule extends ManagedModule<void> {
-  configSchema = undefined;
+export default class DatabaseModule extends ManagedModule<Config> {
+  configSchema = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),
     protoDescription: 'database.DatabaseProvider',
@@ -93,9 +103,13 @@ export default class DatabaseModule extends ManagedModule<void> {
   private adminRouter?: AdminHandlers;
   private userRouter?: DatabaseRoutes;
   private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
+  private schemaController?: SchemaController;
+  private customEndpointController?: CustomEndpointController;
+  private _authorizationDefinitionsRegistered = false;
+  private _databaseRouterWatchDispose: (() => void) | null = null;
 
-  constructor(dbType: string, dbUri: string) {
-    super('database');
+  constructor(dbType: string, dbUri: string, peerManifestRoot?: string) {
+    super('database', peerManifestRoot);
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(dbUri);
@@ -139,14 +153,67 @@ export default class DatabaseModule extends ManagedModule<void> {
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 
+  async onConfig() {
+    const config = ConfigController.getInstance().config;
+    if (!config) return;
+
+    if (this._activeAdapter.getDatabaseType() === 'MongoDB') {
+      this._activeAdapter.updateQueryDefaults({
+        readPreference: config.readPreference ?? 'primary',
+        writeConcern: config.writeConcern ?? '1',
+        readConcern: config.readConcern ?? 'local',
+      });
+    }
+    if (!config.viewCleanup.enabled) {
+      try {
+        await QueueController.getInstance().drainViewCleanupQueue();
+      } catch {
+        // Queue was never initialized (cleanup stayed disabled).
+      }
+      return;
+    }
+    const queueController = QueueController.getInstance(this.grpcSdk);
+    await queueController.drainViewCleanupQueue();
+    queueController.addViewCleanupWorker(job =>
+      this._activeAdapter.cleanUpStaleViews(
+        job.data.stalenessThresholdMs,
+        job.data.batchSize,
+      ),
+    );
+    if (!config.viewCleanup.cronPattern) {
+      ConduitGrpcSdk.Logger.warn(
+        'View cleanup is enabled but no cronPattern is set. Skipping job scheduling.',
+      );
+      return;
+    }
+    const repeatOptions = {
+      pattern: config.viewCleanup.cronPattern,
+    };
+    await queueController.addViewCleanupJob(
+      config.viewCleanup.stalenessThresholdMs,
+      config.viewCleanup.batchSize,
+      repeatOptions,
+    );
+  }
+
   async onRegister() {
     this.registerInstanceSyncEvents();
     const coreHealth = (await this.grpcSdk.core.check()) as unknown as HealthCheckStatus;
     this.onCoreHealthChange(coreHealth);
     this.grpcSdk.core.watch('');
-    this.grpcSdk.onceModuleUp('authorization', async () => {
-      await this._activeAdapter.registerAuthorizationDefinitions();
-    });
+    this.registerDeclaredPeerWatches();
+  }
+
+  protected onDeclaredPeerConnectionUpdate(moduleName: string, serving: boolean): void {
+    if (
+      moduleName !== 'authorization' ||
+      !serving ||
+      this._authorizationDefinitionsRegistered
+    ) {
+      return;
+    }
+    this._authorizationDefinitionsRegistered = true;
+    void this._activeAdapter.registerAuthorizationDefinitions();
   }
 
   async initializeMetrics() {
@@ -154,6 +221,92 @@ export default class DatabaseModule extends ManagedModule<void> {
       .getSchemaModel('CustomEndpoints')
       .model.countDocuments({});
     ConduitGrpcSdk.Metrics?.set('custom_endpoints_total', customEndpointsTotal);
+  }
+
+  // Framework export/import (GitOps)
+  protected getExportableResources(): ExportableResource[] {
+    return [
+      { type: 'schemas', description: 'CMS schemas', priority: 10 },
+      {
+        type: 'extensions',
+        description: 'Schema extensions (database-owned)',
+        priority: 11,
+      },
+      { type: 'customEndpoints', description: 'Custom endpoints', priority: 20 },
+    ];
+  }
+
+  protected async exportResources(resourceTypes?: string[]): Promise<ExportResult> {
+    if (!this.schemaController || !this.customEndpointController) return {};
+    const schemaAdmin = new SchemaAdmin(
+      this.grpcSdk,
+      this._activeAdapter,
+      this.schemaController,
+      this.customEndpointController,
+    );
+    const schemaExport = await schemaAdmin.exportSchemas();
+    const customEndpointsAdmin = new CustomEndpointsAdmin(
+      this.grpcSdk,
+      this._activeAdapter,
+      this.customEndpointController,
+    );
+    const endpointExport = await customEndpointsAdmin.exportCustomEndpoints();
+    const all: ExportResult = {
+      schemas: (schemaExport as { schemas: unknown[] }).schemas ?? [],
+      extensions: (schemaExport as { extensions: unknown[] }).extensions ?? [],
+      customEndpoints: (endpointExport as { endpoints: unknown[] }).endpoints ?? [],
+    };
+    if (!resourceTypes || resourceTypes.length === 0) return all;
+    const out: ExportResult = {};
+    for (const t of resourceTypes) {
+      if (all[t]) out[t] = all[t];
+    }
+    return out;
+  }
+
+  protected async importResources(data: ExportResult): Promise<ImportResult> {
+    if (!this.schemaController || !this.customEndpointController) return {};
+    const result: ImportResult = {
+      schemas: { created: 0, updated: 0, failed: 0, errors: [] },
+      extensions: { created: 0, updated: 0, failed: 0, errors: [] },
+      customEndpoints: { created: 0, updated: 0, failed: 0, errors: [] },
+    };
+    const schemaAdmin = new SchemaAdmin(
+      this.grpcSdk,
+      this._activeAdapter,
+      this.schemaController,
+      this.customEndpointController,
+    );
+    const customEndpointsAdmin = new CustomEndpointsAdmin(
+      this.grpcSdk,
+      this._activeAdapter,
+      this.customEndpointController,
+    );
+    if (data.schemas?.length || data.extensions?.length) {
+      try {
+        await schemaAdmin.importSchemas({
+          request: {
+            params: { schemas: data.schemas ?? [], extensions: data.extensions ?? [] },
+          },
+        } as any);
+      } catch (e) {
+        result.schemas.failed =
+          (data.schemas?.length ?? 0) + (data.extensions?.length ?? 0);
+        result.schemas.errors.push((e as Error).message);
+      }
+    }
+    if (data.customEndpoints?.length) {
+      try {
+        await customEndpointsAdmin.importCustomEndpoints({
+          request: { params: { endpoints: data.customEndpoints } },
+        } as any);
+        result.customEndpoints.created = data.customEndpoints.length;
+      } catch (e) {
+        result.customEndpoints.failed = data.customEndpoints.length;
+        result.customEndpoints.errors.push((e as Error).message);
+      }
+    }
+    return result;
   }
 
   // gRPC Service
@@ -342,6 +495,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         populate: call.request.populate,
         userId: call.request.userId,
         scope: call.request.scope,
+        readPreference: call.request.readPreference,
       });
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
@@ -378,6 +532,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         populate,
         userId: call.request.userId,
         scope: call.request.scope,
+        readPreference: call.request.readPreference,
       });
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
@@ -725,6 +880,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.countDocuments(call.request.query, {
         userId: call.request.userId,
         scope: call.request.scope,
+        readPreference: call.request.readPreference,
       });
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
@@ -840,6 +996,12 @@ export default class DatabaseModule extends ManagedModule<void> {
       this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
         await this._activeAdapter.deleteSchema(schemaName, false, '', true);
       });
+      this.grpcSdk.bus?.subscribe('database:delete:view', async (viewName: string) => {
+        delete this._activeAdapter.views[viewName];
+        if (this._activeAdapter instanceof MongooseAdapter) {
+          delete this._activeAdapter.mongoose.models[viewName];
+        }
+      });
     } catch {
       ConduitGrpcSdk.Logger.error('Failed to synchronize schema');
     }
@@ -848,8 +1010,8 @@ export default class DatabaseModule extends ManagedModule<void> {
   private onCoreHealthChange(state: HealthCheckStatus) {
     const boundFunctionRef = this.onCoreHealthChange.bind(this);
     if (state === HealthCheckStatus.SERVING) {
-      const schemaController = new SchemaController(this.grpcSdk, this._activeAdapter);
-      const customEndpointController = new CustomEndpointController(
+      this.schemaController = new SchemaController(this.grpcSdk, this._activeAdapter);
+      this.customEndpointController = new CustomEndpointController(
         this.grpcSdk,
         this._activeAdapter,
       );
@@ -857,24 +1019,27 @@ export default class DatabaseModule extends ManagedModule<void> {
         this.grpcServer,
         this.grpcSdk,
         this._activeAdapter,
-        schemaController,
-        customEndpointController,
+        this.schemaController,
+        this.customEndpointController,
       );
-      this.grpcSdk
-        .waitForExistence('router')
-        .then(() => {
+      this._databaseRouterWatchDispose?.();
+      this._databaseRouterWatchDispose = this.grpcSdk.watchPeer(
+        'router',
+        serving => {
+          if (!serving || this.userRouter) return;
           this.userRouter = new DatabaseRoutes(
             this.grpcServer,
             this._activeAdapter,
             this.grpcSdk,
           );
-          schemaController.setRouter(this.userRouter);
-          customEndpointController.setRouter(this.userRouter);
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e.message);
-        });
+          this.schemaController?.setRouter(this.userRouter);
+          this.customEndpointController?.setRouter(this.userRouter);
+        },
+        { edge: 'rising', syncInitialState: true },
+      );
     } else {
+      this._databaseRouterWatchDispose?.();
+      this._databaseRouterWatchDispose = null;
       this.grpcSdk.core.healthCheckWatcher.once(
         'grpc-health-change:Core',
         boundFunctionRef,

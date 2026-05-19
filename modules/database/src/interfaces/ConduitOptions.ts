@@ -30,4 +30,5 @@ export const ConduitOptions = {
   authorization: {
     enabled: ConduitBoolean.Optional,
   },
+  readPreference: ConduitString.Optional,
 };

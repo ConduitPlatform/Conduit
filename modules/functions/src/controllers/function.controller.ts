@@ -52,7 +52,7 @@ export class FunctionController {
 
   refreshRoutes() {
     return Functions.getInstance()
-      .findMany({})
+      .findMany({}, { readPreference: 'primary' })
       .then(r => {
         if (!r || r.length == 0) {
           ConduitGrpcSdk.Logger.log('No functions to register');

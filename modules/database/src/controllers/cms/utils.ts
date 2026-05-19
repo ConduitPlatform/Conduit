@@ -130,7 +130,10 @@ export function getOps(
   const createIsEnabled =
     actualSchema.modelOptions.conduit!.cms.crudOperations.create.enabled;
 
-  const assignableFields: ConduitModel = Object.assign({}, actualSchema.fields);
+  const sourceFields =
+    (actualSchema as unknown as { compiledFields?: ConduitModel }).compiledFields ??
+    actualSchema.fields;
+  const assignableFields: ConduitModel = Object.assign({}, sourceFields);
   delete assignableFields._id;
   delete assignableFields.createdAt;
   delete assignableFields.updatedAt;

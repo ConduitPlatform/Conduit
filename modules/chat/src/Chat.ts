@@ -51,9 +51,12 @@ export default class Chat extends ManagedModule<Config> {
   private database: DatabaseProvider;
   private _emailServing: boolean;
   private _pushNotificationsServing: boolean;
+  private _emailWatchDispose: (() => void) | null = null;
+  private _pushWatchDispose: (() => void) | null = null;
+  private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
 
-  constructor() {
-    super('chat');
+  constructor(peerManifestRoot?: string) {
+    super('chat', peerManifestRoot);
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
@@ -70,48 +73,81 @@ export default class Chat extends ManagedModule<Config> {
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
+    await this.awaitPeersFromManifest();
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
-    await this.grpcSdk.monitorModule('authentication', serving => {
+  }
+
+  protected override onDeclaredPeerConnectionUpdate(
+    moduleName: string,
+    serving: boolean,
+  ): void {
+    if (moduleName === 'authentication') {
       this.updateHealth(
         serving ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING,
       );
-    });
+    }
+    if (moduleName === 'router' && serving) {
+      this.scheduleAppRouteRefresh();
+    }
+  }
+
+  private async ensureUserRouterAndRefresh() {
+    if (this.userRouter) {
+      await this.userRouter.registerRoutes(this.sendEmail, this.sendPushNotification);
+      return;
+    }
+    this.userRouter = new ChatRoutes(this.grpcServer, this.grpcSdk);
+    await this.userRouter.registerRoutes(this.sendEmail, this.sendPushNotification);
   }
 
   async onConfig() {
     const config = await ConfigController.getInstance().config;
     if (!config.active) {
+      if (this.refreshAppRoutesTimeout) {
+        clearTimeout(this.refreshAppRoutesTimeout);
+        this.refreshAppRoutesTimeout = null;
+      }
+      this.disposeDeclaredPeerWatches();
+      this._emailWatchDispose?.();
+      this._emailWatchDispose = null;
+      this._pushWatchDispose?.();
+      this._pushWatchDispose = null;
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
+      this.registerDeclaredPeerWatches();
       this._sendEmail =
         config.explicit_room_joins.enabled && config.explicit_room_joins.send_email;
+      this._emailWatchDispose?.();
+      this._emailWatchDispose = null;
       if (this._sendEmail) {
-        await this.grpcSdk.monitorModule('email', serving => {
-          this._emailServing = serving;
-          this.refreshAppRoutes(); // redundant while called directly by onConfig() with sendPushNotification === true
-        });
-      } else {
-        this.grpcSdk.unmonitorModule('email');
+        this._emailWatchDispose = this.grpcSdk.watchPeer(
+          'email',
+          serving => {
+            this._emailServing = serving;
+            this.scheduleAppRouteRefresh();
+          },
+          { edge: 'both', dedupe: false, syncInitialState: true },
+        );
       }
       this._sendPushNotification =
         config.explicit_room_joins.enabled &&
         config.explicit_room_joins.send_notification;
+      this._pushWatchDispose?.();
+      this._pushWatchDispose = null;
       if (this._sendPushNotification) {
-        await this.grpcSdk.monitorModule('pushNotifications', serving => {
-          this._pushNotificationsServing = serving;
-          this.refreshAppRoutes();
-        });
-      } else {
-        this.grpcSdk.unmonitorModule('pushNotifications');
+        this._pushWatchDispose = this.grpcSdk.watchPeer(
+          'pushNotifications',
+          serving => {
+            this._pushNotificationsServing = serving;
+            this.scheduleAppRouteRefresh();
+          },
+          { edge: 'both', dedupe: false, syncInitialState: true },
+        );
       }
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      if (!this._sendEmail && !this._sendPushNotification) {
-        // avoid redundant refreshes
-        await this.refreshAppRoutes();
-      }
+      this.scheduleAppRouteRefresh();
       this.updateHealth(HealthCheckStatus.SERVING);
     }
   }
@@ -333,24 +369,29 @@ export default class Chat extends ManagedModule<Config> {
     return Promise.all(promises);
   }
 
+  private scheduleAppRouteRefresh() {
+    if (this.refreshAppRoutesTimeout) {
+      clearTimeout(this.refreshAppRoutesTimeout);
+      this.refreshAppRoutesTimeout = null;
+    }
+    this.refreshAppRoutesTimeout = setTimeout(async () => {
+      try {
+        await this.refreshAppRoutes();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this.refreshAppRoutesTimeout = null;
+    }, 800);
+  }
+
   private async refreshAppRoutes() {
     if (this.userRouter) {
-      await this.userRouter.registerRoutes();
+      await this.userRouter.registerRoutes(this.sendEmail, this.sendPushNotification);
       return;
     }
-    this.grpcSdk
-      .waitForExistence('router')
-      .then(() => {
-        this.userRouter = new ChatRoutes(
-          this.grpcServer,
-          this.grpcSdk,
-          this.sendEmail,
-          this.sendPushNotification,
-        );
-        return this.userRouter.registerRoutes();
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
+    if (!this.grpcSdk.isAvailable('router')) {
+      return;
+    }
+    await this.ensureUserRouterAndRefresh();
   }
 }

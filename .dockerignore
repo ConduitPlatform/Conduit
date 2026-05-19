@@ -2,6 +2,9 @@ node_modules
 **/dist
 **/node_modules
 **/*.tsbuildinfo
+.turbo
+**/.turbo
+pnpm-debug.log*
 **/.next
 **/docs
 **/.docz/

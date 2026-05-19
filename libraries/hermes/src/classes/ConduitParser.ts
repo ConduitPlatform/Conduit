@@ -7,6 +7,7 @@ import {
   TYPE,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
+import { ParserUtils } from './ParserUtils.js';
 
 const baseTypes = ['String', 'Number', 'Boolean', 'Date', 'ObjectId', 'JSON'];
 
@@ -48,6 +49,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     isArray: boolean,
     parentField: string,
     description?: string,
+    sourceField?: unknown,
   ): void;
 
   protected abstract getResultFromObject(
@@ -58,6 +60,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     isRequired: boolean,
     isArray: boolean,
     description?: string,
+    sourceField?: unknown,
   ): void;
 
   protected abstract getResultFromArray(
@@ -68,6 +71,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     isRequired: boolean,
     nestedType?: boolean,
     description?: string,
+    sourceField?: unknown,
   ): void;
 
   protected abstract getResultFromRelation(
@@ -77,6 +81,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     value: any,
     isRequired: boolean,
     isArray: boolean,
+    sourceField?: unknown,
   ): void;
 
   protected extractTypesInternal(
@@ -116,53 +121,65 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
             field,
             fields[field] as Array,
             false,
+            undefined,
+            undefined,
+            fields[field],
           );
         } else if (typeof fields[field] === 'object') {
           // if it has "type" as a property we assume that the value is a string
-          if ((fields[field] as any).type) {
+          if (ParserUtils.hasTypeProperty(fields[field])) {
+            const baseType = ParserUtils.getBaseType(fields[field]);
+            const isRequired = ParserUtils.isFieldRequired(fields[field]);
+            const description = ParserUtils.getFieldDescription(fields[field]);
+
             // if type is simply a type
-            if (typeof (fields[field] as ConduitModelField).type === 'string') {
-              if ((fields[field] as ConduitModelFieldRelation).type === 'Relation') {
+            if (typeof baseType === 'string') {
+              if (ParserUtils.isRelationType(fields[field])) {
+                const model = ParserUtils.getRelationModel(fields[field]);
                 this.getResultFromRelation(
                   processingObject,
                   name,
                   field,
-                  (fields[field] as ConduitModelFieldRelation).model,
-                  (fields[field] as ConduitModelFieldRelation).required!,
+                  model!,
+                  isRequired,
                   false,
+                  fields[field],
                 );
               } else {
                 this.getResultFromString(
                   processingObject,
                   field,
-                  (fields[field] as ConduitModelField).type,
-                  (fields[field] as ConduitModelField).required!,
+                  baseType,
+                  isRequired,
                   false,
                   name,
-                  (fields[field] as ConduitModelField).description!,
+                  description,
+                  fields[field],
                 );
               }
             }
             // if type is an array
-            else if (Array.isArray((fields[field] as any).type)) {
+            else if (Array.isArray(baseType)) {
               this.getResultFromArray(
                 processingObject,
                 name,
                 field,
-                (fields[field] as ConduitModelField).type as Array,
-                (fields[field] as ConduitModelField).required!,
+                baseType as Array,
+                isRequired,
                 true,
-                (fields[field] as ConduitModelField).description,
+                description,
+                fields[field],
               );
             } else {
               this.getResultFromObject(
                 processingObject,
                 name,
                 field,
-                (fields[field] as ConduitModelField).type,
-                (fields[field] as ConduitModelField).required!,
+                baseType,
+                isRequired,
                 false,
-                (fields[field] as ConduitModelField).description!,
+                description,
+                fields[field],
               );
             }
           } else {
@@ -173,7 +190,8 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
               fields[field] as ConduitModelField,
               false,
               false,
-              (fields[field] as ConduitModelField).description!,
+              ParserUtils.getFieldDescription(fields[field]),
+              fields[field],
             );
           }
         }
@@ -188,34 +206,44 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     // if array contains simply a type
     if (typeof value[0] === 'string') {
       this.getResultFromString(processingObject, field, value[0], false, true, name);
-    } else if (value[0].type) {
+    } else if (ParserUtils.hasTypeProperty(value[0])) {
+      const baseType = ParserUtils.getBaseType(value[0]);
+      const isRequired = ParserUtils.isFieldRequired(value[0]);
+      const description = ParserUtils.getFieldDescription(value[0]);
+
       // if array contains a model
-      if (value[0].type === 'Relation') {
+      if (ParserUtils.isRelationType(value[0])) {
+        const model = ParserUtils.getRelationModel(value[0]);
         this.getResultFromRelation(
           processingObject,
           name,
           field,
-          value[0].model,
-          value[0].required,
+          model!,
+          isRequired,
           true,
+          value[0],
         );
-      } else if (typeof value[0].type === 'string') {
+      } else if (typeof baseType === 'string') {
         this.getResultFromString(
           processingObject,
           field,
-          value[0].type,
-          value[0].required,
+          baseType,
+          isRequired,
           true,
           name,
+          description,
+          value[0],
         );
-      } else if (Array.isArray(value[0].type)) {
+      } else if (Array.isArray(baseType)) {
         this.getResultFromArray(
           processingObject,
           name,
           field,
-          value[0].type as Array,
-          value[0].required,
+          baseType as Array,
+          isRequired,
           true,
+          description,
+          value[0],
         );
       }
       // if the array has "type" but is an object
@@ -224,15 +252,26 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           processingObject,
           name,
           field,
-          value[0].type,
-          value[0].required,
+          baseType,
+          isRequired,
           true,
+          description,
+          value[0],
         );
       }
     }
     // if array contains an object
     else {
-      this.getResultFromObject(processingObject, name, field, value[0], false, true);
+      this.getResultFromObject(
+        processingObject,
+        name,
+        field,
+        value[0],
+        false,
+        true,
+        undefined,
+        value[0],
+      );
     }
     return processingObject;
   }
