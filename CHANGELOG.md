@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.17.0-alpha.0](https://github.com/ConduitPlatform/Conduit/compare/v0.16.26...v0.17.0-alpha.0) (2026-05-19)
+
+
+### Features
+
+* v0.17-alpha ([#1471](https://github.com/ConduitPlatform/Conduit/issues/1471)) ([f56e0c8](https://github.com/ConduitPlatform/Conduit/commit/f56e0c8c4bd7a1f3e00c426dc5010780ae611f0e)), closes [#1404](https://github.com/ConduitPlatform/Conduit/issues/1404) [#1461](https://github.com/ConduitPlatform/Conduit/issues/1461)
+
 ### [0.16.26](https://github.com/ConduitPlatform/Conduit/compare/v0.16.25...v0.16.26) (2026-04-19)
 
 
