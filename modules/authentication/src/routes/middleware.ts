@@ -12,7 +12,6 @@ import { AccessToken, Client, User } from '../models/index.js';
 import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
-import moment from 'moment';
 import getToken = AuthUtils.getToken;
 
 /*
@@ -55,13 +54,6 @@ export async function handleAuthentication(
       'Token is expired or otherwise not valid',
     );
   }
-  // delete all expired tokens
-  AccessToken.getInstance()
-    .deleteMany({
-      expiresOn: { $lte: moment.utc().toDate() },
-    })
-    .catch();
-
   if (
     !(payload as JwtPayload).authorized &&
     path !== '/authentication/twoFa/verify' &&

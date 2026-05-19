@@ -81,7 +81,13 @@ function generateLog(
   if (routerRequest) {
     log += `(${routerType}) Request: ${call.request.path}`;
   } else {
-    log += `(${routerType})  Socket: ${call.request.event} socket: ${call.request.socket}`;
+    const socketReq = call.request as {
+      event: string;
+      socketId?: string;
+      socket?: string;
+    };
+    const socketLabel = socketReq.socketId ?? socketReq.socket;
+    log += `(${routerType})  Socket: ${socketReq.event} socket: ${socketLabel}`;
   }
   log += ` ${mapGrpcStatusToHttp(status) ?? '200'} ${latency}ms`;
 
