@@ -17,7 +17,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    name: Build chat
+    name: Build functions
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -27,6 +27,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build conduit chat
+      - name: Build conduit functions
         run: |
           DEV=TRUE make modules/functions

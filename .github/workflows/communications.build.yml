@@ -4,7 +4,7 @@ on:
     branches:
       - main
     paths:
-      - "modules/email/**"
+      - "modules/communications/**"
       - "libraries/grpc-sdk/**"
       - "libraries/module-tools/**"
 
@@ -17,7 +17,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    name: Build email
+    name: Build communications
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -27,6 +27,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build conduit email
+      - name: Build conduit communications
         run: |
-          DEV=TRUE make modules/email
+          DEV=TRUE make modules/communications

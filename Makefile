@@ -1,5 +1,5 @@
 GIT_SHA1 = $(shell git rev-parse --verify HEAD)
-IMAGE_TAG = $(shell git describe --tags `git rev-list --tags --max-count=1` 2> /dev/null || echo 'latest' )
+IMAGE_TAG ?= $(shell git describe --tags `git rev-list --tags --max-count=1` 2> /dev/null || echo 'latest' )
 
 ifeq ($(NEXT),TRUE)
 	TAG_SUFFIX = :next
@@ -9,14 +9,15 @@ else
 	TAG_SUFFIX = :$(IMAGE_TAG)
 endif
 
-IMAGE_DIRS = $(dir $(wildcard modules/*/Dockerfile))
+MODULE_DOCKERFILES = $(wildcard modules/*/Dockerfile)
+IMAGE_DIRS = $(patsubst %/Dockerfile,%,$(MODULE_DOCKERFILES))
 
 all: conduit $(IMAGE_DIRS)
 
 define build_docker_image
 	docker build --no-cache -t ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX) $(3)
 	docker push ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX)
-	$(eval SKIP_LATEST=$(if $(findstring $(2),alpha beta rc),true,false))
+	$(eval SKIP_LATEST=$(if $(or $(findstring alpha,$(2)),$(findstring beta,$(2)),$(findstring rc,$(2))),true,false))
 	@if [ "$(SKIP_LATEST)" = "false" ] && [ "$(TAG_SUFFIX)" != ":dev" ] && [ "$(TAG_SUFFIX)" != ":next" ]; then \
 		docker tag ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX) conduitplatform/$(1):$(2) ; \
 		docker tag ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX) ghcr.io/conduitplatform/$(1):latest ; \

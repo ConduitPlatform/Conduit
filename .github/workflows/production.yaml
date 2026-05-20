@@ -19,6 +19,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Set env
+        run: echo "RELEASE_VERSION=$(echo "${GITHUB_REF#refs/*/}" | sed 's/^v//')" >> "$GITHUB_ENV"
       - name: Log in to the Container registry
         uses: docker/login-action@v4
         with:
@@ -31,14 +35,21 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Build conduit modules
-        run: |
-          make all
+        run: make all IMAGE_TAG=${{ env.RELEASE_VERSION }}
   publish_sdk:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
       - name: Set env
-        run: echo "RELEASE_VERSION=$(echo ${GITHUB_REF#refs/*/} | sed 's/^v//')" >> $GITHUB_ENV
+        run: |
+          VERSION=$(echo "${GITHUB_REF#refs/*/}" | sed 's/^v//')
+          echo "RELEASE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          case "$VERSION" in
+            *-alpha*) echo "NPM_TAG=alpha" >> "$GITHUB_ENV" ;;
+            *-beta*) echo "NPM_TAG=beta" >> "$GITHUB_ENV" ;;
+            *-rc*) echo "NPM_TAG=rc" >> "$GITHUB_ENV" ;;
+            *) echo "NPM_TAG=" >> "$GITHUB_ENV" ;;
+          esac
       - uses: pnpm/action-setup@v4
         with:
           version: 10.9.0
@@ -55,8 +66,12 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Set version and publish
         run: |
-          pnpm version ${{ env.RELEASE_VERSION }} --no-git-tag-version
-          pnpm publish --access public --no-git-checks
+          pnpm version "$RELEASE_VERSION" --no-git-tag-version
+          publish_args=(--access public --no-git-checks)
+          if [ -n "${NPM_TAG:-}" ]; then
+            publish_args+=(--tag "$NPM_TAG")
+          fi
+          pnpm publish "${publish_args[@]}"
         working-directory: ./libraries/grpc-sdk
         env:
           NODE_AUTH_TOKEN: "${{ secrets.NPM_PUBLISH_TOKEN }}"
@@ -65,7 +80,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Set env
-        run: echo "RELEASE_VERSION=$(echo ${GITHUB_REF#refs/*/} | sed 's/^v//')" >> $GITHUB_ENV
+        run: |
+          VERSION=$(echo "${GITHUB_REF#refs/*/}" | sed 's/^v//')
+          echo "RELEASE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          case "$VERSION" in
+            *-alpha*) echo "NPM_TAG=alpha" >> "$GITHUB_ENV" ;;
+            *-beta*) echo "NPM_TAG=beta" >> "$GITHUB_ENV" ;;
+            *-rc*) echo "NPM_TAG=rc" >> "$GITHUB_ENV" ;;
+            *) echo "NPM_TAG=" >> "$GITHUB_ENV" ;;
+          esac
       - uses: pnpm/action-setup@v4
         with:
           version: 10.9.0
@@ -84,8 +107,12 @@ jobs:
         run: npx turbo run build --filter=@conduitplatform/grpc-sdk --filter=@conduitplatform/module-tools
       - name: Set version and publish
         run: |
-          pnpm version ${{ env.RELEASE_VERSION }} --no-git-tag-version
-          pnpm publish --access public --no-git-checks
+          pnpm version "$RELEASE_VERSION" --no-git-tag-version
+          publish_args=(--access public --no-git-checks)
+          if [ -n "${NPM_TAG:-}" ]; then
+            publish_args+=(--tag "$NPM_TAG")
+          fi
+          pnpm publish "${publish_args[@]}"
         working-directory: ./libraries/module-tools
         env:
           NODE_AUTH_TOKEN: "${{ secrets.NPM_PUBLISH_TOKEN }}"
