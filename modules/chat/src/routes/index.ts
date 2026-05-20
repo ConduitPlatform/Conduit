@@ -496,7 +496,7 @@ export class ChatRoutes {
     const { user } = call.request.context;
     const rooms = await ChatRoom.getInstance().findMany(
       { participants: user._id },
-      '_id',
+      { select: '_id' },
     );
     return { event: 'join-room', rooms: rooms.map((room: ChatRoom) => room._id) };
   }
