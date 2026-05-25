@@ -45,7 +45,8 @@ jobs:
         id: release
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
-            VERSION=$(echo "${GITHUB_REF#refs/*/}" | sed 's/^v//')
+            REF_NAME="${GITHUB_REF#refs/*/}"
+            VERSION="${REF_NAME#v}"
             echo "release_version=${VERSION}" >> "$GITHUB_OUTPUT"
             if [ "${{ github.event.release.prerelease }}" = "true" ]; then
               echo "publish_latest=false" >> "$GITHUB_OUTPUT"
@@ -150,28 +151,28 @@ jobs:
 
       - name: Build and push (dev)
         if: needs.prepare.outputs.channel == 'dev'
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@v7
         with:
-          files: docker-bake.hcl
+          files: |
+            docker-bake.hcl
+            cwd://${{ steps.meta_dev.outputs.bake-file }}
           targets: ${{ matrix.target }}
           push: true
           set: |
             conduit-base.args.BUILDING_SERVICE=${{ matrix.building_service }}
-            *.tags=${{ steps.meta_dev.outputs.tags }}
-            *.labels=${{ steps.meta_dev.outputs.labels }}
             *.cache-from=type=gha,scope=${{ matrix.target }}
             *.cache-to=type=gha,mode=max,scope=${{ matrix.target }}
 
       - name: Build and push (release)
         if: needs.prepare.outputs.channel == 'release'
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@v7
         with:
-          files: docker-bake.hcl
+          files: |
+            docker-bake.hcl
+            cwd://${{ steps.meta_release.outputs.bake-file }}
           targets: ${{ matrix.target }}
           push: true
           set: |
             conduit-base.args.BUILDING_SERVICE=${{ matrix.building_service }}
-            *.tags=${{ steps.meta_release.outputs.tags }}
-            *.labels=${{ steps.meta_release.outputs.labels }}
             *.cache-from=type=gha,scope=${{ matrix.target }}
             *.cache-to=type=gha,mode=max,scope=${{ matrix.target }}

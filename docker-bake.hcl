@@ -6,6 +6,8 @@ variable "BUILDING_SERVICE" {
   default = ""
 }
 
+target "docker-metadata-action" {}
+
 target "_platforms" {
   platforms = PLATFORMS
 }
@@ -29,7 +31,7 @@ target "conduit-builder" {
 }
 
 target "_runtime" {
-  inherits = ["_platforms"]
+  inherits = ["_platforms", "docker-metadata-action"]
   contexts = {
     conduit-base    = "target:conduit-base"
     conduit-builder = "target:conduit-builder"
@@ -91,7 +93,7 @@ target "storage" {
 }
 
 target "conduit-standalone" {
-  inherits = ["_platforms"]
+  inherits = ["_platforms", "docker-metadata-action"]
   context    = "."
   dockerfile = "standalone.Dockerfile"
   contexts = {
