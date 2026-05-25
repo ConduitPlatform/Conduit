@@ -22,7 +22,7 @@ jobs:
             *-rc*) echo "NPM_TAG=rc" >> "$GITHUB_ENV" ;;
             *) echo "NPM_TAG=" >> "$GITHUB_ENV" ;;
           esac
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.9.0
       - uses: actions/setup-node@v6
@@ -61,7 +61,7 @@ jobs:
             *-rc*) echo "NPM_TAG=rc" >> "$GITHUB_ENV" ;;
             *) echo "NPM_TAG=" >> "$GITHUB_ENV" ;;
           esac
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.9.0
       - uses: actions/setup-node@v6
