@@ -1,8 +1,8 @@
-FROM conduit-builder:latest
+FROM conduit-builder
 
 WORKDIR /app
 
-COPY --from=conduit-base:latest /app/modules/storage /app/modules/storage
+COPY --from=conduit-base /app/modules/storage /app/modules/storage
 
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts && pnpm store prune
 

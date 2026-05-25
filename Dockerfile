@@ -7,10 +7,17 @@ COPY . /app
 WORKDIR /app
 
 ARG PROTOC_VERSION=29.3
-RUN curl -OL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip" && \
-    unzip -o "protoc-${PROTOC_VERSION}-linux-x86_64.zip" -d /usr/local && \
+ARG TARGETARCH
+RUN case "${TARGETARCH}" in \
+      amd64) PROTOC_ARCH=x86_64 ;; \
+      arm64) PROTOC_ARCH=aarch_64 ;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2 && exit 1 ;; \
+    esac && \
+    curl -fsSL -o /tmp/protoc.zip \
+      "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip" && \
+    unzip -o /tmp/protoc.zip -d /usr/local && \
     chmod +x /usr/local/bin/protoc && \
-    rm -f "protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+    rm -f /tmp/protoc.zip
 
 RUN npm install -g node-gyp ts-proto pnpm@10.9.0
 

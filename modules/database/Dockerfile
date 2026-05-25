@@ -1,8 +1,8 @@
-FROM conduit-builder:latest
+FROM conduit-builder
 
 WORKDIR /app
 
-COPY --from=conduit-base:latest /app/modules/database /app/modules/database
+COPY --from=conduit-base /app/modules/database /app/modules/database
 
 RUN apk update && \
     apk add --no-cache --virtual .gyp python3 py3-setuptools make g++ && \

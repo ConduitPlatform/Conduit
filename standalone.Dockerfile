@@ -2,7 +2,7 @@ FROM node:24-alpine
 
 WORKDIR /app
 
-COPY --from=conduit-base:latest /app/ /app/
+COPY --from=conduit-base /app/ /app/
 
 RUN apk update && \
     apk add --no-cache --virtual .gyp python3 py3-setuptools make g++ && \

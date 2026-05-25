@@ -1,10 +1,10 @@
-FROM conduit-builder:latest
+FROM conduit-builder
 
 WORKDIR /app
 
-COPY --from=conduit-base:latest /app/packages /app/packages
-COPY --from=conduit-base:latest /app/libraries/hermes /app/libraries/hermes
-COPY --from=conduit-base:latest /app/libraries/node-2fa /app/libraries/node-2fa
+COPY --from=conduit-base /app/packages /app/packages
+COPY --from=conduit-base /app/libraries/hermes /app/libraries/hermes
+COPY --from=conduit-base /app/libraries/node-2fa /app/libraries/node-2fa
 
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts && pnpm store prune
 

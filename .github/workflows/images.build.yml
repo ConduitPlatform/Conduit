@@ -1,0 +1,177 @@
+name: Build container images
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'dev = path-filtered on push only; all = build every image'
+        required: false
+        default: all
+        type: choice
+        options:
+          - dev
+          - all
+  push:
+    branches:
+      - main
+  release:
+    types:
+      - created
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_PREFIX: ghcr.io/conduitplatform
+  DOCKERHUB_PREFIX: conduitplatform
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      channel: ${{ steps.matrix.outputs.channel }}
+      has_targets: ${{ steps.matrix.outputs.has_targets }}
+      release_version: ${{ steps.release.outputs.release_version }}
+      publish_latest: ${{ steps.release.outputs.publish_latest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release metadata
+        id: release
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION=$(echo "${GITHUB_REF#refs/*/}" | sed 's/^v//')
+            echo "release_version=${VERSION}" >> "$GITHUB_OUTPUT"
+            if [ "${{ github.event.release.prerelease }}" = "true" ]; then
+              echo "publish_latest=false" >> "$GITHUB_OUTPUT"
+            elif echo "${VERSION}" | grep -Eq '(alpha|beta|rc)'; then
+              echo "publish_latest=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "publish_latest=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "release_version=" >> "$GITHUB_OUTPUT"
+            echo "publish_latest=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Collect changed files
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.channel }}" = "all" ]; then
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            git diff --name-only HEAD~1 HEAD 2>/dev/null > /tmp/changed.txt || git ls-files > /tmp/changed.txt
+          else
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              git ls-files > /tmp/changed.txt
+            else
+              git diff --name-only "$BEFORE" "${{ github.sha }}" > /tmp/changed.txt
+            fi
+          fi
+          {
+            echo "files<<EOF"
+            cat /tmp/changed.txt
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Resolve build matrix
+        id: matrix
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          CHANGED_FILES: ${{ steps.changed.outputs.files }}
+          FORCE_ALL: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.channel == 'all') }}
+        run: node scripts/resolve-docker-targets.mjs
+
+  build:
+    needs: prepare
+    if: needs.prepare.outputs.has_targets == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    name: ${{ matrix.name }} (multi-arch)
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: needs.prepare.outputs.channel == 'release'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Docker metadata (dev)
+        if: needs.prepare.outputs.channel == 'dev'
+        id: meta_dev
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}
+          tags: |
+            type=raw,value=dev
+
+      - name: Docker metadata (release)
+        if: needs.prepare.outputs.channel == 'release'
+        id: meta_release
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}
+            ${{ env.DOCKERHUB_PREFIX }}/${{ matrix.image }}
+          tags: |
+            type=raw,value=${{ needs.prepare.outputs.release_version }}
+            type=raw,value=latest,enable=${{ needs.prepare.outputs.publish_latest == 'true' }}
+
+      - name: Build and push (dev)
+        if: needs.prepare.outputs.channel == 'dev'
+        uses: docker/bake-action@v6
+        with:
+          files: docker-bake.hcl
+          targets: ${{ matrix.target }}
+          push: true
+          set: |
+            conduit-base.args.BUILDING_SERVICE=${{ matrix.building_service }}
+            *.tags=${{ steps.meta_dev.outputs.tags }}
+            *.labels=${{ steps.meta_dev.outputs.labels }}
+            *.cache-from=type=gha,scope=${{ matrix.target }}
+            *.cache-to=type=gha,mode=max,scope=${{ matrix.target }}
+
+      - name: Build and push (release)
+        if: needs.prepare.outputs.channel == 'release'
+        uses: docker/bake-action@v6
+        with:
+          files: docker-bake.hcl
+          targets: ${{ matrix.target }}
+          push: true
+          set: |
+            conduit-base.args.BUILDING_SERVICE=${{ matrix.building_service }}
+            *.tags=${{ steps.meta_release.outputs.tags }}
+            *.labels=${{ steps.meta_release.outputs.labels }}
+            *.cache-from=type=gha,scope=${{ matrix.target }}
+            *.cache-to=type=gha,mode=max,scope=${{ matrix.target }}

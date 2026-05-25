@@ -1,9 +1,9 @@
-FROM conduit-builder:latest
+FROM conduit-builder
 
 WORKDIR /app
 
-COPY --from=conduit-base:latest /app/modules/authentication /app/modules/authentication
-COPY --from=conduit-base:latest /app/libraries/node-2fa /app/libraries/node-2fa
+COPY --from=conduit-base /app/modules/authentication /app/modules/authentication
+COPY --from=conduit-base /app/libraries/node-2fa /app/libraries/node-2fa
 
 RUN apk update && \
     apk add --no-cache --virtual .gyp python3 make g++ && \
