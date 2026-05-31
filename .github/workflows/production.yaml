@@ -63,7 +63,7 @@ jobs:
           esac
       - uses: pnpm/action-setup@v6
         with:
-          version: 10.9.0
+          version: 11.5.0
       - uses: actions/setup-node@v6
         with:
           node-version: 24

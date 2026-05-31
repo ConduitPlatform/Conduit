@@ -19,7 +19,7 @@ RUN case "${TARGETARCH}" in \
     chmod +x /usr/local/bin/protoc && \
     rm -f /tmp/protoc.zip
 
-RUN npm install -g node-gyp ts-proto pnpm@10.9.0
+RUN npm install -g node-gyp ts-proto pnpm@11.5.0
 
 RUN pnpm install --frozen-lockfile --ignore-scripts && \
     pnpm rebuild @apollo/protobufjs @firebase/util bcrypt esbuild keccak msgpackr-extract protobufjs secp256k1 sqlite3 unrs-resolver vue-demi && \

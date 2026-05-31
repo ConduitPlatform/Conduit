@@ -310,11 +310,7 @@ export class SchemaAdmin {
     }
 
     return this.schemaController.createSchema(
-      new ConduitSchema(
-        requestedSchema.name,
-        requestedSchema.fields,
-        requestedSchema.modelOptions,
-      ),
+      new ConduitSchema(requestedSchema.name, requestedSchema.fields, modelOptions),
       'update',
     );
   }

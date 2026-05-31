@@ -2,7 +2,7 @@ FROM node:24-alpine
 
 WORKDIR /app
 
-RUN npm install -g pnpm@10.9.0
+RUN npm install -g pnpm@11.5.0
 
 COPY --from=conduit-base /app/libraries/grpc-sdk /app/libraries/grpc-sdk
 COPY --from=conduit-base /app/libraries/module-tools /app/libraries/module-tools
