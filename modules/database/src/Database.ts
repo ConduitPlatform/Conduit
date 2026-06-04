@@ -31,6 +31,14 @@ import {
   Schema as SchemaDto,
   UpdateManyRequest,
   UpdateRequest,
+  DeleteVectorIndexRequest,
+  VectorCapabilitiesRequest,
+  VectorCapabilitiesResponse,
+  VectorIndex,
+  VectorIndexListRequest,
+  VectorIndexListResponse,
+  VectorIndexRequest,
+  VectorSearchRequest,
 } from './protoTypes/database.js';
 import {
   CreateSchemaExtensionRequest,
@@ -97,6 +105,11 @@ export default class DatabaseModule extends ManagedModule<Config> {
       migrate: this.migrate.bind(this),
       getDatabaseType: this.getDatabaseType.bind(this),
       generateId: this.generateId.bind(this),
+      getVectorCapabilities: this.getVectorCapabilities.bind(this),
+      createVectorIndex: this.createVectorIndex.bind(this),
+      getVectorIndexes: this.getVectorIndexes.bind(this),
+      deleteVectorIndex: this.deleteVectorIndex.bind(this),
+      vectorSearch: this.vectorSearch.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -943,6 +956,117 @@ export default class DatabaseModule extends ManagedModule<Config> {
     callback(null, { result: exist });
   }
 
+  async getVectorCapabilities(
+    call: GrpcRequest<VectorCapabilitiesRequest>,
+    callback: GrpcResponse<VectorCapabilitiesResponse>,
+  ) {
+    try {
+      const result = await this._activeAdapter.getVectorCapabilities(
+        call.request.schemaName,
+      );
+      callback(null, result);
+    } catch (err) {
+      callback({ code: status.INTERNAL, message: (err as Error).message });
+    }
+  }
+
+  async createVectorIndex(
+    call: GrpcRequest<VectorIndexRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    try {
+      if (!call.request.index) {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Vector index definition is required',
+        });
+      }
+      const moduleName = call.metadata!.get('module-name')![0] as string;
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      if (!(await canModify(moduleName, schemaAdapter.model))) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to create vector indexes for ${call.request.schemaName}!`,
+        });
+      }
+      const result = await this._activeAdapter.createVectorIndex(
+        call.request.schemaName,
+        this.parseVectorIndex(call.request.index),
+      );
+      callback(null, { result: JSON.stringify(result) });
+    } catch (err) {
+      callback({ code: status.INTERNAL, message: (err as Error).message });
+    }
+  }
+
+  async getVectorIndexes(
+    call: GrpcRequest<VectorIndexListRequest>,
+    callback: GrpcResponse<VectorIndexListResponse>,
+  ) {
+    try {
+      const indexes = await this._activeAdapter.getVectorIndexes(call.request.schemaName);
+      callback(null, {
+        indexes: indexes.map(index => ({
+          field: index.field,
+          dimensions: index.dimensions,
+          similarity: index.similarity,
+          name: index.name,
+          method: index.method,
+          filterFields: [...(index.filterFields ?? [])],
+          options: index.options ? JSON.stringify(index.options) : undefined,
+        })),
+      });
+    } catch (err) {
+      callback({ code: status.INTERNAL, message: (err as Error).message });
+    }
+  }
+
+  async deleteVectorIndex(
+    call: GrpcRequest<DeleteVectorIndexRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    try {
+      const moduleName = call.metadata!.get('module-name')![0] as string;
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      if (!(await canModify(moduleName, schemaAdapter.model))) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to delete vector indexes for ${call.request.schemaName}!`,
+        });
+      }
+      const result = await this._activeAdapter.deleteVectorIndex(
+        call.request.schemaName,
+        call.request.indexName,
+      );
+      callback(null, { result: JSON.stringify(result) });
+    } catch (err) {
+      callback({ code: status.INTERNAL, message: (err as Error).message });
+    }
+  }
+
+  async vectorSearch(
+    call: GrpcRequest<VectorSearchRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    try {
+      const result = await this._activeAdapter.vectorSearch({
+        schemaName: call.request.schemaName,
+        field: call.request.field,
+        vector: call.request.vector,
+        indexName: call.request.indexName,
+        filter: call.request.filter ? JSON.parse(call.request.filter) : undefined,
+        limit: call.request.limit,
+        numCandidates: call.request.numCandidates,
+        select: call.request.select,
+        userId: call.request.userId,
+        scope: call.request.scope,
+      });
+      callback(null, { result: JSON.stringify(result) });
+    } catch (err) {
+      callback({ code: status.INTERNAL, message: (err as Error).message });
+    }
+  }
+
   async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<Empty>) {
     if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
       const schemaName = call.request.schemaName;
@@ -975,6 +1099,18 @@ export default class DatabaseModule extends ManagedModule<Config> {
   ) {
     const result = this._activeAdapter.generateId();
     callback(null, { result });
+  }
+
+  private parseVectorIndex(index: VectorIndex) {
+    return {
+      field: index.field,
+      dimensions: index.dimensions,
+      similarity: index.similarity as any,
+      name: index.name,
+      method: index.method as any,
+      filterFields: index.filterFields,
+      options: index.options ? JSON.parse(index.options) : undefined,
+    };
   }
 
   private registerInstanceSyncEvents() {
