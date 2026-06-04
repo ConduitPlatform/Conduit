@@ -131,7 +131,7 @@ jobs:
       - name: Docker metadata (dev)
         if: needs.prepare.outputs.channel == 'dev'
         id: meta_dev
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}
           tags: |
@@ -140,7 +140,7 @@ jobs:
       - name: Docker metadata (release)
         if: needs.prepare.outputs.channel == 'release'
         id: meta_release
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: |
             ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}
