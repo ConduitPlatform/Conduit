@@ -8,6 +8,10 @@ import {
   RawMongoQuery,
   RawSQLQuery,
   TYPE,
+  VectorCapabilities,
+  VectorIndexDefinition,
+  VectorSearchInput,
+  VectorSearchResult,
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import type { Config } from '../config/index.js';
@@ -295,6 +299,42 @@ export abstract class DatabaseAdapter<T extends Schema> {
     schemaName: string,
     rawQuery: RawMongoQuery | RawSQLQuery,
   ): Promise<any>;
+
+  getVectorCapabilities(_schemaName?: string): Promise<VectorCapabilities> {
+    return Promise.resolve({
+      supported: false,
+      storage: false,
+      indexing: false,
+      search: false,
+      provider: 'unsupported',
+      reason: `${this.getDatabaseType()} does not support Conduit vector search`,
+    });
+  }
+
+  createVectorIndex(_schemaName: string, _index: VectorIndexDefinition): Promise<string> {
+    throw new GrpcError(
+      status.UNIMPLEMENTED,
+      `${this.getDatabaseType()} does not support vector indexes`,
+    );
+  }
+
+  getVectorIndexes(_schemaName: string): Promise<VectorIndexDefinition[]> {
+    return Promise.resolve([]);
+  }
+
+  deleteVectorIndex(_schemaName: string, _indexName: string): Promise<string> {
+    throw new GrpcError(
+      status.UNIMPLEMENTED,
+      `${this.getDatabaseType()} does not support vector indexes`,
+    );
+  }
+
+  vectorSearch(_request: VectorSearchInput): Promise<VectorSearchResult[]> {
+    throw new GrpcError(
+      status.UNIMPLEMENTED,
+      `${this.getDatabaseType()} does not support vector search`,
+    );
+  }
 
   abstract syncSchema(name: string): Promise<void>;
 

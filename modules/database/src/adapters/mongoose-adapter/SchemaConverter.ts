@@ -87,6 +87,10 @@ function convert(value: any, key: any, parentValue: any) {
     parentValue[key].type = Schema.Types.Mixed;
   }
 
+  if (parentValue[key]?.type === 'Vector') {
+    parentValue[key].type = [Number];
+  }
+
   if (!isNil(parentValue[key]) && parentValue[key] === 'JSON') {
     parentValue[key] = Schema.Types.Mixed;
   }

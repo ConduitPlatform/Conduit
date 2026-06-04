@@ -36,6 +36,18 @@ export function fieldsValidator(
         );
       }
 
+      if ((target as ConduitModelField & { type?: string }).type === 'Vector') {
+        const dimensions = (target as ConduitModelField & { dimensions?: number })
+          .dimensions;
+        if (!Number.isInteger(dimensions) || dimensions! <= 0) {
+          throw new ConduitError(
+            'INVALID_ARGUMENTS',
+            400,
+            `Schema '${schemaName}' vector field '${f}' requires a positive integer 'dimensions' value.`,
+          );
+        }
+      }
+
       if (target.hasOwnProperty('type') && typeof target.type === 'object') {
         if (Array.isArray(target.type)) {
           if ((target.type as unknown[]).length !== 1) {

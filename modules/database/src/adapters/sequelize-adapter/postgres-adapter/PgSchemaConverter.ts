@@ -94,6 +94,8 @@ function extractType(type: string, sqlType?: SQLDataType) {
       }
     case 'JSON':
       return DataTypes.JSONB;
+    case 'Vector':
+      return (DataTypes as any).VECTOR;
     case 'Relation':
     case 'ObjectId':
       return DataTypes.UUID;
@@ -152,6 +154,9 @@ function extractObjectType(objectField: Indexable):
       res.type = extractArrayType(objectField.type).type;
     } else {
       res.type = extractType(objectField.type, objectField.sqlType);
+      if (objectField.type === 'Vector') {
+        res.type = res.type(objectField.dimensions);
+      }
     }
     if (objectField.hasOwnProperty('default')) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);

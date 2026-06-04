@@ -1,3 +1,5 @@
+import type { Indexable } from './Indexable.js';
+
 export enum TYPE {
   String = 'String',
   Number = 'Number',
@@ -6,6 +8,7 @@ export enum TYPE {
   ObjectId = 'ObjectId',
   JSON = 'JSON',
   Relation = 'Relation',
+  Vector = 'Vector',
 }
 
 export enum SQLDataType {
@@ -20,6 +23,19 @@ export enum SQLDataType {
   TIME = 'TIME',
   DATETIME = 'DATETIME',
   TIMESTAMP = 'TIMESTAMP',
+  VECTOR = 'VECTOR',
+}
+
+export enum VectorSimilarity {
+  Cosine = 'cosine',
+  Euclidean = 'euclidean',
+  DotProduct = 'dotProduct',
+}
+
+export enum VectorIndexMethod {
+  HNSW = 'hnsw',
+  IVFFlat = 'ivfflat',
+  Flat = 'flat',
 }
 
 export enum MongoIndexType {
@@ -109,6 +125,14 @@ export type ConduitModelFieldJSON = BasicConduitModelField & {
   type: TYPE.JSON | TYPE.JSON[];
 };
 
+export type ConduitModelFieldVector = BasicConduitModelField & {
+  type: TYPE.Vector;
+  dimensions: number;
+  similarity?: VectorSimilarity;
+  provider?: string;
+  model?: string;
+};
+
 export type ConduitModelFieldEnum = BasicConduitModelField & {
   type: ExcludeJSONRelation<TYPE> | ExcludeJSONRelation<TYPE>[];
   enum: any;
@@ -127,6 +151,7 @@ export type allowedTypes =
   | ConduitModelField
   | ConduitModelFieldEnum
   | ConduitModelFieldJSON
+  | ConduitModelFieldVector
   | ConduitModelFieldRelation;
 
 type embeddableArray =
@@ -195,6 +220,7 @@ export interface ConduitSchemaOptions {
   };
   /** Includes readonly/const-asserted index arrays (e.g. `as const` in schema definitions). */
   indexes?: ReadonlyArray<ModelOptionsIndexes>;
+  vectorIndexes?: ReadonlyArray<VectorIndexDefinition>;
 }
 
 export interface SchemaFieldIndex {
@@ -246,4 +272,55 @@ export interface PostgresIndexOptions {
   where?: {
     [opt: string]: any;
   };
+}
+
+export interface VectorIndexDefinition {
+  name?: string;
+  field: string;
+  dimensions: number;
+  similarity: VectorSimilarity;
+  method?: VectorIndexMethod;
+  filterFields?: string[];
+  options?: {
+    numCandidates?: number;
+    quantization?: 'none' | 'scalar' | 'binary';
+    hnsw?: {
+      maxEdges?: number;
+      numEdgeCandidates?: number;
+      m?: number;
+      efConstruction?: number;
+    };
+    ivfflat?: {
+      lists?: number;
+      probes?: number;
+    };
+    storedSource?: boolean | { include?: string[]; exclude?: string[] };
+  };
+}
+
+export interface VectorCapabilities {
+  supported: boolean;
+  storage: boolean;
+  indexing: boolean;
+  search: boolean;
+  provider: 'mongodb' | 'postgres' | 'unsupported';
+  reason?: string;
+}
+
+export interface VectorSearchInput {
+  schemaName: string;
+  field: string;
+  vector: number[];
+  indexName?: string;
+  filter?: Indexable;
+  limit?: number;
+  numCandidates?: number;
+  select?: string;
+  userId?: string;
+  scope?: string;
+}
+
+export interface VectorSearchResult<T = Indexable> {
+  document: T;
+  score: number;
 }

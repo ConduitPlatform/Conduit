@@ -7,6 +7,7 @@ import {
   Config,
   Core,
   DatabaseProvider,
+  EmbeddingsProvider,
   Email,
   PushNotifications,
   Router,
@@ -66,6 +67,7 @@ class ConduitGrpcSdk {
   private readonly _availableModules: any = {
     router: Router,
     database: DatabaseProvider,
+    embeddings: EmbeddingsProvider,
     storage: Storage,
     email: Email,
     pushNotifications: PushNotifications,
@@ -221,6 +223,15 @@ class ConduitGrpcSdk {
 
   get databaseProvider(): DatabaseProvider | null {
     return this.database;
+  }
+
+  get embeddings(): EmbeddingsProvider | null {
+    if (this._modules['embeddings']) {
+      return this._modules['embeddings'] as EmbeddingsProvider;
+    } else {
+      ConduitGrpcSdk.Logger.warn('Embeddings provider not up yet!');
+      return null;
+    }
   }
 
   get storage(): Storage | null {

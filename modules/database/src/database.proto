@@ -156,6 +156,60 @@ message GetDatabaseTypeResponse {
   string result = 1;
 }
 
+message VectorCapabilitiesRequest {
+  optional string schemaName = 1;
+}
+
+message VectorCapabilitiesResponse {
+  bool supported = 1;
+  bool storage = 2;
+  bool indexing = 3;
+  bool search = 4;
+  string provider = 5;
+  optional string reason = 6;
+}
+
+message VectorIndex {
+  string field = 1;
+  int32 dimensions = 2;
+  string similarity = 3;
+  optional string name = 4;
+  optional string method = 5;
+  repeated string filterFields = 6;
+  optional string options = 7;
+}
+
+message VectorIndexRequest {
+  string schemaName = 1;
+  VectorIndex index = 2;
+}
+
+message VectorIndexListRequest {
+  string schemaName = 1;
+}
+
+message VectorIndexListResponse {
+  repeated VectorIndex indexes = 1;
+}
+
+message DeleteVectorIndexRequest {
+  string schemaName = 1;
+  string indexName = 2;
+}
+
+message VectorSearchRequest {
+  string schemaName = 1;
+  string field = 2;
+  repeated double vector = 3;
+  optional string indexName = 4;
+  optional string filter = 5;
+  optional int32 limit = 6;
+  optional int32 numCandidates = 7;
+  optional string select = 8;
+  optional string userId = 9;
+  optional string scope = 10;
+}
+
 service DatabaseProvider {
   rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (Schema);
   rpc GetSchema(GetSchemaRequest) returns (Schema);
@@ -182,4 +236,9 @@ service DatabaseProvider {
   rpc createView(CreateViewRequest) returns (google.protobuf.Empty);
   rpc deleteView(DeleteViewRequest) returns (google.protobuf.Empty);
   rpc columnExistence(ColumnExistenceRequest) returns (ColumnExistenceResponse);
+  rpc getVectorCapabilities(VectorCapabilitiesRequest) returns (VectorCapabilitiesResponse);
+  rpc createVectorIndex(VectorIndexRequest) returns (QueryResponse);
+  rpc getVectorIndexes(VectorIndexListRequest) returns (VectorIndexListResponse);
+  rpc deleteVectorIndex(DeleteVectorIndexRequest) returns (QueryResponse);
+  rpc vectorSearch(VectorSearchRequest) returns (QueryResponse);
 }
