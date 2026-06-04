@@ -324,11 +324,9 @@ export default class Authentication extends ManagedModule<Config> {
     }
     this.refreshAppRoutes();
   }
-
   async initializeMetrics() {
-    // @improve-metrics
-    // TODO: This should initialize 'logged_in_users_total' based on valid tokens
-    // Gauge value should also decrease on latest token expiry.
+    AuthUtils.initMetricsRedis(this.grpcSdk);
+    await AuthUtils.reconcileLoggedInUsersMetric();
   }
 
   // produces login credentials for a user without them having to login
@@ -358,6 +356,7 @@ export default class Authentication extends ManagedModule<Config> {
         clientId,
         config,
       });
+
       return callback(null, {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken ?? undefined,
@@ -560,6 +559,7 @@ export default class Authentication extends ManagedModule<Config> {
       config,
       isRefresh: false,
     });
+
     return callback(null, {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken ?? undefined,
@@ -767,7 +767,11 @@ export default class Authentication extends ManagedModule<Config> {
     await User.getInstance().findByIdAndUpdate(user._id, { active });
     callback(null, { message: 'ok' });
     if (!active) {
-      TokenProvider.getInstance().deleteUserTokens({ user: id });
+      await TokenProvider.getInstance().deleteUserTokens({
+        user: id,
+      });
+
+      TokenProvider.getInstance().trackLoggedOutUserMetric(id);
     }
   }
 
@@ -942,12 +946,16 @@ export default class Authentication extends ManagedModule<Config> {
 
   private startTokenCleanup() {
     if (this.tokenCleanupInterval) return;
-    const cleanup = () => {
-      models.AccessToken.getInstance()
-        .deleteMany({ expiresOn: { $lte: new Date() } })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(`Token cleanup failed: ${e.message}`);
+    const cleanup = async () => {
+      try {
+        await models.AccessToken.getInstance().deleteMany({
+          expiresOn: { $lte: new Date() },
         });
+        await AuthUtils.cleanupExpiredUsers();
+        await AuthUtils.reconcileLoggedInUsersMetric();
+      } catch (e) {
+        ConduitGrpcSdk.Logger.error(`Token cleanup failed: ${(e as Error).message}`);
+      }
     };
     cleanup();
     this.tokenCleanupInterval = setInterval(cleanup, 5 * 60 * 1000);

@@ -151,10 +151,11 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   ): Promise<UnparsedRouterResponse> {
     const { magicToken } = call.request.urlParams;
     const { user, data } = await this.redeemMagicToken(magicToken);
+    const config = ConfigController.getInstance().config;
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: data.clientId,
-      config: ConfigController.getInstance().config,
+      config,
     });
   }
 

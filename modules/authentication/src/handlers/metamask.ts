@@ -153,7 +153,6 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
       'metamask.nonce': uuid(),
     });
 
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     const config = ConfigController.getInstance().config;
     return TokenProvider.getInstance().provideUserTokens({
       user,

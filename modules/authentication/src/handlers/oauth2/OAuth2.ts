@@ -211,11 +211,10 @@ export abstract class OAuth2<
       stateToken.data.invitationToken,
       stateToken.data.anonymousUserId,
     );
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       this.settings.finalRedirect;
+
     return TokenProvider.getInstance().provideUserTokens(
       {
         user,
@@ -242,8 +241,6 @@ export abstract class OAuth2<
       call.request.context.anonymousUser?._id,
     );
     const config = ConfigController.getInstance().config;
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: call.request.context.clientId,

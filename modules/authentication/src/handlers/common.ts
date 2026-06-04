@@ -60,8 +60,10 @@ export class CommonHandlers implements IAuthenticationStrategy {
         expiresOn: { $lte: moment.utc().toDate() },
       })
       .catch();
+    const user = oldRefreshToken.user as User;
+
     return TokenProvider.getInstance().provideUserTokens({
-      user: oldRefreshToken.user as User,
+      user,
       clientId,
       config,
       twoFaPass: true,
@@ -76,7 +78,6 @@ export class CommonHandlers implements IAuthenticationStrategy {
     const config: Config = ConfigController.getInstance().config;
     const authToken = getToken(call.request.headers, call.request.cookies, 'access');
     const clientConfig = config.clients;
-    ConduitGrpcSdk.Metrics?.decrement('logged_in_users_total');
     await TokenProvider.getInstance().logOutClientOperations(
       this.grpcSdk,
       clientConfig,
@@ -84,6 +85,10 @@ export class CommonHandlers implements IAuthenticationStrategy {
       clientId,
       user._id,
     );
+
+    if (!clientConfig.multipleUserSessions) {
+      TokenProvider.getInstance().trackLoggedOutUserMetric(user._id);
+    }
     const removeCookies = [];
     if (config.refreshTokens.enabled && config.refreshTokens.setCookie) {
       removeCookies.push({

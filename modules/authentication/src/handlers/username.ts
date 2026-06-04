@@ -101,9 +101,6 @@ export class UsernameHandlers implements IAuthenticationStrategy {
     }
 
     await authenticateChecks(password, config, user);
-
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId,

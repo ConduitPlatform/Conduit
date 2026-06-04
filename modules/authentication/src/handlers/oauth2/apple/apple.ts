@@ -145,7 +145,6 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       stateToken.data.anonymousUserId,
     );
     await Token.getInstance().deleteOne(stateToken);
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
@@ -236,7 +235,6 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       stateToken.data.anonymousUserId,
     );
     await Token.getInstance().deleteOne(stateToken);
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
     const conduitClientId = stateToken.data.clientId;
 

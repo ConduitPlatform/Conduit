@@ -476,6 +476,7 @@ export class TwoFa implements IAuthenticationStrategy {
       config,
       twoFaPass: true,
     });
+
     result.message = `You have ${codeSet.codes.length} back up codes left`;
     return result;
   }

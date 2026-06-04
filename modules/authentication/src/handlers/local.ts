@@ -425,7 +425,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
     await authenticateChecks(password, config, user);
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId,
@@ -544,6 +543,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
     await TokenProvider.getInstance().deleteUserTokens({
       user: user._id,
     });
+
+    TokenProvider.getInstance().trackLoggedOutUserMetric(user._id);
 
     return 'Password reset successful';
   }
