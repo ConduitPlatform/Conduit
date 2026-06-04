@@ -2,6 +2,7 @@ import { Schema } from 'mongoose';
 import {
   ConduitModelField,
   ConduitSchema,
+  ModelOptionsIndexes,
   MongoIndexType,
   SchemaFieldIndex,
 } from '@conduitplatform/grpc-sdk';
@@ -119,7 +120,9 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
 }
 
 function convertModelOptionsIndexes(copy: ConduitSchema) {
-  for (const index of copy.modelOptions.indexes!) {
+  if (!copy.modelOptions.indexes?.length) return copy;
+  const mutIndexes = copy.modelOptions.indexes as ModelOptionsIndexes[];
+  for (const index of mutIndexes) {
     // compound indexes are maintained in modelOptions in order to be created after schema creation
     // single field index => add it to specified schema field
     if (index.fields.length !== 1) continue;
@@ -148,7 +151,7 @@ function convertModelOptionsIndexes(copy: ConduitSchema) {
         modelField.index![option as keyof SchemaFieldIndex] = optionValue;
       }
     }
-    copy.modelOptions.indexes!.splice(copy.modelOptions.indexes!.indexOf(index), 1);
+    mutIndexes.splice(mutIndexes.indexOf(index), 1);
   }
   return copy;
 }

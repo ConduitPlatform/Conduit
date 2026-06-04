@@ -4,4 +4,5 @@ export interface IView {
   originalSchema: string;
   joinedSchemas: string[];
   query: JSON;
+  lastAccessedAt?: Date;
 }

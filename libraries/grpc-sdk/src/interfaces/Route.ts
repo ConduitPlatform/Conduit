@@ -1,4 +1,4 @@
-import { allowedTypes, ConduitModel, TYPE } from './Model.js';
+import { allowedTypes, ConduitModel, ConduitValidationRules, TYPE } from './Model.js';
 import { Indexable } from './Indexable.js';
 
 export interface ModuleErrorDefinition {
@@ -21,12 +21,14 @@ export interface ConduitRouteParameters {
 
 type AllowedTypes = TYPE.String | TYPE.Number | TYPE.Boolean | TYPE.Date | TYPE.ObjectId;
 
-export type ConduitUrlParam = AllowedTypes | { type: AllowedTypes; required?: boolean };
+export type ConduitUrlParam =
+  | AllowedTypes
+  | { type: AllowedTypes; required?: boolean; validate?: ConduitValidationRules };
 export type ConduitQueryParam =
   | ConduitUrlParam
   | AllowedTypes[]
-  | { type: AllowedTypes[]; required: boolean }
-  | { type: AllowedTypes; required?: boolean }[];
+  | { type: AllowedTypes[]; required: boolean; validate?: ConduitValidationRules }
+  | { type: AllowedTypes; required?: boolean; validate?: ConduitValidationRules }[];
 
 export type ConduitUrlParams = {
   [field in string]: ConduitUrlParam;
@@ -58,6 +60,12 @@ export enum ConduitRouteActions {
   DELETE = 'DELETE',
 }
 
+export interface RateLimitOptions {
+  maxRequests: number;
+  /** Window length in seconds */
+  resetInterval: number;
+}
+
 export interface ConduitRouteOptions {
   queryParams?: ConduitQueryParams;
   bodyParams?: ConduitModel;
@@ -68,7 +76,17 @@ export interface ConduitRouteOptions {
   description?: string;
   middlewares?: string[];
   cacheControl?: string;
+  mcp?: boolean;
   errors?: ModuleErrorDefinition[];
+  /**
+   * How unknown body/query/url keys are handled during Zod validation:
+   * - `true`: reject with USER_INPUT_ERROR (strict mode)
+   * - `false`: allow through to the handler (passthrough)
+   * - unset: strip unknown keys from validated params (default; prevents pollution without errors)
+   */
+  strictParams?: boolean;
+  /** Per-route rate limit (per client IP). Fails closed if Redis is unavailable. */
+  rateLimit?: RateLimitOptions;
 }
 
 export interface ConduitRouteObject {

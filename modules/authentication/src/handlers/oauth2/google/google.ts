@@ -5,9 +5,10 @@ import {
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
+import { OAUTH_NATIVE_COMPLETE } from '../../../constants/index.js';
 import { status } from '@grpc/grpc-js';
 import { OAuth2 } from '../OAuth2.js';
-import googleParameters from './google.json' assert { type: 'json' };
+import googleParameters from './google.json' with { type: 'json' };
 import { GoogleUser } from './google.user.js';
 import axios from 'axios';
 import {
@@ -71,6 +72,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
           scopes: [ConduitString.Optional],
         },
         middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
+        rateLimit: OAUTH_NATIVE_COMPLETE,
       },
       new ConduitRouteReturnDefinition('GoogleResponse', {
         userId: ConduitString.Required,

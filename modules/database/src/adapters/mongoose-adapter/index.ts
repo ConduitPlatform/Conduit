@@ -5,7 +5,6 @@ import {
   ConduitGrpcSdk,
   ConduitSchema,
   GrpcError,
-  Indexable,
   ModelOptionsIndexes,
   MongoIndexType,
   RawMongoQuery,
@@ -20,10 +19,8 @@ import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces/index.js';
-import { isNil, isEqual, isArray } from 'lodash-es';
-
-// @ts-ignore
-import * as parseSchema from 'mongodb-schema';
+import { isArray, isEqual, isNil } from 'lodash-es';
+import { parseSchema } from 'mongodb-schema';
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
@@ -44,6 +41,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   async retrieveForeignSchemas(): Promise<void> {
     const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
       {},
+      { readPreference: 'primary' },
     );
     const collectionNames: string[] = [];
     (await this.mongoose.connection?.db?.listCollections()?.toArray())?.forEach(c =>
@@ -83,14 +81,16 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
 
     const model = this.models[modelName];
-    const newSchema: Partial<ConduitSchema> = Object.assign({}, model.schema);
-    //@ts-ignore
-    newSchema.name = viewName;
-    //@ts-ignore
-    newSchema.collectionName = viewName;
+    const orgSchema = Object.assign({}, model.schema);
+    const newSchema: ConduitSchema = new ConduitSchema(
+      viewName,
+      orgSchema.fields,
+      orgSchema.modelOptions,
+      viewName,
+    );
 
     if (existingView && !isQueryEqual) {
-      await this.deleteView(viewName);
+      await this.deleteView(viewName, true);
     }
     const viewModel = new MongooseSchema(
       this.grpcSdk,
@@ -107,13 +107,17 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     });
     this.views[viewName] = viewModel;
 
-    const foundView = await this.models['Views'].findOne({ name: viewName });
+    const foundView = await this.models['Views'].findOne(
+      { name: viewName },
+      { readPreference: 'primary' },
+    );
     if (isNil(foundView)) {
       await this.models['Views'].create({
         name: viewName,
         originalSchema: modelName,
         joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
         query,
+        lastAccessedAt: new Date(),
       });
     }
   }
@@ -129,18 +133,23 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return this.views[viewName];
   }
 
-  async deleteView(viewName: string): Promise<void> {
+  async deleteView(viewName: string, instanceSync = false): Promise<void> {
     if (this.views[viewName]) {
-      await this.views[viewName].model.collection.drop();
+      await this.views[viewName].model.collection.drop().catch((e: Error) => {
+        if (!e.message.includes('ns not found')) throw e;
+      });
     }
     await this.models['Views'].deleteOne({ name: viewName });
     delete this.views[viewName];
     delete this.mongoose.models[viewName];
+    if (!instanceSync) {
+      this.publishViewDeletion(viewName);
+    }
   }
 
   async introspectDatabase(): Promise<ConduitSchema[]> {
     const introspectedSchemas: ConduitSchema[] = [];
-    const db = this.mongoose.connection.db;
+    const db = this.mongoose.connection.db!;
     const modelOptions = {
       timestamps: true,
       conduit: {
@@ -175,24 +184,17 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     // Process Schemas
     await Promise.all(
       introspectableSchemas.map(async collectionName => {
-        await parseSchema(
-          db?.collection(collectionName).find(),
-          async (err: Error, originalSchema: Indexable) => {
-            if (err) {
-              throw new GrpcError(status.INTERNAL, err.message);
-            }
-            originalSchema = mongoSchemaConverter(originalSchema);
-            const schema = new ConduitSchema(
-              collectionName,
-              originalSchema,
-              modelOptions,
-              collectionName,
-            );
-            schema.ownerModule = 'database';
-            introspectedSchemas.push(schema);
-            ConduitGrpcSdk.Logger.log(`Introspected schema ${collectionName}`);
-          },
+        const _originalSchema = await parseSchema(db.collection(collectionName).find());
+        let originalSchema = mongoSchemaConverter(_originalSchema);
+        const schema = new ConduitSchema(
+          collectionName,
+          originalSchema,
+          modelOptions,
+          collectionName,
         );
+        schema.ownerModule = 'database';
+        introspectedSchemas.push(schema);
+        ConduitGrpcSdk.Logger.log(`Introspected schema ${collectionName}`);
       }),
     );
     return introspectedSchemas;
@@ -268,7 +270,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   async createIndexes(
     schemaName: string,
-    indexes: ModelOptionsIndexes[],
+    indexes: readonly ModelOptionsIndexes[],
     callerModule: string,
   ): Promise<string> {
     if (!this.models[schemaName])
@@ -460,7 +462,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   private checkIndexes(
     schemaName: string,
-    indexes: ModelOptionsIndexes[],
+    indexes: readonly ModelOptionsIndexes[],
     callerModule: string,
   ) {
     for (const index of indexes) {

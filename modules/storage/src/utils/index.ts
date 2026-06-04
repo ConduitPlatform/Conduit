@@ -20,8 +20,6 @@ export async function streamToBuffer(readableStream: any): Promise<Buffer> {
       chunks.push(data instanceof Buffer ? data : Buffer.from(data));
     });
     readableStream.on('end', () => {
-      // shouldn't really provide an error
-      // @ts-expect-error
       resolve(Buffer.concat(chunks));
     });
     readableStream.on('error', reject);
@@ -92,7 +90,9 @@ export async function storeNewFile(
   await storageProvider.container(container).store(fileName, buffer, isPublic);
 
   // Get container public status for URL generation
-  const containerDoc = await _StorageContainer.getInstance().findOne({ name: container });
+  const containerDoc = await _StorageContainer
+    .getInstance()
+    .findOne({ name: container }, { readPreference: 'primary' });
   const containerIsPublic = containerDoc?.isPublic ?? false;
 
   // Get raw storage URL (sourceUrl) and CDN-applied URL (url)
@@ -136,7 +136,9 @@ export async function _createFileUploadUrl(
     .store(fileName, Buffer.from('PENDING UPLOAD'), isPublic);
 
   // Get container public status for URL generation
-  const containerDoc = await _StorageContainer.getInstance().findOne({ name: container });
+  const containerDoc = await _StorageContainer
+    .getInstance()
+    .findOne({ name: container }, { readPreference: 'primary' });
   const containerIsPublic = containerDoc?.isPublic ?? false;
 
   // Get raw storage URL (sourceUrl) and CDN-applied URL (url)
@@ -192,7 +194,9 @@ export async function _updateFile(
   }
 
   // Get container public status for URL generation
-  const containerDoc = await _StorageContainer.getInstance().findOne({ name: container });
+  const containerDoc = await _StorageContainer
+    .getInstance()
+    .findOne({ name: container }, { readPreference: 'primary' });
   const containerIsPublic = containerDoc?.isPublic ?? false;
 
   // Get raw storage URL (sourceUrl) and CDN-applied URL (url)
@@ -249,9 +253,9 @@ export async function _updateFileUploadUrl(
       .delete((file.folder === '/' ? '' : file.folder) + file.name);
 
     // Get container public status for URL generation
-    const containerDoc = await _StorageContainer.getInstance().findOne({
-      name: container,
-    });
+    const containerDoc = await _StorageContainer
+      .getInstance()
+      .findOne({ name: container }, { readPreference: 'primary' });
     const containerIsPublic = containerDoc?.isPublic ?? false;
 
     // Get raw storage URL (sourceUrl) and CDN-applied URL (url)
@@ -376,9 +380,9 @@ export async function validateFilePrivacy(
   containerName: string,
   isFilePublic?: boolean,
 ): Promise<void> {
-  const container = await _StorageContainer.getInstance().findOne({
-    name: containerName,
-  });
+  const container = await _StorageContainer
+    .getInstance()
+    .findOne({ name: containerName }, { readPreference: 'primary' });
   if (container?.isPublic && isFilePublic === false) {
     throw new GrpcError(
       status.INVALID_ARGUMENT,

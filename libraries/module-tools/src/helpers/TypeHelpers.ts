@@ -1,4 +1,8 @@
-import { TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  TYPE,
+  ConduitNumberValidation,
+  ConduitStringValidation,
+} from '@conduitplatform/grpc-sdk';
 
 class ConduitStringConstructor {
   // private to disallow creating other instances of this type
@@ -10,6 +14,22 @@ class ConduitStringConstructor {
 
   static get Required(): { type: TYPE.String; required: true } {
     return { type: TYPE.String, required: true };
+  }
+
+  static RequiredWith(rules: ConduitStringValidation): {
+    type: TYPE.String;
+    required: true;
+    validate: ConduitStringValidation;
+  } {
+    return { type: TYPE.String, required: true, validate: rules };
+  }
+
+  static OptionalWith(rules: ConduitStringValidation): {
+    type: TYPE.String;
+    required: false;
+    validate: ConduitStringValidation;
+  } {
+    return { type: TYPE.String, required: false, validate: rules };
   }
 }
 
@@ -25,6 +45,22 @@ class ConduitNumberConstructor {
 
   static get Required(): { type: TYPE.Number; required: true } {
     return { type: TYPE.Number, required: true };
+  }
+
+  static RequiredWith(rules: ConduitNumberValidation): {
+    type: TYPE.Number;
+    required: true;
+    validate: ConduitNumberValidation;
+  } {
+    return { type: TYPE.Number, required: true, validate: rules };
+  }
+
+  static OptionalWith(rules: ConduitNumberValidation): {
+    type: TYPE.Number;
+    required: false;
+    validate: ConduitNumberValidation;
+  } {
+    return { type: TYPE.Number, required: false, validate: rules };
   }
 }
 

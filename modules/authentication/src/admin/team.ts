@@ -4,16 +4,20 @@ import {
   ConduitRouteReturnDefinition,
   GrpcError,
   ParsedRouterRequest,
+  Query,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { Team, User } from '../models/index.js';
+import { Team, Token, User } from '../models/index.js';
 import { isNil } from 'lodash-es';
 import escapeStringRegexp from 'escape-string-regexp';
 import { AuthUtils } from '../utils/index.js';
+import { TokenType } from '../constants/index.js';
+import { v4 as uuid } from 'uuid';
 import {
   ConduitBoolean,
+  ConduitJson,
   ConduitNumber,
   ConduitObjectId,
   ConduitString,
@@ -34,6 +38,7 @@ export class TeamsAdmin {
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
           parentTeam: ConduitObjectId.Optional,
+          populate: [ConduitString.Optional],
         },
         name: 'GetTeams',
         description: 'Gets all available teams',
@@ -65,6 +70,9 @@ export class TeamsAdmin {
         action: ConduitRouteActions.GET,
         urlParams: {
           teamId: ConduitObjectId.Required,
+        },
+        queryParams: {
+          populate: [ConduitString.Optional],
         },
         name: 'GetTeam',
         description: 'Gets the specified team',
@@ -182,6 +190,59 @@ export class TeamsAdmin {
       new ConduitRouteReturnDefinition('DeleteTeam', 'String'),
       this.deleteTeam.bind(this),
     );
+    routingManager.route(
+      {
+        path: '/teams/:teamId/invites',
+        action: ConduitRouteActions.GET,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+        },
+        name: 'GetTeamInvites',
+        description: 'Gets invite tokens for a team',
+      },
+      new ConduitRouteReturnDefinition('GetTeamInvites', {
+        invites: [Token.name],
+        count: ConduitNumber.Required,
+      }),
+      this.getTeamInvites.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/teams/:teamId/invite/persistent',
+        action: ConduitRouteActions.POST,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          role: ConduitString.Required,
+          userData: ConduitJson.Optional,
+        },
+        name: 'CreatePersistentInvite',
+        description: 'Creates a persistent invitation token for a team',
+      },
+      new ConduitRouteReturnDefinition('PersistentInvitationToken', 'String'),
+      this.createPersistentInvite.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/teams/:teamId/invite/persistent',
+        action: ConduitRouteActions.DELETE,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        queryParams: {
+          invitationToken: ConduitString.Required,
+        },
+        name: 'DeletePersistentInvite',
+        description: 'Deletes a persistent invitation token',
+      },
+      new ConduitRouteReturnDefinition('DeletePersistentInvitationToken', 'String'),
+      this.deletePersistentInvite.bind(this),
+    );
   }
 
   async getTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -204,14 +265,12 @@ export class TeamsAdmin {
       query['$or'] = [{ parentTeam: null }, { parentTeam: { $exists: false } }];
     }
 
-    const teams: Team[] = await Team.getInstance().findMany(
-      query,
-      undefined,
+    const teams: Team[] = await Team.getInstance().findMany(query, {
       skip,
       limit,
       sort,
       populate,
-    );
+    });
     const count: number = await Team.getInstance().countDocuments(query);
 
     return { teams, count };
@@ -221,8 +280,7 @@ export class TeamsAdmin {
     const { teamId, populate } = call.request.params;
     const team: Team | null = await Team.getInstance().findOne(
       { _id: teamId },
-      undefined,
-      populate,
+      { populate },
     );
     return team || 'Team not found';
   }
@@ -407,5 +465,68 @@ export class TeamsAdmin {
       sort,
     });
     return { members: members, count };
+  }
+
+  async getTeamInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { teamId } = call.request.params;
+    const skip = call.request.params.skip ?? 0;
+    const limit = call.request.params.limit ?? 25;
+    const team = await Team.getInstance().findOne({ _id: teamId });
+    if (!team) {
+      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+    }
+    const query = {
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
+      'data.teamId': teamId,
+    };
+    const invites = await Token.getInstance().findMany(query, {
+      skip,
+      limit,
+      sort: '-createdAt',
+    });
+    const count = await Token.getInstance().countDocuments(query);
+    return { invites, count };
+  }
+
+  async createPersistentInvite(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { teamId, role, userData } = call.request.params;
+    const team = await Team.getInstance().findOne({ _id: teamId });
+    if (!team) {
+      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+    }
+    const invitation = await Token.getInstance().create({
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
+      token: uuid(),
+      data: {
+        teamId,
+        role: role || 'member',
+        userData,
+      },
+    });
+    return invitation.token;
+  }
+
+  async deletePersistentInvite(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { teamId, invitationToken } = call.request.params;
+    const team = await Team.getInstance().findOne({ _id: teamId });
+    if (!team) {
+      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+    }
+    const foundToken = await Token.getInstance().findOne(
+      {
+        token: invitationToken,
+        'data.teamId': teamId,
+      } as Query<Token>,
+      { readPreference: 'primary' },
+    );
+    if (!foundToken) {
+      throw new GrpcError(status.NOT_FOUND, 'Token not found');
+    }
+    await Token.getInstance().deleteOne({ _id: foundToken._id });
+    return 'Invitation token deleted';
   }
 }

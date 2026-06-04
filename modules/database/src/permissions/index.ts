@@ -1,12 +1,19 @@
 import { DeclaredSchemaExtension, Schema } from '../interfaces/index.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 
+function migratingComms(owner: string, caller: string) {
+  return (
+    ['pushNotifications', 'email', 'sms'].includes(owner) && caller === 'communications'
+  );
+}
+
 export async function canCreate(moduleName: string, schema: Schema) {
   if (moduleName === 'database' && schema.originalSchema.name === '_DeclaredSchema')
     return true;
   return (
     schema.originalSchema.ownerModule === moduleName ||
-    schema.originalSchema.modelOptions.conduit!.permissions!.canCreate
+    schema.originalSchema.modelOptions.conduit!.permissions!.canCreate ||
+    migratingComms(schema.originalSchema.ownerModule, moduleName)
   );
 }
 
@@ -15,7 +22,8 @@ export async function canModify(moduleName: string, schema: Schema, data?: Index
     return true;
   if (
     schema.originalSchema.ownerModule === moduleName ||
-    schema.originalSchema.modelOptions.conduit!.permissions!.canModify === 'Everything'
+    schema.originalSchema.modelOptions.conduit!.permissions!.canModify === 'Everything' ||
+    migratingComms(schema.originalSchema.ownerModule, moduleName)
   )
     return true;
   if (
@@ -48,6 +56,7 @@ export async function canDelete(moduleName: string, schema: Schema) {
     return true;
   return (
     schema.originalSchema.ownerModule === moduleName ||
-    schema.originalSchema.modelOptions.conduit!.permissions!.canDelete
+    schema.originalSchema.modelOptions.conduit!.permissions!.canDelete ||
+    migratingComms(schema.originalSchema.ownerModule, moduleName)
   );
 }

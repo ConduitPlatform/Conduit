@@ -3,6 +3,7 @@ import {
   Authentication,
   Authorization,
   Chat,
+  Communications,
   Config,
   Core,
   DatabaseProvider,
@@ -20,11 +21,25 @@ import {
   sleep,
   StateManager,
 } from './utilities/index.js';
-import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
+import {
+  addMiddleware,
+  getInterceptors,
+  getLogger,
+  getMetrics,
+  setLogger,
+  setMetrics,
+} from './utilities/GrpcSdkContext.js';
 import { checkModuleHealth, ConduitModule } from './classes/index.js';
-import { Client } from 'nice-grpc';
+import { Client, CompatServiceDefinition } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
-import { GrpcError, HealthCheckStatus } from './types/index.js';
+import {
+  AwaitPeerOptions,
+  GrpcError,
+  HealthCheckStatus,
+  PeerWatchBatchOptions,
+  PeerWatchOptions,
+  PeerWatchSpec,
+} from './types/index.js';
 import { createSigner } from 'fast-jwt';
 import { ClusterOptions, RedisOptions } from 'ioredis';
 import { IConduitLogger, IConduitMetrics } from './interfaces/index.js';
@@ -37,8 +52,9 @@ import {
 
 type UrlRemap = { [url: string]: string };
 
+const COMMUNICATIONS_LEGACY_MODULES = ['email', 'sms', 'pushNotifications'] as const;
+
 class ConduitGrpcSdk {
-  private static middleware: any[] = [];
   public readonly name: string;
   public readonly instance: string;
   private readonly serverUrl: string;
@@ -57,6 +73,7 @@ class ConduitGrpcSdk {
     authorization: Authorization,
     sms: SMS,
     chat: Chat,
+    communications: Communications,
   };
   private _dynamicModules: { [key: string]: CompatServiceDefinition } = {};
   private _eventBus?: EventBus;
@@ -66,6 +83,8 @@ class ConduitGrpcSdk {
   private readonly _serviceHealthStatusGetter: () => HealthCheckStatus;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
+  private readonly _moduleMonitorListeners = new Map<string, Set<(s: boolean) => void>>();
+  private readonly _communicationsLegacyConnectionStates = new Map<string, boolean>();
 
   constructor(
     serverUrl: string,
@@ -75,9 +94,9 @@ class ConduitGrpcSdk {
     serviceHealthStatusGetter: () => HealthCheckStatus = () => HealthCheckStatus.SERVING,
   ) {
     if (logger) {
-      ConduitGrpcSdk._Logger = logger;
+      setLogger(logger);
     } else {
-      ConduitGrpcSdk._Logger = console;
+      setLogger(console);
     }
 
     if (!name) {
@@ -108,24 +127,24 @@ class ConduitGrpcSdk {
     }
   }
 
-  private static _Logger: IConduitLogger | Console;
-
   static get Logger() {
-    return ConduitGrpcSdk._Logger;
+    return getLogger();
   }
 
-  private static _Metrics: IConduitMetrics | undefined = undefined;
+  static get Sleep() {
+    return sleep;
+  }
 
   static get Metrics() {
-    return ConduitGrpcSdk._Metrics;
+    return getMetrics();
   }
 
   static set Metrics(metrics: IConduitMetrics | undefined) {
-    ConduitGrpcSdk._Metrics = metrics;
+    setMetrics(metrics);
   }
 
   static get interceptors() {
-    return ConduitGrpcSdk.middleware;
+    return getInterceptors();
   }
 
   private _redisManager: RedisManager | null = null;
@@ -272,7 +291,7 @@ class ConduitGrpcSdk {
   }
 
   public addMiddleware(middleware: any) {
-    ConduitGrpcSdk.middleware.push(middleware);
+    addMiddleware(middleware);
   }
 
   async initialize() {
@@ -308,26 +327,36 @@ class ConduitGrpcSdk {
     const emitter = this.config.getModuleWatcher();
     this.config.watchModules().then();
     emitter.on('serving-modules-update', modules => {
+      const legacySet = new Set<string>(COMMUNICATIONS_LEGACY_MODULES);
       Object.keys(this._modules).forEach(r => {
         if (r === this.name) return;
+        if (legacySet.has(r)) return;
         const found = modules.filter(
           (m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving,
         );
         if ((!found || found.length === 0) && this._modules[r]) {
           this._modules[r]?.closeConnection();
           emitter.emit(`module-connection-update:${r}`, false);
+          if (r === 'communications') {
+            this.syncCommunicationsLegacyClients(false, emitter);
+          }
         }
       });
       modules.forEach((m: ModuleListResponse_ModuleResponse) => {
         if (m.moduleName === this.name || !m.serving) return;
         const alreadyActive = this._modules[m.moduleName]?.active;
-        if (alreadyActive) return;
-        if (this._availableModules[m.moduleName] && this._modules[m.moduleName]) {
-          this._modules[m.moduleName].openConnection();
-        } else {
-          this.createModuleClient(m.moduleName, m.url);
+        if (alreadyActive && m.moduleName !== 'communications') return;
+        if (!alreadyActive) {
+          if (this._availableModules[m.moduleName] && this._modules[m.moduleName]) {
+            this._modules[m.moduleName].openConnection();
+          } else {
+            this.createModuleClient(m.moduleName, m.url);
+          }
+          emitter.emit(`module-connection-update:${m.moduleName}`, true);
         }
-        emitter.emit(`module-connection-update:${m.moduleName}`, true);
+        if (m.moduleName === 'communications') {
+          this.syncCommunicationsLegacyClients(true, emitter, m.url);
+        }
       });
     });
     emitter.on('core-status-update', () => {
@@ -357,13 +386,166 @@ class ConduitGrpcSdk {
       })
       .then(() => {
         const emitter = this.config.getModuleWatcher();
-        emitter.on(`module-connection-update:${moduleName}`, callback);
+        const event = `module-connection-update:${moduleName}`;
+        emitter.on(event, callback);
+        let set = this._moduleMonitorListeners.get(moduleName);
+        if (!set) {
+          set = new Set();
+          this._moduleMonitorListeners.set(moduleName, set);
+        }
+        set.add(callback);
       });
   }
 
   unmonitorModule(moduleName: string) {
     const emitter = this.config.getModuleWatcher();
-    emitter.removeAllListeners(`module-connection-update:${moduleName}`);
+    const event = `module-connection-update:${moduleName}`;
+    const set = this._moduleMonitorListeners.get(moduleName);
+    if (set) {
+      for (const cb of set) {
+        emitter.off(event, cb);
+      }
+      this._moduleMonitorListeners.delete(moduleName);
+    }
+  }
+
+  async awaitPeer(moduleName: string, options?: AwaitPeerOptions): Promise<void> {
+    const onlyIfServing = options?.onlyIfServing ?? true;
+    if (this.isAvailable(moduleName)) return;
+    if (options?.timeoutMs != null) {
+      await Promise.race([
+        this.waitForExistence(moduleName, onlyIfServing),
+        sleep(options.timeoutMs).then(() => {
+          throw new GrpcError(
+            status.DEADLINE_EXCEEDED,
+            `awaitPeer(${moduleName}) timed out after ${options.timeoutMs}ms`,
+          );
+        }),
+      ]);
+      return;
+    }
+    await this.waitForExistence(moduleName, onlyIfServing);
+  }
+
+  watchPeer(
+    moduleName: string,
+    handler: (serving: boolean) => void,
+    options?: PeerWatchOptions,
+  ): () => void {
+    const edge = options?.edge ?? 'both';
+    const dedupe = options?.dedupe ?? (edge === 'rising' || edge === 'falling');
+    let last: boolean | undefined;
+    const event = `module-connection-update:${moduleName}`;
+    const emitter = this.config.getModuleWatcher();
+
+    const listener = (serving: boolean) => {
+      if (dedupe && last === serving) return;
+      let fire = false;
+      if (edge === 'both') {
+        fire = true;
+      } else if (edge === 'rising') {
+        fire = serving === true && last !== true;
+      } else {
+        fire = serving === false && last !== false;
+      }
+      last = serving;
+      if (fire) handler(serving);
+    };
+
+    let attached = false;
+    const attach = () => {
+      if (attached) return;
+      attached = true;
+      emitter.on(event, listener);
+    };
+
+    if (options?.syncInitialState !== false) {
+      Promise.resolve()
+        .then(() => this._modules[moduleName]?.healthClient?.check({}))
+        .then(res => {
+          const serving = res?.status === HealthCheckResponse_ServingStatus.SERVING;
+          last = serving;
+          let fire = false;
+          if (edge === 'both') fire = true;
+          else if (edge === 'rising') fire = serving === true;
+          else fire = serving === false;
+          if (fire) handler(serving);
+        })
+        .catch(() => {
+          last = false;
+          if (edge === 'both' || edge === 'falling') handler(false);
+        })
+        .finally(() => attach());
+    } else {
+      attach();
+    }
+
+    return () => {
+      emitter.off(event, listener);
+    };
+  }
+
+  oncePeerUp(moduleName: string, callback: () => void | Promise<void>): () => void {
+    let done = false;
+    const dispose = this.watchPeer(
+      moduleName,
+      () => {
+        if (done) return;
+        done = true;
+        dispose();
+        void Promise.resolve(callback());
+      },
+      { edge: 'rising', syncInitialState: true },
+    );
+    return () => {
+      if (done) return;
+      done = true;
+      dispose();
+    };
+  }
+
+  getKnownModuleNames(): string[] {
+    return Object.keys(this._availableModules);
+  }
+
+  watchPeers(
+    specs: PeerWatchSpec[],
+    handler: (statuses: Record<string, boolean>) => void,
+    options?: PeerWatchBatchOptions,
+  ): () => void {
+    if (specs.length === 0) {
+      return () => {};
+    }
+    const debounceMs = options?.debounceMs ?? 100;
+    const syncInitial = options?.syncInitialState !== false;
+    const statuses: Record<string, boolean> = {};
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const flush = () => {
+      timer = null;
+      handler({ ...statuses });
+    };
+    const schedule = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(flush, debounceMs);
+    };
+
+    const disposers = specs.map(spec =>
+      this.watchPeer(
+        spec.module,
+        serving => {
+          statuses[spec.module] = serving;
+          schedule();
+        },
+        { edge: spec.edge ?? 'both', syncInitialState: syncInitial },
+      ),
+    );
+
+    return () => {
+      for (const d of disposers) {
+        d();
+      }
+      if (timer) clearTimeout(timer);
+    };
   }
 
   initializeEventBus(): Promise<EventBus> {
@@ -422,6 +604,9 @@ class ConduitGrpcSdk {
         r.forEach(m => {
           this.createModuleClient(m.moduleName, m.url);
           emitter.emit(`module-connection-update:${m.moduleName}`, m.serving);
+          if (m.moduleName === 'communications') {
+            this.syncCommunicationsLegacyClients(m.serving, emitter, m.url);
+          }
         });
         return 'ok';
       })
@@ -438,12 +623,13 @@ class ConduitGrpcSdk {
   }
 
   createModuleClient(moduleName: string, moduleUrl: string) {
-    if (this._modules[moduleName]) return;
-    moduleUrl =
-      this.urlRemap?.[moduleUrl] ??
-      (this.urlRemap?.['*']
-        ? `${this.urlRemap['*']}:${moduleUrl.split(':')[1]}`
-        : moduleUrl);
+    moduleUrl = this.resolveModuleUrl(moduleUrl);
+    if (this._modules[moduleName]) {
+      if (moduleName === 'communications') {
+        this.createCommunicationsLegacyClients(moduleUrl);
+      }
+      return;
+    }
     if (this._availableModules[moduleName]) {
       ConduitGrpcSdk.Logger.info(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new this._availableModules[moduleName](
@@ -470,6 +656,53 @@ class ConduitGrpcSdk {
         this._grpcToken,
       );
       this._modules[moduleName].initializeClient(ConduitModuleDefinition);
+    }
+
+    if (moduleName === 'communications') {
+      this.createCommunicationsLegacyClients(moduleUrl);
+    }
+  }
+
+  private resolveModuleUrl(moduleUrl: string) {
+    return (
+      this.urlRemap?.[moduleUrl] ??
+      (this.urlRemap?.['*']
+        ? `${this.urlRemap['*']}:${moduleUrl.split(':')[1]}`
+        : moduleUrl)
+    );
+  }
+
+  private createCommunicationsLegacyClients(moduleUrl: string) {
+    for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
+      if (!this._modules[legacyModule] && this._availableModules[legacyModule]) {
+        ConduitGrpcSdk.Logger.info(`Creating gRPC client for ${legacyModule}`);
+        this._modules[legacyModule] = new this._availableModules[legacyModule](
+          this.name,
+          moduleUrl,
+          this._grpcToken,
+        );
+      }
+    }
+  }
+
+  private syncCommunicationsLegacyClients(
+    serving: boolean,
+    emitter: ReturnType<Config['getModuleWatcher']>,
+    moduleUrl?: string,
+  ) {
+    if (serving && moduleUrl) {
+      this.createCommunicationsLegacyClients(this.resolveModuleUrl(moduleUrl));
+    }
+    for (const legacyModule of COMMUNICATIONS_LEGACY_MODULES) {
+      if (serving) {
+        this._modules[legacyModule]?.openConnection();
+      } else {
+        this._modules[legacyModule]?.closeConnection();
+      }
+      if (this._communicationsLegacyConnectionStates.get(legacyModule) !== serving) {
+        this._communicationsLegacyConnectionStates.set(legacyModule, serving);
+        emitter.emit(`module-connection-update:${legacyModule}`, serving);
+      }
     }
   }
 
@@ -572,11 +805,12 @@ class ConduitGrpcSdk {
 }
 
 export { ConduitGrpcSdk };
+export type { CountDocumentsOptions } from './modules/database/index.js';
+export type { FindManyOptions, FindOneOptions } from './modules/database/types.js';
 export * from './interfaces/index.js';
 export * from './classes/index.js';
 export * from './modules/index.js';
 export * from './constants/index.js';
 export * from './types/index.js';
-export * from './utilities/index.js';
 export * from './protoUtils/index.js';
 export * from '@grpc/grpc-js';

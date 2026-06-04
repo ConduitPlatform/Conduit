@@ -145,6 +145,14 @@ export function populateArray(pop: any) {
   return pop;
 }
 
+const ALLOWED_CONDUIT_READ_PREFERENCES = [
+  'primary',
+  'primaryPreferred',
+  'secondary',
+  'secondaryPreferred',
+  'nearest',
+] as const;
+
 function validateModelOptions(modelOptions: ConduitSchemaOptions) {
   if (!isPlainObject(modelOptions)) throw new Error('Model options must be an object');
   Object.keys(modelOptions).forEach(key => {
@@ -156,6 +164,21 @@ function validateModelOptions(modelOptions: ConduitSchemaOptions) {
       if (!isObject(modelOptions.conduit))
         throw new Error("Option 'conduit' must be of type Object");
       Object.keys(modelOptions.conduit).forEach((conduitKey: string) => {
+        if (conduitKey === 'readPreference') {
+          const rp = modelOptions.conduit!.readPreference;
+          if (rp !== undefined && rp !== null && rp !== '') {
+            if (typeof rp !== 'string')
+              throw new Error("Conduit field 'readPreference' must be of type string");
+            if (
+              !ALLOWED_CONDUIT_READ_PREFERENCES.includes(
+                rp as (typeof ALLOWED_CONDUIT_READ_PREFERENCES)[number],
+              )
+            ) {
+              throw new Error(`Invalid conduit.readPreference: ${rp}`);
+            }
+          }
+          return;
+        }
         if (
           conduitKey !== 'cms' &&
           conduitKey !== 'permissions' &&
@@ -163,7 +186,7 @@ function validateModelOptions(modelOptions: ConduitSchemaOptions) {
           conduitKey !== 'imported'
         )
           throw new Error(
-            "Only 'cms' and 'permissions' fields allowed inside 'conduit' field",
+            "Only 'cms', 'permissions', 'authorization', 'imported', and 'readPreference' fields allowed inside 'conduit' field",
           );
         if (conduitKey === 'imported') {
           if (!isBoolean(modelOptions.conduit!.imported))

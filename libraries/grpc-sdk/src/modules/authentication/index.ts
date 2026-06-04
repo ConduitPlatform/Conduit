@@ -11,7 +11,7 @@ import {
   InvitationDeleteResponse,
   InviteUserToTeamResponse,
 } from '../../protoUtils/index.js';
-import { Indexable } from '../../interfaces';
+import { Indexable } from '../../interfaces/index.js';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
   constructor(

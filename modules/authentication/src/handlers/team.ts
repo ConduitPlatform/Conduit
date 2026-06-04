@@ -26,13 +26,14 @@ import { TeamInviteTemplate } from '../templates/index.js';
 import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/index.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
-import { TokenType } from '../constants/index.js';
+import { OAUTH_CALLBACK, TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
 import { isEmpty } from 'lodash-es';
 
 export class TeamsHandler implements IAuthenticationStrategy {
   private static _instance?: TeamsHandler;
   private initialized = false;
+  private _teamInviteEmailDispose: (() => void) | null = null;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
@@ -52,10 +53,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
       ConduitGrpcSdk.Logger.error('TeamsHandler not initialized');
       return false;
     }
-    const inviteToken = await Token.getInstance().findOne({
-      tokenType: TokenType.TEAM_INVITE_TOKEN,
-      token: invitationToken,
-    });
+    const inviteToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.TEAM_INVITE_TOKEN,
+        token: invitationToken,
+      },
+      { readPreference: 'primary' },
+    );
     if (!inviteToken) {
       return false;
     }
@@ -78,10 +82,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
       ConduitGrpcSdk.Logger.error('TeamsHandler not initialized');
       return false;
     }
-    const inviteToken = await Token.getInstance().findOne({
-      tokenType: TokenType.TEAM_INVITE_TOKEN,
-      token: invitationToken,
-    });
+    const inviteToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.TEAM_INVITE_TOKEN,
+        token: invitationToken,
+      },
+      { readPreference: 'primary' },
+    );
     if (!inviteToken) {
       return false;
     }
@@ -96,10 +103,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async addUserToTeam(user: User, invitationToken: string) {
     if (!this.initialized) return;
-    const inviteToken = await Token.getInstance().findOne({
-      tokenType: TokenType.TEAM_INVITE_TOKEN,
-      token: invitationToken,
-    });
+    const inviteToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.TEAM_INVITE_TOKEN,
+        token: invitationToken,
+      },
+      { readPreference: 'primary' },
+    );
     if (!inviteToken) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -225,10 +235,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
     const { invitationToken } = call.request.params;
-    const inviteToken = await Token.getInstance().findOne({
-      tokenType: TokenType.TEAM_INVITE_TOKEN,
-      token: invitationToken,
-    });
+    const inviteToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.TEAM_INVITE_TOKEN,
+        token: invitationToken,
+      },
+      { readPreference: 'primary' },
+    );
     if (!inviteToken) {
       throw new GrpcError(status.NOT_FOUND, 'Invitation token not found');
     }
@@ -474,8 +487,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     }
     const team: Team | null = await Team.getInstance().findOne(
       { _id: teamId },
-      undefined,
-      populate,
+      { populate },
     );
     return team || 'Team not found';
   }
@@ -761,10 +773,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'You do not have permission to invite users to this team',
       );
     }
-    const foundToken = await Token.getInstance().findOne({
-      token: invitationToken,
-      'data.teamId': teamId,
-    } as Query<Token>);
+    const foundToken = await Token.getInstance().findOne(
+      {
+        token: invitationToken,
+        'data.teamId': teamId,
+      } as Query<Token>,
+      { readPreference: 'primary' },
+    );
     if (!foundToken) {
       throw new GrpcError(status.NOT_FOUND, 'Token not found');
     }
@@ -846,6 +861,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           limit: ConduitNumber.Optional,
           search: ConduitString.Optional,
           sort: ConduitString.Optional,
+          populate: [ConduitString.Optional],
         },
         action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
@@ -925,6 +941,9 @@ export class TeamsHandler implements IAuthenticationStrategy {
         description: `Gets a team.`,
         urlParams: {
           teamId: ConduitObjectId.Required,
+        },
+        queryParams: {
+          populate: [ConduitString.Optional],
         },
         action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
@@ -1034,6 +1053,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           invitationToken: ConduitString.Required,
         },
         action: ConduitRouteActions.GET,
+        rateLimit: OAUTH_CALLBACK,
       },
       new ConduitRouteReturnDefinition('GetInvitationTokenUserData', {
         email: ConduitString.Required,
@@ -1152,7 +1172,9 @@ export class TeamsHandler implements IAuthenticationStrategy {
           );
         }
         if (config.teams.invites.sendEmail) {
-          this.grpcSdk.onceModuleUp('email', async () => {
+          this._teamInviteEmailDispose?.();
+          this._teamInviteEmailDispose = this.grpcSdk.oncePeerUp('email', async () => {
+            this._teamInviteEmailDispose = null;
             await this.grpcSdk.emailProvider!.registerTemplate(TeamInviteTemplate);
           });
         }

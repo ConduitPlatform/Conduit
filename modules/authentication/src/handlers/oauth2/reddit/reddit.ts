@@ -9,7 +9,7 @@ import {
   Payload,
   ProviderConfig,
 } from '../interfaces/index.js';
-import redditParameters from './reddit.json' assert { type: 'json' };
+import redditParameters from './reddit.json' with { type: 'json' };
 
 export class RedditHandlers extends OAuth2<RedditUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { reddit: ProviderConfig }) {

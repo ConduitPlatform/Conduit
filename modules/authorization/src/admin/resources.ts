@@ -135,13 +135,11 @@ export class ResourceHandler {
         query = { name: { $regex: `.*${nameSearch}.*`, $options: 'i' } };
       }
     }
-    const resources = await ResourceDefinition.getInstance().findMany(
-      query,
-      undefined,
+    const resources = await ResourceDefinition.getInstance().findMany(query, {
       skip,
       limit,
       sort,
-    );
+    });
     if (isNil(resources)) {
       throw new Error('Resources not found');
     }

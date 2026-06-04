@@ -1,10 +1,10 @@
-FROM conduit-builder:latest
+FROM conduit-builder
 
 WORKDIR /app
 
-COPY --from=conduit-base:latest /app/modules/storage /app/modules/storage
+COPY --from=conduit-base /app/modules/storage /app/modules/storage
 
-RUN yarn install --production --pure-lockfile --non-interactive && yarn cache clean
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts && pnpm store prune
 
 WORKDIR /app/modules/storage
 

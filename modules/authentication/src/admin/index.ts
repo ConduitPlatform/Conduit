@@ -64,9 +64,9 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Creates a new user using email/username and password.`,
         bodyParams: {
-          email: ConduitString.Optional,
+          email: ConduitString.OptionalWith({ format: 'email' }),
           username: ConduitString.Optional,
-          password: ConduitString.Required,
+          password: ConduitString.RequiredWith({ minLength: 8 }),
         },
       },
       new ConduitRouteReturnDefinition(User.name),
@@ -202,10 +202,10 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/services/:serviceId/token',
+        path: '/services/:id/token',
         action: ConduitRouteActions.GET,
         urlParams: {
-          serviceId: ConduitString.Required,
+          id: ConduitString.Required,
         },
         name: 'RenewServiceToken',
         description: 'Renews a service token.',

@@ -5,6 +5,4 @@ export * from './Middleware.js';
 export * from './RouterDescriptor.js';
 export * from './Socket.js';
 export * from './ConduitRequest.js';
-export * from './IProxyRouteOptions.js';
-export * from './IProxyRoute.js';
 export * from './MiddlewarePatch.js';

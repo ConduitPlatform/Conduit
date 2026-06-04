@@ -9,7 +9,7 @@ import {
   Payload,
   ProviderConfig,
 } from '../interfaces/index.js';
-import bitbucketParameters from './bitbucket.json' assert { type: 'json' };
+import bitbucketParameters from './bitbucket.json' with { type: 'json' };
 import { isNil } from 'lodash-es';
 import { makeRequest } from '../utils/index.js';
 

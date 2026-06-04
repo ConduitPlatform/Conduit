@@ -15,6 +15,8 @@ import {
 import { status } from '@grpc/grpc-js';
 import { Token, User } from '../models/index.js';
 import { TokenType } from '../constants/index.js';
+import { AuthUtils } from '../utils/index.js';
+import { ALT_STRATEGY_AUTH, TokenType } from '../constants/index.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
@@ -50,6 +52,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
           encryptedData: ConduitString.Required,
           keyId: ConduitString.Required,
         },
+        rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('BiometricsAuthenticateResponse', {
         accessToken: ConduitString.Optional,
@@ -96,11 +99,8 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     const { encryptedData, keyId } = call.request.params;
     const config = ConfigController.getInstance().config;
     const key = await BiometricToken.getInstance().findOne(
-      {
-        _id: keyId,
-      },
-      undefined,
-      'user',
+      { _id: keyId },
+      { populate: ['user'], readPreference: 'primary' },
     );
     if (!key) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Key not found!');
@@ -127,10 +127,13 @@ export class BiometricHandlers implements IAuthenticationStrategy {
   async enroll(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { publicKey } = call.request.params;
     const { clientId, user } = call.request.context;
-    const existingToken = await Token.getInstance().findOne({
-      tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
-      user: user._id,
-    });
+    const existingToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
+        user: user._id,
+      },
+      { readPreference: 'primary' },
+    );
     if (existingToken) {
       AuthUtils.checkResendThreshold(existingToken);
       await Token.getInstance().deleteMany({
@@ -159,10 +162,13 @@ export class BiometricHandlers implements IAuthenticationStrategy {
   ): Promise<UnparsedRouterResponse> {
     const { encryptedData } = call.request.params;
     const { clientId, user } = call.request.context;
-    const existingToken = await Token.getInstance().findOne({
-      tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
-      user: user._id,
-    });
+    const existingToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
+        user: user._id,
+      },
+      { readPreference: 'primary' },
+    );
     if (!existingToken) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token!');
     }

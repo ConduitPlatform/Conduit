@@ -10,3 +10,4 @@ export * from './sms/index.js';
 export * from './chat/index.js';
 export * from './authorization/index.js';
 export * from './authentication/index.js';
+export * from './communications/index.js';

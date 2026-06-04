@@ -3,6 +3,13 @@ import { RestController } from './Rest/index.js';
 import { GraphQLController } from './GraphQl/GraphQL.js';
 import { SocketController } from './Socket/Socket.js';
 import {
+  MCP_CONSTANTS,
+  MCPConfig,
+  MCPController,
+  SwaggerDocProvider,
+  API_GUIDE_CONTENT,
+} from './MCP/index.js';
+import {
   ConduitError,
   ConduitGrpcSdk,
   IConduitLogger,
@@ -19,9 +26,8 @@ import {
 import { SwaggerRouterMetadata } from './types/index.js';
 import cookieParser from 'cookie-parser';
 import path from 'path';
-import { ConduitRoute, ProxyRoute } from './classes/index.js';
+import { ConduitRoute } from './classes/index.js';
 import { createRouteMiddleware } from './utils/logger.js';
-import { isInstanceOfProxyRoute, ProxyRouteController } from './Proxy/index.js';
 import { fileURLToPath } from 'node:url';
 import { instrumentationMiddleware } from './metrics/middleware.js';
 import { RouteTrie } from './metrics/RouteTrie.js';
@@ -33,11 +39,13 @@ export class ConduitRoutingController {
   private _restRouter?: RestController;
   private _graphQLRouter?: GraphQLController;
   private _socketRouter?: SocketController;
+  private _mcpRouter?: MCPController;
 
-  private _proxyRouter?: ProxyRouteController;
   private _middlewareRouter: Router;
   private readonly _cleanupTimeoutMs: number;
   private _cleanupTimeout: NodeJS.Timeout | null = null;
+  /** Routes registered before MCP starts; replayed in initMCP. */
+  private readonly _conduitRoutesByKey: Map<string, ConduitRoute> = new Map();
   private readonly routeTrie: RouteTrie = new RouteTrie();
   readonly expressApp: Express = express();
   readonly server = http.createServer(this.expressApp);
@@ -92,8 +100,11 @@ export class ConduitRoutingController {
             .json({ message: 'GraphQL is not enabled on this server!' });
         }
         this._graphQLRouter?.handleRequest(req, res, next);
-      } else if (req.url.startsWith('/proxy')) {
-        self._proxyRouter?.handleRequest(req, res, next);
+      } else if (req.url.startsWith('/mcp')) {
+        if (!this._mcpRouter) {
+          return res.status(500).json({ message: 'MCP is not enabled on this server!' });
+        }
+        this._mcpRouter?.handleRequest(req, res, next);
       } else {
         // this needs to be a function to hook on whatever the current router is
         self._restRouter?.handleRequest(req, res, next);
@@ -133,9 +144,44 @@ export class ConduitRoutingController {
     );
   }
 
-  initProxy() {
-    if (this._proxyRouter) return;
-    this._proxyRouter = new ProxyRouteController(this.grpcSdk, this.metrics);
+  initMCP(config?: {
+    enabled?: boolean;
+    transport?: { options?: { pingInterval?: number; sessionTimeout?: number } };
+    /** Optional provider for Client/Router API swagger documentation */
+    clientSwaggerProvider?: SwaggerDocProvider;
+    /** Optional API guide content (markdown) */
+    apiGuideContent?: string;
+  }) {
+    if (this._mcpRouter) return;
+
+    // Build full config with defaults and constants
+    const fullConfig: MCPConfig = {
+      enabled: config?.enabled ?? true,
+      path: MCP_CONSTANTS.PATH,
+      protocolVersion: MCP_CONSTANTS.PROTOCOL_VERSION,
+      serverInfo: MCP_CONSTANTS.SERVER_INFO,
+      capabilities: MCP_CONSTANTS.CAPABILITIES,
+    };
+
+    this._mcpRouter = new MCPController(this.grpcSdk, fullConfig, this.metrics);
+
+    // Set up Admin API swagger provider (from this server's REST router)
+    // This provides the swagger doc for the Admin API that MCP tools correspond to
+    this._mcpRouter.setAdminSwaggerProvider(() => {
+      return this._restRouter?.getSwaggerDoc() ?? null;
+    });
+
+    // Set up Client API swagger provider if provided
+    if (config?.clientSwaggerProvider) {
+      this._mcpRouter.setClientSwaggerProvider(config.clientSwaggerProvider);
+    }
+
+    // Set up API guide content (use provided content or default)
+    this._mcpRouter.setApiGuideContent(config?.apiGuideContent ?? API_GUIDE_CONTENT);
+
+    for (const route of this._conduitRoutesByKey.values()) {
+      this._mcpRouter.registerConduitRoute(route);
+    }
   }
 
   stopRest() {
@@ -156,10 +202,26 @@ export class ConduitRoutingController {
     delete this._socketRouter;
   }
 
-  stopProxy() {
-    if (!this._proxyRouter) return;
-    this._proxyRouter.shutDown();
-    delete this._proxyRouter;
+  stopMCP() {
+    if (!this._mcpRouter) return;
+    this._mcpRouter.shutDown();
+    delete this._mcpRouter;
+  }
+
+  /**
+   * Set the API guide content for MCP resources
+   * This provides a markdown guide explaining Admin vs Client APIs
+   */
+  setMCPApiGuideContent(content: string): void {
+    this._mcpRouter?.setApiGuideContent(content);
+  }
+
+  /**
+   * Set the Client/Router API swagger provider for MCP resources
+   * This enables agents to access Client API documentation
+   */
+  setMCPClientSwaggerProvider(provider: SwaggerDocProvider): void {
+    this._mcpRouter?.setClientSwaggerProvider(provider);
   }
 
   registerMiddleware(
@@ -176,7 +238,7 @@ export class ConduitRoutingController {
     this._restRouter?.registerMiddleware(middleware, moduleUrl);
     this._graphQLRouter?.registerMiddleware(middleware, moduleUrl);
     this._socketRouter?.registerMiddleware(middleware, moduleUrl);
-    this._proxyRouter?.registerMiddleware(middleware, moduleUrl);
+    this._mcpRouter?.registerMiddleware(middleware, moduleUrl);
   }
 
   patchRouteMiddlewares(patch: MiddlewarePatch) {
@@ -214,13 +276,12 @@ export class ConduitRoutingController {
   }
 
   registerConduitRoute(route: ConduitRoute) {
+    const key = `${route.input.action}-${route.input.path}`;
+    this._conduitRoutesByKey.set(key, route);
     this.routeTrie.insert(route.input.action, route.input.path);
     this._graphQLRouter?.registerConduitRoute(route);
     this._restRouter?.registerConduitRoute(route);
-  }
-
-  registerProxyRoute(route: ProxyRoute) {
-    this._proxyRouter?.registerProxyRoute(route);
+    this._mcpRouter?.registerConduitRoute(route);
   }
 
   registerConduitSocket(socket: ConduitSocket) {
@@ -247,41 +308,54 @@ export class ConduitRoutingController {
   }
 
   private _cleanupRoutes(routes: UntypedArray) {
-    this._restRouter?.cleanupRoutes(routes);
-    this._graphQLRouter?.cleanupRoutes(routes);
-    this._proxyRouter?.cleanupRoutes(routes);
+    const typed = routes as { action: string; path: string }[];
+    const keepKeys = new Set(typed.map(r => `${r.action}-${r.path}`));
+    for (const key of [...this._conduitRoutesByKey.keys()]) {
+      if (!keepKeys.has(key)) {
+        this._conduitRoutesByKey.delete(key);
+      }
+    }
+    this._restRouter?.cleanupRoutes(typed);
+    this._graphQLRouter?.cleanupRoutes(typed);
+    this._mcpRouter?.cleanupRoutes(typed);
   }
 
   async socketPush(data: SocketPush) {
     await this._socketRouter?.handleSocketPush(data);
   }
 
+  /** True if any enabled transport would change this route (new or definition changed). */
+  private anyTransportRouteChanged(route: ConduitRoute): boolean {
+    const rest = this._restRouter?.routeChanged(route);
+    const gql = this._graphQLRouter?.routeChanged(route);
+    const mcp = this._mcpRouter?.routeChanged(route);
+    if (rest === true || gql === true || mcp === true) return true;
+    if (rest === undefined && gql === undefined && mcp === undefined) return true;
+    return false;
+  }
+
   registerRoutes(
-    processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket | ProxyRoute)[],
+    processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[],
     url?: string,
   ) {
+    let needsRouterRefresh = false;
     processedRoutes.forEach(r => {
       if (r instanceof ConduitMiddleware) {
+        needsRouterRefresh = true;
         ConduitGrpcSdk.Logger.log(
           'New middleware registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerRouteMiddleware(r, url!);
       } else if (r instanceof ConduitSocket) {
+        needsRouterRefresh = true;
         ConduitGrpcSdk.Logger.log(
           'New socket registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerConduitSocket(r);
-      } else if (isInstanceOfProxyRoute(r)) {
-        ConduitGrpcSdk.Logger.log(
-          'New proxy route registered: ' +
-            r.input.options.action +
-            ' ' +
-            r.input.options.path +
-            ' target url: ' +
-            r.input.proxy.target,
-        );
-        this._proxyRouter?.registerProxyRoute(r);
       } else {
+        if (this.anyTransportRouteChanged(r)) {
+          needsRouterRefresh = true;
+        }
         ConduitGrpcSdk.Logger.log(
           'New route registered: ' +
             r.input.action +
@@ -293,9 +367,11 @@ export class ConduitRoutingController {
         this.registerConduitRoute(r);
       }
     });
-    this._restRouter?.scheduleRouterRefresh();
-    this._graphQLRouter?.scheduleRouterRefresh();
-    this._proxyRouter?.scheduleRouterRefresh();
+    if (needsRouterRefresh) {
+      this._restRouter?.scheduleRouterRefresh();
+      this._graphQLRouter?.scheduleRouterRefresh();
+      this._mcpRouter?.scheduleRouterRefresh();
+    }
   }
 
   onError(error: any) {
@@ -356,3 +432,5 @@ export * from './interfaces/index.js';
 export * from './types/index.js';
 export * from './classes/index.js';
 export * from './utils/GrpcConverter.js';
+export * from './utils/extractClientIp.js';
+export * from './MCP/index.js';

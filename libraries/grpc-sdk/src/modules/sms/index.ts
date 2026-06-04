@@ -1,30 +1,26 @@
 import { ConduitModule } from '../../classes/index.js';
-import {
-  SendSmsResponse,
-  SendVerificationCodeResponse,
-  SmsDefinition,
-  VerifyResponse,
-} from '../../protoUtils/sms.js';
+import { CommunicationsDefinition } from '../../protoUtils/index.js';
 
-export class SMS extends ConduitModule<typeof SmsDefinition> {
+export class SMS extends ConduitModule<typeof CommunicationsDefinition> {
   constructor(
     private readonly moduleName: string,
     url: string,
     grpcToken?: string,
   ) {
-    super(moduleName, 'sms', url, grpcToken);
-    this.initializeClient(SmsDefinition);
+    // Connect to communications module instead of sms
+    super(moduleName, 'communications', url, grpcToken);
+    this.initializeClient(CommunicationsDefinition);
   }
 
-  sendSms(to: string, message: string): Promise<SendSmsResponse> {
+  sendSms(to: string, message: string) {
     return this.client!.sendSms({ to, message });
   }
 
-  sendVerificationCode(to: string): Promise<SendVerificationCodeResponse> {
+  sendVerificationCode(to: string) {
     return this.client!.sendVerificationCode({ to });
   }
 
-  verify(verificationSid: string, code: string): Promise<VerifyResponse> {
+  verify(verificationSid: string, code: string) {
     return this.client!.verify({ verificationSid, code });
   }
 }

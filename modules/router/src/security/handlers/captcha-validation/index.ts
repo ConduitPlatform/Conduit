@@ -66,11 +66,11 @@ export class CaptchaValidator {
   async middleware(req: ConduitRequest, res: Response, next: NextFunction) {
     const { enabled, provider, secretKey } =
       ConfigController.getInstance().config.captcha;
-    const { captchaToken } = req.body;
     if (!enabled) {
       req.conduit!.captcha = 'disabled';
       return next();
     }
+    const captchaToken = req.body?.captchaToken;
     if (!captchaToken) {
       req.conduit!.captcha = 'missing';
       return next();

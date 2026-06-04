@@ -1,0 +1,17 @@
+packages:
+  - "packages/*"
+  - "libraries/*"
+  - "modules/*"
+allowBuilds:
+  '@apollo/protobufjs': true
+  '@firebase/util': true
+  bcrypt: true
+  core-js: true
+  esbuild: true
+  keccak: true
+  msgpackr-extract: true
+  protobufjs: true
+  secp256k1: true
+  sqlite3: true
+  unrs-resolver: true
+  vue-demi: true

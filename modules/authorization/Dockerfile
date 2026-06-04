@@ -1,13 +1,13 @@
-FROM conduit-builder:latest
+FROM conduit-builder
 
 WORKDIR /app
 
-COPY --from=conduit-base:latest /app/modules/authorization /app/modules/authorization
+COPY --from=conduit-base /app/modules/authorization /app/modules/authorization
 
 RUN apk update && \
     apk add --no-cache --virtual .gyp python3 make g++ && \
-    yarn install --production --pure-lockfile --non-interactive && \
-    yarn cache clean && \
+    pnpm install --prod --frozen-lockfile --ignore-scripts && \
+    pnpm store prune && \
     apk del .gyp
 
 WORKDIR /app/modules/authorization

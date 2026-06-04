@@ -40,7 +40,7 @@ export class ServiceHandler implements IAuthenticationStrategy {
 
     const serviceUser: Service | null = await Service.getInstance().findOne(
       { name: serviceName },
-      '+hashedToken',
+      { select: '+hashedToken' },
     );
     if (isNil(serviceUser))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');

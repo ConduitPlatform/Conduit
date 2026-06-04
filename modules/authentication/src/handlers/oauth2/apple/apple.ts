@@ -7,7 +7,7 @@ import {
   Indexable,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
-import appleParameters from '../apple/apple.json' assert { type: 'json' };
+import appleParameters from '../apple/apple.json' with { type: 'json' };
 import {
   AppleOAuth2Settings,
   AppleProviderConfig,
@@ -22,14 +22,15 @@ import { Token } from '../../../models/index.js';
 import { status } from '@grpc/grpc-js';
 import moment from 'moment';
 import jwksRsa from 'jwks-rsa';
-import qs from 'querystring';
 
 import { validateStateToken } from '../utils/index.js';
 import {
+  ConduitJson,
   ConduitString,
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { OAUTH_CALLBACK } from '../../../constants/index.js';
 import { AuthUtils } from '../../../utils/index.js';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
@@ -100,13 +101,18 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     const clientId = this.settings.clientId;
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     const config = ConfigController.getInstance().config;
-    const postData = qs.stringify({
-      client_id: clientId,
-      client_secret: apple_client_secret,
-      code: params.code,
-      grant_type: this.settings.grantType,
-      redirect_uri: `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
-    });
+    const tokenBody = new URLSearchParams();
+    tokenBody.set('client_id', clientId);
+    tokenBody.set('client_secret', apple_client_secret);
+    tokenBody.set('code', params.code);
+    if (this.settings.grantType) {
+      tokenBody.set('grant_type', this.settings.grantType);
+    }
+    tokenBody.set(
+      'redirect_uri',
+      `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
+    );
+    const postData = tokenBody.toString();
     const req = {
       method: this.settings.accessTokenMethod,
       url: this.settings.tokenUrl,
@@ -126,12 +132,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     if (decoded_id_token!.payload.sub !== payload.sub) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
     }
-    let userData = params.user;
-    try {
-      userData = JSON.parse(params.user);
-    } catch (e) {
-      // already a valid object
-    }
+    const userData = (params.user ?? {}) as Indexable;
 
     const userParams = {
       id: payload.sub!,
@@ -194,12 +195,14 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
 
     const clientId = this.settings.clientId;
     const config = ConfigController.getInstance().config;
-    const postData = qs.stringify({
-      client_id: clientId,
-      client_secret: apple_client_secret,
-      code: params.code,
-      grant_type: this.settings.grantType,
-    });
+    const nativeTokenBody = new URLSearchParams();
+    nativeTokenBody.set('client_id', clientId);
+    nativeTokenBody.set('client_secret', apple_client_secret);
+    nativeTokenBody.set('code', params.code);
+    if (this.settings.grantType) {
+      nativeTokenBody.set('grant_type', this.settings.grantType);
+    }
+    const postData = nativeTokenBody.toString();
     const req = {
       method: this.settings.accessTokenMethod,
       url: this.settings.tokenUrl,
@@ -219,12 +222,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     if (decoded_id_token!.payload.sub !== payload.sub) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
     }
-    let userData = params.user;
-    try {
-      userData = JSON.parse(params.user);
-    } catch (e) {
-      // already a valid object
-    }
+    const userData = (params.user ?? {}) as Indexable;
 
     const userParams = {
       id: payload.sub!,
@@ -258,7 +256,9 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
           code: ConduitString.Required,
           id_token: ConduitString.Required,
           state: ConduitString.Required,
+          user: ConduitJson.Optional,
         },
+        rateLimit: OAUTH_CALLBACK,
       },
       new ConduitRouteReturnDefinition(`AppleResponse`, {
         accessToken: ConduitString.Optional,

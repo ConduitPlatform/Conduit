@@ -1,10 +1,10 @@
-FROM conduit-builder:latest
+FROM conduit-builder
 
 WORKDIR /app
 
-COPY --from=conduit-base:latest /app/modules/chat /app/modules/chat
+COPY --from=conduit-base /app/modules/chat /app/modules/chat
 
-RUN yarn install --production --pure-lockfile --non-interactive && yarn cache clean
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts && pnpm store prune
 
 WORKDIR /app/modules/chat
 

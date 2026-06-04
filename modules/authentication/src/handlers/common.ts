@@ -34,8 +34,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
         token: refreshToken,
         clientId,
       },
-      undefined,
-      ['user'],
+      { populate: ['user'], readPreference: 'primary' },
     );
     if (isNil(oldRefreshToken)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Refresh token not found');

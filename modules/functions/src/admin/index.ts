@@ -20,7 +20,7 @@ import { isEmpty, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { FunctionExecutions, Functions } from '../models/index.js';
 import { FunctionController } from '../controllers/function.controller.js';
-import { VMScript } from 'vm2';
+import { compileUserFunctionScript } from '../sandbox/functionSandbox.js';
 
 import escapeStringRegexp from 'escape-string-regexp';
 
@@ -43,10 +43,9 @@ export class AdminHandlers {
     if (!isNil(func)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
     }
-    const script = `module.exports = function(grpcSdk,req,res) { ${functionCode} }`;
     try {
-      new VMScript(script).compile();
-    } catch (e) {
+      compileUserFunctionScript(functionCode);
+    } catch {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid function code');
     }
     const query = {
@@ -103,13 +102,11 @@ export class AdminHandlers {
         query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
       }
     }
-    const functions = await Functions.getInstance().findMany(
-      query,
-      undefined,
+    const functions = await Functions.getInstance().findMany(query, {
       skip,
       limit,
       sort,
-    );
+    });
     const count = await Functions.getInstance().countDocuments(query);
     return { functions, count };
   }
@@ -136,6 +133,11 @@ export class AdminHandlers {
       returns: returns ?? func.returns,
       timeout: timeout ?? func.timeout,
     };
+    try {
+      compileUserFunctionScript(query.functionCode);
+    } catch {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid function code');
+    }
     await Functions.getInstance().findByIdAndUpdate(func._id, query);
     this.functionsController.refreshEndpoints();
     return { updated: true };
@@ -150,9 +152,7 @@ export class AdminHandlers {
 
     const functionsExecutions = await FunctionExecutions.getInstance().findMany(
       {},
-      skip,
-      limit,
-      sort,
+      { skip, limit, sort },
     );
     const count = await FunctionExecutions.getInstance().countDocuments({});
     return { functionsExecutions, count };

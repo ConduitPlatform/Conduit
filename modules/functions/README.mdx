@@ -1,6 +1,45 @@
 # Functions Module
 
-This module provides support for serverless functions.
+Runs **admin-defined JavaScript** on the Conduit server in response to HTTP routes, webhooks, sockets, middleware, and bus events. It extends what you can do beyond declarative custom endpoints without requiring separate infrastructure.
 
-## Environment Variables 📃 <a name="env-vars"></a>
+## Trust model
 
+- Function code is created and updated **only through the admin API** (and Conduit UI). Treat it like deploying code to the server: it runs **in the same Node.js process** with **full access** to the injected `grpcSdk` (database, auth, storage, etc.).
+- **`node:vm`** is used for a **per-invocation timeout** and a limited **`require` surface** — these reduce accidents, **not** malicious isolation. Do not use this module for tenant-submitted or untrusted code; use a dedicated sandboxed runtime in a cloud or sidecar deployment for that.
+
+## Handler shape
+
+Your stored `functionCode` is the **body** of:
+
+```js
+function (grpcSdk, req, res) {
+  // your code
+}
+```
+
+- **`grpcSdk`** — Conduit gRPC SDK instance (same capabilities as server-side modules).
+- **`req`** — Parsed request / event payload (shape depends on function type).
+- **`res`** — Callback `(data) => void` to return a result to the router.
+
+## Allowed `require` modules
+
+Only these identifiers are available from the synthetic `require` in the VM context:
+
+| `require(...)` | Implementation |
+|----------------|----------------|
+| `lodash`       | `lodash-es` (namespace import) |
+| `axios`        | `axios` |
+
+Anything else throws at runtime.
+
+## Timeout
+
+Each function document has a **`timeout`** (milliseconds, default **180000**). It is applied to the VM run so long-running handlers are cut off.
+
+## Configuration
+
+See [`src/config/config.ts`](./src/config/config.ts): `active` toggles whether the module is serving.
+
+## Environment Variables
+
+None required by this module beyond what the core Conduit stack needs.

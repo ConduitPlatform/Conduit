@@ -1,41 +1,38 @@
 {
   "name": "conduit",
-  "version": "0.16.26",
+  "version": "0.17.0-alpha.0",
   "description": "",
   "main": "index.js",
   "private": true,
+  "packageManager": "pnpm@11.5.0+sha512.dbfcc4f81cf48597afd4bc391ffdf12c11f1a9fb83a395bfa6b0a2d9cc2fd8ffebafdb1ccbd529632153f793904c2615b7f09fe1a345473fd1c35845172a8eb1",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "yarn turbo run build",
+    "lint": "eslint .",
+    "build": "turbo run build",
     "prepare": "husky",
     "release": "standard-version"
   },
-  "workspaces": [
-    "packages/*",
-    "libraries/*",
-    "admin/*",
-    "modules/*"
-  ],
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@commitlint/cli": "^19.3.0",
-    "@commitlint/config-conventional": "^19.5.0",
-    "@commitlint/config-lerna-scopes": "^19.0.0",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@eslint/js": "^10.0.1",
     "copyfiles": "^2.4.1",
     "cz-conventional-changelog": "^3.3.0",
+    "eslint": "^10.2.0",
+    "globals": "^17.4.0",
     "husky": "^9.0.11",
-    "lerna": "^8.1.8",
-    "lint-staged": ">=15",
-    "prettier": "^3.0.3",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1",
     "standard-version": "^9.5.0",
-    "turbo": "^1.12.4"
+    "turbo": "^2.9.6",
+    "typescript-eslint": "^8.58.0"
   },
-  "dependencies": {},
   "config": {
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
