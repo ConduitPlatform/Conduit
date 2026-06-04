@@ -75,17 +75,15 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
   }
 
   sendManyNotifications(
-    notifications: [
-      {
-        sendTo: string;
-        title: string;
-        body?: string;
-        data?: string;
-        platform?: string;
-        doNotStore?: boolean;
-        isSilent?: boolean;
-      },
-    ],
+    notifications: {
+      sendTo: string;
+      title: string;
+      body?: string;
+      data?: string;
+      platform?: string;
+      doNotStore?: boolean;
+      isSilent?: boolean;
+    }[],
   ) {
     return this.client!.sendManyNotifications({
       notifications,
