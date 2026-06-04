@@ -1,0 +1,43 @@
+syntax = 'proto3';
+import "google/protobuf/empty.proto";
+package embeddings;
+
+message EmbeddingConfigRequest {
+  string schemaName = 1;
+  repeated string sourceFields = 2;
+  string targetField = 3;
+  string provider = 4;
+  string model = 5;
+  int32 dimensions = 6;
+  optional string similarity = 7;
+}
+
+message EmbeddingConfigResponse {
+  string result = 1;
+}
+
+message BackfillRequest {
+  string schemaName = 1;
+  optional int32 batchSize = 2;
+}
+
+message SemanticSearchRequest {
+  string schemaName = 1;
+  string text = 2;
+  optional string targetField = 3;
+  optional string filter = 4;
+  optional int32 limit = 5;
+  optional string userId = 6;
+  optional string scope = 7;
+}
+
+message EmbeddingsQueryResponse {
+  string result = 1;
+}
+
+service EmbeddingsProvider {
+  rpc upsertConfig(EmbeddingConfigRequest) returns (EmbeddingConfigResponse);
+  rpc getConfigs(google.protobuf.Empty) returns (EmbeddingsQueryResponse);
+  rpc startBackfill(BackfillRequest) returns (EmbeddingsQueryResponse);
+  rpc semanticSearch(SemanticSearchRequest) returns (EmbeddingsQueryResponse);
+}

@@ -10,6 +10,11 @@ import {
   PostgresIndexType,
   RawSQLQuery,
   UntypedArray,
+  VectorCapabilities,
+  VectorIndexDefinition,
+  VectorIndexMethod,
+  VectorSearchInput,
+  VectorSearchResult,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
@@ -422,6 +427,131 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     return 'Indexes deleted';
   }
 
+  async getVectorCapabilities(schemaName?: string): Promise<VectorCapabilities> {
+    if (this.sequelize.getDialect() !== 'postgres') {
+      return {
+        supported: false,
+        storage: false,
+        indexing: false,
+        search: false,
+        provider: 'unsupported',
+        reason: `${this.sequelize.getDialect()} does not support Conduit vector search`,
+      };
+    }
+    try {
+      await this.sequelize.query("SELECT 'vector'::regtype");
+      return {
+        supported: true,
+        storage: true,
+        indexing: true,
+        search: true,
+        provider: 'postgres',
+      };
+    } catch (err) {
+      return {
+        supported: true,
+        storage: false,
+        indexing: false,
+        search: false,
+        provider: 'postgres',
+        reason: schemaName
+          ? `Schema ${schemaName} cannot use pgvector: ${(err as Error).message}`
+          : (err as Error).message,
+      };
+    }
+  }
+
+  async createVectorIndex(
+    schemaName: string,
+    index: VectorIndexDefinition,
+  ): Promise<string> {
+    this.ensurePostgresVectorSupport(schemaName);
+    this.validateVectorField(schemaName, index);
+    const tableName = this.getPhysicalTableName(schemaName);
+    const indexName = this.quoteIdentifier(
+      index.name ?? `${tableName}_${index.field}_vector`,
+    );
+    const method = index.method === VectorIndexMethod.IVFFlat ? 'ivfflat' : 'hnsw';
+    const operator = this.pgVectorOperator(index.similarity);
+    const withOptions =
+      method === 'ivfflat'
+        ? this.renderWithOptions({ lists: index.options?.ivfflat?.lists })
+        : this.renderWithOptions({
+            m: index.options?.hnsw?.m,
+            ef_construction: index.options?.hnsw?.efConstruction,
+          });
+    await this.sequelize.query(
+      `CREATE INDEX IF NOT EXISTS ${indexName} ON ${this.quoteIdentifier(
+        tableName,
+      )} USING ${method} (${this.quoteIdentifier(index.field)} ${operator})${withOptions}`,
+    );
+    return 'Vector index created!';
+  }
+
+  async getVectorIndexes(schemaName: string): Promise<VectorIndexDefinition[]> {
+    this.ensurePostgresVectorSupport(schemaName);
+    const tableName = this.getPhysicalTableName(schemaName);
+    const rows = await this.sequelize.query(
+      `SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = current_schema() AND tablename = ${this.sequelize.escape(
+        tableName,
+      )}`,
+    );
+    return (rows[0] as any[])
+      .filter(row => /USING (hnsw|ivfflat)/i.test(row.indexdef))
+      .map(row => this.fromPostgresVectorIndex(row.indexname, row.indexdef));
+  }
+
+  async deleteVectorIndex(schemaName: string, indexName: string): Promise<string> {
+    this.ensurePostgresVectorSupport(schemaName);
+    await this.sequelize.query(`DROP INDEX IF EXISTS ${this.quoteIdentifier(indexName)}`);
+    return 'Vector index deleted';
+  }
+
+  async vectorSearch(request: VectorSearchInput): Promise<VectorSearchResult[]> {
+    this.ensurePostgresVectorSupport(request.schemaName);
+    const schema = this.models[request.schemaName];
+    const field = (schema.originalSchema.compiledFields?.[request.field] ??
+      schema.originalSchema.fields?.[request.field]) as any;
+    if (field?.type !== 'Vector') {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Requested field is not a vector');
+    }
+    if (request.vector.length !== field.dimensions) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `Vector dimensions mismatch: expected ${field.dimensions}`,
+      );
+    }
+    const authorizedQuery = await schema.getAuthorizedQuery(
+      'read',
+      request.filter ?? {},
+      true,
+      request.userId,
+      request.scope,
+    );
+    if (isNil(authorizedQuery)) return [];
+    const tableName = this.getPhysicalTableName(request.schemaName);
+    const distance = this.pgVectorDistanceOperator(field.similarity ?? 'cosine');
+    const where = this.renderSimpleWhere(authorizedQuery);
+    const limit = Math.max(1, Math.min(request.limit ?? 10, 1000));
+    const vector = `[${request.vector.join(',')}]`;
+    const selectedColumns = this.buildVectorSelectList(
+      schema.originalSchema,
+      request.select,
+    );
+    const rows = await this.sequelize.query(
+      `SELECT ${selectedColumns}, (${this.quoteIdentifier(request.field)} ${distance} ${this.sequelize.escape(
+        vector,
+      )}::vector) AS _score FROM ${this.quoteIdentifier(tableName)}${where} ORDER BY ${this.quoteIdentifier(
+        request.field,
+      )} ${distance} ${this.sequelize.escape(vector)}::vector LIMIT ${limit}`,
+    );
+    return (rows[0] as any[]).map(row => {
+      const score = Number(row._score ?? 0);
+      delete row._score;
+      return { document: row, score };
+    });
+  }
+
   async execRawQuery(schemaName: string, rawQuery: RawSQLQuery) {
     return await this.sequelize
       .query(rawQuery.query, rawQuery.options)
@@ -463,6 +593,165 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   }
 
   protected abstract hasLegacyCollections(): Promise<boolean>;
+
+  private ensurePostgresVectorSupport(schemaName: string) {
+    if (this.sequelize.getDialect() !== 'postgres') {
+      throw new GrpcError(
+        status.UNIMPLEMENTED,
+        `${this.sequelize.getDialect()} does not support vector search`,
+      );
+    }
+    if (!this.models[schemaName]) {
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    }
+  }
+
+  private validateVectorField(schemaName: string, index: VectorIndexDefinition) {
+    const schema = this.models[schemaName].originalSchema;
+    const field = (schema.compiledFields?.[index.field] ??
+      schema.fields?.[index.field]) as any;
+    if (!field || field.type !== 'Vector') {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Vector index field is not a vector');
+    }
+    if (field.dimensions !== index.dimensions) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `Vector index dimensions mismatch: field ${field.dimensions}, index ${index.dimensions}`,
+      );
+    }
+  }
+
+  private getPhysicalTableName(schemaName: string) {
+    return this.models[schemaName].originalSchema.collectionName || `cnd_${schemaName}`;
+  }
+
+  private quoteIdentifier(identifier: string) {
+    return `"${identifier.replace(/"/g, '""')}"`;
+  }
+
+  private pgVectorOperator(similarity: string) {
+    if (similarity === 'euclidean') return 'vector_l2_ops';
+    if (similarity === 'dotProduct') return 'vector_ip_ops';
+    return 'vector_cosine_ops';
+  }
+
+  private pgVectorDistanceOperator(similarity: string) {
+    if (similarity === 'euclidean') return '<->';
+    if (similarity === 'dotProduct') return '<#>';
+    return '<=>';
+  }
+
+  private renderWithOptions(options: Record<string, number | undefined>) {
+    const entries = Object.entries(options).filter((entry): entry is [string, number] =>
+      Number.isFinite(entry[1]),
+    );
+    if (!entries.length) return '';
+    return ` WITH (${entries.map(([key, value]) => `${key} = ${value}`).join(', ')})`;
+  }
+
+  private renderSimpleWhere(query: Indexable): string {
+    const clauses: string[] = Reflect.ownKeys(query).flatMap((fieldKey): string[] => {
+      const value = (query as any)[fieldKey as any];
+      const field = String(fieldKey);
+      if (field === '$and' && Array.isArray(value)) {
+        return value
+          .map(item => this.renderSimpleWhere(item as Indexable).replace(/^ WHERE /, ''))
+          .filter(Boolean);
+      }
+      if (
+        typeof fieldKey === 'symbol' &&
+        fieldKey.description === 'and' &&
+        Array.isArray(value)
+      ) {
+        return value
+          .map(item => this.renderSimpleWhere(item as Indexable).replace(/^ WHERE /, ''))
+          .filter(Boolean);
+      }
+      if (typeof fieldKey === 'symbol') {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Unsupported vector search filter operator',
+        );
+      }
+      const inValues = this.extractInValues(value);
+      if (field === '_id' && inValues) {
+        const ids = inValues.map(id => this.sequelize.escape(String(id)));
+        return ids.length
+          ? [`${this.quoteIdentifier(field)} IN (${ids.join(', ')})`]
+          : [];
+      }
+      if (value === null) {
+        return [`${this.quoteIdentifier(field)} IS NULL`];
+      }
+      if (typeof value === 'boolean') {
+        return [`${this.quoteIdentifier(field)} = ${value ? 'TRUE' : 'FALSE'}`];
+      }
+      if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) {
+        return [
+          `${this.quoteIdentifier(field)} = ${this.sequelize.escape(value as string | number)}`,
+        ];
+      }
+      if (value && typeof value === 'object') {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Unsupported vector search filter shape',
+        );
+      }
+      return [];
+    });
+    return clauses.length ? ` WHERE ${clauses.join(' AND ')}` : '';
+  }
+
+  private extractInValues(value: unknown): unknown[] | null {
+    if (!value || typeof value !== 'object') return null;
+    if ('$in' in value) return (value as { $in: unknown[] }).$in;
+    const inSymbol = Object.getOwnPropertySymbols(value).find(
+      symbol => symbol.description === 'in' || symbol.toString() === 'Symbol(in)',
+    );
+    return inSymbol ? ((value as any)[inSymbol] as unknown[]) : null;
+  }
+
+  private buildVectorSelectList(schema: ConduitDatabaseSchema, select?: string) {
+    const fields = schema.compiledFields ?? schema.fields;
+    const hiddenFields = new Set(
+      Object.entries(fields)
+        .filter(([, field]: [string, any]) => field?.select === false)
+        .map(([field]) => field),
+    );
+    const availableFields = Object.keys(fields).filter(field => !hiddenFields.has(field));
+    const tokens = select?.split(' ').filter(Boolean) ?? [];
+    const includeTokens = tokens.filter(token => !token.startsWith('-'));
+    const selected = new Set(includeTokens.length ? includeTokens : availableFields);
+    tokens
+      .filter(token => token.startsWith('-'))
+      .map(token => token.slice(1))
+      .forEach(field => selected.delete(field));
+    hiddenFields.forEach(field => selected.delete(field));
+    if (!selected.size) selected.add('_id');
+    return [...selected].map(field => this.quoteIdentifier(field)).join(', ');
+  }
+
+  private fromPostgresVectorIndex(
+    name: string,
+    definition: string,
+  ): VectorIndexDefinition {
+    const method = /USING\s+(\w+)/i.exec(definition)?.[1] as
+      | VectorIndexMethod
+      | undefined;
+    const field = /\((?:"([^"]+)"|(\w+))\s+vector_/i.exec(definition);
+    const operator = /vector_(l2|cosine|ip)_ops/i.exec(definition)?.[1];
+    return {
+      name,
+      field: field?.[1] ?? field?.[2] ?? '',
+      dimensions: 0,
+      similarity: (operator === 'l2'
+        ? 'euclidean'
+        : operator === 'ip'
+          ? 'dotProduct'
+          : 'cosine') as any,
+      method: method as VectorIndexMethod | undefined,
+    };
+  }
 
   private checkAndConvertIndexes(
     schemaName: string,

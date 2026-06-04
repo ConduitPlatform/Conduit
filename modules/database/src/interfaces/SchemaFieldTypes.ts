@@ -23,7 +23,7 @@ export const SchemaField = {
     type: 'String',
     required: true,
     description:
-      'Field type. One of: String, Number, Boolean, Date, ObjectId, JSON, Relation',
+      'Field type. One of: String, Number, Boolean, Date, ObjectId, JSON, Relation, Vector',
   },
   required: ConduitBoolean.Optional,
   unique: ConduitBoolean.Optional,
@@ -34,6 +34,16 @@ export const SchemaField = {
     type: 'String',
     required: false,
     description: 'Required when type is "Relation". The name of the related schema.',
+  },
+  dimensions: {
+    type: 'Number',
+    required: false,
+    description: 'Required when type is "Vector". The number of embedding dimensions.',
+  },
+  similarity: {
+    type: 'String',
+    required: false,
+    description: 'Optional for Vector fields. One of: cosine, euclidean, dotProduct.',
   },
 };
 
@@ -46,23 +56,26 @@ export const SchemaField = {
  */
 export const SchemaFieldsDescription = `Object mapping field names to field definitions.
 
-**Field Types:** String, Number, Boolean, Date, ObjectId, JSON, Relation
+**Field Types:** String, Number, Boolean, Date, ObjectId, JSON, Relation, Vector
 
 **Definition Formats:**
 - Shorthand: \`{ fieldName: "String" }\`
 - Object: \`{ fieldName: { type: "String", required: true } }\`
 - Array: \`{ fieldName: ["String"] }\` or \`{ fieldName: [{ type: "String" }] }\`
 - Relation: \`{ fieldName: { type: "Relation", model: "SchemaName" } }\`
+- Vector: \`{ fieldName: { type: "Vector", dimensions: 1536, similarity: "cosine", select: false } }\`
 - Nested: \`{ fieldName: { nestedField: { type: "String" } } }\`
 
 **Field Properties:**
-- \`type\` (required): String | Number | Boolean | Date | ObjectId | JSON | Relation
+- \`type\` (required): String | Number | Boolean | Date | ObjectId | JSON | Relation | Vector
 - \`required\` (optional): boolean - Whether the field is required
 - \`unique\` (optional): boolean - Whether values must be unique (requires required: true)
 - \`select\` (optional): boolean - Whether to include in query results by default
 - \`default\` (optional): string - Default value for the field
 - \`description\` (optional): string - Field description
 - \`model\` (required for Relation): string - Name of the related schema
+- \`dimensions\` (required for Vector): number - Embedding vector dimensions
+- \`similarity\` (optional for Vector): cosine | euclidean | dotProduct
 
 **Example:**
 \`\`\`json
@@ -71,6 +84,7 @@ export const SchemaFieldsDescription = `Object mapping field names to field defi
   "price": { "type": "Number", "required": true },
   "description": "String",
   "category": { "type": "Relation", "model": "Category" },
+  "embedding": { "type": "Vector", "dimensions": 1536, "similarity": "cosine", "select": false },
   "tags": ["String"],
   "metadata": { "key": "String", "value": "String" }
 }

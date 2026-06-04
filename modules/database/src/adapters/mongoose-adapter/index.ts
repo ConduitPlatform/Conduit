@@ -9,6 +9,10 @@ import {
   ModelOptionsIndexes,
   MongoIndexType,
   RawMongoQuery,
+  VectorCapabilities,
+  VectorIndexDefinition,
+  VectorSearchInput,
+  VectorSearchResult,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter.js';
 import { validateFieldChanges, validateFieldConstraints } from '../utils/index.js';
@@ -20,7 +24,7 @@ import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces/index.js';
-import { isArray, isEqual } from 'lodash-es';
+import { isArray, isEqual, isNil } from 'lodash-es';
 import { parseSchema } from 'mongodb-schema';
 
 const VIEW_LOCK_TTL_MS = 60_000;
@@ -720,6 +724,155 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return 'Indexes deleted';
   }
 
+  async getVectorCapabilities(schemaName?: string): Promise<VectorCapabilities> {
+    const modelName = schemaName ?? Object.keys(this.models)[0];
+    if (!modelName || !this.models[modelName]) {
+      return {
+        supported: true,
+        storage: true,
+        indexing: false,
+        search: false,
+        provider: 'mongodb',
+        reason: 'No schema is available to probe MongoDB Vector Search support',
+      };
+    }
+
+    try {
+      const collection: any = this.mongoose.model(modelName).collection;
+      if (typeof collection.listSearchIndexes !== 'function') {
+        return {
+          supported: true,
+          storage: true,
+          indexing: false,
+          search: false,
+          provider: 'mongodb',
+          reason: 'MongoDB driver does not expose search index commands',
+        };
+      }
+      await collection.listSearchIndexes().toArray();
+      return {
+        supported: true,
+        storage: true,
+        indexing: true,
+        search: true,
+        provider: 'mongodb',
+      };
+    } catch (err) {
+      return {
+        supported: true,
+        storage: true,
+        indexing: false,
+        search: false,
+        provider: 'mongodb',
+        reason: (err as Error).message,
+      };
+    }
+  }
+
+  async createVectorIndex(
+    schemaName: string,
+    index: VectorIndexDefinition,
+  ): Promise<string> {
+    if (!this.models[schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    this.validateVectorField(schemaName, index);
+    const collection: any = this.mongoose.model(schemaName).collection;
+    if (typeof collection.createSearchIndex !== 'function') {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'MongoDB Vector Search index commands are not available for this deployment',
+      );
+    }
+    await collection.createSearchIndex({
+      name: index.name ?? `${index.field}_vector`,
+      type: 'vectorSearch',
+      definition: this.toMongoVectorIndexDefinition(index),
+    });
+    return 'Vector index created!';
+  }
+
+  async getVectorIndexes(schemaName: string): Promise<VectorIndexDefinition[]> {
+    if (!this.models[schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const collection: any = this.mongoose.model(schemaName).collection;
+    if (typeof collection.listSearchIndexes !== 'function') return [];
+    const indexes = await collection.listSearchIndexes().toArray();
+    return indexes
+      .filter((index: any) => index.type === 'vectorSearch')
+      .map((index: any) => this.fromMongoVectorIndex(index));
+  }
+
+  async deleteVectorIndex(schemaName: string, indexName: string): Promise<string> {
+    if (!this.models[schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const collection: any = this.mongoose.model(schemaName).collection;
+    if (typeof collection.dropSearchIndex !== 'function') {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'MongoDB Vector Search index commands are not available for this deployment',
+      );
+    }
+    await collection.dropSearchIndex(indexName);
+    return 'Vector index deleted';
+  }
+
+  async vectorSearch(request: VectorSearchInput): Promise<VectorSearchResult[]> {
+    if (!this.models[request.schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const model = this.models[request.schemaName];
+    const schemaField =
+      model.originalSchema.compiledFields?.[request.field] ??
+      model.originalSchema.fields?.[request.field];
+    if (schemaField?.type !== 'Vector') {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Requested field is not a vector');
+    }
+    if (request.vector.length !== schemaField.dimensions) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `Vector dimensions mismatch: expected ${schemaField.dimensions}`,
+      );
+    }
+
+    const filter = request.filter ?? {};
+    const authorizedQuery = await model.getAuthorizedQuery(
+      'read',
+      filter,
+      true,
+      request.userId,
+      request.scope,
+    );
+    if (isNil(authorizedQuery)) return [];
+
+    const vectorStage: any = {
+      index: request.indexName ?? `${request.field}_vector`,
+      path: request.field,
+      queryVector: request.vector,
+      numCandidates: request.numCandidates ?? Math.max((request.limit ?? 10) * 10, 100),
+      limit: request.limit ?? 10,
+    };
+    if (Object.keys(authorizedQuery).length > 0) {
+      vectorStage.filter = authorizedQuery;
+    }
+
+    const pipeline: any[] = [
+      { $vectorSearch: vectorStage },
+      { $addFields: { _score: { $meta: 'vectorSearchScore' } } },
+    ];
+    pipeline.push({
+      $project: this.buildVectorProjection(model.originalSchema, request.select),
+    });
+
+    const docs = await this.mongoose
+      .model(request.schemaName)
+      .collection.aggregate(pipeline)
+      .toArray();
+    return docs.map((doc: any) => {
+      const score = doc._score ?? 0;
+      delete doc._score;
+      return { document: doc, score };
+    });
+  }
+
   async execRawQuery(schemaName: string, rawQuery: RawMongoQuery) {
     let collection = this.models[schemaName]?.model.collection;
     if (!collection) {
@@ -802,6 +955,90 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return !!(await this.mongoose.connection.db?.listCollections().toArray())?.find(
       c => c.name === '_declaredschemas',
     );
+  }
+
+  private validateVectorField(schemaName: string, index: VectorIndexDefinition) {
+    const schema = this.models[schemaName].originalSchema as any;
+    const field = schema.compiledFields?.[index.field] ?? schema.fields?.[index.field];
+    if (!field || field.type !== 'Vector') {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Vector index field is not a vector');
+    }
+    if (field.dimensions !== index.dimensions) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `Vector index dimensions mismatch: field ${field.dimensions}, index ${index.dimensions}`,
+      );
+    }
+  }
+
+  private toMongoVectorIndexDefinition(index: VectorIndexDefinition) {
+    const vectorField: any = {
+      type: 'vector',
+      path: index.field,
+      numDimensions: index.dimensions,
+      similarity: index.similarity,
+    };
+    if (index.options?.quantization)
+      vectorField.quantization = index.options.quantization;
+    if (index.method) vectorField.indexingMethod = index.method;
+    if (index.options?.hnsw) {
+      vectorField.hnswOptions = {
+        ...(index.options.hnsw.maxEdges && { maxEdges: index.options.hnsw.maxEdges }),
+        ...(index.options.hnsw.numEdgeCandidates && {
+          numEdgeCandidates: index.options.hnsw.numEdgeCandidates,
+        }),
+      };
+    }
+    return {
+      fields: [
+        vectorField,
+        ...(index.filterFields ?? []).map((path: string) => ({ type: 'filter', path })),
+      ],
+      ...(index.options?.storedSource !== undefined && {
+        storedSource: index.options.storedSource,
+      }),
+    };
+  }
+
+  private fromMongoVectorIndex(index: any): VectorIndexDefinition {
+    const fields = index.latestDefinition?.fields ?? index.definition?.fields ?? [];
+    const vectorField = fields.find((field: any) => field.type === 'vector') ?? {};
+    return {
+      name: index.name,
+      field: vectorField.path,
+      dimensions: vectorField.numDimensions,
+      similarity: vectorField.similarity,
+      method: vectorField.indexingMethod,
+      filterFields: fields
+        .filter((field: any) => field.type === 'filter')
+        .map((field: any) => field.path),
+    };
+  }
+
+  private buildVectorProjection(schema: ConduitDatabaseSchema, select?: string) {
+    const hiddenFields = new Set(
+      Object.entries(schema.compiledFields ?? schema.fields)
+        .filter(([, field]: [string, any]) => field?.select === false)
+        .map(([field]) => field),
+    );
+    const tokens = select?.split(' ').filter(Boolean) ?? [];
+    const includeTokens = tokens.filter(token => !token.startsWith('-'));
+    if (includeTokens.length) {
+      return includeTokens.reduce(
+        (projection: any, token: string) => {
+          if (!hiddenFields.has(token)) projection[token] = 1;
+          return projection;
+        },
+        { _score: 1 },
+      );
+    }
+    return [
+      ...hiddenFields,
+      ...tokens.filter(token => token.startsWith('-')).map(token => token.slice(1)),
+    ].reduce((projection: any, field: string) => {
+      projection[field] = 0;
+      return projection;
+    }, {});
   }
 
   protected async _createSchemaFromAdapter(
