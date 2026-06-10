@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.17.0-alpha.1](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.0...v0.17.0-alpha.1) (2026-06-10)
+
+
+### Bug Fixes
+
+* **authentication:** reconcile logged in users metric ([#1468](https://github.com/ConduitPlatform/Conduit/issues/1468)) ([f733a48](https://github.com/ConduitPlatform/Conduit/commit/f733a48195a28ac3c504c2da7912fd50554e2bba))
+* **chat:** missing migration on findMany ([f746400](https://github.com/ConduitPlatform/Conduit/commit/f746400390c02ab9f86c7e8cf07a14432ecd8399))
+* **ci:** sync lockfile and harden alpha release pipeline ([2840b62](https://github.com/ConduitPlatform/Conduit/commit/2840b6294ee88c5416ea984ce712f7b338db3954)), closes [#1473](https://github.com/ConduitPlatform/Conduit/issues/1473)
+* **database:** persistence issues in schema patching ([f5cfbcc](https://github.com/ConduitPlatform/Conduit/commit/f5cfbcc7490ff0603f555529dac9705287cbf1e1))
+* new ci pipeline failure ([7fbc49d](https://github.com/ConduitPlatform/Conduit/commit/7fbc49d6b6bd14271f3aca361747b1716dd7734c))
+
 ## [0.17.0-alpha.0](https://github.com/ConduitPlatform/Conduit/compare/v0.16.26...v0.17.0-alpha.0) (2026-05-19)
 
 
