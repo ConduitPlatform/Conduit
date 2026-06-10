@@ -30,7 +30,7 @@
     "@conduitplatform/module-tools": "workspace:*",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
-    "axios": "^1.14.0",
+    "axios": "^1.16.0",
     "bcrypt": "^6.0.0",
     "convict": "^6.2.5",
     "cors": "^2.8.6",
