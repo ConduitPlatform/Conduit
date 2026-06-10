@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.17.0-alpha.2](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.1...v0.17.0-alpha.2) (2026-06-10)
+
+
+### Bug Fixes
+
+* **authentication:** resolve container build TypeScript errors ([bd1fa35](https://github.com/ConduitPlatform/Conduit/commit/bd1fa35b321a09012059d96695d7609d4395a2a8))
+
 ## [0.17.0-alpha.1](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.0...v0.17.0-alpha.1) (2026-06-10)
 
 
