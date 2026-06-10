@@ -154,11 +154,11 @@ importers:
         specifier: ^1.0.3
         version: 1.0.3(graphql@16.13.2)
       '@apollo/server':
-        specifier: ^5.5.0
-        version: 5.5.0(graphql@16.13.2)
+        specifier: ^5.5.1
+        version: 5.5.1(graphql@16.13.2)
       '@as-integrations/express5':
         specifier: ^1.1.2
-        version: 1.1.2(@apollo/server@5.5.0(graphql@16.13.2))(express@5.2.1)
+        version: 1.1.2(@apollo/server@5.5.1(graphql@16.13.2))(express@5.2.1)
       '@conduitplatform/grpc-sdk':
         specifier: workspace:*
         version: link:../grpc-sdk
@@ -253,8 +253,8 @@ importers:
         specifier: 5.0.1
         version: 5.0.1(express@5.2.1)
       uuid:
-        specifier: ^13.0.0
-        version: 13.0.0
+        specifier: ^14.0.0
+        version: 14.0.0
       winston:
         specifier: ^3.19.0
         version: 3.19.0
@@ -466,8 +466,8 @@ importers:
         specifier: ^2.30.1
         version: 2.30.1
       uuid:
-        specifier: ^13.0.0
-        version: 13.0.0
+        specifier: ^14.0.0
+        version: 14.0.0
     devDependencies:
       '@types/bcrypt':
         specifier: ^6.0.0
@@ -542,8 +542,8 @@ importers:
         specifier: ^2.30.1
         version: 2.30.1
       uuid:
-        specifier: ^13.0.0
-        version: 13.0.0
+        specifier: ^14.0.0
+        version: 14.0.0
     devDependencies:
       '@types/bcrypt':
         specifier: ^6.0.0
@@ -600,8 +600,8 @@ importers:
         specifier: ^4.18.1
         version: 4.18.1
       uuid:
-        specifier: ^13.0.0
-        version: 13.0.0
+        specifier: ^14.0.0
+        version: 14.0.0
     devDependencies:
       '@types/convict':
         specifier: ^6.1.6
@@ -1061,8 +1061,8 @@ importers:
         specifier: ^4.18.1
         version: 4.18.1
       uuid:
-        specifier: ^13.0.0
-        version: 13.0.0
+        specifier: ^14.0.0
+        version: 14.0.0
     devDependencies:
       '@types/ali-oss':
         specifier: ^6.23.3
@@ -1264,8 +1264,8 @@ packages:
     peerDependencies:
       graphql: 14.x || 15.x || 16.x
 
-  '@apollo/server@5.5.0':
-    resolution: {integrity: sha512-vWtodBOK/SZwBTJzItECOmLfL8E8pn/IdvP7pnxN5g2tny9iW4+9sxdajE798wV1H2+PYp/rRcl/soSHIBKMPw==}
+  '@apollo/server@5.5.1':
+    resolution: {integrity: sha512-Rn3g5TJQsMSUY23CWZTghWdBWyjX7dP1eaEBPkvmM2RHi82cDcpgTIkSCbGvtTUEGjwopLv1AAooU/n7iIZ20A==}
     engines: {node: '>=20'}
     peerDependencies:
       graphql: ^16.11.0
@@ -8705,8 +8705,8 @@ packages:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
     hasBin: true
 
-  uuid@13.0.0:
-    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
+  uuid@14.0.0:
+    resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
     hasBin: true
 
   uuid@3.4.0:
@@ -9064,7 +9064,7 @@ snapshots:
       '@apollo/utils.logger': 3.0.0
       graphql: 16.13.2
 
-  '@apollo/server@5.5.0(graphql@16.13.2)':
+  '@apollo/server@5.5.1(graphql@16.13.2)':
     dependencies:
       '@apollo/cache-control-types': 1.0.3(graphql@16.13.2)
       '@apollo/server-gateway-interface': 2.0.0(graphql@16.13.2)
@@ -9086,7 +9086,6 @@ snapshots:
       loglevel: 1.9.2
       lru-cache: 11.2.2
       negotiator: 1.0.0
-      uuid: 11.1.0
       whatwg-mimetype: 4.0.0
     transitivePeerDependencies:
       - supports-color
@@ -9144,9 +9143,9 @@ snapshots:
 
   '@apollo/utils.withrequired@3.0.0': {}
 
-  '@as-integrations/express5@1.1.2(@apollo/server@5.5.0(graphql@16.13.2))(express@5.2.1)':
+  '@as-integrations/express5@1.1.2(@apollo/server@5.5.1(graphql@16.13.2))(express@5.2.1)':
     dependencies:
-      '@apollo/server': 5.5.0(graphql@16.13.2)
+      '@apollo/server': 5.5.1(graphql@16.13.2)
       express: 5.2.1
 
   '@aws-crypto/crc32@5.2.0':
@@ -18358,7 +18357,7 @@ snapshots:
 
   uuid@11.1.0: {}
 
-  uuid@13.0.0: {}
+  uuid@14.0.0: {}
 
   uuid@3.4.0: {}
 
