@@ -77,12 +77,12 @@ export class AdminHandlers {
       doNotStore: call.request.params.doNotStore,
       platform: call.request.params.platform,
     };
-    await this.provider.sendToManyDevices(params).catch(e => {
+    const result = await this.provider.sendToManyDevices(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
     ConduitGrpcSdk.Metrics?.increment(
       'push_notifications_sent_total',
-      call.request.params.userIds.length,
+      result.successCount,
     );
     return 'Ok';
   }
@@ -91,12 +91,18 @@ export class AdminHandlers {
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
     const params: ISendNotification[] = call.request.params.notifications;
-    await this.provider.sendMany(params).catch(e => {
+    if (params.length === 0) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'notifications is required and must be a non-empty array',
+      );
+    }
+    const result = await this.provider.sendMany(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
     ConduitGrpcSdk.Metrics?.increment(
       'push_notifications_sent_total',
-      call.request.params.userIds.length,
+      result.successCount,
     );
     return 'Ok';
   }
@@ -214,6 +220,7 @@ export class AdminHandlers {
                 sendTo: ConduitString.Required,
                 title: ConduitString.Optional,
                 body: ConduitString.Optional,
+                data: ConduitJson.Optional,
                 isSilent: ConduitBoolean.Optional,
                 platform: ConduitString.Optional,
                 doNotStore: ConduitBoolean.Optional,
