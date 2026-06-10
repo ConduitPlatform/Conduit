@@ -31,7 +31,7 @@
     "@types/node": "^24.9.1",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.2.0",
-    "globals": "^17.4.0",
+    "globals": "^17.6.0",
     "typescript-eslint": "^8.58.0",
     "jest": "^30.3.0",
     "prettier": "^3.8.1",
