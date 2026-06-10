@@ -453,6 +453,9 @@ importers:
       ethereumjs-util:
         specifier: ^7.1.5
         version: 7.1.5
+      ioredis:
+        specifier: ^5.10.1
+        version: 5.10.1
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3

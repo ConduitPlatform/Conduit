@@ -50,6 +50,7 @@
     "convict": "^6.2.5",
     "escape-string-regexp": "^5.0.0",
     "ethereumjs-util": "^7.1.5",
+    "ioredis": "^5.10.1",
     "jsonwebtoken": "^9.0.3",
     "jwks-rsa": "^4.0.1",
     "lodash-es": "^4.17.23",
