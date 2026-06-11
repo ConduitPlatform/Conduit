@@ -27,7 +27,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@conduitplatform/grpc-sdk": "workspace:*",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "abort-controller-x": "^0.5.0",
@@ -54,6 +53,7 @@
     "directory": "libraries/module-tools"
   },
   "devDependencies": {
+    "@conduitplatform/grpc-sdk": "workspace:*",
     "@types/convict": "^6.1.6",
     "@types/fs-extra": "^11.0.4",
     "@types/google-protobuf": "^3.15.12",

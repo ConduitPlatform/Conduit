@@ -76,11 +76,20 @@ jobs:
           version: '29.x'
       - name: install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Set grpc-sdk version
+        run: pnpm version "$RELEASE_VERSION" --no-git-tag-version
+        working-directory: ./libraries/grpc-sdk
       - name: build the sdk
         run: npx turbo run build --filter=@conduitplatform/grpc-sdk --filter=@conduitplatform/module-tools
       - name: Set version and publish
         run: |
           pnpm version "$RELEASE_VERSION" --no-git-tag-version
+          pnpm pack --pack-destination /tmp
+          tgz=$(ls -t /tmp/conduitplatform-module-tools-*.tgz | head -1)
+          pkg=$(tar -xOf "$tgz" package/package.json)
+          peer=$(echo "$pkg" | jq -r '.peerDependencies["@conduitplatform/grpc-sdk"]')
+          dep=$(echo "$pkg" | jq -r '.dependencies["@conduitplatform/grpc-sdk"] // empty')
+          [ "$peer" = "$RELEASE_VERSION" ] && [ -z "$dep" ] || exit 1
           publish_args=(--access public --no-git-checks)
           if [ -n "${NPM_TAG:-}" ]; then
             publish_args+=(--tag "$NPM_TAG")
