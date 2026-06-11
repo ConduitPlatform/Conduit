@@ -128,7 +128,7 @@ export class FirebaseProvider extends BaseNotificationProvider<IFirebaseSettings
     try {
       response = await this.fcm!.sendEachForMulticast(multicast);
     } catch (error) {
-      ConduitGrpcSdk.Logger.error('Failed to send multicast notification: ', error);
+      ConduitGrpcSdk.Logger.error(`Failed to send multicast notification: ${error}`);
       return {
         successCount: 0,
         failureCount: targets.length,
@@ -148,7 +148,11 @@ export class FirebaseProvider extends BaseNotificationProvider<IFirebaseSettings
       if (sendResponse.success) return;
       const target = targets[index];
       const error = sendResponse.error;
-      ConduitGrpcSdk.Logger.error('Failed to send notification: ', error);
+      ConduitGrpcSdk.Logger.error(
+        error instanceof Error
+          ? error
+          : `Failed to send notification: ${error?.code ?? error}`,
+      );
       failures.push({
         token: target.token,
         platform: target.platform,
