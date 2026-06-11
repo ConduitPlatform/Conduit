@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.27](https://github.com/ConduitPlatform/Conduit/compare/v0.16.26...v0.16.27) (2026-06-11)
+
+
+### Bug Fixes
+
+* **push-notifications:** correct Logger.error calls in Firebase provider ([e1aab0c](https://github.com/ConduitPlatform/Conduit/commit/e1aab0c4d710524f693f879be6e8ada1e5a82351))
+
 ### [0.16.26](https://github.com/ConduitPlatform/Conduit/compare/v0.16.25...v0.16.26) (2026-04-19)
 
 
