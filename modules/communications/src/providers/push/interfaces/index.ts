@@ -17,3 +17,28 @@ export interface ISendNotificationToManyDevices {
   doNotStore?: boolean;
   isSilent?: boolean;
 }
+
+export interface IPushTokenTarget {
+  token: string;
+  platform: string;
+}
+
+export interface IPushSendFailure {
+  token: string;
+  platform?: string;
+  error?: unknown;
+  reason?: string;
+}
+
+export interface IPushBatchResult {
+  successCount: number;
+  failureCount: number;
+  failures: IPushSendFailure[];
+}
+
+export interface IPushSendAggregateResult {
+  requestedCount: number;
+  successCount: number;
+  failureCount: number;
+  skippedCount: number;
+}
