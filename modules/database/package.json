@@ -46,7 +46,7 @@
     "mongodb": "^7.2.0",
     "mongodb-schema": "^12.7.0",
     "mongoose": "^9.4.1",
-    "mysql2": "^3.20.0",
+    "mysql2": "^3.22.5",
     "object-hash": "^3.0.0",
     "pg": "^8.20.0",
     "pg-hstore": "^2.3.4",
