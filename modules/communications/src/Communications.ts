@@ -427,6 +427,7 @@ export default class Communications extends ManagedModule<Config> {
         doNotStore: call.request.doNotStore,
         isSilent: call.request.isSilent,
       });
+      ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1);
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
@@ -437,8 +438,14 @@ export default class Communications extends ManagedModule<Config> {
     call: GrpcRequest<SendNotificationToManyDevicesRequest>,
     callback: GrpcCallback<SendNotificationResponse>,
   ) {
+    if (call.request.sendTo.length === 0) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'sendTo is required and must be a non-empty array',
+      });
+    }
     try {
-      await this.pushService.sendToManyDevices({
+      const result = await this.pushService.sendToManyDevices({
         sendTo: call.request.sendTo,
         title: call.request.title,
         body: call.request.body,
@@ -447,6 +454,10 @@ export default class Communications extends ManagedModule<Config> {
         doNotStore: call.request.doNotStore,
         isSilent: call.request.isSilent,
       });
+      ConduitGrpcSdk.Metrics?.increment(
+        'push_notifications_sent_total',
+        result.successCount,
+      );
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
@@ -457,6 +468,12 @@ export default class Communications extends ManagedModule<Config> {
     call: GrpcRequest<SendManyNotificationsRequest>,
     callback: GrpcCallback<SendNotificationResponse>,
   ) {
+    if (call.request.notifications.length === 0) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'notifications is required and must be a non-empty array',
+      });
+    }
     try {
       const notifications = call.request.notifications.map(notification => ({
         sendTo: notification.sendTo,
@@ -467,7 +484,11 @@ export default class Communications extends ManagedModule<Config> {
         doNotStore: notification.doNotStore,
         isSilent: notification.isSilent,
       }));
-      await this.pushService.sendManyNotifications(notifications);
+      const result = await this.pushService.sendManyNotifications(notifications);
+      ConduitGrpcSdk.Metrics?.increment(
+        'push_notifications_sent_total',
+        result.successCount,
+      );
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }

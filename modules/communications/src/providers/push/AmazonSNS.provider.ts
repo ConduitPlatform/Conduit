@@ -7,13 +7,21 @@ import { BaseNotificationProvider } from './base.provider.js';
 import { ConduitGrpcSdk, PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
 import { IAmazonSNSSettings } from '../../interfaces/index.js';
 import { NotificationToken } from '../../models/index.js';
-import { ISendNotification, ISendNotificationToManyDevices } from './interfaces/index.js';
+import {
+  IPushBatchResult,
+  IPushSendFailure,
+  IPushTokenTarget,
+  ISendNotification,
+  ISendNotificationToManyDevices,
+} from './interfaces/index.js';
 
 // Mapping between Conduit platforms and AWS SNS message types
 const CONDUIT_TO_AWS_PLATFORM: Partial<Record<PlatformTypesEnum, 'GCM' | 'APNS'>> = {
   [PlatformTypesEnum.ANDROID]: 'GCM',
   [PlatformTypesEnum.IOS]: 'APNS',
 };
+
+const SNS_SEND_CONCURRENCY = 10;
 
 export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettings> {
   private snsClient: SNSClient;
@@ -49,7 +57,6 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
   }
 
   async registerDeviceToken(token: string, platform: PlatformTypesEnum): Promise<string> {
-    // Get the appropriate application ARN based on platform
     const applicationArn =
       platform === PlatformTypesEnum.ANDROID
         ? this.settings.gcmApplicationArn
@@ -76,7 +83,6 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
       throw error;
     }
 
-    // Update the existing token entry with the new ARN
     await NotificationToken.getInstance().updateOne(
       { token: token },
       { token: endpointResponse.EndpointArn as string },
@@ -85,13 +91,57 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
     return endpointResponse.EndpointArn as string;
   }
 
+  private isPermanentSnsEndpointError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const err = error as {
+      name?: string;
+      Code?: string;
+      code?: string;
+      message?: string;
+    };
+    const name = err.name ?? '';
+    const code = String(err.Code ?? err.code ?? '');
+
+    if (
+      name === 'EndpointDisabledException' ||
+      code === 'EndpointDisabled' ||
+      name === 'EndpointDisabled'
+    ) {
+      return true;
+    }
+
+    if (name === 'NotFoundException' || code === 'NotFound' || name === 'NotFound') {
+      return true;
+    }
+
+    if (
+      name === 'InvalidParameterException' ||
+      code === 'InvalidParameter' ||
+      name === 'InvalidParameter'
+    ) {
+      const message = String(err.message ?? '').toLowerCase();
+      return (
+        message.includes('endpoint') &&
+        (message.includes('not found') ||
+          message.includes('does not exist') ||
+          message.includes('invalid') ||
+          message.includes('disabled'))
+      );
+    }
+
+    return false;
+  }
+
+  private async deleteToken(token: string): Promise<void> {
+    await NotificationToken.getInstance().deleteOne({ token });
+  }
+
   async sendMessage(
     token: string,
     params: ISendNotification | ISendNotificationToManyDevices,
   ): Promise<void | string> {
     const { title, body, data, isSilent = false, platform } = params;
 
-    // Get the AWS platform type for the message structure
     const awsPlatform = CONDUIT_TO_AWS_PLATFORM[platform as PlatformTypesEnum];
     if (!awsPlatform) {
       throw new Error(
@@ -99,7 +149,6 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
       );
     }
 
-    // Message payload
     const message: Record<string, string> = {
       default: JSON.stringify({ title, body, data }),
     };
@@ -133,10 +182,9 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
       );
     }
 
-    // Sending the message.
     try {
       const command = new PublishCommand({
-        TargetArn: token, // Using the registered token directly
+        TargetArn: token,
         Message: JSON.stringify(message),
         MessageStructure: 'json',
       });
@@ -152,5 +200,46 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
       ConduitGrpcSdk.Logger.error(`Failed to send SNS message: ${error}`);
       throw error;
     }
+  }
+
+  async sendMessages(
+    targets: IPushTokenTarget[],
+    params: ISendNotification | ISendNotificationToManyDevices,
+  ): Promise<IPushBatchResult> {
+    const failures: IPushSendFailure[] = [];
+    const deletePromises: Promise<void>[] = [];
+    let successCount = 0;
+
+    for (let i = 0; i < targets.length; i += SNS_SEND_CONCURRENCY) {
+      const chunk = targets.slice(i, i + SNS_SEND_CONCURRENCY);
+      await Promise.all(
+        chunk.map(async target => {
+          try {
+            await this.sendMessage(target.token, {
+              ...params,
+              platform: params.platform ?? target.platform,
+            });
+            successCount++;
+          } catch (error) {
+            failures.push({
+              token: target.token,
+              platform: target.platform,
+              error,
+            });
+            if (this.isPermanentSnsEndpointError(error)) {
+              deletePromises.push(this.deleteToken(target.token));
+            }
+          }
+        }),
+      );
+    }
+
+    await Promise.all(deletePromises);
+
+    return {
+      successCount,
+      failureCount: failures.length,
+      failures,
+    };
   }
 }

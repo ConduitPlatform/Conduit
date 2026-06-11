@@ -1,5 +1,5 @@
 import { isNil } from 'lodash-es';
-import { Notification, NotificationToken } from '../models/index.js';
+import { NotificationToken } from '../models/index.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import {
   ChannelResult,
@@ -8,8 +8,8 @@ import {
   IChannelSendParams,
 } from '../interfaces/index.js';
 import { BaseNotificationProvider } from '../providers/push/base.provider.js';
-import { validateNotification } from '../providers/push/utils/index.js';
 import {
+  IPushSendAggregateResult,
   ISendNotification,
   ISendNotificationToManyDevices,
 } from '../providers/push/interfaces/index.js';
@@ -105,7 +105,6 @@ export class PushService implements IChannel {
   }
 
   async getStatus(messageId: string): Promise<ChannelStatus> {
-    // Push notifications don't typically have status tracking like email
     return {
       status: 'sent' as const,
       messageId,
@@ -134,137 +133,31 @@ export class PushService implements IChannel {
     return tokenDocuments || [];
   }
 
-  async sendNotification(params: ISendNotification) {
+  async sendNotification(params: ISendNotification): Promise<void> {
     if (!this.isAvailable()) {
       throw new Error('Provider not initialized');
     }
-
-    validateNotification(params);
-    if (!params.doNotStore && !params.isSilent) {
-      await Notification.getInstance().create({
-        user: params.sendTo,
-        title: params.title,
-        body: params.body,
-        data: params.data,
-        platform: params.platform,
-      });
-    }
-
-    if (this.provider!.isBaseProvider) return;
-
-    const notificationTokens = await this.provider!.fetchTokens(
-      params.sendTo,
-      params.platform,
-    );
-    if (notificationTokens.length === 0) {
-      throw new Error('No notification token found');
-    }
-
-    const promises = notificationTokens.map(async notToken => {
-      await this.provider!.sendMessage(notToken.token, {
-        ...params,
-        platform: params.platform ?? notToken.platform,
-      });
-    });
-
-    return Promise.all(promises);
+    await this.provider!.sendToDevice(params);
   }
 
-  async sendToManyDevices(params: ISendNotificationToManyDevices) {
+  async sendToManyDevices(
+    params: ISendNotificationToManyDevices,
+  ): Promise<IPushSendAggregateResult> {
     if (!this.isAvailable()) {
       throw new Error('Provider not initialized');
     }
-
-    validateNotification(params);
-    if (!params.doNotStore && !params.isSilent) {
-      await Notification.getInstance().createMany(
-        params.sendTo.map(userId => ({
-          user: userId,
-          title: params.title,
-          body: params.body,
-          data: params.data,
-          platform: params.platform,
-        })),
-      );
-    }
-
-    if (this.provider!.isBaseProvider) return;
-
-    const notificationTokens = await this.provider!.fetchTokens(
-      params.sendTo,
-      params.platform,
-    );
-    if (notificationTokens.length === 0) {
-      throw new Error('Could not find tokens');
-    }
-
-    const promises = notificationTokens.map(async notToken => {
-      await this.provider!.sendMessage(notToken.token, {
-        ...params,
-        platform: params.platform ?? notToken.platform,
-      });
-    });
-
-    return Promise.all(promises);
+    return this.provider!.sendToManyDevices(params);
   }
 
-  async sendManyNotifications(notifications: ISendNotification[]) {
+  async sendManyNotifications(
+    notifications: ISendNotification[],
+  ): Promise<IPushSendAggregateResult> {
     if (!this.isAvailable()) {
       throw new Error('Provider not initialized');
     }
-
-    const notificationsToStore: {
-      user: string;
-      title?: string;
-      body?: string;
-      data?: any;
-      platform?: string;
-    }[] = [];
-
-    notifications.forEach(param => {
-      validateNotification(param);
-      if (param.doNotStore || param.isSilent) return;
-      notificationsToStore.push({
-        user: param.sendTo,
-        title: param.title,
-        body: param.body,
-        data: param.data,
-        platform: param.platform,
-      });
-    });
-
-    if (notificationsToStore.length !== 0) {
-      await Notification.getInstance().createMany(notificationsToStore);
+    if (notifications.length === 0) {
+      throw new Error('notifications is required and must be a non-empty array');
     }
-
-    if (this.provider!.isBaseProvider) return;
-
-    const userIds = notifications.map(param => param.sendTo);
-    const notificationsObj = notifications.reduce(
-      (acc, param) => {
-        acc[param.sendTo] = param;
-        return acc;
-      },
-      {} as Record<string, ISendNotification>,
-    );
-
-    const notificationTokens = await this.provider!.fetchTokens(userIds);
-    if (!notificationTokens || notificationTokens.length === 0) {
-      throw new Error('Could not find tokens');
-    }
-
-    const promises = notificationTokens.map(async token => {
-      const id = token.userId.toString();
-      const data = notificationsObj[id];
-      if (data.platform && data.platform !== token.platform) return;
-      await this.provider!.sendMessage(token.token, {
-        ...data,
-        platform: data.platform ?? token.platform,
-      }).catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
-    });
-
-    return Promise.all(promises);
+    return this.provider!.sendMany(notifications);
   }
 }
