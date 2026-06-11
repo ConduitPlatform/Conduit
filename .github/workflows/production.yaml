@@ -89,7 +89,7 @@ jobs:
           pkg=$(tar -xOf "$tgz" package/package.json)
           peer=$(echo "$pkg" | jq -r '.peerDependencies["@conduitplatform/grpc-sdk"]')
           dep=$(echo "$pkg" | jq -r '.dependencies["@conduitplatform/grpc-sdk"] // empty')
-          [ "$peer" = "$RELEASE_VERSION" ] && [ -z "$dep" ] || exit 1
+          [ "$peer" = "$RELEASE_VERSION" ] && [ "$dep" = "$RELEASE_VERSION" ] || exit 1
           publish_args=(--access public --no-git-checks)
           if [ -n "${NPM_TAG:-}" ]; then
             publish_args+=(--tag "$NPM_TAG")
