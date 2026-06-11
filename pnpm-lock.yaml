@@ -824,8 +824,8 @@ importers:
         specifier: ^9.4.1
         version: 9.4.1(snappy@7.3.3)(socks@2.8.7)
       mysql2:
-        specifier: ^3.20.0
-        version: 3.20.0(@types/node@24.9.1)
+        specifier: ^3.22.5
+        version: 3.22.5(@types/node@24.9.1)
       object-hash:
         specifier: ^3.0.0
         version: 3.0.0
@@ -837,10 +837,10 @@ importers:
         version: 2.3.4
       sequelize:
         specifier: ^6.37.8
-        version: 6.37.8(mariadb@3.5.2)(mysql2@3.20.0(@types/node@24.9.1))(pg-hstore@2.3.4)(pg@8.20.0)(sqlite3@6.0.1)
+        version: 6.37.8(mariadb@3.5.2)(mysql2@3.22.5(@types/node@24.9.1))(pg-hstore@2.3.4)(pg@8.20.0)(sqlite3@6.0.1)
       sequelize-auto:
         specifier: ^0.8.8
-        version: 0.8.8(sequelize@6.37.8(mariadb@3.5.2)(mysql2@3.20.0(@types/node@24.9.1))(pg-hstore@2.3.4)(pg@8.20.0)(sqlite3@6.0.1))
+        version: 0.8.8(sequelize@6.37.8(mariadb@3.5.2)(mysql2@3.22.5(@types/node@24.9.1))(pg-hstore@2.3.4)(pg@8.20.0)(sqlite3@6.0.1))
       sqlite3:
         specifier: ^6.0.1
         version: 6.0.1
@@ -7048,8 +7048,8 @@ packages:
   mute-stream@0.0.7:
     resolution: {integrity: sha512-r65nCZhrbXXb6dXOACihYApHw2Q6pV0M3V0PSxd74N0+D8nzAdEAITq2oAjA1jVnKI+tGvEBUpqiMh0+rW6zDQ==}
 
-  mysql2@3.20.0:
-    resolution: {integrity: sha512-eCLUs7BNbgA6nf/MZXsaBO1SfGs0LtLVrJD3WeWq+jPLDWkSufTD+aGMwykfUVPdZnblaUK1a8G/P63cl9FkKg==}
+  mysql2@3.22.5:
+    resolution: {integrity: sha512-95uZ2TrPWAZdwpB3vvvDbmEMcNG8yIeNCyu6GUcr/QnWEE/wXm7+mhOCsdQfWQDTV7qYT/PDUZ4U4UPP4AsXqQ==}
     engines: {node: '>= 8.0'}
     peerDependencies:
       '@types/node': '>= 8'
@@ -16449,7 +16449,7 @@ snapshots:
 
   mute-stream@0.0.7: {}
 
-  mysql2@3.20.0(@types/node@24.9.1):
+  mysql2@3.22.5(@types/node@24.9.1):
     dependencies:
       '@types/node': 24.9.1
       aws-ssl-profiles: 1.1.2
@@ -17447,17 +17447,17 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  sequelize-auto@0.8.8(sequelize@6.37.8(mariadb@3.5.2)(mysql2@3.20.0(@types/node@24.9.1))(pg-hstore@2.3.4)(pg@8.20.0)(sqlite3@6.0.1)):
+  sequelize-auto@0.8.8(sequelize@6.37.8(mariadb@3.5.2)(mysql2@3.22.5(@types/node@24.9.1))(pg-hstore@2.3.4)(pg@8.20.0)(sqlite3@6.0.1)):
     dependencies:
       lodash: 4.18.1
       mkdirp: 1.0.4
       reserved-words: 0.1.2
-      sequelize: 6.37.8(mariadb@3.5.2)(mysql2@3.20.0(@types/node@24.9.1))(pg-hstore@2.3.4)(pg@8.20.0)(sqlite3@6.0.1)
+      sequelize: 6.37.8(mariadb@3.5.2)(mysql2@3.22.5(@types/node@24.9.1))(pg-hstore@2.3.4)(pg@8.20.0)(sqlite3@6.0.1)
       yargs: 16.2.0
 
   sequelize-pool@7.1.0: {}
 
-  sequelize@6.37.8(mariadb@3.5.2)(mysql2@3.20.0(@types/node@24.9.1))(pg-hstore@2.3.4)(pg@8.20.0)(sqlite3@6.0.1):
+  sequelize@6.37.8(mariadb@3.5.2)(mysql2@3.22.5(@types/node@24.9.1))(pg-hstore@2.3.4)(pg@8.20.0)(sqlite3@6.0.1):
     dependencies:
       '@types/debug': 4.1.12
       '@types/validator': 13.15.10
@@ -17477,7 +17477,7 @@ snapshots:
       wkx: 0.5.0
     optionalDependencies:
       mariadb: 3.5.2
-      mysql2: 3.20.0(@types/node@24.9.1)
+      mysql2: 3.22.5(@types/node@24.9.1)
       pg: 8.20.0
       pg-hstore: 2.3.4
       sqlite3: 6.0.1
