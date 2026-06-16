@@ -386,3 +386,84 @@ export async function validateFilePrivacy(
     );
   }
 }
+
+export function escapeRegex(value: string): string {
+  return value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
+export function getFileStoragePath(file: Pick<File, 'folder' | 'name'>): string {
+  return (file.folder === '/' ? '' : file.folder) + file.name;
+}
+
+export function buildFolderFilesQuery(
+  container: string,
+  folder: string,
+): Record<string, unknown> {
+  if (folder === '/') {
+    return { container };
+  }
+  return {
+    container,
+    folder: { $regex: `^${escapeRegex(folder)}` },
+  };
+}
+
+export function buildFolderMetadataQuery(
+  container: string,
+  folder: string,
+): Record<string, unknown> {
+  if (folder === '/') {
+    return { container };
+  }
+  return {
+    container,
+    name: { $regex: `^${escapeRegex(folder)}` },
+  };
+}
+
+export async function buildPublicFileUrls(
+  storageProvider: IStorageProvider,
+  file: Pick<File, 'folder' | 'name' | 'container'>,
+  containerIsPublic: boolean,
+): Promise<{ sourceUrl?: string; url?: string }> {
+  const fileName = getFileStoragePath(file);
+  const publicUrlResult = await storageProvider
+    .container(file.container)
+    .getPublicUrl(fileName, containerIsPublic);
+  if (publicUrlResult instanceof Error) {
+    throw publicUrlResult;
+  }
+  return {
+    sourceUrl: publicUrlResult,
+    url: applyCdnHost(publicUrlResult, file.container),
+  };
+}
+
+export async function applyFilePublicityUpdate(
+  storageProvider: IStorageProvider,
+  file: File,
+  isPublic: boolean,
+  containerIsPublic: boolean,
+): Promise<File> {
+  const fileName = getFileStoragePath(file);
+  const providerResult = await storageProvider
+    .container(file.container)
+    .setFilePublicAccess(fileName, isPublic, containerIsPublic);
+  if (providerResult instanceof Error) {
+    throw providerResult;
+  }
+
+  let sourceUrl: string | undefined;
+  let url: string | undefined;
+  if (isPublic) {
+    const urls = await buildPublicFileUrls(storageProvider, file, containerIsPublic);
+    sourceUrl = urls.sourceUrl;
+    url = urls.url;
+  }
+
+  return (await File.getInstance().findByIdAndUpdate(file._id, {
+    isPublic,
+    sourceUrl,
+    url,
+  })) as File;
+}

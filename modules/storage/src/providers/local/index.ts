@@ -204,4 +204,17 @@ export class LocalStorage implements IStorageProvider {
       new Error('Public containers are not supported with local storage provider'),
     );
   }
+
+  setFilePublicAccess(
+    _fileName: string,
+    isPublic: boolean,
+    _containerIsPublic?: boolean,
+  ): Promise<boolean | Error> {
+    if (isPublic) {
+      return Promise.reject(
+        new Error('Public files are not supported with local storage provider'),
+      );
+    }
+    return Promise.resolve(true);
+  }
 }

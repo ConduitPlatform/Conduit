@@ -5,6 +5,7 @@ import {
   FileResponse,
   GetFileDataResponse,
   GetFileUrlResponse,
+  SetFilesPublicityByFolderResponse,
   StorageDefinition,
 } from '../../protoUtils/storage.js';
 import { AuthzOptions } from '../../types';
@@ -274,5 +275,19 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
       options = nameOrOptions;
     }
     return this.client!.updateFileByUrl({ id, ...options });
+  }
+
+  setFilesPublicityByFolder(
+    container: string,
+    folder: string,
+    isPublic: boolean,
+    dryRun?: boolean,
+  ): Promise<SetFilesPublicityByFolderResponse> {
+    return this.client!.setFilesPublicityByFolder({
+      container,
+      folder,
+      isPublic,
+      dryRun,
+    });
   }
 }

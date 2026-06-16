@@ -159,6 +159,25 @@ export class GoogleCloudStorage implements IStorageProvider {
     return true;
   }
 
+  async setFilePublicAccess(
+    fileName: string,
+    isPublic: boolean,
+    containerIsPublic?: boolean,
+  ): Promise<boolean | Error> {
+    if (containerIsPublic && !isPublic) {
+      return new Error(
+        'Cannot make files private in a public container on GCS; make the container private first',
+      );
+    }
+    const file = this._storage.bucket(this._activeBucket).file(fileName);
+    if (isPublic) {
+      await file.makePublic();
+    } else {
+      await file.makePrivate();
+    }
+    return true;
+  }
+
   getUploadUrl(fileName: string): Promise<string | Error> {
     return this._storage
       .bucket(this._activeBucket)

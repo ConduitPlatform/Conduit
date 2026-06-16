@@ -186,6 +186,29 @@ export class AzureStorage implements IStorageProvider {
     return true;
   }
 
+  async setFilePublicAccess(
+    fileName: string,
+    isPublic: boolean,
+    containerIsPublic?: boolean,
+  ): Promise<boolean | Error> {
+    if (containerIsPublic && !isPublic) {
+      return new Error(
+        'Cannot make files private in a public container on Azure; make the container private first',
+      );
+    }
+    // Azure blob ACLs are container-scoped; private containers keep blobs private by default.
+    // Public file access in private containers is handled via long-lived SAS URLs in metadata.
+    if (!containerIsPublic) {
+      return true;
+    }
+    if (isPublic) {
+      return true;
+    }
+    return new Error(
+      'Cannot make files private in a public container on Azure; make the container private first',
+    );
+  }
+
   getUploadUrl(fileName: string): Promise<string> {
     const containerClient = this._storage.getContainerClient(this._activeContainer);
     const sasOptions: BlobSASSignatureValues = {

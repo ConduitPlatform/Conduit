@@ -168,4 +168,18 @@ export class AliyunStorage implements IStorageProvider {
       method: 'GET',
     });
   }
+
+  async setFilePublicAccess(
+    fileName: string,
+    isPublic: boolean,
+    containerIsPublic?: boolean,
+  ): Promise<boolean | Error> {
+    if (containerIsPublic && !isPublic) {
+      return new Error(
+        'Cannot make files private in a public container on Aliyun; make the container private first',
+      );
+    }
+    await this._ossClient.putACL(fileName, isPublic ? 'public-read' : 'private');
+    return true;
+  }
 }

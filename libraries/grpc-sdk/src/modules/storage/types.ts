@@ -21,3 +21,10 @@ export type UpdateFileOptions = {
 export type CreateFileByURLOptions = { size?: number } & CreateFileOptions;
 
 export type UpdateFileByURLOptions = { size?: number } & UpdateFileOptions;
+
+export type SetFilesPublicityByFolderOptions = {
+  container: string;
+  folder: string;
+  isPublic: boolean;
+  dryRun?: boolean;
+};

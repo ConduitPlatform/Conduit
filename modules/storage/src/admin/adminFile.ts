@@ -15,9 +15,13 @@ import {
   _updateFile,
   _updateFileUploadUrl,
   applyCdnHost,
+  applyFilePublicityUpdate,
+  buildFolderFilesQuery,
+  buildFolderMetadataQuery,
   deepPathHandler,
   normalizeFolderPath,
   storeNewFile,
+  validateFilePrivacy,
   validateName,
 } from '../utils/index.js';
 
@@ -228,6 +232,97 @@ export class AdminFileHandlers {
         (e as Error).message ?? 'Something went wrong!',
       );
     }
+  }
+
+  async setFilesPublicityByFolder(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { container, folder: rawFolder, isPublic, dryRun } = call.request.params;
+    if (!isString(container)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'container is required');
+    }
+    if (isNil(isPublic)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'isPublic is required');
+    }
+
+    const folder = normalizeFolderPath(rawFolder);
+    const containerDoc = await _StorageContainer
+      .getInstance()
+      .findOne({ name: container });
+    if (isNil(containerDoc)) {
+      throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
+    }
+
+    await validateFilePrivacy(container, isPublic);
+    const containerIsPublic = containerDoc.isPublic ?? false;
+    const fileQuery = buildFolderFilesQuery(container, folder);
+
+    const BATCH_SIZE = 100;
+    let skip = 0;
+    let matched = 0;
+    let updated = 0;
+    let skipped = 0;
+    let failed = 0;
+    const failedFileIds: string[] = [];
+
+    if (!dryRun) {
+      const folders = await _StorageFolder
+        .getInstance()
+        .findMany(buildFolderMetadataQuery(container, folder));
+      for (const folderDoc of folders) {
+        if (folderDoc.isPublic !== isPublic) {
+          await _StorageFolder.getInstance().findByIdAndUpdate(folderDoc._id, {
+            isPublic,
+          });
+        }
+      }
+    }
+
+    while (true) {
+      const files = await File.getInstance().findMany(
+        fileQuery,
+        undefined,
+        skip,
+        BATCH_SIZE,
+      );
+      if (files.length === 0) {
+        break;
+      }
+
+      for (const file of files) {
+        matched++;
+        if (file.isPublic === isPublic) {
+          skipped++;
+          continue;
+        }
+        if (dryRun) {
+          updated++;
+          continue;
+        }
+        try {
+          await applyFilePublicityUpdate(
+            this.storageProvider,
+            file,
+            isPublic,
+            containerIsPublic,
+          );
+          updated++;
+        } catch (e) {
+          failed++;
+          failedFileIds.push(file._id);
+          ConduitGrpcSdk.Logger.error(
+            `Failed to update publicity for file ${file._id}: ${(e as Error).message}`,
+          );
+        }
+      }
+
+      if (files.length < BATCH_SIZE) {
+        break;
+      }
+      skip += BATCH_SIZE;
+    }
+
+    return { matched, updated, skipped, failed, failedFileIds };
   }
 
   async getFileData(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

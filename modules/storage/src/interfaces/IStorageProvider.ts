@@ -57,5 +57,17 @@ export interface IStorageProvider {
    */
   getPublicUrl(fileName: string, containerIsPublic?: boolean): Promise<string | Error>;
 
+  /**
+   * Updates the public access level of an existing file object in storage.
+   * @param fileName The file name/path within the active container
+   * @param isPublic Whether the file should be publicly accessible
+   * @param containerIsPublic Whether the container is publicly accessible
+   */
+  setFilePublicAccess(
+    fileName: string,
+    isPublic: boolean,
+    containerIsPublic?: boolean,
+  ): Promise<boolean | Error>;
+
   getUploadUrl(fileName: string): Promise<string | Error>;
 }

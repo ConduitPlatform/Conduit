@@ -10,6 +10,7 @@ import {
   ListObjectsCommand,
   PutBucketPolicyCommand,
   PutObjectCommand,
+  PutObjectAclCommand,
   PutPublicAccessBlockCommand,
   S3Client,
   S3ClientConfig,
@@ -268,7 +269,6 @@ export class AWSS3Storage implements IStorageProvider {
   }
 
   async getPublicUrl(fileName: string, _containerIsPublic?: boolean) {
-    // AWS uses bucket-level ACLs, so public URL format is the same regardless
     const config: Config['aws'] = ConfigController.getInstance().config.aws;
     if (config.endpoint !== '') {
       // check if endpoint contains http/https or not
@@ -292,6 +292,26 @@ export class AWSS3Storage implements IStorageProvider {
     }
 
     return `https://${this._activeContainer}.s3.amazonaws.com/${fileName}`;
+  }
+
+  async setFilePublicAccess(
+    fileName: string,
+    isPublic: boolean,
+    containerIsPublic?: boolean,
+  ): Promise<boolean | Error> {
+    if (containerIsPublic && !isPublic) {
+      return new Error(
+        'Cannot make files private in a public container on AWS; make the container private first',
+      );
+    }
+    await this._storage.send(
+      new PutObjectAclCommand({
+        Bucket: this._activeContainer,
+        Key: fileName,
+        ACL: isPublic ? 'public-read' : 'private',
+      }),
+    );
+    return true;
   }
 
   getUploadUrl(fileName: string): Promise<string | Error> {

@@ -2,6 +2,7 @@ import {
   ConduitGrpcSdk,
   DatabaseProvider,
   GrpcCallback,
+  GrpcError,
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
@@ -34,6 +35,8 @@ import {
   GetFileUrlResponse,
   UpdateFileByUrlRequest,
   UpdateFileRequest,
+  SetFilesPublicityByFolderRequest,
+  SetFilesPublicityByFolderResponse,
 } from './protoTypes/storage.js';
 import MetricsSchema from './metrics/index.js';
 import { IStorageProvider } from './interfaces/index.js';
@@ -66,6 +69,7 @@ export default class Storage extends ManagedModule<Config> {
       createFileByUrl: this.createFileByUrl.bind(this),
       updateFileByUrl: this.updateFileByUrl.bind(this),
       getFileUrl: this.getFileUrl.bind(this),
+      setFilesPublicityByFolder: this.setFilesPublicityByFolder.bind(this),
     },
   };
   protected metricsSchema = MetricsSchema;
@@ -397,6 +401,31 @@ export default class Storage extends ManagedModule<Config> {
     }
     const response = this.storageParamAdapter.getFileByUrlResponse(result);
     callback(null, response);
+  }
+
+  async setFilesPublicityByFolder(
+    call: GrpcRequest<SetFilesPublicityByFolderRequest>,
+    callback: GrpcCallback<SetFilesPublicityByFolderResponse>,
+  ) {
+    if (!this._adminFileHandlers) {
+      return callback({
+        code: status.INTERNAL,
+        message: 'File handlers not initiated',
+      });
+    }
+    const request = createParsedRouterRequest(call.request);
+    try {
+      const result = await this._adminFileHandlers.setFilesPublicityByFolder(request);
+      callback(null, result as SetFilesPublicityByFolderResponse);
+    } catch (e) {
+      if (e instanceof GrpcError) {
+        return callback({ code: e.code, message: e.message });
+      }
+      callback({
+        code: status.INTERNAL,
+        message: (e as Error).message ?? 'Something went wrong',
+      });
+    }
   }
 
   protected registerSchemas(): Promise<unknown> {

@@ -86,6 +86,21 @@ message UpdateFileByUrlRequest {
   optional string alias = 9;
 }
 
+message SetFilesPublicityByFolderRequest {
+  string container = 1;
+  string folder = 2;
+  bool isPublic = 3;
+  optional bool dryRun = 4;
+}
+
+message SetFilesPublicityByFolderResponse {
+  int32 matched = 1;
+  int32 updated = 2;
+  int32 skipped = 3;
+  int32 failed = 4;
+  repeated string failedFileIds = 5;
+}
+
 service Storage {
   rpc GetFile(GetFileRequest) returns (FileResponse);
   rpc GetFileData(GetFileRequest) returns (GetFileDataResponse);
@@ -95,4 +110,5 @@ service Storage {
   rpc DeleteFile(GetFileRequest) returns (DeleteFileResponse);
   rpc CreateFileByUrl(CreateFileByUrlRequest) returns (FileByUrlResponse);
   rpc UpdateFileByUrl(UpdateFileByUrlRequest) returns (FileByUrlResponse);
+  rpc SetFilesPublicityByFolder(SetFilesPublicityByFolderRequest) returns (SetFilesPublicityByFolderResponse);
 }
