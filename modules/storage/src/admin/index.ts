@@ -388,6 +388,32 @@ export class AdminRoutes {
     );
     this.routingManager.route(
       {
+        path: '/folders/publicity',
+        action: ConduitRouteActions.PATCH,
+        description: `Updates publicity for files under a folder.`,
+        bodyParams: {
+          container: ConduitString.Required,
+          folder: ConduitString.Required,
+          isPublic: ConduitBoolean.Required,
+          dryRun: {
+            type: TYPE.Boolean,
+            required: false,
+            description:
+              'Preview how many files would be updated without changing file metadata or provider ACLs.',
+          },
+        },
+      },
+      new ConduitRouteReturnDefinition('SetFilesPublicityByFolder', {
+        matched: ConduitNumber.Required,
+        updated: ConduitNumber.Required,
+        skipped: ConduitNumber.Required,
+        failed: ConduitNumber.Required,
+        failedFileIds: [ConduitString.Required],
+      }),
+      this.fileHandlers.setFilesPublicityByFolder.bind(this.fileHandlers),
+    );
+    this.routingManager.route(
+      {
         path: '/folders/:id',
         action: ConduitRouteActions.DELETE,
         description: `Deletes a folder.`,
