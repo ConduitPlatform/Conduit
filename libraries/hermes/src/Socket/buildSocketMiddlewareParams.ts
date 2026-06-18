@@ -1,55 +1,30 @@
+import type { ConduitRouteParameters, Indexable } from '@conduitplatform/grpc-sdk';
 import type { Socket } from 'socket.io';
 
-export function parseCookieHeader(
-  cookieHeader: string | undefined,
-): Record<string, string> {
-  if (!cookieHeader) {
-    return {};
-  }
+export type SocketMiddlewareParams = ConduitRouteParameters & {
+  context: Indexable;
+};
 
-  const cookies: Record<string, string> = {};
-
-  for (const segment of cookieHeader.split(';')) {
-    const trimmed = segment.trim();
-    if (!trimmed) {
-      continue;
-    }
-
-    const separatorIndex = trimmed.indexOf('=');
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const name = trimmed.slice(0, separatorIndex).trim();
-    const value = trimmed.slice(separatorIndex + 1).trim();
-    if (name) {
-      cookies[name] = value;
-    }
-  }
-
-  return cookies;
-}
-
-export function buildSocketMiddlewareParams(socket: Socket) {
+export function buildSocketMiddlewareParams(socket: Socket): SocketMiddlewareParams {
   const headers = { ...socket.request.headers };
   const auth = socket.handshake.auth ?? {};
 
-  const rawToken = auth.token ?? auth.accessToken ?? auth.access_token;
-  if (rawToken && !headers.authorization && !headers.Authorization) {
+  const hasAuthorizationHeader =
+    Boolean(headers.authorization) || Boolean(headers.Authorization);
+
+  const rawToken = auth.token ?? auth.accessToken;
+  if (rawToken && !hasAuthorizationHeader) {
     headers.authorization = `Bearer ${rawToken}`;
   }
-  if (typeof auth.authorization === 'string') {
+  if (typeof auth.authorization === 'string' && !hasAuthorizationHeader) {
     headers.authorization = auth.authorization;
   }
 
-  const cookies = parseCookieHeader(headers.cookie as string | undefined);
+  const request = socket.request as typeof socket.request & { conduit?: Indexable };
 
   return {
     headers,
-    cookies,
-    context: {
-      ...((socket.request as { conduit?: Record<string, unknown> }).conduit ?? {}),
-      ...(socket.data ?? {}),
-    },
+    cookies: {},
+    context: { ...request.conduit, ...socket.data },
   };
 }

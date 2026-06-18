@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./.test-dist",
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["src/Socket/buildSocketMiddlewareParams.ts"]
+}

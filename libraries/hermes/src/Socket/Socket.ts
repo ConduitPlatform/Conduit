@@ -117,10 +117,8 @@ export class SocketController extends ConduitRouter {
       self
         .checkMiddlewares(context, conduitSocket.input.middlewares)
         .then(r => {
-          if (context.context) {
-            socket.data = context.context;
-          }
           Object.assign(context.context, r);
+          socket.data = context.context;
           next();
         })
         .catch((err: Error | ConduitError) => {
@@ -141,7 +139,6 @@ export class SocketController extends ConduitRouter {
           .executeRequest({
             event: 'connect',
             socketId: socket.id,
-            // @ts-ignore
             context: socket.data,
           })
           .then(res => this.handleResponse(res, socket, namespace))
@@ -158,7 +155,6 @@ export class SocketController extends ConduitRouter {
             event,
             socketId: socket.id,
             params: args,
-            // @ts-ignore
             context: socket.data,
           })
           .then(res => this.handleResponse(res, socket, namespace))
@@ -176,7 +172,6 @@ export class SocketController extends ConduitRouter {
           .executeRequest({
             event: 'disconnect',
             socketId: socket.id,
-            // @ts-ignore
             context: socket.data,
           })
           .then(res => this.handleResponse(res, socket, namespace))
