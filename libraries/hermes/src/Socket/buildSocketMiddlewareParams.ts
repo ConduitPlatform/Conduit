@@ -7,6 +7,11 @@ export type SocketMiddlewareParams = ConduitRouteParameters & {
   cookies: Indexable;
 };
 
+function formatBearerToken(token: unknown): string {
+  const value = String(token);
+  return value.startsWith('Bearer ') ? value : `Bearer ${value}`;
+}
+
 export function buildSocketMiddlewareParams(socket: Socket): SocketMiddlewareParams {
   const headers = { ...socket.request.headers };
   const auth = socket.handshake.auth ?? {};
@@ -17,7 +22,7 @@ export function buildSocketMiddlewareParams(socket: Socket): SocketMiddlewarePar
   if (!hasAuthHeader) {
     const rawToken = auth.token ?? auth.accessToken;
     if (rawToken) {
-      headers.authorization = `Bearer ${rawToken}`;
+      headers.authorization = formatBearerToken(rawToken);
     } else if (typeof auth.authorization === 'string') {
       headers.authorization = auth.authorization;
     }
