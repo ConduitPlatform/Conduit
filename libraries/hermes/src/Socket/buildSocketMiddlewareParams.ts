@@ -20,8 +20,7 @@ export function buildSocketMiddlewareParams(socket: Socket): SocketMiddlewarePar
   const rawToken = auth.token ?? auth.accessToken;
   if (rawToken && !hasAuthorizationHeader) {
     headers.authorization = formatBearerToken(rawToken);
-  }
-  if (typeof auth.authorization === 'string' && !hasAuthorizationHeader) {
+  } else if (typeof auth.authorization === 'string' && !hasAuthorizationHeader) {
     headers.authorization = auth.authorization;
   }
 
