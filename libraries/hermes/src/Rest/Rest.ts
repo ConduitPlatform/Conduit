@@ -136,6 +136,9 @@ export class RestController extends ConduitRouter {
     const self = this;
     return (req, res) => {
       const context = { ...extractRequestData(req), params: {} };
+      if (!route.input.captureRawBody) {
+        delete context.rawBody;
+      }
       let hashKey: string;
       const { caching, cacheAge, scope } = extractCaching(
         route,

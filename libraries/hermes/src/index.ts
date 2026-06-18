@@ -409,7 +409,15 @@ export class ConduitRoutingController {
       createRouteMiddleware((ConduitGrpcSdk.Logger as IConduitLogger).winston),
       false,
     );
-    this.registerMiddleware(express.json({ limit: '50mb' }), false);
+    this.registerMiddleware(
+      express.json({
+        limit: '50mb',
+        verify: (req, _res, buf) => {
+          (req as ConduitRequest).rawBody = buf;
+        },
+      }),
+      false,
+    );
     this.registerMiddleware(
       express.urlencoded({ limit: '50mb', extended: false }),
       false,
