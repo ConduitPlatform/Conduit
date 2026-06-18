@@ -211,7 +211,7 @@ export class LocalStorage implements IStorageProvider {
     _containerIsPublic?: boolean,
   ): Promise<boolean | Error> {
     if (isPublic) {
-      return Promise.reject(
+      return Promise.resolve(
         new Error('Public files are not supported with local storage provider'),
       );
     }

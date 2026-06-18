@@ -330,15 +330,11 @@ export const constructDispositionHeader = (
   fileName: string,
   options?: UrlOptions,
 ): string | undefined => {
-  if (!options || (!options.download && !options.fileName)) {
+  if (!options || !options.download) {
     return undefined;
   }
-  const disposition = options.download ? 'attachment' : 'inline';
-  const _fileName = `; filename="${options.fileName ?? fileName}"`;
-  const _fileNameUtf8 = `; filename*=UTF-8''${encodeURIComponent(
-    options.fileName ?? fileName,
-  )}`;
-  return `${disposition}${_fileName}${_fileNameUtf8}`;
+  const name = options.fileName ?? fileName;
+  return `attachment; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 };
 
 /**
@@ -453,17 +449,17 @@ export async function applyFilePublicityUpdate(
     throw providerResult;
   }
 
-  let sourceUrl: string | undefined;
-  let url: string | undefined;
   if (isPublic) {
     const urls = await buildPublicFileUrls(storageProvider, file, containerIsPublic);
-    sourceUrl = urls.sourceUrl;
-    url = urls.url;
+    return (await File.getInstance().findByIdAndUpdate(file._id, {
+      isPublic,
+      sourceUrl: urls.sourceUrl,
+      url: urls.url,
+    })) as File;
   }
 
+  await File.getInstance().findByIdAndUpdate(file._id, { isPublic });
   return (await File.getInstance().findByIdAndUpdate(file._id, {
-    isPublic,
-    sourceUrl,
-    url,
-  })) as File;
+    $unset: { sourceUrl: '', url: '' },
+  } as Record<string, unknown>)) as File;
 }

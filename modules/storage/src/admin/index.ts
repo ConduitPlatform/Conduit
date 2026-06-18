@@ -390,7 +390,7 @@ export class AdminRoutes {
       {
         path: '/folders/publicity',
         action: ConduitRouteActions.PATCH,
-        description: `Updates publicity for files under a folder.`,
+        description: `Updates publicity for all files under a folder, including nested subfolders.`,
         bodyParams: {
           container: ConduitString.Required,
           folder: ConduitString.Required,
