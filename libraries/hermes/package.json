@@ -10,8 +10,6 @@
   "type": "module",
   "scripts": {
     "prepublish": "npm run build",
-    "test:unit": "rimraf .test-dist && tsc -p tsconfig.test.json",
-    "test": "npm run test:unit && node --test test/*.test.mjs",
     "build": "rimraf dist && tsc",
     "publish": "npm publish",
     "postbuild": "copyfiles -u 1 src/*.proto src/**/*.json ./dist/"
