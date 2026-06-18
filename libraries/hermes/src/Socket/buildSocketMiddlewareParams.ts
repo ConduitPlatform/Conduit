@@ -5,6 +5,11 @@ export type SocketMiddlewareParams = ConduitRouteParameters & {
   context: Indexable;
 };
 
+function formatBearerToken(token: unknown): string {
+  const value = String(token);
+  return value.startsWith('Bearer ') ? value : `Bearer ${value}`;
+}
+
 export function buildSocketMiddlewareParams(socket: Socket): SocketMiddlewareParams {
   const headers = { ...socket.request.headers };
   const auth = socket.handshake.auth ?? {};
@@ -14,7 +19,7 @@ export function buildSocketMiddlewareParams(socket: Socket): SocketMiddlewarePar
 
   const rawToken = auth.token ?? auth.accessToken;
   if (rawToken && !hasAuthorizationHeader) {
-    headers.authorization = `Bearer ${rawToken}`;
+    headers.authorization = formatBearerToken(rawToken);
   }
   if (typeof auth.authorization === 'string' && !hasAuthorizationHeader) {
     headers.authorization = auth.authorization;
