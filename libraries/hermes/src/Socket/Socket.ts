@@ -14,6 +14,7 @@ import {
 } from '../interfaces/index.js';
 import ObjectHash from 'object-hash';
 import { ConduitError, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { buildSocketMiddlewareParams } from './buildSocketMiddlewareParams.js';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;
@@ -112,10 +113,7 @@ export class SocketController extends ConduitRouter {
       });
     });
     this.io.of(namespace).use((socket, next) => {
-      const context = {
-        headers: socket.request.headers,
-        context: (socket.request as any).conduit || {},
-      };
+      const context = buildSocketMiddlewareParams(socket);
       self
         .checkMiddlewares(context, conduitSocket.input.middlewares)
         .then(r => {

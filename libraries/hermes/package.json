@@ -10,6 +10,7 @@
   "type": "module",
   "scripts": {
     "prepublish": "npm run build",
+    "test": "tsc --ignoreConfig src/Socket/buildSocketMiddlewareParams.ts --outDir dist --rootDir src --module NodeNext --moduleResolution NodeNext --target es2018 --esModuleInterop --skipLibCheck --declaration false && node --test test/*.test.mjs",
     "build": "rimraf dist && tsc",
     "publish": "npm publish",
     "postbuild": "copyfiles -u 1 src/*.proto src/**/*.json ./dist/"
