@@ -14,6 +14,7 @@ import {
 } from '../interfaces/index.js';
 import ObjectHash from 'object-hash';
 import { ConduitError, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { buildSocketMiddlewareParams } from './buildSocketMiddlewareParams.js';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;
@@ -112,17 +113,12 @@ export class SocketController extends ConduitRouter {
       });
     });
     this.io.of(namespace).use((socket, next) => {
-      const context = {
-        headers: socket.request.headers,
-        context: (socket.request as any).conduit || {},
-      };
+      const context = buildSocketMiddlewareParams(socket);
       self
         .checkMiddlewares(context, conduitSocket.input.middlewares)
         .then(r => {
-          if (context.context) {
-            socket.data = context.context;
-          }
           Object.assign(context.context, r);
+          socket.data = context.context;
           next();
         })
         .catch((err: Error | ConduitError) => {
@@ -143,8 +139,7 @@ export class SocketController extends ConduitRouter {
           .executeRequest({
             event: 'connect',
             socketId: socket.id,
-            // @ts-ignore
-            context: socket.request.conduit,
+            context: socket.data,
           })
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
@@ -160,8 +155,7 @@ export class SocketController extends ConduitRouter {
             event,
             socketId: socket.id,
             params: args,
-            // @ts-ignore
-            context: socket.request.conduit,
+            context: socket.data,
           })
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
@@ -178,8 +172,7 @@ export class SocketController extends ConduitRouter {
           .executeRequest({
             event: 'disconnect',
             socketId: socket.id,
-            // @ts-ignore
-            context: socket.request.conduit,
+            context: socket.data,
           })
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
