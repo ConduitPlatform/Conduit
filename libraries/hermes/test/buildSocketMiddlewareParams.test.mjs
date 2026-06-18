@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import {
-  buildSocketMiddlewareParams,
-  parseCookieHeader,
-} from '../dist/Socket/buildSocketMiddlewareParams.js';
+import { buildSocketMiddlewareParams } from '../.test-dist/Socket/buildSocketMiddlewareParams.js';
 
 function createMockSocket({ auth = {}, headers = {}, conduit, data } = {}) {
   return {
@@ -16,17 +13,6 @@ function createMockSocket({ auth = {}, headers = {}, conduit, data } = {}) {
     data,
   };
 }
-
-test('parseCookieHeader parses semicolon-separated cookies', () => {
-  const cookies = parseCookieHeader('accessToken=abc; refreshToken=xyz');
-  assert.equal(cookies.accessToken, 'abc');
-  assert.equal(cookies.refreshToken, 'xyz');
-});
-
-test('parseCookieHeader returns empty object for missing header', () => {
-  assert.deepEqual(parseCookieHeader(undefined), {});
-  assert.deepEqual(parseCookieHeader(''), {});
-});
 
 test('buildSocketMiddlewareParams bridges auth.token to Bearer authorization', () => {
   const socket = createMockSocket({
@@ -48,7 +34,7 @@ test('buildSocketMiddlewareParams bridges auth.accessToken to Bearer authorizati
   assert.equal(params.headers.authorization, 'Bearer access-token-value');
 });
 
-test('buildSocketMiddlewareParams does not overwrite existing authorization header', () => {
+test('buildSocketMiddlewareParams preserves lowercase authorization header', () => {
   const socket = createMockSocket({
     auth: { token: 'socket-token' },
     headers: { authorization: 'Bearer existing-token' },
@@ -59,7 +45,29 @@ test('buildSocketMiddlewareParams does not overwrite existing authorization head
   assert.equal(params.headers.authorization, 'Bearer existing-token');
 });
 
-test('buildSocketMiddlewareParams passes auth.authorization through as-is', () => {
+test('buildSocketMiddlewareParams preserves capital Authorization header', () => {
+  const socket = createMockSocket({
+    auth: { token: 'socket-token' },
+    headers: { Authorization: 'Bearer existing-token' },
+  });
+
+  const params = buildSocketMiddlewareParams(socket);
+
+  assert.equal(params.headers.Authorization, 'Bearer existing-token');
+  assert.equal(params.headers.authorization, undefined);
+});
+
+test('buildSocketMiddlewareParams passes auth.authorization when no existing header', () => {
+  const socket = createMockSocket({
+    auth: { authorization: 'Custom scheme-value' },
+  });
+
+  const params = buildSocketMiddlewareParams(socket);
+
+  assert.equal(params.headers.authorization, 'Custom scheme-value');
+});
+
+test('buildSocketMiddlewareParams does not override existing header with auth.authorization', () => {
   const socket = createMockSocket({
     auth: {
       token: 'ignored-token',
@@ -70,18 +78,37 @@ test('buildSocketMiddlewareParams passes auth.authorization through as-is', () =
 
   const params = buildSocketMiddlewareParams(socket);
 
-  assert.equal(params.headers.authorization, 'Custom scheme-value');
+  assert.equal(params.headers.authorization, 'Bearer existing-token');
 });
 
-test('buildSocketMiddlewareParams parses cookies from cookie header', () => {
+test('buildSocketMiddlewareParams leaves headers unchanged when handshake.auth is missing or empty', () => {
+  const socketWithoutAuth = createMockSocket({
+    headers: { 'x-custom': 'value' },
+  });
+  const socketWithEmptyAuth = createMockSocket({
+    auth: {},
+    headers: { 'x-custom': 'value' },
+  });
+
+  const paramsWithoutAuth = buildSocketMiddlewareParams(socketWithoutAuth);
+  const paramsWithEmptyAuth = buildSocketMiddlewareParams(socketWithEmptyAuth);
+
+  assert.equal(paramsWithoutAuth.headers.authorization, undefined);
+  assert.equal(paramsWithoutAuth.headers.Authorization, undefined);
+  assert.equal(paramsWithoutAuth.headers['x-custom'], 'value');
+  assert.equal(paramsWithEmptyAuth.headers.authorization, undefined);
+  assert.equal(paramsWithEmptyAuth.headers.Authorization, undefined);
+  assert.equal(paramsWithEmptyAuth.headers['x-custom'], 'value');
+});
+
+test('buildSocketMiddlewareParams returns empty cookies even when cookie header exists', () => {
   const socket = createMockSocket({
     headers: { cookie: 'accessToken=abc; refreshToken=xyz' },
   });
 
   const params = buildSocketMiddlewareParams(socket);
 
-  assert.equal(params.cookies.accessToken, 'abc');
-  assert.equal(params.cookies.refreshToken, 'xyz');
+  assert.deepEqual(params.cookies, {});
 });
 
 test('buildSocketMiddlewareParams merges conduit request context and socket data', () => {

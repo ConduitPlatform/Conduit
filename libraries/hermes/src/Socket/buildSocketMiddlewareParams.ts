@@ -1,52 +1,31 @@
+import type { ConduitRouteParameters, Indexable } from '@conduitplatform/grpc-sdk';
 import type { Socket } from 'socket.io';
 
-export function parseCookieHeader(
-  cookieHeader: string | undefined,
-): Record<string, string> {
-  if (!cookieHeader) {
-    return {};
-  }
+export type SocketMiddlewareParams = ConduitRouteParameters & {
+  headers: Indexable;
+  context: Indexable;
+  cookies: Indexable;
+};
 
-  const cookies: Record<string, string> = {};
-
-  for (const segment of cookieHeader.split(';')) {
-    const trimmed = segment.trim();
-    if (!trimmed) {
-      continue;
-    }
-
-    const separatorIndex = trimmed.indexOf('=');
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const name = trimmed.slice(0, separatorIndex).trim();
-    const value = trimmed.slice(separatorIndex + 1).trim();
-    if (name) {
-      cookies[name] = value;
-    }
-  }
-
-  return cookies;
-}
-
-export function buildSocketMiddlewareParams(socket: Socket) {
+export function buildSocketMiddlewareParams(socket: Socket): SocketMiddlewareParams {
   const headers = { ...socket.request.headers };
   const auth = socket.handshake.auth ?? {};
 
-  const rawToken = auth.token ?? auth.accessToken ?? auth.access_token;
-  if (rawToken && !headers.authorization && !headers.Authorization) {
-    headers.authorization = `Bearer ${rawToken}`;
-  }
-  if (typeof auth.authorization === 'string') {
-    headers.authorization = auth.authorization;
-  }
+  const hasAuthHeader =
+    headers.authorization !== undefined || headers.Authorization !== undefined;
 
-  const cookies = parseCookieHeader(headers.cookie as string | undefined);
+  if (!hasAuthHeader) {
+    const rawToken = auth.token ?? auth.accessToken;
+    if (rawToken) {
+      headers.authorization = `Bearer ${rawToken}`;
+    } else if (typeof auth.authorization === 'string') {
+      headers.authorization = auth.authorization;
+    }
+  }
 
   return {
     headers,
-    cookies,
+    cookies: {},
     context: {
       ...((socket.request as { conduit?: Record<string, unknown> }).conduit ?? {}),
       ...(socket.data ?? {}),
