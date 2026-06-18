@@ -25,7 +25,7 @@
     "@conduitplatform/hermes": "workspace:*",
     "@conduitplatform/module-tools": "workspace:*",
     "@conduitplatform/node-2fa": "workspace:*",
-    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.0",
     "bcrypt": "^6.0.0",
     "convict": "^6.2.5",
