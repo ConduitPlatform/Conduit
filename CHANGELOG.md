@@ -2,12 +2,6 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [Unreleased]
-
-### Bug Fixes
-
-* **hermes:** bridge Socket.IO handshake.auth to Authorization header for websocket-first browser clients
-
 ## [0.17.0-alpha.2](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.1...v0.17.0-alpha.2) (2026-06-10)
 
 
