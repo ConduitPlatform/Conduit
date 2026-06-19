@@ -384,7 +384,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
         joinedSchemas: call.request.joinedSchemas,
         query: call.request.query,
       });
-      callback(null); // @dirty-type-cast
+      callback(null, {});
     } catch (err) {
       callback({
         code: status.INTERNAL,
@@ -401,7 +401,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
   async deleteView(call: GrpcRequest<DeleteViewRequest>, callback: GrpcResponse<Empty>) {
     try {
       await this._activeAdapter.deleteView(call.request.viewName);
-      callback(null);
+      callback(null, {});
     } catch (err) {
       callback({
         code: status.INTERNAL,
@@ -943,7 +943,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
     callback(null, { result: exist });
   }
 
-  async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<null>) {
+  async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<Empty>) {
     if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
       const schemaName = call.request.schemaName;
       await this._activeAdapter.syncSchema(schemaName).catch(async () => {
@@ -958,7 +958,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
         await this._activeAdapter.syncSchema(schemaName);
       });
     }
-    callback(null, null);
+    callback(null, {});
   }
 
   async getDatabaseType(

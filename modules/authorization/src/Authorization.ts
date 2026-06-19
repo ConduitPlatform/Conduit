@@ -331,21 +331,21 @@ export default class Authorization extends ManagedModule<Config> {
 
   async grantPermission(
     call: GrpcRequest<PermissionRequest>,
-    callback: GrpcResponse<Decision>,
+    callback: GrpcResponse<Empty>,
   ) {
     const { subject, resource, action } = call.request;
     await this.permissionsController.grantPermission(subject, action, resource);
-    callback(null);
+    callback(null, {});
   }
 
   async removePermission(
     call: GrpcRequest<PermissionRequest>,
-    callback: GrpcResponse<Decision>,
+    callback: GrpcResponse<Empty>,
   ) {
     const { subject, resource, action } = call.request;
     await this.permissionsController.removePermission(subject, action, resource);
 
-    callback(null);
+    callback(null, {});
   }
 
   async initializeMetrics() {

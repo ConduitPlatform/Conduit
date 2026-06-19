@@ -220,7 +220,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   async registerGrpcRoute(
     call: GrpcRequest<RegisterConduitRouteRequest>,
-    callback: GrpcCallback<null>,
+    callback: GrpcCallback<Record<string, never>>,
   ) {
     const moduleName = call.metadata!.get('module-name')[0];
     try {
@@ -252,7 +252,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
     //todo definitely missing an error handler here
     //perhaps wrong(?) we send an empty response
-    callback(null, undefined);
+    callback(null, {});
   }
 
   internalRegisterRoute(routes: RouteT[], url: string, moduleName?: string) {
@@ -277,7 +277,10 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     this.cleanupRoutes();
   }
 
-  async socketPush(call: GrpcRequest<SocketData>, callback: GrpcCallback<null>) {
+  async socketPush(
+    call: GrpcRequest<SocketData>,
+    callback: GrpcCallback<Record<string, never>>,
+  ) {
     try {
       const socketData: SocketPush = {
         event: call.request.event,
@@ -294,7 +297,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
     //todo definitely missing an error handler here
     //perhaps wrong(?) we send an empty response
-    callback(null, undefined);
+    callback(null, {});
   }
 
   cleanupRoutes() {
@@ -387,7 +390,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   async patchRouteMiddlewares(
     call: GrpcRequest<PatchAppRouteMiddlewaresRequest>,
-    callback: GrpcCallback<null>,
+    callback: GrpcCallback<Record<string, never>>,
   ) {
     const { path, action, middlewares } = call.request;
     const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
@@ -407,6 +410,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         });
       },
     );
+    callback(null, {});
   }
 
   async _patchRouteMiddlewares(
