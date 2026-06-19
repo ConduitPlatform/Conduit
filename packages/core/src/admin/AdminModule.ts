@@ -174,7 +174,7 @@ export default class AdminModule {
 
   async registerAdminRoute(
     call: GrpcRequest<RegisterAdminRouteRequest>,
-    callback: GrpcCallback<null>,
+    callback: GrpcCallback<Record<string, never>>,
   ) {
     const moduleName = call.metadata!.get('module-name')[0];
     try {
@@ -210,7 +210,7 @@ export default class AdminModule {
         message: 'Error when registering routes',
       });
     }
-    callback(null, null);
+    callback(null, {});
   }
 
   registerRoute(route: ConduitRoute): void {
@@ -505,7 +505,7 @@ export default class AdminModule {
 
   async patchRouteMiddlewares(
     call: GrpcRequest<PatchRouteMiddlewaresRequest>,
-    callback: GrpcCallback<null>,
+    callback: GrpcCallback<Record<string, never>>,
   ) {
     const { path, action, middlewares } = call.request;
     const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
@@ -525,7 +525,7 @@ export default class AdminModule {
         });
       },
     );
-    callback(null, null);
+    callback(null, {});
   }
 
   async _patchRouteMiddlewares(
