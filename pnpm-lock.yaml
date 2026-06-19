@@ -710,8 +710,8 @@ importers:
         specifier: ^4.0.1
         version: 4.0.1
       nodemailer:
-        specifier: ^8.0.4
-        version: 8.0.4
+        specifier: ^9.0.1
+        version: 9.0.1
       nodemailer-mailgun-transport:
         specifier: ^2.1.5
         version: 2.1.5(handlebars@4.7.9)(lodash@4.18.1)(underscore@1.13.1)
@@ -6719,6 +6719,10 @@ packages:
 
   nodemailer@8.0.4:
     resolution: {integrity: sha512-k+jf6N8PfQJ0Fe8ZhJlgqU5qJU44Lpvp2yvidH3vp1lPnVQMgi4yEEMPXg5eJS1gFIJTVq1NHBk7Ia9ARdSBdQ==}
+    engines: {node: '>=6.0.0'}
+
+  nodemailer@9.0.1:
+    resolution: {integrity: sha512-Gwv8SQewT616ZM/URn0H54b8PWo/Wum7md3EW2aWy1lO27+WZCX+Xyak3J+NlmHUjDh5ME+uesJUDRbR3Ye8Bw==}
     engines: {node: '>=6.0.0'}
 
   noms@0.0.0:
@@ -15241,6 +15245,8 @@ snapshots:
       mandrill-api: 1.0.45
 
   nodemailer@8.0.4: {}
+
+  nodemailer@9.0.1: {}
 
   noms@0.0.0:
     dependencies:

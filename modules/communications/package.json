@@ -57,7 +57,7 @@
     "mailersend": "^2.7.0",
     "mailgun.js": "^12.7.1",
     "messagebird": "^4.0.1",
-    "nodemailer": "^8.0.4",
+    "nodemailer": "^9.0.1",
     "nodemailer-mailgun-transport": "^2.1.5",
     "nodemailer-mandrill-transport": "^1.2.0",
     "otp-generator": "^4.0.1",
