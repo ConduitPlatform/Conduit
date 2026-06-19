@@ -28,16 +28,16 @@
   "license": "MIT",
   "dependencies": {
     "@conduitplatform/grpc-sdk": "workspace:*",
-    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.0",
     "abort-controller-x": "^0.5.0",
     "convict": "^6.2.5",
-    "fast-jwt": "^6.1.0",
+    "fast-jwt": "^6.2.4",
     "lodash": "^4.18.1",
     "lodash-es": "^4.18.1",
     "nice-grpc-common": "^2.0.2",
     "prom-client": "^15.1.3",
-    "protobufjs": "^8.0.1",
+    "protobufjs": "^8.4.1",
     "winston": "^3.19.0",
     "winston-loki": "^6.1.4"
   },
@@ -70,6 +70,6 @@
   },
   "peerDependencies": {
     "@conduitplatform/grpc-sdk": "workspace:*",
-    "@grpc/grpc-js": "^1.13.3"
+    "@grpc/grpc-js": "^1.14.4"
   }
 }

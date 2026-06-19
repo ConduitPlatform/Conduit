@@ -39,7 +39,7 @@
     "@bufbuild/protobuf": "^2.10.2",
     "@conduitplatform/grpc-sdk": "workspace:*",
     "@conduitplatform/module-tools": "workspace:*",
-    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.0",
     "convict": "^6.2.5",
     "escape-string-regexp": "^5.0.0",

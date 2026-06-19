@@ -32,7 +32,7 @@
     "@bufbuild/protobuf": "^2.10.2",
     "@conduitplatform/grpc-sdk": "workspace:*",
     "@conduitplatform/module-tools": "workspace:*",
-    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.0",
     "bson": "^7.2.0",
     "bullmq": "^5.21.2",
