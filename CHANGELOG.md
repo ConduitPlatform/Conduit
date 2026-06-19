@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.17.0-alpha.3](///compare/v0.17.0-alpha.2...v0.17.0-alpha.3) (2026-06-19)
+
+
+### Bug Fixes
+
+* **build:** restore alpha release build 0462f64
+* **hermes:** support Socket.IO handshake auth ([#1487](undefined/undefined/undefined/issues/1487)) 93e4397
+* **module-tools:** restore grpc-sdk prod dependency for container runtime a5d1bb0
+
 ## [0.17.0-alpha.2](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.1...v0.17.0-alpha.2) (2026-06-10)
 
 
