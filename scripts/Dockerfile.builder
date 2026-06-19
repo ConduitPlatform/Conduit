@@ -4,6 +4,9 @@ WORKDIR /app
 
 RUN npm install -g pnpm@11.5.0
 
+ENV PNPM_CONFIG_TRUST_LOCKFILE=true
+ENV PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false
+
 COPY --from=conduit-base /app/libraries/grpc-sdk /app/libraries/grpc-sdk
 COPY --from=conduit-base /app/libraries/module-tools /app/libraries/module-tools
 COPY --from=conduit-base /app/package.json .

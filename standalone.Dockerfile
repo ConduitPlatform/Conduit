@@ -4,6 +4,9 @@ WORKDIR /app
 
 COPY --from=conduit-base /app/ /app/
 
+ENV PNPM_CONFIG_TRUST_LOCKFILE=true
+ENV PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false
+
 RUN apk update && \
     apk add --no-cache --virtual .gyp python3 py3-setuptools make g++ && \
     npm install -g pm2 pnpm@10.9.0 && \
