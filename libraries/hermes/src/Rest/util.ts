@@ -1,8 +1,6 @@
-import { Request } from 'express';
 import {
   BodyParams,
   ConduitError,
-  Indexable,
   Params,
   QueryParams,
   UrlParams,
