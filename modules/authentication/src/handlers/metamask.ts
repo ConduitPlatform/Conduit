@@ -19,7 +19,13 @@ import {
 } from '@conduitplatform/module-tools';
 import { Config } from '../config/index.js';
 import { ALT_STRATEGY_AUTH } from '../constants/index.js';
-import ethUtil from 'ethereumjs-util';
+import {
+  bytesToHex,
+  ecrecover,
+  fromRPCSig,
+  hashPersonalMessage,
+  publicToAddress,
+} from '@ethereumjs/util';
 
 export class MetamaskHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -117,18 +123,18 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
 
     const message = `I am signing my one-time nonce: ${user.metamask!.nonce}`;
     const msgBuffer = Buffer.from(message, 'utf8');
-    const msgHash = ethUtil.hashPersonalMessage(msgBuffer);
+    const msgHash = hashPersonalMessage(msgBuffer);
 
     let signatureParams;
     try {
-      signatureParams = ethUtil.fromRpcSig(signature);
+      signatureParams = fromRPCSig(signature);
     } catch (e) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature format');
     }
 
     let publicKey;
     try {
-      publicKey = ethUtil.ecrecover(
+      publicKey = ecrecover(
         msgHash,
         signatureParams.v,
         signatureParams.r,
@@ -138,8 +144,8 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.UNAUTHENTICATED, 'Signature recovery failed');
     }
 
-    const addressBuffer = ethUtil.publicToAddress(publicKey);
-    const recoveredAddress = ethUtil.bufferToHex(addressBuffer).toLowerCase();
+    const addressBuffer = publicToAddress(publicKey);
+    const recoveredAddress = bytesToHex(addressBuffer).toLowerCase();
 
     if (recoveredAddress !== normalizedEthPublicAddress) {
       throw new GrpcError(

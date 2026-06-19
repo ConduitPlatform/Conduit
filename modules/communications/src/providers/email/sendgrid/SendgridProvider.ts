@@ -2,6 +2,7 @@ import { EmailProviderClass } from '../models/EmailProviderClass.js';
 import { SendGridConfig } from './sendgrid.config.js';
 import { createTransport, SentMessageInfo } from 'nodemailer';
 import { Client } from '@sendgrid/client';
+import { initialize as initializeSendgrid } from './sendgrid.js';
 import { SendgridMailBuilder } from './sendgridMailBuilder.js';
 import { getHandleBarsValues } from '../utils/index.js';
 import {
@@ -15,13 +16,11 @@ import {
 } from '../interfaces/sendgrid/SendgridTemplate.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 
-import sgTransport from 'nodemailer-sendgrid';
-
 export class SendgridProvider extends EmailProviderClass {
   private _sgClient: any;
 
   constructor(sgSettings: SendGridConfig) {
-    super(createTransport(sgTransport(sgSettings)));
+    super(createTransport(initializeSendgrid(sgSettings)));
     this._sgClient = new Client();
     this._sgClient.setDataResidency(sgSettings.residency);
     this._sgClient.setApiKey(sgSettings.apiKey);
