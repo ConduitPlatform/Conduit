@@ -15,6 +15,7 @@ service Config {
   rpc GetServerConfig (google.protobuf.Empty) returns (GetConfigResponse);
   rpc GetRedisDetails (google.protobuf.Empty) returns (GetRedisDetailsResponse);
   rpc GetModuleUrlByName (ModuleByNameRequest) returns (ModuleByNameResponse);
+  rpc DeleteConfig (DeleteConfigRequest) returns (google.protobuf.Empty);
 }
 
 service Admin {
@@ -129,6 +130,10 @@ message ModuleExistsResponse {
 }
 
 message GetConfigRequest {
+  string key = 1;
+}
+
+message DeleteConfigRequest {
   string key = 1;
 }
 
