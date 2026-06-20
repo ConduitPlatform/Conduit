@@ -249,14 +249,23 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Download digests
+      - name: Prepare digest directory
+        run: mkdir -p /tmp/digests
+
+      - name: Download amd64 digest
         uses: actions/download-artifact@v4
         with:
+          name: digests-${{ matrix.target }}-amd64
           path: /tmp/digests
-          pattern: |
-            digests-${{ matrix.target }}-amd64
-            digests-${{ matrix.target }}-arm64
-          merge-multiple: true
+
+      - name: Download arm64 digest
+        uses: actions/download-artifact@v4
+        with:
+          name: digests-${{ matrix.target }}-arm64
+          path: /tmp/digests
+
+      - name: Verify digest artifacts
+        run: test "$(find /tmp/digests -maxdepth 1 -type f | wc -l | tr -d ' ')" -eq 2
 
       - name: Create GHCR manifest
         working-directory: /tmp/digests
