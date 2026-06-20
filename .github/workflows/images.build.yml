@@ -253,7 +253,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: /tmp/digests
-          pattern: digests-${{ matrix.target }}-*
+          pattern: |
+            digests-${{ matrix.target }}-amd64
+            digests-${{ matrix.target }}-arm64
           merge-multiple: true
 
       - name: Create GHCR manifest
