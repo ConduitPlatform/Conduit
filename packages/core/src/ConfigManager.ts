@@ -25,6 +25,8 @@ import { RedisOptions } from 'ioredis';
 import { ServiceRegistry } from './service-discovery/ServiceRegistry.js';
 import { fileURLToPath } from 'node:url';
 
+const LEGACY_COMMUNICATIONS_CONFIG_KEYS = new Set(['email', 'pushNotifications', 'sms']);
+
 export default class ConfigManager {
   grpcSdk: ConduitGrpcSdk;
   private readonly serviceDiscovery: ServiceDiscovery;
@@ -83,6 +85,7 @@ export default class ConfigManager {
           this.serviceDiscovery,
         ),
         getModuleUrlByName: this.getModuleUrlByNameGrpc.bind(this.serviceDiscovery),
+        deleteConfig: this.deleteConfigGrpc.bind(this),
       },
     );
     this.serviceDiscovery.beginMonitors();
@@ -198,6 +201,35 @@ export default class ConfigManager {
     } catch (e) {
       ConduitGrpcSdk.Logger.error(`Could not update "${moduleName}" configuration`);
     }
+  }
+
+  async deleteConfig(moduleName: string) {
+    await this._configStorage.deleteConfig(moduleName);
+  }
+
+  deleteConfigGrpc(
+    call: GrpcRequest<{ key: string }>,
+    callback: GrpcResponse<Record<string, never>>,
+  ) {
+    const callerModule = call.metadata!.get('module-name')![0] as string;
+    const { key } = call.request;
+    if (
+      callerModule !== 'communications' ||
+      !LEGACY_COMMUNICATIONS_CONFIG_KEYS.has(key)
+    ) {
+      return callback({
+        code: status.PERMISSION_DENIED,
+        message: 'Not authorized to delete module configuration',
+      });
+    }
+    this.deleteConfig(key)
+      .then(() => callback(null, {}))
+      .catch((e: Error) =>
+        callback({
+          code: status.INTERNAL,
+          message: e.message,
+        }),
+      );
   }
 
   async configureModule(

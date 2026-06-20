@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  collectLegacyModulesFound,
   getDefaultCommunicationsConfig,
   mergeLegacyChannelConfigs,
 } from '../dist/config/legacyConfigMigration.js';
@@ -74,6 +75,26 @@ test('existing communications config with real values is not overwritten', () =>
   assert.equal(config.email.transport, 'mailgun');
   assert.equal(config.email.transportSettings.mailgun.apiKey, 'existing-mailgun-key');
   assert.equal(config.email.transportSettings.sendgrid.apiKey, '');
+});
+
+test('collectLegacyModulesFound returns keys with non-empty legacy config', () => {
+  assert.deepEqual(collectLegacyModulesFound({}), []);
+  assert.deepEqual(collectLegacyModulesFound({ email: { active: true } }), ['email']);
+  assert.deepEqual(
+    collectLegacyModulesFound({
+      email: {},
+      pushNotifications: { active: false },
+      sms: null,
+    }),
+    ['pushNotifications'],
+  );
+  assert.deepEqual(
+    collectLegacyModulesFound({
+      email: { transport: 'sendgrid' },
+      sms: { active: true },
+    }),
+    ['email', 'sms'],
+  );
 });
 
 test('legacy push active:false is preserved instead of forcing active:true', () => {

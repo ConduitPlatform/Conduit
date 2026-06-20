@@ -12,7 +12,9 @@ import { fileURLToPath } from 'node:url';
 
 import AppConfigSchema, { Config } from './config/index.js';
 import {
+  collectLegacyModulesFound,
   getDefaultCommunicationsConfig,
+  LEGACY_MODULE_CONFIG_KEYS,
   mergeLegacyChannelConfigs,
   type LegacyModuleConfigs,
 } from './config/legacyConfigMigration.js';
@@ -119,7 +121,7 @@ export default class Communications extends ManagedModule<Config> {
   private pushService: PushService;
   private smsService: SmsService;
   private orchestratorService: OrchestratorService;
-  private legacyConfigMigrated = false;
+  private legacyModulesPendingCleanup: string[] = [];
 
   // Provider instances
   private emailProvider: EmailProvider;
@@ -139,9 +141,14 @@ export default class Communications extends ManagedModule<Config> {
   }
 
   async preConfig(config: Config) {
-    if (!this.legacyConfigMigrated) {
+    const hasLegacyKeys = await Promise.all(
+      LEGACY_MODULE_CONFIG_KEYS.map(key =>
+        this.grpcSdk.state!.getKey(`moduleConfigs.${key}`),
+      ),
+    ).then(keys => keys.some(Boolean));
+
+    if (hasLegacyKeys) {
       config = await this.mergeLegacyModuleConfigs(config);
-      this.legacyConfigMigrated = true;
     }
     if (isNil(config.email) || isNil(config.pushNotifications) || isNil(config.sms)) {
       throw new Error('Invalid configuration given');
@@ -152,31 +159,19 @@ export default class Communications extends ManagedModule<Config> {
   private async mergeLegacyModuleConfigs(config: Config): Promise<Config> {
     const legacyConfigs: LegacyModuleConfigs = {};
 
-    try {
-      const emailConfig = await this.grpcSdk.config.get('email');
-      if (emailConfig && Object.keys(emailConfig).length > 0) {
-        legacyConfigs.email = emailConfig;
+    for (const key of LEGACY_MODULE_CONFIG_KEYS) {
+      const stateKey = await this.grpcSdk.state!.getKey(`moduleConfigs.${key}`);
+      if (!stateKey) continue;
+
+      const moduleConfig = await this.grpcSdk.config.get(key);
+      if (moduleConfig && Object.keys(moduleConfig).length > 0) {
+        legacyConfigs[key] = moduleConfig;
       }
-    } catch {
-      ConduitGrpcSdk.Logger.log('No existing email configuration found');
     }
 
-    try {
-      const pushConfig = await this.grpcSdk.config.get('pushNotifications');
-      if (pushConfig && Object.keys(pushConfig).length > 0) {
-        legacyConfigs.pushNotifications = pushConfig;
-      }
-    } catch {
-      ConduitGrpcSdk.Logger.log('No existing push notifications configuration found');
-    }
-
-    try {
-      const smsConfig = await this.grpcSdk.config.get('sms');
-      if (smsConfig && Object.keys(smsConfig).length > 0) {
-        legacyConfigs.sms = smsConfig;
-      }
-    } catch {
-      ConduitGrpcSdk.Logger.log('No existing SMS configuration found');
+    const legacyModulesFound = collectLegacyModulesFound(legacyConfigs);
+    if (legacyModulesFound.length > 0) {
+      this.legacyModulesPendingCleanup = legacyModulesFound;
     }
 
     const { config: mergedConfig, migratedChannels } = mergeLegacyChannelConfigs(
@@ -196,6 +191,17 @@ export default class Communications extends ManagedModule<Config> {
 
   async onConfig() {
     const config = ConfigController.getInstance().config as Config;
+
+    if (this.legacyModulesPendingCleanup.length > 0) {
+      const modulesToRemove = [...this.legacyModulesPendingCleanup];
+      for (const name of modulesToRemove) {
+        await this.grpcSdk.config.delete(name);
+      }
+      ConduitGrpcSdk.Logger.log(
+        `Removed legacy module configuration: ${modulesToRemove.join(', ')}`,
+      );
+      this.legacyModulesPendingCleanup = [];
+    }
 
     if (!this.isRunning) {
       await this.initServices();

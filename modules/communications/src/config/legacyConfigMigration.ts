@@ -14,6 +14,8 @@ export type LegacyConfigMergeResult = {
   migratedChannels: string[];
 };
 
+export const LEGACY_MODULE_CONFIG_KEYS = ['email', 'pushNotifications', 'sms'] as const;
+
 export function getDefaultCommunicationsConfig(): Config {
   return convict(AppConfigSchema).getProperties() as Config;
 }
@@ -22,6 +24,10 @@ function hasLegacyConfig(
   config?: Record<string, unknown> | null,
 ): config is Record<string, unknown> {
   return !!config && Object.keys(config).length > 0;
+}
+
+export function collectLegacyModulesFound(legacyConfigs: LegacyModuleConfigs): string[] {
+  return LEGACY_MODULE_CONFIG_KEYS.filter(key => hasLegacyConfig(legacyConfigs[key]));
 }
 
 function shouldMigrateChannel(current: unknown, defaults: unknown): boolean {
