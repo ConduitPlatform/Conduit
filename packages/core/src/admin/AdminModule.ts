@@ -292,7 +292,6 @@ export default class AdminModule {
   protected onConfig() {
     let restEnabled = ConfigController.getInstance().config.transports.rest;
     const graphqlEnabled = ConfigController.getInstance().config.transports.graphql;
-    const proxyEnabled = ConfigController.getInstance().config.transports.proxy;
     if (!restEnabled && !graphqlEnabled) {
       ConduitGrpcSdk.Logger.warn(
         'Cannot disable both REST and GraphQL admin transport APIs. Falling back to REST...',

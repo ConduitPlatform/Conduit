@@ -62,10 +62,6 @@ export default {
       format: 'Boolean',
       default: true,
     },
-    proxy: {
-      format: 'Boolean',
-      default: true,
-    },
   },
   security: {
     clientValidation: {

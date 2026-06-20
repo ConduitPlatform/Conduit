@@ -61,10 +61,6 @@ export default {
       type: 'Boolean',
       default: false,
     },
-    proxy: {
-      format: 'Boolean',
-      default: true,
-    },
     mcp: {
       format: 'Boolean',
       default: true,
