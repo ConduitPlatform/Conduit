@@ -99,7 +99,7 @@ export class RelationHandler {
   }
 
   async createRelations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { subject, relation, resources } = call.request.params;
+    const { subject, relation, resources } = call.request.bodyParams;
     return RelationsController.getInstance().createRelations(
       subject,
       relation,
