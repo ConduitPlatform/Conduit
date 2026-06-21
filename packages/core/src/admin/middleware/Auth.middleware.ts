@@ -124,6 +124,7 @@ async function handleJwtToken(
       return;
     }
     req.conduit!.admin = admin;
+    req.conduit!.jwtPayload = decoded;
     next();
   } catch (error) {
     ConduitGrpcSdk.Logger.error(error as Error);

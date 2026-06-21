@@ -48,7 +48,7 @@ export async function verify2Fa(admin: Admin, code: string) {
   }
   const authConfig = ConfigController.getInstance().config.auth;
   const { tokenSecret, tokenExpirationTime } = authConfig;
-  return signToken({ id: admin._id }, tokenSecret, tokenExpirationTime);
+  return signToken({ id: admin._id, sudo: true }, tokenSecret, tokenExpirationTime);
 }
 
 export function generateSecret(options?: { name: string; account: string }) {

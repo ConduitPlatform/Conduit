@@ -185,7 +185,7 @@ export class TeamsAdmin {
           teamId: ConduitObjectId.Required,
         },
         name: 'DeleteTeam',
-        description: 'Deletes a team',
+        description: 'Deletes a team (requires sudo access)',
       },
       new ConduitRouteReturnDefinition('DeleteTeam', 'String'),
       this.deleteTeam.bind(this),
@@ -375,6 +375,12 @@ export class TeamsAdmin {
   }
 
   async deleteTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (!call.request.context.jwtPayload?.sudo) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Re-login required to enter sudo mode',
+      );
+    }
     const { teamId } = call.request.params;
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {

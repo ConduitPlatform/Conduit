@@ -23,7 +23,8 @@ export function verifyTwoFaRoute() {
     async (req: ConduitRouteParameters) => {
       const { code } = req.params!;
       const admin = req.context!.admin;
-      return await verify2Fa(admin, code);
+      const token = await verify2Fa(admin, code);
+      return { token };
     },
   );
 }

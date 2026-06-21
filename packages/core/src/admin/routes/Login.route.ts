@@ -69,7 +69,7 @@ export function getLoginRoute() {
       const authConfig = ConfigController.getInstance().config.auth;
       const { tokenSecret, tokenExpirationTime } = authConfig;
       const token = signToken(
-        { id: admin._id.toString() },
+        { id: admin._id.toString(), sudo: true },
         tokenSecret,
         tokenExpirationTime,
       );
