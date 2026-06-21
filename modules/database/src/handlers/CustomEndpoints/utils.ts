@@ -159,8 +159,6 @@ function _translateQuery(
       return { [schemaField]: { $in: comparisonField } };
     case 7:
       return { [schemaField]: { $nin: comparisonField } };
-    case 8:
-      return { [schemaField]: comparisonField };
     default:
       return { [schemaField]: comparisonField };
   }
