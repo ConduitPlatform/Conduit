@@ -25,6 +25,13 @@ import { Config } from '../config/index.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { randomInt } from 'crypto';
 
+function normalizeTwoFaMethod(method?: string): string | undefined {
+  if (method === 'phone') {
+    return 'sms';
+  }
+  return method;
+}
+
 export class TwoFa implements IAuthenticationStrategy {
   private smsModule: SMS;
 
@@ -129,7 +136,7 @@ export class TwoFa implements IAuthenticationStrategy {
       this.disableTwoFa.bind(this),
     );
 
-    if (ConfigController.getInstance().config.twoFa.backUpCodes) {
+    if (ConfigController.getInstance().config.twoFa.backUpCodes?.enabled) {
       routingManager.route(
         {
           path: '/twoFa/generate',
@@ -169,7 +176,8 @@ export class TwoFa implements IAuthenticationStrategy {
     if (!user.hasTwoFA) {
       return '2FA disabled';
     }
-    if (user.twoFaMethod === 'sms') {
+    const twoFaMethod = normalizeTwoFaMethod(user.twoFaMethod);
+    if (twoFaMethod === 'sms') {
       const verificationSid = await AuthUtils.sendVerificationCode(
         this.smsModule,
         user.phoneNumber!,
@@ -183,7 +191,7 @@ export class TwoFa implements IAuthenticationStrategy {
         method: 'sms',
         message: `A verification code has been sent to ${phoneNumber}`,
       };
-    } else if (user.twoFaMethod === 'authenticator') {
+    } else if (twoFaMethod === 'authenticator') {
       return {
         method: 'authenticator',
         message: `Use your authenticator app to get the code`,
@@ -264,7 +272,8 @@ export class TwoFa implements IAuthenticationStrategy {
     | { message: string; accessToken?: undefined }
     | { message: string; accessToken: string }
   > {
-    if (user.twoFaMethod === 'phone') {
+    const twoFaMethod = normalizeTwoFaMethod(user.twoFaMethod);
+    if (twoFaMethod === 'sms') {
       const verificationSid = await AuthUtils.sendVerificationCode(
         this.smsModule,
         user.phoneNumber!,
@@ -288,7 +297,7 @@ export class TwoFa implements IAuthenticationStrategy {
       return {
         message: 'Verification code sent',
       };
-    } else if (user.twoFaMethod === 'authenticator') {
+    } else if (twoFaMethod === 'authenticator') {
       const secret = await TwoFactorSecret.getInstance().findOne(
         {
           user: user._id,
@@ -324,7 +333,8 @@ export class TwoFa implements IAuthenticationStrategy {
     code: string,
     clientId: string,
   ): Promise<{ userId?: string; accessToken?: string; refreshToken?: string }> {
-    if (user.twoFaMethod === 'phone') {
+    const twoFaMethod = normalizeTwoFaMethod(user.twoFaMethod);
+    if (twoFaMethod === 'sms') {
       const token = await Token.getInstance().findOne(
         {
           tokenType: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
@@ -519,7 +529,7 @@ export class TwoFa implements IAuthenticationStrategy {
       token: uuid(),
     });
     await User.getInstance().findByIdAndUpdate(user._id, {
-      twoFaMethod: 'phone',
+      twoFaMethod: 'sms',
     });
     return 'Verification code sent';
   }
