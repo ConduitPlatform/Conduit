@@ -169,16 +169,59 @@ export class AdminHandlers {
         'ids is required and must be a non-empty array',
       );
     }
-    await ChatRoom.getInstance()
-      .deleteMany({ _id: { $in: ids } })
+
+    const rooms = await ChatRoom.getInstance()
+      .findMany({ _id: { $in: ids } })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    await ChatMessage.getInstance()
-      .deleteMany({ room: { $in: ids } })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+
+    const auditMode = ConfigController.getInstance().config.auditMode;
+    if (auditMode) {
+      await ChatRoom.getInstance()
+        .updateMany({ _id: { $in: ids } }, { deleted: true })
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+      await ChatMessage.getInstance()
+        .updateMany({ room: { $in: ids } }, { deleted: true })
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+    } else {
+      await ChatRoom.getInstance()
+        .deleteMany({ _id: { $in: ids } })
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+      await ChatMessage.getInstance()
+        .deleteMany({ room: { $in: ids } })
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+    }
+
+    for (const room of rooms) {
+      const roomId = room._id;
+      const participantIds = room.participants.map(p =>
+        typeof p === 'string' ? p : p._id,
+      );
+
+      await this.invalidateMembershipCache(roomId);
+      this.grpcSdk.bus?.publish('chat:deleteRoom:ChatRoom', JSON.stringify({ roomId }));
+      for (const userId of participantIds) {
+        this.grpcSdk.router?.socketPush({
+          event: 'leave-room',
+          receivers: [userId],
+          rooms: [roomId],
+        });
+        this.grpcSdk.bus?.publish(
+          'chat:leaveRoom:ChatRoom',
+          JSON.stringify({ roomId, user: userId }),
+        );
+      }
+    }
+
     ConduitGrpcSdk.Metrics?.decrement('chat_rooms_total');
     return 'Done';
   }
