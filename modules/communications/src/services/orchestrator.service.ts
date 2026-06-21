@@ -3,10 +3,12 @@ import { IChannel, IChannelSendParams, ChannelResult } from '../interfaces/index
 import { EmailService } from './email.service.js';
 import { PushService } from './push.service.js';
 import { SmsService } from './sms.service.js';
+import { CommunicationTemplateService } from './communication-template.service.js';
 
 export interface IMultiChannelSendParams extends IChannelSendParams {
   channels: ('email' | 'push' | 'sms')[];
   strategy: 'BEST_EFFORT' | 'ALL_OR_NOTHING';
+  templateName?: string;
 }
 
 export interface IFallbackSendParams extends IChannelSendParams {
@@ -14,7 +16,12 @@ export interface IFallbackSendParams extends IChannelSendParams {
     channel: 'email' | 'push' | 'sms';
     timeout: number;
   }>;
+  templateName?: string;
 }
+
+export type OrchestratorSendParams = IChannelSendParams & {
+  templateName?: string;
+};
 
 export class OrchestratorService {
   constructor(
@@ -22,7 +29,12 @@ export class OrchestratorService {
     private emailService: EmailService,
     private pushService: PushService,
     private smsService: SmsService,
+    private templateService?: CommunicationTemplateService,
   ) {}
+
+  setTemplateService(templateService: CommunicationTemplateService) {
+    this.templateService = templateService;
+  }
 
   updateServices(
     emailService: EmailService,
@@ -47,12 +59,72 @@ export class OrchestratorService {
     }
   }
 
+  private async resolveParamsForChannel(
+    channel: 'email' | 'push' | 'sms',
+    params: OrchestratorSendParams,
+  ): Promise<IChannelSendParams & { emailTemplateName?: string }> {
+    if (!params.templateName || !this.templateService) {
+      return params;
+    }
+
+    const resolved = await this.templateService.resolve(
+      params.templateName,
+      channel,
+      params.variables ?? {},
+    );
+    return this.templateService.mergeWithRequest(params, resolved);
+  }
+
+  private async sendOnChannel(
+    channel: 'email' | 'push' | 'sms',
+    params: IChannelSendParams & { emailTemplateName?: string },
+  ): Promise<ChannelResult> {
+    if (channel === 'email' && params.emailTemplateName) {
+      try {
+        const result = await this.emailService.sendEmail(params.emailTemplateName, {
+          email: params.recipient,
+          subject: params.subject,
+          body: params.body,
+          variables: params.variables,
+          sender: params.sender,
+          cc: params.cc,
+          replyTo: params.replyTo,
+        });
+        return {
+          success: true,
+          messageId: result.messageId,
+          channel: 'email',
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: (error as Error).message,
+          channel: 'email',
+        };
+      }
+    }
+
+    const service = this.getChannelService(channel);
+    return service.send(params);
+  }
+
+  private trackSendMetrics(results: ChannelResult[]) {
+    ConduitGrpcSdk.Metrics?.increment('communications_sent_total', results.length);
+    for (const result of results) {
+      if (result.success) {
+        ConduitGrpcSdk.Metrics?.increment('communications_success_total');
+      } else {
+        ConduitGrpcSdk.Metrics?.increment('communications_failure_total');
+      }
+    }
+  }
+
   async sendToMultipleChannels(params: IMultiChannelSendParams): Promise<{
     results: ChannelResult[];
     successCount: number;
     failureCount: number;
   }> {
-    const { channels, strategy, ...sendParams } = params;
+    const { channels, strategy, templateName, ...sendParams } = params;
     const results: ChannelResult[] = [];
     const availableChannels = channels.filter(channel =>
       this.getChannelService(channel).isAvailable(),
@@ -62,11 +134,13 @@ export class OrchestratorService {
       throw new Error('No available channels');
     }
 
-    // Send to all channels in parallel
     const promises = availableChannels.map(async channel => {
       try {
-        const service = this.getChannelService(channel);
-        const result = await service.send(sendParams);
+        const resolvedParams = await this.resolveParamsForChannel(channel, {
+          ...sendParams,
+          templateName,
+        });
+        const result = await this.sendOnChannel(channel, resolvedParams);
         results.push(result);
         return result;
       } catch (error) {
@@ -84,7 +158,8 @@ export class OrchestratorService {
     const successCount = channelResults.filter(r => r.success).length;
     const failureCount = channelResults.filter(r => !r.success).length;
 
-    // If strategy is ALL_OR_NOTHING and any channel failed, throw error
+    this.trackSendMetrics(channelResults);
+
     if (strategy === 'ALL_OR_NOTHING' && failureCount > 0) {
       const failedChannels = channelResults.filter(r => !r.success).map(r => r.channel);
       throw new Error(`Failed to send to channels: ${failedChannels.join(', ')}`);
@@ -102,7 +177,7 @@ export class OrchestratorService {
     messageId?: string;
     attempts: ChannelResult[];
   }> {
-    const { fallbackChain, ...sendParams } = params;
+    const { fallbackChain, templateName, ...sendParams } = params;
     const attempts: ChannelResult[] = [];
 
     for (const step of fallbackChain) {
@@ -119,19 +194,25 @@ export class OrchestratorService {
       }
 
       try {
-        const service = this.getChannelService(channel);
+        const resolvedParams = await this.resolveParamsForChannel(channel, {
+          ...sendParams,
+          templateName,
+        });
 
-        // Create a timeout promise
         const timeoutPromise = new Promise<never>((_, reject) => {
           setTimeout(() => reject(new Error(`Timeout after ${timeout}ms`)), timeout);
         });
 
-        // Race between the service call and timeout
-        const result = await Promise.race([service.send(sendParams), timeoutPromise]);
+        const result = await Promise.race([
+          this.sendOnChannel(channel, resolvedParams),
+          timeoutPromise,
+        ]);
 
         attempts.push(result);
 
         if (result.success) {
+          this.trackSendMetrics(attempts);
+          ConduitGrpcSdk.Metrics?.increment('fallback_chain_used_total');
           return {
             successfulChannel: channel,
             messageId: result.messageId,
@@ -148,13 +229,13 @@ export class OrchestratorService {
       }
     }
 
-    // If we get here, all channels failed
+    this.trackSendMetrics(attempts);
     throw new Error(`All fallback channels failed. Attempts: ${attempts.length}`);
   }
 
   async sendToChannel(
     channel: 'email' | 'push' | 'sms',
-    params: IChannelSendParams,
+    params: OrchestratorSendParams,
   ): Promise<ChannelResult> {
     const service = this.getChannelService(channel);
 
@@ -162,7 +243,10 @@ export class OrchestratorService {
       throw new Error(`Channel ${channel} is not available`);
     }
 
-    return service.send(params);
+    const resolvedParams = await this.resolveParamsForChannel(channel, params);
+    const result = await this.sendOnChannel(channel, resolvedParams);
+    this.trackSendMetrics([result]);
+    return result;
   }
 
   getAvailableChannels(): ('email' | 'push' | 'sms')[] {

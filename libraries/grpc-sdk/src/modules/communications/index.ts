@@ -201,11 +201,12 @@ export class Communications extends ConduitModule<typeof CommunicationsDefinitio
       platform?: string;
       doNotStore?: boolean;
       isSilent?: boolean;
+      templateName?: string;
     },
   ) {
     return this.client!.sendCommunication({
       channel,
-      templateName: '', // Not used for direct sending
+      templateName: params.templateName ?? '',
       params: {
         recipient: params.recipient,
         subject: params.subject,
@@ -244,12 +245,13 @@ export class Communications extends ConduitModule<typeof CommunicationsDefinitio
       platform?: string;
       doNotStore?: boolean;
       isSilent?: boolean;
+      templateName?: string;
     },
   ) {
     return this.client!.sendToMultipleChannels({
       channels,
       strategy,
-      templateName: '', // Not used for direct sending
+      templateName: params.templateName ?? '',
       params: {
         recipient: params.recipient,
         subject: params.subject,
@@ -287,11 +289,12 @@ export class Communications extends ConduitModule<typeof CommunicationsDefinitio
       platform?: string;
       doNotStore?: boolean;
       isSilent?: boolean;
+      templateName?: string;
     },
   ) {
     return this.client!.sendWithFallback({
       fallbackChain,
-      templateName: '', // Not used for direct sending
+      templateName: params.templateName ?? '',
       params: {
         recipient: params.recipient,
         subject: params.subject,
@@ -322,5 +325,74 @@ export class Communications extends ConduitModule<typeof CommunicationsDefinitio
     }).then(res => {
       return JSON.parse(res.statusInfo);
     });
+  }
+
+  registerCommunicationTemplate(template: {
+    name: string;
+    channels: ('email' | 'push' | 'sms')[];
+    description?: string;
+    variables?: string[];
+    email?: { subject: string; body: string; sender?: string };
+    push?: { title: string; body: string };
+    sms?: { message: string };
+  }) {
+    return this.client!.registerCommunicationTemplate({
+      name: template.name,
+      channels: template.channels,
+      description: template.description,
+      variables: template.variables ?? [],
+      template: {
+        email: template.email,
+        push: template.push,
+        sms: template.sms,
+      },
+    }).then(res => JSON.parse(res.template));
+  }
+
+  updateCommunicationTemplate(
+    id: string,
+    params: {
+      name?: string;
+      channels?: ('email' | 'push' | 'sms')[];
+      description?: string;
+      variables?: string[];
+      email?: { subject: string; body: string; sender?: string };
+      push?: { title: string; body: string };
+      sms?: { message: string };
+    },
+  ) {
+    return this.client!.updateCommunicationTemplate({
+      id,
+      name: params.name,
+      channels: params.channels ?? [],
+      description: params.description,
+      variables: params.variables ?? [],
+      template: {
+        email: params.email,
+        push: params.push,
+        sms: params.sms,
+      },
+    }).then(res => JSON.parse(res.template));
+  }
+
+  deleteCommunicationTemplate(id: string) {
+    return this.client!.deleteCommunicationTemplate({ id });
+  }
+
+  getCommunicationTemplate(params: { id?: string; name?: string }) {
+    return this.client!.getCommunicationTemplate(params).then(res => {
+      return JSON.parse(res.template);
+    });
+  }
+
+  listCommunicationTemplates(params: { skip?: number; limit?: number; search?: string }) {
+    return this.client!.listCommunicationTemplates({
+      skip: params.skip ?? 0,
+      limit: params.limit ?? 25,
+      search: params.search,
+    }).then(res => ({
+      templates: res.templates.map(t => JSON.parse(t)),
+      count: res.count,
+    }));
   }
 }

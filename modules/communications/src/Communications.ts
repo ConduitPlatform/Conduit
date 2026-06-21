@@ -24,8 +24,10 @@ import { EmailService } from './services/email.service.js';
 import { PushService } from './services/push.service.js';
 import { SmsService } from './services/sms.service.js';
 import { OrchestratorService } from './services/orchestrator.service.js';
+import { CommunicationTemplateService } from './services/communication-template.service.js';
 import { QueueController } from './controllers/queue.controller.js';
 import * as models from './models/index.js';
+import type { CommunicationTemplate } from './models/CommunicationTemplate.schema.js';
 import { runMigrations } from './migrations/index.js';
 import metricsSchema from './metrics/index.js';
 import {
@@ -52,6 +54,13 @@ import {
   GetNotificationTokensResponse,
   RegisterCommunicationTemplateRequest,
   RegisterCommunicationTemplateResponse,
+  UpdateCommunicationTemplateRequest,
+  DeleteCommunicationTemplateRequest,
+  DeleteCommunicationTemplateResponse,
+  GetCommunicationTemplateRequest,
+  GetCommunicationTemplateResponse,
+  ListCommunicationTemplatesRequest,
+  ListCommunicationTemplatesResponse,
   RegisterTemplateRequest,
   RegisterTemplateResponse,
   ResendEmailRequest,
@@ -109,6 +118,10 @@ export default class Communications extends ManagedModule<Config> {
       sendToMultipleChannels: this.sendToMultipleChannels.bind(this),
       sendWithFallback: this.sendWithFallback.bind(this),
       registerCommunicationTemplate: this.registerCommunicationTemplate.bind(this),
+      updateCommunicationTemplate: this.updateCommunicationTemplate.bind(this),
+      deleteCommunicationTemplate: this.deleteCommunicationTemplate.bind(this),
+      getCommunicationTemplate: this.getCommunicationTemplate.bind(this),
+      listCommunicationTemplates: this.listCommunicationTemplates.bind(this),
       getMessageStatus: this.getMessageStatus.bind(this),
     },
   };
@@ -121,6 +134,7 @@ export default class Communications extends ManagedModule<Config> {
   private pushService: PushService;
   private smsService: SmsService;
   private orchestratorService: OrchestratorService;
+  private templateService: CommunicationTemplateService;
   private legacyModulesPendingCleanup: string[] = [];
 
   // Provider instances
@@ -211,6 +225,7 @@ export default class Communications extends ManagedModule<Config> {
         this.pushService,
         this.smsService,
         this.orchestratorService,
+        this.templateService,
       );
 
       // Initialize user routes for push notifications
@@ -237,8 +252,15 @@ export default class Communications extends ManagedModule<Config> {
   }
 
   async initializeMetrics() {
-    const templatesTotal = await models.EmailTemplate.getInstance().countDocuments({});
-    ConduitGrpcSdk.Metrics?.set('email_templates_total', templatesTotal);
+    const [emailTemplatesTotal, communicationTemplatesTotal] = await Promise.all([
+      models.EmailTemplate.getInstance().countDocuments({}),
+      models.CommunicationTemplate.getInstance().countDocuments({}),
+    ]);
+    ConduitGrpcSdk.Metrics?.set('email_templates_total', emailTemplatesTotal);
+    ConduitGrpcSdk.Metrics?.set(
+      'communication_templates_total',
+      communicationTemplatesTotal,
+    );
   }
 
   // Framework export/import (GitOps)
@@ -314,6 +336,17 @@ export default class Communications extends ManagedModule<Config> {
         continue;
       }
       try {
+        const emailCollision = await emailModel.findOne({ name });
+        if (emailCollision) {
+          result.communicationTemplates.failed += 1;
+          result.communicationTemplates.errors.push(
+            `${String(name)}: name conflicts with existing email template`,
+          );
+          continue;
+        }
+
+        this.templateService.validateForImport(r);
+
         const existing = await commModel.findOne({ name });
         if (existing) {
           await commModel.updateOne({ name }, r);
@@ -329,6 +362,10 @@ export default class Communications extends ManagedModule<Config> {
         );
       }
     }
+
+    const commTemplateCount = await commModel.countDocuments({});
+    ConduitGrpcSdk.Metrics?.set('communication_templates_total', commTemplateCount);
+
     return result;
   }
 
@@ -654,6 +691,7 @@ export default class Communications extends ManagedModule<Config> {
       platform: params!.platform,
       doNotStore: params!.doNotStore,
       isSilent: params!.isSilent,
+      templateName: templateName || undefined,
     };
 
     let errorMessage: string | null = null;
@@ -700,6 +738,7 @@ export default class Communications extends ManagedModule<Config> {
       platform: params!.platform,
       doNotStore: params!.doNotStore,
       isSilent: params!.isSilent,
+      templateName: templateName || undefined,
     };
 
     let errorMessage: string | null = null;
@@ -752,6 +791,7 @@ export default class Communications extends ManagedModule<Config> {
       platform: params!.platform,
       doNotStore: params!.doNotStore,
       isSilent: params!.isSilent,
+      templateName: templateName || undefined,
     };
 
     let errorMessage: string | null = null;
@@ -781,9 +821,166 @@ export default class Communications extends ManagedModule<Config> {
     call: GrpcRequest<RegisterCommunicationTemplateRequest>,
     callback: GrpcCallback<RegisterCommunicationTemplateResponse>,
   ) {
-    // This would implement the unified template registration
-    // For now, return a placeholder
-    return callback(null, { template: JSON.stringify({ name: call.request.name }) });
+    try {
+      const template = await this.templateService.create(
+        this.mapProtoToCreateParams(call.request),
+      );
+      return callback(null, { template: JSON.stringify(template) });
+    } catch (e) {
+      const message = (e as Error).message;
+      const code = message.includes('already exists')
+        ? status.ALREADY_EXISTS
+        : status.INTERNAL;
+      return callback({ code, message });
+    }
+  }
+
+  async updateCommunicationTemplate(
+    call: GrpcRequest<UpdateCommunicationTemplateRequest>,
+    callback: GrpcCallback<RegisterCommunicationTemplateResponse>,
+  ) {
+    try {
+      const template = await this.templateService.update(
+        call.request.id,
+        this.mapProtoToUpdateParams(call.request),
+      );
+      return callback(null, { template: JSON.stringify(template) });
+    } catch (e) {
+      const message = (e as Error).message;
+      const code = message.includes('not found')
+        ? status.NOT_FOUND
+        : message.includes('already exists')
+          ? status.ALREADY_EXISTS
+          : status.INTERNAL;
+      return callback({ code, message });
+    }
+  }
+
+  async deleteCommunicationTemplate(
+    call: GrpcRequest<DeleteCommunicationTemplateRequest>,
+    callback: GrpcCallback<DeleteCommunicationTemplateResponse>,
+  ) {
+    try {
+      const result = await this.templateService.delete(call.request.id);
+      return callback(null, { deleted: result.deleted });
+    } catch (e) {
+      const message = (e as Error).message;
+      const code = message.includes('not found') ? status.NOT_FOUND : status.INTERNAL;
+      return callback({ code, message });
+    }
+  }
+
+  async getCommunicationTemplate(
+    call: GrpcRequest<GetCommunicationTemplateRequest>,
+    callback: GrpcCallback<GetCommunicationTemplateResponse>,
+  ) {
+    try {
+      let template;
+      if (call.request.id) {
+        template = await this.templateService.getById(call.request.id);
+      } else if (call.request.name) {
+        template = await this.templateService.getByName(call.request.name);
+        if (!template) {
+          return callback({ code: status.NOT_FOUND, message: 'Template does not exist' });
+        }
+      } else {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Either id or name must be provided',
+        });
+      }
+      return callback(null, { template: JSON.stringify(template) });
+    } catch (e) {
+      const message = (e as Error).message;
+      const code = message.includes('not found') ? status.NOT_FOUND : status.INTERNAL;
+      return callback({ code, message });
+    }
+  }
+
+  async listCommunicationTemplates(
+    call: GrpcRequest<ListCommunicationTemplatesRequest>,
+    callback: GrpcCallback<ListCommunicationTemplatesResponse>,
+  ) {
+    const { skip, limit, search } = call.request;
+    let query: Record<string, unknown> = {};
+    if (search) {
+      if (search.match(/^[a-fA-F\d]{24}$/)) {
+        query = { _id: search };
+      } else {
+        query = { name: { $regex: `.*${search}.*`, $options: 'i' } };
+      }
+    }
+
+    try {
+      const { documents, count } = await this.templateService.list(query as never, {
+        skip,
+        limit,
+      });
+      return callback(null, {
+        templates: documents.map((doc: CommunicationTemplate) => JSON.stringify(doc)),
+        count,
+      });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  private mapProtoToCreateParams(request: RegisterCommunicationTemplateRequest) {
+    const nested = request.template;
+    return {
+      name: request.name,
+      channels: (request.channels ?? []) as ('email' | 'push' | 'sms')[],
+      summary: request.description,
+      variables: request.variables?.length ? request.variables : undefined,
+      email: nested?.email
+        ? {
+            subject: nested.email.subject,
+            body: nested.email.body,
+            sender: nested.email.sender,
+          }
+        : undefined,
+      push: nested?.push
+        ? {
+            title: nested.push.title,
+            body: nested.push.body,
+          }
+        : undefined,
+      sms: nested?.sms
+        ? {
+            message: nested.sms.message,
+          }
+        : undefined,
+    };
+  }
+
+  private mapProtoToUpdateParams(request: UpdateCommunicationTemplateRequest) {
+    const nested = request.template;
+    return {
+      name: request.name,
+      channels: request.channels?.length
+        ? (request.channels as ('email' | 'push' | 'sms')[])
+        : undefined,
+      summary: request.description,
+      variables: request.variables?.length ? request.variables : undefined,
+      email: nested?.email
+        ? {
+            subject: nested.email.subject,
+            body: nested.email.body,
+            sender: nested.email.sender,
+          }
+        : undefined,
+      push: nested?.push
+        ? {
+            title: nested.push.title,
+            body: nested.push.body,
+          }
+        : undefined,
+      sms: nested?.sms
+        ? {
+            message: nested.sms.message,
+          }
+        : undefined,
+    };
   }
 
   async getMessageStatus(
@@ -815,13 +1012,14 @@ export default class Communications extends ManagedModule<Config> {
     this.emailService = new EmailService(this.grpcSdk);
     this.pushService = new PushService(this.grpcSdk);
     this.smsService = new SmsService(this.grpcSdk);
+    this.templateService = new CommunicationTemplateService(this.grpcSdk);
 
-    // Initialize orchestrator service
     this.orchestratorService = new OrchestratorService(
       this.grpcSdk,
       this.emailService,
       this.pushService,
       this.smsService,
+      this.templateService,
     );
   }
 }
