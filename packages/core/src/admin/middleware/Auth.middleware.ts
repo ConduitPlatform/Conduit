@@ -8,11 +8,12 @@ import { ConduitRequest } from '@conduitplatform/hermes';
 import { gql } from 'graphql-tag';
 import { ConfigController } from '@conduitplatform/module-tools';
 
-const excludedRestRoutes = ['/ready', '/login', '/config/modules'];
+const excludedRestRoutes = ['/ready', '/live', '/login', '/config/modules'];
 const excludedGqlOperations = [
   '__schema',
   'IntrospectionQuery',
   'getReady',
+  'getLive',
   'postLogin',
   'getConfigModules',
 ];

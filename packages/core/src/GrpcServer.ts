@@ -74,6 +74,10 @@ export class GrpcServer {
     return this._initialized;
   }
 
+  isGrpcServing(): boolean {
+    return this._serviceHealthState === HealthCheckStatus.SERVING;
+  }
+
   get internalGrpc() {
     return this.server;
   }
@@ -101,7 +105,7 @@ export class GrpcServer {
   }
 
   private async bootstrapSdkComponents() {
-    this.adminModule = new AdminModule(this._grpcSdk, this.configManager);
+    this.adminModule = new AdminModule(this._grpcSdk, this.configManager, this);
     this.configManager.setAdminModule(this.adminModule);
     this.initializeMetrics();
 
