@@ -1,18 +1,11 @@
 import { LocalHandlers } from '../handlers/local.js';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import {
-  ConduitGrpcSdk,
-  ConduitReturn,
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-} from '@conduitplatform/grpc-sdk';
-import {
-  ConduitString,
   ConfigController,
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { CommonHandlers } from '../handlers/common.js';
-import { ServiceHandler } from '../handlers/service.js';
 import * as oauth2 from '../handlers/oauth2/index.js';
 import { PhoneHandlers } from '../handlers/phone.js';
 import { OAuth2 } from '../handlers/oauth2/OAuth2.js';
@@ -30,13 +23,11 @@ import { TeamsHandler } from '../handlers/team.js';
 import { BiometricHandlers } from '../handlers/biometric.js';
 import { UsernameHandlers } from '../handlers/username.js';
 import { MetamaskHandlers } from '../handlers/metamask.js';
-import { SERVICE_ACCOUNT } from '../constants/index.js';
 
 type OAuthHandler = typeof oauth2;
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
-  private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
   private readonly phoneHandlers: PhoneHandlers;
   private readonly _routingManager: RoutingManager;
@@ -51,7 +42,6 @@ export class AuthenticationRoutes {
     private readonly grpcSdk: ConduitGrpcSdk,
   ) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
-    this.serviceHandler = new ServiceHandler(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
     this.phoneHandlers = new PhoneHandlers(grpcSdk);
     this.localHandlers = new LocalHandlers(this.grpcSdk);
@@ -131,34 +121,6 @@ export class AuthenticationRoutes {
           });
       }),
     );
-
-    authActive = await this.serviceHandler
-      .validate()
-      .catch(e => ConduitGrpcSdk.Logger.error(e));
-    if (authActive) {
-      const returnField: ConduitReturn = {
-        serviceId: ConduitString.Required,
-        accessToken: ConduitString.Optional,
-        refreshToken: ConduitString.Optional,
-      };
-
-      this._routingManager.route(
-        {
-          path: '/service',
-          action: ConduitRouteActions.POST,
-          description: `Login with service account.`,
-          bodyParams: {
-            serviceName: ConduitString.Required,
-            token: ConduitString.Required,
-          },
-          rateLimit: SERVICE_ACCOUNT,
-        },
-        new ConduitRouteReturnDefinition('VerifyServiceResponse', returnField),
-        this.serviceHandler.authenticate.bind(this.serviceHandler),
-      );
-
-      enabled = true;
-    }
 
     const usernameActive = await this.usernameHandlers
       .validate()
