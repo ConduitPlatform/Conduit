@@ -8,6 +8,8 @@ import { AdminHandlers } from './admin/index.js';
 import * as models from './models/index.js';
 import AppConfigSchema, { Config } from './config/index.js';
 import { FunctionController } from './controllers/function.controller.js';
+import { CronQueueController } from './controllers/cronQueue.controller.js';
+import { runMigrations } from './migrations/index.js';
 import {
   ConfigController,
   ManagedModule,
@@ -37,6 +39,7 @@ export default class Functions extends ManagedModule<Config> {
     await this.awaitPeersFromManifest();
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
+    await runMigrations(this.grpcSdk);
   }
 
   async onConfig() {
@@ -46,6 +49,11 @@ export default class Functions extends ManagedModule<Config> {
       this.isRunning = false;
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
       this.trustModelNoticeLoggedForActiveSession = false;
+      try {
+        await CronQueueController.getInstance().drainCronQueue();
+      } catch {
+        // Queue was never initialized while inactive.
+      }
     } else if (!this.trustModelNoticeLoggedForActiveSession) {
       ConduitGrpcSdk.Logger.log(
         'Functions module active: user-defined code runs with full server privileges. Only deploy code you trust.',
@@ -65,6 +73,7 @@ export default class Functions extends ManagedModule<Config> {
     if (moduleName !== 'router' || !serving || this.isRunning) return;
     this.isRunning = true;
     this.functionsController = new FunctionController(this.grpcServer, this.grpcSdk);
+    CronQueueController.getInstance(this.grpcSdk);
     this.adminRouter = new AdminHandlers(
       this.grpcServer,
       this.grpcSdk,

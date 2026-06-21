@@ -15,6 +15,7 @@ import {
   compileUserFunctionScript,
   runUserFunctionInSandbox,
 } from '../sandbox/functionSandbox.js';
+import { getCronPatternFromInputs, validateCronPattern } from './cron.utils.js';
 
 function getOperation(op: string) {
   switch (op) {
@@ -179,6 +180,27 @@ export function createMiddlewareFunction(func: Functions, grpcSdk: ConduitGrpcSd
   };
 }
 
+export async function executeBackgroundFunction(
+  func: Functions,
+  requestPayload: unknown,
+  functionCodeCompiled: CompiledUserFunction,
+  grpcSdk: ConduitGrpcSdk,
+): Promise<void> {
+  try {
+    await executeFunction(
+      func,
+      { request: requestPayload } as ParsedRouterRequest,
+      functionCodeCompiled,
+      func.timeout,
+      func.name,
+      grpcSdk,
+    );
+  } catch (err) {
+    ConduitGrpcSdk.Logger.error(`Execution failed for ${func.name}:`);
+    ConduitGrpcSdk.Logger.error(err as Error);
+  }
+}
+
 export function createEventFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
   if (!func.inputs?.event) {
     throw new GrpcError(status.INVALID_ARGUMENT, 'Event not found');
@@ -193,28 +215,28 @@ export function createEventFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
         parsedData = JSON.parse(data);
       }
 
-      executeFunction(
+      void executeBackgroundFunction(
         func,
-        { request: parsedData },
+        parsedData,
         compiledFunctionCode,
-        func.timeout,
-        func.name,
         grpcSdk,
-      )
-        .then(() => {
-          ConduitGrpcSdk.Logger.log(
-            `Executed ${func.name} for event ${func.inputs.event}`,
-          );
-        })
-        .catch(err => {
-          ConduitGrpcSdk.Logger.error(
-            `Execution failed for ${func.name} for event ${func.inputs.event} with: `,
-          );
-          ConduitGrpcSdk.Logger.error(err);
-        });
+      ).then(() => {
+        ConduitGrpcSdk.Logger.log(`Executed ${func.name} for event ${func.inputs.event}`);
+      });
     },
     func._id,
   );
+}
+
+export function validateCronFunctionConfig(func: Functions): void {
+  const pattern = getCronPatternFromInputs(func.inputs);
+  if (!pattern) {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      'Cron pattern is required (inputs.cronPattern or inputs.event)',
+    );
+  }
+  validateCronPattern(pattern);
 }
 
 export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
@@ -224,7 +246,8 @@ export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
     case 'webhook':
       return createRequestOrWebhookFunction(func, grpcSdk);
     case 'cron':
-    //todo
+      validateCronFunctionConfig(func);
+      return null;
     case 'event':
       createEventFunction(func, grpcSdk);
       return null;
