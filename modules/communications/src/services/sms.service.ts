@@ -14,6 +14,7 @@ import { TwilioProvider } from '../providers/sms/twilio.js';
 
 export class SmsService implements IChannel {
   private provider?: ISmsProvider;
+  private providerName?: string;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
@@ -26,6 +27,7 @@ export class SmsService implements IChannel {
     }
     if (!smsConfig.active) {
       this.provider = undefined;
+      this.providerName = undefined;
       return;
     }
 
@@ -46,8 +48,12 @@ export class SmsService implements IChannel {
         default:
           ConduitGrpcSdk.Logger.error(`Unknown SMS provider: ${name}`);
       }
+      if (this.provider) {
+        this.providerName = name;
+      }
     } catch (e) {
       this.provider = undefined;
+      this.providerName = undefined;
       ConduitGrpcSdk.Logger.error('Failed to initialize SMS provider:', e);
     }
   }
@@ -69,7 +75,7 @@ export class SmsService implements IChannel {
       const smsRecord = await SmsRecord.getInstance().create({
         recipient,
         message: body || '',
-        provider: 'unknown', // This should be determined from the provider
+        provider: this.providerName ?? 'unknown',
         status: 'sent',
         providerResponse: result,
       });
@@ -142,7 +148,7 @@ export class SmsService implements IChannel {
     const smsRecord = await SmsRecord.getInstance().create({
       recipient: to,
       message,
-      provider: 'unknown', // This should be determined from the provider
+      provider: this.providerName ?? 'unknown',
       status: 'sent',
       providerResponse: result,
     });

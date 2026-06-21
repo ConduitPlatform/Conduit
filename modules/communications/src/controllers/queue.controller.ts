@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { Cluster, Redis } from 'ioredis';
 import { fileURLToPath } from 'node:url';
+import { Provider } from '../utils/getEmailStatus.js';
 
 export class QueueController {
   private static _instance: QueueController;
@@ -90,6 +91,7 @@ export class QueueController {
     messageId: string,
     emailRecId: string,
     retries = 0,
+    provider: Provider,
   ): Promise<Job> {
     return this.emailStatusQueue.add(
       `email-status-${randomUUID()}`,
@@ -97,6 +99,7 @@ export class QueueController {
         messageId,
         emailRecId,
         retries,
+        provider,
       },
       { delay: 5000 * (retries + 1) },
     );

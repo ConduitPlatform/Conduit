@@ -45,7 +45,7 @@ export class AzureStorage implements IStorageProvider {
       }
     }
     ConduitGrpcSdk.Logger.log(`${i} blobs deleted.`);
-    ConduitGrpcSdk.Metrics?.increment('folders_total');
+    ConduitGrpcSdk.Metrics?.decrement('folders_total');
     return true;
   }
 

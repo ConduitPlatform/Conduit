@@ -1,31 +1,29 @@
 import { SandboxedJob } from 'bullmq';
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { Communications, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { EmailRecord } from '../models/index.js';
 import { QueueController } from '../controllers/queue.controller.js';
 import { EmailStatusEnum } from '../models/EmailStatusEnum.js';
 import { IJobData } from '../interfaces/index.js';
-import { Config } from '../config/index.js';
-import { mapProviderStatus, Provider } from '../utils/index.js';
+import { mapProviderStatus } from '../utils/index.js';
 
 let grpcSdk: ConduitGrpcSdk | undefined = undefined;
 
 export default async (job: SandboxedJob<IJobData>) => {
   if (!grpcSdk) {
     if (!process.env.CONDUIT_SERVER) throw new Error('No serverUrl provided!');
-    grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'email', false);
+    grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'communications', false);
     await grpcSdk.initialize();
     await grpcSdk.initializeEventBus();
-    await grpcSdk.waitForExistence('email');
+    await grpcSdk.waitForExistence('communications');
     await grpcSdk.waitForExistence('database');
     QueueController.getInstance(grpcSdk);
     EmailRecord.getInstance(grpcSdk.database!);
   }
 
-  const { messageId, emailRecId, retries = 0 } = job.data;
+  const { messageId, emailRecId, retries = 0, provider } = job.data;
 
-  // For now, return a basic status since we don't have direct provider access in jobs
-  const rawProviderResponse = { status: 'sent' };
-  const provider = 'sendgrid' as Provider;
+  const communications = grpcSdk.getModule('communications') as Communications;
+  const rawProviderResponse = await communications.getEmailStatus(messageId);
   const status = mapProviderStatus(provider, rawProviderResponse);
 
   const query = {
@@ -42,6 +40,7 @@ export default async (job: SandboxedJob<IJobData>) => {
         messageId,
         emailRecId,
         retries + 1,
+        provider,
       );
     } else {
       await EmailRecord.getInstance().findByIdAndUpdate(emailRecId, {
