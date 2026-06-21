@@ -98,7 +98,7 @@ export class AdminHandlers {
         bodyParams: {
           soft: ConduitBoolean.Optional,
         },
-        description: `Wipes and re-constructs the relation indexes.`,
+        description: `Rebuilds relation indexes. Body: soft (optional boolean, default false). soft=true skips wipe and only enqueues missing index jobs; soft=false deletes all ActorIndex and ObjectIndex documents first, then re-enqueues jobs for every relation. Returns "ok" immediately; work runs in background. Use only after index corruption or bulk imports — try soft=true first; require explicit user confirmation before soft=false.`,
       },
       new ConduitRouteReturnDefinition('IndexReconstruct', 'String'),
       this.reconstructIndices.bind(this),
