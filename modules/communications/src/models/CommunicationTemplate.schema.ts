@@ -13,6 +13,9 @@ const schema: ConduitModel = {
     unique: true,
     required: true,
   },
+  summary: {
+    type: TYPE.String,
+  },
   channels: {
     type: [TYPE.String],
     enum: ['email', 'push', 'sms'],
@@ -68,6 +71,7 @@ export class CommunicationTemplate extends ConduitActiveSchema<CommunicationTemp
   private static _instance: CommunicationTemplate;
   _id: string;
   declare name: string;
+  summary?: string;
   channels: ('email' | 'push' | 'sms')[];
   email?: {
     subject?: string;
