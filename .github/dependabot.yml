@@ -10,6 +10,9 @@ updates:
     versioning-strategy: increase
     schedule:
       interval: "daily"
+    ignore:
+      - dependency-name: "graphql"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     # Workflow files stored in the default location of `.github/workflows`. (You don't need to specify `/.github/workflows` for `directory`. You can use `directory: "/"`.)
     directory: "/"
