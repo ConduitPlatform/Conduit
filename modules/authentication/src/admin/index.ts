@@ -13,14 +13,12 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { UserAdmin } from './user.js';
-import { ServiceAdmin } from './service.js';
 import { TeamsAdmin } from './team.js';
-import { Service, User } from '../models/index.js';
+import { User } from '../models/index.js';
 import { Config } from '../config/index.js';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
-  private readonly serviceAdmin: ServiceAdmin;
   private readonly teamsAdmin: TeamsAdmin;
   private readonly routingManager: RoutingManager;
 
@@ -29,7 +27,6 @@ export class AdminHandlers {
     private readonly grpcSdk: ConduitGrpcSdk,
   ) {
     this.userAdmin = new UserAdmin(this.grpcSdk);
-    this.serviceAdmin = new ServiceAdmin(this.grpcSdk);
     this.teamsAdmin = new TeamsAdmin(this.grpcSdk);
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
@@ -151,70 +148,6 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('ToggleUsers', 'String'),
       this.userAdmin.toggleUsers.bind(this.userAdmin),
-    );
-    // Service Routes
-    this.routingManager.route(
-      {
-        path: '/services',
-        action: ConduitRouteActions.GET,
-        queryParams: {
-          skip: ConduitNumber.Optional,
-          limit: ConduitNumber.Optional,
-          sort: ConduitString.Optional,
-        },
-        name: 'GetServices',
-        description: 'Returns queried registered services.',
-      },
-      new ConduitRouteReturnDefinition('GetServices', {
-        services: [Service.name],
-        count: ConduitNumber.Required,
-      }),
-      this.serviceAdmin.getServices.bind(this.serviceAdmin),
-    );
-    this.routingManager.route(
-      {
-        path: '/services',
-        action: ConduitRouteActions.POST,
-        bodyParams: {
-          name: ConduitString.Required,
-        },
-        name: 'CreateService',
-        description: 'Registers a new service.',
-      },
-      new ConduitRouteReturnDefinition('CreateService', {
-        name: ConduitString.Required,
-        token: ConduitString.Required,
-      }),
-      this.serviceAdmin.createService.bind(this.serviceAdmin),
-    );
-    this.routingManager.route(
-      {
-        path: '/services/:id',
-        action: ConduitRouteActions.DELETE,
-        urlParams: {
-          id: ConduitString.Required,
-        },
-        name: 'DeleteService',
-        description: 'Deletes a service.',
-      },
-      new ConduitRouteReturnDefinition('DeleteService', 'String'),
-      this.serviceAdmin.deleteService.bind(this.serviceAdmin),
-    );
-    this.routingManager.route(
-      {
-        path: '/services/:id/token',
-        action: ConduitRouteActions.GET,
-        urlParams: {
-          id: ConduitString.Required,
-        },
-        name: 'RenewServiceToken',
-        description: 'Renews a service token.',
-      },
-      new ConduitRouteReturnDefinition('RenewServiceToken', {
-        name: ConduitString.Required,
-        token: ConduitString.Required,
-      }),
-      this.serviceAdmin.renewToken.bind(this.serviceAdmin),
     );
 
     const config: Config = ConfigController.getInstance().config;

@@ -49,11 +49,6 @@ export const PHONE_CODE_VERIFY: RateLimitOptions = {
 
 export const MAGIC_LINK_EXCHANGE: RateLimitOptions = AUTH_CREDENTIALS;
 
-export const SERVICE_ACCOUNT: RateLimitOptions = {
-  maxRequests: 30,
-  resetInterval: 300,
-};
-
 export const TWO_FA_CHALLENGE: RateLimitOptions = {
   maxRequests: 20,
   resetInterval: 900,
