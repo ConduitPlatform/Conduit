@@ -11,7 +11,7 @@ jobs:
   publish_sdk:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set env
         run: |
           VERSION=$(echo "${GITHUB_REF#refs/*/}" | sed 's/^v//')
@@ -51,7 +51,7 @@ jobs:
     needs: publish_sdk
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set env
         run: |
           VERSION=$(echo "${GITHUB_REF#refs/*/}" | sed 's/^v//')
