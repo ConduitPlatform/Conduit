@@ -253,13 +253,13 @@ jobs:
         run: mkdir -p /tmp/digests
 
       - name: Download amd64 digest
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: digests-${{ matrix.target }}-amd64
           path: /tmp/digests
 
       - name: Download arm64 digest
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: digests-${{ matrix.target }}-arm64
           path: /tmp/digests
