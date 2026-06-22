@@ -55,7 +55,7 @@
     "jwks-rsa": "^4.0.1",
     "lodash-es": "^4.18.1",
     "moment": "^2.30.1",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
