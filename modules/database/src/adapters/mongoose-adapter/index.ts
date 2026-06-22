@@ -207,7 +207,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     joinedSchemas: string[],
     query: any,
   ): Promise<void> {
-    await this.models['Views'].model.findOneAndUpdate(
+    await this.models['Views'].model.updateOne(
       { name: viewName },
       {
         $set: {
@@ -217,7 +217,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
           lastAccessedAt: new Date(),
         },
       },
-      { upsert: true, new: true },
+      { upsert: true },
     );
   }
 
