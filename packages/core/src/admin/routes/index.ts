@@ -10,6 +10,7 @@ export * from './GetMonoConfig.route.js';
 export * from './GetRouteMiddlewares.route.js';
 export * from './Login.route.js';
 export * from './PatchRouteMiddlewares.route.js';
+export * from './Live.js';
 export * from './Ready.js';
 export * from './SetModuleConfig.route.js';
 export * from './StateExport.route.js';
