@@ -36,7 +36,7 @@
     "deepdash-es": "^5.3.9",
     "express": "~5.2.1",
     "express-winston": "^4.2.0",
-    "graphql": "^16.14.2",
+    "graphql": "^17.0.1",
     "graphql-parse-resolve-info": "^4.14.1",
     "graphql-tools": "^9.0.28",
     "graphql-type-json": "^0.3.2",
