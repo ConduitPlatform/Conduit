@@ -46,7 +46,7 @@
     "await-to-js": "^3.0.0",
     "axios": "^1.18.0",
     "bcrypt": "^6.0.0",
-    "bullmq": "^5.79.0",
+    "bullmq": "^5.79.1",
     "convict": "^6.2.5",
     "escape-string-regexp": "^5.0.0",
     "firebase-admin": "^14.0.0",

@@ -35,7 +35,7 @@
     "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.1",
     "bson": "^7.3.0",
-    "bullmq": "^5.79.0",
+    "bullmq": "^5.79.1",
     "convict": "^6.2.5",
     "deepdash-es": "^5.3.9",
     "escape-string-regexp": "^5.0.0",
