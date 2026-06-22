@@ -769,8 +769,8 @@ importers:
         specifier: ^6.1.3
         version: 6.1.3
       smtp-server:
-        specifier: ^3.19.0
-        version: 3.19.0
+        specifier: ^3.19.1
+        version: 3.19.1
       ts-proto:
         specifier: ^2.11.8
         version: 2.11.8
@@ -7227,8 +7227,8 @@ packages:
     resolution: {integrity: sha512-stxByr12oeeOyY2BlviTNQlYV5xOj47GirPr4yA1hE9JCtxfQN0+tVbkxwCtYDQWhEKWFHsEK48ORg5jrouCAg==}
     engines: {node: '>=20'}
 
-  smtp-server@3.19.0:
-    resolution: {integrity: sha512-gCozR1sY+ED1K0gfyT9dMlz6vZBci2cWD/CZROKaIBwR7Xet/W61x1wTMcaxr5nB2TQAn85HVcUyaf+9lhmcTg==}
+  smtp-server@3.19.1:
+    resolution: {integrity: sha512-2IeTkoLkmRm9LiG3vlws3OddCgp+sDXAVEUXJeBMoW1fpBYUU5iPOxp3hLWGt/D3a+YfT/NrIdRAUjKapy4dhQ==}
     engines: {node: '>=18.18.0'}
 
   snappy@7.3.3:
@@ -15237,7 +15237,7 @@ snapshots:
       ansi-styles: 6.2.3
       is-fullwidth-code-point: 5.1.0
 
-  smtp-server@3.19.0:
+  smtp-server@3.19.1:
     dependencies:
       ipv6-normalize: 1.0.1
       nodemailer: 9.0.1
