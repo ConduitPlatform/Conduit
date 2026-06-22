@@ -26,7 +26,8 @@
     "postbuild": "copyfiles -u 1 src/*.proto ./dist/ && copyfiles -u 3 src/adapters/mongoose-adapter/deep-populate.js ./dist/adapters/mongoose-adapter/",
     "build:docker": "docker build -t ghcr.io/conduitplatform/database:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/database:latest",
     "generateTypes": "sh build.sh",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:view-race": "node --test src/adapters/mongoose-adapter/createView.race.test.mjs"
   },
   "license": "ISC",
   "dependencies": {
