@@ -268,7 +268,7 @@ importers:
         version: 5.0.1(express@5.2.1)
       uuid:
         specifier: '>=11.1.1'
-        version: 14.0.0
+        version: 14.0.1
       winston:
         specifier: ^3.19.0
         version: 3.19.0
@@ -484,7 +484,7 @@ importers:
         version: 2.30.1
       uuid:
         specifier: '>=11.1.1'
-        version: 14.0.0
+        version: 14.0.1
     devDependencies:
       '@types/bcrypt':
         specifier: ^6.0.0
@@ -560,7 +560,7 @@ importers:
         version: 2.30.1
       uuid:
         specifier: '>=11.1.1'
-        version: 14.0.0
+        version: 14.0.1
     devDependencies:
       '@types/bcrypt':
         specifier: ^6.0.0
@@ -618,7 +618,7 @@ importers:
         version: 4.18.1
       uuid:
         specifier: '>=11.1.1'
-        version: 14.0.0
+        version: 14.0.1
     devDependencies:
       '@types/convict':
         specifier: ^6.1.6
@@ -1067,7 +1067,7 @@ importers:
         version: 4.18.1
       uuid:
         specifier: '>=11.1.1'
-        version: 14.0.0
+        version: 14.0.1
     devDependencies:
       '@types/ali-oss':
         specifier: ^6.23.3
@@ -7853,8 +7853,8 @@ packages:
     resolution: {integrity: sha512-PYxZDA+6QtvRvm//++aGdmKG/cI07jNwbROz0Ql+VzFV1+Z0Dy55NI4zZ7RHc9KKpBePNFwoErqIuqQv/cjiTA==}
     engines: {node: '>= 0.12.0'}
 
-  uuid@14.0.0:
-    resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
+  uuid@14.0.1:
+    resolution: {integrity: sha512-6ZxzVpzDXDa3bJWaHilVayA+BH/1zmxCJoVgvmqJnid/gPoKHxUrS/aC/T6LGQtNHT+XHG9fXPJB4d+IrU30Ew==}
     hasBin: true
 
   v8-compile-cache-lib@3.0.1:
@@ -12362,7 +12362,7 @@ snapshots:
       https-proxy-agent: 7.0.6
       is-stream: 2.0.1
       node-fetch: 2.7.0
-      uuid: 14.0.0
+      uuid: 14.0.1
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -15137,7 +15137,7 @@ snapshots:
       semver: 7.8.4
       sequelize-pool: 7.1.0
       toposort-class: 1.0.1
-      uuid: 14.0.0
+      uuid: 14.0.1
       validator: 13.15.35
       wkx: 0.5.0
     optionalDependencies:
@@ -15590,7 +15590,7 @@ snapshots:
       https-proxy-agent: 5.0.1
       node-fetch: 2.7.0
       stream-events: 1.0.5
-      uuid: 14.0.0
+      uuid: 14.0.1
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -15978,7 +15978,7 @@ snapshots:
       mz: 2.7.0
       unescape: 1.0.1
 
-  uuid@14.0.0: {}
+  uuid@14.0.1: {}
 
   v8-compile-cache-lib@3.0.1: {}
 

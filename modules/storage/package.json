@@ -55,7 +55,7 @@
     "ali-oss": "^6.23.0",
     "convict": "^6.2.5",
     "lodash-es": "^4.18.1",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@types/ali-oss": "^6.23.3",
