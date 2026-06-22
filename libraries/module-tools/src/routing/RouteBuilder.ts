@@ -92,6 +92,16 @@ export class RouteBuilder {
     return this;
   }
 
+  captureRawBody(capture: boolean): RouteBuilder {
+    this._options.captureRawBody = capture;
+    return this;
+  }
+
+  captureRawHeaders(capture: boolean): RouteBuilder {
+    this._options.captureRawHeaders = capture;
+    return this;
+  }
+
   return(name: string, fields: ConduitReturn): RouteBuilder {
     this._returns = new ConduitRouteReturnDefinition(name, fields);
     return this;

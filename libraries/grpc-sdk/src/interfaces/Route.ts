@@ -93,11 +93,19 @@ export interface ConduitRouteOptions {
    * When true, the raw request body bytes are forwarded to the handler
    * as `rawBody` on `ParsedRouterRequest`.
    *
-   * Intended for webhook signature verification only. The raw body
-   * bypasses Zod body validation — handlers must verify the signature
+   * Supported for `application/json` and `application/x-www-form-urlencoded`
+   * content types. Intended for webhook signature verification only. The raw
+   * body bypasses Zod body validation — handlers must verify the signature
    * and validate the payload themselves.
    */
   captureRawBody?: boolean;
+  /**
+   * When true, raw HTTP headers with original casing are forwarded as
+   * `rawHeaders` on `ParsedRouterRequest`. Intended for webhook signature
+   * verification. Sanitized against post-middleware headers — headers stripped
+   * by security middleware are excluded.
+   */
+  captureRawHeaders?: boolean;
 }
 
 export interface ConduitRouteObject {

@@ -28,6 +28,7 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import { ConduitRoute } from './classes/index.js';
 import { createRouteMiddleware } from './utils/logger.js';
+import { captureRequestRawBody } from './Rest/util.js';
 import { fileURLToPath } from 'node:url';
 import { instrumentationMiddleware } from './metrics/middleware.js';
 import { RouteTrie } from './metrics/RouteTrie.js';
@@ -409,17 +410,17 @@ export class ConduitRoutingController {
       createRouteMiddleware((ConduitGrpcSdk.Logger as IConduitLogger).winston),
       false,
     );
+    // verify retains buffer until route gate clears req.rawBody
     this.registerMiddleware(
-      express.json({
-        limit: '50mb',
-        verify: (req, _res, buf) => {
-          (req as ConduitRequest).rawBody = buf;
-        },
-      }),
+      express.json({ limit: '50mb', verify: captureRequestRawBody }),
       false,
     );
     this.registerMiddleware(
-      express.urlencoded({ limit: '50mb', extended: false }),
+      express.urlencoded({
+        limit: '50mb',
+        extended: false,
+        verify: captureRequestRawBody,
+      }),
       false,
     );
     this.registerMiddleware(cookieParser(), false);

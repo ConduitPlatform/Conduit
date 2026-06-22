@@ -6,12 +6,18 @@ import {
   UrlParams,
 } from '@conduitplatform/grpc-sdk';
 import { ZodParser } from '../classes/ZodParser.js';
+import { Response } from 'express';
 import { ConduitRequest } from '../interfaces/ConduitRequest.js';
 
+export function captureRequestRawBody(req: ConduitRequest, _res: Response, buf: Buffer) {
+  req.rawBody = buf;
+}
+
 export function sanitizeRawHeaders(
-  rawHeaders: string[],
+  rawHeaders: string[] | undefined,
   parsedHeaders: Record<string, string | string[] | undefined>,
 ): string[] {
+  if (!rawHeaders?.length) return [];
   const result: string[] = [];
   for (let i = 0; i < rawHeaders.length; i += 2) {
     const key = rawHeaders[i];
