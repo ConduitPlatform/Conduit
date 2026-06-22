@@ -72,15 +72,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
           }
         : {}),
     });
-    try {
-      this.model = mongoose.model(cloneDeep(schema.name), mongooseSchema);
-    } catch (err: any) {
-      if (err.name === 'OverwriteModelError') {
-        this.model = mongoose.model(schema.name);
-      } else {
-        throw err;
-      }
-    }
+    this.model = mongoose.model(cloneDeep(schema.name), mongooseSchema);
   }
 
   parseStringToQuery(

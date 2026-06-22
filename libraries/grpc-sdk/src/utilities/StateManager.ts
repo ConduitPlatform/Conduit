@@ -5,6 +5,7 @@ import { Redlock, Lock } from '@sesamecare-oss/redlock';
 
 export enum KNOWN_LOCKS {
   STATE_MODIFICATION = 'state_modification',
+  VIEW_CREATION = 'view_creation',
 }
 
 export class StateManager {
@@ -43,6 +44,15 @@ export class StateManager {
 
   async releaseLock(lock: Lock) {
     await lock.release();
+  }
+
+  async withLock<T>(resource: string, ttl: number, fn: () => Promise<T>): Promise<T> {
+    const lock = await this.acquireLock(resource, ttl);
+    try {
+      return await fn();
+    } finally {
+      await this.releaseLock(lock);
+    }
   }
 
   async modifyState(modifier: (state: Indexable) => Promise<Indexable>) {

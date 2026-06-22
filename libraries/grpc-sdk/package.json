@@ -25,7 +25,8 @@
     "prepublish": "npm run build",
     "prebuild": "npm run protoc",
     "build": "rimraf dist && tsup",
-    "protoc": "sh build.sh"
+    "protoc": "sh build.sh",
+    "test": "node --test src/utilities/StateManager.withLock.test.mjs"
   },
   "license": "MIT",
   "dependencies": {
