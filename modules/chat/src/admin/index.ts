@@ -169,17 +169,98 @@ export class AdminHandlers {
         'ids is required and must be a non-empty array',
       );
     }
-    await ChatRoom.getInstance()
-      .deleteMany({ _id: { $in: ids } })
+
+    const rooms = await ChatRoom.getInstance()
+      .findMany({ _id: { $in: ids }, deleted: { $ne: true } })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    await ChatMessage.getInstance()
-      .deleteMany({ room: { $in: ids } })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    ConduitGrpcSdk.Metrics?.decrement('chat_rooms_total');
+
+    if (rooms.length === 0) return 'Done';
+
+    const roomIds = rooms.map(r => r._id);
+    const auditMode = ConfigController.getInstance().config.auditMode;
+
+    if (auditMode) {
+      for (const room of rooms) {
+        const participantIds = room.participants.map(p =>
+          typeof p === 'string' ? p : p._id,
+        );
+        const participantsLog = await ChatParticipantsLog.getInstance()
+          .createMany(
+            participantIds.map(userId => ({
+              user: userId,
+              action: 'remove' as const,
+              chatRoom: room._id,
+            })),
+          )
+          .catch((e: Error) => {
+            throw new GrpcError(status.INTERNAL, e.message);
+          });
+        await ChatRoom.getInstance()
+          .findByIdAndUpdate(room._id, {
+            participantsLog: [
+              ...room.participantsLog.map(log =>
+                typeof log === 'string' ? log : log._id,
+              ),
+              ...participantsLog.map(log => log._id),
+            ],
+            deleted: true,
+          })
+          .catch((e: Error) => {
+            throw new GrpcError(status.INTERNAL, e.message);
+          });
+        await ChatMessage.getInstance()
+          .updateMany({ room: room._id }, { deleted: true })
+          .catch((e: Error) => {
+            throw new GrpcError(status.INTERNAL, e.message);
+          });
+      }
+      await InvitationToken.getInstance()
+        .deleteMany({ room: { $in: roomIds } })
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+    } else {
+      await ChatRoom.getInstance()
+        .deleteMany({ _id: { $in: roomIds } })
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+      await ChatMessage.getInstance()
+        .deleteMany({ room: { $in: roomIds } })
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+      await InvitationToken.getInstance()
+        .deleteMany({ room: { $in: roomIds } })
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+    }
+
+    for (const room of rooms) {
+      const roomId = room._id;
+      const participantIds = room.participants.map(p =>
+        typeof p === 'string' ? p : p._id,
+      );
+
+      await this.invalidateMembershipCache(roomId);
+      this.grpcSdk.bus?.publish('chat:deleteRoom:ChatRoom', JSON.stringify({ roomId }));
+      for (const userId of participantIds) {
+        this.grpcSdk.router?.socketPush({
+          event: 'leave-room',
+          receivers: [userId],
+          rooms: [roomId],
+        });
+        this.grpcSdk.bus?.publish(
+          'chat:leaveRoom:ChatRoom',
+          JSON.stringify({ roomId, user: userId }),
+        );
+      }
+    }
+
+    ConduitGrpcSdk.Metrics?.decrement('chat_rooms_total', rooms.length);
     return 'Done';
   }
 
