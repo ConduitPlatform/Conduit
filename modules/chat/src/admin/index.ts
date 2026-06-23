@@ -222,7 +222,7 @@ export class AdminHandlers {
       }
     }
 
-    ConduitGrpcSdk.Metrics?.decrement('chat_rooms_total');
+    ConduitGrpcSdk.Metrics?.decrement('chat_rooms_total', rooms.length);
     return 'Done';
   }
 
