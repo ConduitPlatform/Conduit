@@ -270,10 +270,10 @@ export default class Authorization extends ManagedModule<Config> {
   ) {
     const { relation, resource, subject, resourceType, subjectType, skip, limit } =
       call.request;
-    if (!subject && !relation && !resource) {
+    if (!subject && !relation && !resource && !subjectType && !resourceType) {
       return callback({
         code: status.INVALID_ARGUMENT,
-        message: 'At least 2 of subject, relation, resource must be provided',
+        message: 'At least one search filter must be provided',
       });
     }
     const [relations, count] = await this.relationsController.findRelations(
@@ -331,21 +331,21 @@ export default class Authorization extends ManagedModule<Config> {
 
   async grantPermission(
     call: GrpcRequest<PermissionRequest>,
-    callback: GrpcResponse<Decision>,
+    callback: GrpcResponse<Empty>,
   ) {
     const { subject, resource, action } = call.request;
     await this.permissionsController.grantPermission(subject, action, resource);
-    callback(null);
+    callback(null, {});
   }
 
   async removePermission(
     call: GrpcRequest<PermissionRequest>,
-    callback: GrpcResponse<Decision>,
+    callback: GrpcResponse<Empty>,
   ) {
     const { subject, resource, action } = call.request;
     await this.permissionsController.removePermission(subject, action, resource);
 
-    callback(null);
+    callback(null, {});
   }
 
   async initializeMetrics() {

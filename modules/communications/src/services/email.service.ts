@@ -18,6 +18,9 @@ import { getHandleBarsValues } from '../providers/email/utils/index.js';
 import { QueueController } from '../controllers/queue.controller.js';
 import { storeEmail } from '../utils/storeEmail.js';
 import { Config } from '../config/index.js';
+import { Provider } from '../utils/index.js';
+
+const STATUS_UNSUPPORTED_TRANSPORTS = new Set(['amazonSes', 'smtp']);
 
 export interface IRegisterTemplateParams {
   name: string;
@@ -329,7 +332,15 @@ export class EmailService implements IChannel {
       );
 
       if (messageId) {
-        await QueueController.getInstance().addEmailStatusJob(messageId, emailRecId, 0);
+        const transport = config.email?.transport;
+        if (transport && !STATUS_UNSUPPORTED_TRANSPORTS.has(transport)) {
+          await QueueController.getInstance().addEmailStatusJob(
+            messageId,
+            emailRecId,
+            0,
+            transport as Provider,
+          );
+        }
       }
     }
     return { messageId, ...sentMessageInfo };

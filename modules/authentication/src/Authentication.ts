@@ -76,6 +76,7 @@ export default class Authentication extends ManagedModule<Config> {
       userLogin: this.userLogin.bind(this),
       userModifyStatus: this.userModifyStatus.bind(this),
       userCreate: this.userCreate.bind(this),
+      userCreateByUsername: this.userCreateByUsername.bind(this),
       anonymousUserCreate: this.anonymousUserCreate.bind(this),
       changePass: this.changePass.bind(this),
       userDelete: this.userDelete.bind(this),

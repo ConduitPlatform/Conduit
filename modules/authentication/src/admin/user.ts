@@ -94,7 +94,7 @@ export class UserAdmin {
     }
     let twoFaMethod: string | undefined;
     if (hasTwoFA) {
-      twoFaMethod = user.twoFaMethod ?? 'phone';
+      twoFaMethod = user.twoFaMethod ?? 'sms';
     }
     const query = {
       email: email ?? user.email,

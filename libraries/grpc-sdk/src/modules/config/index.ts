@@ -50,6 +50,10 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     });
   }
 
+  delete(name: string) {
+    return this.client!.deleteConfig({ key: name });
+  }
+
   configure(config: any, schema: any, override: boolean) {
     const request = {
       config: JSON.stringify(config),

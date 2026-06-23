@@ -41,8 +41,8 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-iam": "^3.1071.0",
-    "@aws-sdk/client-s3": "^3.1071.0",
+    "@aws-sdk/client-iam": "^3.1073.0",
+    "@aws-sdk/client-s3": "^3.1073.0",
     "@aws-sdk/client-sts": "^3.1071.0",
     "@aws-sdk/s3-request-presigner": "^3.1071.0",
     "@azure/storage-blob": "^12.32.0",
@@ -55,7 +55,7 @@
     "ali-oss": "^6.23.0",
     "convict": "^6.2.5",
     "lodash-es": "^4.18.1",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@types/ali-oss": "^6.23.3",

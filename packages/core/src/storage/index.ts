@@ -256,4 +256,18 @@ export class ConfigStorage {
       this.toBeReconciled.push(moduleName);
     }
   }
+
+  async deleteConfig(moduleName: string) {
+    await this.waitForReconcile();
+    await this.grpcSdk.state!.clearKey(`moduleConfigs.${moduleName}`);
+    await this.grpcSdk.state!.clearKey(this.versionKey(moduleName));
+    this.toBeReconciled = this.toBeReconciled.filter(name => name !== moduleName);
+    if (this.grpcSdk.isAvailable('database')) {
+      try {
+        await models.Config.getInstance().deleteOne({ name: moduleName });
+      } catch {
+        // Config model singleton not yet initialized (initializeModels pending)
+      }
+    }
+  }
 }

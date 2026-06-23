@@ -22,6 +22,7 @@ function getOperation(op: string) {
       return ConduitRouteActions.GET;
     case 'POST':
       return ConduitRouteActions.POST;
+    case 'PUT':
     case 'UPDATE':
       return ConduitRouteActions.UPDATE;
     case 'DELETE':

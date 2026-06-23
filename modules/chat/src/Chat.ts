@@ -209,7 +209,10 @@ export default class Chat extends ManagedModule<Config> {
     });
   }
 
-  async sendMessage(call: GrpcRequest<SendMessageRequest>, callback: GrpcCallback<null>) {
+  async sendMessage(
+    call: GrpcRequest<SendMessageRequest>,
+    callback: GrpcCallback<Record<string, never>>,
+  ) {
     const userId = call.request.userId;
     const { roomId, message, messageType, persist } = call.request;
 
@@ -276,7 +279,7 @@ export default class Chat extends ManagedModule<Config> {
         }),
       });
 
-      callback(null, null);
+      callback(null, {});
     } catch (e: unknown) {
       callback({
         code: status.INTERNAL,

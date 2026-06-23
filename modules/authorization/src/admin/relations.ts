@@ -37,7 +37,7 @@ export class RelationHandler {
       {
         path: '/relations/many',
         action: ConduitRouteActions.POST,
-        description: `Creates many relations.`,
+        description: `Creates many relations in one request. Body: subject, relation, resources[] (required). Enqueues async index jobs per tuple. Prefer post_authorization_relations for a single tuple. Validate subject/relation against the ResourceDefinition; batch ≤100 resources when possible. Admin-only.`,
         bodyParams: {
           subject: ConduitString.Required,
           relation: ConduitString.Required,
@@ -99,7 +99,7 @@ export class RelationHandler {
   }
 
   async createRelations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { subject, relation, resources } = call.request.params;
+    const { subject, relation, resources } = call.request.bodyParams;
     return RelationsController.getInstance().createRelations(
       subject,
       relation,

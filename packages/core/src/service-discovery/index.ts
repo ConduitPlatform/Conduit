@@ -73,7 +73,7 @@ export class ServiceDiscovery {
    * Used by modules to notify Core regarding changes in their health state.
    * Called on module health change via grpc-sdk.
    */
-  moduleHealthProbe(call: any, callback: GrpcResponse<null>) {
+  moduleHealthProbe(call: any, callback: GrpcResponse<Record<string, never>>) {
     if (
       call.request.status < HealthCheckStatus.UNKNOWN ||
       call.request.status > HealthCheckStatus.NOT_SERVING
@@ -98,7 +98,7 @@ export class ServiceDiscovery {
       call.request.url,
       call.request.status,
     );
-    callback(null, null);
+    callback(null, {});
   }
 
   moduleList(call: GrpcRequest<null>, callback: GrpcCallback<ModuleListResponse>) {

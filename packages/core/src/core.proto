@@ -15,6 +15,7 @@ service Config {
   rpc GetServerConfig (google.protobuf.Empty) returns (GetConfigResponse);
   rpc GetRedisDetails (google.protobuf.Empty) returns (GetRedisDetailsResponse);
   rpc GetModuleUrlByName (ModuleByNameRequest) returns (ModuleByNameResponse);
+  rpc DeleteConfig (DeleteConfigRequest) returns (google.protobuf.Empty);
 }
 
 service Admin {
@@ -39,7 +40,6 @@ message RegisterAdminRouteRequest {
     optional string grpcFunction = 3;
     optional bool isMiddleware = 4;
     optional string events = 5;
-    optional ProxyRouteOptions proxy = 6;
   }
 
   message ConduitRouteOptions {
@@ -58,23 +58,6 @@ message RegisterAdminRouteRequest {
     optional string rateLimit = 13;
     optional bool captureRawBody = 14;
     optional bool captureRawHeaders = 15;
-  }
-
-  message ProxyRouteOptions {
-    optional string target = 1;
-    optional bool changeOrigin = 2;
-    optional bool secure = 3;
-    optional string context = 4;
-    optional string pathRewrite = 5;
-    optional string headers = 6;
-    optional int32 proxyTimeout = 7;
-    optional string cookieDomainRewrite = 8;
-    optional bool autoRewrite = 9;
-    optional bool followRedirects = 10;
-    optional bool xfwd = 11;
-    optional bool ws = 12;
-    optional string router = 13;
-    optional bool preserveHeaderKeyCase = 14;
   }
 
   message ConduitRouteReturnDefinition {
@@ -131,6 +114,10 @@ message ModuleExistsResponse {
 }
 
 message GetConfigRequest {
+  string key = 1;
+}
+
+message DeleteConfigRequest {
   string key = 1;
 }
 

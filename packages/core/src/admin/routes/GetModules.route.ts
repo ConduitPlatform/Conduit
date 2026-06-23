@@ -1,5 +1,4 @@
 import {
-  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
@@ -31,9 +30,6 @@ export function getModulesRoute() {
     async (call: ConduitRouteParameters) => {
       const sortByName = call.params!.sortByName;
       const modules = ServiceRegistry.getInstance().getModuleDetailsList();
-      if (modules.length === 0) {
-        throw new ConduitError('INTERNAL', 500, 'Modules not available yet');
-      }
       if (!isNil(sortByName)) {
         if (sortByName) modules!.sort((a, b) => a.moduleName.localeCompare(b.moduleName));
         else modules!.sort((a, b) => b.moduleName.localeCompare(a.moduleName));

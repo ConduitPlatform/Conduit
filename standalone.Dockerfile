@@ -1,8 +1,12 @@
-FROM node:24-alpine
+FROM node:24-alpine3.22
 
 WORKDIR /app
 
 COPY --from=conduit-base /app/ /app/
+
+ENV PNPM_CONFIG_TRUST_LOCKFILE=true
+ENV PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false
+ENV PNPM_CONFIG_UPDATE_NOTIFIER=false
 
 RUN apk update && \
     apk add --no-cache --virtual .gyp python3 py3-setuptools make g++ && \

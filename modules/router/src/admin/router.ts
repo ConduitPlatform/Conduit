@@ -79,7 +79,6 @@ export class RouterAdmin {
         moduleUrl: url,
         routes: {},
         socketRoutes: {},
-        proxyRoutes: {},
         middlewares: {},
       };
       module[url].forEach(item => {

@@ -2,10 +2,12 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+  GrpcError,
   ParsedRouterRequest,
   Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import {
   ConduitJson,
   ConduitNumber,
@@ -177,11 +179,11 @@ export class ResourceHandler {
 
   async deleteResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
-    const found = ResourceDefinition.getInstance().findOne({ _id: id });
+    const found = await ResourceDefinition.getInstance().findOne({ _id: id });
     if (isNil(found)) {
-      throw new Error('Resource does not exist');
+      throw new GrpcError(status.NOT_FOUND, 'Resource does not exist');
     }
-    await ResourceDefinition.getInstance().deleteOne({ _id: id });
+    await ResourceController.getInstance().deleteResource(found.name);
     return 'Resource deleted successfully';
   }
 }

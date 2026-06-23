@@ -148,11 +148,7 @@ export class FirebaseProvider extends BaseNotificationProvider<IFirebaseSettings
       if (sendResponse.success) return;
       const target = targets[index];
       const error = sendResponse.error;
-      ConduitGrpcSdk.Logger.error(
-        error instanceof Error
-          ? error
-          : `Failed to send notification: ${error?.code ?? error}`,
-      );
+      ConduitGrpcSdk.Logger.error('Failed to send notification: ', error);
       failures.push({
         token: target.token,
         platform: target.platform,
