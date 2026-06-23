@@ -412,6 +412,20 @@ export class ConduitRoutingController {
     );
     // verify retains buffer until route gate clears req.rawBody
     this.registerMiddleware(
+      express.raw({
+        limit: '50mb',
+        type: req => {
+          const ct = req.headers['content-type'] || '';
+          return (
+            !ct.startsWith('application/json') &&
+            !ct.startsWith('application/x-www-form-urlencoded')
+          );
+        },
+        verify: captureRequestRawBody,
+      }),
+      false,
+    );
+    this.registerMiddleware(
       express.json({ limit: '50mb', verify: captureRequestRawBody }),
       false,
     );
