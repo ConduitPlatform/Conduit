@@ -54,6 +54,8 @@ message RegisterConduitRouteRequest {
     optional bool mcp = 11;
     optional bool strictParams = 12;
     optional string rateLimit = 13;
+    optional bool captureRawBody = 14;
+    optional bool captureRawHeaders = 15;
   }
 
 

@@ -57,6 +57,8 @@ message Request {
   string urlParams = 7;
   string queryParams = 8;
   string functionName = 9;
+  string rawHeaders = 10;
+  bytes rawBody = 11;
 }
 
 message Response {

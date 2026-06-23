@@ -8,6 +8,13 @@ export type ParsedRouterRequest = GrpcRequest<{
   bodyParams: Params;
   path: string;
   headers: Headers & { authorization?: string };
+  /** Raw HTTP headers with original casing, only populated when the route sets `captureRawHeaders: true`. Sanitized: headers stripped by security middleware are excluded. */
+  rawHeaders: string[];
+  /**
+   * Raw request body bytes, only populated when the route sets `captureRawBody: true`.
+   * Contains unvalidated bytes — verify the webhook signature before trusting the content.
+   */
+  rawBody: Buffer;
   context: Context;
   cookies: Cookies;
 }>;

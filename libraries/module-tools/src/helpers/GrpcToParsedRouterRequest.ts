@@ -9,6 +9,8 @@ export function createParsedRouterRequest(
   headers?: Headers,
   context?: Context,
   cookies?: Cookies,
+  rawHeaders?: string[],
+  rawBody?: Buffer,
 ): ParsedRouterRequest {
   return <ParsedRouterRequest>{
     request: {
@@ -18,6 +20,8 @@ export function createParsedRouterRequest(
       bodyParams: bodyParams ?? {},
       path: path ?? '',
       headers: headers,
+      rawHeaders: rawHeaders ?? [],
+      rawBody: rawBody ?? Buffer.alloc(0),
       context: context ?? {},
       cookies: cookies ?? {},
     },

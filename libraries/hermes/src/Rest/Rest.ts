@@ -15,9 +15,10 @@ import {
   ConduitError,
   ConduitGrpcSdk,
   ConduitRouteActions,
+  ConduitRouteParameters,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { Cookie } from '../interfaces/index.js';
+import { ConduitRequest, Cookie } from '../interfaces/index.js';
 import { SwaggerRouterMetadata } from '../types/index.js';
 import { ConduitRoute, TypeRegistry } from '../classes/index.js';
 import { apiReference } from '@scalar/express-api-reference';
@@ -136,6 +137,13 @@ export class RestController extends ConduitRouter {
     const self = this;
     return (req, res) => {
       const context = { ...extractRequestData(req), params: {} };
+      if (!route.input.captureRawBody) {
+        delete context.rawBody;
+        delete (req as ConduitRequest).rawBody;
+      }
+      if (!route.input.captureRawHeaders) {
+        delete (context as ConduitRouteParameters).rawHeaders;
+      }
       let hashKey: string;
       const { caching, cacheAge, scope } = extractCaching(
         route,
