@@ -171,31 +171,69 @@ export class AdminHandlers {
     }
 
     const rooms = await ChatRoom.getInstance()
-      .findMany({ _id: { $in: ids } })
+      .findMany({ _id: { $in: ids }, deleted: { $ne: true } })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
 
+    if (rooms.length === 0) return 'Done';
+
+    const roomIds = rooms.map(r => r._id);
     const auditMode = ConfigController.getInstance().config.auditMode;
+
     if (auditMode) {
-      await ChatRoom.getInstance()
-        .updateMany({ _id: { $in: ids } }, { deleted: true })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
-      await ChatMessage.getInstance()
-        .updateMany({ room: { $in: ids } }, { deleted: true })
+      for (const room of rooms) {
+        const participantIds = room.participants.map(p =>
+          typeof p === 'string' ? p : p._id,
+        );
+        const participantsLog = await ChatParticipantsLog.getInstance()
+          .createMany(
+            participantIds.map(userId => ({
+              user: userId,
+              action: 'remove' as const,
+              chatRoom: room._id,
+            })),
+          )
+          .catch((e: Error) => {
+            throw new GrpcError(status.INTERNAL, e.message);
+          });
+        await ChatRoom.getInstance()
+          .findByIdAndUpdate(room._id, {
+            participantsLog: [
+              ...room.participantsLog.map(log =>
+                typeof log === 'string' ? log : log._id,
+              ),
+              ...participantsLog.map(log => log._id),
+            ],
+            deleted: true,
+          })
+          .catch((e: Error) => {
+            throw new GrpcError(status.INTERNAL, e.message);
+          });
+        await ChatMessage.getInstance()
+          .updateMany({ room: room._id }, { deleted: true })
+          .catch((e: Error) => {
+            throw new GrpcError(status.INTERNAL, e.message);
+          });
+      }
+      await InvitationToken.getInstance()
+        .deleteMany({ room: { $in: roomIds } })
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
     } else {
       await ChatRoom.getInstance()
-        .deleteMany({ _id: { $in: ids } })
+        .deleteMany({ _id: { $in: roomIds } })
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
       await ChatMessage.getInstance()
-        .deleteMany({ room: { $in: ids } })
+        .deleteMany({ room: { $in: roomIds } })
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+      await InvitationToken.getInstance()
+        .deleteMany({ room: { $in: roomIds } })
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
