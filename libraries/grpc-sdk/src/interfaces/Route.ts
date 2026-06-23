@@ -17,6 +17,8 @@ export interface ConduitRouteParameters {
   bodyParams?: Indexable;
   urlParams?: Indexable;
   queryParams?: Indexable;
+  rawHeaders?: string[];
+  rawBody?: Buffer;
 }
 
 type AllowedTypes = TYPE.String | TYPE.Number | TYPE.Boolean | TYPE.Date | TYPE.ObjectId;
@@ -87,6 +89,23 @@ export interface ConduitRouteOptions {
   strictParams?: boolean;
   /** Per-route rate limit (per client IP). Fails closed if Redis is unavailable. */
   rateLimit?: RateLimitOptions;
+  /**
+   * When true, the raw request body bytes are forwarded to the handler
+   * as `rawBody` on `ParsedRouterRequest`.
+   *
+   * Supported for `application/json` and `application/x-www-form-urlencoded`
+   * content types. Intended for webhook signature verification only. The raw
+   * body bypasses Zod body validation — handlers must verify the signature
+   * and validate the payload themselves.
+   */
+  captureRawBody?: boolean;
+  /**
+   * When true, raw HTTP headers with original casing are forwarded as
+   * `rawHeaders` on `ParsedRouterRequest`. Intended for webhook signature
+   * verification. Sanitized against post-middleware headers — headers stripped
+   * by security middleware are excluded.
+   */
+  captureRawHeaders?: boolean;
 }
 
 export interface ConduitRouteObject {

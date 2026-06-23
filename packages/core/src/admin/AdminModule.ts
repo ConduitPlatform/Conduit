@@ -42,33 +42,17 @@ import metricsSchema from './metrics/index.js';
 import cors from 'cors';
 import { ConfigController, GrpcServer, merge } from '@conduitplatform/module-tools';
 import { fileURLToPath } from 'node:url';
+import { loadReadinessConfig } from '../health/config.js';
+import { getReadinessMiddleware } from '../health/readinessMiddleware.js';
+import { ReadinessService } from '../health/ReadinessService.js';
+import type { CoreHealthProvider } from '../health/types.js';
 
 export default class AdminModule {
   grpcSdk: ConduitGrpcSdk;
   readonly config: convict.Config<ConfigSchema> = convict(AppConfigSchema);
   private _router!: ConduitRoutingController;
-  private _sdkRoutes: ConduitRoute[] = [
-    adminRoutes.getLoginRoute(),
-    adminRoutes.getCreateAdminRoute(),
-    adminRoutes.getAdminRoute(),
-    adminRoutes.getAdminsRoute(),
-    adminRoutes.deleteAdminUserRoute(),
-    adminRoutes.changePasswordRoute(),
-    adminRoutes.getReadyRoute(),
-    adminRoutes.toggleTwoFaRoute(),
-    adminRoutes.verifyQrCodeRoute(),
-    adminRoutes.verifyTwoFaRoute(),
-    adminRoutes.changeUsersPasswordRoute(),
-    adminRoutes.patchRouteMiddlewares(this),
-    adminRoutes.getRouteMiddlewares(this),
-    adminRoutes.createApiTokenRoute(),
-    adminRoutes.getApiTokensRoute(),
-    adminRoutes.deleteApiTokenRoute(),
-    configRoutes.getModulesRoute(),
-    adminRoutes.getStateExportRoute(this),
-    adminRoutes.getStateImportRoute(this),
-    adminRoutes.getConfigImportRoute(this),
-  ];
+  private readonly _readinessService: ReadinessService;
+  private _sdkRoutes: ConduitRoute[];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
   } = {};
@@ -77,9 +61,41 @@ export default class AdminModule {
   private _refreshTimeout: NodeJS.Timeout | null = null;
   readonly configManager: any;
 
-  constructor(grpcSdk: ConduitGrpcSdk, configManager: any) {
+  constructor(
+    grpcSdk: ConduitGrpcSdk,
+    configManager: any,
+    coreHealth?: CoreHealthProvider,
+  ) {
     this.grpcSdk = grpcSdk;
     this.configManager = configManager;
+    this._readinessService = new ReadinessService(
+      grpcSdk,
+      coreHealth ?? { initialized: false, isGrpcServing: () => false },
+      loadReadinessConfig(),
+    );
+    this._sdkRoutes = [
+      adminRoutes.getLoginRoute(),
+      adminRoutes.getCreateAdminRoute(),
+      adminRoutes.getAdminRoute(),
+      adminRoutes.getAdminsRoute(),
+      adminRoutes.deleteAdminUserRoute(),
+      adminRoutes.changePasswordRoute(),
+      adminRoutes.getReadyRoute(this._readinessService),
+      adminRoutes.getLiveRoute(),
+      adminRoutes.toggleTwoFaRoute(),
+      adminRoutes.verifyQrCodeRoute(),
+      adminRoutes.verifyTwoFaRoute(),
+      adminRoutes.changeUsersPasswordRoute(),
+      adminRoutes.patchRouteMiddlewares(this),
+      adminRoutes.getRouteMiddlewares(this),
+      adminRoutes.createApiTokenRoute(),
+      adminRoutes.getApiTokensRoute(),
+      adminRoutes.deleteApiTokenRoute(),
+      configRoutes.getModulesRoute(),
+      adminRoutes.getStateExportRoute(this),
+      adminRoutes.getStateImportRoute(this),
+      adminRoutes.getConfigImportRoute(this),
+    ];
     this._router = new ConduitRoutingController(
       this.getHttpPort()!,
       this.getSocketPort()!,
@@ -151,6 +167,10 @@ export default class AdminModule {
     this._router.registerMiddleware(
       middleware.getAuthMiddleware(this.grpcSdk, this.configManager),
       true,
+    );
+    this._router.registerMiddleware(
+      getReadinessMiddleware(() => this._readinessService),
+      false,
     );
     this._router.registerMiddleware(helmet(), false);
     this._router.registerMiddleware((req: Request, res: Response, next: NextFunction) => {

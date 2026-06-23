@@ -180,6 +180,14 @@ export function wrapRouterGrpcFunction(
       routerRequest = !call.request.hasOwnProperty('event');
       if (routerRequest) {
         call.request.headers = parseRequestData(call.request.headers);
+        call.request.rawHeaders = call.request.rawHeaders
+          ? JSON.parse(call.request.rawHeaders)
+          : [];
+        if (call.request.rawBody && !Buffer.isBuffer(call.request.rawBody)) {
+          call.request.rawBody = Buffer.from(call.request.rawBody);
+        } else if (!call.request.rawBody) {
+          call.request.rawBody = Buffer.alloc(0);
+        }
       }
     } catch (e) {
       ConduitGrpcSdk.Metrics?.increment(`${routerType}_grpc_errors_total`);

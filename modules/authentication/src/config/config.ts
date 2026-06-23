@@ -3,12 +3,6 @@ export default {
     format: 'Boolean',
     default: true,
   },
-  service: {
-    enabled: {
-      format: 'Boolean',
-      default: true,
-    },
-  },
   twoFa: {
     enabled: {
       format: 'Boolean',

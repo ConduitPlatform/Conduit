@@ -50,8 +50,8 @@ importers:
         specifier: ^9.1.7
         version: 9.1.7
       lint-staged:
-        specifier: ^17.0.7
-        version: 17.0.7
+        specifier: ^17.0.8
+        version: 17.0.8
       prettier:
         specifier: ^3.8.4
         version: 3.8.4
@@ -268,7 +268,7 @@ importers:
         version: 5.0.1(express@5.2.1)
       uuid:
         specifier: '>=11.1.1'
-        version: 14.0.0
+        version: 14.0.1
       winston:
         specifier: ^3.19.0
         version: 3.19.0
@@ -484,7 +484,7 @@ importers:
         version: 2.30.1
       uuid:
         specifier: '>=11.1.1'
-        version: 14.0.0
+        version: 14.0.1
     devDependencies:
       '@types/bcrypt':
         specifier: ^6.0.0
@@ -560,7 +560,7 @@ importers:
         version: 2.30.1
       uuid:
         specifier: '>=11.1.1'
-        version: 14.0.0
+        version: 14.0.1
     devDependencies:
       '@types/bcrypt':
         specifier: ^6.0.0
@@ -618,7 +618,7 @@ importers:
         version: 4.18.1
       uuid:
         specifier: '>=11.1.1'
-        version: 14.0.0
+        version: 14.0.1
     devDependencies:
       '@types/convict':
         specifier: ^6.1.6
@@ -645,11 +645,11 @@ importers:
   modules/communications:
     dependencies:
       '@aws-sdk/client-sesv2':
-        specifier: ^3.1071.0
-        version: 3.1071.0
+        specifier: ^3.1073.0
+        version: 3.1073.0
       '@aws-sdk/client-sns':
-        specifier: ^3.1071.0
-        version: 3.1071.0
+        specifier: ^3.1073.0
+        version: 3.1073.0
       '@bufbuild/protobuf':
         specifier: ^2.12.0
         version: 2.12.0
@@ -769,8 +769,8 @@ importers:
         specifier: ^6.1.3
         version: 6.1.3
       smtp-server:
-        specifier: ^3.19.0
-        version: 3.19.0
+        specifier: ^3.19.1
+        version: 3.19.1
       ts-proto:
         specifier: ^2.11.8
         version: 2.11.8
@@ -1024,11 +1024,11 @@ importers:
   modules/storage:
     dependencies:
       '@aws-sdk/client-iam':
-        specifier: ^3.1071.0
-        version: 3.1071.0
+        specifier: ^3.1073.0
+        version: 3.1073.0
       '@aws-sdk/client-s3':
-        specifier: ^3.1071.0
-        version: 3.1071.0
+        specifier: ^3.1073.0
+        version: 3.1073.0
       '@aws-sdk/client-sts':
         specifier: ^3.1071.0
         version: 3.1071.0
@@ -1067,7 +1067,7 @@ importers:
         version: 4.18.1
       uuid:
         specifier: '>=11.1.1'
-        version: 14.0.0
+        version: 14.0.1
     devDependencies:
       '@types/ali-oss':
         specifier: ^6.23.3
@@ -1372,20 +1372,20 @@ packages:
     resolution: {integrity: sha512-qh0fG/RtrFztst4+vn1HZehAvAhr5Jlq/WMP7e5KvvfF16oNVBc9CDNVdxdm19vzOY2x0qiDMFCRjhxQAusGWQ==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-iam@3.1071.0':
-    resolution: {integrity: sha512-7Bojv5nuPX+NNCRkTde9ZKl51Y2MPLbFkMgVm2hA43L8rOsgDz2tjBfY9IpTW78K1s+1IaW2DTmJTwa5vmNxAw==}
+  '@aws-sdk/client-iam@3.1073.0':
+    resolution: {integrity: sha512-TEovDL6IPOiThcSWj0xVJe0Mffc06xFD1xEry+kAREra0d8ArxGFnYeCRBOxQkGpw0H3z0T8STWxw73ibkm/Mw==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-s3@3.1071.0':
-    resolution: {integrity: sha512-BqsqkaU/FztbQnq5Aw0BK6/weQgwnC3n2w19M7CjEjRHscr5dZU8+ihi7PIY6UMW9RkJrzUUEmaoHQrIVScFYQ==}
+  '@aws-sdk/client-s3@3.1073.0':
+    resolution: {integrity: sha512-/Dvhrff0I4D2YUWSdm8uLKa1bfXdw9BMRDUME6ZeoTrrdQKQDeo2scLDjdpC5X2YdvTc/ZnUCR2HAvD7qXvS1w==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-sesv2@3.1071.0':
-    resolution: {integrity: sha512-qAgfKG/zVmPR2xiIkHxY48LE/h2FBY7aIjtHIm9Dp+w1XWx8e1QAjFj6CKEL+sRyW6HxYnmOqhMEsPT604xJpg==}
+  '@aws-sdk/client-sesv2@3.1073.0':
+    resolution: {integrity: sha512-+9OG/NMj/5OFL0ygVFEbh/CF1ENdGLSuYR3upvYJ4entG3dcAwBzgxRl81EAXt7yI0nK6IqBy7H6QuNoAs3Aew==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-sns@3.1071.0':
-    resolution: {integrity: sha512-/fgKJy/z0cOWyj0riUQ7HFurhW6tuRgjf9aVD5XVUZFh0Q6vg2x6Z9Fjnt3Ka3Ws8V8xgnoflK0aSl+P/V88pQ==}
+  '@aws-sdk/client-sns@3.1073.0':
+    resolution: {integrity: sha512-nvhM/meCUotd3480WccQXty5T29Vx7mClySIKwAszeQjsKSKTypvLLGUJvlWbY7X42i8x8ctj+puWjytzWUsuQ==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-sts@3.1071.0':
@@ -3604,6 +3604,9 @@ packages:
   anynum@1.0.0:
     resolution: {integrity: sha512-xjR9/zBVnUOP6ztMIIgShjsxui80nQUQH+5xJnvrYLs+90bF25/KJqaAi8mk+B4RDtX1Nspi6fmp4YTEts8SfA==}
 
+  anynum@1.0.1:
+    resolution: {integrity: sha512-N6//FLET/tXYNM/F6ABca1oH6fWB+KlTt909Le28WMDBk8oaT4vY17DCrwg2MvmuqUKt3Ni4N5dGJ/EoBgcO6A==}
+
   arg@4.1.3:
     resolution: {integrity: sha512-58S9QDqG0Xx27YwPSt9fJxivjYl432YCwfDMfZ+71RAqUrZef7LrKQZ3LHLOwCS4FLNBplP533Zx895SeOCHvA==}
 
@@ -4787,6 +4790,10 @@ packages:
     resolution: {integrity: sha512-DYPkXnVSJHAGAkSBeVYhEo/seIpz2SLr9OQcX7m6lXaX3gvoB+DCKzFdZIEhZGI3I1DUhObBAUOT/v2xfoXz/w==}
     hasBin: true
 
+  fast-xml-parser@5.9.3:
+    resolution: {integrity: sha512-brCNCeScma/kqa54J4PIDriSSSLssRkuYaUCpvHJulGc3HGI/xxKUCTDcYkAdqJsyb//ydpbxecjC3hB9+tb/g==}
+    hasBin: true
+
   faye-websocket@0.11.4:
     resolution: {integrity: sha512-CzbClwlXAuiRQAlUyfqPgvPoNKTckTPGfwZV4ZdAhVcP2lh9KUxJg2b5GkE7XbjKQ3YJnQ9z6D9ntLAlB+tP8g==}
     engines: {node: '>=0.8.0'}
@@ -5797,8 +5804,8 @@ packages:
   lines-and-columns@1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
 
-  lint-staged@17.0.7:
-    resolution: {integrity: sha512-JrSobt+tW3rH8IOMi8tDZd3foorM5yPEkLD/V2NxobgHrFfHWGee4MOLVuZeScgxftEwbHrPHIFA/ZL+nUJeuA==}
+  lint-staged@17.0.8:
+    resolution: {integrity: sha512-B2P/d+jVW0UXOQ0MVMLrB/9ydA1P+zz6jYfdrbbEd9ur3S2rcbduFWKiUCC02Sm5hbC8nrm7y24WuYMG54HfxA==}
     engines: {node: '>=22.22.1'}
     hasBin: true
 
@@ -6617,6 +6624,10 @@ packages:
     resolution: {integrity: sha512-cbrerZV+6rvdQrrD+iGMcZFEiiSrbv9Tfdkvnusy6y0x0GKBXREFg/Y65GhIfm0tnLntThhzCnfKwp1WRjeCyQ==}
     engines: {node: '>=14.0.0'}
 
+  path-expression-matcher@1.6.0:
+    resolution: {integrity: sha512-e5y7RCLHKjemsgQ4eqGJtPyr10ILz25HO7flzxhTV8bgvd5yHx98DGtCAtbVW9f2TqnYI/gEVZd+vz7snrdPTw==}
+    engines: {node: '>=14.0.0'}
+
   path-is-absolute@1.0.1:
     resolution: {integrity: sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==}
     engines: {node: '>=0.10.0'}
@@ -7216,8 +7227,8 @@ packages:
     resolution: {integrity: sha512-stxByr12oeeOyY2BlviTNQlYV5xOj47GirPr4yA1hE9JCtxfQN0+tVbkxwCtYDQWhEKWFHsEK48ORg5jrouCAg==}
     engines: {node: '>=20'}
 
-  smtp-server@3.19.0:
-    resolution: {integrity: sha512-gCozR1sY+ED1K0gfyT9dMlz6vZBci2cWD/CZROKaIBwR7Xet/W61x1wTMcaxr5nB2TQAn85HVcUyaf+9lhmcTg==}
+  smtp-server@3.19.1:
+    resolution: {integrity: sha512-2IeTkoLkmRm9LiG3vlws3OddCgp+sDXAVEUXJeBMoW1fpBYUU5iPOxp3hLWGt/D3a+YfT/NrIdRAUjKapy4dhQ==}
     engines: {node: '>=18.18.0'}
 
   snappy@7.3.3:
@@ -7412,6 +7423,9 @@ packages:
 
   strnum@2.4.0:
     resolution: {integrity: sha512-sHrVyWWdq28RbhjuJdZsA1SnGRJV6NiXbk6AXBxDOsgAcA+lmpUZCYjOdLBxkXMwis6RRe7dlZt4VlIWFVzkmg==}
+
+  strnum@2.4.1:
+    resolution: {integrity: sha512-M9eUSMT2dCB2cTNPG7UYj6KuK7RJR2SN2+yCV/fTW3xzTCS6EaGZ5pSMgDIjB7r8zSfTGk+dvvn9rTjpVS9Mwg==}
 
   stubs@3.0.0:
     resolution: {integrity: sha512-PdHt7hHUJKxvTCgbKX9C1V/ftOcjJQgz8BZwNfV5c4B6dcGqlpelTbJ999jBGZ2jYiPAwcX5dP6oBwVlBlUbxw==}
@@ -7839,8 +7853,8 @@ packages:
     resolution: {integrity: sha512-PYxZDA+6QtvRvm//++aGdmKG/cI07jNwbROz0Ql+VzFV1+Z0Dy55NI4zZ7RHc9KKpBePNFwoErqIuqQv/cjiTA==}
     engines: {node: '>= 0.12.0'}
 
-  uuid@14.0.0:
-    resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
+  uuid@14.0.1:
+    resolution: {integrity: sha512-6ZxzVpzDXDa3bJWaHilVayA+BH/1zmxCJoVgvmqJnid/gPoKHxUrS/aC/T6LGQtNHT+XHG9fXPJB4d+IrU30Ew==}
     hasBin: true
 
   v8-compile-cache-lib@3.0.1:
@@ -8315,7 +8329,7 @@ snapshots:
       '@smithy/types': 4.15.0
       tslib: 2.8.1
 
-  '@aws-sdk/client-iam@3.1071.0':
+  '@aws-sdk/client-iam@3.1073.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -8328,7 +8342,7 @@ snapshots:
       '@smithy/types': 4.15.0
       tslib: 2.8.1
 
-  '@aws-sdk/client-s3@3.1071.0':
+  '@aws-sdk/client-s3@3.1073.0':
     dependencies:
       '@aws-crypto/sha1-browser': 5.2.0
       '@aws-crypto/sha256-browser': 5.2.0
@@ -8345,7 +8359,7 @@ snapshots:
       '@smithy/types': 4.15.0
       tslib: 2.8.1
 
-  '@aws-sdk/client-sesv2@3.1071.0':
+  '@aws-sdk/client-sesv2@3.1073.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -8359,7 +8373,7 @@ snapshots:
       '@smithy/types': 4.15.0
       tslib: 2.8.1
 
-  '@aws-sdk/client-sns@3.1071.0':
+  '@aws-sdk/client-sns@3.1073.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -8545,7 +8559,7 @@ snapshots:
   '@aws-sdk/xml-builder@3.972.30':
     dependencies:
       '@smithy/types': 4.15.0
-      fast-xml-parser: 5.9.2
+      fast-xml-parser: 5.9.3
       tslib: 2.8.1
 
   '@aws/lambda-invoke-store@0.2.4': {}
@@ -11059,6 +11073,8 @@ snapshots:
 
   anynum@1.0.0: {}
 
+  anynum@1.0.1: {}
+
   arg@4.1.3: {}
 
   argparse@2.0.1: {}
@@ -12145,6 +12161,15 @@ snapshots:
       strnum: 2.4.0
       xml-naming: 0.1.0
 
+  fast-xml-parser@5.9.3:
+    dependencies:
+      '@nodable/entities': 2.2.0
+      fast-xml-builder: 1.2.0
+      is-unsafe: 1.0.1
+      path-expression-matcher: 1.6.0
+      strnum: 2.4.1
+      xml-naming: 0.1.0
+
   faye-websocket@0.11.4:
     dependencies:
       websocket-driver: 0.7.5
@@ -12337,7 +12362,7 @@ snapshots:
       https-proxy-agent: 7.0.6
       is-stream: 2.0.1
       node-fetch: 2.7.0
-      uuid: 14.0.0
+      uuid: 14.0.1
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -13499,7 +13524,7 @@ snapshots:
 
   lines-and-columns@1.2.4: {}
 
-  lint-staged@17.0.7:
+  lint-staged@17.0.8:
     dependencies:
       listr2: 10.2.1
       picomatch: 4.0.4
@@ -14546,6 +14571,8 @@ snapshots:
 
   path-expression-matcher@1.5.0: {}
 
+  path-expression-matcher@1.6.0: {}
+
   path-is-absolute@1.0.1: {}
 
   path-key@3.1.1: {}
@@ -15110,7 +15137,7 @@ snapshots:
       semver: 7.8.4
       sequelize-pool: 7.1.0
       toposort-class: 1.0.1
-      uuid: 14.0.0
+      uuid: 14.0.1
       validator: 13.15.35
       wkx: 0.5.0
     optionalDependencies:
@@ -15210,7 +15237,7 @@ snapshots:
       ansi-styles: 6.2.3
       is-fullwidth-code-point: 5.1.0
 
-  smtp-server@3.19.0:
+  smtp-server@3.19.1:
     dependencies:
       ipv6-normalize: 1.0.1
       nodemailer: 9.0.1
@@ -15457,6 +15484,10 @@ snapshots:
     dependencies:
       anynum: 1.0.0
 
+  strnum@2.4.1:
+    dependencies:
+      anynum: 1.0.1
+
   stubs@3.0.0: {}
 
   style-mod@4.1.3: {}
@@ -15559,7 +15590,7 @@ snapshots:
       https-proxy-agent: 5.0.1
       node-fetch: 2.7.0
       stream-events: 1.0.5
-      uuid: 14.0.0
+      uuid: 14.0.1
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -15947,7 +15978,7 @@ snapshots:
       mz: 2.7.0
       unescape: 1.0.1
 
-  uuid@14.0.0: {}
+  uuid@14.0.1: {}
 
   v8-compile-cache-lib@3.0.1: {}
 

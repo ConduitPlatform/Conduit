@@ -125,6 +125,8 @@ function createHandlerForRoute(
       context: JSON.stringify(req.context),
       cookies: JSON.stringify(req.cookies),
       functionName: route.grpcFunction,
+      rawHeaders: req.rawHeaders?.length ? JSON.stringify(req.rawHeaders) : '',
+      rawBody: req.rawBody ?? Buffer.alloc(0),
     };
     return new Promise((resolve, reject) => {
       client.route(request, metadata, (err: Error, result: Indexable | string) => {

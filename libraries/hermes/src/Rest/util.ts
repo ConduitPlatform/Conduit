@@ -1,15 +1,33 @@
-import { Request } from 'express';
 import {
   BodyParams,
   ConduitError,
-  Indexable,
   Params,
   QueryParams,
   UrlParams,
 } from '@conduitplatform/grpc-sdk';
 import { ZodParser } from '../classes/ZodParser.js';
+import { Response } from 'express';
+import { ConduitRequest } from '../interfaces/ConduitRequest.js';
 
-type ConduitRequest = Request & { conduit?: Indexable };
+export function captureRequestRawBody(req: ConduitRequest, _res: Response, buf: Buffer) {
+  req.rawBody = buf;
+}
+
+export function sanitizeRawHeaders(
+  rawHeaders: string[] | undefined,
+  parsedHeaders: Record<string, string | string[] | undefined>,
+): string[] {
+  if (!rawHeaders?.length) return [];
+  const result: string[] = [];
+  for (let i = 0; i < rawHeaders.length; i += 2) {
+    const key = rawHeaders[i];
+    const value = rawHeaders[i + 1];
+    if (key && parsedHeaders[key.toLowerCase()] !== undefined) {
+      result.push(key, value);
+    }
+  }
+  return result;
+}
 
 export function extractRequestData(req: ConduitRequest) {
   const context = req.conduit || {};
@@ -18,6 +36,8 @@ export function extractRequestData(req: ConduitRequest) {
   const bodyParams: BodyParams = {};
   const headers = req.headers;
   const cookies = req.cookies;
+  const rawHeaders = sanitizeRawHeaders(req.rawHeaders, req.headers);
+  const rawBody = req.rawBody;
   if (req.query) {
     const newObj = {};
     Object.keys(req.query).forEach((k: string) => {
@@ -50,7 +70,17 @@ export function extractRequestData(req: ConduitRequest) {
     }
   }
   const path = req.baseUrl + req.path;
-  return { context, headers, cookies, path, urlParams, queryParams, bodyParams };
+  return {
+    context,
+    headers,
+    rawHeaders,
+    rawBody,
+    cookies,
+    path,
+    urlParams,
+    queryParams,
+    bodyParams,
+  };
 }
 
 export function validateParams(

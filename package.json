@@ -27,7 +27,7 @@
     "eslint": "^10.5.0",
     "globals": "^17.6.0",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.7",
+    "lint-staged": "^17.0.8",
     "prettier": "^3.8.4",
     "standard-version": "^9.5.0",
     "turbo": "^2.9.18",

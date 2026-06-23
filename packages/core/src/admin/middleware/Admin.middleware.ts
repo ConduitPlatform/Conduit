@@ -22,7 +22,10 @@ export function getAdminMiddleware(configManager: any) {
     ) {
       return next();
     }
-    if (req.originalUrl.indexOf('/ready') === 0) {
+    if (
+      req.originalUrl.indexOf('/ready') === 0 ||
+      req.originalUrl.indexOf('/live') === 0
+    ) {
       return next();
     }
     // Allow API tokens (cdt_*) to bypass masterkey; Auth.middleware will validate the token
