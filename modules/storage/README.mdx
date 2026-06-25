@@ -11,6 +11,13 @@ Documents may have complex structures and subcollections and can be stored local
 - AWS S3 (or any other S3-compatible provider)
 - Alibaba Cloud (Aliyun)
 
+## Public files
+
+Public files expose a stable Conduit-relative `uri` in the form `/storage/getFileUrl/:id`.
+If both the container and file are public, `url` contains the direct provider/CDN URL.
+If the container is private and the file is public, `url` is left empty and Conduit signs a provider URL on demand through `uri`.
+Private files are not allowed in public containers.
+
 ## Requirements ⚡
 
 - [Database](../database) module

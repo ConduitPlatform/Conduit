@@ -27,11 +27,7 @@ export class GoogleCloudStorage implements IStorageProvider {
     return this;
   }
 
-  async store(
-    fileName: string,
-    data: Buffer | string,
-    _isPublic: boolean = false,
-  ): Promise<boolean | Error> {
+  async store(fileName: string, data: Buffer | string): Promise<boolean | Error> {
     await this.bucket().file(fileName).save(data);
     return true;
   }
@@ -179,18 +175,10 @@ export class GoogleCloudStorage implements IStorageProvider {
     fileName: string,
     containerIsPublic?: boolean,
   ): Promise<string | Error> {
-    if (containerIsPublic) {
-      return this.bucket().file(fileName).publicUrl();
+    if (!containerIsPublic) {
+      return new Error('Public URL is only available for files in public containers');
     }
-
-    const [url] = await this.bucket()
-      .file(fileName)
-      .getSignedUrl({
-        version: 'v4',
-        action: 'read',
-        expires: new Date(new Date().setFullYear(new Date().getFullYear() + 99)),
-      });
-    return url;
+    return this.bucket().file(fileName).publicUrl();
   }
 
   getUploadUrl(fileName: string): Promise<string | Error> {
