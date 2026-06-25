@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.17.0-alpha.4](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.3...v0.17.0-alpha.4) (2026-06-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **authentication:** remove legacy service account auth (#1510)
+
+### Features
+
+* **authentication:** remove legacy service account auth ([#1510](https://github.com/ConduitPlatform/Conduit/issues/1510)) ([ae0f7e5](https://github.com/ConduitPlatform/Conduit/commit/ae0f7e5ec25e2ceb863d9ab4ca3a1a2d5a84ed04))
+* **core:** deep readiness probe with dependency checks ([#1505](https://github.com/ConduitPlatform/Conduit/issues/1505)) ([97f0c10](https://github.com/ConduitPlatform/Conduit/commit/97f0c102bb09148883ffe773ee7e9dfae797f9cd))
+* **routing:** raw headers and opt-in raw body for webhook verification ([#1488](https://github.com/ConduitPlatform/Conduit/issues/1488)) ([b366071](https://github.com/ConduitPlatform/Conduit/commit/b366071be17dfb18b19906f4e01673979ff0a1c6))
+
+
+### Bug Fixes
+
+* **authentication:** 2FA naming, backup codes gate, wire UserCreateByUsername gRPC ([#1501](https://github.com/ConduitPlatform/Conduit/issues/1501)) ([514f1f0](https://github.com/ConduitPlatform/Conduit/commit/514f1f07fe81e1eb728a7d922344b9d969bac4cb))
+* **authorization:** resource delete cascade, relations/many body, FindRelation message ([#1502](https://github.com/ConduitPlatform/Conduit/issues/1502)) ([c175afc](https://github.com/ConduitPlatform/Conduit/commit/c175afc0b33a7206fae0cb7b7269ebaa87469ce3))
+* **chat:** add missing admin routes for Conduit UI chat panel ([#1497](https://github.com/ConduitPlatform/Conduit/issues/1497)) ([71b7b30](https://github.com/ConduitPlatform/Conduit/commit/71b7b30a5e9350065ba2ab9f5b474dfe0926e6a6))
+* **chat:** emit socket and bus events on admin room delete ([#1513](https://github.com/ConduitPlatform/Conduit/issues/1513)) ([2a676c6](https://github.com/ConduitPlatform/Conduit/commit/2a676c68a549c96987eed26fdd06b60242363a67))
+* **ci:** avoid conduit-standalone digest collision in core manifest merge ([#1496](https://github.com/ConduitPlatform/Conduit/issues/1496)) ([19632f9](https://github.com/ConduitPlatform/Conduit/commit/19632f94634b8bd3c4a577cadd0c5318de729def))
+* **ci:** build container images on native arm64 runners ([#1495](https://github.com/ConduitPlatform/Conduit/issues/1495)) ([cbbffc8](https://github.com/ConduitPlatform/Conduit/commit/cbbffc88e625ff861cd598d14f7b5669b1dd44a2))
+* **ci:** download manifest digests by exact artifact name ([3fa5460](https://github.com/ConduitPlatform/Conduit/commit/3fa5460c89c7c4f7f46a2f1d8977db67459ee905))
+* **ci:** pin alpine runtime image builds ([#1494](https://github.com/ConduitPlatform/Conduit/issues/1494)) ([765d57d](https://github.com/ConduitPlatform/Conduit/commit/765d57d3622ade66e0eb24b6825d083919fe1aec))
+* **ci:** trust lockfile in Docker runtime pnpm installs ([f35cdb9](https://github.com/ConduitPlatform/Conduit/commit/f35cdb90beb660887c98e6bf1bd6209b71573d1d))
+* **communications,storage:** sms provider field, email status job, azure folder metric ([#1504](https://github.com/ConduitPlatform/Conduit/issues/1504)) ([23b7b57](https://github.com/ConduitPlatform/Conduit/commit/23b7b57c3d7773d6ae13fb1f0f925e3deddf5578))
+* **communications:** persist legacy email/push/sms config during migration ([#1498](https://github.com/ConduitPlatform/Conduit/issues/1498)) ([328fa96](https://github.com/ConduitPlatform/Conduit/commit/328fa96c3f2f2dff4baa236063c1a62b6b5f1b79))
+* **database,functions:** custom endpoint CONTAIN op and PUT route mapping ([#1503](https://github.com/ConduitPlatform/Conduit/issues/1503)) ([b7a8e40](https://github.com/ConduitPlatform/Conduit/commit/b7a8e40b4d539743d3919a463654706f507bfc27))
+* **grpc:** return {} for google.protobuf.Empty responses ([#1493](https://github.com/ConduitPlatform/Conduit/issues/1493)) ([8e5fd54](https://github.com/ConduitPlatform/Conduit/commit/8e5fd54052bb3113b20bcb6ae6408aad4836d297))
+
 ## [0.17.0-alpha.3](///compare/v0.17.0-alpha.2...v0.17.0-alpha.3) (2026-06-19)
 
 
