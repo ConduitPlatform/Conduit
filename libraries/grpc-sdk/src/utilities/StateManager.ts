@@ -13,6 +13,25 @@ export enum KNOWN_LOCKS {
   VIEW_CREATION = 'view_creation',
 }
 
+export async function isLockContention(error: unknown): Promise<boolean> {
+  if (error instanceof ResourceLockedError) {
+    return true;
+  }
+  if (!(error instanceof ExecutionError)) {
+    return false;
+  }
+
+  const attempts = await Promise.all(error.attempts);
+  const voteErrors = attempts.flatMap(attempt =>
+    Array.from(attempt.votesAgainst.values()),
+  );
+
+  return (
+    voteErrors.length > 0 &&
+    voteErrors.every(voteError => voteError instanceof ResourceLockedError)
+  );
+}
+
 export class StateManager {
   private readonly redisClient: Redis | Cluster;
   private readonly redLock: Redlock;
@@ -55,7 +74,7 @@ export class StateManager {
     try {
       return await this.redLock.acquire([resource], ttl, { retryCount: 0 });
     } catch (error) {
-      if (error instanceof ExecutionError || error instanceof ResourceLockedError) {
+      if (await isLockContention(error)) {
         return null;
       }
       throw error;
