@@ -23,6 +23,10 @@ import { isArray, isEqual } from 'lodash-es';
 import { parseSchema } from 'mongodb-schema';
 
 const VIEW_LOCK_TTL_MS = 60_000;
+const VIEW_READINESS_TIMEOUT_MS = 5_000;
+const VIEW_READINESS_POLL_MS = 50;
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
@@ -116,11 +120,90 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         'State manager not initialized; cannot create view safely',
       );
     }
-    return state.withLock(
-      MongooseAdapter.viewLockResource(viewName),
-      VIEW_LOCK_TTL_MS,
-      () => this.createViewLocked(modelName, viewName, joinedSchemas, query),
+
+    const resource = MongooseAdapter.viewLockResource(viewName);
+    const lock = await state.tryAcquireLock(resource, VIEW_LOCK_TTL_MS);
+    if (lock) {
+      try {
+        await this.createViewLocked(modelName, viewName, joinedSchemas, query);
+        return;
+      } finally {
+        await state.releaseLock(lock);
+      }
+    }
+
+    const ready = await this.waitForViewReadiness(
+      modelName,
+      viewName,
+      joinedSchemas,
+      query,
     );
+    if (ready) {
+      return;
+    }
+
+    return state.withLock(resource, VIEW_LOCK_TTL_MS, () =>
+      this.createViewLocked(modelName, viewName, joinedSchemas, query),
+    );
+  }
+
+  private async waitForViewReadiness(
+    modelName: string,
+    viewName: string,
+    _joinedSchemas: string[],
+    query: any,
+  ): Promise<boolean> {
+    if (!this.models[modelName]) {
+      throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
+    }
+
+    const model = this.models[modelName];
+    const viewOn = model.originalSchema.collectionName;
+    const pipeline = this.parseViewPipeline(query);
+    const deadline = Date.now() + VIEW_READINESS_TIMEOUT_MS;
+
+    while (Date.now() < deadline) {
+      if (this.views[viewName] && isEqual(this.views[viewName]?.viewQuery, query)) {
+        return true;
+      }
+
+      const metadata = await this.models['Views'].findOne(
+        { name: viewName },
+        { readPreference: 'primary' },
+      );
+
+      if (metadata && !isEqual(metadata.query, query)) {
+        throw new GrpcError(
+          status.INTERNAL,
+          `View metadata for ${viewName} does not match requested query`,
+        );
+      }
+
+      if (metadata && isEqual(metadata.query, query)) {
+        const namespaceExists = await this.mongoViewNamespaceExists(viewName);
+        if (namespaceExists) {
+          const definition = await this.readMongoViewDefinition(viewName);
+          if (!definition) {
+            throw new GrpcError(
+              status.INTERNAL,
+              `Collection ${viewName} exists but is not a MongoDB view`,
+            );
+          }
+          if (definition.viewOn !== viewOn || !isEqual(definition.pipeline, pipeline)) {
+            throw new GrpcError(
+              status.INTERNAL,
+              `MongoDB view ${viewName} exists with incompatible definition`,
+            );
+          }
+          this.buildViewModel(modelName, viewName, query);
+          return true;
+        }
+      }
+
+      await sleep(VIEW_READINESS_POLL_MS);
+    }
+
+    return false;
   }
 
   private parseViewPipeline(query: any): object[] {

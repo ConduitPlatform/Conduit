@@ -1,7 +1,12 @@
 import { RedisManager } from './RedisManager.js';
 import { Cluster, Redis } from 'ioredis';
 import { Indexable } from '../interfaces/index.js';
-import { Redlock, Lock } from '@sesamecare-oss/redlock';
+import {
+  ExecutionError,
+  Lock,
+  Redlock,
+  ResourceLockedError,
+} from '@sesamecare-oss/redlock';
 
 export enum KNOWN_LOCKS {
   STATE_MODIFICATION = 'state_modification',
@@ -40,6 +45,21 @@ export class StateManager {
 
   async acquireLock(resource: string, ttl: number = 5000): Promise<Lock> {
     return await this.redLock.acquire([resource], ttl);
+  }
+
+  /**
+   * Attempt to acquire a lock once. Returns null when another holder owns the
+   * resource (contention). Re-throws Redis/infrastructure failures.
+   */
+  async tryAcquireLock(resource: string, ttl: number = 5000): Promise<Lock | null> {
+    try {
+      return await this.redLock.acquire([resource], ttl, { retryCount: 0 });
+    } catch (error) {
+      if (error instanceof ExecutionError || error instanceof ResourceLockedError) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   async releaseLock(lock: Lock) {

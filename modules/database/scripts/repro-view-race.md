@@ -36,6 +36,8 @@ pnpm --filter @conduitplatform/database build
 ## What the fix does
 
 - Same-process callers coalesce on one in-flight promise per `viewName`
-- Cross-instance callers serialize on a Redis Redlock keyed per view
+- One cross-instance writer acquires a short-attempt Redlock per view
+- Lock losers verify readiness in parallel (metadata + namespace + definition) instead of serially acquiring the lock
+- If readiness times out, the caller retries as writer via `withLock`
 - After waiting, callers re-check local/durable state instead of assuming the lock holder succeeded
 - Physical MongoDB view creation is separated from local Mongoose model registration

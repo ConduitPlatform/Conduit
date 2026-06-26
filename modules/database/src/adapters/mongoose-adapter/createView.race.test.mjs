@@ -11,6 +11,8 @@ test('MongooseAdapter createView uses distributed lock and local coalescing', ()
   const schemaSource = readFileSync(join(here, 'MongooseSchema.ts'), 'utf8');
 
   assert.match(adapterSource, /pendingViewCreations/);
+  assert.match(adapterSource, /tryAcquireLock/);
+  assert.match(adapterSource, /waitForViewReadiness/);
   assert.match(adapterSource, /state\.withLock/);
   assert.match(adapterSource, /createViewLocked/);
   assert.match(adapterSource, /createPhysicalMongoView/);
