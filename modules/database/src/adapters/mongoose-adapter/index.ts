@@ -88,9 +88,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       if (this.views[viewName] && isEqual(this.views[viewName]?.viewQuery, query)) {
         return;
       }
-      if (this.views[viewName]) {
-        return;
-      }
     }
 
     const promise = this.runCreateViewLocked(
