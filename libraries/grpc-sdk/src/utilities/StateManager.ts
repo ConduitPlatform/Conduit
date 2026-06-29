@@ -1,10 +1,35 @@
 import { RedisManager } from './RedisManager.js';
 import { Cluster, Redis } from 'ioredis';
 import { Indexable } from '../interfaces/index.js';
-import { Redlock, Lock } from '@sesamecare-oss/redlock';
+import {
+  ExecutionError,
+  Lock,
+  Redlock,
+  ResourceLockedError,
+} from '@sesamecare-oss/redlock';
 
 export enum KNOWN_LOCKS {
   STATE_MODIFICATION = 'state_modification',
+  VIEW_CREATION = 'view_creation',
+}
+
+export async function isLockContention(error: unknown): Promise<boolean> {
+  if (error instanceof ResourceLockedError) {
+    return true;
+  }
+  if (!(error instanceof ExecutionError)) {
+    return false;
+  }
+
+  const attempts = await Promise.all(error.attempts);
+  const voteErrors = attempts.flatMap(attempt =>
+    Array.from(attempt.votesAgainst.values()),
+  );
+
+  return (
+    voteErrors.length > 0 &&
+    voteErrors.every(voteError => voteError instanceof ResourceLockedError)
+  );
 }
 
 export class StateManager {
@@ -41,8 +66,32 @@ export class StateManager {
     return await this.redLock.acquire([resource], ttl);
   }
 
+  /**
+   * Attempt to acquire a lock once. Returns null when another holder owns the
+   * resource (contention). Re-throws Redis/infrastructure failures.
+   */
+  async tryAcquireLock(resource: string, ttl: number = 5000): Promise<Lock | null> {
+    try {
+      return await this.redLock.acquire([resource], ttl, { retryCount: 0 });
+    } catch (error) {
+      if (await isLockContention(error)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
   async releaseLock(lock: Lock) {
     await lock.release();
+  }
+
+  async withLock<T>(resource: string, ttl: number, fn: () => Promise<T>): Promise<T> {
+    const lock = await this.acquireLock(resource, ttl);
+    try {
+      return await fn();
+    } finally {
+      await this.releaseLock(lock);
+    }
   }
 
   async modifyState(modifier: (state: Indexable) => Promise<Indexable>) {
