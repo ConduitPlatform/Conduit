@@ -46,6 +46,7 @@ message FileResponse {
   string id = 1;
   string url = 2;
   string name = 3;
+  string uri = 4;
 }
 
 message GetFileDataResponse {
@@ -72,6 +73,7 @@ message FileByUrlResponse {
   string fileUrl = 2;
   string name = 3;
   string uploadUrl = 4;
+  string uri = 5;
 }
 
 message UpdateFileByUrlRequest {

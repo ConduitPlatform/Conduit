@@ -28,6 +28,7 @@ const schema: ConduitModel = {
     default: false,
   },
   url: TYPE.String,
+  uri: TYPE.String,
   sourceUrl: TYPE.String,
   mimeType: TYPE.String,
   createdAt: TYPE.Date,
@@ -56,7 +57,8 @@ export class File extends ConduitActiveSchema<File> {
   container!: string;
   size!: number;
   isPublic?: boolean;
-  url!: string;
+  url?: string;
+  uri?: string;
   sourceUrl?: string;
   mimeType!: string;
   createdAt!: Date;
