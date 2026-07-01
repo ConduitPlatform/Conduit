@@ -37,5 +37,25 @@ export default {
       format: 'Boolean',
       default: false,
     },
+    redirect: {
+      login_uri: {
+        doc: 'Where unauthenticated users are redirected before accepting or declining. The hook URL is passed as redirectUri.',
+        format: 'String',
+        default: '',
+        optional: true,
+      },
+      accept_uri: {
+        doc: 'Where users are redirected after accepting an invitation. Supports {roomId} placeholder.',
+        format: 'String',
+        default: '',
+        optional: true,
+      },
+      decline_uri: {
+        doc: 'Where users are redirected after declining an invitation.',
+        format: 'String',
+        default: '',
+        optional: true,
+      },
+    },
   },
 };
