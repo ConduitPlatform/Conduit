@@ -236,7 +236,9 @@ message SendWithFallbackResponse {
 
 message RegisterCommunicationTemplateRequest {
   string name = 1;
-  CommunicationTemplate template = 2;
+  repeated string channels = 2;
+  optional string description = 3;
+  CommunicationTemplate template = 4;
   message CommunicationTemplate {
     optional EmailTemplate email = 1;
     optional PushTemplate push = 2;
@@ -257,10 +259,48 @@ message RegisterCommunicationTemplateRequest {
       repeated string variables = 2;
     }
   }
+  repeated string variables = 5;
 }
 
 message RegisterCommunicationTemplateResponse {
   string template = 1;
+}
+
+message UpdateCommunicationTemplateRequest {
+  string id = 1;
+  optional string name = 2;
+  repeated string channels = 3;
+  optional string description = 4;
+  optional RegisterCommunicationTemplateRequest.CommunicationTemplate template = 5;
+  repeated string variables = 6;
+}
+
+message DeleteCommunicationTemplateRequest {
+  string id = 1;
+}
+
+message DeleteCommunicationTemplateResponse {
+  bool deleted = 1;
+}
+
+message GetCommunicationTemplateRequest {
+  optional string id = 1;
+  optional string name = 2;
+}
+
+message GetCommunicationTemplateResponse {
+  string template = 1;
+}
+
+message ListCommunicationTemplatesRequest {
+  int32 skip = 1;
+  int32 limit = 2;
+  optional string search = 3;
+}
+
+message ListCommunicationTemplatesResponse {
+  repeated string templates = 1;
+  int32 count = 2;
 }
 
 message GetMessageStatusRequest {
@@ -298,5 +338,9 @@ service Communications {
   rpc SendToMultipleChannels(SendToMultipleChannelsRequest) returns (SendToMultipleChannelsResponse);
   rpc SendWithFallback(SendWithFallbackRequest) returns (SendWithFallbackResponse);
   rpc RegisterCommunicationTemplate(RegisterCommunicationTemplateRequest) returns (RegisterCommunicationTemplateResponse);
+  rpc UpdateCommunicationTemplate(UpdateCommunicationTemplateRequest) returns (RegisterCommunicationTemplateResponse);
+  rpc DeleteCommunicationTemplate(DeleteCommunicationTemplateRequest) returns (DeleteCommunicationTemplateResponse);
+  rpc GetCommunicationTemplate(GetCommunicationTemplateRequest) returns (GetCommunicationTemplateResponse);
+  rpc ListCommunicationTemplates(ListCommunicationTemplatesRequest) returns (ListCommunicationTemplatesResponse);
   rpc GetMessageStatus(GetMessageStatusRequest) returns (GetMessageStatusResponse);
 }
