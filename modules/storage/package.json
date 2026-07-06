@@ -64,7 +64,7 @@
     "@types/node": "24.13.2",
     "copyfiles": "^2.4.1",
     "rimraf": "^6.1.3",
-    "ts-proto": "^2.11.9",
+    "ts-proto": "^2.12.0",
     "typescript": "~6.0.3"
   }
 }
