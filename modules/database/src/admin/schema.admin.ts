@@ -275,36 +275,19 @@ export class SchemaAdmin {
       .model.findOne({ name }, { readPreference: 'primary' });
   }
 
-  async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async putSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, fields } = call.request.params;
-    const requestedSchema = await this.checkRequestedSchema(id);
-    requestedSchema.fields = fields ?? requestedSchema.fields;
-    if (
-      !requestedSchema.modelOptions.conduit.authorization?.enabled &&
-      call.request.params.conduitOptions?.authorization?.enabled
-    ) {
-      // wipe all data when enabling authz
-      await this.database.getSchemaModel(requestedSchema.name).model.deleteMany({});
-    }
-    const modelOptions = SchemaConverter.getModelOptions({
-      cmsSchema: true,
-      cms: call.request.params.conduitOptions?.cms,
-      authorization: call.request.params.conduitOptions?.authorization,
-      permissions: call.request.params.conduitOptions?.permissions,
-      readPreference: call.request.params.conduitOptions?.readPreference,
-      existingModelOptions: requestedSchema.modelOptions,
-    });
-    if (
-      call.request.params.conduitOptions?.authorization?.enabled &&
-      !this.grpcSdk.isAvailable('authorization')
-    ) {
+    if (isNil(fields) || isEmpty(fields)) {
       throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'Authorization service is not available',
+        status.INVALID_ARGUMENT,
+        "Argument 'fields' is required and must be a non-empty object!",
       );
     }
+    const requestedSchema = await this.checkRequestedSchema(id);
+    requestedSchema.fields = fields;
+    const modelOptions = await this.applySchemaOptionsUpdate(call, requestedSchema);
     try {
-      validateSchemaInput(requestedSchema.name, fields, modelOptions);
+      validateSchemaInput(requestedSchema.name, requestedSchema.fields, modelOptions);
     } catch (err: unknown) {
       throw new GrpcError(status.INTERNAL, (err as Error).message);
     }
@@ -313,6 +296,66 @@ export class SchemaAdmin {
       new ConduitSchema(requestedSchema.name, requestedSchema.fields, modelOptions),
       'update',
     );
+  }
+
+  async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { fields, conduitOptions } = call.request.params;
+    if (!isNil(fields)) {
+      ConduitGrpcSdk.Logger.warn(
+        "PATCH /schemas/:id with 'fields' is deprecated and will be removed in a future release. Use PUT /schemas/:id to update schema fields instead.",
+      );
+      return this.putSchema(call);
+    }
+    if (isNil(conduitOptions)) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        "Argument 'conduitOptions' is required!",
+      );
+    }
+    const requestedSchema = await this.checkRequestedSchema(call.request.params.id);
+    const modelOptions = await this.applySchemaOptionsUpdate(call, requestedSchema);
+    try {
+      validateSchemaInput(requestedSchema.name, undefined, modelOptions);
+    } catch (err: unknown) {
+      throw new GrpcError(status.INTERNAL, (err as Error).message);
+    }
+
+    return this.schemaController.createSchema(
+      new ConduitSchema(requestedSchema.name, requestedSchema.fields, modelOptions),
+      'update',
+    );
+  }
+
+  private async applySchemaOptionsUpdate(
+    call: ParsedRouterRequest,
+    requestedSchema: ConduitDatabaseSchema,
+  ) {
+    const conduitOptions = call.request.params.conduitOptions;
+    if (
+      !requestedSchema.modelOptions.conduit?.authorization?.enabled &&
+      conduitOptions?.authorization?.enabled
+    ) {
+      // wipe all data when enabling authz
+      await this.database.getSchemaModel(requestedSchema.name).model.deleteMany({});
+    }
+    const modelOptions = SchemaConverter.getModelOptions({
+      cmsSchema: true,
+      cms: conduitOptions?.cms,
+      authorization: conduitOptions?.authorization,
+      permissions: conduitOptions?.permissions,
+      readPreference: conduitOptions?.readPreference,
+      existingModelOptions: requestedSchema.modelOptions,
+    });
+    if (
+      conduitOptions?.authorization?.enabled &&
+      !this.grpcSdk.isAvailable('authorization')
+    ) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'Authorization service is not available',
+      );
+    }
+    return modelOptions;
   }
 
   async deleteSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
