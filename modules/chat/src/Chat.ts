@@ -175,7 +175,8 @@ export default class Chat extends ManagedModule<Config> {
 
   async sendMessage(call: GrpcRequest<SendMessageRequest>, callback: GrpcCallback<null>) {
     const userId = call.request.userId;
-    const { roomId, message, messageType, persist } = call.request;
+    const { roomId, message, messageType, persist, files } = call.request;
+    const requestFiles = files ?? [];
 
     let errorMessage: string | null = null;
     const room = await models.ChatRoom.getInstance()
@@ -191,10 +192,48 @@ export default class Chat extends ManagedModule<Config> {
       return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
     }
 
+    const resolvedType = (messageType || MessageType.Text) as MessageType;
+    const isFileMessage = [MessageType.File, MessageType.Multimedia].includes(
+      resolvedType,
+    );
+
+    if (!['text', 'file', 'typing', 'multimedia', 'system'].includes(resolvedType)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message:
+          'Invalid contentType, must be one of: text, file, typing, multimedia, system',
+      });
+    }
+
+    if (isFileMessage && requestFiles.length === 0) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: `Files are required for ${resolvedType} messages`,
+      });
+    }
+
+    if (isFileMessage && !Array.isArray(requestFiles)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: `Files must be an array for ${resolvedType} messages`,
+      });
+    }
+
+    if (
+      [MessageType.Text, MessageType.Multimedia, MessageType.System].includes(
+        resolvedType,
+      ) &&
+      !message
+    ) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: `${resolvedType} messages need to have content`,
+      });
+    }
+
     const shouldPersist = persist !== false;
     let messageId: string | undefined;
     const createdAt = new Date().toISOString();
-    const resolvedType = messageType || MessageType.Text;
 
     try {
       if (shouldPersist) {
@@ -204,6 +243,7 @@ export default class Chat extends ManagedModule<Config> {
             _id: messageId,
             message,
             messageType: resolvedType,
+            ...(requestFiles.length > 0 ? { files: requestFiles } : {}),
             senderUser: userId,
             room: roomId,
             readBy: [userId],
@@ -234,6 +274,7 @@ export default class Chat extends ManagedModule<Config> {
           sender: userId,
           content: message,
           message,
+          ...(requestFiles.length > 0 ? { files: requestFiles } : {}),
           room: roomId,
           contentType: resolvedType,
           createdAt,
