@@ -327,7 +327,7 @@ export class CommunicationTemplateService {
     const created = [];
     for (const item of planned) {
       if (item.skipped) continue;
-      const doc = await this.create(item.target);
+      const doc = await this.createMigratedTemplate(item.target);
       created.push(doc);
       if (deleteSource) {
         await EmailTemplate.getInstance().deleteOne({ _id: item.sourceId });
@@ -336,6 +336,28 @@ export class CommunicationTemplateService {
     }
 
     return { dryRun: false, planned, created, count: created.length };
+  }
+
+  private async createMigratedTemplate(params: ICreateCommunicationTemplateParams) {
+    const validated = this.validateTemplatePayload(params);
+    await this.assertUnifiedNameAvailable(validated.name);
+
+    const variables =
+      params.variables && params.variables.length > 0
+        ? params.variables
+        : this.extractVariables(validated);
+
+    const doc = await CommunicationTemplate.getInstance()
+      .create({
+        ...validated,
+        variables,
+      })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+
+    ConduitGrpcSdk.Metrics?.increment('communication_templates_total');
+    return doc;
   }
 
   private renderUnifiedChannel(
@@ -477,11 +499,8 @@ export class CommunicationTemplateService {
     return [...vars];
   }
 
-  private async assertNameAvailable(name: string, excludeId?: string) {
-    const [unified, email] = await Promise.all([
-      CommunicationTemplate.getInstance().findOne({ name }),
-      EmailTemplate.getInstance().findOne({ name }),
-    ]);
+  private async assertUnifiedNameAvailable(name: string, excludeId?: string) {
+    const unified = await CommunicationTemplate.getInstance().findOne({ name });
 
     if (unified && unified._id !== excludeId) {
       throw new GrpcError(
@@ -489,7 +508,12 @@ export class CommunicationTemplateService {
         `A unified template named '${name}' already exists`,
       );
     }
+  }
 
+  private async assertNameAvailable(name: string, excludeId?: string) {
+    await this.assertUnifiedNameAvailable(name, excludeId);
+
+    const email = await EmailTemplate.getInstance().findOne({ name });
     if (email) {
       throw new GrpcError(
         status.ALREADY_EXISTS,
