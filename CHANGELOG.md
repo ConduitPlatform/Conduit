@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.28](https://github.com/ConduitPlatform/Conduit/compare/v0.16.27...v0.16.28) (2026-07-08)
+
+
+### Features
+
+* **chat:** add file attachments to sendMessage gRPC ([#1541](https://github.com/ConduitPlatform/Conduit/issues/1541)) ([b9db30e](https://github.com/ConduitPlatform/Conduit/commit/b9db30e78352ef1a5028fd3a26188d494acbeefa))
+
+
+### Bug Fixes
+
+* **hermes:** support Socket.IO handshake auth ([#1486](https://github.com/ConduitPlatform/Conduit/issues/1486)) ([ed5a04f](https://github.com/ConduitPlatform/Conduit/commit/ed5a04f18d96872e476a1d57ceeb2fdd9c50a44b))
+* **push-notifications:** sendToDevice storage condition ([#1543](https://github.com/ConduitPlatform/Conduit/issues/1543)) ([d8d71bb](https://github.com/ConduitPlatform/Conduit/commit/d8d71bba05cf1c82a4509237b549814d4b1f8414))
+
 ### [0.16.27](https://github.com/ConduitPlatform/Conduit/compare/v0.16.26...v0.16.27) (2026-06-11)
 
 
