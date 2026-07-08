@@ -56,7 +56,7 @@ export function wrongFields(schemaFields: string[], updateFields: string[]): boo
 
 export function validateSchemaInput(
   name: string,
-  fields: ConduitModel,
+  fields: ConduitModel | undefined,
   modelOptions: ConduitSchemaOptions,
 ) {
   if (!isNil(name) && !isString(name))

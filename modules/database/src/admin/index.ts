@@ -22,11 +22,7 @@ import { SchemaAdmin } from './schema.admin.js';
 import { SchemaController } from '../controllers/cms/schema.controller.js';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller.js';
 import { CustomEndpoints, DeclaredSchema, PendingSchemas } from '../models/index.js';
-import {
-  ConduitOptions,
-  SchemaFieldsRequired,
-  SchemaFieldsOptional,
-} from '../interfaces/index.js';
+import { ConduitOptions, SchemaFieldsRequired } from '../interfaces/index.js';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
@@ -178,13 +174,28 @@ export class AdminHandlers {
     this.routingManager.route(
       {
         path: '/schemas/:id',
-        action: ConduitRouteActions.PATCH,
-        description: `Updates a schema.`,
+        action: ConduitRouteActions.UPDATE,
+        description: `Replaces the entire schema fields map. Call GET /database/schemas/:id first and send the complete merged fields object. Optionally update conduitOptions.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
         bodyParams: {
-          fields: SchemaFieldsOptional,
+          fields: SchemaFieldsRequired,
+          conduitOptions: ConduitOptions,
+        },
+      },
+      new ConduitRouteReturnDefinition('PutSchema', '_DeclaredSchema'),
+      this.schemaAdmin.putSchema.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/schemas/:id',
+        action: ConduitRouteActions.PATCH,
+        description: `Updates schema settings (conduitOptions) only. Does not modify fields. Use PUT /database/schemas/:id for field updates.`,
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+        bodyParams: {
           conduitOptions: ConduitOptions,
         },
       },
