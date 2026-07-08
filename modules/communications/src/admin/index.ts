@@ -26,11 +26,13 @@ import { EmailService } from '../services/email.service.js';
 import { PushService } from '../services/push.service.js';
 import { SmsService } from '../services/sms.service.js';
 import { OrchestratorService } from '../services/orchestrator.service.js';
+import { CommunicationTemplateService } from '../services/communication-template.service.js';
 import {
   EmailTemplate,
   EmailRecord,
   NotificationToken,
   SmsRecord,
+  CommunicationTemplate,
 } from '../models/index.js';
 import { getHandleBarsValues } from '../providers/email/utils/index.js';
 import { Template } from '../providers/email/interfaces/Template.js';
@@ -41,6 +43,7 @@ export class AdminHandlers {
   private pushService: PushService;
   private smsService: SmsService;
   private orchestratorService: OrchestratorService;
+  private templateService: CommunicationTemplateService;
   private readonly routingManager: RoutingManager;
 
   constructor(
@@ -56,11 +59,13 @@ export class AdminHandlers {
     pushService: PushService,
     smsService: SmsService,
     orchestratorService: OrchestratorService,
+    templateService: CommunicationTemplateService,
   ) {
     this.emailService = emailService;
     this.pushService = pushService;
     this.smsService = smsService;
     this.orchestratorService = orchestratorService;
+    this.templateService = templateService;
   }
 
   // Email admin routes
@@ -127,7 +132,7 @@ export class AdminHandlers {
   async sendToMultipleChannels(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
-    const { channels, strategy, recipient, subject, body, variables } =
+    const { channels, strategy, recipient, subject, body, variables, templateName } =
       call.request.params;
 
     const sendParams = {
@@ -137,6 +142,7 @@ export class AdminHandlers {
       subject,
       body,
       variables,
+      templateName,
     };
 
     const result = await this.orchestratorService
@@ -153,7 +159,8 @@ export class AdminHandlers {
   }
 
   async sendWithFallback(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { fallbackChain, recipient, subject, body, variables } = call.request.params;
+    const { fallbackChain, recipient, subject, body, variables, templateName } =
+      call.request.params;
 
     const sendParams = {
       fallbackChain: fallbackChain.map((step: { channel: string; timeout?: number }) => ({
@@ -164,6 +171,7 @@ export class AdminHandlers {
       subject,
       body,
       variables,
+      templateName,
     };
 
     const result = await this.orchestratorService
@@ -177,6 +185,145 @@ export class AdminHandlers {
       messageId: result.messageId,
       attempts: result.attempts,
     };
+  }
+
+  // Unified communication template management
+  async sendCommunication(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { channel, templateName, recipient, subject, body, variables, sender } =
+      call.request.params;
+
+    const result = await this.orchestratorService
+      .sendToChannel(channel as 'email' | 'push' | 'sms', {
+        recipient,
+        subject,
+        body,
+        variables,
+        sender,
+        templateName,
+      })
+      .catch(e => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+
+    return result;
+  }
+
+  async getCommunicationTemplates(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    let query: Query<CommunicationTemplate> = {};
+    let identifier;
+    if (!isNil(call.request.params.search)) {
+      if (call.request.params.search.match(/^[a-fA-F\d]{24}$/)) {
+        query = { _id: call.request.params.search };
+      } else {
+        identifier = escapeStringRegexp(call.request.params.search);
+        query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
+      }
+    }
+
+    const { documents, count } = await this.templateService
+      .list(query, { skip, limit, sort })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+
+    return { templateDocuments: documents, count };
+  }
+
+  async getCommunicationTemplate(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const template = await this.templateService
+      .getById(call.request.urlParams.id)
+      .catch((e: Error) => {
+        if (e.message.includes('not exist')) {
+          throw new GrpcError(status.NOT_FOUND, e.message);
+        }
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    return { template };
+  }
+
+  async createCommunicationTemplate(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { name, channels, email, push, sms, variables, templateDescription } =
+      call.request.params;
+    const template = await this.templateService
+      .create({
+        name,
+        channels,
+        email,
+        push,
+        sms,
+        variables,
+        summary: templateDescription,
+      })
+      .catch((e: Error) => {
+        if (e.message.includes('already exists')) {
+          throw new GrpcError(status.ALREADY_EXISTS, e.message);
+        }
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    return { template };
+  }
+
+  async patchCommunicationTemplate(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const bodyParams = { ...call.request.bodyParams };
+    if (bodyParams.templateDescription !== undefined) {
+      bodyParams.summary = bodyParams.templateDescription;
+      delete bodyParams.templateDescription;
+    }
+    const template = await this.templateService
+      .update(call.request.urlParams.id, bodyParams)
+      .catch((e: Error) => {
+        if (e.message.includes('not exist')) {
+          throw new GrpcError(status.NOT_FOUND, e.message);
+        }
+        if (e.message.includes('already exists')) {
+          throw new GrpcError(status.ALREADY_EXISTS, e.message);
+        }
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    return { template };
+  }
+
+  async deleteCommunicationTemplate(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    return await this.templateService
+      .delete(call.request.urlParams.id)
+      .catch((e: Error) => {
+        if (e.message.includes('not exist')) {
+          throw new GrpcError(status.NOT_FOUND, e.message);
+        }
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+  }
+
+  async migrateFromEmailTemplate(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { emailTemplateId, dryRun, skipExisting, deleteSource } = call.request.params;
+    return await this.templateService
+      .migrateFromEmailTemplate({
+        emailTemplateId,
+        dryRun,
+        skipExisting,
+        deleteSource,
+      })
+      .catch((e: Error) => {
+        if (e.message.includes('already exists')) {
+          throw new GrpcError(status.ALREADY_EXISTS, e.message);
+        }
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
   }
 
   // Email template management methods
@@ -224,7 +371,6 @@ export class AdminHandlers {
 
     if (externalManaged) {
       if (isNil(_id)) {
-        //that means that we want to create an external managed template
         const [err, template] = await to(
           this.emailService.createExternalTemplate({
             name,
@@ -240,6 +386,15 @@ export class AdminHandlers {
         externalId = _id;
       }
     }
+
+    const unifiedCollision = await CommunicationTemplate.getInstance().findOne({ name });
+    if (!isNil(unifiedCollision)) {
+      throw new GrpcError(
+        status.ALREADY_EXISTS,
+        `A unified template named '${name}' already exists`,
+      );
+    }
+
     const newTemplate = await EmailTemplate.getInstance()
       .create({
         name,
@@ -594,6 +749,7 @@ export class AdminHandlers {
           subject: ConduitString.Optional,
           body: ConduitString.Optional,
           variables: ConduitJson.Optional,
+          templateName: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('SendToMultipleChannels', 'Object'),
@@ -611,10 +767,140 @@ export class AdminHandlers {
           subject: ConduitString.Optional,
           body: ConduitString.Optional,
           variables: ConduitJson.Optional,
+          templateName: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('SendWithFallback', 'Object'),
       this.sendWithFallback.bind(this),
+    );
+
+    this.routingManager.route(
+      {
+        path: '/communications/send',
+        action: ConduitRouteActions.POST,
+        description: 'Sends a message on a single channel.',
+        bodyParams: {
+          channel: ConduitString.Required,
+          recipient: ConduitString.Required,
+          templateName: ConduitString.Optional,
+          subject: ConduitString.Optional,
+          body: ConduitString.Optional,
+          variables: ConduitJson.Optional,
+          sender: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('SendCommunication', 'Object'),
+      this.sendCommunication.bind(this),
+    );
+
+    this.routingManager.route(
+      {
+        path: '/communications/templates',
+        action: ConduitRouteActions.GET,
+        description: 'Get unified communication templates',
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+          search: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetCommunicationTemplates', {
+        templateDocuments: ['CommunicationTemplate'],
+        count: ConduitNumber.Required,
+      }),
+      this.getCommunicationTemplates.bind(this),
+    );
+
+    this.routingManager.route(
+      {
+        path: '/communications/templates',
+        action: ConduitRouteActions.POST,
+        description: 'Create unified communication template',
+        bodyParams: {
+          name: ConduitString.Required,
+          channels: { type: [TYPE.String], required: true },
+          email: ConduitJson.Optional,
+          push: ConduitJson.Optional,
+          sms: ConduitJson.Optional,
+          variables: { type: [TYPE.String], required: false },
+          templateDescription: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('CreateCommunicationTemplate', {
+        template: 'CommunicationTemplate',
+      }),
+      this.createCommunicationTemplate.bind(this),
+    );
+
+    this.routingManager.route(
+      {
+        path: '/communications/templates/migrate-from-email',
+        action: ConduitRouteActions.POST,
+        description: 'Migrate email templates to unified communication templates',
+        bodyParams: {
+          emailTemplateId: ConduitString.Optional,
+          dryRun: ConduitBoolean.Optional,
+          skipExisting: ConduitBoolean.Optional,
+          deleteSource: ConduitBoolean.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('MigrateFromEmailTemplate', 'Object'),
+      this.migrateFromEmailTemplate.bind(this),
+    );
+
+    this.routingManager.route(
+      {
+        path: '/communications/templates/:id',
+        action: ConduitRouteActions.GET,
+        description: 'Get unified communication template by id',
+        urlParams: {
+          id: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetCommunicationTemplate', {
+        template: 'CommunicationTemplate',
+      }),
+      this.getCommunicationTemplate.bind(this),
+    );
+
+    this.routingManager.route(
+      {
+        path: '/communications/templates/:id',
+        action: ConduitRouteActions.PATCH,
+        description: 'Update unified communication template',
+        urlParams: {
+          id: ConduitString.Required,
+        },
+        bodyParams: {
+          name: ConduitString.Optional,
+          channels: { type: [TYPE.String], required: false },
+          email: ConduitJson.Optional,
+          push: ConduitJson.Optional,
+          sms: ConduitJson.Optional,
+          variables: { type: [TYPE.String], required: false },
+          templateDescription: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('PatchCommunicationTemplate', {
+        template: 'CommunicationTemplate',
+      }),
+      this.patchCommunicationTemplate.bind(this),
+    );
+
+    this.routingManager.route(
+      {
+        path: '/communications/templates/:id',
+        action: ConduitRouteActions.DELETE,
+        description: 'Delete unified communication template',
+        urlParams: {
+          id: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('DeleteCommunicationTemplate', {
+        deleted: ConduitBoolean.Required,
+      }),
+      this.deleteCommunicationTemplate.bind(this),
     );
 
     // Additional Email routes

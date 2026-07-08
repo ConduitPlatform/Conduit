@@ -50,6 +50,13 @@ export default {
       help: 'Total number of failed communications',
     },
   },
+  communication_templates_total: {
+    type: MetricType.Gauge,
+    config: {
+      name: 'communication_templates_total',
+      help: 'Total number of unified communication templates',
+    },
+  },
   fallback_chain_used_total: {
     type: MetricType.Counter,
     config: {
