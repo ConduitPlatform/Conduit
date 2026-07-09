@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.29](https://github.com/ConduitPlatform/Conduit/compare/v0.16.28...v0.16.29) (2026-07-09)
+
+
+### Bug Fixes
+
+* **grpc-sdk:** make chat sendMessage files optional at SDK boundary ([#1548](https://github.com/ConduitPlatform/Conduit/issues/1548)) ([7316b85](https://github.com/ConduitPlatform/Conduit/commit/7316b85a1d7328f0e4b62e205d06ec7f08b34d65))
+
 ### [0.16.28](https://github.com/ConduitPlatform/Conduit/compare/v0.16.27...v0.16.28) (2026-07-08)
 
 
