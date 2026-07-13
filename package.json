@@ -19,19 +19,19 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@commitlint/cli": "^21.1.0",
-    "@commitlint/config-conventional": "^21.1.0",
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
     "@eslint/js": "^10.0.1",
     "copyfiles": "^2.4.1",
     "cz-conventional-changelog": "^3.3.0",
-    "eslint": "^10.6.0",
+    "eslint": "^10.7.0",
     "globals": "^17.7.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
-    "prettier": "^3.9.1",
+    "prettier": "^3.9.5",
     "standard-version": "^9.5.0",
-    "turbo": "^2.10.0",
-    "typescript-eslint": "^8.62.0"
+    "turbo": "^2.10.4",
+    "typescript-eslint": "^8.63.0"
   },
   "config": {
     "commitizen": {
