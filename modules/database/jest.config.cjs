@@ -11,5 +11,7 @@ module.exports = {
       { useESM: true, tsconfig: '<rootDir>/tsconfig.jest.json' },
     ],
   },
+  transformIgnorePatterns: ['/node_modules/(?!(uuid)/)'],
   testMatch: ['<rootDir>/src/**/__tests__/**/*.test.ts'],
+  testTimeout: 120_000,
 };
