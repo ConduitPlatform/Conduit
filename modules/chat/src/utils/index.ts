@@ -63,8 +63,16 @@ export async function sendInvitations(
     );
     if (sendEmail) {
       const result = { invitationToken, hostUrl: url };
-      const acceptLink = `${result.hostUrl}/hook/chat/invitations/accept/${result.invitationToken.token}`;
-      const declineLink = `${result.hostUrl}/hook/chat/invitations/decline/${result.invitationToken.token}`;
+      const acceptLink = buildInvitationHookUrl(
+        result.hostUrl,
+        'accept',
+        result.invitationToken.token,
+      );
+      const declineLink = buildInvitationHookUrl(
+        result.hostUrl,
+        'decline',
+        result.invitationToken.token,
+      );
       const roomName = room.name;
       const userName = sender.email;
       await grpcSdk
@@ -93,6 +101,14 @@ export async function sendInvitations(
     }
   }
   return 'Invitations sent';
+}
+
+export function buildInvitationHookUrl(
+  hostUrl: string,
+  answer: 'accept' | 'decline',
+  invitationToken: string,
+) {
+  return `${hostUrl.replace(/\/$/, '')}/hook/chat/invitations/${answer}/${invitationToken}`;
 }
 
 export function populateArray(pop: string | string[] | undefined) {
