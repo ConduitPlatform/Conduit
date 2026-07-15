@@ -20,7 +20,7 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@bufbuild/protobuf": "^2.12.0",
+    "@bufbuild/protobuf": "^2.12.1",
     "@conduitplatform/grpc-sdk": "workspace:*",
     "@conduitplatform/hermes": "workspace:*",
     "@conduitplatform/module-tools": "workspace:*",
@@ -31,7 +31,7 @@
     "convict": "^6.2.5",
     "cors": "^2.8.6",
     "deepdash-es": "^5.3.9",
-    "fs-extra": "^11.3.5",
+    "fs-extra": "^11.3.6",
     "graphql-tag": "^2.12.7",
     "helmet": "8.2.0",
     "ioredis": "^5.11.1",
