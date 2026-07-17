@@ -65,12 +65,8 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     this.schemaLevelReadPreference = schemaRp;
     const mongooseSchema = new Schema(cloneDeep(schema.fields as Indexable), {
       ...mo,
-      ...(isView
-        ? {
-            autoCreate: false,
-            autoIndex: false,
-          }
-        : {}),
+      autoCreate: false,
+      autoIndex: false,
     });
     this.model = mongoose.model(cloneDeep(schema.name), mongooseSchema);
   }
