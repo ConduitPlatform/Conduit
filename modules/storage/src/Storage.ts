@@ -221,6 +221,9 @@ export default class Storage extends ManagedModule<Config> {
       this._storageAuthzResourceDispose?.();
       this._storageAuthzResourceDispose = null;
       this.disposeDeclaredPeerWatches();
+      if (this.storageProvider?.dispose) {
+        await this.storageProvider.dispose();
+      }
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       this.registerDeclaredPeerWatches();
@@ -238,6 +241,9 @@ export default class Storage extends ManagedModule<Config> {
       } else {
         this._storageAuthzResourceDispose?.();
         this._storageAuthzResourceDispose = null;
+      }
+      if (this.storageProvider?.dispose) {
+        await this.storageProvider.dispose();
       }
       this.storageProvider = createStorageProvider(provider, {
         local,

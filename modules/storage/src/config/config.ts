@@ -77,6 +77,16 @@ export default {
       format: 'String',
       default: '/var/tmp',
     },
+    httpPort: {
+      format: 'Number',
+      default: 3100,
+      doc: 'Port for the local storage HTTP file server (serves uploads/downloads)',
+    },
+    httpBaseUrl: {
+      format: 'String',
+      default: 'http://localhost:3100',
+      doc: 'Base URL for local storage file URLs (override for Docker/CI)',
+    },
   },
   suffixOnNameConflict: {
     format: 'Boolean',

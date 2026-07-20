@@ -58,4 +58,9 @@ export interface IStorageProvider {
   getPublicUrl(fileName: string, containerIsPublic?: boolean): Promise<string | Error>;
 
   getUploadUrl(fileName: string): Promise<string | Error>;
+
+  /**
+   * Releases provider resources (e.g. local HTTP file server).
+   */
+  dispose?(): Promise<void>;
 }
