@@ -9,6 +9,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import appleParameters from '../apple/apple.json' with { type: 'json' };
 import {
+  AppleClientCredentials,
   AppleOAuth2Settings,
   AppleProviderConfig,
   ConnectionParams,
@@ -22,8 +23,7 @@ import { Token } from '../../../models/index.js';
 import { status } from '@grpc/grpc-js';
 import moment from 'moment';
 import jwksRsa from 'jwks-rsa';
-
-import { validateStateToken } from '../utils/index.js';
+import { validateStateToken, resolveAppleOAuthClient } from '../utils/index.js';
 import {
   ConduitJson,
   ConduitString,
@@ -49,7 +49,8 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       !authConfig['apple'] ||
       !authConfig['apple'].clientId ||
       !authConfig['apple'].privateKey ||
-      !authConfig['apple'].teamId
+      !authConfig['apple'].teamId ||
+      !authConfig['apple'].keyId
     ) {
       ConduitGrpcSdk.Logger.log(`Apple authentication not available`);
       return (this.initialized = false);
@@ -66,9 +67,32 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     return scopes.join(' ');
   }
 
+  protected getInitRouteQueryParams() {
+    return {
+      ...super.getInitRouteQueryParams(),
+      oauthClientId: ConduitString.Optional,
+    };
+  }
+
+  protected getInitNativeRouteQueryParams() {
+    return {
+      ...super.getInitNativeRouteQueryParams(),
+      oauthClientId: ConduitString.Optional,
+    };
+  }
+
+  protected resolveOAuthClientId(call: ParsedRouterRequest): string {
+    return resolveAppleOAuthClient(call.request.params?.oauthClientId).clientId;
+  }
+
+  protected getOAuthStateExtras(call: ParsedRouterRequest): Record<string, unknown> {
+    return { oauthClientId: call.request.params?.oauthClientId };
+  }
+
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
     const stateToken = await validateStateToken(params.state);
+    const providerClient = resolveAppleOAuthClient(stateToken.data.oauthClientId);
     const decoded_id_token = jwt.decode(params.id_token, { complete: true });
 
     const publicKeys = await axios.get('https://appleid.apple.com/auth/keys');
@@ -76,33 +100,14 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       (key: Indexable) => key.kid === decoded_id_token!.header.kid,
     );
     const applePublicKey = await this.generateApplePublicKey(publicKey.kid);
-    this.verifyIdentityToken(applePublicKey, params.id_token);
+    this.verifyIdentityToken(applePublicKey, params.id_token, providerClient.clientId);
 
-    const apple_private_key = this.settings.privateKey;
+    const apple_client_secret = this.buildAppleClientSecret(providerClient);
 
-    const jwtHeader = {
-      alg: 'ES256',
-      kid: this.settings.keyId,
-    };
-
-    const jwtPayload = {
-      iss: this.settings.teamId,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 86400,
-      aud: 'https://appleid.apple.com',
-      sub: this.settings.clientId,
-    };
-
-    const apple_client_secret = jwt.sign(jwtPayload, apple_private_key, {
-      algorithm: 'ES256',
-      header: jwtHeader,
-    });
-
-    const clientId = this.settings.clientId;
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     const config = ConfigController.getInstance().config;
     const tokenBody = new URLSearchParams();
-    tokenBody.set('client_id', clientId);
+    tokenBody.set('client_id', providerClient.clientId);
     tokenBody.set('client_secret', apple_client_secret);
     tokenBody.set('code', params.code);
     if (this.settings.grantType) {
@@ -148,7 +153,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
 
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
-      this.settings.finalRedirect;
+      providerClient.redirect_uri;
     const conduitClientId = stateToken.data.clientId;
 
     return TokenProvider.getInstance()!.provideUserTokens(
@@ -164,6 +169,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   async nativeAuthorize(call: ParsedRouterRequest) {
     const params = call.request.bodyParams;
     const stateToken = await validateStateToken(params.state);
+    const providerClient = resolveAppleOAuthClient(stateToken.data.oauthClientId);
     const decoded_id_token = jwt.decode(params.id_token, { complete: true });
 
     const publicKeys = await axios.get('https://appleid.apple.com/auth/keys');
@@ -171,32 +177,13 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       (key: Indexable) => key.kid === decoded_id_token!.header.kid,
     );
     const applePublicKey = await this.generateApplePublicKey(publicKey.kid);
-    this.verifyIdentityToken(applePublicKey, params.id_token);
+    this.verifyIdentityToken(applePublicKey, params.id_token, providerClient.clientId);
 
-    const apple_private_key = this.settings.privateKey;
+    const apple_client_secret = this.buildAppleClientSecret(providerClient);
 
-    const jwtHeader = {
-      alg: 'ES256',
-      kid: this.settings.keyId,
-    };
-
-    const jwtPayload = {
-      iss: this.settings.teamId,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 86400,
-      aud: 'https://appleid.apple.com',
-      sub: this.settings.clientId,
-    };
-
-    const apple_client_secret = jwt.sign(jwtPayload, apple_private_key, {
-      algorithm: 'ES256',
-      header: jwtHeader,
-    });
-
-    const clientId = this.settings.clientId;
     const config = ConfigController.getInstance().config;
     const nativeTokenBody = new URLSearchParams();
-    nativeTokenBody.set('client_id', clientId);
+    nativeTokenBody.set('client_id', providerClient.clientId);
     nativeTokenBody.set('client_secret', apple_client_secret);
     nativeTokenBody.set('code', params.code);
     if (this.settings.grantType) {
@@ -277,7 +264,31 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     return key.getPublicKey();
   }
 
-  private verifyIdentityToken(applePublicKey: string, id_token: string) {
+  private buildAppleClientSecret(providerClient: AppleClientCredentials): string {
+    const jwtHeader = {
+      alg: 'ES256',
+      kid: providerClient.keyId,
+    };
+
+    const jwtPayload = {
+      iss: providerClient.teamId,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 86400,
+      aud: 'https://appleid.apple.com',
+      sub: providerClient.clientId,
+    };
+
+    return jwt.sign(jwtPayload, providerClient.privateKey, {
+      algorithm: 'ES256',
+      header: jwtHeader,
+    });
+  }
+
+  private verifyIdentityToken(
+    applePublicKey: string,
+    id_token: string,
+    expectedClientId: string,
+  ) {
     const decoded = jwt.decode(id_token, { complete: true }) as Jwt;
     const payload = decoded.payload as JwtPayload;
     const header = decoded.header as JwtHeader;
@@ -291,7 +302,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     if (payload.iss !== 'https://appleid.apple.com') {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid iss');
     }
-    if (payload.aud !== this.settings.clientId) {
+    if (payload.aud !== expectedClientId) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid aud');
     }
 
