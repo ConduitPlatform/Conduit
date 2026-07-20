@@ -5,18 +5,22 @@ export class StorageParamAdapter {
   constructor() {}
 
   getFileResponse(response: UnparsedRouterResponse): FileResponse {
+    const file = response as Indexable;
     return {
-      id: (response as Indexable)._id,
-      url: (response as Indexable).url,
-      name: (response as Indexable).name,
+      id: file._id,
+      url: file.url ?? '',
+      uri: file.uri ?? '',
+      name: file.name,
     };
   }
 
   getFileByUrlResponse(response: UnparsedRouterResponse): FileByUrlResponse {
+    const file = (response as Indexable).file as Indexable;
     return {
-      id: (response as Indexable).file._id,
-      fileUrl: (response as Indexable).file.url,
-      name: (response as Indexable).file.name,
+      id: file._id,
+      fileUrl: file.url ?? file.uri ?? '',
+      uri: file.uri ?? '',
+      name: file.name,
       uploadUrl: (response as Indexable).url,
     };
   }

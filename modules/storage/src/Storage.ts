@@ -17,6 +17,7 @@ import { status } from '@grpc/grpc-js';
 import { isEmpty, isNil } from 'lodash-es';
 import { runMigrations } from './migrations/index.js';
 import { migratePublicContainers } from './migrations/publicContainerMigration.js';
+import { migrateFileUriReferences } from './migrations/fileUriMigration.js';
 import {
   CdnConfiguration,
   cdnConfigsAreEqual,
@@ -82,6 +83,7 @@ export default class Storage extends ManagedModule<Config> {
   private enableAuthRoutes: boolean = false;
   private storageParamAdapter: StorageParamAdapter;
   private publicContainerMigrationRan: boolean = false;
+  private fileUriMigrationRan: boolean = false;
   private previousCdnConfig: CdnConfiguration = {};
   private _storageAuthzResourceDispose: (() => void) | null = null;
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
@@ -252,6 +254,10 @@ export default class Storage extends ManagedModule<Config> {
       if (!this.publicContainerMigrationRan && provider !== 'local') {
         this.publicContainerMigrationRan = true;
         await migratePublicContainers(this.grpcSdk, this.storageProvider);
+      }
+      if (!this.fileUriMigrationRan) {
+        this.fileUriMigrationRan = true;
+        await migrateFileUriReferences();
       }
       // Detect CDN config changes and run migration if needed (order-independent comparison)
       const currentCdnConfig = (ConfigController.getInstance().config.cdnConfiguration ??
