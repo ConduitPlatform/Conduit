@@ -7,7 +7,6 @@ import {
   createReadStream,
   createWriteStream,
   existsSync,
-  mkdir,
   mkdirSync,
   readFile,
   rmSync,
@@ -171,6 +170,7 @@ export class LocalStorage implements IStorageProvider {
     if (!this._httpServer) return;
     const server = this._httpServer;
     this._httpServer = null;
+    server.closeAllConnections();
     await new Promise<void>(res => {
       server.close(() => res());
     });
@@ -231,8 +231,10 @@ export class LocalStorage implements IStorageProvider {
     if (fileName !== self._activeContainer) {
       path += fileName;
     }
+    const resolvedPath = resolve(path);
+    mkdirSync(dirname(resolvedPath), { recursive: true });
     return new Promise(function (res, reject) {
-      writeFile(resolve(path), data, function (err) {
+      writeFile(resolvedPath, data, function (err) {
         if (err) reject(err);
         else {
           res(true);
@@ -243,25 +245,15 @@ export class LocalStorage implements IStorageProvider {
 
   async createFolder(name: string): Promise<boolean | Error> {
     const self = this;
-    return new Promise(async function (res, reject) {
-      let path = self._storagePath + '/' + self._activeContainer;
-      const containerExists = await self.folderExists(self._activeContainer);
-      if (!containerExists) {
-        mkdir(path, function (err) {
-          if (err) reject(err);
-        });
-      }
-      if (self._activeContainer !== name) {
-        path = self._storagePath + '/' + self._activeContainer + '/' + name;
-        mkdir(resolve(path), function (err) {
-          if (err) reject(err);
-          else res(true);
-        });
-      }
-      ConduitGrpcSdk.Metrics?.increment('folders_total');
-      ConduitGrpcSdk.Metrics?.increment('containers_total');
-      res(true);
-    });
+    let path = self._storagePath + '/' + self._activeContainer;
+    mkdirSync(resolve(path), { recursive: true });
+    if (self._activeContainer !== name) {
+      path = self._storagePath + '/' + self._activeContainer + '/' + name;
+      mkdirSync(resolve(path), { recursive: true });
+    }
+    ConduitGrpcSdk.Metrics?.increment('folders_total');
+    ConduitGrpcSdk.Metrics?.increment('containers_total');
+    return true;
   }
 
   folderExists(name: string): Promise<boolean | Error> {
