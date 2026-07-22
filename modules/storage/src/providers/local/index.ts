@@ -66,7 +66,7 @@ export class LocalStorage implements IStorageProvider {
     this._storagePath = this._rootStoragePath;
     this._httpPort = options?.local?.httpPort ?? 3100;
     this._httpBaseUrl =
-      options?.local?.httpBaseUrl ?? `http://localhost:${this._httpPort}`;
+      options?.local?.httpBaseUrl || `http://localhost:${this._httpPort}`;
     if (this._storagePath !== '') {
       try {
         accessSync(this._storagePath, constants.R_OK | constants.W_OK);
@@ -136,7 +136,12 @@ export class LocalStorage implements IStorageProvider {
         }
         createReadStream(filePath).pipe(res);
       } else if (req.method === 'PUT') {
-        mkdirSync(dirname(filePath), { recursive: true });
+        try {
+          mkdirSync(dirname(filePath), { recursive: true });
+        } catch {
+          res.writeHead(500);
+          return res.end('Failed to create directory');
+        }
         const writeStream = createWriteStream(filePath);
         req.pipe(writeStream);
         writeStream.on('finish', () => {
@@ -177,6 +182,9 @@ export class LocalStorage implements IStorageProvider {
   }
 
   getUploadUrl(fileName: string): Promise<string | Error> {
+    if (!this._httpServer) {
+      return Promise.reject(new Error('Local storage server is not running'));
+    }
     return Promise.resolve(`${this._httpBaseUrl}/${this._activeContainer}/${fileName}`);
   }
 
@@ -304,10 +312,16 @@ export class LocalStorage implements IStorageProvider {
   }
 
   getPublicUrl(fileName: string, _containerIsPublic?: boolean): Promise<string | Error> {
+    if (!this._httpServer) {
+      return Promise.reject(new Error('Local storage server is not running'));
+    }
     return Promise.resolve(`${this._httpBaseUrl}/${this._activeContainer}/${fileName}`);
   }
 
   getSignedUrl(fileName: string, options?: UrlOptions): Promise<string | Error> {
+    if (!this._httpServer) {
+      return Promise.reject(new Error('Local storage server is not running'));
+    }
     const params = new URLSearchParams();
     if (options?.download) params.set('download', 'true');
     if (options?.fileName) params.set('fileName', options.fileName);

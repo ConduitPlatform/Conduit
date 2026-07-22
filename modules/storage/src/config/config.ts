@@ -84,8 +84,8 @@ export default {
     },
     httpBaseUrl: {
       format: 'String',
-      default: 'http://localhost:3100',
-      doc: 'Base URL for local storage file URLs (override for Docker/CI)',
+      default: '',
+      doc: 'External base URL for local storage file URLs. Leave empty to auto-derive from httpPort (http://localhost:{httpPort}). Override when the storage server is behind a reverse proxy or running in Docker.',
     },
   },
   suffixOnNameConflict: {
