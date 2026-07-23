@@ -209,6 +209,14 @@ export default class Storage extends ManagedModule<Config> {
         config.aws.usePathStyle = false;
       }
     }
+    if (config.provider === 'local') {
+      const secret = config.local?.signingSecret?.trim() ?? '';
+      if (secret && !/^[0-9a-fA-F]{64}$/.test(secret)) {
+        throw new Error(
+          "local.signingSecret must be a 64-character hex string (32 bytes). Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+        );
+      }
+    }
     return config;
   }
 

@@ -90,7 +90,7 @@ export default {
     signingSecret: {
       format: 'String',
       default: '',
-      doc: 'Hex-encoded HMAC secret for signing file URLs. If empty, a random secret is generated on startup (URLs will not survive restarts).',
+      doc: 'Hex-encoded HMAC secret (64 hex chars / 32 bytes) for signing file URLs. Required for URLs to survive restarts — without it, a random secret is generated on startup and any public file URLs already stored in the database (sourceUrl/url) become invalid.',
     },
   },
   suffixOnNameConflict: {

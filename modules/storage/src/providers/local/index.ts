@@ -70,9 +70,9 @@ export class LocalStorage implements IStorageProvider {
     this._rootStoragePath = options && options.local ? options.local.storagePath : '';
     this._storagePath = this._rootStoragePath;
     this._httpPort = options?.local?.httpPort ?? 3100;
-    this._httpBaseUrl =
-      options?.local?.httpBaseUrl || `http://localhost:${this._httpPort}`;
-    const configSecret = options?.local?.signingSecret;
+    const rawBaseUrl = options?.local?.httpBaseUrl?.replace(/\/+$/, '') ?? '';
+    this._httpBaseUrl = rawBaseUrl || `http://localhost:${this._httpPort}`;
+    const configSecret = options?.local?.signingSecret?.trim();
     this._signingSecret = configSecret
       ? Buffer.from(configSecret, 'hex')
       : randomBytes(32);
@@ -156,7 +156,14 @@ export class LocalStorage implements IStorageProvider {
         if (disposition) {
           res.setHeader('Content-Disposition', disposition);
         }
-        createReadStream(filePath).pipe(res);
+        const stream = createReadStream(filePath);
+        stream.on('error', () => {
+          if (!res.headersSent) {
+            res.writeHead(500);
+          }
+          res.end();
+        });
+        stream.pipe(res);
       } else if (req.method === 'PUT') {
         try {
           mkdirSync(dirname(filePath), { recursive: true });
