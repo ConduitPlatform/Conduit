@@ -13,9 +13,11 @@ import {
   unlink,
   writeFile,
 } from 'fs';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
 import { dirname, extname, resolve, sep } from 'path';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { SIGNED_URL_EXPIRY } from '../../constants/expiry.js';
 import { constructDispositionHeader } from '../../utils/index.js';
 
 const MIME_TYPES: Record<string, string> = {
@@ -59,6 +61,7 @@ export class LocalStorage implements IStorageProvider {
   private _httpPort: number;
   private _httpBaseUrl: string;
   private _httpServer: Server | null = null;
+  private _signingSecret: Buffer;
 
   constructor(options?: StorageConfig) {
     this._activeContainer = '';
@@ -67,6 +70,7 @@ export class LocalStorage implements IStorageProvider {
     this._httpPort = options?.local?.httpPort ?? 3100;
     this._httpBaseUrl =
       options?.local?.httpBaseUrl || `http://localhost:${this._httpPort}`;
+    this._signingSecret = randomBytes(32);
     if (this._storagePath !== '') {
       try {
         accessSync(this._storagePath, constants.R_OK | constants.W_OK);
@@ -116,6 +120,19 @@ export class LocalStorage implements IStorageProvider {
       if (!relativePath || !filePath.startsWith(rootPath + sep)) {
         res.writeHead(403);
         return res.end('Forbidden');
+      }
+
+      const sig = url.searchParams.get('sig');
+      const expires = url.searchParams.get('expires');
+      const hasSig = sig !== null && expires !== null;
+
+      if (req.method === 'PUT' && !hasSig) {
+        res.writeHead(403);
+        return res.end('Signature required');
+      }
+      if (hasSig && !this.verifyRequest(req.method!, relativePath, sig!, expires!)) {
+        res.writeHead(403);
+        return res.end('Invalid or expired signature');
       }
 
       if (req.method === 'GET') {
@@ -171,6 +188,35 @@ export class LocalStorage implements IStorageProvider {
     });
   }
 
+  private signUrl(
+    relativePath: string,
+    method: 'GET' | 'PUT',
+    extraParams?: URLSearchParams,
+  ): string {
+    const expires = Date.now() + SIGNED_URL_EXPIRY;
+    const payload = `${method}:${relativePath}:${expires}`;
+    const sig = createHmac('sha256', this._signingSecret).update(payload).digest('hex');
+    const params = extraParams ?? new URLSearchParams();
+    params.set('expires', expires.toString());
+    params.set('sig', sig);
+    return `${this._httpBaseUrl}/${relativePath}?${params.toString()}`;
+  }
+
+  private verifyRequest(
+    method: string,
+    relativePath: string,
+    sig: string,
+    expires: string,
+  ): boolean {
+    const expiresNum = Number(expires);
+    if (isNaN(expiresNum) || Date.now() > expiresNum) return false;
+    const payload = `${method}:${relativePath}:${expires}`;
+    const expected = createHmac('sha256', this._signingSecret).update(payload).digest();
+    const provided = Buffer.from(sig, 'hex');
+    if (expected.length !== provided.length) return false;
+    return timingSafeEqual(expected, provided);
+  }
+
   async dispose(): Promise<void> {
     if (!this._httpServer) return;
     const server = this._httpServer;
@@ -185,7 +231,8 @@ export class LocalStorage implements IStorageProvider {
     if (!this._httpServer) {
       return Promise.reject(new Error('Local storage server is not running'));
     }
-    return Promise.resolve(`${this._httpBaseUrl}/${this._activeContainer}/${fileName}`);
+    const relativePath = `${this._activeContainer}/${fileName}`;
+    return Promise.resolve(this.signUrl(relativePath, 'PUT'));
   }
 
   deleteContainer(name: string): Promise<boolean | Error> {
@@ -322,13 +369,11 @@ export class LocalStorage implements IStorageProvider {
     if (!this._httpServer) {
       return Promise.reject(new Error('Local storage server is not running'));
     }
-    const params = new URLSearchParams();
-    if (options?.download) params.set('download', 'true');
-    if (options?.fileName) params.set('fileName', options.fileName);
-    const query = params.toString() ? `?${params.toString()}` : '';
-    return Promise.resolve(
-      `${this._httpBaseUrl}/${this._activeContainer}/${fileName}${query}`,
-    );
+    const relativePath = `${this._activeContainer}/${fileName}`;
+    const extraParams = new URLSearchParams();
+    if (options?.download) extraParams.set('download', 'true');
+    if (options?.fileName) extraParams.set('fileName', options.fileName);
+    return Promise.resolve(this.signUrl(relativePath, 'GET', extraParams));
   }
 
   container(name: string): IStorageProvider {
