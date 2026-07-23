@@ -234,7 +234,7 @@ export class LocalStorage implements IStorageProvider {
   }
 
   getUploadUrl(fileName: string): Promise<string | Error> {
-    if (!this._httpServer) {
+    if (!this._httpServer?.listening) {
       return Promise.reject(new Error('Local storage server is not running'));
     }
     const relativePath = `${this._activeContainer}/${fileName}`;
@@ -365,7 +365,7 @@ export class LocalStorage implements IStorageProvider {
   }
 
   getPublicUrl(fileName: string, _containerIsPublic?: boolean): Promise<string | Error> {
-    if (!this._httpServer) {
+    if (!this._httpServer?.listening) {
       return Promise.reject(new Error('Local storage server is not running'));
     }
     const relativePath = `${this._activeContainer}/${fileName}`;
@@ -375,7 +375,7 @@ export class LocalStorage implements IStorageProvider {
   }
 
   getSignedUrl(fileName: string, options?: UrlOptions): Promise<string | Error> {
-    if (!this._httpServer) {
+    if (!this._httpServer?.listening) {
       return Promise.reject(new Error('Local storage server is not running'));
     }
     const relativePath = `${this._activeContainer}/${fileName}`;
