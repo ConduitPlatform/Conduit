@@ -26,5 +26,6 @@ export interface StorageConfig {
     storagePath: string;
     httpPort: number;
     httpBaseUrl: string;
+    signingSecret: string;
   };
 }

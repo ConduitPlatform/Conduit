@@ -55,6 +55,8 @@ function getMimeType(filePath: string): string {
 }
 
 export class LocalStorage implements IStorageProvider {
+  private static readonly PUBLIC_URL_EXPIRY = 1000 * 60 * 60 * 24 * 365 * 99;
+
   _rootStoragePath: string;
   _storagePath: string;
   _activeContainer: string;
@@ -70,7 +72,10 @@ export class LocalStorage implements IStorageProvider {
     this._httpPort = options?.local?.httpPort ?? 3100;
     this._httpBaseUrl =
       options?.local?.httpBaseUrl || `http://localhost:${this._httpPort}`;
-    this._signingSecret = randomBytes(32);
+    const configSecret = options?.local?.signingSecret;
+    this._signingSecret = configSecret
+      ? Buffer.from(configSecret, 'hex')
+      : randomBytes(32);
     if (this._storagePath !== '') {
       try {
         accessSync(this._storagePath, constants.R_OK | constants.W_OK);
@@ -126,11 +131,11 @@ export class LocalStorage implements IStorageProvider {
       const expires = url.searchParams.get('expires');
       const hasSig = sig !== null && expires !== null;
 
-      if (req.method === 'PUT' && !hasSig) {
+      if (!hasSig) {
         res.writeHead(403);
         return res.end('Signature required');
       }
-      if (hasSig && !this.verifyRequest(req.method!, relativePath, sig!, expires!)) {
+      if (!this.verifyRequest(req.method!, relativePath, sig!, expires!)) {
         res.writeHead(403);
         return res.end('Invalid or expired signature');
       }
@@ -192,8 +197,9 @@ export class LocalStorage implements IStorageProvider {
     relativePath: string,
     method: 'GET' | 'PUT',
     extraParams?: URLSearchParams,
+    expiryMs: number = SIGNED_URL_EXPIRY,
   ): string {
-    const expires = Date.now() + SIGNED_URL_EXPIRY;
+    const expires = Date.now() + expiryMs;
     const payload = `${method}:${relativePath}:${expires}`;
     const sig = createHmac('sha256', this._signingSecret).update(payload).digest('hex');
     const params = extraParams ?? new URLSearchParams();
@@ -362,7 +368,10 @@ export class LocalStorage implements IStorageProvider {
     if (!this._httpServer) {
       return Promise.reject(new Error('Local storage server is not running'));
     }
-    return Promise.resolve(`${this._httpBaseUrl}/${this._activeContainer}/${fileName}`);
+    const relativePath = `${this._activeContainer}/${fileName}`;
+    return Promise.resolve(
+      this.signUrl(relativePath, 'GET', undefined, LocalStorage.PUBLIC_URL_EXPIRY),
+    );
   }
 
   getSignedUrl(fileName: string, options?: UrlOptions): Promise<string | Error> {

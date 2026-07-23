@@ -87,6 +87,11 @@ export default {
       default: '',
       doc: 'External base URL for local storage file URLs. Leave empty to auto-derive from httpPort (http://localhost:{httpPort}). Override when the storage server is behind a reverse proxy or running in Docker.',
     },
+    signingSecret: {
+      format: 'String',
+      default: '',
+      doc: 'Hex-encoded HMAC secret for signing file URLs. If empty, a random secret is generated on startup (URLs will not survive restarts).',
+    },
   },
   suffixOnNameConflict: {
     format: 'Boolean',
