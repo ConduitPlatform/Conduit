@@ -51,6 +51,7 @@ import {
 import { StorageParamAdapter } from './adapter/StorageParamAdapter.js';
 import { FileResource } from './authz/index.js';
 import { AdminFileHandlers } from './admin/adminFile.js';
+import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -209,6 +210,18 @@ export default class Storage extends ManagedModule<Config> {
         config.aws.usePathStyle = false;
       }
     }
+    if (config.provider === 'local') {
+      const secret = config.local.signingSecret?.trim() ?? '';
+      if (!secret) {
+        config.local.signingSecret = randomBytes(32).toString('hex');
+      } else if (!/^[0-9a-fA-F]{64}$/.test(secret)) {
+        throw new Error(
+          "local.signingSecret must be a 64-character hex string (32 bytes). Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+        );
+      } else {
+        config.local.signingSecret = secret;
+      }
+    }
     return config;
   }
 
@@ -221,6 +234,9 @@ export default class Storage extends ManagedModule<Config> {
       this._storageAuthzResourceDispose?.();
       this._storageAuthzResourceDispose = null;
       this.disposeDeclaredPeerWatches();
+      if (this.storageProvider?.dispose) {
+        await this.storageProvider.dispose();
+      }
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       this.registerDeclaredPeerWatches();
@@ -238,6 +254,9 @@ export default class Storage extends ManagedModule<Config> {
       } else {
         this._storageAuthzResourceDispose?.();
         this._storageAuthzResourceDispose = null;
+      }
+      if (this.storageProvider?.dispose) {
+        await this.storageProvider.dispose();
       }
       this.storageProvider = createStorageProvider(provider, {
         local,

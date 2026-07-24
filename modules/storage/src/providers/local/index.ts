@@ -1,28 +1,98 @@
-import { IStorageProvider, StorageConfig } from '../../interfaces/index.js';
+import { IStorageProvider, StorageConfig, UrlOptions } from '../../interfaces/index.js';
 import {
   access,
   accessSync,
   chmod,
   constants,
+  createReadStream,
+  createWriteStream,
   existsSync,
-  mkdir,
+  lstatSync,
+  mkdirSync,
   readFile,
+  realpathSync,
   rmSync,
   unlink,
   writeFile,
 } from 'fs';
-import { resolve } from 'path';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
+import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
+import { basename, dirname, extname, resolve, sep } from 'path';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { SIGNED_URL_EXPIRY } from '../../constants/expiry.js';
+import { constructDispositionHeader } from '../../utils/index.js';
+
+const MIME_TYPES: Record<string, string> = {
+  '.txt': 'text/plain',
+  '.html': 'text/html',
+  '.htm': 'text/html',
+  '.css': 'text/css',
+  '.js': 'text/javascript',
+  '.json': 'application/json',
+  '.xml': 'application/xml',
+  '.csv': 'text/csv',
+  '.pdf': 'application/pdf',
+  '.zip': 'application/zip',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.bmp': 'image/bmp',
+  '.ico': 'image/x-icon',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mov': 'video/quicktime',
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xls': 'application/vnd.ms-excel',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+};
+
+function getMimeType(filePath: string): string {
+  return MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream';
+}
+
+function canonicalizeSignedExtraParams(params?: URLSearchParams): string {
+  const canonicalParams = new URLSearchParams();
+  for (const key of ['download', 'fileName'] as const) {
+    const value = params?.get(key);
+    if (value != null) {
+      canonicalParams.set(key, value);
+    }
+  }
+  return canonicalParams.toString();
+}
+
+function isWithinRoot(rootPath: string, targetPath: string): boolean {
+  return targetPath === rootPath || targetPath.startsWith(rootPath + sep);
+}
 
 export class LocalStorage implements IStorageProvider {
+  private static readonly PUBLIC_URL_EXPIRY = 1000 * 60 * 60 * 24 * 365 * 99;
+
   _rootStoragePath: string;
   _storagePath: string;
   _activeContainer: string;
+  private _httpPort: number;
+  private _httpBaseUrl: string;
+  private _httpServer: Server | null = null;
+  private _signingSecret: Buffer;
 
   constructor(options?: StorageConfig) {
     this._activeContainer = '';
     this._rootStoragePath = options && options.local ? options.local.storagePath : '';
     this._storagePath = this._rootStoragePath;
+    this._httpPort = options?.local?.httpPort ?? 3100;
+    const rawBaseUrl = options?.local?.httpBaseUrl?.replace(/\/+$/, '') ?? '';
+    this._httpBaseUrl = rawBaseUrl || `http://localhost:${this._httpPort}`;
+    const configSecret = options?.local?.signingSecret?.trim();
+    this._signingSecret = configSecret
+      ? Buffer.from(configSecret, 'hex')
+      : randomBytes(32);
     if (this._storagePath !== '') {
       try {
         accessSync(this._storagePath, constants.R_OK | constants.W_OK);
@@ -34,11 +104,230 @@ export class LocalStorage implements IStorageProvider {
           ConduitGrpcSdk.Logger.log('Permissions changed');
         });
       }
+      this.startHttpServer();
     }
   }
 
+  /**
+   * Serves uploads/downloads for URLs returned by getUploadUrl(), getSignedUrl()
+   * and getPublicUrl(). Mirrors the presigned-URL pattern used by cloud providers,
+   * but reads/writes directly against the local filesystem.
+   */
+  private startHttpServer(): void {
+    const rootPath = resolve(this._rootStoragePath);
+    const realRoot = realpathSync(rootPath);
+
+    this._httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-ms-blob-type');
+      res.setHeader('Access-Control-Max-Age', '86400');
+
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        return res.end();
+      }
+
+      let url: URL;
+      try {
+        url = new URL(req.url ?? '/', `http://localhost:${this._httpPort}`);
+      } catch {
+        res.writeHead(400);
+        return res.end('Bad request');
+      }
+
+      let relativePath: string;
+      try {
+        relativePath = decodeURIComponent(url.pathname).replace(/^\/+/, '');
+      } catch {
+        res.writeHead(400);
+        return res.end('Bad request');
+      }
+      const filePath = resolve(rootPath, relativePath);
+
+      // Path traversal protection: resolved path must stay within rootPath
+      if (!relativePath || !filePath.startsWith(rootPath + sep)) {
+        res.writeHead(403);
+        return res.end('Forbidden');
+      }
+
+      const sig = url.searchParams.get('sig');
+      const expires = url.searchParams.get('expires');
+      const hasSig = sig !== null && expires !== null;
+
+      if (!hasSig) {
+        res.writeHead(403);
+        return res.end('Signature required');
+      }
+      if (
+        !this.verifyRequest(req.method!, relativePath, sig!, expires!, url.searchParams)
+      ) {
+        res.writeHead(403);
+        return res.end('Invalid or expired signature');
+      }
+
+      if (req.method === 'GET') {
+        let realFilePath: string;
+        try {
+          realFilePath = realpathSync(filePath);
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+            res.writeHead(404);
+            return res.end('Not found');
+          }
+          res.writeHead(403);
+          return res.end('Forbidden');
+        }
+        if (!isWithinRoot(realRoot, realFilePath)) {
+          res.writeHead(403);
+          return res.end('Forbidden');
+        }
+        res.setHeader('Content-Type', getMimeType(filePath));
+        const download = url.searchParams.get('download') === 'true';
+        const fileNameParam = url.searchParams.get('fileName') ?? undefined;
+        if (fileNameParam && /["\r\n]/.test(fileNameParam)) {
+          res.writeHead(400);
+          return res.end('Bad request');
+        }
+        const baseName = relativePath.split('/').pop() ?? relativePath;
+        const disposition = constructDispositionHeader(baseName, {
+          download,
+          fileName: fileNameParam,
+        });
+        if (disposition) {
+          res.setHeader('Content-Disposition', disposition);
+        }
+        const stream = createReadStream(realFilePath);
+        stream.on('error', () => {
+          if (!res.headersSent) {
+            res.writeHead(500);
+          }
+          res.end();
+        });
+        stream.pipe(res);
+      } else if (req.method === 'PUT') {
+        const parentPath = dirname(filePath);
+        try {
+          mkdirSync(parentPath, { recursive: true });
+        } catch {
+          res.writeHead(500);
+          return res.end('Failed to create directory');
+        }
+        let realParentPath: string;
+        try {
+          realParentPath = realpathSync(parentPath);
+        } catch {
+          res.writeHead(403);
+          return res.end('Forbidden');
+        }
+        if (!isWithinRoot(realRoot, realParentPath)) {
+          res.writeHead(403);
+          return res.end('Forbidden');
+        }
+        const realTargetPath = resolve(realParentPath, basename(filePath));
+        if (!isWithinRoot(realRoot, realTargetPath)) {
+          res.writeHead(403);
+          return res.end('Forbidden');
+        }
+        let targetExists = false;
+        try {
+          lstatSync(realTargetPath);
+          targetExists = true;
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+            res.writeHead(403);
+            return res.end('Forbidden');
+          }
+        }
+        if (targetExists) {
+          try {
+            if (!isWithinRoot(realRoot, realpathSync(realTargetPath))) {
+              res.writeHead(403);
+              return res.end('Forbidden');
+            }
+          } catch {
+            res.writeHead(403);
+            return res.end('Forbidden');
+          }
+        }
+        const writeStream = createWriteStream(realTargetPath);
+        req.pipe(writeStream);
+        writeStream.on('finish', () => {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true }));
+        });
+        writeStream.on('error', err => {
+          res.writeHead(500);
+          res.end(err.message);
+        });
+      } else {
+        res.writeHead(405);
+        res.end('Method not allowed');
+      }
+    });
+
+    this._httpServer.on('error', err => {
+      ConduitGrpcSdk.Logger.error(
+        new Error(`[LocalStorage] HTTP file server error: ${(err as Error).message}`),
+      );
+    });
+
+    this._httpServer.listen(this._httpPort, () => {
+      ConduitGrpcSdk.Logger.log(
+        `[LocalStorage] HTTP file server listening on port ${this._httpPort}`,
+      );
+    });
+  }
+
+  private signUrl(
+    relativePath: string,
+    method: 'GET' | 'PUT',
+    extraParams?: URLSearchParams,
+    expiryMs: number = SIGNED_URL_EXPIRY,
+  ): string {
+    const expires = Date.now() + expiryMs;
+    const canonicalExtra = canonicalizeSignedExtraParams(extraParams);
+    const payload = `${method}:${relativePath}:${expires}:${canonicalExtra}`;
+    const sig = createHmac('sha256', this._signingSecret).update(payload).digest('hex');
+    const params = extraParams ?? new URLSearchParams();
+    params.set('expires', expires.toString());
+    params.set('sig', sig);
+    return `${this._httpBaseUrl}/${relativePath}?${params.toString()}`;
+  }
+
+  private verifyRequest(
+    method: string,
+    relativePath: string,
+    sig: string,
+    expires: string,
+    extraParams: URLSearchParams,
+  ): boolean {
+    const expiresNum = Number(expires);
+    if (isNaN(expiresNum) || Date.now() > expiresNum) return false;
+    const canonicalExtra = canonicalizeSignedExtraParams(extraParams);
+    const payload = `${method}:${relativePath}:${expires}:${canonicalExtra}`;
+    const expected = createHmac('sha256', this._signingSecret).update(payload).digest();
+    const provided = Buffer.from(sig, 'hex');
+    if (expected.length !== provided.length) return false;
+    return timingSafeEqual(expected, provided);
+  }
+
+  async dispose(): Promise<void> {
+    if (!this._httpServer) return;
+    const server = this._httpServer;
+    this._httpServer = null;
+    server.closeAllConnections();
+    await new Promise<void>(res => {
+      server.close(() => res());
+    });
+  }
+
   getUploadUrl(fileName: string): Promise<string | Error> {
-    throw new Error('Method not implemented.');
+    if (!this._httpServer?.listening) {
+      return Promise.reject(new Error('Local storage server is not running'));
+    }
+    const relativePath = `${this._activeContainer}/${fileName}`;
+    return Promise.resolve(this.signUrl(relativePath, 'PUT'));
   }
 
   deleteContainer(name: string): Promise<boolean | Error> {
@@ -85,15 +374,17 @@ export class LocalStorage implements IStorageProvider {
     });
   }
 
-  store(fileName: string, data: any): Promise<boolean | Error> {
+  store(fileName: string, data: any, _isPublic?: boolean): Promise<boolean | Error> {
     const self = this;
     let path = self._storagePath + '/' + self._activeContainer + '/';
 
     if (fileName !== self._activeContainer) {
       path += fileName;
     }
+    const resolvedPath = resolve(path);
+    mkdirSync(dirname(resolvedPath), { recursive: true });
     return new Promise(function (res, reject) {
-      writeFile(resolve(path), data, function (err) {
+      writeFile(resolvedPath, data, function (err) {
         if (err) reject(err);
         else {
           res(true);
@@ -104,25 +395,15 @@ export class LocalStorage implements IStorageProvider {
 
   async createFolder(name: string): Promise<boolean | Error> {
     const self = this;
-    return new Promise(async function (res, reject) {
-      let path = self._storagePath + '/' + self._activeContainer;
-      const containerExists = await self.folderExists(self._activeContainer);
-      if (!containerExists) {
-        mkdir(path, function (err) {
-          if (err) reject(err);
-        });
-      }
-      if (self._activeContainer !== name) {
-        path = self._storagePath + '/' + self._activeContainer + '/' + name;
-        mkdir(resolve(path), function (err) {
-          if (err) reject(err);
-          else res(true);
-        });
-      }
-      ConduitGrpcSdk.Metrics?.increment('folders_total');
-      ConduitGrpcSdk.Metrics?.increment('containers_total');
-      res(true);
-    });
+    let path = self._storagePath + '/' + self._activeContainer;
+    mkdirSync(resolve(path), { recursive: true });
+    if (self._activeContainer !== name) {
+      path = self._storagePath + '/' + self._activeContainer + '/' + name;
+      mkdirSync(resolve(path), { recursive: true });
+    }
+    ConduitGrpcSdk.Metrics?.increment('folders_total');
+    ConduitGrpcSdk.Metrics?.increment('containers_total');
+    return true;
   }
 
   folderExists(name: string): Promise<boolean | Error> {
@@ -172,12 +453,25 @@ export class LocalStorage implements IStorageProvider {
     });
   }
 
-  getPublicUrl(_fileName: string, _containerIsPublic?: boolean): Promise<string | Error> {
-    throw new Error('Method not implemented!');
+  getPublicUrl(fileName: string, _containerIsPublic?: boolean): Promise<string | Error> {
+    if (!this._httpServer?.listening) {
+      return Promise.reject(new Error('Local storage server is not running'));
+    }
+    const relativePath = `${this._activeContainer}/${fileName}`;
+    return Promise.resolve(
+      this.signUrl(relativePath, 'GET', undefined, LocalStorage.PUBLIC_URL_EXPIRY),
+    );
   }
 
-  getSignedUrl(fileName: string): Promise<any> {
-    throw new Error('Method not implemented!| Error');
+  getSignedUrl(fileName: string, options?: UrlOptions): Promise<string | Error> {
+    if (!this._httpServer?.listening) {
+      return Promise.reject(new Error('Local storage server is not running'));
+    }
+    const relativePath = `${this._activeContainer}/${fileName}`;
+    const extraParams = new URLSearchParams();
+    if (options?.download) extraParams.set('download', 'true');
+    if (options?.fileName) extraParams.set('fileName', options.fileName);
+    return Promise.resolve(this.signUrl(relativePath, 'GET', extraParams));
   }
 
   container(name: string): IStorageProvider {
@@ -189,19 +483,15 @@ export class LocalStorage implements IStorageProvider {
     return this.folderExists(name);
   }
 
-  createContainer(name: string, isPublic?: boolean): Promise<boolean | Error> {
-    if (isPublic) {
-      return Promise.reject(
-        new Error('Public containers are not supported with local storage provider'),
-      );
-    }
+  createContainer(name: string, _isPublic?: boolean): Promise<boolean | Error> {
+    // Local storage serves all files through the embedded HTTP file server;
+    // public/private access is enforced at the Conduit handler layer, not
+    // at the storage-provider layer, so container-level ACLs don't apply here.
     this._activeContainer = name;
     return this.createFolder(name);
   }
 
   setContainerPublicAccess(_name: string, _isPublic: boolean): Promise<boolean | Error> {
-    return Promise.reject(
-      new Error('Public containers are not supported with local storage provider'),
-    );
+    return Promise.resolve(true);
   }
 }

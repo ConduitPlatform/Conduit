@@ -77,6 +77,21 @@ export default {
       format: 'String',
       default: '/var/tmp',
     },
+    httpPort: {
+      format: 'Number',
+      default: 3100,
+      doc: 'Port for the local storage HTTP file server (serves uploads/downloads)',
+    },
+    httpBaseUrl: {
+      format: 'String',
+      default: '',
+      doc: 'External base URL for local storage file URLs. Leave empty to auto-derive from httpPort (http://localhost:{httpPort}). Override when the storage server is behind a reverse proxy or running in Docker.',
+    },
+    signingSecret: {
+      format: 'String',
+      default: '',
+      doc: 'Hex-encoded HMAC secret (64 hex chars / 32 bytes) for signing file URLs. Leave empty to generate and persist a random secret on first configure (survives restarts).',
+    },
   },
   suffixOnNameConflict: {
     format: 'Boolean',
