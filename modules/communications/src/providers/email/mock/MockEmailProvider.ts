@@ -11,6 +11,9 @@ import {
 import { EmailBuilderClass, EmailProviderClass } from '../models/index.js';
 import { NodemailerBuilder } from '../nodemailer/nodemailerBuilder.js';
 
+const EXTERNAL_TEMPLATES_UNSUPPORTED =
+  'Mock provider does not support external templates';
+
 function formatRecipients(to: Mail.Options['to']): string {
   if (!to) return '';
   if (typeof to === 'string') return to;
@@ -22,12 +25,6 @@ function formatRecipients(to: Mail.Options['to']): string {
   return to.address;
 }
 
-function formatBodySnippet(mailOptions: Mail.Options): string {
-  const content = mailOptions.html ?? mailOptions.text ?? '';
-  const text = typeof content === 'string' ? content : '';
-  return text.length > 100 ? `${text.slice(0, 100)}...` : text;
-}
-
 export class MockEmailProvider extends EmailProviderClass {
   constructor() {
     super(createTransport({ jsonTransport: true }));
@@ -36,7 +33,7 @@ export class MockEmailProvider extends EmailProviderClass {
   sendEmail(mailOptions: Mail.Options): Promise<SentMessageInfo> {
     const messageId = `mock-${randomUUID()}`;
     ConduitGrpcSdk.Logger.log(
-      `[MOCK EMAIL] To: ${formatRecipients(mailOptions.to)} | Subject: ${mailOptions.subject ?? ''} | Body: ${formatBodySnippet(mailOptions)}`,
+      `[MOCK EMAIL] To: ${formatRecipients(mailOptions.to)} | Subject: ${mailOptions.subject ?? ''}`,
     );
     return Promise.resolve({
       messageId,
@@ -45,15 +42,15 @@ export class MockEmailProvider extends EmailProviderClass {
   }
 
   listTemplates(): Promise<Template[]> {
-    throw new Error('Method not implemented.');
+    return Promise.resolve([]);
   }
 
   getTemplateInfo(_templateName: string): Promise<Template> {
-    throw new Error('Method not implemented.');
+    return Promise.reject(new Error(EXTERNAL_TEMPLATES_UNSUPPORTED));
   }
 
   createTemplate(_data: CreateEmailTemplate): Promise<Template> {
-    throw new Error('Method not implemented.');
+    return Promise.reject(new Error(EXTERNAL_TEMPLATES_UNSUPPORTED));
   }
 
   getBuilder(): EmailBuilderClass<Options> {
@@ -61,11 +58,11 @@ export class MockEmailProvider extends EmailProviderClass {
   }
 
   updateTemplate(_data: UpdateEmailTemplate): Promise<Template> {
-    throw new Error('Method not implemented.');
+    return Promise.reject(new Error(EXTERNAL_TEMPLATES_UNSUPPORTED));
   }
 
-  deleteTemplate(_id: string): Promise<DeleteEmailTemplate> {
-    throw new Error('Method not implemented.');
+  deleteTemplate(id: string): Promise<DeleteEmailTemplate> {
+    return Promise.resolve({ id, message: 'OK (mock)' });
   }
 
   getEmailStatus(messageId: string): Promise<Indexable> {

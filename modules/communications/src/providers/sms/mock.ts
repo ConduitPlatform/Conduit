@@ -6,7 +6,7 @@ const MOCK_VERIFICATION_CODE = '123456';
 
 export class MockSmsProvider implements ISmsProvider {
   sendSms(to: string, message: string): Promise<any> {
-    ConduitGrpcSdk.Logger.log(`[MOCK SMS] To: ${to} | Message: ${message}`);
+    ConduitGrpcSdk.Logger.log(`[MOCK SMS] To: ${to}`);
     return Promise.resolve({
       sid: `mock-sms-${randomUUID()}`,
       status: 'sent',
