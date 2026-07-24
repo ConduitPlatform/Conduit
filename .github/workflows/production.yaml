@@ -80,7 +80,9 @@ jobs:
         run: pnpm version "$RELEASE_VERSION" --no-git-tag-version
         working-directory: ./libraries/grpc-sdk
       - name: build the sdk
-        run: npx turbo run build --filter=@conduitplatform/grpc-sdk --filter=@conduitplatform/module-tools
+        run: pnpm exec turbo run build --filter=@conduitplatform/grpc-sdk --filter=@conduitplatform/module-tools
+        env:
+          pnpm_config_verify_deps_before_run: "false"
       - name: Set version and publish
         run: |
           pnpm version "$RELEASE_VERSION" --no-git-tag-version
