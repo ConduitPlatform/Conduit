@@ -7,6 +7,7 @@ export default {
       default: false,
     },
     transport: {
+      doc: 'Email transport provider. Options: smtp, mailgun, mandrill, sendgrid, mailersend, amazonSes, mock (local dev - logs only)',
       format: 'String',
       default: 'smtp',
     },
@@ -226,6 +227,7 @@ export default {
       default: false,
     },
     providerName: {
+      doc: 'SMS provider. Options: twilio, awsSns, messageBird, mock (local dev - logs only)',
       format: 'String',
       default: 'twilio',
     },

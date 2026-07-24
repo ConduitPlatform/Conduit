@@ -15,6 +15,7 @@ import { Indexable } from '@conduitplatform/grpc-sdk';
 import { MailersendConfig } from './mailersend/mailersend.config.js';
 import { MailersendProvider } from './mailersend/MailersendProvider.js';
 import { AmazonSesProvider } from './amazonSes/AmazonSesProvider.js';
+import { MockEmailProvider } from './mock/MockEmailProvider.js';
 
 export class EmailProvider {
   _transport?: EmailProviderClass;
@@ -103,6 +104,9 @@ export class EmailProvider {
         throw new Error('Amazon SES transport settings are missing');
       }
       this._transport = new AmazonSesProvider(transportSettings.amazonSes);
+    } else if (transport === 'mock') {
+      this._transportName = 'mock';
+      this._transport = new MockEmailProvider();
     } else {
       this._transportName = undefined;
       this._transport = undefined;

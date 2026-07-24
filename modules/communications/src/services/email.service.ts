@@ -20,7 +20,7 @@ import { storeEmail } from '../utils/storeEmail.js';
 import { Config } from '../config/index.js';
 import { Provider } from '../utils/index.js';
 
-const STATUS_UNSUPPORTED_TRANSPORTS = new Set(['amazonSes', 'smtp']);
+const STATUS_UNSUPPORTED_TRANSPORTS = new Set(['amazonSes', 'smtp', 'mock']);
 
 export interface IRegisterTemplateParams {
   name: string;
@@ -126,11 +126,7 @@ export class EmailService implements IChannel {
       const statusInfo = await this.getEmailStatus(messageId);
       return {
         status: (statusInfo.status || 'unknown') as
-          | 'pending'
-          | 'sent'
-          | 'delivered'
-          | 'failed'
-          | 'bounced',
+          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced',
         messageId,
         timestamp: new Date(),
       };

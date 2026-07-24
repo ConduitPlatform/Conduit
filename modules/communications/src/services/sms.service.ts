@@ -11,6 +11,7 @@ import { Config } from '../config/index.js';
 import { messageBirdProvider } from '../providers/sms/messageBird.js';
 import { AwsSnsProvider } from '../providers/sms/awsSns.js';
 import { TwilioProvider } from '../providers/sms/twilio.js';
+import { MockSmsProvider } from '../providers/sms/mock.js';
 
 export class SmsService implements IChannel {
   private provider?: ISmsProvider;
@@ -44,6 +45,9 @@ export class SmsService implements IChannel {
           break;
         case 'messageBird':
           this.provider = new messageBirdProvider(settings);
+          break;
+        case 'mock':
+          this.provider = new MockSmsProvider();
           break;
         default:
           ConduitGrpcSdk.Logger.error(`Unknown SMS provider: ${name}`);
