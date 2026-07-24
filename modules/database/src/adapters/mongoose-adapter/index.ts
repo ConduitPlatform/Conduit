@@ -1,4 +1,5 @@
 import { ConnectOptions, Mongoose, Types } from 'mongoose';
+import type { IndexSpecification } from 'mongodb';
 import { MongooseSchema } from './MongooseSchema.js';
 import { schemaConverter } from './SchemaConverter.js';
 import {
@@ -289,6 +290,43 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return 'Indexes created!';
   }
 
+  private async createMongooseFieldIndexes(schemaName: string): Promise<void> {
+    const model = this.models[schemaName];
+    if (!model) throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (model.isView) return;
+
+    const declaredIndexes = model.model.schema.indexes();
+    if (!declaredIndexes.length) return;
+
+    const collection = this.mongoose.model(schemaName).collection;
+    for (const [keys, rawOptions] of declaredIndexes) {
+      const indexKeys = keys as IndexSpecification;
+      if (this.isDefaultIdIndex(indexKeys)) continue;
+
+      const options = this.sanitizeMongooseIndexOptions(
+        rawOptions as Record<string, unknown>,
+      );
+      await collection.createIndex(indexKeys, options).catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    }
+  }
+
+  private isDefaultIdIndex(keys: IndexSpecification): boolean {
+    if (!keys || typeof keys !== 'object' || Array.isArray(keys)) return false;
+    const entries = Object.entries(keys as Record<string, unknown>);
+    return entries.length === 1 && entries[0][0] === '_id' && entries[0][1] === 1;
+  }
+
+  private sanitizeMongooseIndexOptions(
+    options?: Record<string, unknown>,
+  ): Record<string, unknown> | undefined {
+    if (!options) return undefined;
+    const sanitized = { ...options };
+    delete sanitized._autoIndex;
+    return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+  }
+
   async getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
@@ -454,6 +492,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
     if (indexes && !isInstanceSync) {
       await this.createIndexes(schema.name, indexes, schema.ownerModule);
+    }
+    if (!isInstanceSync) {
+      await this.createMongooseFieldIndexes(schema.name);
     }
     return this.models[schema.name];
   }
