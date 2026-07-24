@@ -7,15 +7,17 @@ import {
   createReadStream,
   createWriteStream,
   existsSync,
+  lstatSync,
   mkdirSync,
   readFile,
+  realpathSync,
   rmSync,
   unlink,
   writeFile,
 } from 'fs';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
-import { dirname, extname, resolve, sep } from 'path';
+import { basename, dirname, extname, resolve, sep } from 'path';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { SIGNED_URL_EXPIRY } from '../../constants/expiry.js';
 import { constructDispositionHeader } from '../../utils/index.js';
@@ -52,6 +54,21 @@ const MIME_TYPES: Record<string, string> = {
 
 function getMimeType(filePath: string): string {
   return MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream';
+}
+
+function canonicalizeSignedExtraParams(params?: URLSearchParams): string {
+  const canonicalParams = new URLSearchParams();
+  for (const key of ['download', 'fileName'] as const) {
+    const value = params?.get(key);
+    if (value != null) {
+      canonicalParams.set(key, value);
+    }
+  }
+  return canonicalParams.toString();
+}
+
+function isWithinRoot(rootPath: string, targetPath: string): boolean {
+  return targetPath === rootPath || targetPath.startsWith(rootPath + sep);
 }
 
 export class LocalStorage implements IStorageProvider {
@@ -98,6 +115,7 @@ export class LocalStorage implements IStorageProvider {
    */
   private startHttpServer(): void {
     const rootPath = resolve(this._rootStoragePath);
+    const realRoot = realpathSync(rootPath);
 
     this._httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
       res.setHeader('Access-Control-Allow-Origin', '*');
@@ -118,7 +136,13 @@ export class LocalStorage implements IStorageProvider {
         return res.end('Bad request');
       }
 
-      const relativePath = decodeURIComponent(url.pathname).replace(/^\/+/, '');
+      let relativePath: string;
+      try {
+        relativePath = decodeURIComponent(url.pathname).replace(/^\/+/, '');
+      } catch {
+        res.writeHead(400);
+        return res.end('Bad request');
+      }
       const filePath = resolve(rootPath, relativePath);
 
       // Path traversal protection: resolved path must stay within rootPath
@@ -135,19 +159,36 @@ export class LocalStorage implements IStorageProvider {
         res.writeHead(403);
         return res.end('Signature required');
       }
-      if (!this.verifyRequest(req.method!, relativePath, sig!, expires!)) {
+      if (
+        !this.verifyRequest(req.method!, relativePath, sig!, expires!, url.searchParams)
+      ) {
         res.writeHead(403);
         return res.end('Invalid or expired signature');
       }
 
       if (req.method === 'GET') {
-        if (!existsSync(filePath)) {
-          res.writeHead(404);
-          return res.end('Not found');
+        let realFilePath: string;
+        try {
+          realFilePath = realpathSync(filePath);
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+            res.writeHead(404);
+            return res.end('Not found');
+          }
+          res.writeHead(403);
+          return res.end('Forbidden');
+        }
+        if (!isWithinRoot(realRoot, realFilePath)) {
+          res.writeHead(403);
+          return res.end('Forbidden');
         }
         res.setHeader('Content-Type', getMimeType(filePath));
         const download = url.searchParams.get('download') === 'true';
         const fileNameParam = url.searchParams.get('fileName') ?? undefined;
+        if (fileNameParam && /["\r\n]/.test(fileNameParam)) {
+          res.writeHead(400);
+          return res.end('Bad request');
+        }
         const baseName = relativePath.split('/').pop() ?? relativePath;
         const disposition = constructDispositionHeader(baseName, {
           download,
@@ -156,7 +197,7 @@ export class LocalStorage implements IStorageProvider {
         if (disposition) {
           res.setHeader('Content-Disposition', disposition);
         }
-        const stream = createReadStream(filePath);
+        const stream = createReadStream(realFilePath);
         stream.on('error', () => {
           if (!res.headersSent) {
             res.writeHead(500);
@@ -165,13 +206,51 @@ export class LocalStorage implements IStorageProvider {
         });
         stream.pipe(res);
       } else if (req.method === 'PUT') {
+        const parentPath = dirname(filePath);
         try {
-          mkdirSync(dirname(filePath), { recursive: true });
+          mkdirSync(parentPath, { recursive: true });
         } catch {
           res.writeHead(500);
           return res.end('Failed to create directory');
         }
-        const writeStream = createWriteStream(filePath);
+        let realParentPath: string;
+        try {
+          realParentPath = realpathSync(parentPath);
+        } catch {
+          res.writeHead(403);
+          return res.end('Forbidden');
+        }
+        if (!isWithinRoot(realRoot, realParentPath)) {
+          res.writeHead(403);
+          return res.end('Forbidden');
+        }
+        const realTargetPath = resolve(realParentPath, basename(filePath));
+        if (!isWithinRoot(realRoot, realTargetPath)) {
+          res.writeHead(403);
+          return res.end('Forbidden');
+        }
+        let targetExists = false;
+        try {
+          lstatSync(realTargetPath);
+          targetExists = true;
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+            res.writeHead(403);
+            return res.end('Forbidden');
+          }
+        }
+        if (targetExists) {
+          try {
+            if (!isWithinRoot(realRoot, realpathSync(realTargetPath))) {
+              res.writeHead(403);
+              return res.end('Forbidden');
+            }
+          } catch {
+            res.writeHead(403);
+            return res.end('Forbidden');
+          }
+        }
+        const writeStream = createWriteStream(realTargetPath);
         req.pipe(writeStream);
         writeStream.on('finish', () => {
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -207,7 +286,8 @@ export class LocalStorage implements IStorageProvider {
     expiryMs: number = SIGNED_URL_EXPIRY,
   ): string {
     const expires = Date.now() + expiryMs;
-    const payload = `${method}:${relativePath}:${expires}`;
+    const canonicalExtra = canonicalizeSignedExtraParams(extraParams);
+    const payload = `${method}:${relativePath}:${expires}:${canonicalExtra}`;
     const sig = createHmac('sha256', this._signingSecret).update(payload).digest('hex');
     const params = extraParams ?? new URLSearchParams();
     params.set('expires', expires.toString());
@@ -220,10 +300,12 @@ export class LocalStorage implements IStorageProvider {
     relativePath: string,
     sig: string,
     expires: string,
+    extraParams: URLSearchParams,
   ): boolean {
     const expiresNum = Number(expires);
     if (isNaN(expiresNum) || Date.now() > expiresNum) return false;
-    const payload = `${method}:${relativePath}:${expires}`;
+    const canonicalExtra = canonicalizeSignedExtraParams(extraParams);
+    const payload = `${method}:${relativePath}:${expires}:${canonicalExtra}`;
     const expected = createHmac('sha256', this._signingSecret).update(payload).digest();
     const provided = Buffer.from(sig, 'hex');
     if (expected.length !== provided.length) return false;
