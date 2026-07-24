@@ -45,20 +45,22 @@ export class MockEmailProvider extends EmailProviderClass {
     return Promise.resolve([]);
   }
 
-  getTemplateInfo(_templateName: string): Promise<Template> {
-    return Promise.reject(new Error(EXTERNAL_TEMPLATES_UNSUPPORTED));
+  getTemplateInfo(templateName: string): Promise<Template> {
+    return Promise.reject(
+      new Error(`${EXTERNAL_TEMPLATES_UNSUPPORTED}: ${templateName}`),
+    );
   }
 
-  createTemplate(_data: CreateEmailTemplate): Promise<Template> {
-    return Promise.reject(new Error(EXTERNAL_TEMPLATES_UNSUPPORTED));
+  createTemplate(data: CreateEmailTemplate): Promise<Template> {
+    return Promise.reject(new Error(`${EXTERNAL_TEMPLATES_UNSUPPORTED}: ${data.name}`));
   }
 
   getBuilder(): EmailBuilderClass<Options> {
     return new NodemailerBuilder();
   }
 
-  updateTemplate(_data: UpdateEmailTemplate): Promise<Template> {
-    return Promise.reject(new Error(EXTERNAL_TEMPLATES_UNSUPPORTED));
+  updateTemplate(data: UpdateEmailTemplate): Promise<Template> {
+    return Promise.reject(new Error(`${EXTERNAL_TEMPLATES_UNSUPPORTED}: ${data.id}`));
   }
 
   deleteTemplate(id: string): Promise<DeleteEmailTemplate> {

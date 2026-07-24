@@ -6,7 +6,7 @@ const MOCK_VERIFICATION_CODE = '123456';
 
 export class MockSmsProvider implements ISmsProvider {
   sendSms(to: string, message: string): Promise<any> {
-    ConduitGrpcSdk.Logger.log(`[MOCK SMS] To: ${to}`);
+    ConduitGrpcSdk.Logger.log(`[MOCK SMS] To: ${to} | Message: ${message}`);
     return Promise.resolve({
       sid: `mock-sms-${randomUUID()}`,
       status: 'sent',
@@ -20,7 +20,8 @@ export class MockSmsProvider implements ISmsProvider {
     return Promise.resolve(`mock-verify-${randomUUID()}`);
   }
 
-  verify(_verificationSid: string, code: string): Promise<boolean> {
+  verify(verificationSid: string, code: string): Promise<boolean> {
+    ConduitGrpcSdk.Logger.log(`[MOCK SMS] Verifying sid: ${verificationSid}`);
     return Promise.resolve(code === MOCK_VERIFICATION_CODE);
   }
 }
