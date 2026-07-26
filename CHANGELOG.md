@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.17.0-alpha.6](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.5...v0.17.0-alpha.6) (2026-07-26)
+
+
+### Bug Fixes
+
+* **ci:** allow pnpm version in publish jobs and cap image matrix parallelism ([62a84d2](https://github.com/ConduitPlatform/Conduit/commit/62a84d23f675edfb0b8f88e5dbbb934447e52094))
+
 ## [0.17.0-alpha.5](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.4...v0.17.0-alpha.5) (2026-07-26)
 
 
