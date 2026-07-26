@@ -99,6 +99,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     name: ${{ matrix.name }} (linux/amd64)
     permissions:
@@ -154,6 +155,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     name: ${{ matrix.name }} (linux/arm64)
     permissions:
@@ -209,6 +211,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     name: Merge ${{ matrix.name }} manifest
     permissions:

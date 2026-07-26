@@ -38,7 +38,7 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Set version and publish
         run: |
-          pnpm version "$RELEASE_VERSION" --no-git-tag-version
+          pnpm version "$RELEASE_VERSION" --no-git-tag-version --no-git-checks
           publish_args=(--access public --no-git-checks)
           if [ -n "${NPM_TAG:-}" ]; then
             publish_args+=(--tag "$NPM_TAG")
@@ -77,7 +77,7 @@ jobs:
       - name: install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Set grpc-sdk version
-        run: pnpm version "$RELEASE_VERSION" --no-git-tag-version
+        run: pnpm version "$RELEASE_VERSION" --no-git-tag-version --no-git-checks
         working-directory: ./libraries/grpc-sdk
       - name: build the sdk
         run: pnpm exec turbo run build --filter=@conduitplatform/grpc-sdk --filter=@conduitplatform/module-tools
@@ -85,7 +85,7 @@ jobs:
           pnpm_config_verify_deps_before_run: "false"
       - name: Set version and publish
         run: |
-          pnpm version "$RELEASE_VERSION" --no-git-tag-version
+          pnpm version "$RELEASE_VERSION" --no-git-tag-version --no-git-checks
           pnpm pack --pack-destination /tmp
           tgz=$(ls -t /tmp/conduitplatform-module-tools-*.tgz | head -1)
           pkg=$(tar -xOf "$tgz" package/package.json)
