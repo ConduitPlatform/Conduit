@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.17.0-alpha.5](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.4...v0.17.0-alpha.5) (2026-07-26)
+
+
+### Features
+
+* **chat:** add file attachments to sendMessage gRPC ([#1542](https://github.com/ConduitPlatform/Conduit/issues/1542)) ([ff38796](https://github.com/ConduitPlatform/Conduit/commit/ff387964411a901c0b922d45c505a321d4f0db2a))
+* **communications:** add mock email and SMS providers for local dev ([#1559](https://github.com/ConduitPlatform/Conduit/issues/1559)) ([dcf1256](https://github.com/ConduitPlatform/Conduit/commit/dcf1256e11dfeccec9bd3fbad9c90e0f1640a809))
+* **communications:** unified CommunicationTemplate CRUD and orchestration ([#1508](https://github.com/ConduitPlatform/Conduit/issues/1508)) ([a5bb3d7](https://github.com/ConduitPlatform/Conduit/commit/a5bb3d75152c9315af7b99662af9454fca2d230a))
+* **database:** disable eager collection creation for all schemas ([#1554](https://github.com/ConduitPlatform/Conduit/issues/1554)) ([4600a4a](https://github.com/ConduitPlatform/Conduit/commit/4600a4acfe92bb8b7b888f3034a042b16f9033c6))
+* **storage:** add URL upload/download support for local storage provider ([#1557](https://github.com/ConduitPlatform/Conduit/issues/1557)) ([dc8063d](https://github.com/ConduitPlatform/Conduit/commit/dc8063d9a219d2f9471bd340a235e4929d2f4024))
+
+
+### Bug Fixes
+
+* **ci:** prevent implicit pnpm install during module-tools publish build ([#1560](https://github.com/ConduitPlatform/Conduit/issues/1560)) ([0fc1a97](https://github.com/ConduitPlatform/Conduit/commit/0fc1a970c0c8e103df48576c43dc20675866908e))
+* **communications:** admin push route boolean params ([#1544](https://github.com/ConduitPlatform/Conduit/issues/1544)) ([418254e](https://github.com/ConduitPlatform/Conduit/commit/418254ebf6705afe1dac0123d19a5b8dc2bc443f))
+* **communications:** sendToDevice storage condition ([#1536](https://github.com/ConduitPlatform/Conduit/issues/1536)) ([860af5b](https://github.com/ConduitPlatform/Conduit/commit/860af5bd660a9d64abb493991642be0d1230374d))
+* **database:** cannot overwrite view bug ([#1464](https://github.com/ConduitPlatform/Conduit/issues/1464)) ([91f4f86](https://github.com/ConduitPlatform/Conduit/commit/91f4f86810c9af7f6136d6897b26412aca8eede0))
+* **database:** split schema PUT vs PATCH for honest field updates ([#1540](https://github.com/ConduitPlatform/Conduit/issues/1540)) ([cf5fd5c](https://github.com/ConduitPlatform/Conduit/commit/cf5fd5cef9c8072a2bd433522e7251bba7bd1370))
+* **grpc-sdk:** make chat sendMessage files optional at SDK boundary ([#1549](https://github.com/ConduitPlatform/Conduit/issues/1549)) ([b788271](https://github.com/ConduitPlatform/Conduit/commit/b7882714375df4a960e0a8e932d9b14626c91c0e))
+
 ## [0.17.0-alpha.4](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.3...v0.17.0-alpha.4) (2026-06-25)
 
 
