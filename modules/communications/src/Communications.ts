@@ -628,7 +628,7 @@ export default class Communications extends ManagedModule<Config> {
     }
 
     let errorMessage: string | null = null;
-    const verificationSid = await this.smsService
+    const result = await this.smsService
       .sendVerificationCode(to)
       .catch(e => (errorMessage = e.message));
     if (!isNil(errorMessage))
@@ -637,7 +637,7 @@ export default class Communications extends ManagedModule<Config> {
         message: errorMessage,
       });
 
-    return callback(null, { verificationSid });
+    return callback(null, { verificationSid: result.verificationSid });
   }
 
   async verify(call: GrpcRequest<VerifyRequest>, callback: GrpcCallback<VerifyResponse>) {
@@ -653,7 +653,7 @@ export default class Communications extends ManagedModule<Config> {
     }
 
     let errorMessage: string | null = null;
-    const verified = await this.smsService
+    const result = await this.smsService
       .verify(verificationSid, code)
       .catch(e => (errorMessage = e.message));
     if (!isNil(errorMessage))
@@ -662,7 +662,7 @@ export default class Communications extends ManagedModule<Config> {
         message: errorMessage,
       });
 
-    return callback(null, { verified });
+    return callback(null, { verified: result.verified });
   }
 
   // New Unified Service Methods
