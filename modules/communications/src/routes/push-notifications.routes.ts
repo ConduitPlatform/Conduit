@@ -27,13 +27,11 @@ export class PushNotificationsRoutes {
   ) {
     this.handlers = new NotificationTokensHandler(pushService);
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
-    this.registerRoutes();
   }
 
   async registerRoutes() {
     this._routingManager.clear();
 
-    // Set notification token route
     this._routingManager.route(
       {
         bodyParams: {
@@ -51,7 +49,6 @@ export class PushNotificationsRoutes {
       this.handlers.setNotificationToken.bind(this.handlers),
     );
 
-    // Clear notification token route
     this._routingManager.route(
       {
         queryParams: {
@@ -66,7 +63,6 @@ export class PushNotificationsRoutes {
       this.handlers.clearNotificationTokens.bind(this.handlers),
     );
 
-    // Get user notifications route
     this._routingManager.route(
       {
         queryParams: {
@@ -88,7 +84,6 @@ export class PushNotificationsRoutes {
       this.handlers.getUserNotifications.bind(this.handlers),
     );
 
-    // Mark notifications as read route
     this._routingManager.route(
       {
         bodyParams: {
