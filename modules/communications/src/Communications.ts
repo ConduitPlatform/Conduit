@@ -136,6 +136,7 @@ export default class Communications extends ManagedModule<Config> {
   private orchestratorService: OrchestratorService;
   private templateService: CommunicationTemplateService;
   private legacyModulesPendingCleanup: string[] = [];
+  private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
 
   // Provider instances
   private emailProvider: EmailProvider;
@@ -228,20 +229,13 @@ export default class Communications extends ManagedModule<Config> {
         this.templateService,
       );
 
-      // Initialize user routes for push notifications
-      if (this.grpcSdk.isAvailable('router')) {
-        this.userRouter = new PushNotificationsRoutes(
-          this.grpcServer,
-          this.grpcSdk,
-          this.pushService,
-        );
-      }
-
       // Initialize queue controller and workers
       const queueController = QueueController.getInstance(this.grpcSdk);
       queueController.addEmailStatusWorker();
       queueController.addEmailCleanupWorker();
       this.isRunning = true;
+      this.registerDeclaredPeerWatches();
+      this.scheduleAppRouteRefresh();
     }
 
     await this.emailService.initEmailProvider(config);
@@ -1021,5 +1015,45 @@ export default class Communications extends ManagedModule<Config> {
       this.smsService,
       this.templateService,
     );
+  }
+
+  protected override onDeclaredPeerConnectionUpdate(
+    moduleName: string,
+    serving: boolean,
+  ): void {
+    if (moduleName === 'router' && serving) {
+      this.scheduleAppRouteRefresh();
+    }
+  }
+
+  private scheduleAppRouteRefresh() {
+    if (this.refreshAppRoutesTimeout) {
+      clearTimeout(this.refreshAppRoutesTimeout);
+      this.refreshAppRoutesTimeout = null;
+    }
+    this.refreshAppRoutesTimeout = setTimeout(async () => {
+      try {
+        await this.refreshAppRoutes();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this.refreshAppRoutesTimeout = null;
+    }, 800);
+  }
+
+  private async refreshAppRoutes() {
+    if (this.userRouter) {
+      await this.userRouter.registerRoutes();
+      return;
+    }
+    if (!this.grpcSdk.isAvailable('router')) {
+      return;
+    }
+    this.userRouter = new PushNotificationsRoutes(
+      this.grpcServer,
+      this.grpcSdk,
+      this.pushService,
+    );
+    await this.userRouter.registerRoutes();
   }
 }
