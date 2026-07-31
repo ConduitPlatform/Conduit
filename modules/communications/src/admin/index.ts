@@ -211,16 +211,15 @@ export class AdminHandlers {
   async getCommunicationTemplates(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
-    const { sort } = call.request.params;
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
+    const params = call.request.params ?? {};
+    const { sort, skip, limit, search } = params;
     let query: Query<CommunicationTemplate> = {};
     let identifier;
-    if (!isNil(call.request.params.search)) {
-      if (call.request.params.search.match(/^[a-fA-F\d]{24}$/)) {
-        query = { _id: call.request.params.search };
+    if (!isNil(search)) {
+      if (search.match(/^[a-fA-F\d]{24}$/)) {
+        query = { _id: search };
       } else {
-        identifier = escapeStringRegexp(call.request.params.search);
+        identifier = escapeStringRegexp(search);
         query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
       }
     }
@@ -328,16 +327,15 @@ export class AdminHandlers {
 
   // Email template management methods
   async getTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sort } = call.request.params;
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
+    const params = call.request.params ?? {};
+    const { sort, skip, limit, search } = params;
     let query: Query<EmailTemplate> = {};
     let identifier;
-    if (!isNil(call.request.params.search)) {
-      if (call.request.params.search.match(/^[a-fA-F\d]{24}$/)) {
-        query = { _id: call.request.params.search };
+    if (!isNil(search)) {
+      if (search.match(/^[a-fA-F\d]{24}$/)) {
+        query = { _id: search };
       } else {
-        identifier = escapeStringRegexp(call.request.params.search);
+        identifier = escapeStringRegexp(search);
         query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
       }
     }
