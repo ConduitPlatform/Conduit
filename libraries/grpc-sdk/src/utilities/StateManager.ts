@@ -32,6 +32,11 @@ export async function isLockContention(error: unknown): Promise<boolean> {
   );
 }
 
+/** Escape Redis SCAN glob metacharacters so a prefix is matched literally. */
+function escapeRedisScanGlob(segment: string): string {
+  return segment.replace(/\\/g, '\\\\').replace(/[[\]?*]/g, '\\$&');
+}
+
 export class StateManager {
   private readonly redisClient: Redis | Cluster;
   private readonly redLock: Redlock;
@@ -153,7 +158,7 @@ export class StateManager {
   /** Remove cached response keys for all route paths matching a prefix. */
   async invalidateCacheIndexByPrefix(indexPrefix: string): Promise<void> {
     const stream = this.redisClient.scanStream({
-      match: `${indexPrefix}*`,
+      match: `${escapeRedisScanGlob(indexPrefix)}*`,
       count: 100,
     });
     const indexKeys: string[] = [];
@@ -162,4 +167,9 @@ export class StateManager {
     }
     await Promise.all(indexKeys.map(key => this.invalidateCacheIndex(key)));
   }
+}
+
+/** Escape Redis SCAN glob metacharacters so a prefix is matched literally. */
+function escapeRedisScanGlob(segment: string): string {
+  return segment.replace(/\\/g, '\\\\').replace(/[[\]?*]/g, '\\$&');
 }

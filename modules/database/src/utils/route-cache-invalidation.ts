@@ -10,11 +10,6 @@ export interface RouteCacheInvalidationMessage {
   prefixes?: string[];
 }
 
-/** Escape Redis SCAN glob metacharacters in a path segment. */
-export function escapeRedisScanGlob(segment: string): string {
-  return segment.replace(/\\/g, '\\\\').replace(/[[\]?*]/g, '\\$&');
-}
-
 export function publishRouteCacheInvalidation(
   grpcSdk: ConduitGrpcSdk,
   message: RouteCacheInvalidationMessage,
@@ -30,7 +25,7 @@ export function invalidateCachesAfterSchemaMutation(
   publishRouteCacheInvalidation(grpcSdk, {
     prefixes: [
       `${DATABASE_MODULE_PREFIX}/function/`,
-      `${DATABASE_MODULE_PREFIX}/${escapeRedisScanGlob(schemaName)}`,
+      `${DATABASE_MODULE_PREFIX}/${schemaName}`,
     ],
   });
 }
