@@ -17,17 +17,22 @@ export class RateLimiter {
       const config = ConfigController.getInstance().config.rateLimit;
       const prefix = 'limiter';
       const ip = extractClientIp(req.headers, req.ip);
-      if (req.method === 'OPTIONS') next();
+      if (req.method === 'OPTIONS') {
+        return next();
+      }
       self.redisClient.incr(`${prefix}:${ip}`, (err, requests) => {
         if (err || isNil(requests) || !requests) {
           ConduitGrpcSdk.Logger.error(
             `RATE_LIMIT: error with redis when processing limit.`,
           );
+          return next(
+            new ConduitError('RATE_LIMIT', 429, 'Rate limit check unavailable'),
+          );
         }
         if (requests === 1) {
           self.redisClient.expire(`${prefix}:${ip}`, config.resetInterval);
         }
-        if (requests! > config.maxRequests) {
+        if (requests > config.maxRequests) {
           ConduitGrpcSdk.Logger.info(
             `RATE_LIMIT: ${ip} exceeded rate limit, ${requests} consumed.`,
           );

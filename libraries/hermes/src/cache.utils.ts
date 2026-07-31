@@ -3,6 +3,13 @@ import { ConduitRoute } from './classes/index.js';
 import { CacheScope } from '@apollo/cache-control-types';
 import crypto from 'crypto';
 
+export const ROUTE_CACHE_INVALIDATION_TOPIC = 'route-cache-invalidation';
+
+export interface RouteCacheInvalidationMessage {
+  paths?: string[];
+  prefixes?: string[];
+}
+
 export function createHashKey(path: string, context: Indexable, params: Indexable) {
   let hashKey: string = path + JSON.stringify(context) + JSON.stringify(params);
   hashKey = crypto.createHash('md5').update(hashKey).digest('hex');

@@ -143,6 +143,9 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     if (!this._sdkRoutes.some(r => r.path === '/ready')) {
       this.registerRoute(adminRoutes.getReadyRoute());
     }
+    if (!this._sdkRoutes.some(r => r.path === '/live')) {
+      this.registerRoute(adminRoutes.getLiveRoute());
+    }
     await this.highAvailability();
     this.updateHealth(HealthCheckStatus.SERVING);
   }
@@ -164,6 +167,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       'router-ha',
     );
     this.scheduleMiddlewareApply();
+    this._internalRouter?.subscribeRouteCacheInvalidation();
   }
 
   updateState(routes: RegisterConduitRouteRequest_PathDefinition[], url: string) {

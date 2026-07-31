@@ -13,6 +13,7 @@ import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
 import { ConduitDatabaseSchema, Doc } from '../interfaces/index.js';
 import { parseSortParam } from '../handlers/utils.js';
+import { invalidateCachesAfterSchemaMutation } from '../utils/route-cache-invalidation.js';
 
 export class DocumentsAdmin {
   constructor(
@@ -76,7 +77,11 @@ export class DocumentsAdmin {
         'Schema does not exist or disallows doc modifications',
       );
     }
-    return await this.database.getSchemaModel(schemaName).model.create(inputDocument);
+    const result = await this.database
+      .getSchemaModel(schemaName)
+      .model.create(inputDocument);
+    invalidateCachesAfterSchemaMutation(this.grpcSdk, schemaName);
+    return result;
   }
 
   async createDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -91,6 +96,7 @@ export class DocumentsAdmin {
     const newDocuments = await this.database
       .getSchemaModel(schemaName)
       .model.createMany(inputDocuments);
+    invalidateCachesAfterSchemaMutation(this.grpcSdk, schemaName);
     return { docs: newDocuments };
   }
 
@@ -115,9 +121,11 @@ export class DocumentsAdmin {
       .model.findOne({ _id: id });
 
     Object.assign(dbDocument, changedDocument);
-    return await this.database
+    const result = await this.database
       .getSchemaModel(schemaName)
       .model.findByIdAndUpdate(dbDocument._id, dbDocument);
+    invalidateCachesAfterSchemaMutation(this.grpcSdk, schemaName);
+    return result;
   }
 
   async updateDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -140,6 +148,7 @@ export class DocumentsAdmin {
         .model.findByIdAndUpdate(dbDocument._id, dbDocument);
       updatedDocuments.push(updatedDocument);
     }
+    invalidateCachesAfterSchemaMutation(this.grpcSdk, schemaName);
     return { docs: updatedDocuments };
   }
 
@@ -153,6 +162,7 @@ export class DocumentsAdmin {
       );
     }
     await this.database.getSchemaModel(schemaName).model.deleteOne({ _id: id });
+    invalidateCachesAfterSchemaMutation(this.grpcSdk, schemaName);
     return 'Ok';
   }
 }

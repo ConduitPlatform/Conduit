@@ -448,7 +448,7 @@ export class GraphQLController extends ConduitRouter {
             }
           }
           if (caching) {
-            this.storeInCache(hashKey, result, cacheAge!);
+            this.storeInCache(hashKey, result, cacheAge!, context.path);
           }
           return result;
         })
@@ -514,6 +514,7 @@ export class GraphQLController extends ConduitRouter {
             }
           }
 
+          void this.invalidateCacheForPath(context.path);
           return isArray(result) ? { result } : result;
         })
         .catch(errorHandler);

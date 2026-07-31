@@ -17,4 +17,18 @@
 .turbo
 .DS_Store
 **/env/
+
+# Environment / secrets (never commit)
+docker/.env
+.env
+.env.*
+!.env.example
+
 pnpm-debug.log*
+
+.pnpm-store/
+
+# tsup config build artifacts (source of truth is tsup.config.ts)
+libraries/grpc-sdk/tsup.config.js
+libraries/grpc-sdk/tsup.config.js.map
+libraries/grpc-sdk/tsup.config.d.ts

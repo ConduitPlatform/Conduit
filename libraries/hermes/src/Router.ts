@@ -80,8 +80,26 @@ export abstract class ConduitRouter {
   }
 
   // age is in seconds
-  protected storeInCache(hashKey: string, data: Indexable, age: number) {
-    this.grpcSdk.state!.setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
+  protected storeInCache(hashKey: string, data: Indexable, age: number, path?: string) {
+    const cacheKey = 'hash-' + hashKey;
+    this.grpcSdk.state!.setKey(cacheKey, JSON.stringify(data), age * 1000);
+    if (path) {
+      void this.grpcSdk.state!.addCacheIndexEntry(
+        `cache-index:${path}`,
+        cacheKey,
+        age * 1000,
+      );
+    }
+  }
+
+  async invalidateCacheForPath(path: string): Promise<void> {
+    if (!this.grpcSdk.state) return;
+    await this.grpcSdk.state.invalidateCacheIndex(`cache-index:${path}`);
+  }
+
+  async invalidateCacheForPathPrefix(pathPrefix: string): Promise<void> {
+    if (!this.grpcSdk.state) return;
+    await this.grpcSdk.state.invalidateCacheIndexByPrefix(`cache-index:${pathPrefix}`);
   }
 
   registerMiddleware(middleware: ConduitMiddleware, moduleUrl: string) {

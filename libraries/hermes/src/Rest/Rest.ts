@@ -244,10 +244,13 @@ export class RestController extends ConduitRouter {
             delete result.setCookies;
             delete result.removeCookies;
             if (route.input.action === ConduitRouteActions.GET && caching) {
-              this.storeInCache(hashKey, result, cacheAge!);
+              this.storeInCache(hashKey, result, cacheAge!, context.path);
               res.setHeader('Cache-Control', `${scope}, max-age=${cacheAge}`);
             } else {
               res.setHeader('Cache-Control', 'no-store');
+              if (route.input.action !== ConduitRouteActions.GET) {
+                void this.invalidateCacheForPath(context.path);
+              }
             }
             res.status(200).json(result);
             res.end();

@@ -12,12 +12,20 @@ import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchem
 import { Doc } from '../../interfaces/index.js';
 import { findSchema, getUpdatedDocument } from './utils.js';
 import { constructSortObj } from '../utils.js';
+import { invalidateCachesAfterSchemaMutation } from '../../utils/route-cache-invalidation.js';
 
 export class CmsHandlers {
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
   ) {}
+
+  private invalidateForCall(call: ParsedRouterRequest): void {
+    const schemaName = call.request.path.split('/')[2];
+    if (schemaName) {
+      invalidateCachesAfterSchemaMutation(this.grpcSdk, schemaName);
+    }
+  }
 
   async getDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip, limit, sort, populate, scope } = call.request.params;
@@ -76,10 +84,12 @@ export class CmsHandlers {
   async createDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { scope } = call.request.queryParams;
     const model = findSchema(call, this.database);
-    return model.create(call.request.bodyParams, {
+    const result = await model.create(call.request.bodyParams, {
       userId: call.request.context.user?._id,
       scope,
     });
+    this.invalidateForCall(call);
+    return result;
   }
 
   async createManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -95,6 +105,7 @@ export class CmsHandlers {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
+    this.invalidateForCall(call);
     return { docs: newDocuments };
   }
 
@@ -102,13 +113,15 @@ export class CmsHandlers {
     const { scope } = call.request.queryParams;
     const { id } = call.request.urlParams;
     const model = findSchema(call, this.database);
-    return getUpdatedDocument(model, id, false, call.request.bodyParams, {
+    const result = await getUpdatedDocument(model, id, false, call.request.bodyParams, {
       userId: call.request.context.user?._id,
       scope,
       populate: call.request.queryParams?.populate,
     }).catch((e: Error) => {
       throw e;
     });
+    this.invalidateForCall(call);
+    return result;
   }
 
   async updateManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -127,6 +140,7 @@ export class CmsHandlers {
         });
       updatedDocuments.push(updatedDocument);
     }
+    this.invalidateForCall(call);
     return { docs: updatedDocuments };
   }
 
@@ -134,13 +148,15 @@ export class CmsHandlers {
     const { scope } = call.request.queryParams;
     const { id } = call.request.urlParams;
     const model = findSchema(call, this.database);
-    return getUpdatedDocument(model, id, true, call.request.bodyParams, {
+    const result = await getUpdatedDocument(model, id, true, call.request.bodyParams, {
       userId: call.request.context.user?._id,
       scope,
       populate: call.request.queryParams?.populate,
     }).catch((e: Error) => {
       throw e;
     });
+    this.invalidateForCall(call);
+    return result;
   }
 
   async patchManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -159,6 +175,7 @@ export class CmsHandlers {
         });
       updatedDocuments.push(updatedDocument);
     }
+    this.invalidateForCall(call);
     return { docs: updatedDocuments };
   }
 
@@ -178,6 +195,7 @@ export class CmsHandlers {
         throw new GrpcError(status.INTERNAL, e.message);
       });
 
+    this.invalidateForCall(call);
     return 'Ok';
   }
 }

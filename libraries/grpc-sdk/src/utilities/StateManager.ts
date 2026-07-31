@@ -129,4 +129,37 @@ export class StateManager {
   getKey(keyName: string) {
     return this.redisClient.get(keyName);
   }
+
+  /** Track a cached response key under a route path index for invalidation. */
+  async addCacheIndexEntry(
+    indexKey: string,
+    cacheKey: string,
+    expiryMs: number,
+  ): Promise<void> {
+    await this.redisClient.sadd(indexKey, cacheKey);
+    await this.redisClient.pexpire(indexKey, expiryMs);
+  }
+
+  /** Remove all cached response keys registered under a route path. */
+  async invalidateCacheIndex(indexKey: string): Promise<void> {
+    const members = await this.redisClient.smembers(indexKey);
+    if (members.length > 0) {
+      await this.redisClient.del(...members, indexKey);
+    } else {
+      await this.redisClient.del(indexKey);
+    }
+  }
+
+  /** Remove cached response keys for all route paths matching a prefix. */
+  async invalidateCacheIndexByPrefix(indexPrefix: string): Promise<void> {
+    const stream = this.redisClient.scanStream({
+      match: `${indexPrefix}*`,
+      count: 100,
+    });
+    const indexKeys: string[] = [];
+    for await (const keys of stream) {
+      indexKeys.push(...(keys as string[]));
+    }
+    await Promise.all(indexKeys.map(key => this.invalidateCacheIndex(key)));
+  }
 }

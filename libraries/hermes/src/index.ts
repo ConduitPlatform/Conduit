@@ -32,6 +32,10 @@ import { captureRequestRawBody } from './Rest/util.js';
 import { fileURLToPath } from 'node:url';
 import { instrumentationMiddleware } from './metrics/middleware.js';
 import { RouteTrie } from './metrics/RouteTrie.js';
+import {
+  ROUTE_CACHE_INVALIDATION_TOPIC,
+  type RouteCacheInvalidationMessage,
+} from './cache.utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -247,6 +251,33 @@ export class ConduitRoutingController {
     this._graphQLRouter?.patchRouteMiddlewares(patch);
   }
 
+  async invalidateRouteCaches(message: RouteCacheInvalidationMessage): Promise<void> {
+    const routers = [this._restRouter, this._graphQLRouter].filter(Boolean);
+    for (const router of routers) {
+      for (const path of message.paths ?? []) {
+        await router!.invalidateCacheForPath(path);
+      }
+      for (const prefix of message.prefixes ?? []) {
+        await router!.invalidateCacheForPathPrefix(prefix);
+      }
+    }
+  }
+
+  subscribeRouteCacheInvalidation(): void {
+    this.grpcSdk.bus?.subscribe(
+      ROUTE_CACHE_INVALIDATION_TOPIC,
+      (message: string) => {
+        try {
+          const parsed = JSON.parse(message) as RouteCacheInvalidationMessage;
+          void this.invalidateRouteCaches(parsed);
+        } catch (err) {
+          ConduitGrpcSdk.Logger.error(err as Error);
+        }
+      },
+      'route-cache-invalidation',
+    );
+  }
+
   filterMiddlewaresPatch(
     routeMiddlewares: string[],
     patchMiddlewares: string[],
@@ -457,3 +488,4 @@ export * from './classes/index.js';
 export * from './utils/GrpcConverter.js';
 export * from './utils/extractClientIp.js';
 export * from './MCP/index.js';
+export * from './cache.utils.js';
