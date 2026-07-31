@@ -9,7 +9,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "test": "pnpm --filter @conduitplatform/hermes test",
+    "test": "pnpm --filter @conduitplatform/grpc-sdk build && pnpm --filter @conduitplatform/hermes test",
     "lint": "eslint .",
     "build": "turbo run build",
     "prepare": "husky",
