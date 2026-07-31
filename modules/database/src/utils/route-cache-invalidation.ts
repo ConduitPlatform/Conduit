@@ -12,7 +12,7 @@ export interface RouteCacheInvalidationMessage {
 
 /** Escape Redis SCAN glob metacharacters in a path segment. */
 export function escapeRedisScanGlob(segment: string): string {
-  return segment.replace(/[[\]?*]/g, '\\$&');
+  return segment.replace(/\\/g, '\\\\').replace(/[[\]?*]/g, '\\$&');
 }
 
 export function publishRouteCacheInvalidation(
