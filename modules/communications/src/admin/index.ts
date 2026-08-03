@@ -211,8 +211,7 @@ export class AdminHandlers {
   async getCommunicationTemplates(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
-    const params = call.request.params ?? {};
-    const { sort, skip, limit, search } = params;
+    const { sort, skip = 0, limit = 25, search } = call.request.params ?? {};
     let query: Query<CommunicationTemplate> = {};
     let identifier;
     if (!isNil(search)) {
@@ -327,8 +326,7 @@ export class AdminHandlers {
 
   // Email template management methods
   async getTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const params = call.request.params ?? {};
-    const { sort, skip, limit, search } = params;
+    const { sort, skip = 0, limit = 25, search } = call.request.params ?? {};
     let query: Query<EmailTemplate> = {};
     let identifier;
     if (!isNil(search)) {
