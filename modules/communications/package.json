@@ -10,7 +10,8 @@
   },
   "conduit": {
     "peers": {
-      "await": ["database"]
+      "await": ["database"],
+      "watch": [{ "module": "router", "edge": "rising" }]
     }
   },
   "scripts": {
