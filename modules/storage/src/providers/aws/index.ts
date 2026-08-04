@@ -267,8 +267,10 @@ export class AWSS3Storage implements IStorageProvider {
     });
   }
 
-  async getPublicUrl(fileName: string, _containerIsPublic?: boolean) {
-    // AWS uses bucket-level ACLs, so public URL format is the same regardless
+  async getPublicUrl(fileName: string, containerIsPublic?: boolean) {
+    if (!containerIsPublic) {
+      return new Error('Public URL is only available for files in public containers');
+    }
     const config: Config['aws'] = ConfigController.getInstance().config.aws;
     if (config.endpoint !== '') {
       // check if endpoint contains http/https or not

@@ -49,12 +49,6 @@ export interface IStorageProvider {
 
   getSignedUrl(fileName: string, options?: UrlOptions): Promise<any | Error>;
 
-  /**
-   * Gets a publicly accessible URL for a file.
-   * @param fileName The file name/path
-   * @param containerIsPublic Whether the container is publicly accessible.
-   *        If true, returns a plain URL. If false, returns a long-lived signed URL.
-   */
   getPublicUrl(fileName: string, containerIsPublic?: boolean): Promise<string | Error>;
 
   getUploadUrl(fileName: string): Promise<string | Error>;

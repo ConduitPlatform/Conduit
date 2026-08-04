@@ -135,27 +135,17 @@ export class AzureStorage implements IStorageProvider {
     return this.blobClient(fileName).generateSasUrl(sasOptions);
   }
 
-  async getPublicUrl(fileName: string, containerIsPublic?: boolean): Promise<string> {
-    if (containerIsPublic) {
-      // Return direct URL without SAS token for public containers
-      return `${this._storage.url}${this._activeContainer}/${fileName}`;
+  async getPublicUrl(
+    fileName: string,
+    containerIsPublic?: boolean,
+  ): Promise<string | Error> {
+    if (!containerIsPublic) {
+      return new Error('Public URL is only available for files in public containers');
     }
-    // For private containers with public files, generate long-lived signed URL (99 years)
-    const containerClient = this._storage.getContainerClient(this._activeContainer);
-    const sasOptions: BlobSASSignatureValues = {
-      containerName: containerClient.containerName,
-      blobName: fileName,
-      expiresOn: new Date(new Date().setFullYear(new Date().getFullYear() + 99)),
-      permissions: BlobSASPermissions.parse('r'),
-    };
-    return this.blobClient(fileName).generateSasUrl(sasOptions);
+    return `${this._storage.url}${this._activeContainer}/${fileName}`;
   }
 
-  async store(
-    fileName: string,
-    data: any,
-    isPublic: boolean = false,
-  ): Promise<boolean | Error> {
+  async store(fileName: string, data: any): Promise<boolean | Error> {
     await this._storage
       .getContainerClient(this._activeContainer)
       .getBlockBlobClient(fileName)
