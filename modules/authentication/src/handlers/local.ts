@@ -725,8 +725,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async verifyEmailWithCode(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { email, code } = call.request.params;
-    const foundUser = await User.getInstance().findOne({ email });
+    const email = call.request.params.email.toLowerCase();
+    const { code } = call.request.params;
+    const foundUser = await User.getInstance().findOne(
+      { email },
+      { readPreference: 'primary' },
+    );
     if (!foundUser) {
       throw new GrpcError(status.NOT_FOUND, 'User not found');
     }
