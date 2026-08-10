@@ -104,11 +104,11 @@ importers:
         specifier: ^4.18.1
         version: 4.18.1
       nice-grpc:
-        specifier: ^2.1.16
-        version: 2.1.16
+        specifier: ^2.1.17
+        version: 2.1.17
       nice-grpc-client-middleware-retry:
-        specifier: ^3.1.15
-        version: 3.1.15
+        specifier: ^3.1.16
+        version: 3.1.16
       prom-client:
         specifier: ^15.1.3
         version: 15.1.3
@@ -119,8 +119,8 @@ importers:
         specifier: ^3.19.0
         version: 3.19.0
       winston-loki:
-        specifier: ^6.1.4
-        version: 6.1.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+        specifier: ^6.1.6
+        version: 6.1.6(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
     devDependencies:
       '@types/convict':
         specifier: ^6.1.6
@@ -192,8 +192,8 @@ importers:
         specifier: ^1.60.0
         version: 1.60.0(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)
       '@scalar/express-api-reference':
-        specifier: ^0.10.4
-        version: 0.10.4
+        specifier: ^0.10.12
+        version: 0.10.12
       '@socket.io/redis-streams-adapter':
         specifier: ^0.3.1
         version: 0.3.1(socket.io-adapter@2.5.8)
@@ -234,8 +234,8 @@ importers:
         specifier: ^4.14.1
         version: 4.14.1(graphql@16.14.2)
       graphql-tools:
-        specifier: ^9.0.28
-        version: 9.0.28(graphql@16.14.2)(rxjs@7.8.2)
+        specifier: ^9.0.33
+        version: 9.0.33(graphql@16.14.2)(rxjs@7.8.2)
       graphql-type-json:
         specifier: ^0.3.2
         version: 0.3.2(graphql@16.14.2)
@@ -328,8 +328,8 @@ importers:
         specifier: ^4.18.1
         version: 4.18.1
       nice-grpc-common:
-        specifier: ^2.0.3
-        version: 2.0.3
+        specifier: ^2.0.4
+        version: 2.0.4
       prom-client:
         specifier: ^15.1.3
         version: 15.1.3
@@ -340,8 +340,8 @@ importers:
         specifier: ^3.19.0
         version: 3.19.0
       winston-loki:
-        specifier: ^6.1.4
-        version: 6.1.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+        specifier: ^6.1.6
+        version: 6.1.6(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
     devDependencies:
       '@types/convict':
         specifier: ^6.1.6
@@ -718,7 +718,7 @@ importers:
         version: 4.0.1
       nodemailer:
         specifier: '>=9.0.1'
-        version: 9.0.1
+        version: 9.0.4
       nodemailer-mailgun-transport:
         specifier: ^2.1.5
         version: 2.1.5(handlebars@4.7.9)(lodash@4.18.1)(underscore@1.13.8)
@@ -796,8 +796,8 @@ importers:
         specifier: ^0.8.1
         version: 0.8.1
       bson:
-        specifier: ^7.3.0
-        version: 7.3.0
+        specifier: ^7.3.1
+        version: 7.3.1
       bullmq:
         specifier: ^5.79.0
         version: 5.79.0
@@ -1253,10 +1253,10 @@ packages:
     peerDependencies:
       graphql: 14.x || 15.x || 16.x
 
-  '@apollo/client@4.1.9':
-    resolution: {integrity: sha512-qfpkQD51tdU/7iAR6aLb4w9o/L7I475DluWHRb61U/3Q0AH29nNOxOBHjBbWDdf16ncPOoQuxne1sEs2NjqBFw==}
+  '@apollo/client@4.2.10':
+    resolution: {integrity: sha512-SCHzOEcfInIN9DGZvlDR4F+1zd3954WAy+g8dKwi7mrI09Tdh6YzDH+eXbH0LNpB4de2Qyb53RVKe3Ljv5/bMg==}
     peerDependencies:
-      graphql: ^16.0.0
+      graphql: ^16.0.0 || ^17.0.0
       graphql-ws: ^5.5.5 || ^6.0.3
       react: ^17.0.0 || ^18.0.0 || >=19.0.0-rc
       react-dom: ^17.0.0 || ^18.0.0 || >=19.0.0-rc
@@ -2142,14 +2142,32 @@ packages:
     peerDependencies:
       graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
 
+  '@graphql-tools/merge@9.2.2':
+    resolution: {integrity: sha512-DSLLAztOIQId7QE3m8Ehk5lV+0pjxNSSRDHPzlYQ9E4KJ9AoUMBprC4C+eX3v4srh05S2ujm5/veqAr5yEWFSQ==}
+    engines: {node: '>=16.0.0'}
+    peerDependencies:
+      graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
+
   '@graphql-tools/schema@10.0.33':
     resolution: {integrity: sha512-O6P3RIftO0jafnSsFAqpjurUuUxJ43s/AdPVLQsBkI6y4Ic/tKm4C1Qm1KKQsCDTOxXPJClh/v3g7k7yLKCFBQ==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
       graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
 
+  '@graphql-tools/schema@10.0.38':
+    resolution: {integrity: sha512-Kckk2/vm+rELJ7ijvFaAn9ouWSVUTD0D4SJIvYF4rKeuQHAfCzE/jzMFonZVpTXleqJjPXLZjVbuaMorw7A5Og==}
+    engines: {node: '>=16.0.0'}
+    peerDependencies:
+      graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
+
   '@graphql-tools/utils@11.1.0':
     resolution: {integrity: sha512-PtFVG4r8Z2LEBSaPYQMusBiB3o6kjLVJyjCLbnWem/SpSuM21v6LTmgpkXfYU1qpBV2UGsFyuEnSJInl8fR1Ag==}
+    engines: {node: '>=16.0.0'}
+    peerDependencies:
+      graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
+
+  '@graphql-tools/utils@11.2.2':
+    resolution: {integrity: sha512-Do2A/t6ayqOma8m7PvpYMsCBswL+NB35BQSng4GWSBqafL2/BnfAZy/NSENPwV721Rm2fG0BHETFC0+FJJZmLw==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
       graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
@@ -2547,11 +2565,12 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@napi-rs/wasm-runtime@1.1.5':
-    resolution: {integrity: sha512-AWPoBRJ9tsnVhor4sjO7rkni+7p+2IAEFj6cx06UgP10jkQHqay/36uRV/bFkgrh18D9vb4cr8Q0Pthskgzy+Q==}
+  '@napi-rs/wasm-runtime@1.2.2':
+    resolution: {integrity: sha512-JfB4kuJQjaoHuCTseIINHtHWeJnvgEcxjwA5t/Y00ZgaOO1Crz3fjT/p8kT28zA/Caz7oiUMn3d6H2yOVCVwuw==}
+    engines: {node: ^20.19.0 || ^22.13.0 || >=23.5.0}
     peerDependencies:
-      '@emnapi/core': ^1.7.1
-      '@emnapi/runtime': ^1.7.1
+      '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.3
+      '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.3
 
   '@noble/curves@2.2.0':
     resolution: {integrity: sha512-T/BoHgFXirb0ENSPBquzX0rcjXeM6Lo892a2jlYJkqk83LqZx0l1Of7DzlKJ6jkpvMrkHSnAcgb5JegL8SeIkQ==}
@@ -2774,8 +2793,8 @@ packages:
     resolution: {integrity: sha512-godMRo3E/m6uZtm0zVfDa5xCg1IGD+eEt4uVWzR0v62mbm2O70ZWY9l+ondg8CrPQFsCdtWpWW+nYdzvp1tWTw==}
     engines: {node: '>=22'}
 
-  '@scalar/client-side-rendering@0.2.4':
-    resolution: {integrity: sha512-IQC39aQQXKsZXOqQw0LNiZ/gQ1WxHpF+WLTo/hurn0S/FmNHlBGUAhFyt1BeDSUYxics7ixgzQatKJDggafBTw==}
+  '@scalar/client-side-rendering@0.3.5':
+    resolution: {integrity: sha512-0MX6HN4hNhMlBTqm+PJ1Rgi5yQy7NkMEPMa6QXdyKAO59pQVzWlBGT+MlAnyXCeVrqFULzZh90v81t5UQ/uYEw==}
     engines: {node: '>=22'}
 
   '@scalar/code-highlight@0.3.6':
@@ -2786,12 +2805,16 @@ packages:
     resolution: {integrity: sha512-cwIf042ehbD4dZWUIIlXZp0VWvaH7jznj/gpuLEqtuEDla5MrhTWYWj20aufpTpCeGexf1mqgouaWHUZ7lYByQ==}
     engines: {node: '>=22'}
 
-  '@scalar/express-api-reference@0.10.4':
-    resolution: {integrity: sha512-/FkuP+B9ppWiQbf0Bhygx8CwoLXiEGFgS7OK14FM/JH0SeAaGfQiacUgPEpxJYI2qnqFHkrys8YH2jl400wDfg==}
+  '@scalar/express-api-reference@0.10.12':
+    resolution: {integrity: sha512-xQXw1KQpwybx9G8LLiuFcPvC3uRIAtfom3nFkAfaPhp6wLkPKoM1oCxKEwj+8zftFm+quiEey8GfmjISTOVZhQ==}
     engines: {node: '>=22'}
 
   '@scalar/helpers@0.8.2':
     resolution: {integrity: sha512-qNbqUjSB3S4Gr4A0oANcm5G1Ip+EqBxICYKhe9YzmnaBpbmW6shxqpiivApTvvuDf+uIhR3uMwWyVQbYcGLsxA==}
+    engines: {node: '>=22'}
+
+  '@scalar/helpers@0.9.2':
+    resolution: {integrity: sha512-hjyMpMZjTBZQhyByZmz5oUgRKUQJO5V5AOiJxsVEGbUmgA7sJRQeTrXLB+BEwzaKS5nm2opJeNyMBYLFNK4hiQ==}
     engines: {node: '>=22'}
 
   '@scalar/icons@0.7.3':
@@ -2818,6 +2841,10 @@ packages:
     resolution: {integrity: sha512-aV0PWqFpQft9a6d4Z6HOTHKDaA+K4AquxSPfBDI1c5f6lMe5l3zViww/iBQA/Yw+V1+Y2iwSVzhuxaktC1UiMg==}
     engines: {node: '>=22'}
 
+  '@scalar/schemas@0.8.0':
+    resolution: {integrity: sha512-bwu/NCOghZI/cL6Ayti/Oeb5XEMRTncBsyQeHhkFwk4PZsR910me+kZPd5TAp6TqifMfDbAe3xyLSdlzU/KFLA==}
+    engines: {node: '>=22'}
+
   '@scalar/sidebar@0.9.23':
     resolution: {integrity: sha512-2qC5vh1BGhnARF9/psKr5jPbwWyg4RIfflNmh7q/jHxNyeCrHGr1yyUiV8TsWmURR5ZNMiyUPzHaio4hdAcZNw==}
     engines: {node: '>=22'}
@@ -2837,6 +2864,10 @@ packages:
     resolution: {integrity: sha512-aS1FvHbKhBC51mWqXmhkPe6lmhCd9+u//DQ1YTiCWOz4/fXAdWfwHvW9UZ7AzzcGwGiCo9diE81xV+UvSI1qIg==}
     engines: {node: '>=22'}
 
+  '@scalar/types@0.17.0':
+    resolution: {integrity: sha512-mj033MX0EFOEwfpO3ch7FGGnMbye1aLlnP6LmTC9Il2AlBCDL41rYPk67jF5ICAMsAES1RQ+8N2bcC0MJnupLQ==}
+    engines: {node: '>=22'}
+
   '@scalar/use-codemirror@0.14.12':
     resolution: {integrity: sha512-m+0tmVOHZVAybbcNEizR3m9RYOLtU59AStRkk29J5qaW4J+tsjrz4BDMceeTpoVawL/lxp2vDvQR+w/gKC3miQ==}
     engines: {node: '>=22'}
@@ -2851,6 +2882,10 @@ packages:
 
   '@scalar/validation@0.6.0':
     resolution: {integrity: sha512-tpmmG+/xRE2Kn9RpflU3AIyZv08v10+E1ZrJCx7z6+/91zHVxy0M73kC1LT4/8PbYNt85ywyC8+n+D99JdMcGA==}
+    engines: {node: '>=20'}
+
+  '@scalar/validation@0.6.2':
+    resolution: {integrity: sha512-Sc1TkcwGV6aVCO51AyKeaGiP8gpwAHxEtO5d3tZzPV+KsnlC/YokQxFxwBrbIXw73k9hmcExnJyGu3k5i6n6VA==}
     engines: {node: '>=20'}
 
   '@scalar/workspace-store@0.54.4':
@@ -2999,8 +3034,8 @@ packages:
     cpu: [arm64]
     os: [win32]
 
-  '@tybys/wasm-util@0.10.2':
-    resolution: {integrity: sha512-RoBvJ2X0wuKlWFIjrwffGw1IqZHKQqzIchKaadZZfnNpsAYp2mM0h36JtPCjNDAHGgYez/15uMBpfGwchhiMgg==}
+  '@tybys/wasm-util@0.10.3':
+    resolution: {integrity: sha512-F3fo1MYrRJYL3zER0OUOmkutjr1Vp23m7OsSgp7nq4SP6OqX6C/56XFIPAl5bt3zaBRjmW7SGz3u/6LwFpYcOg==}
 
   '@types/ali-oss@6.23.3':
     resolution: {integrity: sha512-huSf6njkqhSeR37OMJTGMCyUg2d9Zp2AioefhYuUMeh0vNM+WybctrBor7bO/RcCbLCQI6sHn6NtPBIWALYVJg==}
@@ -3787,8 +3822,8 @@ packages:
   bser@2.1.1:
     resolution: {integrity: sha512-gQxTNE/GAfIIrmHLUE3oJyp5FO6HRBfhjnw4/wMmA63ZGDJnWBmgY/lyQBpnDUkGmAhbSe39tx2d/iTOAfglwQ==}
 
-  bson@7.3.0:
-    resolution: {integrity: sha512-WmjjMEwFwZHmGnAb7wn90MhkiT+mTm4x/rLj7dvAPWfwnVWDXhLun2e+UM88MJoDGW624yzZglVX/zTBy9ZZMw==}
+  bson@7.3.1:
+    resolution: {integrity: sha512-h/C0qe6857pQhcSJHLfsR1uYGj98Ge3wKAD3Ed9KqH3wcVh+BM4Jq4xISD7vs9OPuT07n+q3QQVjslJ286j6ag==}
     engines: {node: '>=20.19.0'}
 
   btoa@1.2.1:
@@ -4366,6 +4401,7 @@ packages:
   cron-parser@4.9.0:
     resolution: {integrity: sha512-p0SaNjrHOnQeR8/VnfGbmg9te2kfyYSQ7Sc/j/6DtPL3JQvKxmjO9TSjNFpujqV3vEYYBvNNvXSxzyksBWAx1Q==}
     engines: {node: '>=12.0.0'}
+    deprecated: v4 is no longer maintained, upgrade to v5
 
   cross-env@10.1.0:
     resolution: {integrity: sha512-GsYosgnACZTADcmEyJctkJIoqAhHjttw7RsFrVoJNXbsWWqaq6Ym+7kZjq6mS45O0jij6vtiReppKQEtqWy6Dw==}
@@ -5140,8 +5176,8 @@ packages:
     peerDependencies:
       graphql: ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
 
-  graphql-tools@9.0.28:
-    resolution: {integrity: sha512-QLRgoUXg7AciHYRWJ4TSfUbfBy/wCGSYG4fl8ccSFG3fXyAilekM1V+2ym+Fyv+DqbT1xM1CQ6BcSdCoOV3otA==}
+  graphql-tools@9.0.33:
+    resolution: {integrity: sha512-4JsSP6p9Vb2ky6+y16VI2P0klU+7x7XSuEctVH2iXnav6jzvjp6uzH9RNa/5Ks160gjCoPZmVRhGbnho3QrL7g==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
       graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
@@ -6248,6 +6284,7 @@ packages:
 
   mongodb-schema@12.7.0:
     resolution: {integrity: sha512-TPfop6c2AAQJP1QhQwi/uJnuPEeLhMvN9ouJAZ6M9mouH6fCr0WOHLJWx5Z0dSeXJIVy//WTXxZB6yiol1bGEA==}
+    deprecated: This package is not maintained anymore. Please use @mongodb-js/mongodb-schema instead
     hasBin: true
 
   mongodb@7.2.0:
@@ -6342,13 +6379,18 @@ packages:
     resolution: {integrity: sha512-Tz09sEL2EEuv5fFowm419c1+a/jSMiBjI9gHxVLrVdbUkkNUUfjsVYs9pVZu5oCon/kmRh9TfLEObFtkVxmY0w==}
     engines: {node: '>=8.0.0'}
 
-  nanoid@3.3.12:
-    resolution: {integrity: sha512-ZB9RH/39qpq5Vu6Y+NmUaFhQR6pp+M2Xt76XBnEwDaGcVAqhlvxrl3B2bKS5D3NH3QR76v3aSrKaF/Kiy7lEtQ==}
+  nanoid@3.3.18:
+    resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
   nanoid@5.1.11:
     resolution: {integrity: sha512-v+KEsUv2ps74PaSKv0gHTxTCgMXOIfBEbaqa6w6ISIGC7ZsvHN4N9oJ8d4cmf0n5oTzQz2SLmThbQWhjd/8eKg==}
+    engines: {node: ^18 || >=20}
+    hasBin: true
+
+  nanoid@5.1.16:
+    resolution: {integrity: sha512-kVrnsrJqMR8+oLJnGEmSWw9BivK5mt7H3FZatVRjrc5wGqFYuBxX1yG7+A7Gi5AefkX6t/oCkizcQgpu0cY1dQ==}
     engines: {node: ^18 || >=20}
     hasBin: true
 
@@ -6377,14 +6419,14 @@ packages:
   neverpanic@0.0.8:
     resolution: {integrity: sha512-vVdkelrLxaow/fdWDumzNBO+jwm6X8bxeLJc34THtpj70u0C5QBkcV6CRCu2X726km7XD45N0A3QtYCla4RvKw==}
 
-  nice-grpc-client-middleware-retry@3.1.15:
-    resolution: {integrity: sha512-fXfNNdtjCQzc3O/w3WsK1AOU+xdE1V7FCm4FEQWS/UUVsV1616S2oryvWqsZAF8aOvuMir8lFtNmgH3DeP+PBg==}
+  nice-grpc-client-middleware-retry@3.1.16:
+    resolution: {integrity: sha512-8EbOCUZZ1Uq1pCfTD8dB2zMU1AYrilRvm9al5VSUi444eqhPhxElnI7iqP6ZY/ixb1NGsvMpfbU5FW/3L7DdFw==}
 
-  nice-grpc-common@2.0.3:
-    resolution: {integrity: sha512-MEhnD3JMah0mgyivpb9hpRDbOBuXBxI/TVO+OK1h6rC97WM42HsPMR+zzRNQ0C5BqYJTw1nyWiQRD0DucO+pjQ==}
+  nice-grpc-common@2.0.4:
+    resolution: {integrity: sha512-gOEXlD6ShXZMZ8k+49wm/bA2j1+3IKbEFV9WYREJcvZV4kM5L1KkILYTX9VYBzZF2OuYCe1wp8c82bQkvR0fHw==}
 
-  nice-grpc@2.1.16:
-    resolution: {integrity: sha512-Cl3Pn00212Hl8/U6bpgMxmhZj5lyv3nWoJov4cd3FjWarktrMHP4DNvSjCnDwkMWYx4W1tyscEia4JX6Y4GVCQ==}
+  nice-grpc@2.1.17:
+    resolution: {integrity: sha512-pu9xYPlWSeqoYQOCqb2ftQqZi/P2DaI70PSuwnxvoyIRiilaOVtktyPe6LmuXegWB4Ic1sPuDGCnCCASbwzK0w==}
 
   node-abi@3.92.0:
     resolution: {integrity: sha512-KdHvFWZjEKDf0cakgFjebl371GPsISX2oZHcuyKqM7DtogIsHrqKeLTo8wBHxaXRAQlY2PsPlZmfo+9ZCxEREQ==}
@@ -6445,8 +6487,8 @@ packages:
   nodemailer-mandrill-transport@1.2.0:
     resolution: {integrity: sha512-Dli7B8D0Q2EkLi01ajSS4zaSfB1Vpv0s5539Dgjr6/XmQaXX7zVtzUvicWg38brgmFAaQ3HyXNFK6lWsF5I27A==}
 
-  nodemailer@9.0.1:
-    resolution: {integrity: sha512-Gwv8SQewT616ZM/URn0H54b8PWo/Wum7md3EW2aWy1lO27+WZCX+Xyak3J+NlmHUjDh5ME+uesJUDRbR3Ye8Bw==}
+  nodemailer@9.0.4:
+    resolution: {integrity: sha512-LmJNRVRtfSCULxcZpy0Cpg4WWenlUZ9+zbmTO+S7v9wD6XreYLjXRFtDjtV/4F0HT5p1GyZfA0Ux/myxHb18CQ==}
     engines: {node: '>=6.0.0'}
 
   noms@0.0.0:
@@ -6815,6 +6857,10 @@ packages:
 
   protobufjs@8.7.1:
     resolution: {integrity: sha512-agdGHrXNTv0IrYscJPDou/PlEJk1c/hBZ9o/B5NH2i/nSPtPqacNxzgwf1CebXxFMjMrZH5sqv9uQuw96aGt/A==}
+    engines: {node: '>=12.0.0'}
+
+  protobufjs@8.7.2:
+    resolution: {integrity: sha512-oTVHV+oelUBtiu5iTuTNNZ0eLYsXSMxry4cgr30mayNkgIZL6qZ0IOQVPuSWGcyAaXKl/XgqwWHIC3a0khYVBA==}
     engines: {node: '>=12.0.0'}
 
   proxy-addr@2.0.7:
@@ -7709,6 +7755,10 @@ packages:
     resolution: {integrity: sha512-1URUxUqfHFM1c+zfSPsa3gnkO7Aq21qyH75SIduNYz4SzY964rn1X2vCMQaHSHhktiw+0kPa2iyb6PUpXqB6Vg==}
     engines: {node: '>=20'}
 
+  type-fest@5.8.0:
+    resolution: {integrity: sha512-YGYEVz3Fm5iy/AybuA0oyNFq7H4CgQNfRp/qfe8nurE1kuCeNm3/vfm9X4Mtl+qLyaKJUh5xrFZwogr41SMjYA==}
+    engines: {node: '>=20'}
+
   type-is@2.1.0:
     resolution: {integrity: sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA==}
     engines: {node: '>= 18'}
@@ -7950,8 +8000,8 @@ packages:
     resolution: {integrity: sha512-iCRnKVvGxOQdsKhcQId2PXV1vV3J/sDPXKA4Oe9+Eti2nb2ESEsYHRYls/UjoUW3bIc5ZDO8dTH50A/5iVN+bw==}
     engines: {node: '>=0.10.0'}
 
-  winston-loki@6.1.4:
-    resolution: {integrity: sha512-/j/Zf7TGLjgSBck29BkPnpJlEnGQr5xqlx8A0N6LZnXYYYvyK7lFk6FPpWiD+VMO8xjaxOu1KNF9SzWaRDsigA==}
+  winston-loki@6.1.6:
+    resolution: {integrity: sha512-chNF2zG4l0Cocgt4MmFQ8hS4iSNbbs0GsW4XI+FWCsf2oa8KCEzizyJR7VlnabiCYAs5jMYeFedDBP8TIljw9A==}
 
   winston-transport@4.9.0:
     resolution: {integrity: sha512-8drMJ4rkgaPo1Me4zD/3WLfI/zPdA9o2IipKODunnGDcuqbHwjsbB79ylv04LCGGzU0xQ6vTznOMpQGaLhhm6A==}
@@ -8125,7 +8175,7 @@ snapshots:
     dependencies:
       graphql: 16.14.2
 
-  '@apollo/client@4.1.9(graphql@16.14.2)(rxjs@7.8.2)':
+  '@apollo/client@4.2.10(graphql@16.14.2)(rxjs@7.8.2)':
     dependencies:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.14.2)
       '@wry/caches': 1.0.1
@@ -9319,7 +9369,7 @@ snapshots:
       fast-deep-equal: 3.1.3
       functional-red-black-tree: 1.0.1
       google-gax: 5.0.7
-      protobufjs: 8.7.1
+      protobufjs: 8.7.2
     transitivePeerDependencies:
       - supports-color
     optional: true
@@ -9359,6 +9409,12 @@ snapshots:
       graphql: 16.14.2
       tslib: 2.8.1
 
+  '@graphql-tools/merge@9.2.2(graphql@16.14.2)':
+    dependencies:
+      '@graphql-tools/utils': 11.2.2(graphql@16.14.2)
+      graphql: 16.14.2
+      tslib: 2.8.1
+
   '@graphql-tools/schema@10.0.33(graphql@16.14.2)':
     dependencies:
       '@graphql-tools/merge': 9.1.9(graphql@16.14.2)
@@ -9366,7 +9422,22 @@ snapshots:
       graphql: 16.14.2
       tslib: 2.8.1
 
+  '@graphql-tools/schema@10.0.38(graphql@16.14.2)':
+    dependencies:
+      '@graphql-tools/merge': 9.2.2(graphql@16.14.2)
+      '@graphql-tools/utils': 11.2.2(graphql@16.14.2)
+      graphql: 16.14.2
+      tslib: 2.8.1
+
   '@graphql-tools/utils@11.1.0(graphql@16.14.2)':
+    dependencies:
+      '@graphql-typed-document-node/core': 3.2.0(graphql@16.14.2)
+      '@whatwg-node/promise-helpers': 1.3.2
+      cross-inspect: 1.0.1
+      graphql: 16.14.2
+      tslib: 2.8.1
+
+  '@graphql-tools/utils@11.2.2(graphql@16.14.2)':
     dependencies:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.14.2)
       '@whatwg-node/promise-helpers': 1.3.2
@@ -9812,7 +9883,7 @@ snapshots:
 
   '@napi-rs/snappy-wasm32-wasi@7.3.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@napi-rs/wasm-runtime': 1.2.2(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -9827,11 +9898,11 @@ snapshots:
   '@napi-rs/snappy-win32-x64-msvc@7.3.3':
     optional: true
 
-  '@napi-rs/wasm-runtime@1.1.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
+  '@napi-rs/wasm-runtime@1.2.2(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
       '@emnapi/core': 1.10.0
       '@emnapi/runtime': 1.10.0
-      '@tybys/wasm-util': 0.10.2
+      '@tybys/wasm-util': 0.10.3
     optional: true
 
   '@noble/curves@2.2.0':
@@ -10092,11 +10163,11 @@ snapshots:
       - universal-cookie
       - zod
 
-  '@scalar/client-side-rendering@0.2.4':
+  '@scalar/client-side-rendering@0.3.5':
     dependencies:
-      '@scalar/schemas': 0.5.0
-      '@scalar/types': 0.14.0
-      '@scalar/validation': 0.6.0
+      '@scalar/schemas': 0.8.0
+      '@scalar/types': 0.17.0
+      '@scalar/validation': 0.6.2
 
   '@scalar/code-highlight@0.3.6':
     dependencies:
@@ -10140,11 +10211,13 @@ snapshots:
       - tailwindcss
       - typescript
 
-  '@scalar/express-api-reference@0.10.4':
+  '@scalar/express-api-reference@0.10.12':
     dependencies:
-      '@scalar/client-side-rendering': 0.2.4
+      '@scalar/client-side-rendering': 0.3.5
 
   '@scalar/helpers@0.8.2': {}
+
+  '@scalar/helpers@0.9.2': {}
 
   '@scalar/icons@0.7.3(typescript@6.0.3)':
     dependencies:
@@ -10184,6 +10257,11 @@ snapshots:
       '@scalar/helpers': 0.8.2
       '@scalar/validation': 0.6.0
 
+  '@scalar/schemas@0.8.0':
+    dependencies:
+      '@scalar/helpers': 0.9.2
+      '@scalar/validation': 0.6.2
+
   '@scalar/sidebar@0.9.23(tailwindcss@4.3.1)(typescript@6.0.3)':
     dependencies:
       '@scalar/components': 0.27.2(tailwindcss@4.3.1)(typescript@6.0.3)
@@ -10217,6 +10295,13 @@ snapshots:
       '@scalar/helpers': 0.8.2
       nanoid: 5.1.11
       type-fest: 5.7.0
+      zod: 4.4.3
+
+  '@scalar/types@0.17.0':
+    dependencies:
+      '@scalar/helpers': 0.9.2
+      nanoid: 5.1.16
+      type-fest: 5.8.0
       zod: 4.4.3
 
   '@scalar/use-codemirror@0.14.12(typescript@6.0.3)':
@@ -10258,6 +10343,8 @@ snapshots:
       - typescript
 
   '@scalar/validation@0.6.0': {}
+
+  '@scalar/validation@0.6.2': {}
 
   '@scalar/workspace-store@0.54.4(typescript@6.0.3)':
     dependencies:
@@ -10414,7 +10501,7 @@ snapshots:
   '@turbo/windows-arm64@2.10.7':
     optional: true
 
-  '@tybys/wasm-util@0.10.2':
+  '@tybys/wasm-util@0.10.3':
     dependencies:
       tslib: 2.8.1
     optional: true
@@ -10804,7 +10891,7 @@ snapshots:
     dependencies:
       '@emnapi/core': 1.10.0
       '@emnapi/runtime': 1.10.0
-      '@napi-rs/wasm-runtime': 1.1.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@napi-rs/wasm-runtime': 1.2.2(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
     optional: true
 
   '@unrs/resolver-binding-win32-arm64-msvc@1.12.2':
@@ -11258,7 +11345,7 @@ snapshots:
     dependencies:
       node-int64: 0.4.0
 
-  bson@7.3.0: {}
+  bson@7.3.1: {}
 
   btoa@1.2.1: {}
 
@@ -12558,7 +12645,7 @@ snapshots:
       node-fetch: 3.3.2
       object-hash: 3.0.0
       proto3-json-serializer: 3.0.4
-      protobufjs: 8.7.1
+      protobufjs: 8.7.2
       retry-request: 8.0.3
       rimraf: 5.0.10
     transitivePeerDependencies:
@@ -12586,13 +12673,13 @@ snapshots:
       graphql: 16.14.2
       tslib: 2.8.1
 
-  graphql-tools@9.0.28(graphql@16.14.2)(rxjs@7.8.2):
+  graphql-tools@9.0.33(graphql@16.14.2)(rxjs@7.8.2):
     dependencies:
-      '@graphql-tools/schema': 10.0.33(graphql@16.14.2)
+      '@graphql-tools/schema': 10.0.38(graphql@16.14.2)
       graphql: 16.14.2
       tslib: 2.8.1
     optionalDependencies:
-      '@apollo/client': 4.1.9(graphql@16.14.2)(rxjs@7.8.2)
+      '@apollo/client': 4.2.10(graphql@16.14.2)(rxjs@7.8.2)
     transitivePeerDependencies:
       - graphql-ws
       - react
@@ -14107,7 +14194,7 @@ snapshots:
     dependencies:
       reservoir: 0.1.2
     optionalDependencies:
-      bson: 7.3.0
+      bson: 7.3.1
       cli-table: 0.3.11
       js-yaml: 4.2.0
       mongodb: 7.3.0(snappy@7.3.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))
@@ -14128,7 +14215,7 @@ snapshots:
   mongodb@7.2.0(snappy@7.3.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)):
     dependencies:
       '@mongodb-js/saslprep': 1.4.11
-      bson: 7.3.0
+      bson: 7.3.1
       mongodb-connection-string-url: 7.0.1
     optionalDependencies:
       snappy: 7.3.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
@@ -14136,7 +14223,7 @@ snapshots:
   mongodb@7.3.0(snappy@7.3.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)):
     dependencies:
       '@mongodb-js/saslprep': 1.4.11
-      bson: 7.3.0
+      bson: 7.3.1
       mongodb-connection-string-url: 7.0.1
     optionalDependencies:
       snappy: 7.3.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
@@ -14204,9 +14291,11 @@ snapshots:
     dependencies:
       lru.min: 1.1.4
 
-  nanoid@3.3.12: {}
+  nanoid@3.3.18: {}
 
   nanoid@5.1.11: {}
+
+  nanoid@5.1.16: {}
 
   napi-build-utils@2.0.0: {}
 
@@ -14222,20 +14311,20 @@ snapshots:
 
   neverpanic@0.0.8: {}
 
-  nice-grpc-client-middleware-retry@3.1.15:
+  nice-grpc-client-middleware-retry@3.1.16:
     dependencies:
       abort-controller-x: 0.5.0
-      nice-grpc-common: 2.0.3
+      nice-grpc-common: 2.0.4
 
-  nice-grpc-common@2.0.3:
+  nice-grpc-common@2.0.4:
     dependencies:
       ts-error: 1.0.6
 
-  nice-grpc@2.1.16:
+  nice-grpc@2.1.17:
     dependencies:
       '@grpc/grpc-js': 1.14.4
       abort-controller-x: 0.5.0
-      nice-grpc-common: 2.0.3
+      nice-grpc-common: 2.0.4
 
   node-abi@3.92.0:
     dependencies:
@@ -14352,7 +14441,7 @@ snapshots:
       extend: 3.0.2
       mandrill-api: 1.0.45
 
-  nodemailer@9.0.1: {}
+  nodemailer@9.0.4: {}
 
   noms@0.0.0:
     dependencies:
@@ -14630,7 +14719,7 @@ snapshots:
 
   postcss@8.5.15:
     dependencies:
-      nanoid: 3.3.12
+      nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -14691,10 +14780,14 @@ snapshots:
 
   proto3-json-serializer@3.0.4:
     dependencies:
-      protobufjs: 8.7.1
+      protobufjs: 8.7.2
     optional: true
 
   protobufjs@8.7.1:
+    dependencies:
+      long: 5.3.2
+
+  protobufjs@8.7.2:
     dependencies:
       long: 5.3.2
 
@@ -15177,7 +15270,7 @@ snapshots:
   smtp-server@3.19.2:
     dependencies:
       ipv6-normalize: 1.0.1
-      nodemailer: 9.0.1
+      nodemailer: 9.0.4
       punycode.js: 2.3.1
 
   snappy@7.3.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0):
@@ -15744,6 +15837,10 @@ snapshots:
     dependencies:
       tagged-tag: 1.0.0
 
+  type-fest@5.8.0:
+    dependencies:
+      tagged-tag: 1.0.0
+
   type-is@2.1.0:
     dependencies:
       content-type: 2.0.0
@@ -16025,11 +16122,11 @@ snapshots:
     dependencies:
       semver: 5.7.2
 
-  winston-loki@6.1.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0):
+  winston-loki@6.1.6(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0):
     dependencies:
       async-exit-hook: 2.0.1
       btoa: 1.2.1
-      protobufjs: 8.7.1
+      protobufjs: 8.7.2
       url-polyfill: 1.1.14
       winston-transport: 4.9.0
     optionalDependencies:
