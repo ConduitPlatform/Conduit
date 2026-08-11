@@ -46,6 +46,7 @@ import { loadReadinessConfig } from '../health/config.js';
 import { getReadinessMiddleware } from '../health/readinessMiddleware.js';
 import { ReadinessService } from '../health/ReadinessService.js';
 import type { CoreHealthProvider } from '../health/types.js';
+import { stripUndeclaredConfigParams } from '../utils/stripUndeclaredConfigParams.js';
 
 export default class AdminModule {
   grpcSdk: ConduitGrpcSdk;
@@ -113,11 +114,14 @@ export default class AdminModule {
     const previousConfig =
       (await this.configManager.get('admin')) ?? this.config.getProperties();
     await generateConfigDefaults(previousConfig);
-    ConfigController.getInstance().config = await this.configManager.configurePackage(
+    const loadedConfig = await this.configManager.configurePackage(
       'admin',
       previousConfig,
       AdminConfigRawSchema,
     );
+    const adminConfig = stripUndeclaredConfigParams(AdminConfigRawSchema, loadedConfig);
+    await this.configManager.set('admin', adminConfig);
+    ConfigController.getInstance().config = adminConfig;
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     await server.addService(
@@ -292,8 +296,9 @@ export default class AdminModule {
 
   async setConfig(moduleConfig: any) {
     const previousConfig = await this.configManager.get('admin');
-    const config = merge(previousConfig, moduleConfig);
+    let config = merge(previousConfig, moduleConfig);
     await generateConfigDefaults(config);
+    config = stripUndeclaredConfigParams(AppConfigSchema, config);
     try {
       this.config.load(config).validate({
         allowed: 'strict',
@@ -303,6 +308,7 @@ export default class AdminModule {
       this.config.load(previousConfig);
       throw new ConduitError('INVALID_ARGUMENT', 400, (e as Error).message);
     }
+    config = this.config.getProperties();
     this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(config));
     ConfigController.getInstance().config = config;
     this.onConfig();
