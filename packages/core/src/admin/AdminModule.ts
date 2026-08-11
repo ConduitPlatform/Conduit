@@ -119,21 +119,8 @@ export default class AdminModule {
       previousConfig,
       AdminConfigRawSchema,
     );
-    // Drop undeclared keys left in stored config after schema removals (e.g. transports.proxy).
-    let adminConfig = stripUndeclaredConfigParams(
-      AdminConfigRawSchema as Record<string, any>,
-      loadedConfig,
-    );
-    try {
-      this.config.load(adminConfig).validate({ allowed: 'strict' });
-      adminConfig = this.config.getProperties();
-      await this.configManager.set('admin', adminConfig);
-    } catch (e) {
-      ConduitGrpcSdk.Logger.warn(
-        `Could not sanitize admin config on startup: ${(e as Error).message}`,
-      );
-      adminConfig = loadedConfig;
-    }
+    const adminConfig = stripUndeclaredConfigParams(AdminConfigRawSchema, loadedConfig);
+    await this.configManager.set('admin', adminConfig);
     ConfigController.getInstance().config = adminConfig;
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
@@ -309,16 +296,11 @@ export default class AdminModule {
 
   async setConfig(moduleConfig: any) {
     const previousConfig = await this.configManager.get('admin');
-    const config = merge(previousConfig, moduleConfig);
+    let config = merge(previousConfig, moduleConfig);
     await generateConfigDefaults(config);
-    // Strip legacy undeclared keys (e.g. transports.proxy) before strict validation.
-    // Convict getProperties() retains undeclared keys that were loaded, so warn+get is not enough.
-    const sanitizedConfig = stripUndeclaredConfigParams(
-      AppConfigSchema as Record<string, any>,
-      config,
-    );
+    config = stripUndeclaredConfigParams(AppConfigSchema, config);
     try {
-      this.config.load(sanitizedConfig).validate({
+      this.config.load(config).validate({
         allowed: 'strict',
       });
     } catch (e) {
@@ -326,11 +308,11 @@ export default class AdminModule {
       this.config.load(previousConfig);
       throw new ConduitError('INVALID_ARGUMENT', 400, (e as Error).message);
     }
-    const updatedConfig = this.config.getProperties();
-    this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(updatedConfig));
-    ConfigController.getInstance().config = updatedConfig;
+    config = this.config.getProperties();
+    this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(config));
+    ConfigController.getInstance().config = config;
     this.onConfig();
-    return updatedConfig;
+    return config;
   }
 
   protected onConfig() {

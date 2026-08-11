@@ -35,7 +35,7 @@ export class Core {
 
   async setConfig(moduleConfig: any): Promise<any> {
     const previousConfig = await this.configManager.get('core');
-    let config = stripUndeclaredConfigParams(AppConfigSchema as Record<string, any>, {
+    let config = stripUndeclaredConfigParams(AppConfigSchema, {
       ...previousConfig,
       ...moduleConfig,
     });
