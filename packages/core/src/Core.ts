@@ -3,6 +3,7 @@ import { GrpcServer } from './GrpcServer.js';
 import { isNil } from 'lodash-es';
 import AppConfigSchema, { Config as ConfigSchema } from './config/index.js';
 import convict from 'convict';
+import { stripUndeclaredConfigParams } from './utils/stripUndeclaredConfigParams.js';
 
 export class Core {
   private static _instance: Core;
@@ -34,7 +35,10 @@ export class Core {
 
   async setConfig(moduleConfig: any): Promise<any> {
     const previousConfig = await this.configManager.get('core');
-    let config = { ...previousConfig, ...moduleConfig };
+    let config = stripUndeclaredConfigParams(AppConfigSchema as Record<string, any>, {
+      ...previousConfig,
+      ...moduleConfig,
+    });
     try {
       this.config.load(config).validate({
         allowed: 'strict',

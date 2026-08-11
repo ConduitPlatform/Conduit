@@ -2,6 +2,8 @@ import { Indexable } from '@conduitplatform/grpc-sdk';
 
 import * as deepdash from 'deepdash-es/standalone';
 
+export { stripUndeclaredConfigParams } from './stripUndeclaredConfigParams.js';
+
 export default function parseConfigSchema(schema: Indexable) {
   delete schema.doc;
   deepdash.eachDeep(schema, (value: any, key: string | number, parentValue: any) => {

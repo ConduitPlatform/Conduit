@@ -46,6 +46,7 @@ import { loadReadinessConfig } from '../health/config.js';
 import { getReadinessMiddleware } from '../health/readinessMiddleware.js';
 import { ReadinessService } from '../health/ReadinessService.js';
 import type { CoreHealthProvider } from '../health/types.js';
+import { stripUndeclaredConfigParams } from '../utils/stripUndeclaredConfigParams.js';
 
 export default class AdminModule {
   grpcSdk: ConduitGrpcSdk;
@@ -113,11 +114,27 @@ export default class AdminModule {
     const previousConfig =
       (await this.configManager.get('admin')) ?? this.config.getProperties();
     await generateConfigDefaults(previousConfig);
-    ConfigController.getInstance().config = await this.configManager.configurePackage(
+    const loadedConfig = await this.configManager.configurePackage(
       'admin',
       previousConfig,
       AdminConfigRawSchema,
     );
+    // Drop undeclared keys left in stored config after schema removals (e.g. transports.proxy).
+    let adminConfig = stripUndeclaredConfigParams(
+      AdminConfigRawSchema as Record<string, any>,
+      loadedConfig,
+    );
+    try {
+      this.config.load(adminConfig).validate({ allowed: 'strict' });
+      adminConfig = this.config.getProperties();
+      await this.configManager.set('admin', adminConfig);
+    } catch (e) {
+      ConduitGrpcSdk.Logger.warn(
+        `Could not sanitize admin config on startup: ${(e as Error).message}`,
+      );
+      adminConfig = loadedConfig;
+    }
+    ConfigController.getInstance().config = adminConfig;
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     await server.addService(
@@ -294,8 +311,14 @@ export default class AdminModule {
     const previousConfig = await this.configManager.get('admin');
     const config = merge(previousConfig, moduleConfig);
     await generateConfigDefaults(config);
+    // Strip legacy undeclared keys (e.g. transports.proxy) before strict validation.
+    // Convict getProperties() retains undeclared keys that were loaded, so warn+get is not enough.
+    const sanitizedConfig = stripUndeclaredConfigParams(
+      AppConfigSchema as Record<string, any>,
+      config,
+    );
     try {
-      this.config.load(config).validate({
+      this.config.load(sanitizedConfig).validate({
         allowed: 'strict',
       });
     } catch (e) {
@@ -303,10 +326,11 @@ export default class AdminModule {
       this.config.load(previousConfig);
       throw new ConduitError('INVALID_ARGUMENT', 400, (e as Error).message);
     }
-    this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(config));
-    ConfigController.getInstance().config = config;
+    const updatedConfig = this.config.getProperties();
+    this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(updatedConfig));
+    ConfigController.getInstance().config = updatedConfig;
     this.onConfig();
-    return config;
+    return updatedConfig;
   }
 
   protected onConfig() {
