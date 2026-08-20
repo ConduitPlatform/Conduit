@@ -2,6 +2,7 @@ import {
   ConduitGrpcSdk,
   DatabaseProvider,
   GrpcCallback,
+  GrpcError,
   GrpcRequest,
   HealthCheckStatus,
   Indexable,
@@ -14,6 +15,7 @@ import { AdminHandlers } from './admin/index.js';
 import { AuthenticationRoutes } from './routes/index.js';
 import * as models from './models/index.js';
 import { AuthUtils } from './utils/index.js';
+import { assertEmailAllowed } from './utils/emailRestrictions.js';
 import { TokenType } from './constants/index.js';
 import { v4 as uuid } from 'uuid';
 import {
@@ -300,6 +302,7 @@ export default class Authentication extends ManagedModule<Config> {
           message: 'Invalid email address provided',
         });
       }
+      assertEmailAllowed(email);
       const hashedPassword = await AuthUtils.hashPassword(password);
       const anonymousUserId = call.request.anonymousId;
       if (!anonymousUserId) {
@@ -367,6 +370,9 @@ export default class Authentication extends ManagedModule<Config> {
       }
       return callback(null, { password });
     } catch (e) {
+      if (e instanceof GrpcError) {
+        return callback({ code: e.code, message: e.message });
+      }
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
   }

@@ -7,6 +7,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/index.js';
+import { assertEmailAllowed } from '../utils/emailRestrictions.js';
 import { isNil } from 'lodash-es';
 import { User } from '../models/index.js';
 import escapeStringRegexp from 'escape-string-regexp';
@@ -93,6 +94,7 @@ export class UserAdmin {
       if (!isNil(duplicateEmail)) {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Email already exists');
       }
+      assertEmailAllowed(email);
     }
     let twoFaMethod: string | undefined;
     if (hasTwoFA) {

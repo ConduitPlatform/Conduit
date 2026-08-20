@@ -1,4 +1,5 @@
 **/dist/
+**/dist-test/
 **/node_modules/
 **/.nyc_output
 /.idea

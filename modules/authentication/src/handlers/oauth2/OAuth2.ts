@@ -32,6 +32,7 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { AuthUtils } from '../../utils/index.js';
+import { assertEmailAllowed } from '../../utils/emailRestrictions.js';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy
@@ -298,6 +299,9 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       if (!user.isVerified) user.isVerified = true;
       user = await User.getInstance().findByIdAndUpdate(user._id, user);
     } else {
+      if (payload.email) {
+        assertEmailAllowed(payload.email);
+      }
       if (anonymousUser) {
         return (await User.getInstance().findByIdAndUpdate(anonymousUser._id, {
           email: payload.email,
