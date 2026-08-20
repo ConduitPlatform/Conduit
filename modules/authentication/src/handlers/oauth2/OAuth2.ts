@@ -38,6 +38,7 @@ import {
   OAUTH_NATIVE_COMPLETE,
 } from '../../constants/index.js';
 import { AuthUtils } from '../../utils/index.js';
+import { assertEmailAllowed } from '../../utils/emailRestrictions.js';
 
 export abstract class OAuth2<
   T,
@@ -302,6 +303,9 @@ export abstract class OAuth2<
       if (!user.isVerified) user.isVerified = true;
       user = await User.getInstance().findByIdAndUpdate(user._id, user);
     } else {
+      if (payload.email) {
+        assertEmailAllowed(payload.email);
+      }
       if (anonymousUser) {
         return (await User.getInstance().findByIdAndUpdate(anonymousUser._id, {
           email: payload.email,

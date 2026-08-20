@@ -20,4 +20,10 @@ export const errors = {
     message: 'Invalid invitation token',
     description: 'The provided invitation token is invalid',
   },
+  EMAIL_NOT_ALLOWED: {
+    conduitCode: 'EMAIL_NOT_ALLOWED',
+    grpcCode: status.INVALID_ARGUMENT,
+    message: 'This email address is not allowed',
+    description: 'The provided email address is blocked by email restrictions',
+  },
 } as const satisfies Record<string, ModuleErrorDefinition>;

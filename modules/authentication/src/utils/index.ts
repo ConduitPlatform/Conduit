@@ -17,6 +17,7 @@ import { v4 as uuid } from 'uuid';
 import escapeStringRegexp from 'escape-string-regexp';
 import { FetchMembersParams } from '../interfaces/index.js';
 import { ConfigController } from '@conduitplatform/module-tools';
+import { assertEmailAllowed } from './emailRestrictions.js';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
@@ -312,6 +313,9 @@ export namespace AuthUtils {
 
     if (email && invalidEmailAddress(email)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
+    }
+    if (email) {
+      assertEmailAllowed(email);
     }
 
     const key = email ? 'email' : 'username';

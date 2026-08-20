@@ -34,6 +34,7 @@ import {
 import { createHash } from 'crypto';
 import { authenticateChecks, changePassword } from './utils.js';
 import { errors } from '../errors.js';
+import { assertEmailAllowed } from '../utils/emailRestrictions.js';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -68,6 +69,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           errors.USER_EXISTS,
           errors.INVITATION_REQUIRED,
           errors.INVALID_INVITATION,
+          errors.EMAIL_NOT_ALLOWED,
         ],
         rateLimit: AUTH_CREDENTIALS,
       },
@@ -188,6 +190,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           redirectUri: ConduitString.Optional,
         },
         middlewares: ['authMiddleware', 'denyAnonymousMiddleware'],
+        errors: [errors.EMAIL_NOT_ALLOWED],
       },
       new ConduitRouteReturnDefinition('ChangeEmailResponse', 'String'),
       this.changeEmail.bind(this),
@@ -315,6 +318,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (invalidAddress) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
+    assertEmailAllowed(email, 'module');
 
     let user: User | null = await User.getInstance().findOne({ email });
     if (!isNil(user))
@@ -577,6 +581,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (invalidAddress) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
+    assertEmailAllowed(newEmail, 'module');
     const dupEmailUser = await User.getInstance().findOne({ email: newEmail });
     if (dupEmailUser) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
@@ -666,7 +671,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async verifyChangeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { verificationToken } = call.request.params.verificationToken;
+    const verificationToken = call.request.params.verificationToken;
     const config = ConfigController.getInstance().config;
     const token: Token | null = await Token.getInstance().findOne(
       {
