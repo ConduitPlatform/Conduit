@@ -1,7 +1,7 @@
 export default {
   emailRestrictions: {
     enabled: {
-      doc: 'Defines if email restrictions are enforced on registration and email changes',
+      doc: 'Defines if email restrictions are enforced on new email intake',
       format: 'Boolean',
       default: false,
     },

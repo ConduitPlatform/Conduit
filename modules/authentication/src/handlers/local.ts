@@ -34,7 +34,6 @@ import {
 import { createHash } from 'crypto';
 import { authenticateChecks, changePassword } from './utils.js';
 import { errors } from '../errors.js';
-import { assertEmailAllowed } from '../utils/emailRestrictions.js';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -314,11 +313,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           return token?.data?.userData;
         });
     }
-    const invalidAddress = AuthUtils.invalidEmailAddress(email);
-    if (invalidAddress) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
-    }
-    assertEmailAllowed(email, 'module');
+    AuthUtils.assertValidEmail(email, 'module');
 
     let user: User | null = await User.getInstance().findOne({ email });
     if (!isNil(user))
@@ -577,11 +572,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         'The new email can not be the same as the old email',
       );
     }
-    const invalidAddress = AuthUtils.invalidEmailAddress(newEmail);
-    if (invalidAddress) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
-    }
-    assertEmailAllowed(newEmail, 'module');
+    AuthUtils.assertValidEmail(newEmail, 'module');
     const dupEmailUser = await User.getInstance().findOne({ email: newEmail });
     if (dupEmailUser) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');

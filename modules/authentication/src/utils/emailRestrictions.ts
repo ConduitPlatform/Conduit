@@ -113,12 +113,12 @@ export function assertEmailAllowed(
   email: string,
   errorType: 'grpc' | 'module' = 'grpc',
 ): void {
-  const config = ConfigController.getInstance().config
-    .emailRestrictions as EmailRestrictionsConfig;
-  const result = evaluateEmailRestrictions(email, config, disposableEmailSets);
-  if (result.allowed) {
-    return;
-  }
+  const result = evaluateEmailRestrictions(
+    email,
+    ConfigController.getInstance().config.emailRestrictions,
+    disposableEmailSets,
+  );
+  if (result.allowed) return;
   ConduitGrpcSdk.Logger.warn(`Email address not allowed: ${result.reason}`);
   if (errorType === 'module') {
     throw new ModuleError(errors.EMAIL_NOT_ALLOWED, result.reason);
