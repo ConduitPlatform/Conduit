@@ -25,6 +25,7 @@ import { Team as TeamAuthz } from '../authz/index.js';
 import { TeamInviteTemplate } from '../templates/index.js';
 import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/index.js';
+import { assertEmailAllowed } from '../utils/emailRestrictions.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { OAUTH_CALLBACK, TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
@@ -588,6 +589,9 @@ export class TeamsHandler implements IAuthenticationStrategy {
         status.PERMISSION_DENIED,
         'You do not have permission to invite users to this team',
       );
+    }
+    if (email) {
+      assertEmailAllowed(email);
     }
 
     // Delete any existing invite for the same email and team

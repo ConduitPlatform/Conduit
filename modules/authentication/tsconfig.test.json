@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist-test",
+    "rootDir": "./src",
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": [
+    "src/utils/emailRestrictions.ts",
+    "src/utils/emailRestrictions.test.ts",
+    "src/errors.ts",
+    "src/data/disposable-email-domains.json"
+  ],
+  "exclude": []
+}
