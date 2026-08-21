@@ -61,6 +61,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           errors.USER_EXISTS,
           errors.INVITATION_REQUIRED,
           errors.INVALID_INVITATION,
+          errors.EMAIL_NOT_ALLOWED,
         ],
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
@@ -175,6 +176,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           redirectUri: ConduitString.Optional,
         },
         middlewares: ['authMiddleware', 'denyAnonymousMiddleware'],
+        errors: [errors.EMAIL_NOT_ALLOWED],
       },
       new ConduitRouteReturnDefinition('ChangeEmailResponse', 'String'),
       this.changeEmail.bind(this),
@@ -292,10 +294,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           return token?.data?.userData;
         });
     }
-    const invalidAddress = AuthUtils.invalidEmailAddress(email);
-    if (invalidAddress) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
-    }
+    AuthUtils.assertValidEmail(email, 'module');
 
     let user: User | null = await User.getInstance().findOne({ email });
     if (!isNil(user))
@@ -543,10 +542,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         'The new email can not be the same as the old email',
       );
     }
-    const invalidAddress = AuthUtils.invalidEmailAddress(newEmail);
-    if (invalidAddress) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
-    }
+    AuthUtils.assertValidEmail(newEmail, 'module');
     const dupEmailUser = await User.getInstance().findOne({ email: newEmail });
     if (dupEmailUser) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
@@ -637,7 +633,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async verifyChangeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { verificationToken } = call.request.params.verificationToken;
+    const verificationToken = call.request.params.verificationToken;
     const config = ConfigController.getInstance().config;
     const token: Token | null = await Token.getInstance().findOne(
       {

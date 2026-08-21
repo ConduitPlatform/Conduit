@@ -2,6 +2,7 @@ import {
   ConduitGrpcSdk,
   DatabaseProvider,
   GrpcCallback,
+  GrpcError,
   GrpcRequest,
   HealthCheckStatus,
   Indexable,
@@ -294,12 +295,7 @@ export default class Authentication extends ManagedModule<Config> {
       if (user) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
-      if (AuthUtils.invalidEmailAddress(email)) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Invalid email address provided',
-        });
-      }
+      AuthUtils.assertValidEmail(email);
       const hashedPassword = await AuthUtils.hashPassword(password);
       const anonymousUserId = call.request.anonymousId;
       if (!anonymousUserId) {
@@ -367,6 +363,9 @@ export default class Authentication extends ManagedModule<Config> {
       }
       return callback(null, { password });
     } catch (e) {
+      if (e instanceof GrpcError) {
+        return callback({ code: e.code, message: e.message });
+      }
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
   }

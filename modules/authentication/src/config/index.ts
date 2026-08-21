@@ -18,6 +18,7 @@ import appleConfig from './apple.config.js';
 import twitterConfig from './twitter.config.js';
 import teamsConfig from './teams.config.js';
 import metamaskConfig from './metamask.config.js';
+import emailRestrictionsConfig from './emailRestrictions.config.js';
 
 const AppConfigSchema = {
   ...DefaultConfig,
@@ -31,6 +32,7 @@ const AppConfigSchema = {
   ...slackConfig,
   ...tokenConfig,
   ...localConfig,
+  ...emailRestrictionsConfig,
   ...magicLinkConfig,
   ...gitlabConfig,
   ...appleConfig,

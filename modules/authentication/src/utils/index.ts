@@ -16,6 +16,7 @@ import { v4 as uuid } from 'uuid';
 import escapeStringRegexp from 'escape-string-regexp';
 import { FetchMembersParams } from '../interfaces/index.js';
 import { ConfigController } from '@conduitplatform/module-tools';
+import { assertEmailAllowed } from './emailRestrictions.js';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
@@ -121,6 +122,16 @@ export namespace AuthUtils {
       .match(
         /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
       );
+  }
+
+  export function assertValidEmail(
+    email: string,
+    errorType: 'grpc' | 'module' = 'grpc',
+  ): void {
+    if (invalidEmailAddress(email)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
+    }
+    assertEmailAllowed(email, errorType);
   }
 
   export function checkResendThreshold(token: Token, notBefore?: number) {
@@ -278,8 +289,8 @@ export namespace AuthUtils {
       );
     }
 
-    if (email && invalidEmailAddress(email)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
+    if (email) {
+      assertValidEmail(email);
     }
 
     const key = email ? 'email' : 'username';
