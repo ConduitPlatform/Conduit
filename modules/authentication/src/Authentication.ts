@@ -15,7 +15,6 @@ import { AdminHandlers } from './admin/index.js';
 import { AuthenticationRoutes } from './routes/index.js';
 import * as models from './models/index.js';
 import { AuthUtils } from './utils/index.js';
-import { assertEmailAllowed } from './utils/emailRestrictions.js';
 import { TokenType } from './constants/index.js';
 import { v4 as uuid } from 'uuid';
 import {
@@ -296,13 +295,7 @@ export default class Authentication extends ManagedModule<Config> {
       if (user) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
-      if (AuthUtils.invalidEmailAddress(email)) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Invalid email address provided',
-        });
-      }
-      assertEmailAllowed(email);
+      AuthUtils.assertValidEmail(email);
       const hashedPassword = await AuthUtils.hashPassword(password);
       const anonymousUserId = call.request.anonymousId;
       if (!anonymousUserId) {

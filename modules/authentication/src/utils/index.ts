@@ -124,6 +124,16 @@ export namespace AuthUtils {
       );
   }
 
+  export function assertValidEmail(
+    email: string,
+    errorType: 'grpc' | 'module' = 'grpc',
+  ): void {
+    if (invalidEmailAddress(email)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
+    }
+    assertEmailAllowed(email, errorType);
+  }
+
   export function checkResendThreshold(token: Token, notBefore?: number) {
     const threshold =
       notBefore ||
@@ -279,11 +289,8 @@ export namespace AuthUtils {
       );
     }
 
-    if (email && invalidEmailAddress(email)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
-    }
     if (email) {
-      assertEmailAllowed(email);
+      assertValidEmail(email);
     }
 
     const key = email ? 'email' : 'username';
