@@ -163,7 +163,3 @@ export function generateBundleManifest(
   fs.writeFileSync(outPath, `${JSON.stringify(manifest, null, 2)}\n`);
   return outPath;
 }
-
-export function listBundleExternals(extraDependencies: string[] = []): string[] {
-  return [...SHARED_BUNDLE_EXTERNALS, ...extraDependencies];
-}

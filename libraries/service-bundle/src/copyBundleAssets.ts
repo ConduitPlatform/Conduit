@@ -59,5 +59,3 @@ export function copyBundleAssets(options: CopyBundleAssetsOptions = {}): void {
     fs.copyFileSync(src, dest);
   }
 }
-
-export { MODULE_PROTOS };

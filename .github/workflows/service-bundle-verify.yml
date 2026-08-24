@@ -30,7 +30,6 @@ on:
   push:
     branches:
       - main
-      - feat/chat-service-bundle
     paths:
       - 'modules/chat/**'
       - 'modules/functions/**'
@@ -56,6 +55,9 @@ on:
       - 'docker-bake.hcl'
       - '.github/workflows/service-bundle-verify.yml'
       - '.github/workflows/images.build.yml'
+
+permissions:
+  contents: read
 
 jobs:
   verify:
@@ -91,7 +93,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ripgrep
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Install Redis (core smoke)
         if: matrix.service == 'core'
@@ -125,7 +127,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y build-essential python3 ripgrep redis-server
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Verify standalone bundle
         run: ./scripts/verify-standalone-bundle.sh

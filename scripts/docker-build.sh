@@ -16,7 +16,6 @@ case "$TARGET" in
   functions) BUILDING_SERVICE="modules/functions" ;;
   router) BUILDING_SERVICE="modules/router" ;;
   storage) BUILDING_SERVICE="modules/storage" ;;
-  # Bundle cutover: BUILDING_SERVICE unused by bake branch below (HCL wires conduit-base-bundle-*).
   conduit) BUILDING_SERVICE="packages/core" ;;
   conduit-standalone) BUILDING_SERVICE="" ;;
   all) ;;

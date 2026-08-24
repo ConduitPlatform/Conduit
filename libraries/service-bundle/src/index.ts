@@ -4,14 +4,9 @@ export {
   createServiceTsupConfig,
   type CreateServiceTsupConfigOptions,
 } from './createServiceTsupConfig.js';
-export {
-  copyBundleAssets,
-  MODULE_PROTOS,
-  type CopyBundleAssetsOptions,
-} from './copyBundleAssets.js';
+export { copyBundleAssets, type CopyBundleAssetsOptions } from './copyBundleAssets.js';
 export {
   generateBundleManifest,
-  listBundleExternals,
   loadServiceBundleConfig,
   type GenerateBundleManifestOptions,
   type ServiceBundleConfig,
