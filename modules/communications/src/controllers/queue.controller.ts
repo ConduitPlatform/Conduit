@@ -1,10 +1,12 @@
-import path from 'path';
 import { Job, Queue, Worker } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { Cluster, Redis } from 'ioredis';
-import { fileURLToPath } from 'node:url';
 import { Provider } from '../utils/getEmailStatus.js';
+import {
+  createCleanupStoredEmailsProcessor,
+  createGetEmailStatusProcessor,
+} from '../jobs/index.js';
 
 export class QueueController {
   private static _instance: QueueController;
@@ -39,29 +41,29 @@ export class QueueController {
     });
   }
 
-  private addWorker(name: string, jobPath: string): Worker {
-    const worker = new Worker(
-      name,
-      path.normalize(
-        path.join(path.dirname(fileURLToPath(import.meta.url)), '../jobs', jobPath),
-      ),
-      {
-        concurrency: 5,
-        removeOnComplete: { age: 3600, count: 1000 },
-        removeOnFail: { age: 24 * 3600 },
-        connection: this.redisConnection,
-      },
-    );
+  private addWorker(name: string, processor: (job: Job) => Promise<void>): Worker {
+    const worker = new Worker(name, processor, {
+      concurrency: 5,
+      removeOnComplete: { age: 3600, count: 1000 },
+      removeOnFail: { age: 24 * 3600 },
+      connection: this.redisConnection,
+    });
     this.setupWorkerEventHandlers(worker);
     return worker;
   }
 
   addEmailStatusWorker(): Worker {
-    return this.addWorker('email-status-queue', 'getEmailStatus.js');
+    return this.addWorker(
+      'email-status-queue',
+      createGetEmailStatusProcessor(this.grpcSdk, this.addEmailStatusJob.bind(this)),
+    );
   }
 
   addEmailCleanupWorker(): Worker {
-    return this.addWorker('email-cleanup-queue', 'cleanupStoredEmails.js');
+    return this.addWorker(
+      'email-cleanup-queue',
+      createCleanupStoredEmailsProcessor(this.grpcSdk),
+    );
   }
 
   async drainEmailCleanupQueue(): Promise<void> {

@@ -10,11 +10,14 @@
   },
   "scripts": {
     "start": "node dist/bin/www.js",
+    "start:bundle": "node bundle/index.js",
     "lint": "eslint src",
     "prebuild": "npm run generateTypes",
     "build": "rimraf dist && tsc",
     "generateTypes": "sh build.sh",
     "postbuild": "copyfiles -u 1 src/*.proto ./dist/",
+    "prebuild:bundle": "pnpm --filter @conduitplatform/service-bundle run build",
+    "build:bundle": "rimraf bundle && node ../../libraries/service-bundle/dist/cli.js generate-manifest && tsup && node ../../libraries/service-bundle/dist/cli.js copy-assets && node ../../libraries/service-bundle/dist/cli.js generate-lockfile",
     "prepare": "npm run build",
     "prepublish": "npm run build"
   },
@@ -39,6 +42,7 @@
     "lodash-es": "^4.18.1"
   },
   "devDependencies": {
+    "@conduitplatform/service-bundle": "workspace:*",
     "@eslint/js": "^10.0.1",
     "@types/bcrypt": "^6.0.0",
     "@types/convict": "^6.1.6",
@@ -59,6 +63,7 @@
     "ts-node": "^10.9.2",
     "ts-proto": "^2.12.0",
     "typescript": "~6.0.3",
+    "tsup": "^8.5.1",
     "typescript-eslint": "^8.65.0"
   }
 }

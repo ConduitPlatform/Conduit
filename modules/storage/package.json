@@ -20,10 +20,13 @@
   },
   "scripts": {
     "start": "node dist/index.js",
+    "start:bundle": "node bundle/index.js",
     "prepublish": "npm run build",
     "prebuild": "npm run generateTypes",
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
+    "prebuild:bundle": "pnpm --filter @conduitplatform/service-bundle run build",
+    "build:bundle": "rimraf bundle && node ../../libraries/service-bundle/dist/cli.js generate-manifest && tsup && node ../../libraries/service-bundle/dist/cli.js copy-assets && node ../../libraries/service-bundle/dist/cli.js generate-lockfile",
     "prepare": "npm run build",
     "build:docker": "docker build -t ghcr.io/conduitplatform/storage:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/storage:latest",
     "generateTypes": "sh build.sh"
@@ -58,6 +61,7 @@
     "uuid": "^14.0.1"
   },
   "devDependencies": {
+    "@conduitplatform/service-bundle": "workspace:*",
     "@types/ali-oss": "^6.23.3",
     "@types/convict": "^6.1.6",
     "@types/lodash-es": "^4.17.12",
@@ -65,6 +69,7 @@
     "copyfiles": "^2.4.1",
     "rimraf": "^6.1.3",
     "ts-proto": "^2.12.0",
+    "tsup": "^8.5.1",
     "typescript": "~6.0.3"
   }
 }

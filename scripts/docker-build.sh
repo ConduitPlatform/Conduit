@@ -8,7 +8,6 @@ TARGET="${1:-database}"
 BUILDING_SERVICE="${BUILDING_SERVICE:-}"
 
 case "$TARGET" in
-  conduit) BUILDING_SERVICE="conduit" ;;
   authentication) BUILDING_SERVICE="modules/authentication" ;;
   authorization) BUILDING_SERVICE="modules/authorization" ;;
   chat) BUILDING_SERVICE="modules/chat" ;;
@@ -17,6 +16,8 @@ case "$TARGET" in
   functions) BUILDING_SERVICE="modules/functions" ;;
   router) BUILDING_SERVICE="modules/router" ;;
   storage) BUILDING_SERVICE="modules/storage" ;;
+  # Bundle cutover: BUILDING_SERVICE unused by bake branch below (HCL wires conduit-base-bundle-*).
+  conduit) BUILDING_SERVICE="packages/core" ;;
   conduit-standalone) BUILDING_SERVICE="" ;;
   all) ;;
   *)
@@ -41,6 +42,10 @@ fi
 
 if [ "$TARGET" = "all" ]; then
   docker buildx bake --file docker-bake.hcl all --set "*.platform=linux/amd64,linux/arm64"
+elif [ "$TARGET" = "conduit" ] || [ "$TARGET" = "chat" ] || [ "$TARGET" = "functions" ] || [ "$TARGET" = "storage" ] || [ "$TARGET" = "authentication" ] || [ "$TARGET" = "authorization" ] || [ "$TARGET" = "communications" ] || [ "$TARGET" = "database" ] || [ "$TARGET" = "router" ] || [ "$TARGET" = "conduit-standalone" ]; then
+  # Bundle-based targets: bake HCL wires conduit-base-bundle-* (BUILD_BUNDLE=1).
+  docker buildx bake --file docker-bake.hcl "$TARGET" \
+    --set "*.platform=linux/amd64,linux/arm64"
 else
   docker buildx bake --file docker-bake.hcl "$TARGET" \
     --set "conduit-base.args.BUILDING_SERVICE=${BUILDING_SERVICE}" \

@@ -1,25 +1,23 @@
 FROM conduit-builder
 
-WORKDIR /app
+WORKDIR /app/modules/authorization
 
-COPY --from=conduit-base /app/modules/authorization /app/modules/authorization
+COPY --from=conduit-base /app/modules/authorization/bundle /app/modules/authorization/bundle
+COPY --from=conduit-base /app/modules/authorization/package.bundle.json /app/modules/authorization/package.json
+COPY --from=conduit-base /app/modules/authorization/package.bundle-lock.json /app/modules/authorization/package-lock.json
 
 RUN apk update && \
     apk add --no-cache --virtual .gyp python3 make g++ && \
-    pnpm install --prod --frozen-lockfile --ignore-scripts && \
-    pnpm store prune && \
+    npm ci --omit=dev --ignore-scripts && \
+    npm rebuild bcrypt && \
+    npm cache clean --force && \
     apk del .gyp
 
-WORKDIR /app/modules/authorization
-
-ENV NODE_ENV production
-
-ENV CONDUIT_SERVER conduit_server
-
-ENV SERVICE_IP 0.0.0.0:5000
-
-ENV REGISTER_NAME true
+ENV NODE_ENV=production
+ENV CONDUIT_SERVER=conduit_server
+ENV SERVICE_URL=0.0.0.0:5000
+ENV GRPC_PORT=5000
 
 EXPOSE 5000
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "bundle/index.js"]

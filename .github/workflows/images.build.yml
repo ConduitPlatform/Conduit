@@ -119,6 +119,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Bundle targets (is_bundle=true): rely on docker-bake.hcl conduit-base-bundle-*
+      # for BUILD_BUNDLE=1 and BUILDING_SERVICE — do not override conduit-base args.
       - name: Build and push
         id: bake
         uses: docker/bake-action@v7
@@ -129,7 +131,7 @@ jobs:
           provenance: false
           sbom: false
           set: |
-            conduit-base.args.BUILDING_SERVICE=${{ matrix.building_service }}
+            ${{ matrix.is_bundle != true && format('conduit-base.args.BUILDING_SERVICE={0}', matrix.building_service) || '' }}
             *.platform=linux/amd64
             *.output=type=image,name=${{ env.IMAGE_PREFIX }}/${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
             *.cache-from=type=gha,scope=${{ matrix.target }}-amd64
@@ -175,6 +177,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Bundle targets (is_bundle=true): rely on docker-bake.hcl conduit-base-bundle-*
+      # for BUILD_BUNDLE=1 and BUILDING_SERVICE — do not override conduit-base args.
       - name: Build and push
         id: bake
         uses: docker/bake-action@v7
@@ -185,7 +189,7 @@ jobs:
           provenance: false
           sbom: false
           set: |
-            conduit-base.args.BUILDING_SERVICE=${{ matrix.building_service }}
+            ${{ matrix.is_bundle != true && format('conduit-base.args.BUILDING_SERVICE={0}', matrix.building_service) || '' }}
             *.platform=linux/arm64
             *.output=type=image,name=${{ env.IMAGE_PREFIX }}/${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
             *.cache-from=type=gha,scope=${{ matrix.target }}-arm64
