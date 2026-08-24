@@ -24,7 +24,7 @@
     "@grpc/proto-loader": "^0.8.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@scalar/api-reference": "^1.60.0",
-    "@scalar/express-api-reference": "^0.10.14",
+    "@scalar/express-api-reference": "^0.10.16",
     "@socket.io/redis-streams-adapter": "^0.3.1",
     "@types/object-hash": "^3.0.6",
     "@types/swagger-ui-express": "^4.1.8",
@@ -48,7 +48,7 @@
     "secure-json-parse": "^4.1.0",
     "socket.io": "^4.8.3",
     "swagger-ui-express": "5.0.1",
-    "uuid": "^14.0.1",
+    "uuid": "^14.0.2",
     "winston": "^3.19.0",
     "zod": "^4.4.3"
   },
