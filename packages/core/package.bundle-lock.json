@@ -16,7 +16,7 @@
         "@grpc/proto-loader": "^0.8.1",
         "@modelcontextprotocol/sdk": "^1.29.0",
         "@scalar/api-reference": "^1.60.0",
-        "@scalar/express-api-reference": "^0.10.4",
+        "@scalar/express-api-reference": "^0.10.14",
         "@sesamecare-oss/redlock": "^1.4.0",
         "@socket.io/redis-streams-adapter": "^0.3.1",
         "abort-controller-x": "^0.5.0",
@@ -37,7 +37,7 @@
         "graphql": "^16.14.2",
         "graphql-parse-resolve-info": "^4.14.1",
         "graphql-tag": "^2.12.7",
-        "graphql-tools": "^9.0.28",
+        "graphql-tools": "^9.0.34",
         "graphql-type-json": "^0.3.2",
         "helmet": "8.2.0",
         "ioredis": "^5.11.1",
@@ -45,22 +45,22 @@
         "lodash": "^4.18.1",
         "lodash-es": "^4.18.1",
         "moment": "^2.30.1",
-        "nice-grpc": "^2.1.16",
-        "nice-grpc-client-middleware-retry": "^3.1.15",
-        "nice-grpc-common": "^2.0.3",
+        "nice-grpc": "^2.1.17",
+        "nice-grpc-client-middleware-retry": "^3.1.16",
+        "nice-grpc-common": "^2.0.4",
         "notp": "2.0.3",
         "object-hash": "^3.0.0",
         "prom-client": "^15.1.3",
-        "protobufjs": "^8.7.1",
+        "protobufjs": "^8.7.2",
         "secure-json-parse": "^4.1.0",
-        "snappy": "7.3.3",
+        "snappy": "7.4.1",
         "socket.io": "^4.8.3",
         "socket.io-adapter": "2.5.8",
         "swagger-ui-express": "5.0.1",
         "thirty-two": "1.0.2",
         "uuid": "^14.0.1",
         "winston": "^3.19.0",
-        "winston-loki": "^6.1.4",
+        "winston-loki": "^6.1.7",
         "zod": "^4.4.3"
       },
       "engines": {
@@ -644,40 +644,6 @@
         "kuler": "^2.0.0"
       }
     },
-    "node_modules/@emnapi/core": {
-      "version": "1.11.3",
-      "resolved": "https://registry.npmjs.org/@emnapi/core/-/core-1.11.3.tgz",
-      "integrity": "sha512-zLpS5asjEb7lq8jYLq37N6XKaE41DIexlY1rF/z4/tIl3wo13Sqm28fRyfIsKZD+NZ8mM5RoKkpW/rBcuoSZSg==",
-      "license": "MIT",
-      "optional": true,
-      "peer": true,
-      "dependencies": {
-        "@emnapi/wasi-threads": "1.2.3",
-        "tslib": "^2.4.0"
-      }
-    },
-    "node_modules/@emnapi/runtime": {
-      "version": "1.11.3",
-      "resolved": "https://registry.npmjs.org/@emnapi/runtime/-/runtime-1.11.3.tgz",
-      "integrity": "sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==",
-      "license": "MIT",
-      "optional": true,
-      "peer": true,
-      "dependencies": {
-        "tslib": "^2.4.0"
-      }
-    },
-    "node_modules/@emnapi/wasi-threads": {
-      "version": "1.2.3",
-      "resolved": "https://registry.npmjs.org/@emnapi/wasi-threads/-/wasi-threads-1.2.3.tgz",
-      "integrity": "sha512-ELEBe8PsLvvJ6QMr0zLt8ffvOHW/dc1m3CEzNMg7aJUv3bMaoDtw2TXyDAwkYBuroxxuHEwhRTLJSe5sya547g==",
-      "license": "MIT",
-      "optional": true,
-      "peer": true,
-      "dependencies": {
-        "tslib": "^2.4.0"
-      }
-    },
     "node_modules/@floating-ui/core": {
       "version": "1.8.0",
       "resolved": "https://registry.npmjs.org/@floating-ui/core/-/core-1.8.0.tgz",
@@ -1106,9 +1072,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-android-arm-eabi": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-android-arm-eabi/-/snappy-android-arm-eabi-7.3.3.tgz",
-      "integrity": "sha512-d4vUFFzNBvazGfB/KU8MnEax6itTIgRWXodPdZDnWKHy9HwVBndpCiedQDcSNHcZNYV36rx034rpn7SAuTL2NA==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-android-arm-eabi/-/snappy-android-arm-eabi-7.4.1.tgz",
+      "integrity": "sha512-7siGMYnpi4pjI07XXoIgXlBkIbI/XsmXYMi+dSPEZz/7V/f/4MvK9OGGKT4cgHLiszgxkTSTZzL+AjCF7OACtQ==",
       "cpu": [
         "arm"
       ],
@@ -1122,9 +1088,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-android-arm64": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-android-arm64/-/snappy-android-arm64-7.3.3.tgz",
-      "integrity": "sha512-Uh+w18dhzjVl85MGhRnojb7OLlX2ErvMsYIunO/7l3Frvc2zQvfqsWsFJanu2dwqlE2YDooeNP84S+ywgN9sxg==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-android-arm64/-/snappy-android-arm64-7.4.1.tgz",
+      "integrity": "sha512-8tcrG2V3LSzCS3OdppuvalNbsgsvyr8hIkUliPBaFzjOiAjRpCOyS05s7KZe7YdkJyAht/OCTjIV1XqKdAUJXw==",
       "cpu": [
         "arm64"
       ],
@@ -1138,9 +1104,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-darwin-arm64": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-darwin-arm64/-/snappy-darwin-arm64-7.3.3.tgz",
-      "integrity": "sha512-AmJn+6yOu/0V0YNHLKmRUNYkn93iv/1wtPayC7O1OHtfY6YqHQ31/MVeeRBiEYtQW9TwVZxXrDirxSB1PxRdtw==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-darwin-arm64/-/snappy-darwin-arm64-7.4.1.tgz",
+      "integrity": "sha512-imzAEKEySv3dmzMFCnVj0SeaVbaZptlVGjQXLuIQ1n157/DpqJYuG4Yj1pPIRh3S/VzniC3ewPmYQWfxWepRsA==",
       "cpu": [
         "arm64"
       ],
@@ -1154,9 +1120,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-darwin-x64": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-darwin-x64/-/snappy-darwin-x64-7.3.3.tgz",
-      "integrity": "sha512-biLTXBmPjPmO7HIpv+5BaV9Gy/4+QJSUNJW8Pjx1UlWAVnocPy7um+zbvAWStZssTI5sfn/jOClrAegD4w09UA==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-darwin-x64/-/snappy-darwin-x64-7.4.1.tgz",
+      "integrity": "sha512-Q9LDalgq5uqpd1JwpWxKb34rmheOmk7BhlwUMadaECAZU/v5HwArAZjsWomRXiYm4tfXFnQeL3ItFGW0Irv6+A==",
       "cpu": [
         "x64"
       ],
@@ -1170,9 +1136,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-freebsd-x64": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-freebsd-x64/-/snappy-freebsd-x64-7.3.3.tgz",
-      "integrity": "sha512-E3R3ewm8Mrjm0yL2TC3VgnphDsQaCPixNJqBbGiz3NTshVDhlPlOgPKF0NGYqKiKaDGdD9PKtUgOR4vagUtn7g==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-freebsd-x64/-/snappy-freebsd-x64-7.4.1.tgz",
+      "integrity": "sha512-O1B/ynTjOOlnr6dnVHdj/xrYcPcWLjZPC3dNWyOy7xGbkjQHHYiTt0EXDxmfANALt9YEa1rSfzICMmKcyFCtnQ==",
       "cpu": [
         "x64"
       ],
@@ -1186,9 +1152,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-linux-arm-gnueabihf": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-arm-gnueabihf/-/snappy-linux-arm-gnueabihf-7.3.3.tgz",
-      "integrity": "sha512-ZuNgtmk9j0KyT7TfLyEnvZJxOhbkyNR761nk04F0Q4NTHMICP28wQj0xgEsnCHUsEeA9OXrRL4R7waiLn+rOQA==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-arm-gnueabihf/-/snappy-linux-arm-gnueabihf-7.4.1.tgz",
+      "integrity": "sha512-8vY+IGu1qm2EEuqEvanMh73edIFlRD19HeXMSEZZLOzJeIhlOcMGCAqKApPJSgdwMf7nxNmnBYyXnH+QM1ryQA==",
       "cpu": [
         "arm"
       ],
@@ -1202,9 +1168,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-linux-arm64-gnu": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-arm64-gnu/-/snappy-linux-arm64-gnu-7.3.3.tgz",
-      "integrity": "sha512-KIzwtq0dAzshzpqZWjg0Q9lUx93iZN7wCCUzCdLYIQ+mvJZKM10VCdn0RcuQze1R3UJTPwpPLXQIVskNMBYyPA==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-arm64-gnu/-/snappy-linux-arm64-gnu-7.4.1.tgz",
+      "integrity": "sha512-FRjLCPfbtmr4B4OwR0gIEAKnnaczyLKL7QtG3iAn5+n4g284Fur1RoIGTCloq7zGKAuPbKBRhrARCOrXr7nx3A==",
       "cpu": [
         "arm64"
       ],
@@ -1218,9 +1184,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-linux-arm64-musl": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-arm64-musl/-/snappy-linux-arm64-musl-7.3.3.tgz",
-      "integrity": "sha512-AAED4cQS74xPvktsyVmz5sy8vSxG/+3d7Rq2FDBZzj3Fv6v5vux6uZnECPCAqpALCdTtJ61unqpOyqO7hZCt1Q==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-arm64-musl/-/snappy-linux-arm64-musl-7.4.1.tgz",
+      "integrity": "sha512-seZSp/mCSOMZ/ve29s3bAhnLTPpwUZmf9N7+HCCndVckbS6lzRfasstn4RDWP2fVn0MoGbCDFAHADrGP55dzPQ==",
       "cpu": [
         "arm64"
       ],
@@ -1234,9 +1200,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-linux-ppc64-gnu": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-ppc64-gnu/-/snappy-linux-ppc64-gnu-7.3.3.tgz",
-      "integrity": "sha512-pofO5eSLg8ZTBwVae4WHHwJxJGZI8NEb4r5Mppvq12J/1/Hq1HecClXmfY3A7bdT2fsS2Td+Q7CI9VdBOj2sbA==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-ppc64-gnu/-/snappy-linux-ppc64-gnu-7.4.1.tgz",
+      "integrity": "sha512-vBguLu+Dc3J7pwn6QXYDK1iPgGSoqfSig7O1FQMg7v9iUxexR7IAna7vKMTprMHP8FDM9szxcYOzEMrNGmcdaA==",
       "cpu": [
         "ppc64"
       ],
@@ -1250,9 +1216,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-linux-riscv64-gnu": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-riscv64-gnu/-/snappy-linux-riscv64-gnu-7.3.3.tgz",
-      "integrity": "sha512-OiHYdeuwj0TVBXADUmmQDQ4lL1TB+8EwmXnFgOutoDVXHaUl0CJFyXLa6tYUXe+gRY8hs1v7eb0vyE97LKY06Q==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-riscv64-gnu/-/snappy-linux-riscv64-gnu-7.4.1.tgz",
+      "integrity": "sha512-UmgLvreYF6NWV/cBOwZp25dOm5uxiOTC8Rj+vFdOAx8whi/jiwui/pbxjjdUfwBQutzxFk3nMOSC5Jq6TgAZTA==",
       "cpu": [
         "riscv64"
       ],
@@ -1266,9 +1232,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-linux-s390x-gnu": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-s390x-gnu/-/snappy-linux-s390x-gnu-7.3.3.tgz",
-      "integrity": "sha512-66QdmuV9CTq/S/xifZXlMy3PsZTviAgkqqpZ+7vPCmLtuP+nqhaeupShOFf/sIDsS0gZePazPosPTeTBbhkLHg==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-s390x-gnu/-/snappy-linux-s390x-gnu-7.4.1.tgz",
+      "integrity": "sha512-mXTqUnLUMZeYiSMT6wRiDEmqLDm9VJXJhhtKExqK2sYiTPRGQfn1NR/qzv192LlOsXikIRvY6jWMq4Ron0LA1Q==",
       "cpu": [
         "s390x"
       ],
@@ -1282,9 +1248,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-linux-x64-gnu": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-x64-gnu/-/snappy-linux-x64-gnu-7.3.3.tgz",
-      "integrity": "sha512-g6KURjOxrgb8yXDEZMuIcHkUr/7TKlDwSiydEQtMtP3n4iI4sNjkcE/WNKlR3+t9bZh1pFGAq7NFRBtouQGHpQ==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-x64-gnu/-/snappy-linux-x64-gnu-7.4.1.tgz",
+      "integrity": "sha512-D+2LJTgAAv10SRZcX9rdmdx/rgqU+Lp1oJvZAMkiL7fhkFeHmKRHND8DOkMyAdcVi2ES7EpZnUJBXdcYqxWxjQ==",
       "cpu": [
         "x64"
       ],
@@ -1298,9 +1264,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-linux-x64-musl": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-x64-musl/-/snappy-linux-x64-musl-7.3.3.tgz",
-      "integrity": "sha512-6UvOyczHknpaKjrlKKSlX3rwpOrfJwiMG6qA0NRKJFgbcCAEUxmN9A8JvW4inP46DKdQ0bekdOxwRtAhFiTDfg==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-linux-x64-musl/-/snappy-linux-x64-musl-7.4.1.tgz",
+      "integrity": "sha512-2DgFW7mQ9cy0EtiddIOuEk9rPUCnt8xv875AYtEjjPrQArXbgVmB/Lt6ngbTlckv5Xgb0Cx4lt7R7ahWXcTbxw==",
       "cpu": [
         "x64"
       ],
@@ -1314,9 +1280,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-openharmony-arm64": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-openharmony-arm64/-/snappy-openharmony-arm64-7.3.3.tgz",
-      "integrity": "sha512-I5mak/5rTprobf7wMCk0vFhClmWOL/QiIJM4XontysnadmP/R9hAcmuFmoMV2GaxC9MblqLA7Z++gy8ou5hJVw==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-openharmony-arm64/-/snappy-openharmony-arm64-7.4.1.tgz",
+      "integrity": "sha512-sF1LJRTvZn2A3AyrZUEr6zpNEQW5mm9GO09clzd0nQJlNKoPbWaLusv+nhZYTBxEVLFApISp1ggL8yPNkIpjvA==",
       "cpu": [
         "arm64"
       ],
@@ -1329,26 +1295,10 @@
         "node": ">= 10"
       }
     },
-    "node_modules/@napi-rs/snappy-wasm32-wasi": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-wasm32-wasi/-/snappy-wasm32-wasi-7.3.3.tgz",
-      "integrity": "sha512-+EroeygVYo9RksOchjF206frhMkfD2PaIun3yH4Zp5j/Y0oIEgs/+VhAYx/f+zHRylQYUIdLzDRclcoepvlR8Q==",
-      "cpu": [
-        "wasm32"
-      ],
-      "license": "MIT",
-      "optional": true,
-      "dependencies": {
-        "@napi-rs/wasm-runtime": "^1.0.3"
-      },
-      "engines": {
-        "node": ">=14.0.0"
-      }
-    },
     "node_modules/@napi-rs/snappy-win32-arm64-msvc": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-win32-arm64-msvc/-/snappy-win32-arm64-msvc-7.3.3.tgz",
-      "integrity": "sha512-rxqfntBsCfzgOha/OlG8ld2hs6YSMGhpMUbFjeQLyVDbooY041fRXv3S7yk52DfO6H4QQhLT5+p7cW0mYdhyiQ==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-win32-arm64-msvc/-/snappy-win32-arm64-msvc-7.4.1.tgz",
+      "integrity": "sha512-sqZbbT1yKlKp1LPO4Yqkja6He0txXOvWKANKZJM98vvHqQikLayq4X6ogovzVXOFYzmpkHFdT10NfGwh4hZbog==",
       "cpu": [
         "arm64"
       ],
@@ -1362,9 +1312,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-win32-ia32-msvc": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-win32-ia32-msvc/-/snappy-win32-ia32-msvc-7.3.3.tgz",
-      "integrity": "sha512-joRV16DsRtqjGt0CdSpxGCkO0UlHGeTZ/GqvdscoALpRKbikR2Top4C61dxEchmOd3lSYsXutuwWWGg3Nr++WA==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-win32-ia32-msvc/-/snappy-win32-ia32-msvc-7.4.1.tgz",
+      "integrity": "sha512-RrgbOcrH52k+dFfuey2wm98OxNmNayI4qyGZ1J36pGWMEOemft+g10zsVzHkN86J5D1RWcD6z25SzB87eW3SEQ==",
       "cpu": [
         "ia32"
       ],
@@ -1378,9 +1328,9 @@
       }
     },
     "node_modules/@napi-rs/snappy-win32-x64-msvc": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-win32-x64-msvc/-/snappy-win32-x64-msvc-7.3.3.tgz",
-      "integrity": "sha512-cEnQwcsdJyOU7HSZODWsHpKuQoSYM4jaqw/hn9pOXYbRN1+02WxYppD3fdMuKN6TOA6YG5KA5PHRNeVilNX86Q==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/@napi-rs/snappy-win32-x64-msvc/-/snappy-win32-x64-msvc-7.4.1.tgz",
+      "integrity": "sha512-n8OpxSCvNr1QPmXquDkMatYQaG80pjXrmgPuwvbXbGTr8BbZay6wZWlAE0OW32mEBrGWGqLUs4uheIJdF1cLVA==",
       "cpu": [
         "x64"
       ],
@@ -1391,27 +1341,6 @@
       ],
       "engines": {
         "node": ">= 10"
-      }
-    },
-    "node_modules/@napi-rs/wasm-runtime": {
-      "version": "1.2.3",
-      "resolved": "https://registry.npmjs.org/@napi-rs/wasm-runtime/-/wasm-runtime-1.2.3.tgz",
-      "integrity": "sha512-UMduMbqO5s5zF2NkNacMT/yK5Y5QiKvWr2+50bzIIxFDwVJ2h49b+oyjaCGPhJxd2/gC2x39EHv/gHVuu36x2Q==",
-      "license": "MIT",
-      "optional": true,
-      "dependencies": {
-        "@tybys/wasm-util": "^0.10.3"
-      },
-      "engines": {
-        "node": "^20.19.0 || ^22.13.0 || >=23.5.0"
-      },
-      "funding": {
-        "type": "github",
-        "url": "https://github.com/sponsors/Brooooooklyn"
-      },
-      "peerDependencies": {
-        "@emnapi/core": "^1.7.1 || ^2.0.0-alpha.4",
-        "@emnapi/runtime": "^1.7.1 || ^2.0.0-alpha.4"
       }
     },
     "node_modules/@opentelemetry/api": {
@@ -2072,16 +2001,6 @@
       },
       "peerDependencies": {
         "vue": "^2.7.0 || ^3.0.0"
-      }
-    },
-    "node_modules/@tybys/wasm-util": {
-      "version": "0.10.3",
-      "resolved": "https://registry.npmjs.org/@tybys/wasm-util/-/wasm-util-0.10.3.tgz",
-      "integrity": "sha512-F3fo1MYrRJYL3zER0OUOmkutjr1Vp23m7OsSgp7nq4SP6OqX6C/56XFIPAl5bt3zaBRjmW7SGz3u/6LwFpYcOg==",
-      "license": "MIT",
-      "optional": true,
-      "dependencies": {
-        "tslib": "^2.4.0"
       }
     },
     "node_modules/@types/cors": {
@@ -6957,9 +6876,9 @@
       }
     },
     "node_modules/snappy": {
-      "version": "7.3.3",
-      "resolved": "https://registry.npmjs.org/snappy/-/snappy-7.3.3.tgz",
-      "integrity": "sha512-UDJVCunvgblRpfTOjo/uT7pQzfrTsSICJ4yVS4aq7SsGBaUSpJwaVP15nF//jqinSLpN7boe/BqbUmtWMTQ5MQ==",
+      "version": "7.4.1",
+      "resolved": "https://registry.npmjs.org/snappy/-/snappy-7.4.1.tgz",
+      "integrity": "sha512-Em7vzkTe3d2K4BHhEoKqU3Xz6cZnVuAmx66/iMlly7KZDBIviIRcNRejsvWCQg+/snpalbh1mWZfIKzCfFyiHg==",
       "license": "MIT",
       "engines": {
         "node": ">= 10"
@@ -6969,24 +6888,23 @@
         "url": "https://github.com/sponsors/Brooooooklyn"
       },
       "optionalDependencies": {
-        "@napi-rs/snappy-android-arm-eabi": "7.3.3",
-        "@napi-rs/snappy-android-arm64": "7.3.3",
-        "@napi-rs/snappy-darwin-arm64": "7.3.3",
-        "@napi-rs/snappy-darwin-x64": "7.3.3",
-        "@napi-rs/snappy-freebsd-x64": "7.3.3",
-        "@napi-rs/snappy-linux-arm-gnueabihf": "7.3.3",
-        "@napi-rs/snappy-linux-arm64-gnu": "7.3.3",
-        "@napi-rs/snappy-linux-arm64-musl": "7.3.3",
-        "@napi-rs/snappy-linux-ppc64-gnu": "7.3.3",
-        "@napi-rs/snappy-linux-riscv64-gnu": "7.3.3",
-        "@napi-rs/snappy-linux-s390x-gnu": "7.3.3",
-        "@napi-rs/snappy-linux-x64-gnu": "7.3.3",
-        "@napi-rs/snappy-linux-x64-musl": "7.3.3",
-        "@napi-rs/snappy-openharmony-arm64": "7.3.3",
-        "@napi-rs/snappy-wasm32-wasi": "7.3.3",
-        "@napi-rs/snappy-win32-arm64-msvc": "7.3.3",
-        "@napi-rs/snappy-win32-ia32-msvc": "7.3.3",
-        "@napi-rs/snappy-win32-x64-msvc": "7.3.3"
+        "@napi-rs/snappy-android-arm-eabi": "7.4.1",
+        "@napi-rs/snappy-android-arm64": "7.4.1",
+        "@napi-rs/snappy-darwin-arm64": "7.4.1",
+        "@napi-rs/snappy-darwin-x64": "7.4.1",
+        "@napi-rs/snappy-freebsd-x64": "7.4.1",
+        "@napi-rs/snappy-linux-arm-gnueabihf": "7.4.1",
+        "@napi-rs/snappy-linux-arm64-gnu": "7.4.1",
+        "@napi-rs/snappy-linux-arm64-musl": "7.4.1",
+        "@napi-rs/snappy-linux-ppc64-gnu": "7.4.1",
+        "@napi-rs/snappy-linux-riscv64-gnu": "7.4.1",
+        "@napi-rs/snappy-linux-s390x-gnu": "7.4.1",
+        "@napi-rs/snappy-linux-x64-gnu": "7.4.1",
+        "@napi-rs/snappy-linux-x64-musl": "7.4.1",
+        "@napi-rs/snappy-openharmony-arm64": "7.4.1",
+        "@napi-rs/snappy-win32-arm64-msvc": "7.4.1",
+        "@napi-rs/snappy-win32-ia32-msvc": "7.4.1",
+        "@napi-rs/snappy-win32-x64-msvc": "7.4.1"
       }
     },
     "node_modules/socket.io": {
