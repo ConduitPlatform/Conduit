@@ -1,6 +1,7 @@
 name: Verify service bundles
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'modules/chat/**'
@@ -58,6 +59,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   verify:
