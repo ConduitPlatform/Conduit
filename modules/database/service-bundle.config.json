@@ -1,0 +1,24 @@
+{
+  "extraAssets": [
+    {
+      "from": "src/adapters/mongoose-adapter/deep-populate.js",
+      "to": "adapters/mongoose-adapter/deep-populate.js"
+    }
+  ],
+  "extraDependencies": [
+    "bullmq",
+    "bson",
+    "deepdash-es",
+    "mariadb",
+    "mongodb",
+    "mongodb-schema",
+    "mongoose",
+    "mysql2",
+    "object-hash",
+    "pg",
+    "pg-hstore",
+    "sequelize",
+    "sequelize-auto",
+    "sqlite3"
+  ]
+}

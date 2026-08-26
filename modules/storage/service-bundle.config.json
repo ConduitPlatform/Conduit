@@ -1,0 +1,10 @@
+{
+  "extraDependencies": [
+    "@aws-sdk/client-iam",
+    "@aws-sdk/client-s3",
+    "@aws-sdk/s3-request-presigner",
+    "@azure/storage-blob",
+    "@google-cloud/storage",
+    "ali-oss"
+  ]
+}

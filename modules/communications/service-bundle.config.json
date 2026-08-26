@@ -1,0 +1,23 @@
+{
+  "extraDependencies": [
+    "@aws-sdk/client-sesv2",
+    "@aws-sdk/client-sns",
+    "@mailchimp/mailchimp_transactional",
+    "@onesignal/node-onesignal",
+    "@sendgrid/client",
+    "await-to-js",
+    "bcrypt",
+    "bullmq",
+    "firebase-admin",
+    "form-data",
+    "handlebars",
+    "mailersend",
+    "mailgun.js",
+    "messagebird",
+    "nodemailer",
+    "nodemailer-mailgun-transport",
+    "nodemailer-mandrill-transport",
+    "otp-generator",
+    "twilio"
+  ]
+}

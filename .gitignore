@@ -1,5 +1,6 @@
 **/dist/
 **/dist-test/
+**/bundle/
 **/node_modules/
 **/.nyc_output
 /.idea

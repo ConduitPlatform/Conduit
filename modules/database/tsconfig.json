@@ -66,5 +66,6 @@
     /* Advanced Options */
     "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */
   },
-  "exclude": ["src/**/__tests__/**"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "bundle", "tsup.config.ts", "src/**/__tests__/**"]
 }

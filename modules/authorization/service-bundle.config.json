@@ -1,0 +1,6 @@
+{
+  "extraDependencies": [
+    "bcrypt",
+    "bullmq"
+  ]
+}

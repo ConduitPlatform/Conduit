@@ -8,17 +8,27 @@ const SHARED_BUILD_PATHS = [
   'scripts/Dockerfile.builder',
 ];
 
+const SERVICE_BUNDLE_PATHS = ['libraries/service-bundle/**'];
+
+const LIBRARY_BUILD_PATHS = [
+  'libraries/grpc-sdk/**',
+  'libraries/module-tools/**',
+];
+
 const IMAGE_TARGETS = [
   {
     target: 'conduit',
     image: 'conduit',
     name: 'Build core',
-    buildingService: 'conduit',
+    buildingService: 'packages/core',
+    isBundle: true,
     paths: [
-      'packages/**',
+      'packages/core/**',
+      ...SERVICE_BUNDLE_PATHS,
       'libraries/grpc-sdk/**',
       'libraries/hermes/**',
       'libraries/module-tools/**',
+      'libraries/node-2fa/**',
       ...SHARED_BUILD_PATHS,
     ],
   },
@@ -27,10 +37,12 @@ const IMAGE_TARGETS = [
     image: 'authentication',
     name: 'Build authentication',
     buildingService: 'modules/authentication',
+    isBundle: true,
     paths: [
       'modules/authentication/**',
-      'libraries/grpc-sdk/**',
-      'libraries/module-tools/**',
+      ...SERVICE_BUNDLE_PATHS,
+      'libraries/node-2fa/**',
+      ...LIBRARY_BUILD_PATHS,
       ...SHARED_BUILD_PATHS,
     ],
   },
@@ -39,10 +51,11 @@ const IMAGE_TARGETS = [
     image: 'authorization',
     name: 'Build authorization',
     buildingService: 'modules/authorization',
+    isBundle: true,
     paths: [
       'modules/authorization/**',
-      'libraries/grpc-sdk/**',
-      'libraries/module-tools/**',
+      ...SERVICE_BUNDLE_PATHS,
+      ...LIBRARY_BUILD_PATHS,
       ...SHARED_BUILD_PATHS,
     ],
   },
@@ -51,10 +64,11 @@ const IMAGE_TARGETS = [
     image: 'chat',
     name: 'Build chat',
     buildingService: 'modules/chat',
+    isBundle: true,
     paths: [
       'modules/chat/**',
-      'libraries/grpc-sdk/**',
-      'libraries/module-tools/**',
+      ...SERVICE_BUNDLE_PATHS,
+      ...LIBRARY_BUILD_PATHS,
       ...SHARED_BUILD_PATHS,
     ],
   },
@@ -63,10 +77,11 @@ const IMAGE_TARGETS = [
     image: 'communications',
     name: 'Build communications',
     buildingService: 'modules/communications',
+    isBundle: true,
     paths: [
       'modules/communications/**',
-      'libraries/grpc-sdk/**',
-      'libraries/module-tools/**',
+      ...SERVICE_BUNDLE_PATHS,
+      ...LIBRARY_BUILD_PATHS,
       ...SHARED_BUILD_PATHS,
     ],
   },
@@ -75,10 +90,11 @@ const IMAGE_TARGETS = [
     image: 'database',
     name: 'Build database',
     buildingService: 'modules/database',
+    isBundle: true,
     paths: [
       'modules/database/**',
-      'libraries/grpc-sdk/**',
-      'libraries/module-tools/**',
+      ...SERVICE_BUNDLE_PATHS,
+      ...LIBRARY_BUILD_PATHS,
       ...SHARED_BUILD_PATHS,
     ],
   },
@@ -87,10 +103,11 @@ const IMAGE_TARGETS = [
     image: 'functions',
     name: 'Build functions',
     buildingService: 'modules/functions',
+    isBundle: true,
     paths: [
       'modules/functions/**',
-      'libraries/grpc-sdk/**',
-      'libraries/module-tools/**',
+      ...SERVICE_BUNDLE_PATHS,
+      ...LIBRARY_BUILD_PATHS,
       ...SHARED_BUILD_PATHS,
     ],
   },
@@ -99,8 +116,10 @@ const IMAGE_TARGETS = [
     image: 'router',
     name: 'Build router',
     buildingService: 'modules/router',
+    isBundle: true,
     paths: [
       'modules/router/**',
+      ...SERVICE_BUNDLE_PATHS,
       'libraries/grpc-sdk/**',
       'libraries/hermes/**',
       'libraries/module-tools/**',
@@ -112,10 +131,11 @@ const IMAGE_TARGETS = [
     image: 'storage',
     name: 'Build storage',
     buildingService: 'modules/storage',
+    isBundle: true,
     paths: [
       'modules/storage/**',
-      'libraries/grpc-sdk/**',
-      'libraries/module-tools/**',
+      ...SERVICE_BUNDLE_PATHS,
+      ...LIBRARY_BUILD_PATHS,
       ...SHARED_BUILD_PATHS,
     ],
   },
@@ -124,14 +144,17 @@ const IMAGE_TARGETS = [
     image: 'conduit-standalone',
     name: 'Build standalone',
     buildingService: '',
+    isBundle: true,
     paths: [
       'modules/**',
+      'packages/core/**',
       'libraries/grpc-sdk/**',
+      'libraries/hermes/**',
       'libraries/module-tools/**',
-      'packages/module-tools/**',
-      'packages/**',
+      'libraries/node-2fa/**',
       'standalone/**',
       'standalone.Dockerfile',
+      ...SERVICE_BUNDLE_PATHS,
       ...SHARED_BUILD_PATHS,
     ],
   },
@@ -202,11 +225,14 @@ function writeOutput(matrix, channel) {
 const channel =
   process.env.GITHUB_EVENT_NAME === 'release' ? 'release' : 'dev';
 
-const matrix = resolveTargets().map(({ target, image, name, buildingService }) => ({
-  target,
-  image,
-  name,
-  building_service: buildingService,
-}));
+const matrix = resolveTargets().map(
+  ({ target, image, name, buildingService, isBundle }) => ({
+    target,
+    image,
+    name,
+    building_service: buildingService,
+    is_bundle: isBundle === true,
+  }),
+);
 
 writeOutput(matrix, channel);

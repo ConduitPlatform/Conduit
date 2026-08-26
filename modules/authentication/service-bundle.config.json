@@ -1,0 +1,11 @@
+{
+  "extraDependencies": [
+    "bcrypt",
+    "jsonwebtoken",
+    "jwks-rsa",
+    "moment",
+    "@ethereumjs/util",
+    "notp",
+    "thirty-two"
+  ]
+}

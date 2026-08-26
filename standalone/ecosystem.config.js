@@ -2,14 +2,14 @@ module.exports = {
   apps: [
     {
       name: 'core',
-      script: './packages/core/dist/bin/www.js',
+      script: './packages/core/bundle/index.js',
       env: {
         NODE_ENV: 'production',
       },
     },
     {
       name: 'database',
-      script: './modules/database/dist/index.js',
+      script: './modules/database/bundle/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
         GRPC_PORT: '55160',
@@ -17,7 +17,7 @@ module.exports = {
     },
     {
       name: 'router',
-      script: './modules/router/dist/index.js',
+      script: './modules/router/bundle/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
         GRPC_PORT: '55161',
@@ -25,7 +25,7 @@ module.exports = {
     },
     {
       name: 'authentication',
-      script: './modules/authentication/dist/index.js',
+      script: './modules/authentication/bundle/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
         GRPC_PORT: '55162',
@@ -33,7 +33,7 @@ module.exports = {
     },
     {
       name: 'authorization',
-      script: './modules/authorization/dist/index.js',
+      script: './modules/authorization/bundle/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
         GRPC_PORT: '55169',
@@ -41,7 +41,7 @@ module.exports = {
     },
     {
       name: 'communications',
-      script: './modules/communications/dist/index.js',
+      script: './modules/communications/bundle/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
         GRPC_PORT: '55164',
@@ -49,7 +49,7 @@ module.exports = {
     },
     {
       name: 'storage',
-      script: './modules/storage/dist/index.js',
+      script: './modules/storage/bundle/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
         GRPC_PORT: '55168',
@@ -57,7 +57,7 @@ module.exports = {
     },
     {
       name: 'chat',
-      script: './modules/chat/dist/index.js',
+      script: './modules/chat/bundle/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
         GRPC_PORT: '55170',

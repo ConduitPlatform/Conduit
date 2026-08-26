@@ -1,33 +1,22 @@
-import { SandboxedJob } from 'bullmq';
+import { Job, Processor } from 'bullmq';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import { ActorIndex, ObjectIndex, ResourceDefinition } from '../models/index.js';
-import { IndexController, QueueController } from '../controllers/index.js';
+import { IndexController } from '../controllers/index.controller.js';
 import { RuleCache } from '../controllers/cache.controller.js';
 
-let grpcSdk: ConduitGrpcSdk | undefined = undefined;
-
-type ConstructRelationIndexWorkerData = {
+export type ConstructRelationIndexWorkerData = {
   relation: { subject: string; relation: string; object: string };
 };
 
-export default async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
-  const { relation } = job.data;
-  if (!grpcSdk) {
-    if (!process.env.CONDUIT_SERVER) throw new Error('No serverUrl provided!');
-    grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'authorization', false);
-    await grpcSdk.initialize();
-    await grpcSdk.initializeEventBus();
-    await grpcSdk.waitForExistence('database');
-    ObjectIndex.getInstance(grpcSdk.database!);
-    ActorIndex.getInstance(grpcSdk.database!);
-    ResourceDefinition.getInstance(grpcSdk.database!);
-    IndexController.getInstance(grpcSdk);
-    QueueController.getInstance(grpcSdk);
-  }
-  await IndexController.getInstance().constructRelationIndex(
-    relation.subject,
-    relation.relation,
-    relation.object,
-  );
-  await RuleCache.invalidateSubject(grpcSdk!, relation.subject);
-};
+export function createConstructRelationIndexProcessor(
+  grpcSdk: ConduitGrpcSdk,
+): Processor<ConstructRelationIndexWorkerData> {
+  return async (job: Job<ConstructRelationIndexWorkerData>) => {
+    const { relation } = job.data;
+    await IndexController.getInstance().constructRelationIndex(
+      relation.subject,
+      relation.relation,
+      relation.object,
+    );
+    await RuleCache.invalidateSubject(grpcSdk, relation.subject);
+  };
+}

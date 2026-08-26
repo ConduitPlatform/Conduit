@@ -1,6 +1,16 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 
 import * as deepdash from 'deepdash-es/standalone';
+
+export function resolveProtoPath(baseDir: string, protoFile: string): string {
+  const flat = path.resolve(baseDir, protoFile);
+  if (fs.existsSync(flat)) {
+    return flat;
+  }
+  return path.resolve(baseDir, '..', protoFile);
+}
 
 export default function parseConfigSchema(schema: Indexable) {
   delete schema.doc;

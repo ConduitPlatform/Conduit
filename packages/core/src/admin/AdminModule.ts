@@ -38,6 +38,7 @@ import convict from 'convict';
 import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config.js';
+import { resolveProtoPath } from '../utils/index.js';
 import metricsSchema from './metrics/index.js';
 import cors from 'cors';
 import { ConfigController, GrpcServer, merge } from '@conduitplatform/module-tools';
@@ -125,7 +126,7 @@ export default class AdminModule {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     await server.addService(
-      path.resolve(__dirname, '../core.proto'),
+      resolveProtoPath(__dirname, 'core.proto'),
       'conduit.core.Admin',
       {
         registerAdminRoute: this.registerAdminRoute.bind(this),

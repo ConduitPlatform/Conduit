@@ -1,13 +1,12 @@
-import path from 'path';
 import { Queue, Worker } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { status } from '@grpc/grpc-js';
 import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { Cluster, Redis } from 'ioredis';
-import { fileURLToPath } from 'node:url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import {
+  createConstructRelationIndexProcessor,
+  createProcessPossibleConnectionsProcessor,
+} from '../jobs/index.js';
 
 export class QueueController {
   private static _instance: QueueController;
@@ -42,14 +41,15 @@ export class QueueController {
   }
 
   addRelationIndexWorker() {
-    const processorFile = path.normalize(
-      path.join(__dirname, '../jobs', 'constructRelationIndex.js'),
+    const worker = new Worker(
+      'authorization-index-queue',
+      createConstructRelationIndexProcessor(this.grpcSdk),
+      {
+        concurrency: 5,
+        connection: this.redisConnection,
+        // autorun: true,
+      },
     );
-    const worker = new Worker('authorization-index-queue', processorFile, {
-      concurrency: 5,
-      connection: this.redisConnection,
-      // autorun: true,
-    });
     worker.on('active', job => {
       ConduitGrpcSdk.Logger.info(`Index ${job.id} started`);
     });
@@ -68,21 +68,22 @@ export class QueueController {
   }
 
   addConnectionWorker() {
-    const processorFile = path.normalize(
-      path.join(__dirname, '../jobs', 'processPossibleConnections.js'),
+    const worker = new Worker(
+      'authorization-connection-queue',
+      createProcessPossibleConnectionsProcessor(),
+      {
+        concurrency: 5,
+        connection: this.redisConnection,
+        removeOnComplete: {
+          age: 3600,
+          count: 1000,
+        },
+        removeOnFail: {
+          age: 24 * 3600,
+        },
+        // autorun: true,
+      },
     );
-    const worker = new Worker('authorization-connection-queue', processorFile, {
-      concurrency: 5,
-      connection: this.redisConnection,
-      removeOnComplete: {
-        age: 3600,
-        count: 1000,
-      },
-      removeOnFail: {
-        age: 24 * 3600,
-      },
-      // autorun: true,
-    });
     worker.on('active', job => {
       ConduitGrpcSdk.Logger.info(`Connection ${job.id} started`);
     });

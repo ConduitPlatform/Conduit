@@ -1,0 +1,137 @@
+name: Verify service bundles
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'modules/chat/**'
+      - 'modules/functions/**'
+      - 'modules/storage/**'
+      - 'modules/authentication/**'
+      - 'modules/authorization/**'
+      - 'modules/communications/**'
+      - 'modules/database/**'
+      - 'modules/router/**'
+      - 'packages/core/**'
+      - 'libraries/service-bundle/**'
+      - 'libraries/grpc-sdk/**'
+      - 'libraries/module-tools/**'
+      - 'libraries/hermes/**'
+      - 'libraries/node-2fa/**'
+      - 'scripts/verify-service-bundle.sh'
+      - 'scripts/verify-standalone-bundle.sh'
+      - 'scripts/docker-build.sh'
+      - 'scripts/resolve-docker-targets.mjs'
+      - 'standalone/**'
+      - 'standalone.Dockerfile'
+      - 'Dockerfile'
+      - 'docker-bake.hcl'
+      - '.github/workflows/service-bundle-verify.yml'
+      - '.github/workflows/images.build.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'modules/chat/**'
+      - 'modules/functions/**'
+      - 'modules/storage/**'
+      - 'modules/authentication/**'
+      - 'modules/authorization/**'
+      - 'modules/communications/**'
+      - 'modules/database/**'
+      - 'modules/router/**'
+      - 'packages/core/**'
+      - 'libraries/service-bundle/**'
+      - 'libraries/grpc-sdk/**'
+      - 'libraries/module-tools/**'
+      - 'libraries/hermes/**'
+      - 'libraries/node-2fa/**'
+      - 'scripts/verify-service-bundle.sh'
+      - 'scripts/verify-standalone-bundle.sh'
+      - 'scripts/docker-build.sh'
+      - 'scripts/resolve-docker-targets.mjs'
+      - 'standalone/**'
+      - 'standalone.Dockerfile'
+      - 'Dockerfile'
+      - 'docker-bake.hcl'
+      - '.github/workflows/service-bundle-verify.yml'
+      - '.github/workflows/images.build.yml'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [chat, functions, storage, authentication, authorization, communications, database, router, core]
+    name: Verify ${{ matrix.service }} bundle
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.5.0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '29.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install native build tools (bcrypt / sqlite3)
+        if: matrix.service == 'authentication' || matrix.service == 'authorization' || matrix.service == 'communications' || matrix.service == 'database' || matrix.service == 'router' || matrix.service == 'core'
+        run: sudo apt-get update && sudo apt-get install -y build-essential python3
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Install Redis (core smoke)
+        if: matrix.service == 'core'
+        run: sudo apt-get update && sudo apt-get install -y redis-server
+
+      - name: Verify bundle
+        run: ./scripts/verify-service-bundle.sh ${{ matrix.service }}
+
+  verify-standalone:
+    runs-on: ubuntu-24.04
+    name: Verify standalone bundle
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.5.0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '29.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install native build tools
+        run: sudo apt-get update && sudo apt-get install -y build-essential python3 ripgrep redis-server
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Verify standalone bundle
+        run: ./scripts/verify-standalone-bundle.sh
