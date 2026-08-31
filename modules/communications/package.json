@@ -84,6 +84,6 @@
     "smtp-server": "^3.19.4",
     "ts-proto": "^2.12.1",
     "tsup": "^8.5.1",
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.2"
   }
 }
