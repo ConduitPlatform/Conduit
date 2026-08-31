@@ -41,9 +41,9 @@ export default {
 
   accessTokens: {
     jwtSecret: {
-      doc: 'The secret to use when generating an access token',
+      doc: 'The secret to use when generating an access token. Generated on first configure when empty.',
       format: 'String',
-      default: 'S3CR3T',
+      default: '',
     },
     expiryPeriod: {
       doc: 'How long should the generated access tokens be valid for',

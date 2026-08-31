@@ -118,7 +118,7 @@ export namespace AuthUtils {
 
   export function verify(token: string, secret: string): string | object | null {
     try {
-      return jwt.verify(token, secret);
+      return jwt.verify(token, secret, { algorithms: ['HS256'] });
     } catch (error) {
       return null;
     }

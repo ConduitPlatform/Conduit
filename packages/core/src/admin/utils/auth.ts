@@ -8,11 +8,14 @@ import { status } from '@grpc/grpc-js';
 import * as twoFactor from '@conduitplatform/node-2fa';
 
 export function signToken(data: any, secret: string, expiresIn?: number) {
-  return jwt.sign(data, secret, { expiresIn: expiresIn ?? '6 hours' });
+  return jwt.sign(data, secret, {
+    expiresIn: expiresIn ?? '6 hours',
+    algorithm: 'HS256',
+  });
 }
 
 export function verifyToken(token: string, secret: string): any {
-  return jwt.verify(token, secret);
+  return jwt.verify(token, secret, { algorithms: ['HS256'] });
 }
 
 export function verifyTwoFactorToken(
@@ -51,6 +54,6 @@ export async function verify2Fa(admin: Admin, code: string) {
   return signToken({ id: admin._id }, tokenSecret, tokenExpirationTime);
 }
 
-export function generateSecret(options?: { name: string; account: string }) {
+export async function generateSecret(options?: { name: string; account: string }) {
   return twoFactor.generateSecret(options);
 }

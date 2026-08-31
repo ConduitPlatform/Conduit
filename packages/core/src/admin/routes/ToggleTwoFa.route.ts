@@ -37,7 +37,7 @@ export function toggleTwoFaRoute() {
           return '2FA already enabled';
         }
 
-        const secret = generateSecret({
+        const secret = await generateSecret({
           name: 'Conduit',
           account: admin.username,
         });
