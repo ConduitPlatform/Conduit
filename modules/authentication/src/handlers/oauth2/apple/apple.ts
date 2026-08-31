@@ -23,7 +23,7 @@ import { Token } from '../../../models/index.js';
 import { status } from '@grpc/grpc-js';
 import moment from 'moment';
 import jwksRsa from 'jwks-rsa';
-import { validateStateToken, resolveAppleOAuthClient } from '../utils/index.js';
+import { validateStateToken, resolveAppleOAuthClient, validateAppleClients } from '../utils/index.js';
 import {
   ConduitJson,
   ConduitString,
@@ -57,41 +57,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     }
 
     const clients = authConfig['apple'].clients ?? [];
-    const ids = new Set<string>();
-    for (const client of clients) {
-      if (!client.id || client.id.trim() === '') {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Apple OAuth client id cannot be empty',
-        );
-      }
-      if (ids.has(client.id)) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          `Duplicate Apple OAuth client id: ${client.id}`,
-        );
-      }
-      ids.add(client.id);
-
-      if (!client.clientId) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          `Apple OAuth client '${client.id}' is missing clientId`,
-        );
-      }
-
-      const hasPrivateKey = client.privateKey !== undefined && client.privateKey !== '';
-      const hasTeamId = client.teamId !== undefined && client.teamId !== '';
-      const hasKeyId = client.keyId !== undefined && client.keyId !== '';
-      const setCount = [hasPrivateKey, hasTeamId, hasKeyId].filter(Boolean).length;
-
-      if (setCount !== 0 && setCount !== 3) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          `Apple OAuth client '${client.id}' has mixed credentials. Either omit all three (privateKey, teamId, keyId) to inherit from top-level Apple, or provide all three for a second team`,
-        );
-      }
-    }
+    validateAppleClients(clients);
 
     ConduitGrpcSdk.Logger.log(`Apple authentication is available`);
     return (this.initialized = true);

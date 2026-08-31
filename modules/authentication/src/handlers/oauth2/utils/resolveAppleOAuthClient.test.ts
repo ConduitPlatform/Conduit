@@ -146,21 +146,20 @@ describe('resolveAppleOAuthClient', () => {
     );
   });
 
-  it('throws INVALID_ARGUMENT for empty id', () => {
+  it('falls back to default redirect_uri when client redirect_uri is empty string', () => {
     ConfigController.getInstance().config.apple.clients = [
       {
-        id: '',
-        clientId: 'some-client-id',
+        id: 'client-empty-redirect',
+        clientId: 'client-with-empty-redirect',
+        redirect_uri: '',
+        privateKey: '',
+        teamId: '',
+        keyId: '',
       },
     ];
 
-    assert.throws(
-      () => resolveAppleOAuthClient(''),
-      (err: any) =>
-        err instanceof GrpcError &&
-        err.code === status.INVALID_ARGUMENT &&
-        err.message.includes('id cannot be empty'),
-    );
+    const result = resolveAppleOAuthClient('client-empty-redirect');
+    assert.strictEqual(result.redirect_uri, 'https://example.com/callback');
   });
 
   it('uses client-specific redirect_uri when provided', () => {

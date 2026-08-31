@@ -11,8 +11,13 @@
     "src/utils/emailRestrictions.test.ts",
     "src/handlers/oauth2/utils/resolveAppleOAuthClient.ts",
     "src/handlers/oauth2/utils/resolveAppleOAuthClient.test.ts",
+    "src/handlers/oauth2/utils/validateAppleClients.ts",
+    "src/handlers/oauth2/utils/validateAppleClients.test.ts",
     "src/handlers/oauth2/interfaces/AppleProviderConfig.ts",
     "src/handlers/oauth2/interfaces/ProviderConfig.ts",
+    "src/config/apple.config.ts",
+    "src/config/apple.config.test.ts",
+    "src/constants/index.ts",
     "src/errors.ts",
     "src/data/disposable-email-domains.json"
   ],

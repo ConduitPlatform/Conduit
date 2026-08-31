@@ -69,7 +69,10 @@ export function resolveAppleOAuthClient(
   if (setCount === 0) {
     return {
       clientId: client.clientId,
-      redirect_uri: client.redirect_uri ?? providerConfig.redirect_uri,
+      redirect_uri:
+        client.redirect_uri && client.redirect_uri !== ''
+          ? client.redirect_uri
+          : providerConfig.redirect_uri,
       privateKey: providerConfig.privateKey,
       teamId: providerConfig.teamId,
       keyId: providerConfig.keyId,
@@ -77,7 +80,10 @@ export function resolveAppleOAuthClient(
   } else if (setCount === 3) {
     return {
       clientId: client.clientId,
-      redirect_uri: client.redirect_uri ?? providerConfig.redirect_uri,
+      redirect_uri:
+        client.redirect_uri && client.redirect_uri !== ''
+          ? client.redirect_uri
+          : providerConfig.redirect_uri,
       privateKey: client.privateKey!,
       teamId: client.teamId!,
       keyId: client.keyId!,
