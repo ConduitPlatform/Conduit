@@ -290,24 +290,6 @@ export default class Authentication extends ManagedModule<Config> {
         `Config option redirectUris.allowAny shouldn't be used in production!`,
       );
     }
-    if (
-      config.accessTokens.setCookie &&
-      !config.accessTokens.cookieOptions.secure &&
-      process.env.NODE_ENV === 'production'
-    ) {
-      ConduitGrpcSdk.Logger.warn(
-        `Config option accessTokens.cookieOptions.secure shouldn't be false in production when accessTokens.setCookie is enabled!`,
-      );
-    }
-    if (
-      config.refreshTokens.setCookie &&
-      !config.refreshTokens.cookieOptions.secure &&
-      process.env.NODE_ENV === 'production'
-    ) {
-      ConduitGrpcSdk.Logger.warn(
-        `Config option refreshTokens.cookieOptions.secure shouldn't be false in production when refreshTokens.setCookie is enabled!`,
-      );
-    }
     if (!config.active) {
       this.stopTokenCleanup();
       this.destroyMonitors();
