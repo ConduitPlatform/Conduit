@@ -6,6 +6,7 @@
     "moment",
     "@ethereumjs/util",
     "notp",
-    "thirty-two"
+    "thirty-two",
+    "qrcode"
   ]
 }
