@@ -13,6 +13,7 @@ const base = createServiceTsupConfig({
     '@conduitplatform/grpc-sdk',
     ...(bundleConfig.extraDependencies ?? []),
     'notp',
+    'qrcode',
     'thirty-two',
   ],
 });
