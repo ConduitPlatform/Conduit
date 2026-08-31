@@ -63,7 +63,8 @@ import { TeamsAdmin } from './admin/team.js';
 import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
-import { validateAppleClients } from './handlers/oauth2/utils/index.js';
+import { TeamsHandler } from './handlers/team.js';
+import { validateAppleClients } from './handlers/oauth2/utils/validateAppleClients.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

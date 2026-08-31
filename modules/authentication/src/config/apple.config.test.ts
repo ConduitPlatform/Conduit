@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import convict from 'convict';
-import appleConfig from '../../../config/apple.config.js';
+import appleConfig from './apple.config.js';
 
 describe('Admin apple.clients[] object array persistence', () => {
   it('round-trips object array through convict load and getProperties', () => {
