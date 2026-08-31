@@ -603,7 +603,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
               user: safeUser,
             },
           })
-          .catch((e: any) => {
+          .catch(e => {
             ConduitGrpcSdk.Logger.error(e);
           });
         return 'Verification code sent';
@@ -680,7 +680,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       token.data.customRedirectUri ?? config.local.verification.redirect_uri;
     await Token.getInstance()
       .deleteMany({ user: user._id, tokenType: TokenType.CHANGE_EMAIL_TOKEN })
-        .catch((e: any) => {
+      .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
     await User.getInstance().findByIdAndUpdate(user._id as string, {

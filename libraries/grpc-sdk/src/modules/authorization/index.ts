@@ -16,21 +16,6 @@ import {
 } from '../../protoUtils/index.js';
 import { Empty } from '../../protoUtils/google/protobuf/empty.js';
 
-export type {
-  AllowedResourcesRequest,
-  AllowedResourcesResponse,
-  Decision,
-  DeleteAllRelationsRequest,
-  FindRelationRequest,
-  FindRelationResponse,
-  PermissionCheck,
-  PermissionRequest,
-  Relation,
-  Resource,
-  ResourceAccessListRequest,
-  ResourceAccessListResponse,
-};
-
 export class Authorization extends ConduitModule<typeof AuthorizationDefinition> {
   constructor(
     private readonly moduleName: string,

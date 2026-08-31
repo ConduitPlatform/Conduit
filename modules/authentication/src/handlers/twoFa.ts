@@ -286,7 +286,7 @@ export class TwoFa implements IAuthenticationStrategy {
           user: user._id,
           tokenType: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
         })
-        .catch((e: any) => {
+        .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
       await Token.getInstance().create({
@@ -311,7 +311,7 @@ export class TwoFa implements IAuthenticationStrategy {
           user: user._id,
           tokenType: TokenType.AUTHENTICATOR_VERIFICATION_TOKEN,
         })
-        .catch((e: any) => {
+        .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
       const qrVerificationToken = await Token.getInstance().create({
@@ -415,7 +415,7 @@ export class TwoFa implements IAuthenticationStrategy {
         user: user._id,
         tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       })
-      .catch((e: any) => {
+      .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
     await User.getInstance().findByIdAndUpdate(user._id, {

@@ -105,7 +105,7 @@ export namespace AuthUtils {
         user: dbUserId,
         tokenType: tokenType,
       })
-      .catch((e: any) => {
+      .catch(e => {
         throw e;
       });
     return Token.getInstance().create({
@@ -148,7 +148,7 @@ export namespace AuthUtils {
         },
         tokenType: token.tokenType,
       })
-      .catch((e: any) => {
+      .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
     return true;
@@ -200,12 +200,12 @@ export namespace AuthUtils {
     const skip = params.skip ?? 0;
     const limit = params.limit ?? 25;
     const query: Indexable = {
-      _id: { $in: relations.relations.map((r: any) => r.subject.split(':')[1]) },
+      _id: { $in: relations.relations.map(r => r.subject.split(':')[1]) },
     };
     if (!isNil(search)) {
       if (search.match(/^[a-fA-F0-9]{24}$/)) {
         const included = relations.relations
-          .map((r: any) => r.subject.split(':')[1])
+          .map(r => r.subject.split(':')[1])
           .includes(search);
         if (included) {
           query['_id'] = search;
@@ -227,7 +227,7 @@ export namespace AuthUtils {
       // add role from relation to each member
       // find relation with member id
       const relation = relations.relations.find(
-        (r: any) => r.subject.split(':')[1] === member._id,
+        r => r.subject.split(':')[1] === member._id,
       );
       if (relation) {
         member.role = relation.relation;
@@ -239,12 +239,12 @@ export namespace AuthUtils {
   export async function fetchUserTeams(params: FetchMembersParams) {
     const { relations, search, sort, populate } = params;
     const query: Indexable = {
-      _id: { $in: relations.relations.map((r: any) => r.resource.split(':')[1]) },
+      _id: { $in: relations.relations.map(r => r.resource.split(':')[1]) },
     };
     if (!isNil(search)) {
       if (search.match(/^[a-fA-F0-9]{24}$/)) {
         const included = relations.relations
-          .map((r: any) => r.subject.split(':')[1])
+          .map(r => r.subject.split(':')[1])
           .includes(search);
         if (included) {
           query['_id'] = search;
