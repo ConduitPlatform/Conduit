@@ -625,7 +625,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
             userData,
           },
         })
-        .catch(e => {
+        .catch((e: any) => {
           ConduitGrpcSdk.Logger.error(e);
         });
     }

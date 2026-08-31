@@ -77,10 +77,12 @@ export abstract class OAuth2<
   }
 
   protected resolveOAuthClientId(_call: ParsedRouterRequest): string {
+    void _call;
     return this.settings.clientId;
   }
 
   protected getOAuthStateExtras(_call: ParsedRouterRequest): Record<string, unknown> {
+    void _call;
     return {};
   }
 

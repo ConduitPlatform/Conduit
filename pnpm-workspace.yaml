@@ -22,6 +22,7 @@ overrides:
 allowBuilds:
   '@apollo/protobufjs': true
   '@firebase/util': true
+  '@scarf/scarf': set this to true or false
   bcrypt: true
   core-js: true
   esbuild: true

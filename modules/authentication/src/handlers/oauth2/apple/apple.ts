@@ -74,22 +74,14 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   protected getInitRouteQueryParams() {
     return {
       ...super.getInitRouteQueryParams(),
-      oauthClientId: {
-        ...ConduitString.Optional,
-        description:
-          'Optional local identifier (clients[].id) for an extra Apple OAuth client credential set',
-      },
+      oauthClientId: ConduitString.Optional,
     };
   }
 
   protected getInitNativeRouteQueryParams() {
     return {
       ...super.getInitNativeRouteQueryParams(),
-      oauthClientId: {
-        ...ConduitString.Optional,
-        description:
-          'Optional local identifier (clients[].id) for an extra Apple OAuth client credential set',
-      },
+      oauthClientId: ConduitString.Optional,
     };
   }
 

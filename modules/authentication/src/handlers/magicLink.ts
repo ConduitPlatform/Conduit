@@ -39,7 +39,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       this.emailModule = this.grpcSdk.emailProvider!;
       const success = await this.registerTemplate()
         .then(() => true)
-        .catch(e => {
+        .catch((e: any) => {
           ConduitGrpcSdk.Logger.error(e);
           return false;
         });
@@ -178,7 +178,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     await Token.getInstance()
       .deleteMany({ user: token.user, tokenType: TokenType.MAGIC_LINK })
-      .catch(e => {
+      .catch((e: any) => {
         ConduitGrpcSdk.Logger.error(e);
       });
     return {
