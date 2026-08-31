@@ -25,7 +25,6 @@
     "jsonwebtoken",
     "moment",
     "notp",
-    "qrcode",
     "object-hash",
     "secure-json-parse",
     "socket.io",

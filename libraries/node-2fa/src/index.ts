@@ -1,7 +1,7 @@
 import notp from 'notp';
 import crypto from 'crypto';
 import b32 from 'thirty-two';
-import QRCode from 'qrcode';
+import { renderSVG } from 'uqr';
 import { Options } from './interfaces';
 
 export async function generateSecret(options?: Options) {
@@ -23,7 +23,7 @@ export async function generateSecret(options?: Options) {
 
   const query = `?secret=${secret}&issuer=${config.name}`;
   const uri = `otpauth://totp/${config.name}${config.account}${query}`;
-  const qr = await QRCode.toDataURL(uri);
+  const qr = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderSVG(uri))}`;
 
   return {
     secret,
