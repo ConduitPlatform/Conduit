@@ -535,7 +535,7 @@ export class TwoFa implements IAuthenticationStrategy {
   }
 
   private async enableAuthenticator2Fa(user: User): Promise<string> {
-    const secret = node2fa.generateSecret({
+    const secret = await node2fa.generateSecret({
       //to do: add logic for app name insertion
       name: 'Conduit',
       // add another string when mail is not available

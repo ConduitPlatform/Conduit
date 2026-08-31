@@ -266,6 +266,6 @@ export class TokenProvider {
   }
 
   private signToken(data: Indexable, secret: string, options: SignOptions) {
-    return jwt.sign(data, secret, options);
+    return jwt.sign(data, secret, { ...options, algorithm: 'HS256' });
   }
 }

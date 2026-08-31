@@ -52,6 +52,7 @@ import { TokenProvider } from './handlers/tokenProvider.js';
 import {
   ConduitActiveSchema,
   ConfigController,
+  convictConfigParser,
   createParsedRouterRequest,
   ManagedModule,
   sanitizeDocumentsForExport,
@@ -59,6 +60,7 @@ import {
   type ExportResult,
   type ImportResult,
 } from '@conduitplatform/module-tools';
+import { ensureAccessTokenJwtSecret } from './utils/jwtSecret.js';
 import { TeamsAdmin } from './admin/team.js';
 import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
@@ -224,6 +226,7 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   async preConfig(config: Config) {
+    ensureAccessTokenJwtSecret(config);
     if (config.captcha?.hasOwnProperty('provider')) {
       delete (config as Config & { captcha: { provider?: string } }).captcha.provider;
     }
@@ -270,9 +273,39 @@ export default class Authentication extends ManagedModule<Config> {
 
   async onConfig() {
     const config = ConfigController.getInstance().config;
+    if (!config.accessTokens.jwtSecret?.trim()) {
+      ensureAccessTokenJwtSecret(config);
+      ConfigController.getInstance().config = config;
+      if (this.config) {
+        this.config.load(config);
+        await this.grpcSdk.config.configure(
+          config,
+          convictConfigParser(this.config.getSchema()),
+          true,
+        );
+      }
+    }
     if (config.redirectUris.allowAny && process.env.NODE_ENV === 'production') {
       ConduitGrpcSdk.Logger.warn(
         `Config option redirectUris.allowAny shouldn't be used in production!`,
+      );
+    }
+    if (
+      config.accessTokens.setCookie &&
+      !config.accessTokens.cookieOptions.secure &&
+      process.env.NODE_ENV === 'production'
+    ) {
+      ConduitGrpcSdk.Logger.warn(
+        `Config option accessTokens.cookieOptions.secure shouldn't be false in production when accessTokens.setCookie is enabled!`,
+      );
+    }
+    if (
+      config.refreshTokens.setCookie &&
+      !config.refreshTokens.cookieOptions.secure &&
+      process.env.NODE_ENV === 'production'
+    ) {
+      ConduitGrpcSdk.Logger.warn(
+        `Config option refreshTokens.cookieOptions.secure shouldn't be false in production when refreshTokens.setCookie is enabled!`,
       );
     }
     if (!config.active) {
