@@ -26,23 +26,31 @@ RUN pnpm install --frozen-lockfile --ignore-scripts && \
     pnpm rebuild @apollo/protobufjs @firebase/util bcrypt esbuild keccak msgpackr-extract protobufjs secp256k1 sqlite3 unrs-resolver vue-demi && \
     npx turbo run build --filter=@conduitplatform/grpc-sdk --filter=@conduitplatform/module-tools
 
+# Compile first, then bundle. Router/authentication turbo branches must not skip
+# build:bundle or COPY --from=conduit-base .../bundle fails in image CI.
 RUN pnpm --filter @conduitplatform/service-bundle run build && \
-    if [  -z "$BUILDING_SERVICE" ] ; then npx turbo run build ; \
-    if [ "$BUILD_BUNDLE" = "1" ] ; then \
-      for dir in packages/core modules/database modules/router modules/authentication modules/authorization modules/communications modules/storage modules/chat ; do \
-        if [ -d "/app/$dir" ] && grep -q '"build:bundle"' "/app/$dir/package.json" 2>/dev/null ; then \
-          (cd "/app/$dir" && pnpm run build:bundle) ; \
-        fi ; \
-      done ; \
-    fi ; \
+    if [ -z "$BUILDING_SERVICE" ] ; then npx turbo run build ; \
     elif [ "$BUILDING_SERVICE" = "conduit" ] ; then npx turbo run build --filter=@conduitplatform/core --filter=@conduitplatform/hermes \
     --filter=@conduitplatform/node-2fa; \
     elif [ "$BUILDING_SERVICE" = "modules/router" ] ; then npx turbo run build --filter=@conduitplatform/router \
     --filter=@conduitplatform/hermes; \
     elif [ "$BUILDING_SERVICE" = "modules/authentication" ] ; then npx turbo run build --filter=@conduitplatform/authentication \
     --filter=@conduitplatform/node-2fa; \
-    elif echo "$BUILDING_SERVICE" | grep -q '^modules/' ; then cd /app/$BUILDING_SERVICE && pnpm build && if [ "$BUILD_BUNDLE" = "1" ] && grep -q '"build:bundle"' package.json 2>/dev/null; then pnpm run build:bundle; fi && cd /app ; \
-    elif echo "$BUILDING_SERVICE" | grep -q '^packages/' ; then npx turbo run build --filter=@conduitplatform/core --filter=@conduitplatform/hermes --filter=@conduitplatform/node-2fa && cd /app/$BUILDING_SERVICE && if [ "$BUILD_BUNDLE" = "1" ] && grep -q '"build:bundle"' package.json 2>/dev/null; then pnpm run build:bundle; fi && cd /app ; \
-    else cd /app/$BUILDING_SERVICE && pnpm build && cd /app ; fi
+    elif echo "$BUILDING_SERVICE" | grep -q '^modules/' ; then cd /app/$BUILDING_SERVICE && pnpm build && cd /app ; \
+    elif echo "$BUILDING_SERVICE" | grep -q '^packages/' ; then npx turbo run build --filter=@conduitplatform/core --filter=@conduitplatform/hermes --filter=@conduitplatform/node-2fa ; \
+    else cd /app/$BUILDING_SERVICE && pnpm build && cd /app ; fi && \
+    if [ "$BUILD_BUNDLE" = "1" ] ; then \
+      if [ -z "$BUILDING_SERVICE" ] ; then \
+        for dir in packages/core modules/database modules/router modules/authentication modules/authorization modules/communications modules/storage modules/chat ; do \
+          if [ -d "/app/$dir" ] && grep -q '"build:bundle"' "/app/$dir/package.json" 2>/dev/null ; then \
+            (cd "/app/$dir" && pnpm run build:bundle) ; \
+          fi ; \
+        done ; \
+      elif [ "$BUILDING_SERVICE" = "conduit" ] ; then \
+        (cd /app/packages/core && pnpm run build:bundle) ; \
+      elif [ -f "/app/$BUILDING_SERVICE/package.json" ] && grep -q '"build:bundle"' "/app/$BUILDING_SERVICE/package.json" ; then \
+        (cd "/app/$BUILDING_SERVICE" && pnpm run build:bundle) ; \
+      fi ; \
+    fi
 
 RUN pnpm store prune && pnpm -r exec rm -rf node_modules && rm -rf node_modules
