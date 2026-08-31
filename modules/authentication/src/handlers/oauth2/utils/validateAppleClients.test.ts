@@ -95,7 +95,43 @@ describe('validateAppleClients', () => {
       (err: any) =>
         err instanceof GrpcError &&
         err.code === status.INVALID_ARGUMENT &&
-        err.message.includes("missing clientId"),
+        err.message.includes('missing clientId'),
+    );
+  });
+
+  it('rejects client with whitespace-only clientId', () => {
+    const clients = [
+      {
+        id: 'client-1',
+        clientId: '   ',
+      },
+    ];
+    assert.throws(
+      () => validateAppleClients(clients),
+      (err: any) =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        err.message.includes('missing clientId'),
+    );
+  });
+
+  it('rejects duplicate ids that differ only by whitespace', () => {
+    const clients = [
+      {
+        id: 'app1',
+        clientId: 'app1-client-id',
+      },
+      {
+        id: ' app1 ',
+        clientId: 'app2-client-id',
+      },
+    ];
+    assert.throws(
+      () => validateAppleClients(clients),
+      (err: any) =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        err.message.includes('Duplicate Apple OAuth client id: app1'),
     );
   });
 

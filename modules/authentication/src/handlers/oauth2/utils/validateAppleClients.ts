@@ -5,24 +5,26 @@ import { AppleOAuthClientConfig } from '../interfaces/AppleProviderConfig.js';
 export function validateAppleClients(clients: AppleOAuthClientConfig[]): void {
   const ids = new Set<string>();
   for (const client of clients) {
-    if (!client.id || client.id.trim() === '') {
+    const trimmedId = client.id?.trim() ?? '';
+    if (!trimmedId) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
         'Apple OAuth client id cannot be empty',
       );
     }
-    if (ids.has(client.id)) {
+    if (ids.has(trimmedId)) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        `Duplicate Apple OAuth client id: ${client.id}`,
+        `Duplicate Apple OAuth client id: ${trimmedId}`,
       );
     }
-    ids.add(client.id);
+    ids.add(trimmedId);
 
-    if (!client.clientId) {
+    const trimmedClientId = client.clientId?.trim() ?? '';
+    if (!trimmedClientId) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        `Apple OAuth client '${client.id}' is missing clientId`,
+        `Apple OAuth client '${trimmedId}' is missing clientId`,
       );
     }
 
@@ -34,7 +36,7 @@ export function validateAppleClients(clients: AppleOAuthClientConfig[]): void {
     if (setCount !== 0 && setCount !== 3) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        `Apple OAuth client '${client.id}' has mixed credentials. Either omit all three (privateKey, teamId, keyId) to inherit from top-level Apple, or provide all three for a second team`,
+        `Apple OAuth client '${trimmedId}' has mixed credentials. Either omit all three (privateKey, teamId, keyId) to inherit from top-level Apple, or provide all three for a second team`,
       );
     }
   }
