@@ -2,24 +2,6 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [Unreleased]
-
-### ⚠ BREAKING CHANGES
-
-* **authentication:** biometric login now requires `POST /authentication/biometrics/challenge` and a signature over that one-time challenge instead of `user._id`
-
-### Features
-
-* **authentication:** generate a random `accessTokens.jwtSecret` when unset (existing `'S3CR3T'` installs are unchanged)
-* **authentication:** pin HS256 for user and admin JWTs
-* **authentication:** verify Apple identity tokens with ES256 (client and token-endpoint `id_token`)
-* **authentication:** issue a one-time biometric login challenge
-* **node-2fa:** generate TOTP QR codes locally (no QuickChart)
-
-### Bug Fixes
-
-* **authentication:** warn in production when auth cookies are enabled without `secure`
-
 ## [0.17.0-alpha.6](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.5...v0.17.0-alpha.6) (2026-07-26)
 
 
