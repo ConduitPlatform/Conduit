@@ -33,6 +33,10 @@ function assertRequiredCredential(
   }
 }
 
+function isEmptyString(value: string | undefined): boolean {
+  return value === '';
+}
+
 export function resolveAppleOAuthClient(
   oauthClientId?: string,
 ): ResolvedAppleOAuthClient {
@@ -48,16 +52,40 @@ export function resolveAppleOAuthClient(
   }
 
   const client = findAppleClient(providerConfig.clients, oauthClientId);
-  assertRequiredCredential(client.clientId, oauthClientId, 'clientId');
-  assertRequiredCredential(client.privateKey, oauthClientId, 'privateKey');
-  assertRequiredCredential(client.teamId, oauthClientId, 'teamId');
-  assertRequiredCredential(client.keyId, oauthClientId, 'keyId');
 
-  return {
-    clientId: client.clientId,
-    redirect_uri: client.redirect_uri ?? providerConfig.redirect_uri,
-    privateKey: client.privateKey,
-    teamId: client.teamId,
-    keyId: client.keyId,
-  };
+  if (!client.id || client.id.trim() === '') {
+    throw new GrpcError(status.INVALID_ARGUMENT, 'Apple OAuth client id cannot be empty');
+  }
+
+  assertRequiredCredential(client.clientId, oauthClientId, 'clientId');
+
+  const hasPrivateKey =
+    client.privateKey !== undefined && !isEmptyString(client.privateKey);
+  const hasTeamId = client.teamId !== undefined && !isEmptyString(client.teamId);
+  const hasKeyId = client.keyId !== undefined && !isEmptyString(client.keyId);
+
+  const setCount = [hasPrivateKey, hasTeamId, hasKeyId].filter(Boolean).length;
+
+  if (setCount === 0) {
+    return {
+      clientId: client.clientId,
+      redirect_uri: client.redirect_uri ?? providerConfig.redirect_uri,
+      privateKey: providerConfig.privateKey,
+      teamId: providerConfig.teamId,
+      keyId: providerConfig.keyId,
+    };
+  } else if (setCount === 3) {
+    return {
+      clientId: client.clientId,
+      redirect_uri: client.redirect_uri ?? providerConfig.redirect_uri,
+      privateKey: client.privateKey!,
+      teamId: client.teamId!,
+      keyId: client.keyId!,
+    };
+  } else {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      `Apple OAuth client '${oauthClientId}' has mixed credentials. Either omit all three (privateKey, teamId, keyId) to inherit from top-level Apple, or provide all three for a second team`,
+    );
+  }
 }

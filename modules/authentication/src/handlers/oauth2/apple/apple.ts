@@ -55,6 +55,44 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       ConduitGrpcSdk.Logger.log(`Apple authentication not available`);
       return (this.initialized = false);
     }
+
+    const clients = authConfig['apple'].clients ?? [];
+    const ids = new Set<string>();
+    for (const client of clients) {
+      if (!client.id || client.id.trim() === '') {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Apple OAuth client id cannot be empty',
+        );
+      }
+      if (ids.has(client.id)) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          `Duplicate Apple OAuth client id: ${client.id}`,
+        );
+      }
+      ids.add(client.id);
+
+      if (!client.clientId) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          `Apple OAuth client '${client.id}' is missing clientId`,
+        );
+      }
+
+      const hasPrivateKey = client.privateKey !== undefined && client.privateKey !== '';
+      const hasTeamId = client.teamId !== undefined && client.teamId !== '';
+      const hasKeyId = client.keyId !== undefined && client.keyId !== '';
+      const setCount = [hasPrivateKey, hasTeamId, hasKeyId].filter(Boolean).length;
+
+      if (setCount !== 0 && setCount !== 3) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          `Apple OAuth client '${client.id}' has mixed credentials. Either omit all three (privateKey, teamId, keyId) to inherit from top-level Apple, or provide all three for a second team`,
+        );
+      }
+    }
+
     ConduitGrpcSdk.Logger.log(`Apple authentication is available`);
     return (this.initialized = true);
   }
@@ -70,14 +108,22 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   protected getInitRouteQueryParams() {
     return {
       ...super.getInitRouteQueryParams(),
-      oauthClientId: ConduitString.Optional,
+      oauthClientId: {
+        ...ConduitString.Optional,
+        description:
+          'Optional local identifier (clients[].id) for an extra Apple OAuth client credential set',
+      },
     };
   }
 
   protected getInitNativeRouteQueryParams() {
     return {
       ...super.getInitNativeRouteQueryParams(),
-      oauthClientId: ConduitString.Optional,
+      oauthClientId: {
+        ...ConduitString.Optional,
+        description:
+          'Optional local identifier (clients[].id) for an extra Apple OAuth client credential set',
+      },
     };
   }
 
