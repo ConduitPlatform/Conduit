@@ -30,6 +30,15 @@ describe('invitationHelpers', () => {
         );
       }
     });
+
+    it('throws synchronously before any async operations', () => {
+      try {
+        validateInvitationAnswer('Accept');
+        assert.fail('Should have thrown');
+      } catch (err: any) {
+        assert.equal(err.code, 3);
+      }
+    });
   });
 
   describe('buildLoginRedirectUrl', () => {
@@ -44,6 +53,15 @@ describe('invitationHelpers', () => {
         'https://app.example.com/login?answer=accept&invitationToken=test-token-123',
       );
       assert.ok(!url.includes('redirectUri'));
+    });
+
+    it('does not require or use token secret - only passes token to query param', () => {
+      const url = buildLoginRedirectUrl(
+        'https://app.example.com/login',
+        'accept',
+        'any-string-token',
+      );
+      assert.ok(url.includes('invitationToken=any-string-token'));
     });
 
     it('handles trailing slash in login_uri', () => {

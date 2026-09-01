@@ -147,11 +147,19 @@ export class InvitationRoutes {
     const invitationTokenDoc: InvitationToken | null =
       await InvitationToken.getInstance().findOne({
         _id: id,
-        receiver: user._id,
       });
     if (isNil(invitationTokenDoc)) {
       throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
     }
+
+    const receiver = invitationTokenDoc.receiver as string;
+    if (String(user._id) !== String(receiver)) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Invitation is not for the current user',
+      );
+    }
+
     const message = await this.processInvitationAnswer(
       invitationTokenDoc,
       answer,
