@@ -116,6 +116,11 @@ export async function resolveFileReferences(
     return { sourceUrl: '', url: '', uri };
   }
 
+  const config = ConfigController.getInstance().config;
+  if (config.provider === 'local') {
+    return { sourceUrl: '', url: '', uri };
+  }
+
   const publicUrlResult = await storageProvider
     .container(params.container)
     .getPublicUrl(fileName, true);
@@ -425,4 +430,20 @@ export async function validateFilePrivacy(
       'Files in public containers must be public',
     );
   }
+}
+
+export async function sanitizeFileForResponse(file: File): Promise<File> {
+  const containerDoc = await _StorageContainer
+    .getInstance()
+    .findOne({ name: file.container }, { readPreference: 'primary' });
+  const containerIsPublic = containerDoc?.isPublic ?? false;
+
+  if (!containerIsPublic) {
+    const sanitized = { ...file };
+    delete sanitized.url;
+    delete sanitized.sourceUrl;
+    return sanitized as File;
+  }
+
+  return file;
 }
