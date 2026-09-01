@@ -66,23 +66,30 @@ export class FunctionController {
 
         const cronFunctions: Functions[] = [];
         r.forEach(func => {
-          if (func.functionType === 'cron') {
-            try {
-              this.compiledCronFunctions.set(
-                func._id,
-                compileFunctionCode(func.functionCode),
-              );
-              cronFunctions.push(func);
-            } catch (err) {
-              ConduitGrpcSdk.Logger.error(
-                `Failed to compile cron function ${func.name} (${func._id})`,
-              );
-              ConduitGrpcSdk.Logger.error(err as Error);
+          try {
+            if (func.functionType === 'cron') {
+              try {
+                this.compiledCronFunctions.set(
+                  func._id,
+                  compileFunctionCode(func.functionCode),
+                );
+                cronFunctions.push(func);
+              } catch (err) {
+                ConduitGrpcSdk.Logger.error(
+                  `Failed to compile cron function ${func.name} (${func._id})`,
+                );
+                ConduitGrpcSdk.Logger.error(err as Error);
+              }
             }
-          }
-          const route = createFunctionRoute(func, this.grpcSdk);
-          if (route) {
-            this.functionRoutes.push(route as any);
+            const route = createFunctionRoute(func, this.grpcSdk);
+            if (route) {
+              this.functionRoutes.push(route as any);
+            }
+          } catch (err) {
+            ConduitGrpcSdk.Logger.error(
+              `Failed to process function ${func.name} (${func._id}); skipping`,
+            );
+            ConduitGrpcSdk.Logger.error(err as Error);
           }
         });
         this._routingManager.clear();
