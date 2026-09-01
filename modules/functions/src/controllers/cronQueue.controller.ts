@@ -106,8 +106,10 @@ export class CronQueueController {
     }
 
     let registered = 0;
+    let updated = 0;
+    let unchanged = 0;
     let skipped = 0;
-    const refreshedRepeatables = await this.cronQueue.getRepeatableJobs();
+    const currentRepeatables = await this.cronQueue.getRepeatableJobs();
     for (const func of cronFunctions) {
       const pattern = getCronPatternFromInputs(func.inputs);
       if (!pattern) {
@@ -128,10 +130,19 @@ export class CronQueueController {
       }
 
       const jobId = buildCronJobId(func._id);
-      for (const repeatable of refreshedRepeatables) {
-        if (repeatable.id === jobId) {
-          await this.cronQueue.removeRepeatableByKey(repeatable.key);
-        }
+      const timezone = func.inputs?.timezone ?? 'UTC';
+      const existing = currentRepeatables.find(r => r.id === jobId);
+
+      if (existing && existing.pattern === pattern && existing.tz === timezone) {
+        unchanged += 1;
+        continue;
+      }
+
+      if (existing) {
+        await this.cronQueue.removeRepeatableByKey(existing.key);
+        updated += 1;
+      } else {
+        registered += 1;
       }
 
       await this.cronQueue.add(
@@ -139,16 +150,15 @@ export class CronQueueController {
         { functionId: func._id },
         {
           jobId,
-          repeat: { pattern, tz: func.inputs?.timezone ?? 'UTC' },
+          repeat: { pattern, tz: timezone },
           removeOnComplete: { age: 3600, count: 1000 },
           removeOnFail: { age: 24 * 3600 },
         },
       );
-      registered += 1;
     }
 
     ConduitGrpcSdk.Logger.log(
-      `Cron sync complete: registered=${registered}, removed=${removed}, skipped=${skipped}`,
+      `Cron sync complete: registered=${registered}, updated=${updated}, unchanged=${unchanged}, removed=${removed}, skipped=${skipped}`,
     );
   }
 
