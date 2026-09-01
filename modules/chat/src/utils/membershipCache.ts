@@ -4,8 +4,14 @@ export function getMembershipCacheKey(roomId: string): string {
   return `chat:membership:${roomId}`;
 }
 
+interface GrpcSdkWithState {
+  state?: {
+    clearKey(key: string): Promise<void>;
+  };
+}
+
 export async function invalidateMembershipCache(
-  grpcSdk: any,
+  grpcSdk: GrpcSdkWithState,
   roomId: string,
 ): Promise<void> {
   if (!grpcSdk.state) return;
