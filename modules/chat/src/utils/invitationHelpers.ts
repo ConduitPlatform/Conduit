@@ -25,7 +25,7 @@ export function buildLoginRedirectUrl(
   let redirectUrl: URL;
   try {
     redirectUrl = new URL(loginUri);
-  } catch (e) {
+  } catch {
     throw new InvitationError(
       9,
       'login_uri must be an absolute URL',
