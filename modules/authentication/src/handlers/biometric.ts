@@ -141,7 +141,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
     const { encryptedData, keyId } = call.request.params;
     const config = ConfigController.getInstance().config;
-    const existingToken = await Token.getInstance().findOne(
+    const existingToken = await Token.getInstance().findOneAndDelete(
       {
         tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
         'data.keyId': keyId,
@@ -152,10 +152,6 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     if (Date.now() - new Date(existingToken.createdAt).getTime() > 2 * 60 * 1000) {
-      await Token.getInstance().deleteMany({
-        tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
-        'data.keyId': keyId,
-      } as Query<Token>);
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     if (existingToken.data.clientId !== call.request.context.clientId) {
@@ -171,10 +167,6 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     if (!key) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
-    await Token.getInstance().deleteMany({
-      tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
-      'data.keyId': keyId,
-    } as Query<Token>);
     const verifier = crypto.createVerify('sha256WithRSAEncryption');
     verifier.update(new Uint8Array(Buffer.from(existingToken.data.challenge)));
     const cryptoKey = crypto.createPublicKey({
@@ -232,7 +224,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
   ): Promise<UnparsedRouterResponse> {
     const { encryptedData } = call.request.params;
     const { clientId, user } = call.request.context;
-    const existingToken = await Token.getInstance().findOne(
+    const existingToken = await Token.getInstance().findOneAndDelete(
       {
         tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
         user: user._id,
@@ -240,7 +232,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       { readPreference: 'primary' },
     );
     if (!existingToken) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token!');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     if (existingToken.data.clientId !== clientId) {
       throw new GrpcError(
@@ -250,10 +242,6 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     }
     const challenge = existingToken.data.challenge;
     const publicKey = existingToken.data.publicKey;
-    await Token.getInstance().deleteMany({
-      tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
-      user: user._id,
-    });
     const verifier = crypto.createVerify('sha256WithRSAEncryption');
     verifier.update(new Uint8Array(Buffer.from(challenge)));
     const cryptoKey = crypto.createPublicKey({
