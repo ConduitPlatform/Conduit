@@ -144,11 +144,6 @@ export class AdminHandlers {
     };
     if (func.functionType === 'cron') {
       query.inputs = normalizeCronInputs(query.inputs);
-    } else if (inputs && getCronPatternFromInputs(inputs)) {
-      const pattern = getCronPatternFromInputs(inputs);
-      if (pattern) {
-        validateCronPattern(pattern);
-      }
     }
     try {
       compileUserFunctionScript(query.functionCode);
