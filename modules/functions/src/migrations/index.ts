@@ -2,7 +2,7 @@ import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { Functions } from '../models/index.js';
 import { getCronPatternFromInputs } from '../controllers/cron.utils.js';
 
-export async function runMigrations(grpcSdk: ConduitGrpcSdk) {
+export async function runMigrations(_grpcSdk: ConduitGrpcSdk) {
   const cronFunctions = await Functions.getInstance().findMany({
     functionType: 'cron',
   });
