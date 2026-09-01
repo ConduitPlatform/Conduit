@@ -1,6 +1,6 @@
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { parseExpression } from 'cron-parser';
+import cronParser from 'cron-parser';
 import type { IWebInputsInterface } from '../interfaces/IWebInputs.interface.js';
 
 export function buildCronJobId(functionId: string): string {
@@ -19,7 +19,7 @@ export function getCronPatternFromInputs(
 
 export function validateCronPattern(pattern: string): void {
   try {
-    parseExpression(pattern, { tz: 'UTC' });
+    cronParser.parseExpression(pattern, { tz: 'UTC' });
   } catch {
     throw new GrpcError(
       status.INVALID_ARGUMENT,
