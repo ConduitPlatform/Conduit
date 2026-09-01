@@ -76,6 +76,16 @@ export abstract class OAuth2<
     return (this.initialized = true);
   }
 
+  protected resolveOAuthClientId(_call: ParsedRouterRequest): string {
+    void _call;
+    return this.settings.clientId;
+  }
+
+  protected getOAuthStateExtras(_call: ParsedRouterRequest): Record<string, unknown> {
+    void _call;
+    return {};
+  }
+
   async initNative(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const { anonymousUser } = call.request.context;
@@ -83,7 +93,7 @@ export abstract class OAuth2<
 
     // returns part of regular redirect options for native usage
     const queryOptions: Partial<RedirectOptions> = {
-      client_id: this.settings.clientId,
+      client_id: this.resolveOAuthClientId(call),
       redirect_uri: conduitUrl + this.settings.callbackUrl,
       scope: this.constructScopes(scopes),
     };
@@ -98,6 +108,7 @@ export abstract class OAuth2<
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
           customRedirectUri: call.request.params.redirectUri,
           anonymousUserId: anonymousUser?._id,
+          ...this.getOAuthStateExtras(call),
         },
       })
       .catch(err => {
@@ -126,7 +137,7 @@ export abstract class OAuth2<
         .replace(/\//g, '_');
     }
     const queryOptions: RedirectOptions = {
-      client_id: this.settings.clientId,
+      client_id: this.resolveOAuthClientId(call),
       redirect_uri: conduitUrl + this.settings.callbackUrl,
       response_type: this.settings.responseType,
       response_mode: this.settings.responseMode,
@@ -151,6 +162,7 @@ export abstract class OAuth2<
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
           customRedirectUri: call.request.params.redirectUri,
           anonymousUserId: anonymousUser?._id,
+          ...this.getOAuthStateExtras(call),
         },
       })
       .catch(err => {
@@ -364,12 +376,7 @@ export abstract class OAuth2<
         path: `/init/${this.providerName}`,
         description: `Begins ${this.capitalizeProvider()} authentication.`,
         action: ConduitRouteActions.GET,
-        queryParams: {
-          scopes: [ConduitString.Optional],
-          invitationToken: ConduitString.Optional,
-          captchaToken: ConduitString.Optional,
-          redirectUri: ConduitString.Optional,
-        },
+        queryParams: this.getInitRouteQueryParams(),
         middlewares: initRouteMiddleware,
         rateLimit: OAUTH_INIT,
       },
@@ -385,11 +392,7 @@ export abstract class OAuth2<
           path: `/initNative/${this.providerName}`,
           description: `Begins ${this.capitalizeProvider()} native authentication.`,
           action: ConduitRouteActions.GET,
-          queryParams: {
-            scopes: [ConduitString.Optional],
-            invitationToken: ConduitString.Optional,
-            captchaToken: ConduitString.Optional,
-          },
+          queryParams: this.getInitNativeRouteQueryParams(),
           middlewares: initRouteMiddleware,
           rateLimit: OAUTH_INIT,
         },
@@ -457,6 +460,23 @@ export abstract class OAuth2<
         this.authorize.bind(this),
       );
     }
+  }
+
+  protected getInitRouteQueryParams() {
+    return {
+      scopes: [ConduitString.Optional],
+      invitationToken: ConduitString.Optional,
+      captchaToken: ConduitString.Optional,
+      redirectUri: ConduitString.Optional,
+    };
+  }
+
+  protected getInitNativeRouteQueryParams() {
+    return {
+      scopes: [ConduitString.Optional],
+      invitationToken: ConduitString.Optional,
+      captchaToken: ConduitString.Optional,
+    };
   }
 
   makeRequest(data: AuthParams): OAuthRequest {
