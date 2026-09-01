@@ -21,7 +21,7 @@
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "prebuild": "npm run generateTypes",
     "build": "rimraf dist && tsc",
-    "prebuild:bundle": "test -f ../../libraries/service-bundle/dist/cli.js || pnpm --filter @conduitplatform/service-bundle run build",
+    "prebuild:bundle": "pnpm --filter @conduitplatform/service-bundle run build",
     "build:bundle": "rimraf bundle && node ../../libraries/service-bundle/dist/cli.js generate-manifest && tsup && node ../../libraries/service-bundle/dist/cli.js copy-assets && node ../../libraries/service-bundle/dist/cli.js generate-lockfile",
     "prepare": "npm run build",
     "generateTypes": "sh build.sh",
