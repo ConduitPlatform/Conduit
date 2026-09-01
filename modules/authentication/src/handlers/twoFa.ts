@@ -346,6 +346,10 @@ export class TwoFa implements IAuthenticationStrategy {
         throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
       }
       const verified = await AuthUtils.verifyCode(this.grpcSdk, token, code);
+      await Token.getInstance().deleteMany({
+        user: user._id,
+        tokenType: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
+      });
       if (!verified) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
       }
