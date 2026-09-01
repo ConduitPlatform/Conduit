@@ -6,8 +6,8 @@ export function getMembershipCacheKey(roomId: string): string {
 
 interface GrpcSdkWithState {
   state?: {
-    clearKey(key: string): Promise<void>;
-  };
+    clearKey(key: string): Promise<number>;
+  } | null;
 }
 
 export async function invalidateMembershipCache(
