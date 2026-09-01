@@ -14,6 +14,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { ChatRoom, InvitationToken } from '../models/index.js';
 import { buildInvitationHookUrl } from '../utils/index.js';
+import { invalidateMembershipCache } from '../utils/membershipCache.js';
 import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { Config } from '../config/index.js';
@@ -46,6 +47,20 @@ export class InvitationRoutes {
         redirect: ConduitString.Optional,
       }),
       this.answerInvitationFromHook.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/invitations/by-token/:answer/:invitationToken',
+        action: ConduitRouteActions.GET,
+        description: `Responds to a chat room invitation using the invitation token after authentication.`,
+        urlParams: {
+          answer: ConduitString.Required,
+          invitationToken: ConduitString.Required,
+        },
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('InvitationByTokenResponse', 'String'),
+      this.answerInvitationByToken.bind(this),
     );
     this.routingManager.route(
       {
@@ -113,6 +128,11 @@ export class InvitationRoutes {
   async answerInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, answer } = call.request.params;
     const { user } = call.request.context;
+
+    if (answer !== 'accept' && answer !== 'decline') {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Answer must be accept or decline');
+    }
+
     const invitationTokenDoc: InvitationToken | null =
       await InvitationToken.getInstance().findOne({
         _id: id,
@@ -140,6 +160,10 @@ export class InvitationRoutes {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Answer must be accept or decline');
     }
 
+    if (isNil(user)) {
+      return this.redirectUnauthenticatedUser(answer, invitationToken, config);
+    }
+
     const invitationTokenDoc: InvitationToken | null =
       await InvitationToken.getInstance().findOne({
         token: invitationToken,
@@ -148,14 +172,43 @@ export class InvitationRoutes {
       throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
     }
 
-    const roomId = invitationTokenDoc.room as string;
-    const hookUrl = await this.resolveInvitationHookUrl(answer, invitationToken);
-
-    if (isNil(user)) {
-      return this.redirectUnauthenticatedUser(hookUrl, config);
+    const receiver = invitationTokenDoc.receiver as string;
+    if (String(user._id) !== String(receiver)) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Invitation is not for the current user',
+      );
     }
 
-    if (user._id !== invitationTokenDoc.receiver) {
+    const roomId = invitationTokenDoc.room as string;
+    const message = await this.processInvitationAnswer(
+      invitationTokenDoc,
+      answer,
+      user._id,
+    );
+    return this.redirectAfterAnswer(answer, roomId, config, message);
+  }
+
+  async answerInvitationByToken(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { invitationToken, answer } = call.request.params;
+    const { user } = call.request.context;
+
+    if (answer !== 'accept' && answer !== 'decline') {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Answer must be accept or decline');
+    }
+
+    const invitationTokenDoc: InvitationToken | null =
+      await InvitationToken.getInstance().findOne({
+        token: invitationToken,
+      });
+    if (isNil(invitationTokenDoc)) {
+      throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
+    }
+
+    const receiver = invitationTokenDoc.receiver as string;
+    if (String(user._id) !== String(receiver)) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'Invitation is not for the current user',
@@ -167,7 +220,7 @@ export class InvitationRoutes {
       answer,
       user._id,
     );
-    return this.redirectAfterAnswer(answer, roomId, config, message);
+    return message;
   }
 
   private async processInvitationAnswer(
@@ -187,7 +240,8 @@ export class InvitationRoutes {
 
     const receiver = invitationTokenDoc.receiver as string;
     const accepted = answer === 'accept';
-    const alreadyMember = (chatRoom.participants as string[]).includes(receiver);
+    const participants = chatRoom.participants as string[];
+    const alreadyMember = participants.some(p => String(p) === String(receiver));
 
     if (alreadyMember) {
       await InvitationToken.getInstance().deleteMany({
@@ -198,9 +252,11 @@ export class InvitationRoutes {
 
     let message: string;
     if (accepted) {
-      (chatRoom.participants as string[]).push(receiver);
+      (chatRoom.participants as string[]).push(String(receiver));
       await ChatRoom.getInstance().findByIdAndUpdate(roomId, chatRoom);
       message = 'Invitation accepted';
+
+      await invalidateMembershipCache(this.grpcSdk, roomId);
 
       this.grpcSdk.router?.socketPush({
         event: 'join-room',
@@ -223,20 +279,9 @@ export class InvitationRoutes {
     return message;
   }
 
-  private async resolveInvitationHookUrl(
+  private redirectUnauthenticatedUser(
     answer: string,
     invitationToken: string,
-  ): Promise<string> {
-    const routerConfig = await this.grpcSdk.config.get('router');
-    return buildInvitationHookUrl(
-      routerConfig.hostUrl,
-      answer as 'accept' | 'decline',
-      invitationToken,
-    );
-  }
-
-  private redirectUnauthenticatedUser(
-    hookUrl: string,
     config: Config,
   ): UnparsedRouterResponse {
     const loginUri = config.explicit_room_joins.redirect.login_uri?.replace(/\/$/, '');
@@ -246,8 +291,17 @@ export class InvitationRoutes {
         'Invitation login redirect is not configured',
       );
     }
-    const redirectUrl = new URL(loginUri);
-    redirectUrl.searchParams.set('redirectUri', hookUrl);
+    let redirectUrl: URL;
+    try {
+      redirectUrl = new URL(loginUri);
+    } catch (e) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'login_uri must be an absolute URL',
+      );
+    }
+    redirectUrl.searchParams.set('answer', answer);
+    redirectUrl.searchParams.set('invitationToken', invitationToken);
     return { redirect: redirectUrl.toString() };
   }
 
@@ -262,7 +316,7 @@ export class InvitationRoutes {
         ? config.explicit_room_joins.redirect.accept_uri
         : config.explicit_room_joins.redirect.decline_uri;
     if (!redirectTemplate) {
-      return fallbackMessage;
+      return { result: fallbackMessage };
     }
     return { redirect: redirectTemplate.replace(/\{roomId\}/g, roomId) };
   }

@@ -39,19 +39,19 @@ export default {
     },
     redirect: {
       login_uri: {
-        doc: 'Where unauthenticated users are redirected before accepting or declining. The hook URL is passed as redirectUri.',
+        doc: 'Absolute app page URL where unauthenticated users are redirected. Query params answer and invitationToken are appended. Empty means email clicks fail until configured.',
         format: 'String',
         default: '',
         optional: true,
       },
       accept_uri: {
-        doc: 'Where users are redirected after accepting an invitation. Supports {roomId} placeholder.',
+        doc: 'Hook-with-Bearer 302 redirect after accepting. Supports {roomId} placeholder. Not the SPA landing page.',
         format: 'String',
         default: '',
         optional: true,
       },
       decline_uri: {
-        doc: 'Where users are redirected after declining an invitation.',
+        doc: 'Hook-with-Bearer 302 redirect after declining. Supports {roomId} placeholder. Not the SPA landing page.',
         format: 'String',
         default: '',
         optional: true,
