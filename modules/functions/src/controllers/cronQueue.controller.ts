@@ -100,8 +100,14 @@ export class CronQueueController {
     let removed = 0;
     for (const repeatable of repeatables) {
       if (!repeatable.id || !expectedJobIds.has(repeatable.id)) {
-        await this.cronQueue.removeRepeatableByKey(repeatable.key);
-        removed += 1;
+        try {
+          await this.cronQueue.removeRepeatableByKey(repeatable.key);
+          removed += 1;
+        } catch (err) {
+          ConduitGrpcSdk.Logger.error(
+            `Failed to remove orphan cron job ${repeatable.id}: ${(err as Error).message}`,
+          );
+        }
       }
     }
 
@@ -109,6 +115,7 @@ export class CronQueueController {
     let updated = 0;
     let unchanged = 0;
     let skipped = 0;
+    let errors = 0;
     const currentRepeatables = await this.cronQueue.getRepeatableJobs();
     for (const func of cronFunctions) {
       const pattern = getCronPatternFromInputs(func.inputs);
@@ -138,27 +145,39 @@ export class CronQueueController {
         continue;
       }
 
-      if (existing) {
-        await this.cronQueue.removeRepeatableByKey(existing.key);
-        updated += 1;
-      } else {
-        registered += 1;
-      }
+      try {
+        if (existing) {
+          await this.cronQueue.removeRepeatableByKey(existing.key);
+          updated += 1;
+        } else {
+          registered += 1;
+        }
 
-      await this.cronQueue.add(
-        CRON_JOB_NAME,
-        { functionId: func._id },
-        {
-          jobId,
-          repeat: { pattern, tz: timezone },
-          removeOnComplete: { age: 3600, count: 1000 },
-          removeOnFail: { age: 24 * 3600 },
-        },
-      );
+        await this.cronQueue.add(
+          CRON_JOB_NAME,
+          { functionId: func._id },
+          {
+            jobId,
+            repeat: { pattern, tz: timezone },
+            removeOnComplete: { age: 3600, count: 1000 },
+            removeOnFail: { age: 24 * 3600 },
+          },
+        );
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(
+          `Failed to schedule cron job for ${func.name} (${func._id}): ${(err as Error).message}`,
+        );
+        errors += 1;
+        if (existing) {
+          updated -= 1;
+        } else {
+          registered -= 1;
+        }
+      }
     }
 
     ConduitGrpcSdk.Logger.log(
-      `Cron sync complete: registered=${registered}, updated=${updated}, unchanged=${unchanged}, removed=${removed}, skipped=${skipped}`,
+      `Cron sync complete: registered=${registered}, updated=${updated}, unchanged=${unchanged}, removed=${removed}, skipped=${skipped}, errors=${errors}`,
     );
   }
 
