@@ -21,11 +21,7 @@ import { status } from '@grpc/grpc-js';
 import { FunctionExecutions, Functions } from '../models/index.js';
 import { FunctionController } from '../controllers/function.controller.js';
 import { compileUserFunctionScript } from '../sandbox/functionSandbox.js';
-import {
-  getCronPatternFromInputs,
-  normalizeCronInputs,
-  validateCronPattern,
-} from '../controllers/cron.utils.js';
+import { normalizeCronInputs } from '../controllers/cron.utils.js';
 
 import escapeStringRegexp from 'escape-string-regexp';
 
