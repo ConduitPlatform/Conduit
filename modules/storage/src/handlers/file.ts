@@ -19,6 +19,7 @@ import {
   deepPathHandler,
   normalizeFolderPath,
   resolvePublicFileAccessUrl,
+  sanitizeFileForResponse,
   storeNewFile,
   validateName,
 } from '../utils/index.js';
@@ -113,7 +114,7 @@ export class FileHandlers {
     if (!file.isPublic) {
       await this.fileAccessCheck('read', call.request, file);
     }
-    return file;
+    return sanitizeFileForResponse(file);
   }
 
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

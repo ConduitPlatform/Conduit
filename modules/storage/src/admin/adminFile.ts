@@ -18,6 +18,7 @@ import {
   deepPathHandler,
   normalizeFolderPath,
   resolvePublicFileAccessUrl,
+  sanitizeFileForResponse,
   storeNewFile,
   validateName,
 } from '../utils/index.js';
@@ -51,7 +52,7 @@ export class AdminFileHandlers {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
     }
 
-    return file;
+    return sanitizeFileForResponse(file);
   }
 
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
