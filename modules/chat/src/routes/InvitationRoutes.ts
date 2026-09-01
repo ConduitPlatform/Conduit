@@ -313,7 +313,10 @@ export class InvitationRoutes {
     invitationToken: string,
     config: Config,
   ): UnparsedRouterResponse {
-    const loginUri = config.explicit_room_joins.redirect.login_uri?.replace(/\/$/, '');
+    const loginUri = (config.explicit_room_joins.redirect.login_uri || '').replace(
+      /\/$/,
+      '',
+    );
     try {
       const redirectUrl = buildLoginRedirectUrl(loginUri, answer, invitationToken);
       return { redirect: redirectUrl };
@@ -338,7 +341,7 @@ export class InvitationRoutes {
     if (!redirectTemplate) {
       return { result: fallbackMessage };
     }
-    return { redirect: replaceRoomIdInUri(redirectTemplate, roomId) };
+    return { redirect: replaceRoomIdInUri(redirectTemplate as string, roomId) };
   }
 
   async cancelInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
