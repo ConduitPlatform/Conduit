@@ -13,8 +13,14 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { ChatRoom, InvitationToken } from '../models/index.js';
-import { buildInvitationHookUrl } from '../utils/index.js';
 import { invalidateMembershipCache } from '../utils/membershipCache.js';
+import {
+  validateInvitationAnswer,
+  buildLoginRedirectUrl,
+  isAlreadyMember,
+  replaceRoomIdInUri,
+  InvitationError,
+} from '../utils/invitationHelpers.js';
 import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { Config } from '../config/index.js';
@@ -129,8 +135,13 @@ export class InvitationRoutes {
     const { id, answer } = call.request.params;
     const { user } = call.request.context;
 
-    if (answer !== 'accept' && answer !== 'decline') {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Answer must be accept or decline');
+    try {
+      validateInvitationAnswer(answer);
+    } catch (err) {
+      if (err instanceof InvitationError) {
+        throw new GrpcError(err.code, err.message);
+      }
+      throw err;
     }
 
     const invitationTokenDoc: InvitationToken | null =
@@ -156,8 +167,13 @@ export class InvitationRoutes {
     const { user } = call.request.context;
     const config = ConfigController.getInstance().config;
 
-    if (answer !== 'accept' && answer !== 'decline') {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Answer must be accept or decline');
+    try {
+      validateInvitationAnswer(answer);
+    } catch (err) {
+      if (err instanceof InvitationError) {
+        throw new GrpcError(err.code, err.message);
+      }
+      throw err;
     }
 
     if (isNil(user)) {
@@ -195,8 +211,13 @@ export class InvitationRoutes {
     const { invitationToken, answer } = call.request.params;
     const { user } = call.request.context;
 
-    if (answer !== 'accept' && answer !== 'decline') {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Answer must be accept or decline');
+    try {
+      validateInvitationAnswer(answer);
+    } catch (err) {
+      if (err instanceof InvitationError) {
+        throw new GrpcError(err.code, err.message);
+      }
+      throw err;
     }
 
     const invitationTokenDoc: InvitationToken | null =
@@ -241,7 +262,7 @@ export class InvitationRoutes {
     const receiver = invitationTokenDoc.receiver as string;
     const accepted = answer === 'accept';
     const participants = chatRoom.participants as string[];
-    const alreadyMember = participants.some(p => String(p) === String(receiver));
+    const alreadyMember = isAlreadyMember(participants, receiver);
 
     if (alreadyMember) {
       await InvitationToken.getInstance().deleteMany({
@@ -285,24 +306,15 @@ export class InvitationRoutes {
     config: Config,
   ): UnparsedRouterResponse {
     const loginUri = config.explicit_room_joins.redirect.login_uri?.replace(/\/$/, '');
-    if (!loginUri) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'Invitation login redirect is not configured',
-      );
-    }
-    let redirectUrl: URL;
     try {
-      redirectUrl = new URL(loginUri);
-    } catch (e) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'login_uri must be an absolute URL',
-      );
+      const redirectUrl = buildLoginRedirectUrl(loginUri, answer, invitationToken);
+      return { redirect: redirectUrl };
+    } catch (err) {
+      if (err instanceof InvitationError) {
+        throw new GrpcError(err.code, err.message);
+      }
+      throw err;
     }
-    redirectUrl.searchParams.set('answer', answer);
-    redirectUrl.searchParams.set('invitationToken', invitationToken);
-    return { redirect: redirectUrl.toString() };
   }
 
   private redirectAfterAnswer(
@@ -318,7 +330,7 @@ export class InvitationRoutes {
     if (!redirectTemplate) {
       return { result: fallbackMessage };
     }
-    return { redirect: redirectTemplate.replace(/\{roomId\}/g, roomId) };
+    return { redirect: replaceRoomIdInUri(redirectTemplate, roomId) };
   }
 
   async cancelInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

@@ -4,15 +4,13 @@
     "outDir": "./dist-test",
     "rootDir": "./src",
     "declaration": false,
-    "sourceMap": false
+    "sourceMap": false,
+    "types": ["node"]
   },
   "include": [
-    "src/routes/InvitationRoutes.ts",
-    "src/routes/InvitationRoutes.test.ts",
-    "src/models/index.ts",
-    "src/utils/index.ts",
-    "src/utils/membershipCache.ts",
-    "src/config/index.ts"
+    "src/utils/invitationHelpers.ts",
+    "src/utils/invitationHelpers.test.ts",
+    "src/utils/membershipCache.ts"
   ],
   "exclude": []
 }

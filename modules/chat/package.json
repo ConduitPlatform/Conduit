@@ -29,7 +29,7 @@
     "prepare": "npm run build",
     "build:docker": "docker build -t ghcr.io/conduitplatform/chat:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/chat:latest",
     "generateTypes": "sh build.sh",
-    "test": "echo 'Tests require full build - run pnpm build at workspace root first' && exit 0"
+    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/utils/invitationHelpers.test.js"
   },
   "directories": {
     "lib": "src"

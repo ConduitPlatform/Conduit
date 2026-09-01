@@ -1,5 +1,3 @@
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-
 export const MEMBERSHIP_CACHE_TTL_MS = 30 * 1000;
 
 export function getMembershipCacheKey(roomId: string): string {
@@ -7,7 +5,7 @@ export function getMembershipCacheKey(roomId: string): string {
 }
 
 export async function invalidateMembershipCache(
-  grpcSdk: ConduitGrpcSdk,
+  grpcSdk: any,
   roomId: string,
 ): Promise<void> {
   if (!grpcSdk.state) return;
