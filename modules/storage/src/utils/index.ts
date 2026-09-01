@@ -134,7 +134,12 @@ export async function resolvePublicFileAccessUrl(
   storageProvider: IStorageProvider,
   file: File,
 ): Promise<string> {
-  if (file.url) {
+  const containerDoc = await _StorageContainer
+    .getInstance()
+    .findOne({ name: file.container }, { readPreference: 'primary' });
+  const containerIsPublic = containerDoc?.isPublic ?? false;
+
+  if (containerIsPublic && file.url) {
     return file.url;
   }
 

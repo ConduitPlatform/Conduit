@@ -72,8 +72,6 @@ function isWithinRoot(rootPath: string, targetPath: string): boolean {
 }
 
 export class LocalStorage implements IStorageProvider {
-  private static readonly PUBLIC_URL_EXPIRY = 1000 * 60 * 60 * 24 * 365 * 99;
-
   _rootStoragePath: string;
   _storagePath: string;
   _activeContainer: string;
@@ -458,9 +456,7 @@ export class LocalStorage implements IStorageProvider {
       return Promise.reject(new Error('Local storage server is not running'));
     }
     const relativePath = `${this._activeContainer}/${fileName}`;
-    return Promise.resolve(
-      this.signUrl(relativePath, 'GET', undefined, LocalStorage.PUBLIC_URL_EXPIRY),
-    );
+    return Promise.resolve(this.signUrl(relativePath, 'GET'));
   }
 
   getSignedUrl(fileName: string, options?: UrlOptions): Promise<string | Error> {
