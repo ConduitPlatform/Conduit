@@ -18,11 +18,13 @@ import {
 
 import * as deepdash from 'deepdash-es/standalone';
 
+type CrudOperationConfig = { enabled?: boolean; authenticated?: boolean };
+
 type CrudOperations = {
-  create?: { enabled?: boolean; authenticated?: boolean };
-  read?: { enabled?: boolean; authenticated?: boolean };
-  update?: { enabled?: boolean; authenticated?: boolean };
-  delete?: { enabled?: boolean; authenticated?: boolean };
+  create?: CrudOperationConfig;
+  read?: CrudOperationConfig;
+  update?: CrudOperationConfig;
+  delete?: CrudOperationConfig;
 };
 
 interface Permissions {
@@ -221,29 +223,27 @@ function validateCrudOperations(crudOperations: CrudOperations) {
   if (!isObject(crudOperations))
     throw new Error(`CMS field 'crudOperations' must be of type Object`);
 
-  Object.keys(crudOperations).forEach(op => {
-    const crudOperation = op as keyof CrudOperations;
-
-    if (!allowedCrudOperations.includes(crudOperation)) {
+  (Object.keys(crudOperations) as Array<keyof CrudOperations>).forEach(op => {
+    if (!allowedCrudOperations.includes(op)) {
       throw new Error(`Unrecognized CRUD operation '${op}' provided`);
     }
 
-    const operationConfig = crudOperations[crudOperation];
+    const operationConfig = crudOperations[op];
 
     if (!isObject(operationConfig)) {
       throw new Error(`Crud operation field '${op}' must be of type Object`);
     }
 
-    Object.keys(operationConfig).forEach(opField => {
-      const crudOperationField = opField as keyof typeof operationConfig;
+    const config = operationConfig as CrudOperationConfig;
 
-      if (!['enabled', 'authenticated'].includes(crudOperationField)) {
+    Object.keys(config).forEach(opField => {
+      if (opField !== 'enabled' && opField !== 'authenticated') {
         throw new Error(
           `Unrecognized crud operation field '${opField}' for operation '${op}' provided`,
         );
       }
 
-      if (!isBoolean(operationConfig[crudOperationField])) {
+      if (!isBoolean(config[opField])) {
         throw new Error(
           `Crud operation field '${opField}' for operation '${op}' must be of type Boolean`,
         );

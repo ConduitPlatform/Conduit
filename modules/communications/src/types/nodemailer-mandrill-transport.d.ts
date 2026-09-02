@@ -1,13 +1,5 @@
 declare module 'nodemailer-mandrill-transport' {
-  import type { Transport } from 'nodemailer';
-
-  interface MandrillTransportOptions {
-    auth: {
-      apiKey: string;
-    };
-  }
-
-  function mandrillTransport(options: MandrillTransportOptions): Transport;
+  function mandrillTransport(options: { auth: { apiKey: string } }): any;
 
   export default mandrillTransport;
 }
