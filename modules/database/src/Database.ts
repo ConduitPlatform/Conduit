@@ -91,7 +91,6 @@ export default class DatabaseModule extends ManagedModule<Config> {
       updateMany: this.updateMany.bind(this),
       deleteOne: this.deleteOne.bind(this),
       deleteMany: this.deleteMany.bind(this),
-      findOneAndDelete: this.findOneAndDelete.bind(this),
       countDocuments: this.countDocuments.bind(this),
       rawQuery: this.rawQuery.bind(this),
       columnExistence: this.columnExistence.bind(this),
@@ -830,40 +829,6 @@ export default class DatabaseModule extends ManagedModule<Config> {
       const resultString = JSON.stringify(result);
 
       this.grpcSdk.bus?.publish(`${this.name}:delete:${schemaName}`, resultString);
-
-      callback(null, { result: resultString });
-    } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
-    }
-  }
-
-  async findOneAndDelete(
-    call: GrpcRequest<QueryRequest>,
-    callback: GrpcResponse<QueryResponse>,
-  ) {
-    const moduleName = call.metadata!.get('module-name')![0] as string;
-    const { schemaName, query } = call.request;
-    try {
-      const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!(await canDelete(moduleName, schemaAdapter.model))) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`,
-        });
-      }
-
-      const result = await schemaAdapter.model.findOneAndDelete(query, {
-        userId: call.request.userId,
-        scope: call.request.scope,
-      });
-      const resultString = JSON.stringify(result);
-
-      if (result) {
-        this.grpcSdk.bus?.publish(`${this.name}:delete:${schemaName}`, resultString);
-      }
 
       callback(null, { result: resultString });
     } catch (err) {

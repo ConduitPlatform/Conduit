@@ -172,7 +172,6 @@ service DatabaseProvider {
   rpc createMany(QueryRequest) returns (QueryResponse);
   rpc deleteOne(QueryRequest) returns (QueryResponse);
   rpc deleteMany(QueryRequest) returns (QueryResponse);
-  rpc findOneAndDelete(QueryRequest) returns (QueryResponse);
   rpc findByIdAndUpdate(UpdateRequest) returns (QueryResponse);
   rpc findByIdAndReplace(UpdateRequest) returns (QueryResponse);
   rpc updateMany(UpdateManyRequest) returns (QueryResponse);

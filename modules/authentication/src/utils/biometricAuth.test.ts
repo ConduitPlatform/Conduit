@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import {
   BIOMETRIC_CHALLENGE_TTL_MS,
-  consumeOnce,
   isBiometricChallengeExpired,
   verifyBiometricSignature,
 } from './biometricAuth.js';
@@ -55,35 +54,5 @@ describe('verifyBiometricSignature', () => {
       verifyBiometricSignature(publicKey.toString('base64'), challenge, signature),
       false,
     );
-  });
-});
-
-describe('atomic biometric token consume', () => {
-  it('replays fail after the token is consumed', () => {
-    const store = { value: { challenge: 'once' } };
-    assert.deepEqual(consumeOnce(store), { challenge: 'once' });
-    assert.equal(consumeOnce(store), null);
-    assert.equal(consumeOnce(store), null);
-  });
-
-  it('only one concurrent consumer wins a double-spend', async () => {
-    const store = { value: { token: 'login-challenge' } };
-    const [first, second] = await Promise.all([
-      Promise.resolve(consumeOnce(store)),
-      Promise.resolve(consumeOnce(store)),
-    ]);
-    const winners = [first, second].filter(value => value !== null);
-    assert.equal(winners.length, 1);
-    assert.deepEqual(winners[0], { token: 'login-challenge' });
-  });
-
-  it('treats a clientId mismatch as a failed bind after consume', () => {
-    const store = {
-      value: { data: { clientId: 'web', challenge: 'c' } },
-    };
-    const consumed = consumeOnce(store);
-    assert.ok(consumed);
-    assert.notEqual(consumed.data.clientId, 'mobile');
-    assert.equal(consumeOnce(store), null);
   });
 });

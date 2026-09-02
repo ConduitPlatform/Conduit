@@ -145,11 +145,18 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
     const { encryptedData, keyId } = call.request.params;
     const config = ConfigController.getInstance().config;
-    const existingToken = await Token.getInstance().findOneAndDelete({
-      tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
-      'data.keyId': keyId,
-    } as Query<Token>);
+    const existingToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
+        'data.keyId': keyId,
+      } as Query<Token>,
+      { readPreference: 'primary' },
+    );
     if (!existingToken) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+    }
+    const consumed = await Token.getInstance().deleteOne({ _id: existingToken._id });
+    if (consumed.deletedCount === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     if (isBiometricChallengeExpired(existingToken.createdAt)) {
@@ -218,11 +225,18 @@ export class BiometricHandlers implements IAuthenticationStrategy {
   ): Promise<UnparsedRouterResponse> {
     const { encryptedData } = call.request.params;
     const { clientId, user } = call.request.context;
-    const existingToken = await Token.getInstance().findOneAndDelete({
-      tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
-      user: user._id,
-    });
+    const existingToken = await Token.getInstance().findOne(
+      {
+        tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
+        user: user._id,
+      },
+      { readPreference: 'primary' },
+    );
     if (!existingToken) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+    }
+    const consumed = await Token.getInstance().deleteOne({ _id: existingToken._id });
+    if (consumed.deletedCount === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     if (existingToken.data.clientId !== clientId) {

@@ -74,10 +74,6 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     return this.model.deleteMany(query);
   }
 
-  findOneAndDelete(query: ParsedQuery) {
-    return this.model.findOneAndDelete(query);
-  }
-
   countDocuments(query: ParsedQuery): Promise<number> {
     return this.model.countDocuments(query);
   }
