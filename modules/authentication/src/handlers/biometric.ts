@@ -171,10 +171,6 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     if (!key) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
-    await Token.getInstance().deleteMany({
-      tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
-      'data.keyId': keyId,
-    } as Query<Token>);
     const verifier = crypto.createVerify('sha256WithRSAEncryption');
     verifier.update(new Uint8Array(Buffer.from(existingToken.data.challenge)));
     const cryptoKey = crypto.createPublicKey({
@@ -184,6 +180,10 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       encoding: 'base64',
     });
     const verificationResult = verifier.verify(cryptoKey, encryptedData, 'base64');
+    await Token.getInstance().deleteMany({
+      tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
+      'data.keyId': keyId,
+    } as Query<Token>);
     if (!verificationResult) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
@@ -248,16 +248,14 @@ export class BiometricHandlers implements IAuthenticationStrategy {
         "Responding client doesn't match requesting!",
       );
     }
-    const challenge = existingToken.data.challenge;
-    const publicKey = existingToken.data.publicKey;
     await Token.getInstance().deleteMany({
       tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
       user: user._id,
     });
     const verifier = crypto.createVerify('sha256WithRSAEncryption');
-    verifier.update(new Uint8Array(Buffer.from(challenge)));
+    verifier.update(new Uint8Array(Buffer.from(existingToken.data.challenge)));
     const cryptoKey = crypto.createPublicKey({
-      key: publicKey,
+      key: existingToken.data.publicKey,
       format: 'der',
       type: 'spki',
       encoding: 'base64',
@@ -268,7 +266,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     }
     const biometricToken = await BiometricToken.getInstance().create({
       user: user._id,
-      publicKey,
+      publicKey: existingToken.data.publicKey,
     });
     return {
       keyId: biometricToken._id,
