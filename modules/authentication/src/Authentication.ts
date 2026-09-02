@@ -60,7 +60,7 @@ import {
   type ExportResult,
   type ImportResult,
 } from '@conduitplatform/module-tools';
-import { ensureAccessTokenJwtSecret } from './utils/jwtSecret.js';
+import { adoptPersistedJwtSecret, ensureAccessTokenJwtSecret } from './utils/jwtSecret.js';
 import { TeamsAdmin } from './admin/team.js';
 import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
@@ -273,18 +273,7 @@ export default class Authentication extends ManagedModule<Config> {
 
   async onConfig() {
     const config = ConfigController.getInstance().config;
-    if (!config.accessTokens.jwtSecret?.trim()) {
-      ensureAccessTokenJwtSecret(config);
-      ConfigController.getInstance().config = config;
-      if (this.config) {
-        this.config.load(config);
-        await this.grpcSdk.config.configure(
-          config,
-          convictConfigParser(this.config.getSchema()),
-          true,
-        );
-      }
-    }
+    await this.ensureSharedAccessTokenJwtSecret(config);
     if (config.redirectUris.allowAny && process.env.NODE_ENV === 'production') {
       ConduitGrpcSdk.Logger.warn(
         `Config option redirectUris.allowAny shouldn't be used in production!`,
@@ -311,6 +300,63 @@ export default class Authentication extends ManagedModule<Config> {
           );
         }
       }
+    }
+  }
+
+  private async readPersistedAuthenticationConfig(): Promise<Config | null> {
+    try {
+      return await this.grpcSdk.config.get('authentication');
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Replicas must share one jwtSecret. Adopt a persisted non-empty secret
+   * (including legacy S3CR3T). Generate and persist only when persisted is empty.
+   */
+  private async ensureSharedAccessTokenJwtSecret(config: Config) {
+    const persisted = await this.readPersistedAuthenticationConfig();
+    const { shouldPersist } = adoptPersistedJwtSecret(
+      config,
+      persisted?.accessTokens?.jwtSecret,
+    );
+    ConfigController.getInstance().config = config;
+    if (!shouldPersist) {
+      return;
+    }
+
+    const persistIfStillEmpty = async () => {
+      const again = await this.readPersistedAuthenticationConfig();
+      if (again?.accessTokens?.jwtSecret?.trim()) {
+        config.accessTokens.jwtSecret = again.accessTokens.jwtSecret;
+        ConfigController.getInstance().config = config;
+        return;
+      }
+      if (this.config) {
+        this.config.load(config);
+        await this.grpcSdk.config.configure(
+          config,
+          convictConfigParser(this.config.getSchema()),
+          true,
+        );
+        const after = await this.readPersistedAuthenticationConfig();
+        if (after?.accessTokens?.jwtSecret?.trim()) {
+          config.accessTokens.jwtSecret = after.accessTokens.jwtSecret;
+        }
+        ConfigController.getInstance().config = config;
+        this.config.load(config);
+      }
+    };
+
+    if (this.grpcSdk.state) {
+      await this.grpcSdk.state.withLock(
+        'authentication:jwtSecret',
+        10_000,
+        persistIfStillEmpty,
+      );
+    } else {
+      await persistIfStillEmpty();
     }
   }
 

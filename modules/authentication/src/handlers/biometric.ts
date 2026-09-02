@@ -22,6 +22,10 @@ import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
 import crypto from 'crypto';
 import { BiometricToken } from '../models/BiometricToken.schema.js';
+import {
+  isBiometricChallengeExpired,
+  verifyBiometricSignature,
+} from '../utils/biometricAuth.js';
 
 export class BiometricHandlers implements IAuthenticationStrategy {
   private initialized: boolean = false;
@@ -141,21 +145,14 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
     const { encryptedData, keyId } = call.request.params;
     const config = ConfigController.getInstance().config;
-    const existingToken = await Token.getInstance().findOne(
-      {
-        tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
-        'data.keyId': keyId,
-      } as Query<Token>,
-      { readPreference: 'primary' },
-    );
+    const existingToken = await Token.getInstance().findOneAndDelete({
+      tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
+      'data.keyId': keyId,
+    } as Query<Token>);
     if (!existingToken) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
-    if (Date.now() - new Date(existingToken.createdAt).getTime() > 2 * 60 * 1000) {
-      await Token.getInstance().deleteMany({
-        tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
-        'data.keyId': keyId,
-      } as Query<Token>);
+    if (isBiometricChallengeExpired(existingToken.createdAt)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     if (existingToken.data.clientId !== call.request.context.clientId) {
@@ -171,20 +168,9 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     if (!key) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
-    const verifier = crypto.createVerify('sha256WithRSAEncryption');
-    verifier.update(new Uint8Array(Buffer.from(existingToken.data.challenge)));
-    const cryptoKey = crypto.createPublicKey({
-      key: key.publicKey,
-      format: 'der',
-      type: 'spki',
-      encoding: 'base64',
-    });
-    const verificationResult = verifier.verify(cryptoKey, encryptedData, 'base64');
-    await Token.getInstance().deleteMany({
-      tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
-      'data.keyId': keyId,
-    } as Query<Token>);
-    if (!verificationResult) {
+    if (
+      !verifyBiometricSignature(key.publicKey, existingToken.data.challenge, encryptedData)
+    ) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     return TokenProvider.getInstance().provideUserTokens({
@@ -232,15 +218,12 @@ export class BiometricHandlers implements IAuthenticationStrategy {
   ): Promise<UnparsedRouterResponse> {
     const { encryptedData } = call.request.params;
     const { clientId, user } = call.request.context;
-    const existingToken = await Token.getInstance().findOne(
-      {
-        tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
-        user: user._id,
-      },
-      { readPreference: 'primary' },
-    );
+    const existingToken = await Token.getInstance().findOneAndDelete({
+      tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
+      user: user._id,
+    });
     if (!existingToken) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token!');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     if (existingToken.data.clientId !== clientId) {
       throw new GrpcError(
@@ -248,20 +231,13 @@ export class BiometricHandlers implements IAuthenticationStrategy {
         "Responding client doesn't match requesting!",
       );
     }
-    await Token.getInstance().deleteMany({
-      tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
-      user: user._id,
-    });
-    const verifier = crypto.createVerify('sha256WithRSAEncryption');
-    verifier.update(new Uint8Array(Buffer.from(existingToken.data.challenge)));
-    const cryptoKey = crypto.createPublicKey({
-      key: existingToken.data.publicKey,
-      format: 'der',
-      type: 'spki',
-      encoding: 'base64',
-    });
-    const verificationResult = verifier.verify(cryptoKey, encryptedData, 'base64');
-    if (!verificationResult) {
+    if (
+      !verifyBiometricSignature(
+        existingToken.data.publicKey,
+        existingToken.data.challenge,
+        encryptedData,
+      )
+    ) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     const biometricToken = await BiometricToken.getInstance().create({

@@ -30,7 +30,7 @@
     "build:bundle": "rimraf bundle && node ../../libraries/service-bundle/dist/cli.js generate-manifest && tsup && node ../../libraries/service-bundle/dist/cli.js copy-assets && node ../../libraries/service-bundle/dist/cli.js generate-lockfile",
     "build:docker": "docker build -t ghcr.io/conduitplatform/authentication:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/authentication:latest",
     "generateTypes": "sh build.sh",
-    "test": "tsc -p tsconfig.test.json && copyfiles -u 1 src/data/*.json dist-test/ && node --test dist-test/utils/emailRestrictions.test.js dist-test/utils/jwtSecret.test.js dist-test/handlers/oauth2/utils/resolveAppleOAuthClient.test.js dist-test/handlers/oauth2/utils/validateAppleClients.test.js dist-test/config/apple.config.test.js"
+    "test": "tsc -p tsconfig.test.json && copyfiles -u 1 src/data/*.json dist-test/ && node --test dist-test/utils/emailRestrictions.test.js dist-test/utils/jwtSecret.test.js dist-test/utils/biometricAuth.test.js dist-test/utils/appleIdentityToken.test.js dist-test/handlers/oauth2/utils/resolveAppleOAuthClient.test.js dist-test/handlers/oauth2/utils/validateAppleClients.test.js dist-test/config/apple.config.test.js"
   },
   "license": "ISC",
   "directories": {
