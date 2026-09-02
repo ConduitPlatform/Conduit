@@ -24,6 +24,14 @@ export function getCronTimezone(inputs?: IWebInputsInterface | null): string {
 
 export function validateCronPattern(pattern: string, timezone = 'UTC'): void {
   try {
+    Intl.DateTimeFormat('en-US', { timeZone: timezone });
+  } catch {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      `Invalid timezone: "${timezone}". Use an IANA name (e.g. UTC, Europe/Athens).`,
+    );
+  }
+  try {
     cronParser.parseExpression(pattern, { tz: timezone });
   } catch {
     throw new GrpcError(

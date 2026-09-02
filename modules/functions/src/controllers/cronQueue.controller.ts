@@ -2,10 +2,7 @@ import { Job, Queue, Worker } from 'bullmq';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { Cluster, Redis } from 'ioredis';
 import { Functions } from '../models/index.js';
-import {
-  getCronPatternFromInputs,
-  planCronSync,
-} from './cron.utils.js';
+import { getCronPatternFromInputs, planCronSync } from './cron.utils.js';
 import type { CompiledUserFunction } from '../sandbox/functionSandbox.js';
 import { compileFunctionCode, executeBackgroundFunction } from './utils.js';
 

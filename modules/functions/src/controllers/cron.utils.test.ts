@@ -16,9 +16,7 @@ describe('cron.utils', () => {
     });
 
     it('accepts a pattern in a named timezone', () => {
-      assert.doesNotThrow(() =>
-        validateCronPattern('0 2 * * *', 'America/New_York'),
-      );
+      assert.doesNotThrow(() => validateCronPattern('0 2 * * *', 'America/New_York'));
     });
 
     it('rejects an invalid pattern', () => {
@@ -29,7 +27,7 @@ describe('cron.utils', () => {
 
     it('rejects an invalid timezone', () => {
       assert.throws(() => validateCronPattern('0 2 * * *', 'Not/AZone'), {
-        message: /Invalid cron pattern/,
+        message: /Invalid timezone/,
       });
     });
   });
