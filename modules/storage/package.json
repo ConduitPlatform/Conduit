@@ -29,7 +29,8 @@
     "build:bundle": "rimraf bundle && node ../../libraries/service-bundle/dist/cli.js generate-manifest && tsup && node ../../libraries/service-bundle/dist/cli.js copy-assets && node ../../libraries/service-bundle/dist/cli.js generate-lockfile",
     "prepare": "npm run build",
     "build:docker": "docker build -t ghcr.io/conduitplatform/storage:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/storage:latest",
-    "generateTypes": "sh build.sh"
+    "generateTypes": "sh build.sh",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/adapter/StorageParamAdapter.test.js dist-test/migrations/fileUriMigration.test.js dist-test/providers/aws/acl.test.js dist-test/providers/google/folderMarkers.test.js dist-test/utils/filePrivacy.test.js"
   },
   "keywords": [],
   "author": "",
