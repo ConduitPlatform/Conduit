@@ -24,9 +24,3 @@ export function verifyBiometricSignature(
   });
   return verifier.verify(cryptoKey, signatureBase64, 'base64');
 }
-
-export function consumeOnce<T>(store: { value: T | null }): T | null {
-  const value = store.value;
-  store.value = null;
-  return value;
-}

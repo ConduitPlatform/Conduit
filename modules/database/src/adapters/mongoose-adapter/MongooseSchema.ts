@@ -313,36 +313,6 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       .then(r => ({ deletedCount: r.deletedCount }));
   }
 
-  async findOneAndDelete(
-    query: Query,
-    options?: {
-      userId?: string;
-      scope?: string;
-      populate?: string[];
-    },
-  ) {
-    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
-    parsedQuery = await this.getAuthorizedQuery(
-      'delete',
-      parsedQuery,
-      false,
-      options?.userId,
-      options?.scope,
-    );
-    if (isNil(parsedQuery)) {
-      return null;
-    }
-    const wc = this.effectiveWriteConcern;
-    let finalQuery = this.model.findOneAndDelete(
-      parsedQuery!,
-      wc ? { writeConcern: wc } : undefined,
-    );
-    if (options?.populate !== undefined && options?.populate !== null) {
-      finalQuery = this.populate(finalQuery, options.populate);
-    }
-    return finalQuery.lean().exec();
-  }
-
   async findMany(
     query: Query,
     options?: {

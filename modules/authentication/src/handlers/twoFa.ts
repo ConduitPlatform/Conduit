@@ -350,12 +350,12 @@ export class TwoFa implements IAuthenticationStrategy {
       if (!verified.verified) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
       }
-      const consumed = await Token.getInstance().findOneAndDelete({
+      const consumed = await Token.getInstance().deleteOne({
         _id: token._id,
         user: user._id,
         tokenType: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
       });
-      if (!consumed) {
+      if (consumed.deletedCount === 0) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
       }
       const config = ConfigController.getInstance().config;
@@ -421,12 +421,12 @@ export class TwoFa implements IAuthenticationStrategy {
     if (!verified.verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
     }
-    const consumed = await Token.getInstance().findOneAndDelete({
+    const consumed = await Token.getInstance().deleteOne({
       _id: verificationRecord._id,
       user: user._id,
       tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
     });
-    if (!consumed) {
+    if (consumed.deletedCount === 0) {
       throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
     }
     await User.getInstance().findByIdAndUpdate(user._id, {

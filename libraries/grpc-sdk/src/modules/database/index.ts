@@ -290,20 +290,6 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
-  findOneAndDelete<T>(
-    schemaName: string,
-    query: Query<T>,
-    options?: AuthzOptions,
-  ): Promise<T | null> {
-    return this.client!.findOneAndDelete({
-      schemaName,
-      query: this.processQuery(query),
-      ...(options ?? {}),
-    }).then(res => {
-      return JSON.parse(res.result);
-    });
-  }
-
   countDocuments<T>(
     schemaName: string,
     query: Query<T>,
