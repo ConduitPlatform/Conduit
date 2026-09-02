@@ -275,8 +275,8 @@ export default class Storage extends ManagedModule<Config> {
         await migratePublicContainers(this.grpcSdk, this.storageProvider);
       }
       if (!this.fileUriMigrationRan) {
-        this.fileUriMigrationRan = true;
         await migrateFileUriReferences();
+        this.fileUriMigrationRan = true;
       }
       // Detect CDN config changes and run migration if needed (order-independent comparison)
       const currentCdnConfig = (ConfigController.getInstance().config.cdnConfiguration ??

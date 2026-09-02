@@ -27,6 +27,38 @@ type AwsError = { $metadata: { httpStatusCode: number } };
 type GetResult = Buffer | Error;
 type StoreResult = boolean | Error;
 
+const ALL_USERS_GRANT_READ = 'uri="http://acs.amazonaws.com/groups/global/AllUsers"';
+
+// Public read for public containers is granted by bucket policy.
+// Never GrantRead AllUsers for a public file in a private container.
+// Follow-up: strip leftover AllUsers ACLs on existing objects if needed.
+export function awsObjectGrantRead(options: {
+  fileIsPublic?: boolean;
+  containerIsPublic?: boolean;
+}): string | undefined {
+  if (!options.containerIsPublic) {
+    return undefined;
+  }
+  return ALL_USERS_GRANT_READ;
+}
+
+export function buildPutObjectInput(
+  bucket: string,
+  key: string,
+  body: unknown,
+  options?: { fileIsPublic?: boolean; containerIsPublic?: boolean },
+) {
+  return {
+    Bucket: bucket,
+    Key: key,
+    Body: body,
+    GrantRead: awsObjectGrantRead({
+      fileIsPublic: options?.fileIsPublic,
+      containerIsPublic: options?.containerIsPublic,
+    }),
+  };
+}
+
 export class AWSS3Storage implements IStorageProvider {
   private readonly _storage: S3Client;
   private _activeContainer: string = '';
@@ -54,14 +86,11 @@ export class AWSS3Storage implements IStorageProvider {
 
   async store(fileName: string, data: any, isPublic?: boolean): Promise<StoreResult> {
     await this._storage.send(
-      new PutObjectCommand({
-        Bucket: this._activeContainer,
-        Key: fileName,
-        Body: data,
-        GrantRead: isPublic
-          ? 'uri="http://acs.amazonaws.com/groups/global/AllUsers"'
-          : undefined,
-      }),
+      new PutObjectCommand(
+        buildPutObjectInput(this._activeContainer, fileName, data, {
+          fileIsPublic: isPublic,
+        }),
+      ),
     );
     return true;
   }

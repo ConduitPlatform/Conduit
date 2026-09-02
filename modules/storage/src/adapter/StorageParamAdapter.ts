@@ -18,7 +18,7 @@ export class StorageParamAdapter {
     const file = (response as Indexable).file as Indexable;
     return {
       id: file._id,
-      fileUrl: file.url || file.uri || '',
+      fileUrl: file.url ?? '',
       uri: file.uri ?? '',
       name: file.name,
       uploadUrl: (response as Indexable).url,

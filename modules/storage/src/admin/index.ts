@@ -18,7 +18,7 @@ import {
 import { status } from '@grpc/grpc-js';
 import { isEmpty, isNil } from 'lodash-es';
 import { _StorageContainer, _StorageFolder, File } from '../models/index.js';
-import { normalizeFolderPath } from '../utils/index.js';
+import { normalizeFolderPath, sanitizeFilesForResponse } from '../utils/index.js';
 import { AdminFileHandlers } from './adminFile.js';
 
 export class AdminRoutes {
@@ -58,7 +58,7 @@ export class AdminRoutes {
     const files = await File.getInstance().findMany(query, { skip, limit, sort });
     const filesCount = await File.getInstance().countDocuments(query);
 
-    return { files, filesCount };
+    return { files: await sanitizeFilesForResponse(files), filesCount };
   }
 
   async getFolders(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

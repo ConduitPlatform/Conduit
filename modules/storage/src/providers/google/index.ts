@@ -12,7 +12,12 @@ type GoogleServiceAccountKey = {
 };
 
 const OBJECT_VIEWER_ROLE = 'roles/storage.objectViewer';
-const FOLDER_MARKER_SUFFIX = '.keep.txt';
+export const FOLDER_MARKER_SUFFIX = '.keep.txt';
+
+export function folderMarkerKeys(name: string): string[] {
+  const trimmed = name.replace(/\/+$/, '');
+  return Array.from(new Set([`${name}${FOLDER_MARKER_SUFFIX}`, `${trimmed}/keep.txt`]));
+}
 
 export class GoogleCloudStorage implements IStorageProvider {
   private readonly _storage: Storage;
@@ -55,8 +60,11 @@ export class GoogleCloudStorage implements IStorageProvider {
     const [bucketExists] = await this.bucket().exists();
     if (!bucketExists) return false;
 
-    const [markerExists] = await this.bucket().file(this.folderMarkerKey(name)).exists();
-    return markerExists;
+    for (const key of folderMarkerKeys(name)) {
+      const [markerExists] = await this.bucket().file(key).exists();
+      if (markerExists) return true;
+    }
+    return false;
   }
 
   async createContainer(name: string, isPublic?: boolean): Promise<boolean | Error> {

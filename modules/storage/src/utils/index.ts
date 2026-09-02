@@ -190,9 +190,11 @@ export async function storeNewFile(
     isPublic,
     fileId: file._id,
   });
-  return refs.uri || refs.url || refs.sourceUrl
-    ? ((await File.getInstance().findByIdAndUpdate(file._id, refs)) as File)
-    : file;
+  const storedFile =
+    refs.uri || refs.url || refs.sourceUrl
+      ? ((await File.getInstance().findByIdAndUpdate(file._id, refs)) as File)
+      : file;
+  return sanitizeFileForResponse(storedFile);
 }
 
 export async function _createFileUploadUrl(
@@ -233,7 +235,7 @@ export async function _createFileUploadUrl(
     .container(container)
     .getUploadUrl(fileName)) as string;
   return {
-    file: storedFile,
+    file: await sanitizeFileForResponse(storedFile),
     url: uploadUrl,
   };
 }
@@ -275,7 +277,7 @@ export async function _updateFile(
     mimeType,
   })) as File;
   updateFileMetrics(file.size, (data as Buffer).byteLength);
-  return updatedFile;
+  return sanitizeFileForResponse(updatedFile);
 }
 
 export async function _updateFileUploadUrl(
@@ -332,7 +334,7 @@ export async function _updateFileUploadUrl(
   const uploadUrl = (await storageProvider
     .container(container)
     .getUploadUrl(getStorageFileKey(folder, name))) as string;
-  return { file: updatedFile!, url: uploadUrl };
+  return { file: await sanitizeFileForResponse(updatedFile!), url: uploadUrl };
 }
 
 export function updateFileMetrics(currentSize: number, newSize: number) {
@@ -432,18 +434,39 @@ export async function validateFilePrivacy(
   }
 }
 
-export async function sanitizeFileForResponse(file: File): Promise<File> {
-  const containerDoc = await _StorageContainer
-    .getInstance()
-    .findOne({ name: file.container }, { readPreference: 'primary' });
-  const containerIsPublic = containerDoc?.isPublic ?? false;
+export function stripPrivateContainerUrls<T extends Pick<File, 'url' | 'sourceUrl'>>(
+  file: T,
+  containerIsPublic: boolean,
+): T {
+  if (containerIsPublic) {
+    return file;
+  }
+  const sanitized = { ...file };
+  delete sanitized.url;
+  delete sanitized.sourceUrl;
+  return sanitized;
+}
 
-  if (!containerIsPublic) {
-    const sanitized = { ...file };
-    delete sanitized.url;
-    delete sanitized.sourceUrl;
-    return sanitized as File;
+export async function sanitizeFileForResponse(file: File): Promise<File> {
+  const [sanitized] = await sanitizeFilesForResponse([file]);
+  return sanitized;
+}
+
+export async function sanitizeFilesForResponse(files: File[]): Promise<File[]> {
+  if (files.length === 0) {
+    return files;
   }
 
-  return file;
+  const containerNames = [...new Set(files.map(file => file.container))];
+  const containers = await _StorageContainer.getInstance().findMany(
+    { name: { $in: containerNames } },
+    { select: 'name isPublic', readPreference: 'primary' },
+  );
+  const containerIsPublic = new Map(
+    containers.map(container => [container.name, container.isPublic ?? false]),
+  );
+
+  return files.map(file =>
+    stripPrivateContainerUrls(file, containerIsPublic.get(file.container) ?? false),
+  );
 }
