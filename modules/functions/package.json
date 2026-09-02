@@ -25,6 +25,7 @@
     "build:bundle": "rimraf bundle && node ../../libraries/service-bundle/dist/cli.js generate-manifest && tsup && node ../../libraries/service-bundle/dist/cli.js copy-assets && node ../../libraries/service-bundle/dist/cli.js generate-lockfile",
     "prepare": "npm run build",
     "generateTypes": "sh build.sh",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/controllers/*.test.js",
     "build:docker": "docker build -t ghcr.io/conduitplatform/functions:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/functions:latest"
   },
   "directories": {

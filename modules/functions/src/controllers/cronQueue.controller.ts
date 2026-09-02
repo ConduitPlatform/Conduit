@@ -3,15 +3,16 @@ import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { Cluster, Redis } from 'ioredis';
 import { Functions } from '../models/index.js';
 import {
-  buildCronJobId,
   getCronPatternFromInputs,
-  validateCronPattern,
+  planCronSync,
 } from './cron.utils.js';
 import type { CompiledUserFunction } from '../sandbox/functionSandbox.js';
 import { compileFunctionCode, executeBackgroundFunction } from './utils.js';
 
 const CRON_QUEUE_NAME = 'functions-cron-queue';
 const CRON_JOB_NAME = 'execute-cron';
+const CRON_SYNC_LOCK = 'functions-cron-sync';
+const CRON_SYNC_LOCK_TTL_MS = 60_000;
 
 export class CronQueueController {
   private static _instance: CronQueueController;
@@ -94,81 +95,94 @@ export class CronQueueController {
 
   async syncCronJobs(cronFunctions: Functions[]): Promise<void> {
     this.ensureWorker();
+    await this.withCronSyncLock(() => this.reconcileCronJobs(cronFunctions));
+  }
+
+  // Local worker only. Shared Redis repeatables stay so other replicas keep ticking.
+  async drainCronQueue(): Promise<void> {
+    if (this.cronWorker) {
+      await this.cronWorker.close();
+      this.cronWorker = undefined;
+    }
+    this.compiledFunctions.clear();
+  }
+
+  private async withCronSyncLock(fn: () => Promise<void>): Promise<void> {
+    const state = this.grpcSdk.state;
+    if (!state) {
+      await fn();
+      return;
+    }
+    let lock;
+    try {
+      lock = await state.tryAcquireLock(CRON_SYNC_LOCK, CRON_SYNC_LOCK_TTL_MS);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(
+        `Failed to acquire cron sync lock: ${(err as Error).message}; continuing without lock`,
+      );
+      await fn();
+      return;
+    }
+    if (!lock) {
+      ConduitGrpcSdk.Logger.log('Skipping cron sync; another replica holds the lock');
+      return;
+    }
+    try {
+      await fn();
+    } finally {
+      try {
+        await state.releaseLock(lock);
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(
+          `Failed to release cron sync lock: ${(err as Error).message}`,
+        );
+      }
+    }
+  }
+
+  private async reconcileCronJobs(cronFunctions: Functions[]): Promise<void> {
     const repeatables = await this.cronQueue.getRepeatableJobs();
-    const expectedJobIds = new Set(cronFunctions.map(func => buildCronJobId(func._id)));
+    const plan = planCronSync(cronFunctions, repeatables);
 
     let removed = 0;
-    for (const repeatable of repeatables) {
-      if (!repeatable.id || !expectedJobIds.has(repeatable.id)) {
-        try {
-          await this.cronQueue.removeRepeatableByKey(repeatable.key);
-          removed += 1;
-        } catch (err) {
-          ConduitGrpcSdk.Logger.error(
-            `Failed to remove orphan cron job ${repeatable.id}: ${(err as Error).message}`,
-          );
-        }
+    for (const key of plan.orphanKeys) {
+      try {
+        await this.cronQueue.removeRepeatableByKey(key);
+        removed += 1;
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(
+          `Failed to remove orphan cron job ${key}: ${(err as Error).message}`,
+        );
       }
     }
 
     let registered = 0;
     let updated = 0;
-    let unchanged = 0;
-    let skipped = 0;
     let errors = 0;
-    const currentRepeatables = await this.cronQueue.getRepeatableJobs();
-    for (const func of cronFunctions) {
-      const pattern = getCronPatternFromInputs(func.inputs);
-      if (!pattern) {
-        ConduitGrpcSdk.Logger.warn(
-          `Cron function ${func.name} (${func._id}) missing pattern; skipping schedule`,
-        );
-        skipped += 1;
-        continue;
-      }
+    for (const item of plan.toSchedule) {
       try {
-        validateCronPattern(pattern);
-      } catch (err) {
-        ConduitGrpcSdk.Logger.error(
-          `Cron function ${func.name} (${func._id}) has invalid pattern "${pattern}": ${(err as Error).message}`,
-        );
-        skipped += 1;
-        continue;
-      }
-
-      const jobId = buildCronJobId(func._id);
-      const timezone = func.inputs?.timezone ?? 'UTC';
-      const existing = currentRepeatables.find(r => r.id === jobId);
-
-      if (existing && existing.pattern === pattern && existing.tz === timezone) {
-        unchanged += 1;
-        continue;
-      }
-
-      try {
-        if (existing) {
-          await this.cronQueue.removeRepeatableByKey(existing.key);
+        if (item.existingKey) {
+          await this.cronQueue.removeRepeatableByKey(item.existingKey);
           updated += 1;
         } else {
           registered += 1;
         }
-
         await this.cronQueue.add(
           CRON_JOB_NAME,
-          { functionId: func._id },
+          { functionId: item.functionId },
           {
-            jobId,
-            repeat: { pattern, tz: timezone },
+            jobId: item.jobId,
+            repeat: { pattern: item.pattern, tz: item.timezone },
             removeOnComplete: { age: 3600, count: 1000 },
             removeOnFail: { age: 24 * 3600 },
           },
         );
       } catch (err) {
         ConduitGrpcSdk.Logger.error(
-          `Failed to schedule cron job for ${func.name} (${func._id}): ${(err as Error).message}`,
+          `Failed to schedule cron job ${item.jobId}: ${(err as Error).message}`,
         );
         errors += 1;
-        if (existing) {
+        if (item.existingKey) {
           updated -= 1;
         } else {
           registered -= 1;
@@ -177,21 +191,8 @@ export class CronQueueController {
     }
 
     ConduitGrpcSdk.Logger.log(
-      `Cron sync complete: registered=${registered}, updated=${updated}, unchanged=${unchanged}, removed=${removed}, skipped=${skipped}, errors=${errors}`,
+      `Cron sync complete: registered=${registered}, updated=${updated}, unchanged=${plan.unchangedJobIds.length}, removed=${removed}, skipped=${plan.skipped.length}, errors=${errors}`,
     );
-  }
-
-  async drainCronQueue(): Promise<void> {
-    if (this.cronWorker) {
-      await this.cronWorker.close();
-      this.cronWorker = undefined;
-    }
-    await this.cronQueue.drain();
-    const repeatables = await this.cronQueue.getRepeatableJobs();
-    for (const job of repeatables) {
-      await this.cronQueue.removeRepeatableByKey(job.key);
-    }
-    this.compiledFunctions.clear();
   }
 
   private setupWorkerEventHandlers(worker: Worker): void {

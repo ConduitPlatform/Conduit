@@ -15,7 +15,11 @@ import {
   compileUserFunctionScript,
   runUserFunctionInSandbox,
 } from '../sandbox/functionSandbox.js';
-import { getCronPatternFromInputs, validateCronPattern } from './cron.utils.js';
+import {
+  getCronPatternFromInputs,
+  getCronTimezone,
+  validateCronPattern,
+} from './cron.utils.js';
 
 function getOperation(op: string) {
   switch (op) {
@@ -198,6 +202,7 @@ export async function executeBackgroundFunction(
   } catch (err) {
     ConduitGrpcSdk.Logger.error(`Execution failed for ${func.name}:`);
     ConduitGrpcSdk.Logger.error(err as Error);
+    throw err;
   }
 }
 
@@ -220,9 +225,14 @@ export function createEventFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
         parsedData,
         compiledFunctionCode,
         grpcSdk,
-      ).then(() => {
-        ConduitGrpcSdk.Logger.log(`Executed ${func.name} for event ${func.inputs.event}`);
-      });
+      ).then(
+        () => {
+          ConduitGrpcSdk.Logger.log(
+            `Executed ${func.name} for event ${func.inputs.event}`,
+          );
+        },
+        () => undefined,
+      );
     },
     func._id,
   );
@@ -236,7 +246,7 @@ export function validateCronFunctionConfig(func: Functions): void {
       'Cron pattern is required (inputs.cronPattern or inputs.event)',
     );
   }
-  validateCronPattern(pattern);
+  validateCronPattern(pattern, getCronTimezone(func.inputs));
 }
 
 export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {

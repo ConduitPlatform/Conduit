@@ -15,7 +15,11 @@ import { ConfigController } from '@conduitplatform/module-tools';
 
 import { Functions } from '../models/index.js';
 import { CronQueueController } from './cronQueue.controller.js';
-import { compileFunctionCode, createFunctionRoute } from './utils.js';
+import {
+  compileFunctionCode,
+  createFunctionRoute,
+  validateCronFunctionConfig,
+} from './utils.js';
 import type { CompiledUserFunction } from '../sandbox/functionSandbox.js';
 
 type Socket = {
@@ -65,10 +69,11 @@ export class FunctionController {
         this.compiledCronFunctions.clear();
 
         const cronFunctions: Functions[] = [];
-        r.forEach(func => {
+        for (const func of r) {
           try {
             if (func.functionType === 'cron') {
               try {
+                validateCronFunctionConfig(func);
                 this.compiledCronFunctions.set(
                   func._id,
                   compileFunctionCode(func.functionCode),
@@ -76,10 +81,11 @@ export class FunctionController {
                 cronFunctions.push(func);
               } catch (err) {
                 ConduitGrpcSdk.Logger.error(
-                  `Failed to compile cron function ${func.name} (${func._id})`,
+                  `Failed to prepare cron function ${func.name} (${func._id})`,
                 );
                 ConduitGrpcSdk.Logger.error(err as Error);
               }
+              continue;
             }
             const route = createFunctionRoute(func, this.grpcSdk);
             if (route) {
@@ -91,7 +97,7 @@ export class FunctionController {
             );
             ConduitGrpcSdk.Logger.error(err as Error);
           }
-        });
+        }
         this._routingManager.clear();
         this.functionRoutes.forEach(route => {
           if ((route as Socket).events) {
