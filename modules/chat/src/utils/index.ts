@@ -3,6 +3,9 @@ import { status } from '@grpc/grpc-js';
 import { ConduitGrpcSdk, GrpcError, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { ChatRoom, InvitationToken, User } from '../models/index.js';
 import { v4 as uuid } from 'uuid';
+import { buildInvitationHookUrl } from './invitationHelpers.js';
+
+export { buildInvitationHookUrl };
 
 export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: UntypedArray) {
   const uniqueUsers = Array.from(new Set(users));
@@ -101,14 +104,6 @@ export async function sendInvitations(
     }
   }
   return 'Invitations sent';
-}
-
-export function buildInvitationHookUrl(
-  hostUrl: string,
-  answer: 'accept' | 'decline',
-  invitationToken: string,
-) {
-  return `${hostUrl.replace(/\/$/, '')}/hook/chat/invitations/${answer}/${invitationToken}`;
 }
 
 export function populateArray(pop: string | string[] | undefined) {

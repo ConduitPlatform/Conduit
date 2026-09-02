@@ -11,15 +11,36 @@ export function validateInvitationAnswer(answer: string): void {
   }
 }
 
+export function assertInvitationReceiver(userId: unknown, receiver: unknown): void {
+  if (String(userId) !== String(receiver)) {
+    throw new InvitationError(7, 'Invitation is not for the current user');
+  }
+}
+
+export function buildInvitationHookUrl(
+  hostUrl: string,
+  answer: 'accept' | 'decline',
+  invitationToken: string,
+): string {
+  return `${hostUrl.replace(/\/$/, '')}/hook/chat/invitations/${answer}/${invitationToken}`;
+}
+
 export function buildLoginRedirectUrl(
   loginUri: string,
   answer: string,
   invitationToken: string,
+  redirectUri: string,
 ): string {
   if (!loginUri) {
     throw new InvitationError(
       9,
       'Invitation login redirect is not configured',
+    );
+  }
+  if (!redirectUri) {
+    throw new InvitationError(
+      9,
+      'Invitation hook return URL is required',
     );
   }
   let redirectUrl: URL;
@@ -31,6 +52,7 @@ export function buildLoginRedirectUrl(
       'login_uri must be an absolute URL',
     );
   }
+  redirectUrl.searchParams.set('redirectUri', redirectUri);
   redirectUrl.searchParams.set('answer', answer);
   redirectUrl.searchParams.set('invitationToken', invitationToken);
   return redirectUrl.toString();

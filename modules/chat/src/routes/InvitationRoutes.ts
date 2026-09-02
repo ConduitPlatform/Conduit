@@ -16,6 +16,8 @@ import { ChatRoom, InvitationToken } from '../models/index.js';
 import { invalidateMembershipCache } from '../utils/membershipCache.js';
 import {
   validateInvitationAnswer,
+  assertInvitationReceiver,
+  buildInvitationHookUrl,
   buildLoginRedirectUrl,
   isAlreadyMember,
   replaceRoomIdInUri,
@@ -153,12 +155,7 @@ export class InvitationRoutes {
     }
 
     const receiver = invitationTokenDoc.receiver as string;
-    if (String(user._id) !== String(receiver)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Invitation is not for the current user',
-      );
-    }
+    this.ensureInvitationReceiver(user._id, receiver);
 
     const message = await this.processInvitationAnswer(
       invitationTokenDoc,
@@ -197,12 +194,7 @@ export class InvitationRoutes {
     }
 
     const receiver = invitationTokenDoc.receiver as string;
-    if (String(user._id) !== String(receiver)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Invitation is not for the current user',
-      );
-    }
+    this.ensureInvitationReceiver(user._id, receiver);
 
     const roomId = invitationTokenDoc.room as string;
     const message = await this.processInvitationAnswer(
@@ -237,12 +229,7 @@ export class InvitationRoutes {
     }
 
     const receiver = invitationTokenDoc.receiver as string;
-    if (String(user._id) !== String(receiver)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Invitation is not for the current user',
-      );
-    }
+    this.ensureInvitationReceiver(user._id, receiver);
 
     const message = await this.processInvitationAnswer(
       invitationTokenDoc,
@@ -308,17 +295,46 @@ export class InvitationRoutes {
     return message;
   }
 
-  private redirectUnauthenticatedUser(
+  private ensureInvitationReceiver(userId: unknown, receiver: unknown): void {
+    try {
+      assertInvitationReceiver(userId, receiver);
+    } catch (err) {
+      if (err instanceof InvitationError) {
+        throw new GrpcError(err.code, err.message);
+      }
+      throw err;
+    }
+  }
+
+  private async resolveInvitationHookUrl(
+    answer: string,
+    invitationToken: string,
+  ): Promise<string> {
+    const routerConfig = await this.grpcSdk.config.get('router');
+    return buildInvitationHookUrl(
+      routerConfig.hostUrl,
+      answer as 'accept' | 'decline',
+      invitationToken,
+    );
+  }
+
+  private async redirectUnauthenticatedUser(
     answer: string,
     invitationToken: string,
     config: Config,
-  ): UnparsedRouterResponse {
+  ): Promise<UnparsedRouterResponse> {
     const loginUri = (config.explicit_room_joins.redirect.login_uri || '').replace(
       /\/$/,
       '',
     );
+    const hookUrl = await this.resolveInvitationHookUrl(answer, invitationToken);
     try {
-      const redirectUrl = buildLoginRedirectUrl(loginUri, answer, invitationToken);
+      const redirectUrl = buildLoginRedirectUrl(
+        loginUri,
+        answer,
+        invitationToken,
+        hookUrl,
+      );
       return { redirect: redirectUrl };
     } catch (err) {
       if (err instanceof InvitationError) {

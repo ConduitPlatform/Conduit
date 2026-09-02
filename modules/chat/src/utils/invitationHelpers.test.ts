@@ -2,6 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   validateInvitationAnswer,
+  assertInvitationReceiver,
+  buildInvitationHookUrl,
   buildLoginRedirectUrl,
   isAlreadyMember,
   replaceRoomIdInUri,
@@ -9,6 +11,7 @@ import {
 import {
   getMembershipCacheKey,
   MEMBERSHIP_CACHE_TTL_MS,
+  invalidateMembershipCache,
 } from './membershipCache.js';
 
 describe('invitationHelpers', () => {
@@ -31,28 +34,89 @@ describe('invitationHelpers', () => {
       }
     });
 
-    it('throws synchronously before any async operations', () => {
+    it('throws synchronously so invalid answers cannot burn tokens', () => {
+      let deleted = false;
+      const deleteTokens = () => {
+        deleted = true;
+      };
       try {
         validateInvitationAnswer('Accept');
-        assert.fail('Should have thrown');
+        deleteTokens();
+        assert.fail('Should have thrown before delete');
       } catch (err: any) {
         assert.equal(err.code, 3);
       }
+      assert.equal(deleted, false);
+    });
+  });
+
+  describe('assertInvitationReceiver', () => {
+    it('allows the invitee including ObjectId-like values', () => {
+      assert.doesNotThrow(() =>
+        assertInvitationReceiver(
+          '507f1f77bcf86cd799439011',
+          { toString: () => '507f1f77bcf86cd799439011' },
+        ),
+      );
+    });
+
+    it('throws PERMISSION_DENIED (403) on invitee mismatch', () => {
+      assert.throws(
+        () => assertInvitationReceiver('user-a', 'user-b'),
+        {
+          code: 7,
+          message: 'Invitation is not for the current user',
+        },
+      );
+    });
+  });
+
+  describe('buildInvitationHookUrl', () => {
+    it('matches email invitation hook paths', () => {
+      assert.equal(
+        buildInvitationHookUrl('https://api.example.com', 'accept', 'tok-1'),
+        'https://api.example.com/hook/chat/invitations/accept/tok-1',
+      );
+      assert.equal(
+        buildInvitationHookUrl('https://api.example.com/', 'decline', 'tok-2'),
+        'https://api.example.com/hook/chat/invitations/decline/tok-2',
+      );
     });
   });
 
   describe('buildLoginRedirectUrl', () => {
-    it('builds redirect URL with answer and invitationToken query params', () => {
+    const hookUrl = 'https://api.example.com/hook/chat/invitations/accept/test-token-123';
+
+    it('includes redirectUri pointing back at the invitation hook', () => {
       const url = buildLoginRedirectUrl(
         'https://app.example.com/login',
         'accept',
         'test-token-123',
+        hookUrl,
+      );
+      const parsed = new URL(url);
+      assert.equal(parsed.origin + parsed.pathname, 'https://app.example.com/login');
+      assert.equal(parsed.searchParams.get('redirectUri'), hookUrl);
+      assert.equal(parsed.searchParams.get('answer'), 'accept');
+      assert.equal(parsed.searchParams.get('invitationToken'), 'test-token-123');
+    });
+
+    it('builds the email to login to hook return loop from router hostUrl', () => {
+      const returnHook = buildInvitationHookUrl(
+        'https://api.example.com',
+        'accept',
+        'invite-token',
+      );
+      const url = buildLoginRedirectUrl(
+        'https://app.example.com/login',
+        'accept',
+        'invite-token',
+        returnHook,
       );
       assert.equal(
-        url,
-        'https://app.example.com/login?answer=accept&invitationToken=test-token-123',
+        new URL(url).searchParams.get('redirectUri'),
+        'https://api.example.com/hook/chat/invitations/accept/invite-token',
       );
-      assert.ok(!url.includes('redirectUri'));
     });
 
     it('does not require or use token secret - only passes token to query param', () => {
@@ -60,6 +124,7 @@ describe('invitationHelpers', () => {
         'https://app.example.com/login',
         'accept',
         'any-string-token',
+        hookUrl,
       );
       assert.ok(url.includes('invitationToken=any-string-token'));
     });
@@ -69,19 +134,34 @@ describe('invitationHelpers', () => {
         'https://app.example.com/login/',
         'decline',
         'token-456',
+        'https://api.example.com/hook/chat/invitations/decline/token-456',
       );
+      const parsed = new URL(url);
+      assert.equal(parsed.pathname, '/login/');
+      assert.equal(parsed.searchParams.get('answer'), 'decline');
+      assert.equal(parsed.searchParams.get('invitationToken'), 'token-456');
       assert.equal(
-        url,
-        'https://app.example.com/login/?answer=decline&invitationToken=token-456',
+        parsed.searchParams.get('redirectUri'),
+        'https://api.example.com/hook/chat/invitations/decline/token-456',
       );
     });
 
     it('throws FAILED_PRECONDITION when login_uri is empty', () => {
       assert.throws(
-        () => buildLoginRedirectUrl('', 'accept', 'token'),
+        () => buildLoginRedirectUrl('', 'accept', 'token', hookUrl),
         {
           code: 9,
           message: 'Invitation login redirect is not configured',
+        },
+      );
+    });
+
+    it('throws FAILED_PRECONDITION when hook return URL is empty', () => {
+      assert.throws(
+        () => buildLoginRedirectUrl('https://app.example.com/login', 'accept', 'token', ''),
+        {
+          code: 9,
+          message: 'Invitation hook return URL is required',
         },
       );
     });
@@ -90,7 +170,7 @@ describe('invitationHelpers', () => {
       const relativeUris = ['/login', 'login', '../login'];
       for (const uri of relativeUris) {
         assert.throws(
-          () => buildLoginRedirectUrl(uri, 'accept', 'token'),
+          () => buildLoginRedirectUrl(uri, 'accept', 'token', hookUrl),
           {
             code: 9,
             message: 'login_uri must be an absolute URL',
@@ -164,6 +244,26 @@ describe('membershipCache', () => {
     it('handles different room IDs', () => {
       assert.equal(getMembershipCacheKey('abc'), 'chat:membership:abc');
       assert.equal(getMembershipCacheKey('507f1f77bcf86cd799439011'), 'chat:membership:507f1f77bcf86cd799439011');
+    });
+  });
+
+  describe('invalidateMembershipCache', () => {
+    it('clears chat:membership:{roomId} on accept', async () => {
+      const cleared: string[] = [];
+      const grpcSdk = {
+        state: {
+          async clearKey(key: string): Promise<number> {
+            cleared.push(key);
+            return 1;
+          },
+        },
+      };
+      await invalidateMembershipCache(grpcSdk, 'room123');
+      assert.deepEqual(cleared, ['chat:membership:room123']);
+    });
+
+    it('no-ops when state is missing', async () => {
+      await invalidateMembershipCache({}, 'room123');
     });
   });
 
