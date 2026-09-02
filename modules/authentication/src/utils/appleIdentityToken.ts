@@ -5,7 +5,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 export function verifyAppleIdentityToken(
   applePublicKey: string,
   id_token: string,
-  expectedAudience: string | string[],
+  expectedAudience: string,
 ): JwtPayload {
   try {
     return jwt.verify(id_token, applePublicKey, {
