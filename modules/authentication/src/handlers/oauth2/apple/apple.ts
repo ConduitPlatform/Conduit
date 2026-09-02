@@ -35,6 +35,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { OAUTH_CALLBACK } from '../../../constants/index.js';
 import { AuthUtils } from '../../../utils/index.js';
+import { verifyAppleIdentityToken } from '../../../utils/appleIdentityToken.js';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   private readonly jwksClient = jwksRsa({
@@ -304,16 +305,8 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   private verifyIdentityToken(
     applePublicKey: string,
     id_token: string,
-    expectedAudience: string,
+    expectedAudience: string | string[],
   ): JwtPayload {
-    try {
-      return jwt.verify(id_token, applePublicKey, {
-        algorithms: ['ES256'],
-        issuer: 'https://appleid.apple.com',
-        audience: expectedAudience,
-      }) as JwtPayload;
-    } catch {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
-    }
+    return verifyAppleIdentityToken(applePublicKey, id_token, expectedAudience);
   }
 }
