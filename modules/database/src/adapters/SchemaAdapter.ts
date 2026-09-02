@@ -371,6 +371,15 @@ export abstract class SchemaAdapter<T> {
     },
   ): Promise<any>;
 
+  abstract findOneAndDelete(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+    },
+  ): Promise<any>;
+
   abstract findByIdAndUpdate(
     id: string,
     query: SingleDocQuery,

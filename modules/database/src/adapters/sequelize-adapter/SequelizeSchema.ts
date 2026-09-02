@@ -528,6 +528,60 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       });
   }
 
+  async findOneAndDelete(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+    },
+  ) {
+    const { filter, parsingResult } = parseQueryFilter(
+      this,
+      this.parseStringToQuery(query),
+    );
+    const parsedFilter = await this.getAuthorizedQuery(
+      'delete',
+      filter,
+      false,
+      options?.userId,
+      options?.scope,
+    );
+    if (isNil(parsedFilter)) {
+      return null;
+    }
+    const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
+    try {
+      const findOptions: FindOptions = {
+        where: parsedFilter!,
+        nest: true,
+        include: includeRelations(
+          this,
+          parsingResult.requiredRelations,
+          options?.populate || [],
+        ),
+        transaction: t,
+      };
+      if (this.sequelize.getDialect() !== 'sqlite') {
+        findOptions.lock = t.LOCK.UPDATE;
+      }
+      incrementDbQueries();
+      const doc = await this.model.findOne(findOptions);
+      if (!doc) {
+        await t.commit();
+        return null;
+      }
+      const document = doc.toJSON();
+      unwrap(document, this.objectPaths, this.extractedRelations);
+      await doc.destroy({ transaction: t });
+      await t.commit();
+      return document;
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  }
+
   async countDocuments(
     query: Query,
     options?: {
