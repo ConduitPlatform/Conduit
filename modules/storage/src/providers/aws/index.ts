@@ -45,7 +45,7 @@ export function awsObjectGrantRead(options: {
 export function buildPutObjectInput(
   bucket: string,
   key: string,
-  body: unknown,
+  body: PutObjectCommand['input']['Body'],
   options?: { fileIsPublic?: boolean; containerIsPublic?: boolean },
 ) {
   return {

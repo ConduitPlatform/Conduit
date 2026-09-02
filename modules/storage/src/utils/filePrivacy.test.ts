@@ -23,7 +23,7 @@ function stubContainers(docs: Array<{ name: string; isPublic?: boolean }>) {
       const names = query.name?.$in;
       return names ? docs.filter(doc => names.includes(doc.name)) : docs;
     },
-  })) as typeof _StorageContainer.getInstance;
+  })) as unknown as typeof _StorageContainer.getInstance;
 }
 
 describe('validateFilePrivacy', () => {
@@ -39,7 +39,8 @@ describe('validateFilePrivacy', () => {
     );
     await assert.rejects(
       () => validateFilePrivacy('public-bucket'),
-      (error: unknown) => error instanceof GrpcError && error.code === status.INVALID_ARGUMENT,
+      (error: unknown) =>
+        error instanceof GrpcError && error.code === status.INVALID_ARGUMENT,
     );
   });
 
