@@ -145,12 +145,10 @@ export class TeamsHandler implements IAuthenticationStrategy {
   }
 
   async getUserInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const userInvitesQuery: Indexable = {
+    const invites = await Token.getInstance().findMany({
       tokenType: TokenType.TEAM_INVITE_TOKEN,
       'data.email': call.request.context.user.email,
-    };
-
-    const invites = await Token.getInstance().findMany(userInvitesQuery);
+    } as Query<Token>);
     return {
       invites: invites.map(invite => ({
         teamId: invite.data.teamId,
@@ -596,13 +594,11 @@ export class TeamsHandler implements IAuthenticationStrategy {
     }
 
     // Delete any existing invite for the same email and team
-    const existingInviteQuery: Indexable = {
+    await Token.getInstance().deleteOne({
       tokenType: TokenType.TEAM_INVITE_TOKEN,
       'data.teamId': teamId,
       'data.email': email,
-    };
-
-    await Token.getInstance().deleteOne(existingInviteQuery);
+    } as Query<Token>);
 
     const invitation = await this.createUserInvitation({
       teamId,
@@ -663,13 +659,11 @@ export class TeamsHandler implements IAuthenticationStrategy {
     }
 
     // Delete any existing invite for the same email and team
-    const invitationQuery: Indexable = {
+    await Token.getInstance().deleteOne({
       tokenType: TokenType.TEAM_INVITE_TOKEN,
       'data.teamId': teamId,
       'data.email': email,
-    };
-
-    await Token.getInstance().deleteOne(invitationQuery);
+    } as Query<Token>);
 
     return 'OK';
   }
@@ -701,10 +695,10 @@ export class TeamsHandler implements IAuthenticationStrategy {
       );
     }
 
-    const teamInvitesQuery: Indexable = {
+    const teamInvitesQuery = {
       tokenType: TokenType.TEAM_INVITE_TOKEN,
       'data.teamId': teamId,
-    };
+    } as Query<Token>;
 
     const invites = await Token.getInstance().findMany(teamInvitesQuery);
 

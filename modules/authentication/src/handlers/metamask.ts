@@ -5,8 +5,8 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
-  Indexable,
   ParsedRouterRequest,
+  Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { User } from '../models/index.js';
@@ -80,11 +80,9 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     const { ethPublicAddress } = call.request.params;
     const normalizedEthPublicAddress = ethPublicAddress.toLowerCase();
 
-    const metamaskQuery: Indexable = {
+    const existingUser: User | null = await User.getInstance().findOne({
       'metamask.ethPublicAddress': normalizedEthPublicAddress,
-    };
-
-    const existingUser: User | null = await User.getInstance().findOne(metamaskQuery);
+    } as Query<User>);
 
     if (existingUser) {
       return { nonce: existingUser.metamask!.nonce };
@@ -111,11 +109,9 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     }
 
-    const metamaskQuery: Indexable = {
+    const user = await User.getInstance().findOne({
       'metamask.ethPublicAddress': normalizedEthPublicAddress,
-    };
-
-    const user = await User.getInstance().findOne(metamaskQuery);
+    } as Query<User>);
 
     if (isNil(user)) {
       throw new GrpcError(
@@ -157,11 +153,9 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
       );
     }
 
-    const nonceUpdate: Indexable = {
+    await User.getInstance().findByIdAndUpdate(user._id, {
       'metamask.nonce': uuid(),
-    };
-
-    await User.getInstance().findByIdAndUpdate(user._id, nonceUpdate);
+    } as Query<User>);
 
     const config = ConfigController.getInstance().config;
     return TokenProvider.getInstance().provideUserTokens({
