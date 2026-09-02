@@ -6,6 +6,7 @@ import {
   GrpcRequest,
   HealthCheckStatus,
   Indexable,
+  Query,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isEmpty, isNil } from 'lodash-es';
@@ -787,12 +788,10 @@ export default class Authentication extends ManagedModule<Config> {
     const { email, teamId } = call.request;
 
     try {
-      const invitationQuery: Indexable = {
+      const deletedToken = await Token.getInstance().deleteOne({
         'data.teamId': teamId,
         'data.email': email,
-      };
-
-      const deletedToken = await Token.getInstance().deleteOne(invitationQuery);
+      } as Query<Token>);
 
       if (deletedToken.deletedCount === 0) {
         return callback({
