@@ -305,7 +305,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   private verifyIdentityToken(
     applePublicKey: string,
     id_token: string,
-    expectedAudience: string | string[],
+    expectedAudience: string,
   ): JwtPayload {
     return verifyAppleIdentityToken(applePublicKey, id_token, expectedAudience);
   }

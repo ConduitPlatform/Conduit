@@ -12,11 +12,7 @@ function ecKeyPair() {
   });
 }
 
-function appleToken(
-  privateKey: string,
-  aud: string,
-  algorithm: jwt.Algorithm = 'ES256',
-) {
+function appleToken(privateKey: string, aud: string, algorithm: jwt.Algorithm = 'ES256') {
   return jwt.sign(
     {
       iss: 'https://appleid.apple.com',
@@ -55,10 +51,7 @@ describe('verifyAppleIdentityToken', () => {
   it('accepts an ES256 token whose aud matches the resolved OAuth clientId', () => {
     const { publicKey, privateKey } = ecKeyPair();
     const token = appleToken(privateKey, 'com.example.secondary');
-    const payload = verifyAppleIdentityToken(publicKey, token, [
-      'com.example.app',
-      'com.example.secondary',
-    ]);
+    const payload = verifyAppleIdentityToken(publicKey, token, 'com.example.secondary');
     assert.equal(payload.sub, 'apple-user');
     assert.equal(payload.aud, 'com.example.secondary');
   });
