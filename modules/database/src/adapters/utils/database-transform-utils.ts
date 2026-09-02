@@ -121,7 +121,7 @@ export function extractFieldProperties(
     res.unique = objectField.unique ?? false;
     res.allowNull = false;
   } else if (objectField.hasOwnProperty('required') && objectField.required) {
-    res.allowNull = !objectField.required ?? true;
+    res.allowNull = !objectField.required;
   }
 
   return res;
