@@ -77,6 +77,10 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     return this.dbInstance.deleteMany(this.name, query, options);
   }
 
+  findOneAndDelete(query: Query<T>, options?: AuthzOptions): Promise<T | null> {
+    return this.dbInstance.findOneAndDelete<T>(this.name, query, options);
+  }
+
   countDocuments(query: Query<T>, options?: CountDocumentsOptions): Promise<number> {
     return this.dbInstance.countDocuments(this.name, query, options);
   }
