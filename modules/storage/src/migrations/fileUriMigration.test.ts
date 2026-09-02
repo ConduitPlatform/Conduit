@@ -8,7 +8,8 @@ import {
 } from './fileUriMigration.js';
 
 const originalFileGetInstance = File.getInstance.bind(File);
-const originalContainerGetInstance = _StorageContainer.getInstance.bind(_StorageContainer);
+const originalContainerGetInstance =
+  _StorageContainer.getInstance.bind(_StorageContainer);
 
 afterEach(() => {
   File.getInstance = originalFileGetInstance;
@@ -19,7 +20,11 @@ describe('filesNeedingUriMigrationQuery', () => {
   it('filters public files that are missing uri', () => {
     const query = filesNeedingUriMigrationQuery();
     assert.equal(query.isPublic, true);
-    assert.deepEqual(query.$or, [{ uri: { $exists: false } }, { uri: null }, { uri: '' }]);
+    assert.deepEqual(query.$or, [
+      { uri: { $exists: false } },
+      { uri: null },
+      { uri: '' },
+    ]);
     assert.equal('_id' in query, false);
   });
 
@@ -31,28 +36,34 @@ describe('filesNeedingUriMigrationQuery', () => {
 
 describe('migrateFileUriReferences', () => {
   it('updates files in batches and clears stale urls in private containers', async () => {
-    const files = Array.from({ length: FILE_URI_MIGRATION_BATCH_SIZE + 3 }, (_, index) => ({
-      _id: `file-${String(index).padStart(3, '0')}`,
-      container: index === 0 ? 'public-bucket' : 'private-bucket',
-    }));
-    const findManyCalls: Array<{ query: Record<string, unknown>; options: Record<string, unknown> }> =
-      [];
+    const files = Array.from(
+      { length: FILE_URI_MIGRATION_BATCH_SIZE + 3 },
+      (_, index) => ({
+        _id: `file-${String(index).padStart(3, '0')}`,
+        container: index === 0 ? 'public-bucket' : 'private-bucket',
+      }),
+    );
+    const findManyCalls: Array<{
+      query: Record<string, unknown>;
+      options: Record<string, unknown>;
+    }> = [];
     const updates: Array<{ id: string; update: Record<string, string> }> = [];
 
     File.getInstance = (() => ({
-      findMany: async (query: Record<string, unknown>, options: Record<string, unknown>) => {
+      findMany: async (
+        query: Record<string, unknown>,
+        options: Record<string, unknown>,
+      ) => {
         findManyCalls.push({ query, options });
         const afterId = (query._id as { $gt?: string } | undefined)?.$gt;
-        const remaining = afterId
-          ? files.filter(file => file._id > afterId)
-          : files;
+        const remaining = afterId ? files.filter(file => file._id > afterId) : files;
         return remaining.slice(0, options.limit as number);
       },
       findByIdAndUpdate: async (id: string, update: Record<string, string>) => {
         updates.push({ id, update });
         return { _id: id, ...update };
       },
-    })) as typeof File.getInstance;
+    })) as unknown as typeof File.getInstance;
 
     _StorageContainer.getInstance = (() => ({
       findMany: async (_query: unknown, options: { limit?: number }) => {
@@ -62,7 +73,7 @@ describe('migrateFileUriReferences', () => {
         ];
         return docs.slice(0, options.limit);
       },
-    })) as typeof _StorageContainer.getInstance;
+    })) as unknown as typeof _StorageContainer.getInstance;
 
     await migrateFileUriReferences();
 
@@ -84,10 +95,10 @@ describe('migrateFileUriReferences', () => {
       findByIdAndUpdate: async () => {
         throw new Error('write failed');
       },
-    })) as typeof File.getInstance;
+    })) as unknown as typeof File.getInstance;
     _StorageContainer.getInstance = (() => ({
       findMany: async () => [{ _id: 'c2', name: 'private-bucket', isPublic: false }],
-    })) as typeof _StorageContainer.getInstance;
+    })) as unknown as typeof _StorageContainer.getInstance;
 
     await assert.rejects(() => migrateFileUriReferences(), /write failed/);
   });
