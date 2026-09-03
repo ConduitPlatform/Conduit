@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   validateInvitationAnswer,
   assertInvitationReceiver,
+  assertRoomJoinable,
   buildInvitationHookUrl,
   buildLoginRedirectUrl,
   isAlreadyMember,
@@ -22,15 +23,21 @@ describe('invitationHelpers', () => {
     });
 
     it('rejects invalid answers including capitalized', () => {
-      const invalidAnswers = ['Accept', 'ACCEPT', 'Decline', 'DECLINE', 'maybe', 'yes', 'no', ''];
+      const invalidAnswers = [
+        'Accept',
+        'ACCEPT',
+        'Decline',
+        'DECLINE',
+        'maybe',
+        'yes',
+        'no',
+        '',
+      ];
       for (const answer of invalidAnswers) {
-        assert.throws(
-          () => validateInvitationAnswer(answer),
-          {
-            code: 3,
-            message: 'Answer must be accept or decline',
-          },
-        );
+        assert.throws(() => validateInvitationAnswer(answer), {
+          code: 3,
+          message: 'Answer must be accept or decline',
+        });
       }
     });
 
@@ -53,21 +60,37 @@ describe('invitationHelpers', () => {
   describe('assertInvitationReceiver', () => {
     it('allows the invitee including ObjectId-like values', () => {
       assert.doesNotThrow(() =>
-        assertInvitationReceiver(
-          '507f1f77bcf86cd799439011',
-          { toString: () => '507f1f77bcf86cd799439011' },
-        ),
+        assertInvitationReceiver('507f1f77bcf86cd799439011', {
+          toString: () => '507f1f77bcf86cd799439011',
+        }),
       );
     });
 
     it('throws PERMISSION_DENIED (403) on invitee mismatch', () => {
-      assert.throws(
-        () => assertInvitationReceiver('user-a', 'user-b'),
-        {
-          code: 7,
-          message: 'Invitation is not for the current user',
-        },
-      );
+      assert.throws(() => assertInvitationReceiver('user-a', 'user-b'), {
+        code: 7,
+        message: 'Invitation is not for the current user',
+      });
+    });
+  });
+
+  describe('assertRoomJoinable', () => {
+    it('allows a live room', () => {
+      assert.doesNotThrow(() => assertRoomJoinable({ deleted: false }));
+    });
+
+    it('throws NOT_FOUND when the room is missing', () => {
+      assert.throws(() => assertRoomJoinable(null), {
+        code: 5,
+        message: 'Chat room does not exist',
+      });
+    });
+
+    it('throws NOT_FOUND when the room is soft-deleted', () => {
+      assert.throws(() => assertRoomJoinable({ deleted: true }), {
+        code: 5,
+        message: 'Chat room does not exist',
+      });
     });
   });
 
@@ -147,18 +170,16 @@ describe('invitationHelpers', () => {
     });
 
     it('throws FAILED_PRECONDITION when login_uri is empty', () => {
-      assert.throws(
-        () => buildLoginRedirectUrl('', 'accept', 'token', hookUrl),
-        {
-          code: 9,
-          message: 'Invitation login redirect is not configured',
-        },
-      );
+      assert.throws(() => buildLoginRedirectUrl('', 'accept', 'token', hookUrl), {
+        code: 9,
+        message: 'Invitation login redirect is not configured',
+      });
     });
 
     it('throws FAILED_PRECONDITION when hook return URL is empty', () => {
       assert.throws(
-        () => buildLoginRedirectUrl('https://app.example.com/login', 'accept', 'token', ''),
+        () =>
+          buildLoginRedirectUrl('https://app.example.com/login', 'accept', 'token', ''),
         {
           code: 9,
           message: 'Invitation hook return URL is required',
@@ -169,13 +190,10 @@ describe('invitationHelpers', () => {
     it('throws FAILED_PRECONDITION when login_uri is relative', () => {
       const relativeUris = ['/login', 'login', '../login'];
       for (const uri of relativeUris) {
-        assert.throws(
-          () => buildLoginRedirectUrl(uri, 'accept', 'token', hookUrl),
-          {
-            code: 9,
-            message: 'login_uri must be an absolute URL',
-          },
-        );
+        assert.throws(() => buildLoginRedirectUrl(uri, 'accept', 'token', hookUrl), {
+          code: 9,
+          message: 'login_uri must be an absolute URL',
+        });
       }
     });
   });
@@ -192,21 +210,13 @@ describe('invitationHelpers', () => {
     });
 
     it('uses String() for ObjectId compatibility', () => {
-      const participants = [
-        'user1',
-        { toString: () => 'user2' },
-        'user3',
-      ];
+      const participants = ['user1', { toString: () => 'user2' }, 'user3'];
       const receiver = { toString: () => 'user2' };
       assert.equal(isAlreadyMember(participants, receiver), true);
     });
 
     it('handles mixed string and ObjectId participants', () => {
-      const participants = [
-        'user1',
-        { toString: () => 'user2' },
-        'user3',
-      ];
+      const participants = ['user1', { toString: () => 'user2' }, 'user3'];
       assert.equal(isAlreadyMember(participants, 'user2'), true);
       assert.equal(isAlreadyMember(participants, 'user1'), true);
       assert.equal(isAlreadyMember(participants, 'user4'), false);
@@ -243,7 +253,10 @@ describe('membershipCache', () => {
 
     it('handles different room IDs', () => {
       assert.equal(getMembershipCacheKey('abc'), 'chat:membership:abc');
-      assert.equal(getMembershipCacheKey('507f1f77bcf86cd799439011'), 'chat:membership:507f1f77bcf86cd799439011');
+      assert.equal(
+        getMembershipCacheKey('507f1f77bcf86cd799439011'),
+        'chat:membership:507f1f77bcf86cd799439011',
+      );
     });
   });
 

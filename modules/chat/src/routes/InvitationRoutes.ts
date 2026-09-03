@@ -17,6 +17,7 @@ import { invalidateMembershipCache } from '../utils/membershipCache.js';
 import {
   validateInvitationAnswer,
   assertInvitationReceiver,
+  assertRoomJoinable,
   buildInvitationHookUrl,
   buildLoginRedirectUrl,
   isAlreadyMember,
@@ -250,11 +251,15 @@ export class InvitationRoutes {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    if (isNil(chatRoom)) {
-      throw new GrpcError(status.NOT_FOUND, 'Chat room does not exist');
-    }
 
     const receiver = invitationTokenDoc.receiver as string;
+    if (chatRoom?.deleted) {
+      await InvitationToken.getInstance().deleteMany({
+        $and: [{ room: roomId }, { receiver }],
+      });
+    }
+    this.ensureRoomJoinable(chatRoom);
+
     const accepted = answer === 'accept';
     const participants = chatRoom.participants as string[];
     const alreadyMember = isAlreadyMember(participants, receiver);
@@ -298,6 +303,19 @@ export class InvitationRoutes {
   private ensureInvitationReceiver(userId: unknown, receiver: unknown): void {
     try {
       assertInvitationReceiver(userId, receiver);
+    } catch (err) {
+      if (err instanceof InvitationError) {
+        throw new GrpcError(err.code, err.message);
+      }
+      throw err;
+    }
+  }
+
+  private ensureRoomJoinable<T extends { deleted?: boolean }>(
+    room: T | null,
+  ): asserts room is T {
+    try {
+      assertRoomJoinable(room);
     } catch (err) {
       if (err instanceof InvitationError) {
         throw new GrpcError(err.code, err.message);
