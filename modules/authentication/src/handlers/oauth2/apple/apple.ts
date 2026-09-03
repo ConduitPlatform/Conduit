@@ -278,7 +278,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       const key = await this.jwksClient.getSigningKey(kid);
       return key.getPublicKey();
     } catch {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
+      throw new GrpcError(status.UNAVAILABLE, 'Unable to verify identity token');
     }
   }
 

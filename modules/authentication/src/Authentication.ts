@@ -60,7 +60,12 @@ import {
   type ExportResult,
   type ImportResult,
 } from '@conduitplatform/module-tools';
-import { adoptPersistedJwtSecret, ensureAccessTokenJwtSecret } from './utils/jwtSecret.js';
+import {
+  decideSharedJwtSecret,
+  ensureAccessTokenJwtSecret,
+  isConfigMissingError,
+  type PersistedConfigRead,
+} from './utils/jwtSecret.js';
 import { TeamsAdmin } from './admin/team.js';
 import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
@@ -303,24 +308,28 @@ export default class Authentication extends ManagedModule<Config> {
     }
   }
 
-  private async readPersistedAuthenticationConfig(): Promise<Config | null> {
+  private async readPersistedAuthenticationConfig(): Promise<
+    PersistedConfigRead<Config>
+  > {
     try {
-      return await this.grpcSdk.config.get('authentication');
-    } catch {
-      return null;
+      const persisted = await this.grpcSdk.config.get('authentication');
+      return { ok: true, config: persisted };
+    } catch (error) {
+      if (isConfigMissingError(error)) {
+        return { ok: true, config: null };
+      }
+      return { ok: false };
     }
   }
 
   /**
    * Replicas must share one jwtSecret. Adopt a persisted non-empty secret
-   * (including legacy S3CR3T). Generate and persist only when persisted is empty.
+   * (including legacy S3CR3T). Generate and persist only when a successful
+   * read shows the persisted secret is empty. A failed read must not persist.
    */
   private async ensureSharedAccessTokenJwtSecret(config: Config) {
     const persisted = await this.readPersistedAuthenticationConfig();
-    const { shouldPersist } = adoptPersistedJwtSecret(
-      config,
-      persisted?.accessTokens?.jwtSecret,
-    );
+    const { shouldPersist } = decideSharedJwtSecret(config, persisted);
     ConfigController.getInstance().config = config;
     if (!shouldPersist) {
       return;
@@ -328,8 +337,11 @@ export default class Authentication extends ManagedModule<Config> {
 
     const persistIfStillEmpty = async () => {
       const again = await this.readPersistedAuthenticationConfig();
-      if (again?.accessTokens?.jwtSecret?.trim()) {
-        config.accessTokens.jwtSecret = again.accessTokens.jwtSecret;
+      if (!again.ok) {
+        return;
+      }
+      if (again.config?.accessTokens?.jwtSecret?.trim()) {
+        config.accessTokens.jwtSecret = again.config.accessTokens.jwtSecret;
         ConfigController.getInstance().config = config;
         return;
       }
@@ -341,8 +353,8 @@ export default class Authentication extends ManagedModule<Config> {
           true,
         );
         const after = await this.readPersistedAuthenticationConfig();
-        if (after?.accessTokens?.jwtSecret?.trim()) {
-          config.accessTokens.jwtSecret = after.accessTokens.jwtSecret;
+        if (after.ok && after.config?.accessTokens?.jwtSecret?.trim()) {
+          config.accessTokens.jwtSecret = after.config.accessTokens.jwtSecret;
         }
         ConfigController.getInstance().config = config;
         this.config.load(config);

@@ -9,6 +9,16 @@ export function isBiometricChallengeExpired(
   return now - new Date(createdAt).getTime() > BIOMETRIC_CHALLENGE_TTL_MS;
 }
 
+export function findReusableBiometricChallenge<T extends { createdAt: Date | string }>(
+  newestToken: T | null,
+  now = Date.now(),
+): T | null {
+  if (!newestToken || isBiometricChallengeExpired(newestToken.createdAt, now)) {
+    return null;
+  }
+  return newestToken;
+}
+
 export function verifyBiometricSignature(
   publicKeyDerBase64: string,
   challenge: string,

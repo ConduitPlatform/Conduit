@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import {
   BIOMETRIC_CHALLENGE_TTL_MS,
+  findReusableBiometricChallenge,
   isBiometricChallengeExpired,
   verifyBiometricSignature,
 } from './biometricAuth.js';
@@ -32,6 +33,25 @@ describe('isBiometricChallengeExpired', () => {
   it('rejects a challenge older than the TTL', () => {
     const createdAt = new Date(Date.now() - BIOMETRIC_CHALLENGE_TTL_MS - 1);
     assert.equal(isBiometricChallengeExpired(createdAt), true);
+  });
+});
+
+describe('findReusableBiometricChallenge', () => {
+  it('returns a fresh newest token', () => {
+    const token = { createdAt: new Date(), challenge: 'abc' };
+    assert.equal(findReusableBiometricChallenge(token), token);
+  });
+
+  it('returns null when the newest token is expired', () => {
+    const token = {
+      createdAt: new Date(Date.now() - BIOMETRIC_CHALLENGE_TTL_MS - 1),
+      challenge: 'abc',
+    };
+    assert.equal(findReusableBiometricChallenge(token), null);
+  });
+
+  it('returns null when there is no token', () => {
+    assert.equal(findReusableBiometricChallenge(null), null);
   });
 });
 
