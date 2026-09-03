@@ -869,8 +869,8 @@ importers:
         specifier: ^9.9.4
         version: 9.9.4(snappy@7.4.1)
       mysql2:
-        specifier: ^3.22.5
-        version: 3.22.5(@types/node@24.13.3)
+        specifier: ^3.23.1
+        version: 3.23.1(@types/node@24.13.3)
       object-hash:
         specifier: ^3.0.0
         version: 3.0.0
@@ -882,10 +882,10 @@ importers:
         version: 2.3.4
       sequelize:
         specifier: ^6.37.8
-        version: 6.37.8(mariadb@3.5.3)(mysql2@3.22.5(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1)
+        version: 6.37.8(mariadb@3.5.3)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1)
       sequelize-auto:
         specifier: ^0.8.8
-        version: 0.8.8(sequelize@6.37.8(mariadb@3.5.3)(mysql2@3.22.5(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1))
+        version: 0.8.8(sequelize@6.37.8(mariadb@3.5.3)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1))
       sqlite3:
         specifier: ^6.0.1
         version: 6.0.1
@@ -5583,6 +5583,10 @@ packages:
     resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
     engines: {node: '>=0.10.0'}
 
+  iconv-lite@0.7.3:
+    resolution: {integrity: sha512-IKXpvIzjnC9XTAUbVBcMfGS0EPaIXtW6v+zr+RRp+hqULEpo0owZax6wyRwPOJbWbzjYspQwusTsfVr0ifh4uQ==}
+    engines: {node: '>=0.10.0'}
+
   identifier-regex@1.0.1:
     resolution: {integrity: sha512-ZrYyM0sozNPZlvBvE7Oq9Bn44n0qKGrYu5sQ0JzMUnjIhpgWYE2JB6aBoFwEYdPjqj7jPyxXTMJiHDOxDfd8yw==}
     engines: {node: '>=18'}
@@ -6197,8 +6201,8 @@ packages:
   lru-memoizer@3.0.0:
     resolution: {integrity: sha512-m83w/cYXLdUIboKSPxzPAGfYnk+vqeDYXuoSrQRw1q+yVEd8IXhvMufN8Q5TIPe7e2jyX4SRNrDJI2Skw1yznQ==}
 
-  lru.min@1.1.4:
-    resolution: {integrity: sha512-DqC6n3QQ77zdFpCMASA1a3Jlb64Hv2N2DciFGkO/4L9+q/IpIAuRlKOvCXabtRW6cQf8usbmM6BE/TOPysCdIA==}
+  lru.min@1.1.5:
+    resolution: {integrity: sha512-5J9ysMYUpYIg9RF2vJpy9SinEmSviFSe0GyPpCQ4L5QSkLAgeLXlTAOu2ZwWUU5m+0SBl6gUU1R1ZQB3aKypfA==}
     engines: {bun: '>=1.0.0', deno: '>=1.30.0', node: '>=8.0.0'}
 
   luxon@3.7.2:
@@ -6594,8 +6598,8 @@ packages:
   mute-stream@0.0.8:
     resolution: {integrity: sha512-nnbWWOkoWyUsTjKrhgD0dcz22mdkSnpYqbEjIm2nhwhuxlSkpywJmBo8h0ZqJdkp73mb90SssHkN4rsRaBAfAA==}
 
-  mysql2@3.22.5:
-    resolution: {integrity: sha512-95uZ2TrPWAZdwpB3vvvDbmEMcNG8yIeNCyu6GUcr/QnWEE/wXm7+mhOCsdQfWQDTV7qYT/PDUZ4U4UPP4AsXqQ==}
+  mysql2@3.23.1:
+    resolution: {integrity: sha512-tTuRnC7qCet2IOfSNMYZ5SwXuBnfvBPAcIA28P0gtruXyZlU1LMxA6uha32kYypoFgyYklMqhLWwt4laYwXR/Q==}
     engines: {node: '>= 8.0'}
     peerDependencies:
       '@types/node': '>= 8'
@@ -7545,8 +7549,8 @@ packages:
   split@1.0.1:
     resolution: {integrity: sha512-mTyOoPbrivtXnwnIxZRFYRrPNtEFKlpB2fvjSnCQUiAA6qAZzqwna5envK4uk6OIeP17CsdF3rSBGYVBsU0Tkg==}
 
-  sql-escaper@1.3.3:
-    resolution: {integrity: sha512-BsTCV265VpTp8tm1wyIm1xqQCS+Q9NHx2Sr+WcnUrgLrQ6yiDIvHYJV5gHxsj1lMBy2zm5twLaZao8Jd+S8JJw==}
+  sql-escaper@1.5.1:
+    resolution: {integrity: sha512-4toX5E1fQbBrpfXidaHnF0669nkAdETeIPTs2SUjxxD7RRIs9ICG4gtpmfc68JCEKehsdwLFqBu9VlQqZ1P1gg==}
     engines: {bun: '>=1.0.0', deno: '>=2.0.0', node: '>=12.0.0'}
 
   sqlite3@6.0.1:
@@ -9731,7 +9735,7 @@ snapshots:
   '@inquirer/external-editor@1.0.3(@types/node@24.13.3)':
     dependencies:
       chardet: 2.1.1
-      iconv-lite: 0.7.2
+      iconv-lite: 0.7.3
     optionalDependencies:
       '@types/node': 24.13.3
 
@@ -13296,6 +13300,10 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
+  iconv-lite@0.7.3:
+    dependencies:
+      safer-buffer: 2.1.2
+
   identifier-regex@1.0.1:
     dependencies:
       reserved-identifiers: 1.2.0
@@ -14079,7 +14087,7 @@ snapshots:
       lodash.clonedeep: 4.5.0
       lru-cache: 11.5.1
 
-  lru.min@1.1.4: {}
+  lru.min@1.1.5: {}
 
   luxon@3.7.2: {}
 
@@ -14652,17 +14660,17 @@ snapshots:
 
   mute-stream@0.0.8: {}
 
-  mysql2@3.22.5(@types/node@24.13.3):
+  mysql2@3.23.1(@types/node@24.13.3):
     dependencies:
       '@types/node': 24.13.3
       aws-ssl-profiles: 1.1.2
       denque: 2.1.0
       generate-function: 2.3.1
-      iconv-lite: 0.7.2
+      iconv-lite: 0.7.3
       long: 5.3.2
-      lru.min: 1.1.4
+      lru.min: 1.1.5
       named-placeholders: 1.1.6
-      sql-escaper: 1.3.3
+      sql-escaper: 1.5.1
 
   mz@2.7.0:
     dependencies:
@@ -14672,7 +14680,7 @@ snapshots:
 
   named-placeholders@1.1.6:
     dependencies:
-      lru.min: 1.1.4
+      lru.min: 1.1.5
 
   nanoid@3.3.18: {}
 
@@ -15540,17 +15548,17 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  sequelize-auto@0.8.8(sequelize@6.37.8(mariadb@3.5.3)(mysql2@3.22.5(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1)):
+  sequelize-auto@0.8.8(sequelize@6.37.8(mariadb@3.5.3)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1)):
     dependencies:
       lodash: 4.18.1
       mkdirp: 1.0.4
       reserved-words: 0.1.2
-      sequelize: 6.37.8(mariadb@3.5.3)(mysql2@3.22.5(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1)
+      sequelize: 6.37.8(mariadb@3.5.3)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1)
       yargs: 16.2.0
 
   sequelize-pool@7.1.0: {}
 
-  sequelize@6.37.8(mariadb@3.5.3)(mysql2@3.22.5(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1):
+  sequelize@6.37.8(mariadb@3.5.3)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1):
     dependencies:
       '@types/debug': 4.1.13
       '@types/validator': 13.15.10
@@ -15570,7 +15578,7 @@ snapshots:
       wkx: 0.5.0
     optionalDependencies:
       mariadb: 3.5.3
-      mysql2: 3.22.5(@types/node@24.13.3)
+      mysql2: 3.23.1(@types/node@24.13.3)
       pg: 8.22.0
       pg-hstore: 2.3.4
       sqlite3: 6.0.1
@@ -15748,7 +15756,7 @@ snapshots:
     dependencies:
       through: 2.3.8
 
-  sql-escaper@1.3.3: {}
+  sql-escaper@1.5.1: {}
 
   sqlite3@6.0.1:
     dependencies:

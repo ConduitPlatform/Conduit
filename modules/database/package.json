@@ -50,7 +50,7 @@
     "mongodb": "^7.3.0",
     "mongodb-schema": "^12.7.0",
     "mongoose": "^9.9.4",
-    "mysql2": "^3.22.5",
+    "mysql2": "^3.23.1",
     "object-hash": "^3.0.0",
     "pg": "^8.22.0",
     "pg-hstore": "^2.3.4",
