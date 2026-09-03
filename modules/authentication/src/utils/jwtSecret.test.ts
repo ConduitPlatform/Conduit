@@ -1,6 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { adoptPersistedJwtSecret, ensureAccessTokenJwtSecret } from './jwtSecret.js';
+import {
+  adoptPersistedJwtSecret,
+  decideSharedJwtSecret,
+  ensureAccessTokenJwtSecret,
+  isConfigMissingError,
+} from './jwtSecret.js';
 
 describe('ensureAccessTokenJwtSecret', () => {
   it('generates a non-empty secret when empty', () => {
@@ -56,5 +61,47 @@ describe('adoptPersistedJwtSecret', () => {
     const result = adoptPersistedJwtSecret(config, '   ');
     assert.ok(config.accessTokens.jwtSecret.length > 0);
     assert.equal(result.shouldPersist, true);
+  });
+});
+
+describe('decideSharedJwtSecret', () => {
+  it('does not persist when the persisted read failed', () => {
+    const config = { accessTokens: { jwtSecret: 'local-generated' } };
+    const result = decideSharedJwtSecret(config, { ok: false });
+    assert.equal(config.accessTokens.jwtSecret, 'local-generated');
+    assert.equal(result.shouldPersist, false);
+  });
+
+  it('adopts persisted S3CR3T after a successful read', () => {
+    const config = { accessTokens: { jwtSecret: 'local-generated' } };
+    const result = decideSharedJwtSecret(config, {
+      ok: true,
+      config: { accessTokens: { jwtSecret: 'S3CR3T' } },
+    });
+    assert.equal(config.accessTokens.jwtSecret, 'S3CR3T');
+    assert.equal(result.shouldPersist, false);
+  });
+
+  it('asks to persist when a successful read shows an empty secret', () => {
+    const config = { accessTokens: { jwtSecret: 'local-generated' } };
+    const result = decideSharedJwtSecret(config, { ok: true, config: null });
+    assert.equal(config.accessTokens.jwtSecret, 'local-generated');
+    assert.equal(result.shouldPersist, true);
+  });
+});
+
+describe('isConfigMissingError', () => {
+  it('treats the core missing-config message as empty, not failed', () => {
+    assert.equal(
+      isConfigMissingError(new Error('13 INTERNAL: Config for module not set!')),
+      true,
+    );
+  });
+
+  it('does not treat a timeout as missing config', () => {
+    assert.equal(
+      isConfigMissingError(new Error('14 UNAVAILABLE: deadline exceeded')),
+      false,
+    );
   });
 });
