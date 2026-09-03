@@ -28,7 +28,8 @@
     "build:bundle": "rimraf bundle && node ../../libraries/service-bundle/dist/cli.js generate-manifest && tsup && node ../../libraries/service-bundle/dist/cli.js copy-assets && node ../../libraries/service-bundle/dist/cli.js generate-lockfile",
     "prepare": "npm run build",
     "build:docker": "docker build -t ghcr.io/conduitplatform/chat:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/chat:latest",
-    "generateTypes": "sh build.sh"
+    "generateTypes": "sh build.sh",
+    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/utils/invitationHelpers.test.js"
   },
   "directories": {
     "lib": "src"

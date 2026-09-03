@@ -19,6 +19,7 @@ import {
 import { status } from '@grpc/grpc-js';
 import { isArray, isNil } from 'lodash-es';
 import { populateArray } from '../utils/index.js';
+import { invalidateMembershipCache } from '../utils/membershipCache.js';
 import {
   ChatMessage,
   ChatParticipantsLog,
@@ -698,8 +699,7 @@ export class AdminHandlers {
   }
 
   private async invalidateMembershipCache(roomId: string): Promise<void> {
-    if (!this.grpcSdk.state) return;
-    await this.grpcSdk.state.clearKey(`chat:membership:${roomId}`);
+    await invalidateMembershipCache(this.grpcSdk, roomId);
   }
 
   private sanitizeUserIds(userIds: (string | undefined)[]): string[] {

@@ -9,11 +9,24 @@ import {
 import {
   ConduitNumber,
   ConduitString,
+  ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { ChatRoom, InvitationToken } from '../models/index.js';
+import { invalidateMembershipCache } from '../utils/membershipCache.js';
+import {
+  validateInvitationAnswer,
+  assertInvitationReceiver,
+  assertRoomJoinable,
+  buildInvitationHookUrl,
+  buildLoginRedirectUrl,
+  isAlreadyMember,
+  replaceRoomIdInUri,
+  InvitationError,
+} from '../utils/invitationHelpers.js';
 import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
+import { Config } from '../config/index.js';
 
 export class InvitationRoutes {
   constructor(
@@ -24,7 +37,7 @@ export class InvitationRoutes {
   declareRoutes() {
     this.routingManager.route(
       {
-        path: '/hook/invitations/:answer/:invitationToken',
+        path: '/hook/chat/invitations/:answer/:invitationToken',
         description: `A webhook used to respond to a chat room invitation
                       requiring the invitation token.`,
         action: ConduitRouteActions.GET,
@@ -32,13 +45,31 @@ export class InvitationRoutes {
           answer: ConduitString.Required,
           invitationToken: ConduitString.Required,
         },
+        middlewares: ['authMiddleware?'],
         rateLimit: {
           maxRequests: 50,
           resetInterval: 3600,
         },
       },
-      new ConduitRouteReturnDefinition('InvitationResponse', 'String'),
+      new ConduitRouteReturnDefinition('InvitationHookResponse', {
+        result: ConduitString.Optional,
+        redirect: ConduitString.Optional,
+      }),
       this.answerInvitationFromHook.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/invitations/by-token/:answer/:invitationToken',
+        action: ConduitRouteActions.GET,
+        description: `Responds to a chat room invitation using the invitation token after authentication.`,
+        urlParams: {
+          answer: ConduitString.Required,
+          invitationToken: ConduitString.Required,
+        },
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('InvitationByTokenResponse', 'String'),
+      this.answerInvitationByToken.bind(this),
     );
     this.routingManager.route(
       {
@@ -106,44 +137,32 @@ export class InvitationRoutes {
   async answerInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, answer } = call.request.params;
     const { user } = call.request.context;
+
+    try {
+      validateInvitationAnswer(answer);
+    } catch (err) {
+      if (err instanceof InvitationError) {
+        throw new GrpcError(err.code, err.message);
+      }
+      throw err;
+    }
+
     const invitationTokenDoc: InvitationToken | null =
       await InvitationToken.getInstance().findOne({
         _id: id,
-        receiver: user._id,
       });
     if (isNil(invitationTokenDoc)) {
       throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
     }
-    let message;
-    const receiver = user._id;
-    const accepted = answer === 'accept';
-    const chatRoom = await ChatRoom.getInstance().findOne({
-      _id: invitationTokenDoc.room as string,
-    });
-    if (isNil(chatRoom)) {
-      throw new GrpcError(status.NOT_FOUND, 'Chat room does not exist');
-    }
-    if (!isNil(invitationTokenDoc) && accepted) {
-      chatRoom.participants.push(user);
-      await ChatRoom.getInstance().findByIdAndUpdate(chatRoom._id, chatRoom);
-      message = 'Invitation accepted';
-      this.grpcSdk.router?.socketPush({
-        event: 'join-room',
-        receivers: [user._id],
-        rooms: [chatRoom._id],
-      });
-      this.grpcSdk.router?.socketPush({
-        event: 'room-joined',
-        receivers: [user._id],
-        rooms: [],
-        data: JSON.stringify({ room: chatRoom._id, roomName: chatRoom.name }),
-      });
-    } else {
-      message = 'Invitation declined';
-    }
 
-    const query = { $and: [{ room: chatRoom._id }, { receiver: receiver }] };
-    await InvitationToken.getInstance().deleteMany(query);
+    const receiver = invitationTokenDoc.receiver as string;
+    this.ensureInvitationReceiver(user._id, receiver);
+
+    const message = await this.processInvitationAnswer(
+      invitationTokenDoc,
+      answer,
+      user._id,
+    );
     return message;
   }
 
@@ -152,54 +171,211 @@ export class InvitationRoutes {
   ): Promise<UnparsedRouterResponse> {
     const { invitationToken, answer } = call.request.params;
     const { user } = call.request.context;
+    const config = ConfigController.getInstance().config;
+
+    try {
+      validateInvitationAnswer(answer);
+    } catch (err) {
+      if (err instanceof InvitationError) {
+        throw new GrpcError(err.code, err.message);
+      }
+      throw err;
+    }
+
+    if (isNil(user)) {
+      return this.redirectUnauthenticatedUser(answer, invitationToken, config);
+    }
+
     const invitationTokenDoc: InvitationToken | null =
       await InvitationToken.getInstance().findOne({
         token: invitationToken,
-        receiver: user._id,
       });
     if (isNil(invitationTokenDoc)) {
       throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
     }
-    const roomId: string = invitationTokenDoc?.room as string;
+
+    const receiver = invitationTokenDoc.receiver as string;
+    this.ensureInvitationReceiver(user._id, receiver);
+
+    const roomId = invitationTokenDoc.room as string;
+    const message = await this.processInvitationAnswer(
+      invitationTokenDoc,
+      answer,
+      user._id,
+    );
+    return this.redirectAfterAnswer(answer, roomId, config, message);
+  }
+
+  async answerInvitationByToken(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { invitationToken, answer } = call.request.params;
+    const { user } = call.request.context;
+
+    try {
+      validateInvitationAnswer(answer);
+    } catch (err) {
+      if (err instanceof InvitationError) {
+        throw new GrpcError(err.code, err.message);
+      }
+      throw err;
+    }
+
+    const invitationTokenDoc: InvitationToken | null =
+      await InvitationToken.getInstance().findOne({
+        token: invitationToken,
+      });
+    if (isNil(invitationTokenDoc)) {
+      throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
+    }
+
+    const receiver = invitationTokenDoc.receiver as string;
+    this.ensureInvitationReceiver(user._id, receiver);
+
+    const message = await this.processInvitationAnswer(
+      invitationTokenDoc,
+      answer,
+      user._id,
+    );
+    return message;
+  }
+
+  private async processInvitationAnswer(
+    invitationTokenDoc: InvitationToken,
+    answer: string,
+    receiverId: string,
+  ): Promise<string> {
+    const roomId = invitationTokenDoc.room as string;
     const chatRoom = await ChatRoom.getInstance()
       .findOne({ _id: roomId })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    if (isNil(chatRoom)) {
-      throw new GrpcError(status.NOT_FOUND, 'Chat room does not exist');
+
+    const receiver = invitationTokenDoc.receiver as string;
+    if (chatRoom?.deleted) {
+      await InvitationToken.getInstance().deleteMany({
+        $and: [{ room: roomId }, { receiver }],
+      });
     }
-    const receiver = invitationTokenDoc.receiver;
-    if ((chatRoom.participants as string[]).indexOf(receiver as string) !== -1) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        `User is already a member of target chat room`,
-      );
-    }
+    this.ensureRoomJoinable(chatRoom);
+
     const accepted = answer === 'accept';
-    let message;
-    if (!isNil(invitationTokenDoc) && accepted) {
-      (chatRoom.participants as string[]).push(receiver as string);
+    const participants = chatRoom.participants as string[];
+    const alreadyMember = isAlreadyMember(participants, receiver);
+
+    if (alreadyMember) {
+      await InvitationToken.getInstance().deleteMany({
+        $and: [{ room: roomId }, { receiver }],
+      });
+      return accepted ? 'Invitation accepted' : 'Invitation declined';
+    }
+
+    let message: string;
+    if (accepted) {
+      (chatRoom.participants as string[]).push(String(receiver));
       await ChatRoom.getInstance().findByIdAndUpdate(roomId, chatRoom);
       message = 'Invitation accepted';
 
+      await invalidateMembershipCache(this.grpcSdk, roomId);
+
       this.grpcSdk.router?.socketPush({
         event: 'join-room',
-        receivers: [user._id],
+        receivers: [receiverId],
         rooms: [chatRoom._id],
       });
       this.grpcSdk.router?.socketPush({
         event: 'room-joined',
-        receivers: [user._id],
+        receivers: [receiverId],
         rooms: [],
         data: JSON.stringify({ room: chatRoom._id, roomName: chatRoom.name }),
       });
     } else {
       message = 'Invitation declined';
     }
-    const query = { $and: [{ room: roomId }, { receiver: receiver }] };
-    await InvitationToken.getInstance().deleteMany(query);
+
+    await InvitationToken.getInstance().deleteMany({
+      $and: [{ room: roomId }, { receiver }],
+    });
     return message;
+  }
+
+  private ensureInvitationReceiver(userId: unknown, receiver: unknown): void {
+    try {
+      assertInvitationReceiver(userId, receiver);
+    } catch (err) {
+      if (err instanceof InvitationError) {
+        throw new GrpcError(err.code, err.message);
+      }
+      throw err;
+    }
+  }
+
+  private ensureRoomJoinable<T extends { deleted?: boolean }>(
+    room: T | null,
+  ): asserts room is T {
+    try {
+      assertRoomJoinable(room);
+    } catch (err) {
+      if (err instanceof InvitationError) {
+        throw new GrpcError(err.code, err.message);
+      }
+      throw err;
+    }
+  }
+
+  private async resolveInvitationHookUrl(
+    answer: string,
+    invitationToken: string,
+  ): Promise<string> {
+    const routerConfig = await this.grpcSdk.config.get('router');
+    return buildInvitationHookUrl(
+      routerConfig.hostUrl,
+      answer as 'accept' | 'decline',
+      invitationToken,
+    );
+  }
+
+  private async redirectUnauthenticatedUser(
+    answer: string,
+    invitationToken: string,
+    config: Config,
+  ): Promise<UnparsedRouterResponse> {
+    const loginUri = (config.explicit_room_joins.redirect.login_uri || '').replace(
+      /\/$/,
+      '',
+    );
+    const hookUrl = await this.resolveInvitationHookUrl(answer, invitationToken);
+    try {
+      const redirectUrl = buildLoginRedirectUrl(
+        loginUri,
+        answer,
+        invitationToken,
+        hookUrl,
+      );
+      return { redirect: redirectUrl };
+    } catch (err) {
+      if (err instanceof InvitationError) {
+        throw new GrpcError(err.code, err.message);
+      }
+      throw err;
+    }
+  }
+
+  private redirectAfterAnswer(
+    answer: string,
+    roomId: string,
+    config: Config,
+    fallbackMessage: string,
+  ): UnparsedRouterResponse {
+    const redirectTemplate =
+      answer === 'accept'
+        ? config.explicit_room_joins.redirect.accept_uri
+        : config.explicit_room_joins.redirect.decline_uri;
+    if (!redirectTemplate) {
+      return { result: fallbackMessage };
+    }
+    return { redirect: replaceRoomIdInUri(redirectTemplate as string, roomId) };
   }
 
   async cancelInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
