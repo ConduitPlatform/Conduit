@@ -25,6 +25,7 @@
     "build:bundle": "rimraf bundle && node ../../libraries/service-bundle/dist/cli.js generate-manifest && tsup && node ../../libraries/service-bundle/dist/cli.js copy-assets && node ../../libraries/service-bundle/dist/cli.js generate-lockfile",
     "prepare": "npm run build",
     "generateTypes": "sh build.sh",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/controllers/*.test.js",
     "build:docker": "docker build -t ghcr.io/conduitplatform/functions:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/functions:latest"
   },
   "directories": {
@@ -41,8 +42,11 @@
     "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.1",
     "axios": "^1.18.0",
+    "bullmq": "^5.79.0",
     "convict": "^6.2.5",
+    "cron-parser": "^4.9.0",
     "escape-string-regexp": "^5.0.0",
+    "ioredis": "^5.11.1",
     "lodash-es": "^4.18.1"
   },
   "devDependencies": {

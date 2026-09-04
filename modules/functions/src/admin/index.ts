@@ -21,6 +21,7 @@ import { status } from '@grpc/grpc-js';
 import { FunctionExecutions, Functions } from '../models/index.js';
 import { FunctionController } from '../controllers/function.controller.js';
 import { compileUserFunctionScript } from '../sandbox/functionSandbox.js';
+import { normalizeCronInputs } from '../controllers/cron.utils.js';
 
 import escapeStringRegexp from 'escape-string-regexp';
 
@@ -48,11 +49,15 @@ export class AdminHandlers {
     } catch {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid function code');
     }
+    let normalizedInputs = inputs;
+    if (functionType === 'cron') {
+      normalizedInputs = normalizeCronInputs(inputs);
+    }
     const query = {
       name,
       functionType,
       functionCode,
-      inputs,
+      inputs: normalizedInputs,
       returns,
       timeout: timeout ?? 180000,
     };
@@ -133,6 +138,9 @@ export class AdminHandlers {
       returns: returns ?? func.returns,
       timeout: timeout ?? func.timeout,
     };
+    if (func.functionType === 'cron') {
+      query.inputs = normalizeCronInputs(query.inputs);
+    }
     try {
       compileUserFunctionScript(query.functionCode);
     } catch {
