@@ -36,6 +36,7 @@ import {
 import { OAUTH_CALLBACK } from '../../../constants/index.js';
 import { AuthUtils } from '../../../utils/index.js';
 import { verifyAppleIdentityToken } from '../../../utils/appleIdentityToken.js';
+import { resolveAppleSigningKey } from '../../../utils/appleSigningKey.js';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   private readonly jwksClient = jwksRsa({
@@ -269,17 +270,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   }
 
   private async loadPublicKeyFromToken(id_token: string): Promise<string> {
-    const decoded = jwt.decode(id_token, { complete: true });
-    const kid = decoded?.header?.kid;
-    if (!kid) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
-    }
-    try {
-      const key = await this.jwksClient.getSigningKey(kid);
-      return key.getPublicKey();
-    } catch {
-      throw new GrpcError(status.UNAVAILABLE, 'Unable to verify identity token');
-    }
+    return resolveAppleSigningKey(id_token, kid => this.jwksClient.getSigningKey(kid));
   }
 
   private buildAppleClientSecret(providerClient: AppleClientCredentials): string {

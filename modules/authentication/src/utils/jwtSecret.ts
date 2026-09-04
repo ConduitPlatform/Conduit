@@ -22,8 +22,7 @@ export function isConfigMissingError(error: unknown): boolean {
 
 /**
  * Prefer a persisted non-empty secret (including legacy S3CR3T).
- * Only generate when both persisted and local values are empty.
- * shouldPersist is true only when the persisted secret is still empty.
+ * Does not mint. shouldPersist is true only when persist is still empty.
  */
 export function adoptPersistedJwtSecret(
   config: { accessTokens: { jwtSecret?: string | null } },
@@ -33,18 +32,26 @@ export function adoptPersistedJwtSecret(
     config.accessTokens.jwtSecret = persistedSecret!;
     return { shouldPersist: false };
   }
-  if (isJwtSecretEmpty(config.accessTokens.jwtSecret)) {
-    ensureAccessTokenJwtSecret(config);
-  }
   return { shouldPersist: true };
 }
 
-/** Failed reads must not look like an empty secret (do not persist). */
+export type JwtSecretReconcileMode = 'startup' | 'update';
+
+/**
+ * Failed reads must not look like an empty secret (do not persist).
+ * startup: adopt a persisted non-empty secret (including S3CR3T).
+ * update: keep an already-applied local secret so setConfig/bus cannot
+ * revert a mint while Core still has the old persist value.
+ */
 export function decideSharedJwtSecret(
   config: { accessTokens: { jwtSecret?: string | null } },
   read: PersistedConfigRead<{ accessTokens?: { jwtSecret?: string | null } }>,
+  mode: JwtSecretReconcileMode = 'startup',
 ): { shouldPersist: boolean } {
   if (!read.ok) {
+    return { shouldPersist: false };
+  }
+  if (mode === 'update' && !isJwtSecretEmpty(config.accessTokens.jwtSecret)) {
     return { shouldPersist: false };
   }
   return adoptPersistedJwtSecret(config, read.config?.accessTokens?.jwtSecret);
