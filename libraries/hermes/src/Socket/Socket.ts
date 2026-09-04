@@ -10,6 +10,7 @@ import {
   EventResponse,
   isInstanceOfEventResponse,
   JoinRoomResponse,
+  LeaveRoomResponse,
   SocketPush,
 } from '../interfaces/index.js';
 import ObjectHash from 'object-hash';
@@ -184,11 +185,13 @@ export class SocketController extends ConduitRouter {
   }
 
   async handleSocketPush(push: SocketPush) {
+    const localOnly = push.localOnly === true;
     if (push.event === 'join-room') {
       if (push.rooms.length === 0) return;
       const filteredSockets = await this.findAndFilterSockets(
         push.receivers,
         push.namespace,
+        localOnly,
       );
       for (const socket of filteredSockets) {
         ConduitGrpcSdk.Logger.info(
@@ -203,6 +206,7 @@ export class SocketController extends ConduitRouter {
         const filteredSockets = await this.findAndFilterSockets(
           push.receivers,
           push.namespace,
+          localOnly,
         );
         for (const socket of filteredSockets) {
           for (const room of push.rooms) {
@@ -221,7 +225,12 @@ export class SocketController extends ConduitRouter {
         ConduitGrpcSdk.Logger.info(
           `Emitting event: ${push.event} to all sockets in namespace: ${push.namespace}`,
         );
-        this.io.of(push.namespace).emit(push.event, push.data);
+        const nsp = this.io.of(push.namespace);
+        if (localOnly) {
+          nsp.local.emit(push.event, push.data);
+        } else {
+          nsp.emit(push.event, push.data);
+        }
       } else {
         if (push.rooms.length !== 0) {
           ConduitGrpcSdk.Logger.info(
@@ -229,12 +238,18 @@ export class SocketController extends ConduitRouter {
               ', ',
             )} in namespace: ${push.namespace}`,
           );
-          this.io.of(push.namespace).to(push.rooms).emit(push.event, push.data);
+          const target = this.io.of(push.namespace).to(push.rooms);
+          if (localOnly) {
+            target.local.emit(push.event, push.data);
+          } else {
+            target.emit(push.event, push.data);
+          }
         }
         if (push.receivers.length !== 0) {
           const filteredSockets = await this.findAndFilterSockets(
             push.receivers,
             push.namespace,
+            localOnly,
           );
           for (const socket of filteredSockets) {
             ConduitGrpcSdk.Logger.info(
@@ -248,7 +263,7 @@ export class SocketController extends ConduitRouter {
   }
 
   private async handleResponse(
-    res: EventResponse | JoinRoomResponse,
+    res: EventResponse | JoinRoomResponse | LeaveRoomResponse,
     socket: Socket,
     namespace: string,
   ) {
@@ -307,8 +322,10 @@ export class SocketController extends ConduitRouter {
   async findAndFilterSockets(
     userIds: string[],
     namespace: string,
+    localOnly: boolean = false,
   ): Promise<RemoteSocket<any, any>[]> {
-    const sockets = await this.io.of(namespace).fetchSockets();
+    const nsp = this.io.of(namespace);
+    const sockets = localOnly ? await nsp.local.fetchSockets() : await nsp.fetchSockets();
     const userIdSet = new Set(userIds);
     return sockets.filter(socket => {
       if (socket.data && socket.data.user) {
