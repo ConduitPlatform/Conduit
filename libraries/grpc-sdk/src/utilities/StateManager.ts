@@ -94,6 +94,18 @@ export class StateManager {
     }
   }
 
+  /**
+   * Auto-extends the lease while `fn` runs. `fn` must check `signal.aborted`
+   * after awaited work and must not publish a result after the lease is lost.
+   */
+  async usingLock<T>(
+    resource: string,
+    ttl: number,
+    fn: (signal: AbortSignal) => Promise<T>,
+  ): Promise<T> {
+    return this.redLock.using([resource], ttl, async signal => fn(signal));
+  }
+
   async modifyState(modifier: (state: Indexable) => Promise<Indexable>) {
     const lock = await this.acquireLock(KNOWN_LOCKS.STATE_MODIFICATION);
     try {

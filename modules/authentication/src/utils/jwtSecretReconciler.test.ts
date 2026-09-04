@@ -1,7 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { merge } from 'lodash-es';
-import { reconcileSharedAccessTokenJwtSecret } from './jwtSecretReconciler.js';
+import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
+import {
+  JWT_SECRET_UNAVAILABLE,
+  reconcileSharedAccessTokenJwtSecret,
+} from './jwtSecretReconciler.js';
 import { ensureAccessTokenJwtSecret, type PersistedConfigRead } from './jwtSecret.js';
 
 type AuthConfig = { accessTokens: { jwtSecret?: string | null }; active?: boolean };
@@ -19,9 +24,17 @@ function serializeLock() {
   };
 }
 
+function isUnavailable(error: unknown) {
+  return (
+    error instanceof GrpcError &&
+    error.code === status.UNAVAILABLE &&
+    error.message === JWT_SECRET_UNAVAILABLE
+  );
+}
+
 describe('reconcileSharedAccessTokenJwtSecret', () => {
   it('first install persists one secret under the lock', async () => {
-    let store: AuthConfig | null = null;
+    const persist = { current: null as AuthConfig | null };
     const convict = emptyConfig();
     const controller = { config: emptyConfig() };
     let persistCalls = 0;
@@ -29,7 +42,7 @@ describe('reconcileSharedAccessTokenJwtSecret', () => {
 
     await reconcileSharedAccessTokenJwtSecret(convict, {
       configInitialized: false,
-      readPersisted: async () => ({ ok: true, config: store }),
+      readPersisted: async () => ({ ok: true, config: persist.current }),
       syncConfig: config => {
         convict.accessTokens.jwtSecret = config.accessTokens.jwtSecret;
         controller.config = { ...config, accessTokens: { ...config.accessTokens } };
@@ -38,7 +51,7 @@ describe('reconcileSharedAccessTokenJwtSecret', () => {
         persistCalls += 1;
         assert.equal(locked, true);
         assert.ok(config.accessTokens.jwtSecret?.trim());
-        store = {
+        persist.current = {
           accessTokens: { jwtSecret: config.accessTokens.jwtSecret },
           active: config.active,
         };
@@ -52,26 +65,27 @@ describe('reconcileSharedAccessTokenJwtSecret', () => {
     });
 
     assert.equal(persistCalls, 1);
-    assert.ok(store?.accessTokens.jwtSecret?.trim());
-    assert.equal(convict.accessTokens.jwtSecret, store!.accessTokens.jwtSecret);
-    assert.equal(controller.config.accessTokens.jwtSecret, store!.accessTokens.jwtSecret);
+    const persistedSecret = persist.current?.accessTokens.jwtSecret;
+    assert.ok(persistedSecret?.trim());
+    assert.equal(convict.accessTokens.jwtSecret, persistedSecret);
+    assert.equal(controller.config.accessTokens.jwtSecret, persistedSecret);
   });
 
   it('two replicas converge on the same persisted secret', async () => {
-    let store: AuthConfig | null = null;
+    const persist = { current: null as AuthConfig | null };
     const lock = serializeLock();
     const replica = async () => {
       const convict = emptyConfig();
       const controller = { config: emptyConfig() };
       await reconcileSharedAccessTokenJwtSecret(convict, {
         configInitialized: false,
-        readPersisted: async () => ({ ok: true, config: store }),
+        readPersisted: async () => ({ ok: true, config: persist.current }),
         syncConfig: config => {
           convict.accessTokens.jwtSecret = config.accessTokens.jwtSecret;
           controller.config = { ...config, accessTokens: { ...config.accessTokens } };
         },
         persistOverride: async config => {
-          store = {
+          persist.current = {
             accessTokens: { jwtSecret: config.accessTokens.jwtSecret },
             active: config.active,
           };
@@ -82,9 +96,10 @@ describe('reconcileSharedAccessTokenJwtSecret', () => {
     };
 
     const [a, b] = await Promise.all([replica(), replica()]);
-    assert.ok(store?.accessTokens.jwtSecret?.trim());
-    assert.equal(a.convict.accessTokens.jwtSecret, store!.accessTokens.jwtSecret);
-    assert.equal(b.convict.accessTokens.jwtSecret, store!.accessTokens.jwtSecret);
+    const sharedSecret = persist.current?.accessTokens.jwtSecret;
+    assert.ok(sharedSecret?.trim());
+    assert.equal(a.convict.accessTokens.jwtSecret, sharedSecret);
+    assert.equal(b.convict.accessTokens.jwtSecret, sharedSecret);
     assert.equal(
       a.controller.config.accessTokens.jwtSecret,
       b.controller.config.accessTokens.jwtSecret,
@@ -193,13 +208,15 @@ describe('reconcileSharedAccessTokenJwtSecret', () => {
     assert.equal(persistCalls, 0);
   });
 
-  it('failed initial read keeps a non-empty secret and does not persist', async () => {
-    const convict = emptyConfig();
+  it('failed initial read with a non-empty secret keeps it and does not persist', async () => {
+    const convict = { accessTokens: { jwtSecret: 'S3CR3T' } };
     let persistCalls = 0;
+    let syncCalls = 0;
     await reconcileSharedAccessTokenJwtSecret(convict, {
       configInitialized: false,
       readPersisted: async () => ({ ok: false }),
       syncConfig: config => {
+        syncCalls += 1;
         convict.accessTokens.jwtSecret = config.accessTokens.jwtSecret;
       },
       persistOverride: async () => {
@@ -209,20 +226,175 @@ describe('reconcileSharedAccessTokenJwtSecret', () => {
         throw new Error('lock should not run');
       },
     });
-    assert.ok(convict.accessTokens.jwtSecret?.trim());
+    assert.equal(convict.accessTokens.jwtSecret, 'S3CR3T');
+    assert.equal(syncCalls, 1);
     assert.equal(persistCalls, 0);
   });
 
-  it('failed inside-lock read keeps a local mint and does not persist', async () => {
+  it('failed initial read with an empty secret rejects without mutating', async () => {
     const convict = emptyConfig();
     let persistCalls = 0;
+    let syncCalls = 0;
+    await assert.rejects(
+      () =>
+        reconcileSharedAccessTokenJwtSecret(convict, {
+          configInitialized: false,
+          readPersisted: async () => ({ ok: false }),
+          syncConfig: () => {
+            syncCalls += 1;
+          },
+          persistOverride: async () => {
+            persistCalls += 1;
+          },
+          withLock: async () => {
+            throw new Error('lock should not run');
+          },
+        }),
+      isUnavailable,
+    );
+    assert.equal(convict.accessTokens.jwtSecret, '');
+    assert.equal(syncCalls, 0);
+    assert.equal(persistCalls, 0);
+  });
+
+  it('failed inside-lock read rejects without mutating', async () => {
+    const convict = emptyConfig();
+    let persistCalls = 0;
+    let syncCalls = 0;
     let reads = 0;
+    await assert.rejects(
+      () =>
+        reconcileSharedAccessTokenJwtSecret(convict, {
+          configInitialized: false,
+          readPersisted: async () => {
+            reads += 1;
+            return reads === 1 ? { ok: true, config: null } : { ok: false };
+          },
+          syncConfig: () => {
+            syncCalls += 1;
+          },
+          persistOverride: async () => {
+            persistCalls += 1;
+          },
+          withLock: async (_resource, _ttl, fn) => fn(),
+        }),
+      isUnavailable,
+    );
+    assert.equal(convict.accessTokens.jwtSecret, '');
+    assert.equal(syncCalls, 0);
+    assert.equal(persistCalls, 0);
+  });
+
+  it('persist throw rejects without publishing the candidate', async () => {
+    const convict = emptyConfig();
+    let syncCalls = 0;
+    await assert.rejects(
+      () =>
+        reconcileSharedAccessTokenJwtSecret(convict, {
+          configInitialized: false,
+          readPersisted: async () => ({ ok: true, config: null }),
+          syncConfig: () => {
+            syncCalls += 1;
+          },
+          persistOverride: async () => {
+            throw new Error('core write failed');
+          },
+          withLock: async (_resource, _ttl, fn) => fn(),
+        }),
+      (error: unknown) => error instanceof Error && error.message === 'core write failed',
+    );
+    assert.equal(convict.accessTokens.jwtSecret, '');
+    assert.equal(syncCalls, 0);
+  });
+
+  it('failed read-back after persist rejects without publishing the candidate', async () => {
+    const convict = emptyConfig();
+    let persistCalls = 0;
+    let syncCalls = 0;
+    let reads = 0;
+    await assert.rejects(
+      () =>
+        reconcileSharedAccessTokenJwtSecret(convict, {
+          configInitialized: false,
+          readPersisted: async () => {
+            reads += 1;
+            if (reads <= 2) {
+              return { ok: true, config: null };
+            }
+            return { ok: false };
+          },
+          syncConfig: () => {
+            syncCalls += 1;
+          },
+          persistOverride: async () => {
+            persistCalls += 1;
+          },
+          withLock: async (_resource, _ttl, fn) => fn(),
+        }),
+      isUnavailable,
+    );
+    assert.equal(convict.accessTokens.jwtSecret, '');
+    assert.equal(persistCalls, 1);
+    assert.equal(syncCalls, 0);
+  });
+
+  it('empty read-back after persist rejects without publishing the candidate', async () => {
+    const convict = emptyConfig();
+    let persistCalls = 0;
+    let syncCalls = 0;
+    await assert.rejects(
+      () =>
+        reconcileSharedAccessTokenJwtSecret(convict, {
+          configInitialized: false,
+          readPersisted: async () => ({ ok: true, config: null }),
+          syncConfig: () => {
+            syncCalls += 1;
+          },
+          persistOverride: async () => {
+            persistCalls += 1;
+          },
+          withLock: async (_resource, _ttl, fn) => fn(),
+        }),
+      isUnavailable,
+    );
+    assert.equal(convict.accessTokens.jwtSecret, '');
+    assert.equal(persistCalls, 1);
+    assert.equal(syncCalls, 0);
+  });
+
+  it('successful read-back syncs the verified secret once', async () => {
+    const persist = { current: null as AuthConfig | null };
+    const convict = emptyConfig();
+    let syncCalls = 0;
     await reconcileSharedAccessTokenJwtSecret(convict, {
       configInitialized: false,
-      readPersisted: async () => {
-        reads += 1;
-        return reads === 1 ? { ok: true, config: null } : { ok: false };
+      readPersisted: async () => ({ ok: true, config: persist.current }),
+      syncConfig: config => {
+        syncCalls += 1;
+        convict.accessTokens.jwtSecret = config.accessTokens.jwtSecret;
       },
+      persistOverride: async config => {
+        persist.current = {
+          accessTokens: { jwtSecret: config.accessTokens.jwtSecret },
+          active: config.active,
+        };
+      },
+      withLock: async (_resource, _ttl, fn) => fn(),
+    });
+    assert.equal(syncCalls, 1);
+    assert.ok(convict.accessTokens.jwtSecret?.trim());
+    assert.equal(convict.accessTokens.jwtSecret, persist.current?.accessTokens.jwtSecret);
+  });
+
+  it('adopts a different peer value from the persist read-back', async () => {
+    const convict = emptyConfig();
+    let persistCalls = 0;
+    await reconcileSharedAccessTokenJwtSecret(convict, {
+      configInitialized: false,
+      readPersisted: async () =>
+        persistCalls === 0
+          ? { ok: true, config: null }
+          : { ok: true, config: { accessTokens: { jwtSecret: 'peer-won' } } },
       syncConfig: config => {
         convict.accessTokens.jwtSecret = config.accessTokens.jwtSecret;
       },
@@ -231,8 +403,8 @@ describe('reconcileSharedAccessTokenJwtSecret', () => {
       },
       withLock: async (_resource, _ttl, fn) => fn(),
     });
-    assert.ok(convict.accessTokens.jwtSecret?.trim());
-    assert.equal(persistCalls, 0);
+    assert.equal(persistCalls, 1);
+    assert.equal(convict.accessTokens.jwtSecret, 'peer-won');
   });
 
   it('activation PATCH uses update semantics and keeps persist', async () => {

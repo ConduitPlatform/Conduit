@@ -61,11 +61,11 @@ import {
   type ImportResult,
 } from '@conduitplatform/module-tools';
 import {
-  decideSharedJwtSecret,
   ensureAccessTokenJwtSecret,
   isConfigMissingError,
   type PersistedConfigRead,
 } from './utils/jwtSecret.js';
+import { reconcileSharedAccessTokenJwtSecret } from './utils/jwtSecretReconciler.js';
 import { TeamsAdmin } from './admin/team.js';
 import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
@@ -231,7 +231,9 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   async preConfig(config: Config) {
-    ensureAccessTokenJwtSecret(config);
+    if (this.configInitialized) {
+      ensureAccessTokenJwtSecret(config);
+    }
     if (config.captcha?.hasOwnProperty('provider')) {
       delete (config as Config & { captcha: { provider?: string } }).captcha.provider;
     }
@@ -323,53 +325,37 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   /**
-   * Replicas must share one jwtSecret. Adopt a persisted non-empty secret
-   * (including legacy S3CR3T). Generate and persist only when a successful
-   * read shows the persisted secret is empty. A failed read must not persist.
+   * Replicas must share one jwtSecret. Startup adopts persist or mints
+   * once under lock. Later setConfig/bus updates keep the applied secret.
+   * A failed read must not persist.
    */
   private async ensureSharedAccessTokenJwtSecret(config: Config) {
-    const persisted = await this.readPersistedAuthenticationConfig();
-    const { shouldPersist } = decideSharedJwtSecret(config, persisted);
-    ConfigController.getInstance().config = config;
-    if (!shouldPersist) {
-      return;
-    }
-
-    const persistIfStillEmpty = async () => {
-      const again = await this.readPersistedAuthenticationConfig();
-      if (!again.ok) {
-        return;
-      }
-      if (again.config?.accessTokens?.jwtSecret?.trim()) {
-        config.accessTokens.jwtSecret = again.config.accessTokens.jwtSecret;
-        ConfigController.getInstance().config = config;
-        return;
-      }
-      if (this.config) {
-        this.config.load(config);
+    await reconcileSharedAccessTokenJwtSecret(config, {
+      configInitialized: this.configInitialized,
+      readPersisted: () => this.readPersistedAuthenticationConfig(),
+      syncConfig: next => {
+        if (this.config) {
+          this.config.load(next);
+        }
+        ConfigController.getInstance().config = next;
+      },
+      persistOverride: async next => {
+        if (!this.config) {
+          throw new Error('Authentication config schema is not initialized');
+        }
         await this.grpcSdk.config.configure(
-          config,
+          next,
           convictConfigParser(this.config.getSchema()),
           true,
         );
-        const after = await this.readPersistedAuthenticationConfig();
-        if (after.ok && after.config?.accessTokens?.jwtSecret?.trim()) {
-          config.accessTokens.jwtSecret = after.config.accessTokens.jwtSecret;
+      },
+      withLock: (resource, ttl, fn) => {
+        if (!this.grpcSdk.state) {
+          throw new Error('State manager is not initialized');
         }
-        ConfigController.getInstance().config = config;
-        this.config.load(config);
-      }
-    };
-
-    if (this.grpcSdk.state) {
-      await this.grpcSdk.state.withLock(
-        'authentication:jwtSecret',
-        10_000,
-        persistIfStillEmpty,
-      );
-    } else {
-      await persistIfStillEmpty();
-    }
+        return this.grpcSdk.state.withLock(resource, ttl, fn);
+      },
+    });
   }
 
   initMonitors() {

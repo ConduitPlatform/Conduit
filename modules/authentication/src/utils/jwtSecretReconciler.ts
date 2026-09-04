@@ -1,8 +1,13 @@
+import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import {
+  decideSharedJwtSecret,
   ensureAccessTokenJwtSecret,
   isJwtSecretEmpty,
   type PersistedConfigRead,
 } from './jwtSecret.js';
+
+export const JWT_SECRET_UNAVAILABLE = 'Unable to reconcile access token signing secret';
 
 export type JwtSecretConfig = { accessTokens: { jwtSecret?: string | null } };
 
@@ -23,6 +28,17 @@ function persistedSecret<T extends JwtSecretConfig>(
   return read.config?.accessTokens?.jwtSecret ?? null;
 }
 
+function cloneConfig<T extends JwtSecretConfig>(config: T): T {
+  return {
+    ...config,
+    accessTokens: { ...config.accessTokens },
+  };
+}
+
+function throwUnavailable(): never {
+  throw new GrpcError(status.UNAVAILABLE, JWT_SECRET_UNAVAILABLE);
+}
+
 export async function reconcileSharedAccessTokenJwtSecret<T extends JwtSecretConfig>(
   config: T,
   deps: JwtSecretReconcilerDeps<T>,
@@ -30,25 +46,21 @@ export async function reconcileSharedAccessTokenJwtSecret<T extends JwtSecretCon
   const persisted = await deps.readPersisted();
 
   if (!persisted.ok) {
-    ensureAccessTokenJwtSecret(config);
-    deps.syncConfig(config);
-    return;
-  }
-
-  if (deps.configInitialized) {
     if (isJwtSecretEmpty(config.accessTokens.jwtSecret)) {
-      const existing = persistedSecret(persisted);
-      if (!isJwtSecretEmpty(existing)) {
-        config.accessTokens.jwtSecret = existing!;
-      }
+      throwUnavailable();
     }
     deps.syncConfig(config);
     return;
   }
 
-  const existing = persistedSecret(persisted);
-  if (!isJwtSecretEmpty(existing)) {
-    config.accessTokens.jwtSecret = existing!;
+  const mode = deps.configInitialized ? 'update' : 'startup';
+  const decision = decideSharedJwtSecret(config, persisted, mode);
+  if (!decision.shouldPersist) {
+    deps.syncConfig(config);
+    return;
+  }
+
+  if (deps.configInitialized) {
     deps.syncConfig(config);
     return;
   }
@@ -56,9 +68,7 @@ export async function reconcileSharedAccessTokenJwtSecret<T extends JwtSecretCon
   await deps.withLock('authentication:jwtSecret', 10_000, async () => {
     const again = await deps.readPersisted();
     if (!again.ok) {
-      ensureAccessTokenJwtSecret(config);
-      deps.syncConfig(config);
-      return;
+      throwUnavailable();
     }
     const peer = persistedSecret(again);
     if (!isJwtSecretEmpty(peer)) {
@@ -66,13 +76,17 @@ export async function reconcileSharedAccessTokenJwtSecret<T extends JwtSecretCon
       deps.syncConfig(config);
       return;
     }
-    ensureAccessTokenJwtSecret(config);
-    deps.syncConfig(config);
-    await deps.persistOverride(config);
+
+    const candidate = cloneConfig(config);
+    ensureAccessTokenJwtSecret(candidate);
+    await deps.persistOverride(candidate);
+
     const after = await deps.readPersisted();
-    if (after.ok && !isJwtSecretEmpty(after.config?.accessTokens?.jwtSecret)) {
-      config.accessTokens.jwtSecret = after.config!.accessTokens!.jwtSecret!;
+    const verified = persistedSecret(after);
+    if (!after.ok || isJwtSecretEmpty(verified)) {
+      throwUnavailable();
     }
+    config.accessTokens.jwtSecret = verified!;
     deps.syncConfig(config);
   });
 }
