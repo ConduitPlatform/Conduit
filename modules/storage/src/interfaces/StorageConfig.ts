@@ -5,6 +5,7 @@ export interface StorageConfig {
    */
   google: {
     serviceAccountKeyPath: string;
+    serviceAccountKeyJson: string;
   };
   aws: {
     accessKeyId: string;

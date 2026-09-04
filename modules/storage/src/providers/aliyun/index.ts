@@ -157,15 +157,13 @@ export class AliyunStorage implements IStorageProvider {
     });
   }
 
-  async getPublicUrl(fileName: string, containerIsPublic?: boolean): Promise<string> {
-    if (containerIsPublic) {
-      return this._ossClient.getObjectUrl(fileName);
+  async getPublicUrl(
+    fileName: string,
+    containerIsPublic?: boolean,
+  ): Promise<string | Error> {
+    if (!containerIsPublic) {
+      return new Error('Public URL is only available for files in public containers');
     }
-
-    // For private containers with public files, generate long-lived signed URL (100 years)
-    return this._ossClient.signatureUrl(fileName, {
-      expires: 3600 * 24 * 365 * 100,
-      method: 'GET',
-    });
+    return this._ossClient.getObjectUrl(fileName);
   }
 }
