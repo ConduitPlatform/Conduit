@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist-test",
+    "rootDir": "./src",
+    "declaration": false,
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": [
+    "src/event-relays/constants.ts",
+    "src/event-relays/validationError.ts",
+    "src/event-relays/path.ts",
+    "src/event-relays/template.ts",
+    "src/event-relays/validation.ts",
+    "src/event-relays/rooms.ts",
+    "src/event-relays/process.ts",
+    "src/event-relays/push.ts",
+    "src/event-relays/search.ts",
+    "src/event-relays/channels.ts",
+    "src/event-relays/authorize.ts",
+    "src/event-relays/*.test.ts"
+  ]
+}
