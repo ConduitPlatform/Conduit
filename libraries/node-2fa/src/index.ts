@@ -1,9 +1,10 @@
 import notp from 'notp';
 import crypto from 'crypto';
 import b32 from 'thirty-two';
+import { renderSVG } from 'uqr';
 import { Options } from './interfaces';
 
-export function generateSecret(options?: Options) {
+export async function generateSecret(options?: Options) {
   const config = {
     name: encodeURIComponent(options?.name ?? 'App'),
     account: encodeURIComponent(options?.account ? `:${options.account}` : ''),
@@ -21,13 +22,13 @@ export function generateSecret(options?: Options) {
     .toUpperCase();
 
   const query = `?secret=${secret}&issuer=${config.name}`;
-  const encodedQuery = query.replace('?', '%3F').replace('&', '%26');
-  const uri = `otpauth://totp/${config.name}${config.account}`;
+  const uri = `otpauth://totp/${config.name}${config.account}${query}`;
+  const qr = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderSVG(uri))}`;
 
   return {
     secret,
-    uri: `${uri}${query}`,
-    qr: `https://quickchart.io/chart?chs=166x166&chld=L|0&cht=qr&chl=${uri}${encodedQuery}`,
+    uri,
+    qr,
   };
 }
 

@@ -15,6 +15,7 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
+    "test": "jest",
     "publish": "npm publish"
   },
   "author": "",
@@ -23,10 +24,10 @@
     "@types/notp": "^2.0.5",
     "notp": "^2.0.3",
     "thirty-two": "^1.0.2",
-    "tslib": "^2.6.2"
+    "tslib": "^2.6.2",
+    "uqr": "^0.1.3"
   },
   "devDependencies": {
-    "rimraf": "^6.1.3",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.13.3",
     "@eslint/js": "^10.0.1",
@@ -35,6 +36,7 @@
     "typescript-eslint": "^8.68.0",
     "jest": "^30.5.0",
     "prettier": "^3.9.6",
+    "rimraf": "^6.1.3",
     "ts-jest": "^29.4.12",
     "typescript": "~6.0.2"
   }

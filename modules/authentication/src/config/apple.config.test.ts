@@ -47,15 +47,35 @@ describe('Admin apple.clients[] object array persistence', () => {
     assert.ok(Array.isArray(result.apple.clients), 'clients should be an array');
     assert.strictEqual(result.apple.clients.length, 2, 'should have 2 clients');
 
-    const client1 = result.apple.clients[0];
-    assert.strictEqual(typeof client1, 'object', 'client should be an object, not string');
+    const client1 = result.apple.clients[0] as {
+      id: string;
+      name?: string;
+      clientId: string;
+      redirect_uri?: string;
+    };
+    assert.strictEqual(
+      typeof client1,
+      'object',
+      'client should be an object, not string',
+    );
     assert.strictEqual(client1.id, 'app1');
     assert.strictEqual(client1.name, 'First App');
     assert.strictEqual(client1.clientId, 'app1-client-id');
     assert.strictEqual(client1.redirect_uri, 'https://app1.example.com/callback');
 
-    const client2 = result.apple.clients[1];
-    assert.strictEqual(typeof client2, 'object', 'client should be an object, not string');
+    const client2 = result.apple.clients[1] as {
+      id: string;
+      name?: string;
+      clientId: string;
+      privateKey?: string;
+      teamId?: string;
+      keyId?: string;
+    };
+    assert.strictEqual(
+      typeof client2,
+      'object',
+      'client should be an object, not string',
+    );
     assert.strictEqual(client2.id, 'app2');
     assert.strictEqual(client2.name, 'Second App');
     assert.strictEqual(client2.clientId, 'app2-client-id');
@@ -89,7 +109,7 @@ describe('Admin apple.clients[] object array persistence', () => {
     schema.load(testConfig);
     const result = schema.getProperties();
 
-    const client = result.apple.clients[0];
+    const client = result.apple.clients[0] as { id: string };
     assert.notStrictEqual(
       typeof client,
       'string',
