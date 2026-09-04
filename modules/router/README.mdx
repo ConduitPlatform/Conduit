@@ -77,3 +77,43 @@ If you sent any other string that those provided conduit will not utilize cachin
 The number that you specify also sets the expiry time of conduit's cache. All caching takes place,
 AFTER middleware execution
 - cacheControl?: string;
+
+## Event Relays
+
+Event Relays map an **exact** Redis bus channel to a Socket.io event on the dedicated `/events/` namespace.
+They are configured through the Admin API (`/router/event-relays`) and are **ephemeral**: Redis pub/sub is not replayed, and missed events are not stored.
+
+Each relay stores a ReBAC check (`permission` on `resourceType:resourceId`). Clients never choose a raw room name. Optional `notes` describe the relay for operators.
+
+### Client contract
+
+```javascript
+import { io } from 'socket.io-client';
+
+const socket = io(`${SOCKET_BASE_URL}/events/`, {
+  path: '/realtime',
+  extraHeaders: {
+    authorization: `Bearer ${accessToken}`,
+  },
+});
+
+socket.emit('subscribe', relayId, resourceId);
+socket.on('order-updated', payload => {
+  // payload is the rendered JSON template
+});
+socket.emit('unsubscribe', relayId, resourceId);
+```
+
+- Subscribe is allowed only when `User:<id>` has the relay `permission` on `<resourceType>:<resourceId>`.
+- The outbound event name is the relay `socketEvent`.
+- Placeholders in `messageTemplate` use `{{payload.path}}` against the bus JSON payload.
+
+### Admin API
+
+| Method | Path | Description |
+|:-------|:-----|:------------|
+| `GET` | `/router/event-relays` | Paginated list (`skip`, `limit`, `search`) |
+| `GET` | `/router/event-relays/:id` | Single relay |
+| `POST` | `/router/event-relays` | Create |
+| `PATCH` | `/router/event-relays/:id` | Update |
+| `DELETE` | `/router/event-relays/:id` | Delete |

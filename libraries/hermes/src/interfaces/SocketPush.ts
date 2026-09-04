@@ -4,4 +4,5 @@ export interface SocketPush {
   receivers: string[];
   rooms: string[];
   namespace: string;
+  localOnly?: boolean;
 }

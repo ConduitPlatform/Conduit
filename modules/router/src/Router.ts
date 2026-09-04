@@ -40,6 +40,11 @@ import * as adminRoutes from './admin/routes/index.js';
 import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 import { fileURLToPath } from 'node:url';
+import {
+  createEventRelayPusher,
+  createEventsSocket,
+  EventRelayManager,
+} from './event-relays/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,6 +74,8 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private hasAppliedMiddleware: string[] = [];
   private _refreshTimeout: NodeJS.Timeout | null = null;
   private _haInitialized = false;
+  private eventRelayManager: EventRelayManager;
+  private eventsSocket?: ConduitSocket;
 
   constructor(peerManifestRoot?: string) {
     super('router', peerManifestRoot);
@@ -102,7 +109,16 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   async onRegister() {
-    this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this);
+    this.eventRelayManager = new EventRelayManager(
+      this.grpcSdk,
+      createEventRelayPusher(data => this._internalRouter.socketPush(data)),
+    );
+    this.adminRouter = new AdminHandlers(
+      this.grpcServer,
+      this.grpcSdk,
+      this,
+      this.eventRelayManager,
+    );
     this._security = new SecurityModule(this.grpcSdk, this);
   }
 
@@ -132,8 +148,11 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     }
     if (config.transports.sockets) {
       this._internalRouter.initSockets();
+      this.registerEventsNamespace();
+      await this.eventRelayManager.start();
       atLeastOne = true;
     } else {
+      await this.eventRelayManager?.stop();
       this._internalRouter.stopSockets();
     }
 
@@ -334,6 +353,13 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
     this._internalRouter.registerConduitRoute(route);
+  }
+
+  private registerEventsNamespace() {
+    if (!this.eventsSocket) {
+      this.eventsSocket = createEventsSocket(this.grpcSdk, this.eventRelayManager);
+    }
+    this._internalRouter.registerConduitSocket(this.eventsSocket);
   }
 
   protected registerSchemas(): Promise<unknown> {
