@@ -46,7 +46,10 @@ export function folderListQuery(name: string, pageToken?: string) {
 type IamBinding = { role: string; members: string[] };
 type IamPolicy = { bindings?: IamBinding[]; [key: string]: unknown };
 
-export function applyAllUsersObjectViewer(policy: IamPolicy, isPublic: boolean): IamPolicy {
+export function applyAllUsersObjectViewer(
+  policy: IamPolicy,
+  isPublic: boolean,
+): IamPolicy {
   const bindings = (policy.bindings ?? []).map(binding => ({
     ...binding,
     members: [...binding.members],
@@ -90,7 +93,11 @@ type FolderBucket = {
   getFiles: (
     query: ReturnType<typeof folderListQuery>,
   ) => Promise<
-    [FolderFile[], { pageToken?: string } | null | undefined, { nextPageToken?: string }?]
+    readonly [
+      ReadonlyArray<FolderFile>,
+      { pageToken?: string } | null | undefined,
+      { nextPageToken?: string }?,
+    ]
   >;
   file: (name: string) => FolderFile;
 };
@@ -130,11 +137,11 @@ export async function deleteOneLevelFolder(
 
 type PublicAccessBucket = {
   iam: {
-    getPolicy: (options: { requestedPolicyVersion: number }) => Promise<[IamPolicy]>;
+    getPolicy: (options: { requestedPolicyVersion: number }) => Promise<IamPolicy[]>;
     setPolicy: (policy: IamPolicy) => Promise<unknown>;
   };
   getMetadata: () => Promise<
-    [{ iamConfiguration?: { uniformBucketLevelAccess?: { enabled?: boolean } } }]
+    Array<{ iamConfiguration?: { uniformBucketLevelAccess?: { enabled?: boolean } } }>
   >;
   setMetadata: (metadata: {
     iamConfiguration: { uniformBucketLevelAccess: { enabled: boolean } };
@@ -244,7 +251,11 @@ export class GoogleCloudStorage implements IStorageProvider {
   }
 
   async createContainer(name: string, isPublic?: boolean): Promise<boolean | Error> {
-    await createGcsContainer(this._storage as unknown as ContainerStorage, name, isPublic);
+    await createGcsContainer(
+      this._storage as unknown as ContainerStorage,
+      name,
+      isPublic,
+    );
     this._activeBucket = name;
     ConduitGrpcSdk.Metrics?.increment('containers_total');
     return true;
