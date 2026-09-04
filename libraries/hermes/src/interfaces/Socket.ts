@@ -40,7 +40,14 @@ export type JoinRoomResponse = {
   rooms: string[];
 };
 
-export type ConduitSocketHandlerResponse = Promise<EventResponse | JoinRoomResponse>;
+export type LeaveRoomResponse = {
+  event: 'leave-room';
+  rooms: string[];
+};
+
+export type ConduitSocketHandlerResponse = Promise<
+  EventResponse | JoinRoomResponse | LeaveRoomResponse
+>;
 
 export type ConduitSocketEventHandler = (
   request: ConduitSocketParameters,
