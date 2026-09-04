@@ -19,6 +19,182 @@ export function folderMarkerKeys(name: string): string[] {
   return Array.from(new Set([`${name}${FOLDER_MARKER_SUFFIX}`, `${trimmed}/keep.txt`]));
 }
 
+export function folderObjectPrefix(name: string): string {
+  return name.endsWith('/') ? name : `${name}/`;
+}
+
+export function isDirectChildKey(prefix: string, key: string): boolean {
+  if (!key.startsWith(prefix)) {
+    return false;
+  }
+  const rest = key.slice(prefix.length);
+  return rest.length > 0 && !rest.includes('/');
+}
+
+export const FOLDER_DELETE_PAGE_SIZE = 200;
+
+export function folderListQuery(name: string, pageToken?: string) {
+  return {
+    prefix: folderObjectPrefix(name),
+    delimiter: '/',
+    autoPaginate: false as const,
+    maxResults: FOLDER_DELETE_PAGE_SIZE,
+    ...(pageToken ? { pageToken } : {}),
+  };
+}
+
+type IamBinding = { role: string; members: string[] };
+type IamPolicy = { bindings?: IamBinding[]; [key: string]: unknown };
+
+export function applyAllUsersObjectViewer(policy: IamPolicy, isPublic: boolean): IamPolicy {
+  const bindings = (policy.bindings ?? []).map(binding => ({
+    ...binding,
+    members: [...binding.members],
+  }));
+
+  if (isPublic) {
+    const viewerBinding = bindings.find(binding => binding.role === OBJECT_VIEWER_ROLE);
+    if (viewerBinding) {
+      if (!viewerBinding.members.includes('allUsers')) {
+        viewerBinding.members.push('allUsers');
+      }
+    } else {
+      bindings.push({
+        role: OBJECT_VIEWER_ROLE,
+        members: ['allUsers'],
+      });
+    }
+    return { ...policy, bindings };
+  }
+
+  return {
+    ...policy,
+    bindings: bindings
+      .map(binding => {
+        if (binding.role !== OBJECT_VIEWER_ROLE) return binding;
+        return {
+          ...binding,
+          members: binding.members.filter(member => member !== 'allUsers'),
+        };
+      })
+      .filter(binding => binding.members.length > 0),
+  };
+}
+
+type FolderFile = {
+  name: string;
+  delete: (options?: { ignoreNotFound?: boolean }) => Promise<unknown>;
+};
+
+type FolderBucket = {
+  getFiles: (
+    query: ReturnType<typeof folderListQuery>,
+  ) => Promise<
+    [FolderFile[], { pageToken?: string } | null | undefined, { nextPageToken?: string }?]
+  >;
+  file: (name: string) => FolderFile;
+};
+
+export async function deleteOneLevelFolder(
+  bucket: FolderBucket,
+  name: string,
+): Promise<number> {
+  const prefix = folderObjectPrefix(name);
+  const markers = new Set(folderMarkerKeys(name));
+  let deleted = 0;
+  let pageToken: string | undefined;
+
+  for (;;) {
+    const [files, nextQuery, apiResponse] = await bucket.getFiles(
+      folderListQuery(name, pageToken),
+    );
+    for (const file of files) {
+      if (markers.has(file.name) || !isDirectChildKey(prefix, file.name)) {
+        continue;
+      }
+      await file.delete({ ignoreNotFound: true });
+      deleted++;
+    }
+    pageToken = nextQuery?.pageToken ?? apiResponse?.nextPageToken;
+    if (!pageToken) {
+      break;
+    }
+  }
+
+  for (const key of markers) {
+    await bucket.file(key).delete({ ignoreNotFound: true });
+  }
+
+  return deleted;
+}
+
+type PublicAccessBucket = {
+  iam: {
+    getPolicy: (options: { requestedPolicyVersion: number }) => Promise<[IamPolicy]>;
+    setPolicy: (policy: IamPolicy) => Promise<unknown>;
+  };
+  getMetadata: () => Promise<
+    [{ iamConfiguration?: { uniformBucketLevelAccess?: { enabled?: boolean } } }]
+  >;
+  setMetadata: (metadata: {
+    iamConfiguration: { uniformBucketLevelAccess: { enabled: boolean } };
+  }) => Promise<unknown>;
+};
+
+export async function setBucketPublicAccess(
+  bucket: PublicAccessBucket,
+  isPublic: boolean,
+): Promise<void> {
+  const [policy] = await bucket.iam.getPolicy({ requestedPolicyVersion: 3 });
+  await bucket.iam.setPolicy(applyAllUsersObjectViewer(policy, isPublic));
+  if (isPublic) {
+    await ensureUniformBucketLevelAccess(bucket);
+  }
+}
+
+type ContainerStorage = {
+  createBucket: (
+    name: string,
+    options: { iamConfiguration: { uniformBucketLevelAccess: { enabled: boolean } } },
+  ) => Promise<unknown>;
+  bucket: (name: string) => PublicAccessBucket & {
+    deleteFiles: (options: { force: boolean }) => Promise<unknown>;
+    delete: () => Promise<unknown>;
+  };
+};
+
+export async function createGcsContainer(
+  storage: ContainerStorage,
+  name: string,
+  isPublic?: boolean,
+): Promise<void> {
+  await storage.createBucket(name, {
+    iamConfiguration: {
+      uniformBucketLevelAccess: {
+        enabled: true,
+      },
+    },
+  });
+  try {
+    if (isPublic) {
+      await setBucketPublicAccess(storage.bucket(name), true);
+    }
+  } catch (error) {
+    try {
+      const bucket = storage.bucket(name);
+      await bucket.deleteFiles({ force: true });
+      await bucket.delete();
+    } catch (cleanupError) {
+      ConduitGrpcSdk.Logger?.error(
+        `Failed to clean up GCS bucket "${name}" after public-access setup failed: ${
+          (cleanupError as Error).message
+        }`,
+      );
+    }
+    throw error;
+  }
+}
+
 export class GoogleCloudStorage implements IStorageProvider {
   private readonly _storage: Storage;
   private _activeBucket: string = '';
@@ -68,17 +244,8 @@ export class GoogleCloudStorage implements IStorageProvider {
   }
 
   async createContainer(name: string, isPublic?: boolean): Promise<boolean | Error> {
-    await this._storage.createBucket(name, {
-      iamConfiguration: {
-        uniformBucketLevelAccess: {
-          enabled: true,
-        },
-      },
-    });
+    await createGcsContainer(this._storage as unknown as ContainerStorage, name, isPublic);
     this._activeBucket = name;
-    if (isPublic) {
-      await this.setContainerPublicAccess(name, true);
-    }
     ConduitGrpcSdk.Metrics?.increment('containers_total');
     return true;
   }
@@ -87,38 +254,10 @@ export class GoogleCloudStorage implements IStorageProvider {
     name: string,
     isPublic: boolean,
   ): Promise<boolean | Error> {
-    const bucket = this._storage.bucket(name);
-    await ensureUniformBucketLevelAccess(bucket);
-
-    const [policy] = await bucket.iam.getPolicy({ requestedPolicyVersion: 3 });
-
-    if (isPublic) {
-      const viewerBinding = policy.bindings.find(
-        binding => binding.role === OBJECT_VIEWER_ROLE,
-      );
-      if (viewerBinding) {
-        if (!viewerBinding.members.includes('allUsers')) {
-          viewerBinding.members.push('allUsers');
-        }
-      } else {
-        policy.bindings.push({
-          role: OBJECT_VIEWER_ROLE,
-          members: ['allUsers'],
-        });
-      }
-    } else {
-      policy.bindings = policy.bindings
-        .map(binding => {
-          if (binding.role !== OBJECT_VIEWER_ROLE) return binding;
-          return {
-            ...binding,
-            members: binding.members.filter(member => member !== 'allUsers'),
-          };
-        })
-        .filter(binding => binding.members.length > 0);
-    }
-
-    await bucket.iam.setPolicy(policy);
+    await setBucketPublicAccess(
+      this._storage.bucket(name) as unknown as PublicAccessBucket,
+      isPublic,
+    );
     return true;
   }
 
@@ -139,17 +278,11 @@ export class GoogleCloudStorage implements IStorageProvider {
     const exists = await this.folderExists(name);
     if (!exists) return false;
 
-    ConduitGrpcSdk.Logger.log('Getting files list...');
-    const files = await this.listFiles(name);
-
-    ConduitGrpcSdk.Logger.log('Deleting files...');
-    let deleted = 0;
-    for (const file of files) {
-      deleted++;
-      await file.delete({ ignoreNotFound: true });
-      ConduitGrpcSdk.Logger.log(file.name);
-    }
-    ConduitGrpcSdk.Logger.log(`${deleted} files deleted.`);
+    const deleted = await deleteOneLevelFolder(
+      this.bucket() as unknown as FolderBucket,
+      name,
+    );
+    ConduitGrpcSdk.Logger?.log(`Deleted ${deleted} object(s) from folder ${name}`);
     ConduitGrpcSdk.Metrics?.decrement('folders_total');
     return true;
   }
@@ -207,11 +340,6 @@ export class GoogleCloudStorage implements IStorageProvider {
   private folderMarkerKey(name: string): string {
     return `${name}${FOLDER_MARKER_SUFFIX}`;
   }
-
-  private async listFiles(folderName: string) {
-    const [files] = await this.bucket().getFiles({ prefix: folderName });
-    return files;
-  }
 }
 
 function createGoogleStorageClient(options: StorageConfig): Storage {
@@ -247,7 +375,7 @@ function parseServiceAccountKeyJson(raw: string): GoogleServiceAccountKey {
   }
 }
 
-async function ensureUniformBucketLevelAccess(bucket: Bucket): Promise<void> {
+async function ensureUniformBucketLevelAccess(bucket: PublicAccessBucket): Promise<void> {
   const [metadata] = await bucket.getMetadata();
   if (metadata.iamConfiguration?.uniformBucketLevelAccess?.enabled) {
     return;
