@@ -214,25 +214,8 @@ const enabledConfig: EmbeddingConfigRecord = {
 };
 
 describe('typed embeddings API handlers', () => {
-  it('upserts a typed config and refuses to enable without a queryable index', async () => {
-    const { api, configs } = createApi({ indexes: [] });
-    await assert.rejects(
-      () =>
-        api.upsertConfig(
-          {
-            schemaName: 'Article',
-            sourceFields: ['title'],
-            targetField: 'embedding',
-            provider: 'openai-compatible',
-            model: 'text-embedding-3-small',
-            dimensions: 3,
-            enabled: true,
-          },
-          { callerModule: 'database' },
-        ),
-      (err: unknown) =>
-        err instanceof GrpcError && err.code === status.FAILED_PRECONDITION,
-    );
+  it('upserts a typed config and provisions a missing vector index on first save', async () => {
+    const { api, configs, createdIndexes } = createApi({ indexes: [] });
     const saved = await api.upsertConfig(
       {
         schemaName: 'Article',
@@ -241,18 +224,58 @@ describe('typed embeddings API handlers', () => {
         provider: 'openai-compatible',
         model: 'text-embedding-3-small',
         dimensions: 3,
-        enabled: false,
+        enabled: true,
       },
       { callerModule: 'database' },
     );
     assert.equal(saved.config.enabled, false);
     assert.equal(saved.config.model, 'text-embedding-3-small');
     assert.equal(typeof saved.config.id, 'string');
+    assert.equal(createdIndexes.includes('embedding_vector'), true);
     assert.equal(
       saved.warnings.some(warning => /not queryable/.test(warning)),
       true,
     );
+    assert.equal(
+      saved.warnings.some(warning =>
+        /saved disabled until the provisioned vector index/.test(warning),
+      ),
+      true,
+    );
     assert.equal(configs.length, 1);
+    assert.equal(configs[0].enabled, false);
+  });
+
+  it('reports a manual index lifecycle when Database indexing is unavailable', async () => {
+    const { api, createdIndexes } = createApi({
+      indexes: [],
+      capabilities: {
+        supported: true,
+        storage: true,
+        indexing: false,
+        search: false,
+        provider: 'mongodb',
+        reason: 'indexing unavailable',
+      },
+    });
+    const saved = await api.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['title'],
+        targetField: 'embedding',
+        provider: 'openai-compatible',
+        model: 'text-embedding-3-small',
+        dimensions: 3,
+        enabled: true,
+      },
+      { callerModule: 'database' },
+    );
+    assert.equal(saved.config.enabled, false);
+    assert.equal(createdIndexes.length, 0);
+    assert.equal(
+      saved.warnings.some(warning => /Create the index manually/.test(warning)),
+      true,
+    );
   });
 
   it('gates system schemas and owner policies on config and backfill', async () => {

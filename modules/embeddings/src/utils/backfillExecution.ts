@@ -1,7 +1,7 @@
 import type { VectorCapabilities } from '@conduitplatform/grpc-sdk';
 import {
-  applyBackfillJobCounts,
   applyBackfillPage,
+  backfillCountIncrementPatch,
   boundBackfillPage,
   buildBackfillPageQuery,
   cancelBackfillRun,
@@ -11,6 +11,7 @@ import {
   isActiveBackfillState,
   resumeBackfillRun,
   startBackfillRun,
+  type BackfillCountIncrementPatch,
   type BackfillPageQuery,
   type BackfillRunProgress,
   type BackfillRunResult,
@@ -326,17 +327,19 @@ export async function cancelBackfillExecution(args: {
 }
 
 export async function applyBackfillJobOutcome(args: {
-  run: PersistedBackfillRun;
+  runId: string;
   outcome: 'processed' | 'failed';
-  saveRun: (id: string, run: BackfillRunProgress) => Promise<void>;
+  incrementCounts: (
+    id: string,
+    patch: BackfillCountIncrementPatch,
+  ) => Promise<BackfillRunProgress | null>;
 }): Promise<BackfillRunResult> {
-  const counted = applyBackfillJobCounts(
-    args.run,
-    args.outcome === 'processed' ? { processed: 1 } : { failed: 1 },
+  const run = await args.incrementCounts(
+    args.runId,
+    backfillCountIncrementPatch(args.outcome),
   );
-  if (!counted.ok) return counted;
-  await args.saveRun(args.run._id, counted.run);
-  return counted;
+  if (!run) return { ok: false, reason: 'not_found' };
+  return { ok: true, run };
 }
 
 export async function processBackfillControllerJob(

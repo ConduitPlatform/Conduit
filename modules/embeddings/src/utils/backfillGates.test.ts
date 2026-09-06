@@ -105,6 +105,13 @@ describe('backfill execution gates', () => {
     assert.equal(
       isEmbeddingVectorIndexQueryable({
         field: 'embedding',
+        name: 'embedding_vector',
+      }),
+      false,
+    );
+    assert.equal(
+      isEmbeddingVectorIndexQueryable({
+        field: 'embedding',
         status: VectorIndexStatus.Pending,
       }),
       false,

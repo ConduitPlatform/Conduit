@@ -198,23 +198,6 @@ export class EmbeddingsApi {
     const enabled = request.enabled ?? true;
     const capabilities = await this.deps.getVectorCapabilities(persisted.schemaName);
     let indexes = await this.deps.getVectorIndexes(persisted.schemaName);
-    const warnings = [
-      ...capabilityWarnings(capabilities),
-      ...indexReadinessWarnings(
-        [
-          {
-            targetField: persisted.targetField,
-            enabled,
-            schemaName: persisted.schemaName,
-          },
-        ],
-        indexes,
-      ),
-      ...providerReadinessWarnings(
-        configDefaults.providers[persisted.provider] ??
-          configDefaults.providers[configDefaults.defaultProvider],
-      ),
-    ];
     const existing = await this.deps.configs.findOne({
       schemaName: persisted.schemaName,
       targetField: persisted.targetField,
@@ -225,10 +208,6 @@ export class EmbeddingsApi {
         status.FAILED_PRECONDITION,
         `Changing vector field '${existing.targetField}' dimensions from ${existing.dimensions} to ${persisted.dimensions} is not allowed. Create a new targetField and run an explicit backfill.`,
       );
-    }
-    if (existing && changed.length && requiresIndexRecreation(changed)) {
-      await this.recreateVectorIndex(existing, persisted, indexes);
-      indexes = await this.deps.getVectorIndexes(persisted.schemaName);
     }
     if (capabilities.storage) {
       await this.deps.setSchemaExtension({
@@ -248,6 +227,42 @@ export class EmbeddingsApi {
         },
       });
     }
+    let provisionedIndex = false;
+    if (existing && changed.length && requiresIndexRecreation(changed)) {
+      await this.recreateVectorIndex(existing, persisted, indexes);
+      indexes = await this.deps.getVectorIndexes(persisted.schemaName);
+      provisionedIndex = true;
+    } else {
+      provisionedIndex = await this.ensureVectorIndex(persisted, indexes, capabilities);
+      if (provisionedIndex) {
+        indexes = await this.deps.getVectorIndexes(persisted.schemaName);
+      }
+    }
+    const warnings = [
+      ...capabilityWarnings(capabilities),
+      ...indexReadinessWarnings(
+        [
+          {
+            targetField: persisted.targetField,
+            enabled,
+            schemaName: persisted.schemaName,
+          },
+        ],
+        indexes,
+      ),
+      ...providerReadinessWarnings(
+        configDefaults.providers[persisted.provider] ??
+          configDefaults.providers[configDefaults.defaultProvider],
+      ),
+    ];
+    if (
+      !findTargetVectorIndex(indexes, persisted.targetField) &&
+      !capabilities.indexing
+    ) {
+      warnings.push(
+        `Vector index for field '${persisted.targetField}' was not provisioned automatically because Database indexing is unavailable. Create the index manually and wait until it is queryable before enabling this config.`,
+      );
+    }
     let persistEnabled = enabled;
     if (enabled) {
       try {
@@ -262,14 +277,18 @@ export class EmbeddingsApi {
           indexes,
         });
       } catch (err) {
-        if (existing && changed.length && requiresIndexRecreation(changed)) {
-          persistEnabled = false;
-          warnings.push(
-            'Config was saved disabled until the recreated vector index is queryable. Enable it and start an explicit backfill once the index is ready.',
-          );
-        } else {
-          throw err;
-        }
+        const indexPending =
+          (err instanceof BackfillGateError && err.reason === 'index_not_queryable') ||
+          (err instanceof GrpcError &&
+            err.code === status.FAILED_PRECONDITION &&
+            /not queryable/.test(err.message));
+        if (!indexPending) throw err;
+        persistEnabled = false;
+        warnings.push(
+          provisionedIndex
+            ? 'Config was saved disabled until the provisioned vector index is queryable. Enable it once Database reports the index ready.'
+            : 'Config was saved disabled until the vector index is queryable. Enable it once Database reports the index ready.',
+        );
       }
     }
     const saved = existing
@@ -708,6 +727,39 @@ export class EmbeddingsApi {
       runs.push(...found);
     }
     return runs;
+  }
+
+  private async ensureVectorIndex(
+    next: {
+      schemaName: string;
+      targetField: string;
+      dimensions: number;
+      similarity: string;
+    },
+    indexes: Array<{
+      field?: string;
+      name?: string;
+      queryable?: boolean;
+      status?: string;
+    }>,
+    capabilities: VectorCapabilities,
+  ): Promise<boolean> {
+    if (findTargetVectorIndex(indexes, next.targetField)) return false;
+    if (!capabilities.indexing) return false;
+    try {
+      await this.deps.createVectorIndex(next.schemaName, {
+        field: next.targetField,
+        dimensions: next.dimensions,
+        similarity: next.similarity as VectorIndexDefinition['similarity'],
+        name: defaultEmbeddingVectorIndexName(next.targetField),
+      });
+    } catch (err) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        `Failed to provision vector index for '${next.targetField}': ${sanitizeErrorMessage(err)}`,
+      );
+    }
+    return true;
   }
 
   private async recreateVectorIndex(

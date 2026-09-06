@@ -4,8 +4,11 @@ import {
   dedupeEmbeddingJobs,
   embeddingJobId,
   isDuplicateJobError,
+  isInFlightQueueJobState,
+  isTerminalQueueJobState,
   parseEmbeddingJobData,
   parseEmbeddingJobBatch,
+  shouldReplaceRetainedQueueJob,
 } from './embeddingJobs.js';
 
 describe('embedding job identity', () => {
@@ -26,6 +29,19 @@ describe('embedding job identity', () => {
   it('detects BullMQ duplicate job errors', () => {
     assert.equal(isDuplicateJobError(new Error('Job Article__a already exists')), true);
     assert.equal(isDuplicateJobError(new Error('redis timeout')), false);
+  });
+
+  it('replaces retained completed or failed jobs and only dedupes in-flight work', () => {
+    assert.equal(isInFlightQueueJobState('waiting'), true);
+    assert.equal(isInFlightQueueJobState('active'), true);
+    assert.equal(isInFlightQueueJobState('delayed'), true);
+    assert.equal(isInFlightQueueJobState('completed'), false);
+    assert.equal(isTerminalQueueJobState('completed'), true);
+    assert.equal(isTerminalQueueJobState('failed'), true);
+    assert.equal(shouldReplaceRetainedQueueJob('completed'), true);
+    assert.equal(shouldReplaceRetainedQueueJob('failed'), true);
+    assert.equal(shouldReplaceRetainedQueueJob('waiting'), false);
+    assert.equal(shouldReplaceRetainedQueueJob('active'), false);
   });
 
   it('rejects malformed and oversized queue payloads', () => {

@@ -5,16 +5,22 @@ on:
   pull_request:
     paths:
       - 'modules/embeddings/**'
+      - 'modules/database/**'
+      - 'libraries/hermes/**'
       - 'libraries/grpc-sdk/**'
       - 'libraries/module-tools/**'
+      - 'packages/core/**'
       - '.github/workflows/embeddings-test.yml'
   push:
     branches:
       - main
     paths:
       - 'modules/embeddings/**'
+      - 'modules/database/**'
+      - 'libraries/hermes/**'
       - 'libraries/grpc-sdk/**'
       - 'libraries/module-tools/**'
+      - 'packages/core/**'
       - '.github/workflows/embeddings-test.yml'
 
 permissions:
@@ -47,8 +53,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Build embeddings and workspace dependencies
-        run: pnpm exec turbo run build --filter=@conduitplatform/embeddings...
+      - name: Build embeddings, database, hermes, grpc-sdk, module-tools, and Core tsc
+        run: >
+          pnpm exec turbo run build
+          --filter=@conduitplatform/embeddings...
+          --filter=@conduitplatform/database...
+          --filter=@conduitplatform/hermes...
+          --filter=@conduitplatform/grpc-sdk...
+          --filter=@conduitplatform/module-tools...
+          --filter=@conduitplatform/core
+
+      # Core `build:bundle` still aliases @conduitplatform/node-2fa to its
+      # TypeScript source because the library's CommonJS dist breaks ESM
+      # bundling. That pre-existing packaging issue is out of this embeddings
+      # offline gate; this job only typechecks Core (`tsc`), it does not run
+      # authentication/Core service-bundle verification.
 
       - name: Run embeddings offline tests
         run: pnpm --filter @conduitplatform/embeddings test
+
+      - name: Run database vector and mutation offline tests
+        run: pnpm --filter @conduitplatform/database test --testPathIgnorePatterns=integration
+
+      - name: Run hermes vector offline tests
+        run: pnpm --filter @conduitplatform/hermes test

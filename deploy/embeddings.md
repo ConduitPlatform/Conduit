@@ -37,8 +37,11 @@ and remain disabled by default.
    activation must not.
 5. Configure the HTTPS provider (`endpoint`, `apiKey`, `allowedHosts`). Check
    `GET /embeddings/status` for provider/index warnings.
-6. Create an embedding config with `enabled: false`. Wait until the vector
+6. Create an embedding config. The first upsert provisions the vector index
+   when Database indexing is available. The config stays disabled until the
    index for `targetField` is queryable (`status` ready, not pending/failed).
+   If indexing is unavailable, status reports a manual lifecycle warning and
+   the operator must create the index before enabling.
 7. Enable the config only after index readiness. Start a **bounded** backfill
    (`onlyMissing` recommended). Watch `GET /embeddings/backfills/:id` and
    `GET /embeddings/status` queue counts. Do not scan collections in the

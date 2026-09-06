@@ -74,7 +74,7 @@ import {
 import { QueueController } from './controllers/queue.controller.js';
 import {
   buildMutationEventChunks,
-  collectDocumentIds,
+  collectBoundedMutationIds,
   mutationEventChannel,
   shouldPublishMutationEvent,
   grpcStatusFromError,
@@ -877,10 +877,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcStatusFromError(err));
     }
   }
 
@@ -1272,11 +1269,16 @@ export default class DatabaseModule extends ManagedModule<Config> {
     filterQuery: string,
     options: { userId?: string; scope?: string },
   ): Promise<string[]> {
-    const docs = await model.findMany(filterQuery, {
-      select: '_id',
-      userId: options.userId,
-      scope: options.scope,
+    return collectBoundedMutationIds({
+      findPage: (skip, limit) =>
+        model.findMany(filterQuery, {
+          select: '_id',
+          skip,
+          limit,
+          sort: { _id: 1 },
+          userId: options.userId,
+          scope: options.scope,
+        }),
     });
-    return collectDocumentIds(docs);
   }
 }
