@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import {
   ConduitGrpcSdk,
   DatabaseProvider,
+  GrpcError,
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
@@ -13,6 +14,7 @@ import {
   ConduitActiveSchema,
   ManagedModule,
 } from '@conduitplatform/module-tools';
+import { status } from '@grpc/grpc-js';
 import AppConfigSchema, { Config } from './config/index.js';
 import * as models from './models/index.js';
 import { EmbeddingConfig } from './models/index.js';
@@ -22,12 +24,24 @@ import { validateEmbeddingConfigInput } from './utils/validateEmbeddingConfig.js
 import {
   embeddingOwnedFields,
   isEmbeddingOwnedMutation,
-  parseMutationEvent,
+  parseBoundedMutationEvent,
 } from './utils/mutationEvents.js';
 import {
   buildEmbeddingDocumentSelect,
   generateEmbeddingsForDocument,
 } from './utils/processEmbedding.js';
+import { MAX_QUEUE_BATCH_SIZE, parseEmbeddingJobData } from './utils/embeddingJobs.js';
+import {
+  assertCanManageEmbeddingConfig,
+  assertEmbeddingTargetSchema,
+  assertSemanticSearchAccess,
+  resolveAdminOperatorContext,
+} from './utils/schemaPolicy.js';
+import {
+  assertGrpcKeyRequirement,
+  callerModuleName,
+} from './utils/productionSecurity.js';
+import { sanitizeErrorMessage } from './utils/redactConfig.js';
 import metricsSchema from './metrics/index.js';
 import {
   BackfillRequest,
@@ -64,12 +78,18 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
   }
 
   async onServerStart() {
+    assertGrpcKeyRequirement(process.env);
     await this.awaitPeersFromManifest();
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
     this.queueController = QueueController.getInstance(this.grpcSdk);
     await this.configureRuntime();
     this.updateHealth(HealthCheckStatus.SERVING);
+  }
+
+  async preConfig(config: Config) {
+    assertGrpcKeyRequirement(process.env, config);
+    return config;
   }
 
   async onConfig() {
@@ -82,24 +102,39 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     callback: GrpcResponse<EmbeddingConfigResponse>,
   ) {
     try {
-      const config = this.validateConfigRequest(call.request);
-      const schema = await this.database.getSchema(config.schemaName);
-      if (!config.sourceFields.every(field => schema.fields[field])) {
-        return callback({
-          code: 3,
-          message: 'All source fields must exist on the target schema',
-        });
-      }
+      const schema = await this.database.getSchema(call.request.schemaName);
+      const declared = await this.declaredSchema(call.request.schemaName);
+      assertEmbeddingTargetSchema({
+        name: schema.name,
+        ownerModule: declared?.ownerModule,
+      });
+      assertCanManageEmbeddingConfig({
+        callerModule: callerModuleName(call.metadata),
+        ownerModule: declared?.ownerModule,
+        schemaName: schema.name,
+      });
+      const { sourceFieldAllowlist: _allowlist, ...persisted } =
+        validateEmbeddingConfigInput(
+          {
+            ...call.request,
+            sourceFieldAllowlist: [
+              ...(this.currentConfig().security.sourceFieldAllowlist ?? []),
+              ...(call.request.sourceFieldAllowlist ?? []),
+            ],
+          },
+          { provider: this.currentConfig().defaultProvider },
+          schema.fields,
+        );
       await this.database.setSchemaExtension({
-        schemaName: config.schemaName,
+        schemaName: persisted.schemaName,
         fields: {
-          [config.targetField]: {
+          [persisted.targetField]: {
             type: TYPE.Vector,
-            dimensions: config.dimensions,
-            similarity: config.similarity,
+            dimensions: persisted.dimensions,
+            similarity: persisted.similarity,
             select: false,
           },
-          [`${config.targetField}SourceHash`]: {
+          [`${persisted.targetField}SourceHash`]: {
             type: TYPE.String,
             required: false,
             select: false,
@@ -108,20 +143,20 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       });
       const model = EmbeddingConfig.getInstance();
       const existing = await model.findOne({
-        schemaName: config.schemaName,
-        targetField: config.targetField,
+        schemaName: persisted.schemaName,
+        targetField: persisted.targetField,
       });
       if (existing) {
-        await model.findByIdAndUpdate(existing._id, config);
+        await model.findByIdAndUpdate(existing._id, persisted);
       } else {
-        await model.create({ ...config, enabled: true });
+        await model.create({ ...persisted, enabled: true });
       }
       if (this.currentConfig().enabled) {
-        this.subscribeToSchema(config.schemaName);
+        this.subscribeToSchema(persisted.schemaName);
       }
       callback(null, { result: 'Embedding config saved' });
     } catch (err) {
-      callback({ code: 13, message: (err as Error).message });
+      callback(this.grpcError(err));
     }
   }
 
@@ -133,7 +168,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       const configs = await EmbeddingConfig.getInstance().findMany({});
       callback(null, { result: JSON.stringify(configs) });
     } catch (err) {
-      callback({ code: 13, message: (err as Error).message });
+      callback(this.grpcError(err));
     }
   }
 
@@ -142,11 +177,29 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     callback: GrpcResponse<EmbeddingsQueryResponse>,
   ) {
     try {
+      const schema = await this.database.getSchema(call.request.schemaName);
+      const declared = await this.declaredSchema(call.request.schemaName);
+      assertEmbeddingTargetSchema({
+        name: schema.name,
+        ownerModule: declared?.ownerModule,
+      });
+      assertCanManageEmbeddingConfig({
+        callerModule: callerModuleName(call.metadata),
+        ownerModule: declared?.ownerModule,
+        schemaName: schema.name,
+      });
       const configs = await EmbeddingConfig.getInstance().findMany({
         schemaName: call.request.schemaName,
         enabled: true,
       });
-      const batchSize = call.request.batchSize ?? 100;
+      if (!configs.length) {
+        throw new GrpcError(
+          status.FAILED_PRECONDITION,
+          'No enabled embedding config found for backfill',
+        );
+      }
+      const maxBatch = this.currentConfig().queue.maxBatchSize ?? MAX_QUEUE_BATCH_SIZE;
+      const batchSize = Math.min(Math.max(call.request.batchSize ?? 100, 1), maxBatch);
       const docs = await this.database.findMany<Record<string, unknown>>(
         call.request.schemaName,
         {},
@@ -167,7 +220,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
         result: JSON.stringify({ queued: docs.length * configs.length }),
       });
     } catch (err) {
-      callback({ code: 13, message: (err as Error).message });
+      callback(this.grpcError(err));
     }
   }
 
@@ -176,6 +229,18 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     callback: GrpcResponse<EmbeddingsQueryResponse>,
   ) {
     try {
+      const adminOperator = resolveAdminOperatorContext({
+        requested: call.request.adminOperator,
+        callerModule: callerModuleName(call.metadata),
+      });
+      const schema = await this.database.getSchema(call.request.schemaName);
+      if (schema.modelOptions?.conduit?.authorization?.enabled) {
+        assertSemanticSearchAccess({
+          userId: call.request.userId,
+          scope: call.request.scope,
+          adminOperator,
+        });
+      }
       const config = await this.resolveConfig(
         call.request.schemaName,
         call.request.targetField,
@@ -186,7 +251,8 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
         providerConfig,
       );
       if (vector.length !== config.dimensions) {
-        throw new Error(
+        throw new GrpcError(
+          status.FAILED_PRECONDITION,
           `Embedding provider returned ${vector.length} dimensions; expected ${config.dimensions}`,
         );
       }
@@ -198,10 +264,11 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
         limit: call.request.limit,
         userId: call.request.userId,
         scope: call.request.scope,
+        adminOperator,
       });
       callback(null, { result: JSON.stringify(results) });
     } catch (err) {
-      callback({ code: 13, message: (err as Error).message });
+      callback(this.grpcError(err));
     }
   }
 
@@ -284,24 +351,31 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
 
   private enqueueMutation(schemaName: string, message: string) {
     this.enqueueMutationAsync(schemaName, message).catch(err =>
-      ConduitGrpcSdk.Logger.error(err),
+      ConduitGrpcSdk.Logger.error(sanitizeErrorMessage(err)),
     );
   }
 
   private async enqueueMutationAsync(schemaName: string, message: string) {
-    const parsed = parseMutationEvent(message);
-    if (!parsed?.ids.length) return;
+    const parsed = parseBoundedMutationEvent(
+      message,
+      this.currentConfig().security.maxMutationEventIds,
+    );
+    if (!parsed.ok) {
+      ConduitGrpcSdk.Metrics?.increment('malformed_embedding_events_total');
+      return;
+    }
+    if (!parsed.event.ids.length) return;
     const configs = await EmbeddingConfig.getInstance().findMany({
       schemaName,
       enabled: true,
     });
     if (!configs.length) return;
-    if (isEmbeddingOwnedMutation(parsed.payload, embeddingOwnedFields(configs))) {
+    if (isEmbeddingOwnedMutation(parsed.event.payload, embeddingOwnedFields(configs))) {
       return;
     }
     const attempts = this.currentConfig().queue.attempts;
     await this.queueController.addBulkEmbeddingJobs(
-      parsed.ids.map(documentId => ({ schemaName, documentId })),
+      parsed.event.ids.map(documentId => ({ schemaName, documentId })),
       attempts,
     );
   }
@@ -311,21 +385,44 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     documentId: string,
     configId?: string,
   ) {
+    const parsed = parseEmbeddingJobData({ schemaName, documentId, configId });
+    if (!parsed.ok) {
+      ConduitGrpcSdk.Metrics?.increment('malformed_embedding_jobs_total');
+      return;
+    }
     const configs = (
-      configId
-        ? [await EmbeddingConfig.getInstance().findOne({ _id: configId })]
-        : await EmbeddingConfig.getInstance().findMany({ schemaName, enabled: true })
+      parsed.data.configId
+        ? [await EmbeddingConfig.getInstance().findOne({ _id: parsed.data.configId })]
+        : await EmbeddingConfig.getInstance().findMany({
+            schemaName: parsed.data.schemaName,
+            enabled: true,
+          })
     ).filter(Boolean) as EmbeddingConfig[];
-    if (!configs.length) return;
+    const matching = configs.filter(
+      config => config.enabled && config.schemaName === parsed.data.schemaName,
+    );
+    if (!matching.length) return;
+    const allowedFields = [
+      ...new Set(
+        matching.flatMap(config => [
+          ...config.sourceFields,
+          `${config.targetField}SourceHash`,
+        ]),
+      ),
+    ];
     const doc = await this.database.findOne<Record<string, unknown>>(
-      schemaName,
-      { _id: documentId },
-      { select: buildEmbeddingDocumentSelect(configs) },
+      parsed.data.schemaName,
+      { _id: parsed.data.documentId },
+      {
+        select: buildEmbeddingDocumentSelect(matching),
+        embeddingsJob: true,
+        embeddingsAllowedFields: allowedFields,
+      },
     );
     if (!doc) return;
     await generateEmbeddingsForDocument({
       doc,
-      configs,
+      configs: matching,
       hashInput: hashEmbeddingInput,
       embed: (input, config) =>
         getProvider(config.provider).embed(
@@ -333,34 +430,65 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
           this.providerConfig(config.provider, config.modelName ?? ''),
         ),
       update: (fields, options) =>
-        this.database.findByIdAndUpdate(schemaName, documentId, fields, options),
+        this.database.findByIdAndUpdate(
+          parsed.data.schemaName,
+          parsed.data.documentId,
+          fields,
+          {
+            ...options,
+            embeddingsJob: true,
+          },
+        ),
     });
   }
 
-  private validateConfigRequest(request: EmbeddingConfigRequest) {
-    return validateEmbeddingConfigInput(request, {
-      provider: this.currentConfig().defaultProvider,
-    });
+  private async declaredSchema(schemaName: string) {
+    return this.database.findOne<{ name: string; ownerModule: string }>(
+      '_DeclaredSchema',
+      { name: schemaName },
+      { select: 'name ownerModule' },
+    );
+  }
+
+  private grpcError(err: unknown) {
+    if (err instanceof GrpcError) {
+      return { code: err.code, message: sanitizeErrorMessage(err) };
+    }
+    return { code: status.INTERNAL, message: sanitizeErrorMessage(err) };
+  }
+
+  private providerConfig(provider: string, model: string) {
+    const config = this.currentConfig();
+    const providers = config.providers as Record<string, Record<string, unknown>>;
+    const providerConfig = providers[provider] ?? {};
+    return {
+      endpoint:
+        typeof providerConfig.endpoint === 'string' ? providerConfig.endpoint : undefined,
+      apiKey:
+        typeof providerConfig.apiKey === 'string' ? providerConfig.apiKey : undefined,
+      model: String(providerConfig.model ?? model),
+      allowedHosts: [
+        ...new Set(
+          ((providerConfig.allowedHosts as string[] | undefined) ?? []).filter(Boolean),
+        ),
+      ],
+      timeoutMs: config.security.embedTimeoutMs,
+      maxInputBytes: config.security.maxEmbedInputBytes,
+      maxResponseBytes: config.security.maxEmbedResponseBytes,
+    };
   }
 
   private async resolveConfig(schemaName: string, targetField?: string) {
     const query: Record<string, unknown> = { schemaName, enabled: true };
     if (targetField) query.targetField = targetField;
     const config = await EmbeddingConfig.getInstance().findOne(query);
-    if (!config) throw new Error('No embedding config found for semantic search');
+    if (!config) {
+      throw new GrpcError(
+        status.NOT_FOUND,
+        'No embedding config found for semantic search',
+      );
+    }
     return config;
-  }
-
-  private providerConfig(provider: string, model: string) {
-    const providers = this.currentConfig().providers as Record<
-      string,
-      Record<string, unknown>
-    >;
-    const providerConfig = providers[provider] ?? {};
-    return {
-      ...providerConfig,
-      model: String(providerConfig.model ?? model),
-    };
   }
 
   private currentConfig() {

@@ -5,6 +5,7 @@ import {
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute } from '@conduitplatform/hermes';
+import { redactSensitiveConfig } from '@conduitplatform/module-tools';
 import convict from 'convict';
 
 export function getModuleConfigRoute(
@@ -32,7 +33,7 @@ export function getModuleConfigRoute(
       } else {
         finalConfig = JSON.parse(finalConfig);
       }
-      return { config: finalConfig };
+      return { config: redactSensitiveConfig(finalConfig, configSchema) };
     },
   );
 }

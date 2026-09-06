@@ -74,7 +74,14 @@ import {
   collectDocumentIds,
   mutationEventChannel,
   shouldPublishMutationEvent,
-} from './adapters/utils/mutationEvents.js';
+  grpcStatusFromError,
+  callerModuleName,
+  resolveAdminOperatorContext,
+  assertVectorSearchAccess,
+  assertEmbeddingsJobCaller,
+  assertEmbeddingsJobRead,
+  assertEmbeddingsJobWrite,
+} from './adapters/utils/index.js';
 import AppConfigSchema, { Config } from './config/index.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
@@ -509,6 +516,15 @@ export default class DatabaseModule extends ManagedModule<Config> {
   ) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      if (call.request.embeddingsJob) {
+        assertEmbeddingsJobCaller(callerModuleName(call.metadata));
+        assertEmbeddingsJobRead({
+          query: call.request.query,
+          select: call.request.select,
+          allowedFields: call.request.embeddingsAllowedFields,
+          schema: schemaAdapter.model.originalSchema as ConduitDatabaseSchema,
+        });
+      }
       const doc = await schemaAdapter.model.findOne(call.request.query, {
         select: call.request.select,
         populate: call.request.populate,
@@ -518,10 +534,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcStatusFromError(err));
     }
   }
 
@@ -633,13 +646,19 @@ export default class DatabaseModule extends ManagedModule<Config> {
     call: GrpcRequest<UpdateRequest>,
     callback: GrpcResponse<QueryResponse>,
   ) {
-    const moduleName = call.metadata!.get('module-name')![0] as string;
+    const moduleName = callerModuleName(call.metadata);
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (
+      if (call.request.embeddingsJob) {
+        assertEmbeddingsJobCaller(moduleName);
+        assertEmbeddingsJobWrite({
+          document: call.request.query,
+          schema: schemaAdapter.model.originalSchema as ConduitDatabaseSchema,
+        });
+      } else if (
         !(await canModify(
-          moduleName,
+          moduleName ?? '',
           schemaAdapter.model,
           JSON.parse(call.request.query),
         ))
@@ -670,10 +689,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcStatusFromError(err));
     }
   }
 
@@ -1100,6 +1116,17 @@ export default class DatabaseModule extends ManagedModule<Config> {
     callback: GrpcResponse<QueryResponse>,
   ) {
     try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const adminOperator = resolveAdminOperatorContext({
+        requested: call.request.adminOperator,
+        callerModule: callerModuleName(call.metadata),
+      });
+      assertVectorSearchAccess({
+        authzEnabled: !!schemaAdapter.model.authzEnabled,
+        userId: call.request.userId,
+        scope: call.request.scope,
+        adminOperator,
+      });
       const result = await this._activeAdapter.vectorSearch({
         schemaName: call.request.schemaName,
         field: call.request.field,
@@ -1111,10 +1138,11 @@ export default class DatabaseModule extends ManagedModule<Config> {
         select: call.request.select,
         userId: call.request.userId,
         scope: call.request.scope,
+        adminOperator,
       });
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
-      callback({ code: status.INTERNAL, message: (err as Error).message });
+      callback(grpcStatusFromError(err));
     }
   }
 

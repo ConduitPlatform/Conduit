@@ -45,6 +45,9 @@ message FindOneRequest {
   optional string userId = 5;
   optional string scope = 6;
   optional string readPreference = 7;
+  // When true, Database verifies the caller is embeddings and restricts the read.
+  optional bool embeddingsJob = 8;
+  repeated string embeddingsAllowedFields = 9;
 }
 
 message FindRequest {
@@ -125,6 +128,8 @@ message UpdateRequest {
   optional string scope = 6;
   // When true, skip bus publication. Existing callers omit this and keep publishing.
   optional bool suppressEvent = 7;
+  // When true, Database verifies the caller is embeddings and restricts the write.
+  optional bool embeddingsJob = 8;
 }
 
 message UpdateManyRequest {
@@ -212,6 +217,8 @@ message VectorSearchRequest {
   optional string select = 8;
   optional string userId = 9;
   optional string scope = 10;
+  // Honored only when the verified caller is a platform operator module.
+  optional bool adminOperator = 11;
 }
 
 service DatabaseProvider {

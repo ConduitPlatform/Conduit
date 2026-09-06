@@ -6,3 +6,6 @@ export * from './vectorField.js';
 export * from './vectorCapabilities.js';
 export * from './vectorMappings.js';
 export * from './mutationEvents.js';
+export * from './grpcStatus.js';
+export * from './vectorSearchAuth.js';
+export * from './embeddingsJobContext.js';
