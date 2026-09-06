@@ -43,12 +43,17 @@ import {
 } from '../utils/vectorCapabilities.js';
 import {
   fromPostgresVectorIndex,
-  pgVectorDistanceOperator,
   pgVectorOperator,
   postgresIndexMethodSql,
   resolveVectorFieldFromSchema,
 } from '../utils/vectorMappings.js';
 import { assertVectorSearchAccess } from '../utils/vectorSearchAuth.js';
+import {
+  completeVectorSearch,
+  declaredVectorIndexes,
+  mergeVectorIndexes,
+  planPostgresVectorSearch,
+} from '../utils/vectorSearchQuery.js';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -537,36 +542,36 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       scope: request.scope,
       adminOperator: request.adminOperator,
     });
-    const authorizedQuery = request.adminOperator
-      ? (request.filter ?? {})
-      : await schema.getAuthorizedQuery(
-          'read',
-          request.filter ?? {},
-          true,
-          request.userId,
-          request.scope,
-        );
-    if (isNil(authorizedQuery)) return [];
-    const tableName = this.getPhysicalTableName(request.schemaName);
-    const distance = pgVectorDistanceOperator(field.similarity ?? 'cosine');
-    const where = this.renderSimpleWhere(authorizedQuery);
-    const limit = Math.max(1, Math.min(request.limit ?? 10, 1000));
-    const vector = `[${request.vector.join(',')}]`;
-    const selectedColumns = this.buildVectorSelectList(
-      schema.originalSchema,
-      request.select,
-    );
-    const rows = await this.sequelize.query(
-      `SELECT ${selectedColumns}, (${this.quoteIdentifier(request.field)} ${distance} ${this.sequelize.escape(
-        vector,
-      )}::vector) AS _score FROM ${this.quoteIdentifier(tableName)}${where} ORDER BY ${this.quoteIdentifier(
-        request.field,
-      )} ${distance} ${this.sequelize.escape(vector)}::vector LIMIT ${limit}`,
-    );
-    return (rows[0] as any[]).map(row => {
-      const score = Number(row._score ?? 0);
-      delete row._score;
-      return { document: row, score };
+    const schemaFields = (schema.originalSchema.compiledFields ??
+      schema.originalSchema.fields) as Record<string, unknown>;
+    const liveIndexes = await this.getVectorIndexes(request.schemaName).catch(() => []);
+    const planned = planPostgresVectorSearch({
+      request,
+      indexes: mergeVectorIndexes(
+        declaredVectorIndexes(schema.originalSchema),
+        liveIndexes,
+      ),
+      schemaFields,
+      tableName: this.getPhysicalTableName(request.schemaName),
+      similarity: field.similarity,
+      renderer: {
+        quoteIdentifier: identifier => this.quoteIdentifier(identifier),
+        escape: value => this.sequelize.escape(value as string | number),
+      },
+    });
+    return completeVectorSearch({
+      emptyResult: planned.emptyResult,
+      limit: planned.limits.limit,
+      authzEnabled: !!schema.authzEnabled,
+      adminOperator: request.adminOperator,
+      provider: 'postgres',
+      metric: field.similarity,
+      fetchCandidates: async () => {
+        const rows = await this.sequelize.query(planned.sql);
+        return (rows[0] as Indexable[]) ?? [];
+      },
+      lookupAuthorizedIds: ids =>
+        schema.lookupAuthorizedCandidateIds('read', ids, request.userId, request.scope),
     });
   }
 
@@ -645,88 +650,6 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     );
     if (!entries.length) return '';
     return ` WITH (${entries.map(([key, value]) => `${key} = ${value}`).join(', ')})`;
-  }
-
-  private renderSimpleWhere(query: Indexable): string {
-    const clauses: string[] = Reflect.ownKeys(query).flatMap((fieldKey): string[] => {
-      const value = (query as any)[fieldKey as any];
-      const field = String(fieldKey);
-      if (field === '$and' && Array.isArray(value)) {
-        return value
-          .map(item => this.renderSimpleWhere(item as Indexable).replace(/^ WHERE /, ''))
-          .filter(Boolean);
-      }
-      if (
-        typeof fieldKey === 'symbol' &&
-        fieldKey.description === 'and' &&
-        Array.isArray(value)
-      ) {
-        return value
-          .map(item => this.renderSimpleWhere(item as Indexable).replace(/^ WHERE /, ''))
-          .filter(Boolean);
-      }
-      if (typeof fieldKey === 'symbol') {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Unsupported vector search filter operator',
-        );
-      }
-      const inValues = this.extractInValues(value);
-      if (field === '_id' && inValues) {
-        const ids = inValues.map(id => this.sequelize.escape(String(id)));
-        return ids.length
-          ? [`${this.quoteIdentifier(field)} IN (${ids.join(', ')})`]
-          : [];
-      }
-      if (value === null) {
-        return [`${this.quoteIdentifier(field)} IS NULL`];
-      }
-      if (typeof value === 'boolean') {
-        return [`${this.quoteIdentifier(field)} = ${value ? 'TRUE' : 'FALSE'}`];
-      }
-      if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) {
-        return [
-          `${this.quoteIdentifier(field)} = ${this.sequelize.escape(value as string | number)}`,
-        ];
-      }
-      if (value && typeof value === 'object') {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Unsupported vector search filter shape',
-        );
-      }
-      return [];
-    });
-    return clauses.length ? ` WHERE ${clauses.join(' AND ')}` : '';
-  }
-
-  private extractInValues(value: unknown): unknown[] | null {
-    if (!value || typeof value !== 'object') return null;
-    if ('$in' in value) return (value as { $in: unknown[] }).$in;
-    const inSymbol = Object.getOwnPropertySymbols(value).find(
-      symbol => symbol.description === 'in' || symbol.toString() === 'Symbol(in)',
-    );
-    return inSymbol ? ((value as any)[inSymbol] as unknown[]) : null;
-  }
-
-  private buildVectorSelectList(schema: ConduitDatabaseSchema, select?: string) {
-    const fields = schema.compiledFields ?? schema.fields;
-    const hiddenFields = new Set(
-      Object.entries(fields)
-        .filter(([, field]: [string, any]) => field?.select === false)
-        .map(([field]) => field),
-    );
-    const availableFields = Object.keys(fields).filter(field => !hiddenFields.has(field));
-    const tokens = select?.split(' ').filter(Boolean) ?? [];
-    const includeTokens = tokens.filter(token => !token.startsWith('-'));
-    const selected = new Set(includeTokens.length ? includeTokens : availableFields);
-    tokens
-      .filter(token => token.startsWith('-'))
-      .map(token => token.slice(1))
-      .forEach(field => selected.delete(field));
-    hiddenFields.forEach(field => selected.delete(field));
-    if (!selected.size) selected.add('_id');
-    return [...selected].map(field => this.quoteIdentifier(field)).join(', ');
   }
 
   private checkAndConvertIndexes(

@@ -1,8 +1,10 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
+  applyBoundedVectorAuthorization,
   assertVectorSearchAccess,
+  authorizeBoundedVectorCandidates,
   resolveAdminOperatorContext,
 } from '../vectorSearchAuth.js';
 
@@ -59,5 +61,37 @@ describe('vector search authorization', () => {
     } catch (err) {
       expect((err as GrpcError).code).toBe(status.PERMISSION_DENIED);
     }
+  });
+
+  it('authorizes only the bounded candidate ids instead of materializing every authorized document', async () => {
+    const lookupAuthorizedIds = jest.fn(async (ids: string[]) =>
+      ids.filter(id => id === 'keep'),
+    );
+    const authorized = await authorizeBoundedVectorCandidates({
+      authzEnabled: true,
+      candidateIds: ['keep', 'drop'],
+      lookupAuthorizedIds,
+    });
+    expect(lookupAuthorizedIds).toHaveBeenCalledWith(['keep', 'drop']);
+    expect([...authorized]).toEqual(['keep']);
+    expect(
+      applyBoundedVectorAuthorization(
+        [{ _id: 'keep' }, { _id: 'drop' }, { _id: 'also-keep' }],
+        new Set(['keep', 'also-keep']),
+        1,
+      ),
+    ).toEqual([{ _id: 'keep' }]);
+  });
+
+  it('skips authorization lookup for admin operators while still capping the result limit', async () => {
+    const lookupAuthorizedIds = jest.fn(async (ids: string[]) => ids);
+    const authorized = await authorizeBoundedVectorCandidates({
+      authzEnabled: true,
+      adminOperator: true,
+      candidateIds: ['a', 'b'],
+      lookupAuthorizedIds,
+    });
+    expect(lookupAuthorizedIds).not.toHaveBeenCalled();
+    expect(authorized.size).toBe(2);
   });
 });

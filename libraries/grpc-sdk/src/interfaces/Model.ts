@@ -38,6 +38,8 @@ export enum VectorIndexMethod {
   Flat = 'flat',
 }
 
+export type VectorSearchProvider = 'mongodb' | 'postgres';
+
 export enum MongoIndexType {
   Ascending = 1,
   Descending = -1,
@@ -321,5 +323,17 @@ export interface VectorSearchInput {
 
 export interface VectorSearchResult<T = Indexable> {
   document: T;
+  /**
+   * Provider-neutral, higher-is-better similarity.
+   *
+   * Cosine is normalized so identical vectors score `1` (Postgres cosine
+   * distance is converted with `1 - distance`). Euclidean and inner-product
+   * scores are also higher-is-better ranking values, but they are **not**
+   * comparable across Mongo Atlas Vector Search and pgvector.
+   */
   score: number;
+  /** Raw backend distance or provider score before Conduit normalization. */
+  distance?: number;
+  metric?: VectorSimilarity;
+  provider?: VectorSearchProvider;
 }

@@ -24,6 +24,10 @@ import {
   fromMongoVectorIndex,
   toMongoVectorIndexDefinition,
   assertVectorSearchAccess,
+  completeVectorSearch,
+  declaredVectorIndexes,
+  mergeVectorIndexes,
+  planMongoVectorSearch,
 } from '../utils/index.js';
 import pluralize from '../../utils/pluralize.js';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils.js';
@@ -829,46 +833,31 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       adminOperator: request.adminOperator,
     });
 
-    const vectorStage: any = {
-      index: request.indexName ?? `${request.field}_vector`,
-      path: request.field,
-      queryVector: request.vector,
-      numCandidates: request.numCandidates ?? Math.max((request.limit ?? 10) * 10, 100),
-      limit: request.limit ?? 10,
-    };
-    const filter = request.filter ?? {};
-    if (!request.adminOperator) {
-      const authorizedQuery = await model.getAuthorizedQuery(
-        'read',
-        filter,
-        true,
-        request.userId,
-        request.scope,
-      );
-      if (isNil(authorizedQuery)) return [];
-      if (Object.keys(authorizedQuery).length > 0) {
-        vectorStage.filter = authorizedQuery;
-      }
-    } else if (Object.keys(filter).length > 0) {
-      vectorStage.filter = filter;
-    }
-
-    const pipeline: any[] = [
-      { $vectorSearch: vectorStage },
-      { $addFields: { _score: { $meta: 'vectorSearchScore' } } },
-    ];
-    pipeline.push({
-      $project: this.buildVectorProjection(model.originalSchema, request.select),
+    const schemaFields = (model.originalSchema.compiledFields ??
+      model.originalSchema.fields) as Record<string, unknown>;
+    const liveIndexes = await this.getVectorIndexes(request.schemaName).catch(() => []);
+    const planned = planMongoVectorSearch({
+      request,
+      indexes: mergeVectorIndexes(
+        declaredVectorIndexes(model.originalSchema),
+        liveIndexes,
+      ),
+      schemaFields,
     });
-
-    const docs = await this.mongoose
-      .model(request.schemaName)
-      .collection.aggregate(pipeline)
-      .toArray();
-    return docs.map((doc: any) => {
-      const score = doc._score ?? 0;
-      delete doc._score;
-      return { document: doc, score };
+    return completeVectorSearch({
+      emptyResult: planned.emptyResult,
+      limit: planned.limits.limit,
+      authzEnabled: !!model.authzEnabled,
+      adminOperator: request.adminOperator,
+      provider: 'mongodb',
+      metric: schemaField.similarity,
+      fetchCandidates: async () =>
+        this.mongoose
+          .model(request.schemaName)
+          .collection.aggregate(planned.pipeline)
+          .toArray(),
+      lookupAuthorizedIds: ids =>
+        model.lookupAuthorizedCandidateIds('read', ids, request.userId, request.scope),
     });
   }
 
@@ -960,32 +949,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     const schema = this.models[schemaName].originalSchema as any;
     const field = schema.compiledFields?.[index.field] ?? schema.fields?.[index.field];
     assertVectorIndexMatchesField(field, index);
-  }
-
-  private buildVectorProjection(schema: ConduitDatabaseSchema, select?: string) {
-    const hiddenFields = new Set(
-      Object.entries(schema.compiledFields ?? schema.fields)
-        .filter(([, field]: [string, any]) => field?.select === false)
-        .map(([field]) => field),
-    );
-    const tokens = select?.split(' ').filter(Boolean) ?? [];
-    const includeTokens = tokens.filter(token => !token.startsWith('-'));
-    if (includeTokens.length) {
-      return includeTokens.reduce(
-        (projection: any, token: string) => {
-          if (!hiddenFields.has(token)) projection[token] = 1;
-          return projection;
-        },
-        { _score: 1 },
-      );
-    }
-    return [
-      ...hiddenFields,
-      ...tokens.filter(token => token.startsWith('-')).map(token => token.slice(1)),
-    ].reduce((projection: any, field: string) => {
-      projection[field] = 0;
-      return projection;
-    }, {});
   }
 
   protected async _createSchemaFromAdapter(
