@@ -1,0 +1,638 @@
+import {
+  GrpcError,
+  TYPE,
+  VectorCapabilities,
+  VectorSearchResult,
+  type ConduitModel,
+} from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
+import { Config } from '../config/index.js';
+import { QueueJobCounts } from '../controllers/queue.controller.js';
+import {
+  cancelBackfillExecution,
+  persistableBackfillRun,
+  queueBackfillRuns,
+  resumeBackfillExecution,
+  type BackfillControllerJobData,
+  type PersistedBackfillRun,
+} from '../utils/backfillExecution.js';
+import { BackfillGateError, grpcErrorFromBackfillGate } from '../utils/backfillGates.js';
+import { MAX_QUEUE_BATCH_SIZE } from '../utils/embeddingJobs.js';
+import {
+  assertCanManageEmbeddingConfig,
+  assertEmbeddingTargetSchema,
+  assertSemanticSearchAccess,
+  canManageEmbeddingConfig,
+  resolveAdminOperatorContext,
+} from '../utils/schemaPolicy.js';
+import { validateEmbeddingConfigInput } from '../utils/validateEmbeddingConfig.js';
+import {
+  assertConfigActivation,
+  assertSearchExecutable,
+  capabilityWarnings,
+  emptyQueueCounts,
+  indexReadinessWarnings,
+  isEmbeddingsReady,
+  providerReadinessWarnings,
+  SearchGateError,
+  grpcErrorFromSearchGate,
+} from '../utils/operationalStatus.js';
+import {
+  mapBackfillRun,
+  mapCapabilities,
+  mapEmbeddingConfig,
+  mapQueueCounts,
+  mapSearchHits,
+  parseJsonObject,
+  type MappedBackfillRun,
+  type MappedEmbeddingConfig,
+} from '../utils/protoMappers.js';
+import { sanitizeErrorMessage } from '../utils/redactConfig.js';
+
+export interface DeclaredSchemaInfo {
+  name: string;
+  ownerModule?: string;
+}
+
+export interface SchemaInfo {
+  name: string;
+  fields: Record<string, unknown>;
+  modelOptions?: { conduit?: { authorization?: { enabled?: boolean } } };
+}
+
+export interface EmbeddingConfigRecord {
+  _id: string;
+  schemaName: string;
+  sourceFields: string[];
+  targetField: string;
+  provider: string;
+  modelName: string;
+  dimensions: number;
+  similarity: string;
+  enabled: boolean;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+export interface BackfillRunRecord extends PersistedBackfillRun {
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+export interface ConfigStore {
+  findMany: (query: Record<string, unknown>) => Promise<EmbeddingConfigRecord[]>;
+  findOne: (query: Record<string, unknown>) => Promise<EmbeddingConfigRecord | null>;
+  create: (doc: Record<string, unknown>) => Promise<EmbeddingConfigRecord>;
+  findByIdAndUpdate: (
+    id: string,
+    doc: Record<string, unknown>,
+  ) => Promise<EmbeddingConfigRecord | null>;
+  deleteOne: (query: Record<string, unknown>) => Promise<unknown>;
+}
+
+export interface BackfillStore {
+  findMany: (
+    query: Record<string, unknown>,
+    options?: { skip?: number; limit?: number; sort?: Record<string, 1 | -1> },
+  ) => Promise<BackfillRunRecord[]>;
+  findOne: (query: Record<string, unknown>) => Promise<BackfillRunRecord | null>;
+  countDocuments: (query: Record<string, unknown>) => Promise<number>;
+  create: (doc: Record<string, unknown>) => Promise<{ _id: string }>;
+  findByIdAndUpdate: (
+    id: string,
+    doc: Record<string, unknown>,
+  ) => Promise<BackfillRunRecord | null>;
+}
+
+export interface EmbeddingsApiCaller {
+  callerModule?: string;
+  platformAdmin?: boolean;
+}
+
+export interface EmbeddingsApiDeps {
+  currentConfig: () => Config;
+  getSchema: (schemaName: string) => Promise<SchemaInfo>;
+  declaredSchema: (schemaName: string) => Promise<DeclaredSchemaInfo | null>;
+  setSchemaExtension: (args: {
+    schemaName: string;
+    fields: ConduitModel;
+  }) => Promise<unknown>;
+  getVectorCapabilities: (schemaName?: string) => Promise<VectorCapabilities>;
+  getVectorIndexes: (
+    schemaName: string,
+  ) => Promise<
+    Array<{ field?: string; name?: string; queryable?: boolean; status?: string }>
+  >;
+  vectorSearch: (input: {
+    schemaName: string;
+    field: string;
+    vector: number[];
+    filter?: Record<string, unknown>;
+    limit?: number;
+    userId?: string;
+    scope?: string;
+    adminOperator?: boolean;
+  }) => Promise<VectorSearchResult[]>;
+  configs: ConfigStore;
+  backfills: BackfillStore;
+  getQueueStatus: () => Promise<{ generation: QueueJobCounts; backfill: QueueJobCounts }>;
+  enqueueBackfill: (job: BackfillControllerJobData) => Promise<void>;
+  embed: (input: string, provider: string, model: string) => Promise<number[]>;
+  onConfigChanged?: (schemaName: string) => Promise<void> | void;
+}
+
+const DEFAULT_LIST_LIMIT = 25;
+const MAX_LIST_LIMIT = 100;
+
+export class EmbeddingsApi {
+  constructor(private readonly deps: EmbeddingsApiDeps) {}
+
+  async upsertConfig(
+    request: {
+      schemaName: string;
+      sourceFields: string[];
+      targetField: string;
+      provider?: string;
+      model?: string;
+      dimensions: number;
+      similarity?: string;
+      sourceFieldAllowlist?: string[];
+      enabled?: boolean;
+    },
+    caller: EmbeddingsApiCaller,
+  ): Promise<{ config: MappedEmbeddingConfig; warnings: string[] }> {
+    const schema = await this.loadTargetSchema(request.schemaName, caller);
+    const configDefaults = this.deps.currentConfig();
+    const { sourceFieldAllowlist: _allowlist, ...persisted } =
+      validateEmbeddingConfigInput(
+        {
+          ...request,
+          sourceFieldAllowlist: [
+            ...(configDefaults.security.sourceFieldAllowlist ?? []),
+            ...(request.sourceFieldAllowlist ?? []),
+          ],
+        },
+        { provider: configDefaults.defaultProvider },
+        schema.fields,
+      );
+    const enabled = request.enabled ?? true;
+    const capabilities = await this.deps.getVectorCapabilities(persisted.schemaName);
+    const indexes = await this.deps.getVectorIndexes(persisted.schemaName);
+    const warnings = [
+      ...capabilityWarnings(capabilities),
+      ...indexReadinessWarnings(
+        [
+          {
+            targetField: persisted.targetField,
+            enabled,
+            schemaName: persisted.schemaName,
+          },
+        ],
+        indexes,
+      ),
+      ...providerReadinessWarnings(
+        configDefaults.providers[persisted.provider] ??
+          configDefaults.providers[configDefaults.defaultProvider],
+      ),
+    ];
+    if (enabled) {
+      assertConfigActivation({
+        moduleEnabled: configDefaults.enabled,
+        capabilities,
+        config: {
+          enabled,
+          schemaName: persisted.schemaName,
+          targetField: persisted.targetField,
+        },
+        indexes,
+      });
+    }
+    if (capabilities.storage) {
+      await this.deps.setSchemaExtension({
+        schemaName: persisted.schemaName,
+        fields: {
+          [persisted.targetField]: {
+            type: TYPE.Vector,
+            dimensions: persisted.dimensions,
+            similarity: persisted.similarity,
+            select: false,
+          },
+          [`${persisted.targetField}SourceHash`]: {
+            type: TYPE.String,
+            required: false,
+            select: false,
+          },
+        },
+      });
+    }
+    const existing = await this.deps.configs.findOne({
+      schemaName: persisted.schemaName,
+      targetField: persisted.targetField,
+    });
+    const saved = existing
+      ? await this.deps.configs.findByIdAndUpdate(existing._id, { ...persisted, enabled })
+      : await this.deps.configs.create({ ...persisted, enabled });
+    if (!saved) {
+      throw new GrpcError(status.INTERNAL, 'Failed to persist embedding config');
+    }
+    await this.deps.onConfigChanged?.(saved.schemaName);
+    return { config: mapEmbeddingConfig(saved), warnings };
+  }
+
+  async getConfigs(
+    request: { schemaName?: string; id?: string },
+    caller: EmbeddingsApiCaller,
+  ): Promise<{ configs: MappedEmbeddingConfig[] }> {
+    if (request.id) {
+      const config = await this.requireConfig({ id: request.id });
+      await this.loadTargetSchema(config.schemaName, caller);
+      return { configs: [mapEmbeddingConfig(config)] };
+    }
+    if (request.schemaName) {
+      await this.loadTargetSchema(request.schemaName, caller);
+      const configs = await this.deps.configs.findMany({
+        schemaName: request.schemaName,
+      });
+      return { configs: configs.map(mapEmbeddingConfig) };
+    }
+    this.assertOperatorListAccess(caller);
+    const configs = await this.deps.configs.findMany({});
+    return { configs: configs.map(mapEmbeddingConfig) };
+  }
+
+  async deleteConfig(
+    request: { id?: string; schemaName?: string; targetField?: string },
+    caller: EmbeddingsApiCaller,
+  ): Promise<{ config: MappedEmbeddingConfig }> {
+    const existing = await this.requireConfig(request);
+    await this.loadTargetSchema(existing.schemaName, caller);
+    await this.deps.configs.deleteOne({ _id: existing._id });
+    await this.deps.onConfigChanged?.(existing.schemaName);
+    return { config: mapEmbeddingConfig(existing) };
+  }
+
+  async getCapabilities(schemaName?: string): Promise<{
+    capabilities: ReturnType<typeof mapCapabilities>;
+    warnings: string[];
+  }> {
+    const capabilities = await this.deps.getVectorCapabilities(schemaName);
+    return {
+      capabilities: mapCapabilities(capabilities),
+      warnings: capabilityWarnings(capabilities),
+    };
+  }
+
+  async getStatus(schemaName?: string): Promise<{
+    enabled: boolean;
+    ready: boolean;
+    capabilities: ReturnType<typeof mapCapabilities>;
+    generationQueue: ReturnType<typeof mapQueueCounts>;
+    backfillQueue: ReturnType<typeof mapQueueCounts>;
+    warnings: string[];
+  }> {
+    const config = this.deps.currentConfig();
+    const capabilities = await this.deps.getVectorCapabilities(schemaName);
+    const queue = await this.deps.getQueueStatus().catch(() => ({
+      generation: emptyQueueCounts(),
+      backfill: emptyQueueCounts(),
+    }));
+    const warnings = [
+      ...(config.enabled ? [] : ['Embeddings module is disabled']),
+      ...capabilityWarnings(capabilities),
+      ...providerReadinessWarnings(
+        config.providers[config.defaultProvider] ?? Object.values(config.providers)[0],
+      ),
+    ];
+    if (schemaName) {
+      const configs = await this.deps.configs.findMany({ schemaName, enabled: true });
+      const indexes = await this.deps.getVectorIndexes(schemaName);
+      warnings.push(...indexReadinessWarnings(configs, indexes));
+    }
+    return {
+      enabled: config.enabled,
+      ready: isEmbeddingsReady({ moduleEnabled: config.enabled, warnings }),
+      capabilities: mapCapabilities(capabilities),
+      generationQueue: mapQueueCounts(queue.generation),
+      backfillQueue: mapQueueCounts(queue.backfill),
+      warnings,
+    };
+  }
+
+  async startBackfill(
+    request: {
+      schemaName: string;
+      batchSize?: number;
+      configId?: string;
+      onlyMissing?: boolean;
+      filter?: string;
+    },
+    caller: EmbeddingsApiCaller,
+  ): Promise<{ queued: number; runs: MappedBackfillRun[]; warnings: string[] }> {
+    await this.loadTargetSchema(request.schemaName, caller);
+    const filter = this.parseOptionalFilter(request.filter);
+    const [configs, capabilities, indexes] = await Promise.all([
+      this.deps.configs.findMany({
+        schemaName: request.schemaName,
+        ...(request.configId ? { _id: request.configId } : { enabled: true }),
+      }),
+      this.deps.getVectorCapabilities(request.schemaName),
+      this.deps.getVectorIndexes(request.schemaName),
+    ]);
+    const queued = await queueBackfillRuns(
+      {
+        schemaName: request.schemaName,
+        batchSize: request.batchSize,
+        configId: request.configId,
+        onlyMissing: request.onlyMissing,
+        filter,
+        maxBatchSize:
+          this.deps.currentConfig().queue.maxBatchSize ?? MAX_QUEUE_BATCH_SIZE,
+      },
+      {
+        moduleEnabled: this.deps.currentConfig().enabled,
+        capabilities,
+        configs,
+        indexes,
+        createRun: async run => this.deps.backfills.create(persistableBackfillRun(run)),
+        enqueueController: job => this.deps.enqueueBackfill(job),
+      },
+    );
+    const runs = await Promise.all(
+      queued.runs.map(async item => {
+        const persisted = await this.deps.backfills.findOne({ _id: item.id });
+        if (!persisted) {
+          throw new GrpcError(status.INTERNAL, 'Failed to load queued backfill run');
+        }
+        return mapBackfillRun(persisted);
+      }),
+    );
+    return {
+      queued: queued.queued,
+      runs,
+      warnings: [
+        ...capabilityWarnings(capabilities),
+        ...indexReadinessWarnings(configs, indexes),
+      ],
+    };
+  }
+
+  async getBackfill(id: string, caller: EmbeddingsApiCaller): Promise<MappedBackfillRun> {
+    const run = await this.requireBackfill(id);
+    await this.loadTargetSchema(run.schemaName, caller);
+    return mapBackfillRun(run);
+  }
+
+  async listBackfills(
+    request: {
+      schemaName?: string;
+      state?: string;
+      configId?: string;
+      skip?: number;
+      limit?: number;
+    },
+    caller: EmbeddingsApiCaller,
+  ): Promise<{ runs: MappedBackfillRun[]; count: number }> {
+    if (request.schemaName) {
+      await this.loadTargetSchema(request.schemaName, caller);
+    } else {
+      this.assertOperatorListAccess(caller);
+    }
+    const query: Record<string, unknown> = {};
+    if (request.schemaName) query.schemaName = request.schemaName;
+    if (request.state) query.state = request.state;
+    if (request.configId) query.configId = request.configId;
+    const skip = Math.max(0, request.skip ?? 0);
+    const limit = Math.min(
+      MAX_LIST_LIMIT,
+      Math.max(1, request.limit ?? DEFAULT_LIST_LIMIT),
+    );
+    const [runs, count] = await Promise.all([
+      this.deps.backfills.findMany(query, { skip, limit, sort: { createdAt: -1 } }),
+      this.deps.backfills.countDocuments(query),
+    ]);
+    return { runs: runs.map(mapBackfillRun), count };
+  }
+
+  async cancelBackfill(
+    id: string,
+    caller: EmbeddingsApiCaller,
+  ): Promise<{ run: MappedBackfillRun }> {
+    const existing = await this.requireBackfill(id);
+    await this.loadTargetSchema(existing.schemaName, caller);
+    const result = await cancelBackfillExecution({
+      run: existing,
+      saveRun: async (runId, run) => {
+        await this.deps.backfills.findByIdAndUpdate(runId, persistableBackfillRun(run));
+      },
+    });
+    if (!result.ok) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        `Backfill run '${id}' cannot be canceled from state '${existing.state}'`,
+      );
+    }
+    return { run: mapBackfillRun({ ...existing, ...result.run }) };
+  }
+
+  async resumeBackfill(
+    id: string,
+    caller: EmbeddingsApiCaller,
+  ): Promise<{ run: MappedBackfillRun }> {
+    const existing = await this.requireBackfill(id);
+    await this.loadTargetSchema(existing.schemaName, caller);
+    const config = existing.configId
+      ? await this.deps.configs.findOne({ _id: existing.configId })
+      : await this.deps.configs.findOne({
+          schemaName: existing.schemaName,
+          enabled: true,
+        });
+    const [capabilities, indexes] = await Promise.all([
+      this.deps.getVectorCapabilities(existing.schemaName),
+      this.deps.getVectorIndexes(existing.schemaName),
+    ]);
+    assertConfigActivation({
+      moduleEnabled: this.deps.currentConfig().enabled,
+      capabilities,
+      config: config ?? null,
+      indexes,
+    });
+    const result = await resumeBackfillExecution({
+      run: existing,
+      saveRun: async (runId, run) => {
+        await this.deps.backfills.findByIdAndUpdate(runId, persistableBackfillRun(run));
+      },
+      enqueueController: job => this.deps.enqueueBackfill(job),
+    });
+    if (!result.ok) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        `Backfill run '${id}' cannot be resumed from state '${existing.state}'`,
+      );
+    }
+    return { run: mapBackfillRun({ ...existing, ...result.run }) };
+  }
+
+  async semanticSearch(
+    request: {
+      schemaName: string;
+      text: string;
+      targetField?: string;
+      filter?: string;
+      limit?: number;
+      userId?: string;
+      scope?: string;
+      adminOperator?: boolean;
+    },
+    caller: EmbeddingsApiCaller,
+  ): Promise<{ hits: ReturnType<typeof mapSearchHits> }> {
+    if (typeof request.text !== 'string' || request.text.trim().length === 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Search text is required');
+    }
+    const adminOperator = caller.platformAdmin
+      ? true
+      : resolveAdminOperatorContext({
+          requested: request.adminOperator,
+          callerModule: caller.callerModule,
+        });
+    const schema = await this.deps.getSchema(request.schemaName);
+    const declared = await this.deps.declaredSchema(request.schemaName);
+    assertEmbeddingTargetSchema({
+      name: schema.name,
+      ownerModule: declared?.ownerModule,
+    });
+    if (schema.modelOptions?.conduit?.authorization?.enabled) {
+      assertSemanticSearchAccess({
+        userId: request.userId,
+        scope: request.scope,
+        adminOperator,
+      });
+    }
+    const config = await this.resolveEnabledConfig(
+      request.schemaName,
+      request.targetField,
+    );
+    const [capabilities, indexes] = await Promise.all([
+      this.deps.getVectorCapabilities(request.schemaName),
+      this.deps.getVectorIndexes(request.schemaName),
+    ]);
+    assertSearchExecutable({
+      capabilities,
+      config,
+      indexes,
+    });
+    const vector = await this.deps.embed(request.text, config.provider, config.modelName);
+    if (vector.length !== config.dimensions) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        `Embedding provider returned ${vector.length} dimensions; expected ${config.dimensions}`,
+      );
+    }
+    const results = await this.deps.vectorSearch({
+      schemaName: request.schemaName,
+      field: config.targetField,
+      vector,
+      filter: this.parseOptionalFilter(request.filter),
+      limit: request.limit,
+      userId: request.userId,
+      scope: request.scope,
+      adminOperator,
+    });
+    return { hits: mapSearchHits(results) };
+  }
+
+  mapGrpcError(err: unknown): { code: number; message: string } {
+    if (err instanceof BackfillGateError) {
+      const mapped = grpcErrorFromBackfillGate(err);
+      return { code: mapped.code, message: sanitizeErrorMessage(mapped) };
+    }
+    if (err instanceof SearchGateError) {
+      const mapped = grpcErrorFromSearchGate(err);
+      return { code: mapped.code, message: sanitizeErrorMessage(mapped) };
+    }
+    if (err instanceof GrpcError) {
+      return { code: err.code, message: sanitizeErrorMessage(err) };
+    }
+    return { code: status.INTERNAL, message: sanitizeErrorMessage(err) };
+  }
+
+  private parseOptionalFilter(filter?: string): Record<string, unknown> | undefined {
+    try {
+      return parseJsonObject(filter, 'filter');
+    } catch {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'filter must be a JSON object');
+    }
+  }
+
+  private async loadTargetSchema(schemaName: string, caller: EmbeddingsApiCaller) {
+    const schema = await this.deps.getSchema(schemaName);
+    const declared = await this.deps.declaredSchema(schemaName);
+    assertEmbeddingTargetSchema({
+      name: schema.name,
+      ownerModule: declared?.ownerModule,
+    });
+    if (!caller.platformAdmin) {
+      assertCanManageEmbeddingConfig({
+        callerModule: caller.callerModule,
+        ownerModule: declared?.ownerModule,
+        schemaName: schema.name,
+      });
+    }
+    return schema;
+  }
+
+  private assertOperatorListAccess(caller: EmbeddingsApiCaller) {
+    if (caller.platformAdmin) return;
+    if (canManageEmbeddingConfig({ callerModule: caller.callerModule })) return;
+    throw new GrpcError(
+      status.PERMISSION_DENIED,
+      'Listing embedding resources requires the schema owner or a platform operator',
+    );
+  }
+
+  private async requireConfig(request: {
+    id?: string;
+    schemaName?: string;
+    targetField?: string;
+  }): Promise<EmbeddingConfigRecord> {
+    const query: Record<string, unknown> = {};
+    if (request.id) query._id = request.id;
+    else if (request.schemaName && request.targetField) {
+      query.schemaName = request.schemaName;
+      query.targetField = request.targetField;
+    } else {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'id or schemaName and targetField are required',
+      );
+    }
+    const existing = await this.deps.configs.findOne(query);
+    if (!existing) {
+      throw new GrpcError(status.NOT_FOUND, 'Embedding config not found');
+    }
+    return existing;
+  }
+
+  private async requireBackfill(id: string): Promise<BackfillRunRecord> {
+    if (!id) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Backfill id is required');
+    }
+    const run = await this.deps.backfills.findOne({ _id: id });
+    if (!run) {
+      throw new GrpcError(status.NOT_FOUND, 'Backfill run not found');
+    }
+    return run;
+  }
+
+  private async resolveEnabledConfig(schemaName: string, targetField?: string) {
+    const query: Record<string, unknown> = { schemaName, enabled: true };
+    if (targetField) query.targetField = targetField;
+    const config = await this.deps.configs.findOne(query);
+    if (!config) {
+      throw new GrpcError(
+        status.NOT_FOUND,
+        'No embedding config found for semantic search',
+      );
+    }
+    return config;
+  }
+}
