@@ -17,7 +17,7 @@ import {
 import { status } from '@grpc/grpc-js';
 import AppConfigSchema, { Config } from './config/index.js';
 import * as models from './models/index.js';
-import { EmbeddingConfig } from './models/index.js';
+import { BackfillRun, EmbeddingConfig } from './models/index.js';
 import { QueueController } from './controllers/queue.controller.js';
 import { getProvider, hashEmbeddingInput } from './providers/index.js';
 import { validateEmbeddingConfigInput } from './utils/validateEmbeddingConfig.js';
@@ -30,7 +30,11 @@ import {
   buildEmbeddingDocumentSelect,
   generateEmbeddingsForDocument,
 } from './utils/processEmbedding.js';
-import { MAX_QUEUE_BATCH_SIZE, parseEmbeddingJobData } from './utils/embeddingJobs.js';
+import {
+  MAX_QUEUE_BATCH_SIZE,
+  parseEmbeddingJobData,
+  type EmbeddingJobData,
+} from './utils/embeddingJobs.js';
 import {
   assertCanManageEmbeddingConfig,
   assertEmbeddingTargetSchema,
@@ -42,6 +46,16 @@ import {
   callerModuleName,
 } from './utils/productionSecurity.js';
 import { sanitizeErrorMessage } from './utils/redactConfig.js';
+import {
+  applyBackfillJobOutcome,
+  backfillRunFromDocument,
+  persistableBackfillRun,
+  processBackfillControllerJob,
+  queueBackfillRuns,
+  type BackfillControllerJobData,
+} from './utils/backfillExecution.js';
+import { BackfillGateError, grpcErrorFromBackfillGate } from './utils/backfillGates.js';
+import { incrementEmbeddingMetric } from './utils/embeddingMetrics.js';
 import metricsSchema from './metrics/index.js';
 import {
   BackfillRequest,
@@ -188,37 +202,35 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
         ownerModule: declared?.ownerModule,
         schemaName: schema.name,
       });
-      const configs = await EmbeddingConfig.getInstance().findMany({
-        schemaName: call.request.schemaName,
-        enabled: true,
-      });
-      if (!configs.length) {
-        throw new GrpcError(
-          status.FAILED_PRECONDITION,
-          'No enabled embedding config found for backfill',
-        );
-      }
-      const maxBatch = this.currentConfig().queue.maxBatchSize ?? MAX_QUEUE_BATCH_SIZE;
-      const batchSize = Math.min(Math.max(call.request.batchSize ?? 100, 1), maxBatch);
-      const docs = await this.database.findMany<Record<string, unknown>>(
-        call.request.schemaName,
-        {},
-        { limit: batchSize, select: '_id' },
+      const [configs, capabilities, indexes] = await Promise.all([
+        EmbeddingConfig.getInstance().findMany({
+          schemaName: call.request.schemaName,
+          enabled: true,
+        }),
+        this.database.getVectorCapabilities(call.request.schemaName),
+        this.database.getVectorIndexes(call.request.schemaName),
+      ]);
+      const queued = await queueBackfillRuns(
+        {
+          schemaName: call.request.schemaName,
+          batchSize: call.request.batchSize,
+          maxBatchSize: this.currentConfig().queue.maxBatchSize ?? MAX_QUEUE_BATCH_SIZE,
+        },
+        {
+          moduleEnabled: this.currentConfig().enabled,
+          capabilities,
+          configs,
+          indexes,
+          createRun: async run => {
+            const created = await BackfillRun.getInstance().create(
+              persistableBackfillRun(run),
+            );
+            return { _id: created._id };
+          },
+          enqueueController: job => this.queueController.addBackfillControllerJob(job),
+        },
       );
-      const attempts = this.currentConfig().queue.attempts;
-      await this.queueController.addBulkEmbeddingJobs(
-        docs.flatMap(doc =>
-          configs.map(config => ({
-            schemaName: config.schemaName,
-            documentId: String(doc._id),
-            configId: config._id,
-          })),
-        ),
-        attempts,
-      );
-      callback(null, {
-        result: JSON.stringify({ queued: docs.length * configs.length }),
-      });
+      callback(null, { result: JSON.stringify(queued) });
     } catch (err) {
       callback(this.grpcError(err));
     }
@@ -280,9 +292,16 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       this.unsubscribeAll();
       return;
     }
+    this.queueController.setBackfillJobOutcomeHandler((runId, outcome) =>
+      this.recordBackfillJobOutcome(runId, outcome),
+    );
     await this.queueController.ensureWorker(
-      data => this.processEmbeddingJob(data.schemaName, data.documentId, data.configId),
+      data => this.processEmbeddingJob(data),
       config.queue.concurrency,
+    );
+    await this.queueController.ensureBackfillWorker(
+      data => this.processBackfillJob(data),
+      1,
     );
     const configs = await EmbeddingConfig.getInstance().findMany({ enabled: true });
     const enabledSchemas = new Set(configs.map(item => item.schemaName));
@@ -361,7 +380,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       this.currentConfig().security.maxMutationEventIds,
     );
     if (!parsed.ok) {
-      ConduitGrpcSdk.Metrics?.increment('malformed_embedding_events_total');
+      incrementEmbeddingMetric('malformedEvents');
       return;
     }
     if (!parsed.event.ids.length) return;
@@ -380,14 +399,40 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     );
   }
 
-  private async processEmbeddingJob(
-    schemaName: string,
-    documentId: string,
-    configId?: string,
-  ) {
-    const parsed = parseEmbeddingJobData({ schemaName, documentId, configId });
+  private async processBackfillJob(data: BackfillControllerJobData) {
+    await processBackfillControllerJob(data, {
+      maxBatchSize: this.currentConfig().queue.maxBatchSize ?? MAX_QUEUE_BATCH_SIZE,
+      moduleEnabled: this.currentConfig().enabled,
+      getRun: async id => {
+        const doc = await BackfillRun.getInstance().findOne({ _id: id });
+        return doc ? backfillRunFromDocument(doc) : null;
+      },
+      saveRun: (id, run) =>
+        BackfillRun.getInstance()
+          .findByIdAndUpdate(id, persistableBackfillRun(run))
+          .then(() => undefined),
+      findPage: (schemaName, page) =>
+        this.database.findMany<{ _id?: unknown }>(schemaName, page.query, {
+          sort: page.sort,
+          limit: page.limit,
+          select: '_id',
+        }),
+      enqueueEmbeddingJobs: jobs =>
+        this.queueController.addBulkEmbeddingJobs(
+          jobs,
+          this.currentConfig().queue.attempts,
+        ),
+      enqueueContinuation: job => this.queueController.addBackfillControllerJob(job),
+      getCapabilities: schemaName => this.database.getVectorCapabilities(schemaName),
+      getConfig: id => EmbeddingConfig.getInstance().findOne({ _id: id }),
+      getIndexes: schemaName => this.database.getVectorIndexes(schemaName),
+    });
+  }
+
+  private async processEmbeddingJob(data: EmbeddingJobData) {
+    const parsed = parseEmbeddingJobData(data);
     if (!parsed.ok) {
-      ConduitGrpcSdk.Metrics?.increment('malformed_embedding_jobs_total');
+      incrementEmbeddingMetric('malformedJobs');
       return;
     }
     const configs = (
@@ -401,7 +446,10 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     const matching = configs.filter(
       config => config.enabled && config.schemaName === parsed.data.schemaName,
     );
-    if (!matching.length) return;
+    if (!matching.length) {
+      await this.recordBackfillJobOutcome(parsed.data.backfillRunId, 'processed');
+      return;
+    }
     const allowedFields = [
       ...new Set(
         matching.flatMap(config => [
@@ -419,8 +467,11 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
         embeddingsAllowedFields: allowedFields,
       },
     );
-    if (!doc) return;
-    await generateEmbeddingsForDocument({
+    if (!doc) {
+      await this.recordBackfillJobOutcome(parsed.data.backfillRunId, 'processed');
+      return;
+    }
+    const result = await generateEmbeddingsForDocument({
       doc,
       configs: matching,
       hashInput: hashEmbeddingInput,
@@ -440,6 +491,27 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
           },
         ),
     });
+    incrementEmbeddingMetric('generated', result.generated);
+    incrementEmbeddingMetric('skipped', result.skipped);
+    await this.recordBackfillJobOutcome(parsed.data.backfillRunId, 'processed');
+  }
+
+  private async recordBackfillJobOutcome(
+    runId: string | undefined,
+    outcome: 'processed' | 'failed',
+  ) {
+    if (!runId) return;
+    const doc = await BackfillRun.getInstance().findOne({ _id: runId });
+    if (!doc) return;
+    const run = backfillRunFromDocument(doc);
+    await applyBackfillJobOutcome({
+      run,
+      outcome,
+      saveRun: (id, next) =>
+        BackfillRun.getInstance()
+          .findByIdAndUpdate(id, persistableBackfillRun(next))
+          .then(() => undefined),
+    });
   }
 
   private async declaredSchema(schemaName: string) {
@@ -451,6 +523,10 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
   }
 
   private grpcError(err: unknown) {
+    if (err instanceof BackfillGateError) {
+      const mapped = grpcErrorFromBackfillGate(err);
+      return { code: mapped.code, message: sanitizeErrorMessage(mapped) };
+    }
     if (err instanceof GrpcError) {
       return { code: err.code, message: sanitizeErrorMessage(err) };
     }

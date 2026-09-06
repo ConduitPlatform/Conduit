@@ -39,6 +39,15 @@ describe('embedding job identity', () => {
       false,
     );
     assert.equal(
+      parseEmbeddingJobData({
+        schemaName: 'Article',
+        documentId: 'a',
+        configId: 'c1',
+        backfillRunId: 'run1',
+      }).ok,
+      true,
+    );
+    assert.equal(
       parseEmbeddingJobData({ schemaName: 'Article', documentId: 'a', extra: true }).ok,
       false,
     );
