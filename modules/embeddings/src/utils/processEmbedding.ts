@@ -1,9 +1,12 @@
+import { hashedEmbeddingSource } from './configChange.js';
+
 export interface EmbeddingConfigLike {
   sourceFields: string[];
   targetField: string;
   dimensions: number;
   provider: string;
   modelName?: string;
+  similarity?: string;
 }
 
 export interface EmbeddingGenerationResult {
@@ -57,7 +60,7 @@ export async function generateEmbeddingsForDocument(args: {
   let skipped = 0;
   for (const config of args.configs) {
     const input = buildEmbeddingInput(args.doc, config.sourceFields);
-    const sourceHash = args.hashInput(input);
+    const sourceHash = hashedEmbeddingSource(args.hashInput, input, config);
     if (shouldSkipEmbedding(args.doc, config.targetField, sourceHash)) {
       skipped += 1;
       continue;

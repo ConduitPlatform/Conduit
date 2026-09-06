@@ -17,12 +17,14 @@ export const LEGAL_BACKFILL_TRANSITIONS: Record<
   BackfillRunState,
   readonly BackfillRunState[]
 > = {
-  queued: ['running', 'canceled'],
+  queued: ['running', 'failed', 'canceled'],
   running: ['completed', 'failed', 'canceled'],
   completed: [],
   failed: ['queued'],
   canceled: ['queued'],
 };
+
+export const ACTIVE_BACKFILL_STATES: readonly BackfillRunState[] = ['queued', 'running'];
 
 export const MIN_BACKFILL_BATCH_SIZE = 1;
 export const DEFAULT_BACKFILL_BATCH_SIZE = 100;
@@ -48,6 +50,7 @@ export interface BackfillRunProgress {
   failedCount: number;
   startedAt?: Date | null;
   finishedAt?: Date | null;
+  drainStartedAt?: Date | null;
   error?: string | null;
 }
 
@@ -85,6 +88,10 @@ export function isLegalBackfillTransition(
   to: BackfillRunState,
 ): boolean {
   return LEGAL_BACKFILL_TRANSITIONS[from].includes(to);
+}
+
+export function isActiveBackfillState(state: BackfillRunState): boolean {
+  return ACTIVE_BACKFILL_STATES.includes(state);
 }
 
 export function canCancelBackfill(state: BackfillRunState): boolean {
@@ -176,6 +183,7 @@ export function createQueuedBackfill(input: CreateBackfillRunInput): BackfillRun
       failedCount: 0,
       startedAt: null,
       finishedAt: null,
+      drainStartedAt: null,
       error: null,
     },
   };
@@ -196,6 +204,9 @@ export function cancelBackfillRun(
   run: BackfillRunProgress,
   now: Date = new Date(),
 ): BackfillRunResult {
+  if (run.state === 'canceled') {
+    return { ok: true, run };
+  }
   if (!canCancelBackfill(run.state)) {
     return { ok: false, reason: 'illegal_transition' };
   }
@@ -226,12 +237,16 @@ export function completeBackfillRun(
 }
 
 export function resumeBackfillRun(run: BackfillRunProgress): BackfillRunResult {
+  if (run.state === 'queued' || run.state === 'running') {
+    return { ok: true, run };
+  }
   if (!isResumeEligible(run.state)) {
     return { ok: false, reason: 'illegal_transition' };
   }
   return transition(run, 'queued', {
     finishedAt: null,
     error: null,
+    drainStartedAt: null,
   });
 }
 

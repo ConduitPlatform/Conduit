@@ -61,6 +61,50 @@ describe('CMS assignable fields', () => {
     expect(isCmsWriteOmittedField('title', fields.title)).toBe(false);
   });
 
+  it('recursively omits nested Vector, select:false, and source-hash fields from embedded objects', () => {
+    const nested = {
+      title: { type: TYPE.String, required: true },
+      profile: {
+        type: {
+          bio: TYPE.String,
+          embedding: {
+            type: TYPE.Vector,
+            dimensions: 4,
+            similarity: VectorSimilarity.Cosine,
+          },
+          embeddingSourceHash: { type: TYPE.String, select: false },
+          secret: { type: TYPE.String, select: false },
+        },
+      },
+      items: [
+        {
+          name: TYPE.String,
+          embedding: {
+            type: TYPE.Vector,
+            dimensions: 2,
+            similarity: VectorSimilarity.Cosine,
+          },
+          hidden: { type: TYPE.String, select: false },
+        },
+      ],
+    };
+    const assignable = getAssignableCmsFields(nested);
+    expect(Object.keys(assignable).sort()).toEqual(['items', 'profile', 'title']);
+    expect(assignable.profile).toMatchObject({
+      type: { bio: TYPE.String },
+    });
+    expect(
+      (assignable.profile as { type: Record<string, unknown> }).type,
+    ).not.toHaveProperty('embedding');
+    expect(
+      (assignable.profile as { type: Record<string, unknown> }).type,
+    ).not.toHaveProperty('embeddingSourceHash');
+    expect(
+      (assignable.profile as { type: Record<string, unknown> }).type,
+    ).not.toHaveProperty('secret');
+    expect(assignable.items).toEqual([{ name: TYPE.String }]);
+  });
+
   it('keeps vector fields on CMS return projections but not create/update bodies', () => {
     const handlers = {
       getDocuments: jest.fn(),

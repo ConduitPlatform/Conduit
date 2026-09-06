@@ -4,6 +4,7 @@ import {
   VectorCapabilities,
   VectorSearchResult,
   type ConduitModel,
+  type VectorIndexDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { Config } from '../config/index.js';
@@ -16,8 +17,21 @@ import {
   type BackfillControllerJobData,
   type PersistedBackfillRun,
 } from '../utils/backfillExecution.js';
-import { BackfillGateError, grpcErrorFromBackfillGate } from '../utils/backfillGates.js';
+import {
+  BackfillGateError,
+  findTargetVectorIndex,
+  grpcErrorFromBackfillGate,
+} from '../utils/backfillGates.js';
+import {
+  defaultEmbeddingVectorIndexName,
+  diffMaterialEmbeddingConfig,
+  hashFieldsToInvalidate,
+  isInPlaceDimensionChange,
+  materialChangeWarnings,
+  requiresIndexRecreation,
+} from '../utils/configChange.js';
 import { MAX_QUEUE_BATCH_SIZE } from '../utils/embeddingJobs.js';
+import { ACTIVE_BACKFILL_STATES } from '../utils/backfillRun.js';
 import {
   assertCanManageEmbeddingConfig,
   assertEmbeddingTargetSchema,
@@ -137,6 +151,12 @@ export interface EmbeddingsApiDeps {
   backfills: BackfillStore;
   getQueueStatus: () => Promise<{ generation: QueueJobCounts; backfill: QueueJobCounts }>;
   enqueueBackfill: (job: BackfillControllerJobData) => Promise<void>;
+  createVectorIndex: (
+    schemaName: string,
+    index: VectorIndexDefinition,
+  ) => Promise<unknown>;
+  deleteVectorIndex: (schemaName: string, indexName: string) => Promise<unknown>;
+  invalidateHashes: (schemaName: string, hashFields: string[]) => Promise<void>;
   embed: (input: string, provider: string, model: string) => Promise<number[]>;
   onConfigChanged?: (schemaName: string) => Promise<void> | void;
 }
@@ -177,7 +197,7 @@ export class EmbeddingsApi {
       );
     const enabled = request.enabled ?? true;
     const capabilities = await this.deps.getVectorCapabilities(persisted.schemaName);
-    const indexes = await this.deps.getVectorIndexes(persisted.schemaName);
+    let indexes = await this.deps.getVectorIndexes(persisted.schemaName);
     const warnings = [
       ...capabilityWarnings(capabilities),
       ...indexReadinessWarnings(
@@ -195,17 +215,20 @@ export class EmbeddingsApi {
           configDefaults.providers[configDefaults.defaultProvider],
       ),
     ];
-    if (enabled) {
-      assertConfigActivation({
-        moduleEnabled: configDefaults.enabled,
-        capabilities,
-        config: {
-          enabled,
-          schemaName: persisted.schemaName,
-          targetField: persisted.targetField,
-        },
-        indexes,
-      });
+    const existing = await this.deps.configs.findOne({
+      schemaName: persisted.schemaName,
+      targetField: persisted.targetField,
+    });
+    const changed = existing ? diffMaterialEmbeddingConfig(existing, persisted) : [];
+    if (existing && isInPlaceDimensionChange(existing, persisted)) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        `Changing vector field '${existing.targetField}' dimensions from ${existing.dimensions} to ${persisted.dimensions} is not allowed. Create a new targetField and run an explicit backfill.`,
+      );
+    }
+    if (existing && changed.length && requiresIndexRecreation(changed)) {
+      await this.recreateVectorIndex(existing, persisted, indexes);
+      indexes = await this.deps.getVectorIndexes(persisted.schemaName);
     }
     if (capabilities.storage) {
       await this.deps.setSchemaExtension({
@@ -225,15 +248,53 @@ export class EmbeddingsApi {
         },
       });
     }
-    const existing = await this.deps.configs.findOne({
-      schemaName: persisted.schemaName,
-      targetField: persisted.targetField,
-    });
+    let persistEnabled = enabled;
+    if (enabled) {
+      try {
+        assertConfigActivation({
+          moduleEnabled: configDefaults.enabled,
+          capabilities,
+          config: {
+            enabled,
+            schemaName: persisted.schemaName,
+            targetField: persisted.targetField,
+          },
+          indexes,
+        });
+      } catch (err) {
+        if (existing && changed.length && requiresIndexRecreation(changed)) {
+          persistEnabled = false;
+          warnings.push(
+            'Config was saved disabled until the recreated vector index is queryable. Enable it and start an explicit backfill once the index is ready.',
+          );
+        } else {
+          throw err;
+        }
+      }
+    }
     const saved = existing
-      ? await this.deps.configs.findByIdAndUpdate(existing._id, { ...persisted, enabled })
-      : await this.deps.configs.create({ ...persisted, enabled });
+      ? await this.deps.configs.findByIdAndUpdate(existing._id, {
+          ...persisted,
+          enabled: persistEnabled,
+        })
+      : await this.deps.configs.create({ ...persisted, enabled: persistEnabled });
     if (!saved) {
       throw new GrpcError(status.INTERNAL, 'Failed to persist embedding config');
+    }
+    if (existing && changed.length) {
+      await this.deps.invalidateHashes(
+        saved.schemaName,
+        hashFieldsToInvalidate(existing, saved),
+      );
+      await this.supersedeActiveBackfills(saved._id);
+      let scheduledBackfill = false;
+      if (persistEnabled) {
+        scheduledBackfill = await this.scheduleExplicitBackfill(saved, {
+          capabilities,
+          indexes,
+        });
+      }
+      warnings.push(...materialChangeWarnings(changed, scheduledBackfill));
     }
     await this.deps.onConfigChanged?.(saved.schemaName);
     return { config: mapEmbeddingConfig(saved), warnings };
@@ -354,6 +415,10 @@ export class EmbeddingsApi {
         configs,
         indexes,
         createRun: async run => this.deps.backfills.create(persistableBackfillRun(run)),
+        saveRun: async (id, run) => {
+          await this.deps.backfills.findByIdAndUpdate(id, persistableBackfillRun(run));
+        },
+        findActiveRuns: configId => this.findActiveBackfills(configId),
         enqueueController: job => this.deps.enqueueBackfill(job),
       },
     );
@@ -634,5 +699,112 @@ export class EmbeddingsApi {
       );
     }
     return config;
+  }
+
+  private async findActiveBackfills(configId: string): Promise<PersistedBackfillRun[]> {
+    const runs: PersistedBackfillRun[] = [];
+    for (const state of ACTIVE_BACKFILL_STATES) {
+      const found = await this.deps.backfills.findMany({ configId, state });
+      runs.push(...found);
+    }
+    return runs;
+  }
+
+  private async recreateVectorIndex(
+    existing: EmbeddingConfigRecord,
+    next:
+      | EmbeddingConfigRecord
+      | {
+          schemaName: string;
+          targetField: string;
+          dimensions: number;
+          similarity: string;
+        },
+    indexes: Array<{
+      field?: string;
+      name?: string;
+      queryable?: boolean;
+      status?: string;
+    }>,
+  ): Promise<void> {
+    const current = findTargetVectorIndex(indexes, existing.targetField);
+    if (current?.name) {
+      try {
+        await this.deps.deleteVectorIndex(existing.schemaName, current.name);
+      } catch (err) {
+        throw new GrpcError(
+          status.FAILED_PRECONDITION,
+          `Failed to delete vector index '${current.name}': ${sanitizeErrorMessage(err)}`,
+        );
+      }
+    }
+    try {
+      await this.deps.createVectorIndex(next.schemaName, {
+        field: next.targetField,
+        dimensions: next.dimensions,
+        similarity: next.similarity as VectorIndexDefinition['similarity'],
+        name: defaultEmbeddingVectorIndexName(next.targetField),
+      });
+    } catch (err) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        `Failed to recreate vector index for '${next.targetField}': ${sanitizeErrorMessage(err)}`,
+      );
+    }
+  }
+
+  private async supersedeActiveBackfills(configId: string): Promise<void> {
+    const active = await this.findActiveBackfills(configId);
+    for (const run of active) {
+      await cancelBackfillExecution({
+        run,
+        saveRun: async (id, next) => {
+          await this.deps.backfills.findByIdAndUpdate(id, persistableBackfillRun(next));
+        },
+      });
+    }
+  }
+
+  private async scheduleExplicitBackfill(
+    config: EmbeddingConfigRecord,
+    args: {
+      capabilities: VectorCapabilities;
+      indexes: Array<{
+        field?: string;
+        name?: string;
+        queryable?: boolean;
+        status?: string;
+      }>;
+    },
+  ): Promise<boolean> {
+    try {
+      const queued = await queueBackfillRuns(
+        {
+          schemaName: config.schemaName,
+          configId: config._id,
+          onlyMissing: false,
+          maxBatchSize:
+            this.deps.currentConfig().queue.maxBatchSize ?? MAX_QUEUE_BATCH_SIZE,
+        },
+        {
+          moduleEnabled: this.deps.currentConfig().enabled,
+          capabilities: args.capabilities,
+          configs: [config],
+          indexes: args.indexes,
+          createRun: async run => this.deps.backfills.create(persistableBackfillRun(run)),
+          saveRun: async (id, run) => {
+            await this.deps.backfills.findByIdAndUpdate(id, persistableBackfillRun(run));
+          },
+          findActiveRuns: configId => this.findActiveBackfills(configId),
+          enqueueController: job => this.deps.enqueueBackfill(job),
+        },
+      );
+      return queued.queued > 0;
+    } catch (err) {
+      if (err instanceof BackfillGateError) {
+        return false;
+      }
+      throw err;
+    }
   }
 }

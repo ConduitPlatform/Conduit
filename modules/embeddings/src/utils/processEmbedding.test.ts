@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { hashedEmbeddingSource } from './configChange.js';
 import {
   buildEmbeddingDocumentSelect,
   generateEmbeddingsForDocument,
@@ -27,7 +28,7 @@ describe('embedding generation loop safety', () => {
   });
 
   it('skips provider calls when the source hash already matches', async () => {
-    const sourceHash = hash('Hello\nWorld');
+    const sourceHash = hashedEmbeddingSource(hash, 'Hello\nWorld', config);
     let embedCalls = 0;
     let updates = 0;
     const result = await generateEmbeddingsForDocument({
@@ -53,7 +54,7 @@ describe('embedding generation loop safety', () => {
   });
 
   it('performs one write with event suppression and does not loop on the write-back', async () => {
-    const sourceHash = hash('Hello\nWorld');
+    const sourceHash = hashedEmbeddingSource(hash, 'Hello\nWorld', config);
     let embedCalls = 0;
     const updates: Array<{ fields: Record<string, unknown>; options: unknown }> = [];
     const doc: Record<string, unknown> = { _id: 'a', title: 'Hello', body: 'World' };
@@ -81,5 +82,26 @@ describe('embedding generation loop safety', () => {
     assert.equal(updates.length, 1);
     assert.deepEqual(updates[0].options, { suppressEvent: true });
     assert.equal(updates[0].fields.embeddingSourceHash, sourceHash);
+  });
+
+  it('does not skip when stored hashes were computed without the material config fingerprint', async () => {
+    let embedCalls = 0;
+    const result = await generateEmbeddingsForDocument({
+      doc: {
+        _id: 'a',
+        title: 'Hello',
+        body: 'World',
+        embeddingSourceHash: hash('Hello\nWorld'),
+      },
+      configs: [{ ...config, modelName: 'text-embedding-3-large' }],
+      hashInput: hash,
+      embed: async () => {
+        embedCalls += 1;
+        return [1, 2];
+      },
+      update: async () => undefined,
+    });
+    assert.deepEqual(result, { generated: 1, skipped: 0 });
+    assert.equal(embedCalls, 1);
   });
 });

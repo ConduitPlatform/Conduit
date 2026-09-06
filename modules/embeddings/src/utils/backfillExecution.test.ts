@@ -105,6 +105,13 @@ describe('queued backfill start', () => {
         configs: [config, { ...config, _id: 'cfg2', targetField: 'other' }],
         indexes: [readyIndex, { ...readyIndex, field: 'other', name: 'other_vector' }],
         createRun: store.createRun,
+        saveRun: store.saveRun,
+        findActiveRuns: async configId =>
+          [...store.runs.values()].filter(
+            run =>
+              run.configId === configId &&
+              (run.state === 'queued' || run.state === 'running'),
+          ),
         enqueueController: async job => {
           controllerJobs.push(job);
         },
@@ -145,6 +152,8 @@ describe('queued backfill start', () => {
             configs: [config],
             indexes: [readyIndex],
             createRun: store.createRun,
+            saveRun: store.saveRun,
+            findActiveRuns: async () => [],
             enqueueController: async () => undefined,
           },
         ),
@@ -384,5 +393,172 @@ describe('backfill controller job parsing and persistence mapping', () => {
     });
     assert.equal(progress.cursor, null);
     assert.equal(persistableBackfillRun(progress).onlyMissing, true);
+  });
+});
+
+describe('backfill enqueue failures, drain timeout, and start idempotency', () => {
+  function queueDeps(
+    store: ReturnType<typeof memoryStore>,
+    extras: {
+      enqueue?: (job: BackfillControllerJobData) => Promise<void>;
+      configs?: Array<{
+        _id: string;
+        enabled?: boolean;
+        schemaName?: string;
+        targetField?: string;
+      }>;
+    } = {},
+  ) {
+    return {
+      moduleEnabled: true,
+      capabilities,
+      configs: extras.configs ?? [config],
+      indexes: [readyIndex],
+      createRun: store.createRun,
+      saveRun: store.saveRun,
+      findActiveRuns: async (configId: string) =>
+        [...store.runs.values()].filter(
+          run =>
+            run.configId === configId &&
+            (run.state === 'queued' || run.state === 'running'),
+        ),
+      enqueueController: extras.enqueue ?? (async () => undefined),
+    };
+  }
+
+  it('fails a newly created run when controller enqueue throws instead of leaving it queued', async () => {
+    const store = memoryStore();
+    await assert.rejects(
+      () =>
+        queueBackfillRuns(
+          { schemaName: 'Article' },
+          queueDeps(store, {
+            enqueue: async () => {
+              throw new Error('redis down apiKey=sk-secret');
+            },
+          }),
+        ),
+      /redis down/,
+    );
+    const persisted = [...store.runs.values()];
+    assert.equal(persisted.length, 1);
+    assert.equal(persisted[0].state, 'failed');
+    assert.match(persisted[0].error ?? '', /redis down/);
+    assert.doesNotMatch(persisted[0].error ?? '', /sk-secret/);
+  });
+
+  it('reuses an active run for the same config instead of creating a duplicate', async () => {
+    const store = memoryStore();
+    const first = await queueBackfillRuns(
+      { schemaName: 'Article', batchSize: 2 },
+      queueDeps(store),
+    );
+    const second = await queueBackfillRuns(
+      { schemaName: 'Article', batchSize: 50 },
+      queueDeps(store),
+    );
+    assert.equal(first.queued, 1);
+    assert.equal(second.queued, 1);
+    assert.equal(second.runs[0].id, first.runs[0].id);
+    assert.equal(store.runs.size, 1);
+  });
+
+  it('fails drain polling with a sanitized timeout instead of looping forever', async () => {
+    const store = memoryStore();
+    const created = await store.createRun(
+      backfillRunFromDocument({
+        _id: 'ignored',
+        schemaName: 'Article',
+        configId: 'cfg1',
+        state: 'running',
+        batchSize: 2,
+        queuedCount: 2,
+        processedCount: 0,
+        failedCount: 0,
+        scannedCount: 2,
+        cursor: 'b',
+        drainStartedAt: new Date('2026-09-06T17:00:00.000Z'),
+      }),
+    );
+    const result = await processBackfillControllerJob(
+      { runId: created._id, cursor: 'b', drain: true },
+      deps({
+        store,
+        drainTimeoutMs: 60_000,
+        now: new Date('2026-09-06T18:00:00.000Z'),
+      }),
+    );
+    assert.equal(result.action, 'failed');
+    assert.equal(result.run?.state, 'failed');
+    assert.match(result.run?.error ?? '', /timed out waiting for generation jobs/);
+    assert.doesNotMatch(result.run?.error ?? '', /apiKey|Bearer /);
+  });
+
+  it('records drainStartedAt on the first drain poll then fails after the timeout', async () => {
+    const store = memoryStore();
+    const created = await store.createRun(
+      backfillRunFromDocument({
+        _id: 'ignored',
+        schemaName: 'Article',
+        configId: 'cfg1',
+        state: 'running',
+        batchSize: 2,
+        queuedCount: 2,
+        processedCount: 0,
+        failedCount: 0,
+        scannedCount: 2,
+        cursor: 'b',
+      }),
+    );
+    const startedAt = new Date('2026-09-06T18:00:00.000Z');
+    const first = await processBackfillControllerJob(
+      { runId: created._id, cursor: 'b', drain: true },
+      deps({
+        store,
+        drainTimeoutMs: 60_000,
+        now: startedAt,
+      }),
+    );
+    assert.equal(first.action, 'drain');
+    assert.equal(first.run?.drainStartedAt?.toISOString(), startedAt.toISOString());
+    const timedOut = await processBackfillControllerJob(
+      { runId: created._id, cursor: 'b', drain: true },
+      deps({
+        store,
+        drainTimeoutMs: 60_000,
+        now: new Date('2026-09-06T18:01:00.000Z'),
+      }),
+    );
+    assert.equal(timedOut.action, 'failed');
+    assert.match(timedOut.run?.error ?? '', /timed out waiting for generation jobs/);
+  });
+
+  it('fails a resumed run when controller enqueue throws', async () => {
+    const store = memoryStore();
+    const created = await store.createRun(
+      backfillRunFromDocument({
+        _id: 'ignored',
+        schemaName: 'Article',
+        configId: 'cfg1',
+        state: 'canceled',
+        batchSize: 2,
+        cursor: 'b',
+      }),
+    );
+    const existing = (await store.getRun(created._id))!;
+    await assert.rejects(
+      () =>
+        resumeBackfillExecution({
+          run: existing,
+          saveRun: store.saveRun,
+          enqueueController: async () => {
+            throw new Error('queue unavailable Bearer sk-secret');
+          },
+        }),
+      /queue unavailable/,
+    );
+    const persisted = (await store.getRun(created._id))!;
+    assert.equal(persisted.state, 'failed');
+    assert.doesNotMatch(persisted.error ?? '', /sk-secret/);
   });
 });

@@ -8,6 +8,7 @@ import {
   completeBackfillRun,
   createQueuedBackfill,
   failBackfillRun,
+  isActiveBackfillState,
   resumeBackfillRun,
   startBackfillRun,
   type BackfillPageQuery,
@@ -22,10 +23,14 @@ import {
 } from './backfillGates.js';
 import { EmbeddingJobData, MAX_QUEUE_BATCH_SIZE } from './embeddingJobs.js';
 import { incrementEmbeddingMetric } from './embeddingMetrics.js';
+import { sanitizeErrorMessage } from './redactConfig.js';
 
 const IDENTITY = /^[A-Za-z0-9._-]{1,128}$/;
 
 export const BACKFILL_DRAIN_DELAY_MS = 1000;
+export const DEFAULT_BACKFILL_DRAIN_TIMEOUT_MS = 15 * 60 * 1000;
+export const BACKFILL_DRAIN_TIMEOUT_MESSAGE =
+  'Backfill drain timed out waiting for generation jobs';
 
 export interface PersistedBackfillRun extends BackfillRunProgress {
   _id: string;
@@ -55,6 +60,8 @@ export interface QueueBackfillDeps {
   configs: BackfillConfigGate[];
   indexes: readonly VectorIndexGate[];
   createRun: (run: BackfillRunProgress) => Promise<{ _id: string }>;
+  saveRun: (id: string, run: BackfillRunProgress) => Promise<void>;
+  findActiveRuns: (configId: string) => Promise<PersistedBackfillRun[]>;
   enqueueController: (job: BackfillControllerJobData) => Promise<void>;
 }
 
@@ -75,6 +82,7 @@ export interface ProcessBackfillDeps {
   ) => Promise<Pick<VectorCapabilities, 'supported' | 'storage' | 'provider' | 'reason'>>;
   getConfig: (id: string) => Promise<BackfillConfigGate | null>;
   getIndexes: (schemaName: string) => Promise<readonly VectorIndexGate[]>;
+  drainTimeoutMs?: number;
 }
 
 export function backfillRunFromDocument(doc: {
@@ -92,6 +100,7 @@ export function backfillRunFromDocument(doc: {
   failedCount?: number;
   startedAt?: Date;
   finishedAt?: Date;
+  drainStartedAt?: Date;
   error?: string;
 }): PersistedBackfillRun {
   return {
@@ -109,6 +118,7 @@ export function backfillRunFromDocument(doc: {
     failedCount: doc.failedCount ?? 0,
     startedAt: doc.startedAt ?? null,
     finishedAt: doc.finishedAt ?? null,
+    drainStartedAt: doc.drainStartedAt ?? null,
     error: doc.error ?? null,
   };
 }
@@ -130,6 +140,7 @@ export function persistableBackfillRun(
     failedCount: run.failedCount,
     startedAt: run.startedAt ?? undefined,
     finishedAt: run.finishedAt ?? undefined,
+    drainStartedAt: run.drainStartedAt ?? undefined,
     error: run.error ?? undefined,
   };
 }
@@ -215,8 +226,44 @@ export async function queueBackfillRuns(
         `Invalid backfill request: ${created.reason}`,
       );
     }
+    if (config._id) {
+      const active = (await deps.findActiveRuns(config._id)).filter(run =>
+        isActiveBackfillState(run.state),
+      );
+      const existing = active[0];
+      if (existing) {
+        if (existing.state === 'queued') {
+          await enqueueOrFailRun(
+            existing._id,
+            existing,
+            deps.saveRun,
+            deps.enqueueController,
+            {
+              runId: existing._id,
+              cursor: existing.cursor ?? null,
+            },
+          );
+        }
+        runs.push({
+          id: existing._id,
+          ...(config._id ? { configId: config._id } : {}),
+          state: existing.state,
+        });
+        continue;
+      }
+    }
     const persisted = await deps.createRun(created.run);
-    await deps.enqueueController({ runId: persisted._id, cursor: null });
+    const queuedRun: PersistedBackfillRun = { ...created.run, _id: persisted._id };
+    await enqueueOrFailRun(
+      persisted._id,
+      queuedRun,
+      deps.saveRun,
+      deps.enqueueController,
+      {
+        runId: persisted._id,
+        cursor: null,
+      },
+    );
     runs.push({
       id: persisted._id,
       ...(config._id ? { configId: config._id } : {}),
@@ -224,6 +271,24 @@ export async function queueBackfillRuns(
     });
   }
   return { queued: runs.length, runs };
+}
+
+async function enqueueOrFailRun(
+  id: string,
+  run: BackfillRunProgress,
+  saveRun: (id: string, run: BackfillRunProgress) => Promise<void>,
+  enqueue: (job: BackfillControllerJobData) => Promise<void>,
+  job: BackfillControllerJobData,
+): Promise<void> {
+  try {
+    await enqueue(job);
+  } catch (err) {
+    const failed = failBackfillRun(run, sanitizeErrorMessage(err));
+    if (failed.ok) {
+      await saveRun(id, failed.run);
+    }
+    throw err;
+  }
 }
 
 export async function resumeBackfillExecution(args: {
@@ -234,10 +299,18 @@ export async function resumeBackfillExecution(args: {
   const resumed = resumeBackfillRun(args.run);
   if (!resumed.ok) return resumed;
   await args.saveRun(args.run._id, resumed.run);
-  await args.enqueueController({
-    runId: args.run._id,
-    cursor: resumed.run.cursor ?? null,
-  });
+  try {
+    await args.enqueueController({
+      runId: args.run._id,
+      cursor: resumed.run.cursor ?? null,
+    });
+  } catch (err) {
+    const failed = failBackfillRun(resumed.run, sanitizeErrorMessage(err));
+    if (failed.ok) {
+      await args.saveRun(args.run._id, failed.run);
+    }
+    throw err;
+  }
   return resumed;
 }
 
@@ -404,6 +477,15 @@ async function finishOrDrain(
     if (!completed.ok) return { action: completed.reason, run };
     await deps.saveRun(id, completed.run);
     return { action: 'completed', run: completed.run };
+  }
+  const drainStartedAt = run.drainStartedAt ?? now;
+  const timeoutMs = deps.drainTimeoutMs ?? DEFAULT_BACKFILL_DRAIN_TIMEOUT_MS;
+  if (now.getTime() - drainStartedAt.getTime() >= timeoutMs) {
+    return failPersistedRun(id, run, BACKFILL_DRAIN_TIMEOUT_MESSAGE, deps, now);
+  }
+  if (!run.drainStartedAt) {
+    run = { ...run, drainStartedAt };
+    await deps.saveRun(id, run);
   }
   await deps.enqueueContinuation({
     runId: id,
