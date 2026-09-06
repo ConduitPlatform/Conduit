@@ -1,8 +1,14 @@
 import { TYPE } from '@conduitplatform/grpc-sdk';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { BACKFILL_RUN_SCHEMA } from './backfillRun.js';
 
 export const EMBEDDING_CONFIG_SCHEMA = 'EmbeddingConfig';
+export { BACKFILL_RUN_SCHEMA };
+export const EMBEDDING_OWNED_SCHEMA_NAMES = new Set([
+  EMBEDDING_CONFIG_SCHEMA,
+  BACKFILL_RUN_SCHEMA,
+]);
 export const CONFIG_OPERATOR_MODULES = ['database', 'core'] as const;
 export const SEARCH_OPERATOR_MODULES = ['database', 'core', 'embeddings'] as const;
 
@@ -53,7 +59,7 @@ export function isDeniedEmbeddingSchema(schema: {
   ownerModule?: string;
 }): boolean {
   if (!schema.name) return true;
-  if (schema.name === EMBEDDING_CONFIG_SCHEMA) return true;
+  if (EMBEDDING_OWNED_SCHEMA_NAMES.has(schema.name)) return true;
   if (schema.name.startsWith('_')) return true;
   if (SYSTEM_SCHEMA_NAMES.has(schema.name)) return true;
   return AUTH_SECRET_SCHEMA_NAMES.has(schema.name);
