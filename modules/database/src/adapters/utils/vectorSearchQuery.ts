@@ -24,6 +24,7 @@ import { parseVectorSimilarity } from './vectorField.js';
 import {
   assertVectorIndexQueryable,
   defaultVectorIndexName,
+  selectLiveVectorIndexForField,
 } from './vectorIndexLifecycle.js';
 
 export interface PlannedMongoVectorSearch {
@@ -62,13 +63,7 @@ export function findVectorIndexForSearch(
   if (request.indexName) {
     return indexes.find(item => item.name === request.indexName);
   }
-  return (
-    indexes.find(
-      item =>
-        item.field === request.field &&
-        item.name === defaultVectorIndexName(request.field),
-    ) ?? indexes.find(item => item.field === request.field)
-  );
+  return selectLiveVectorIndexForField(indexes, request.field);
 }
 
 export function mergeVectorIndexes(

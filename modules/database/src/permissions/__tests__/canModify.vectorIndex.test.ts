@@ -1,6 +1,10 @@
 import { describe, expect, it } from '@jest/globals';
 import { TYPE } from '@conduitplatform/grpc-sdk';
-import { canModify, vectorIndexMutationData } from '../index.js';
+import {
+  canModify,
+  vectorIndexDeleteMutationData,
+  vectorIndexMutationData,
+} from '../index.js';
 
 const embeddingExtension = {
   ownerModule: 'embeddings',
@@ -67,6 +71,67 @@ describe('createVectorIndex canModify field evaluation', () => {
     await expect(canModify('embeddings', user as never)).resolves.toBe(false);
     await expect(
       canModify('embeddings', user as never, vectorIndexMutationData('')),
+    ).resolves.toBe(false);
+  });
+});
+
+describe('deleteVectorIndex canModify field evaluation', () => {
+  const liveIndexes = [
+    { name: 'embedding_vector', field: 'embedding' },
+    { name: 'email_1', field: 'email' },
+  ];
+
+  it('allows embeddings to delete its own live extension index on ExtensionOnly schemas', async () => {
+    const user = schema({ ownerModule: 'authentication', canModify: 'ExtensionOnly' });
+    await expect(
+      canModify(
+        'embeddings',
+        user as never,
+        vectorIndexDeleteMutationData(liveIndexes, 'embedding_vector'),
+      ),
+    ).resolves.toBe(true);
+  });
+
+  it('denies unknown and non-vector index names on ExtensionOnly schemas', async () => {
+    const user = schema({ ownerModule: 'authentication', canModify: 'ExtensionOnly' });
+    await expect(
+      canModify(
+        'embeddings',
+        user as never,
+        vectorIndexDeleteMutationData(liveIndexes, 'missing_vector'),
+      ),
+    ).resolves.toBe(false);
+    await expect(
+      canModify(
+        'embeddings',
+        user as never,
+        vectorIndexDeleteMutationData([], 'embedding_vector'),
+      ),
+    ).resolves.toBe(false);
+    await expect(
+      canModify(
+        'embeddings',
+        user as never,
+        vectorIndexDeleteMutationData([{ name: 'title_idx' }], 'title_idx'),
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it('denies unowned live vector indexes on ExtensionOnly schemas', async () => {
+    const user = schema({ ownerModule: 'authentication', canModify: 'ExtensionOnly' });
+    await expect(
+      canModify(
+        'embeddings',
+        user as never,
+        vectorIndexDeleteMutationData(liveIndexes, 'email_1'),
+      ),
+    ).resolves.toBe(false);
+    await expect(
+      canModify(
+        'chat',
+        user as never,
+        vectorIndexDeleteMutationData(liveIndexes, 'embedding_vector'),
+      ),
     ).resolves.toBe(false);
   });
 });

@@ -79,6 +79,7 @@ function createApi(overrides?: {
   embed?: EmbeddingsApiDeps['embed'];
   vectorSearch?: EmbeddingsApiDeps['vectorSearch'];
   createVectorIndex?: EmbeddingsApiDeps['createVectorIndex'];
+  createdIndexQueryable?: boolean;
   enqueue?: string[];
   invalidated?: string[];
   deletedIndexes?: string[];
@@ -88,6 +89,7 @@ function createApi(overrides?: {
 }) {
   const configs = [...(overrides?.configs ?? [])];
   const runs = [...(overrides?.runs ?? [])];
+  const indexes = [...(overrides?.indexes ?? [readyIndex])];
   const enqueued = overrides?.enqueue ?? [];
   const invalidated = overrides?.invalidated ?? [];
   const deletedIndexes = overrides?.deletedIndexes ?? [];
@@ -104,7 +106,7 @@ function createApi(overrides?: {
       overrides?.declared?.[name] ?? { name, ownerModule: 'database' },
     setSchemaExtension: async () => undefined,
     getVectorCapabilities: async () => overrides?.capabilities ?? readyCapabilities,
-    getVectorIndexes: async () => overrides?.indexes ?? [readyIndex],
+    getVectorIndexes: async () => indexes,
     vectorSearch: overrides?.vectorSearch ?? (async () => []),
     configs: {
       findMany: async query =>
@@ -179,11 +181,25 @@ function createApi(overrides?: {
     createVectorIndex:
       overrides?.createVectorIndex ??
       (async (_schema, index) => {
-        createdIndexes.push(index.name ?? index.field);
+        const name = index.name ?? `${index.field}_vector`;
+        createdIndexes.push(name);
+        if (!indexes.some(item => item.name === name)) {
+          indexes.push({
+            field: index.field,
+            name,
+            queryable: overrides?.createdIndexQueryable === true,
+            status:
+              overrides?.createdIndexQueryable === true
+                ? VectorIndexStatus.Ready
+                : VectorIndexStatus.Pending,
+          });
+        }
         return 'created';
       }),
     deleteVectorIndex: async (_schema, indexName) => {
       deletedIndexes.push(indexName);
+      const index = indexes.findIndex(item => item.name === indexName);
+      if (index >= 0) indexes.splice(index, 1);
       return 'deleted';
     },
     invalidateHashes: async (schemaName, hashFields) => {
@@ -201,6 +217,7 @@ function createApi(overrides?: {
     invalidated,
     deletedIndexes,
     createdIndexes,
+    indexes,
   };
 }
 
@@ -305,7 +322,7 @@ describe('typed embeddings API handlers', () => {
     );
     assert.equal(saved.config.enabled, false);
     assert.equal(configs[0].enabled, false);
-    assert.deepEqual(deletedIndexes, ['embedding_vector']);
+    assert.deepEqual(deletedIndexes, []);
     assert.equal(
       saved.warnings.some(
         warning =>
@@ -676,6 +693,7 @@ describe('typed embeddings API handlers', () => {
     const { api, invalidated, deletedIndexes, createdIndexes, enqueued, runs } =
       createApi({
         configs: [enabledConfig],
+        createdIndexQueryable: true,
       });
     await assert.rejects(
       () =>
@@ -712,8 +730,8 @@ describe('typed embeddings API handlers', () => {
     );
     assert.equal(updated.config.model, 'text-embedding-3-large');
     assert.deepEqual(invalidated, ['Article.embeddingSourceHash']);
+    assert.deepEqual(createdIndexes, ['embedding_vector_v2']);
     assert.deepEqual(deletedIndexes, ['embedding_vector']);
-    assert.equal(createdIndexes.includes('embedding_vector'), true);
     assert.equal(enqueued.length, 1);
     assert.equal(runs[0].state, 'queued');
     assert.equal(runs[0].onlyMissing, false);
@@ -721,6 +739,131 @@ describe('typed embeddings API handlers', () => {
       updated.warnings.some(warning => /explicit backfill was scheduled/.test(warning)),
       true,
     );
+  });
+
+  it('keeps the previous index when replacement provisioning fails', async () => {
+    const { api, configs, deletedIndexes, createdIndexes, indexes } = createApi({
+      configs: [enabledConfig],
+      createVectorIndex: async () => {
+        throw new Error('atlas rejected replacement');
+      },
+    });
+    const saved = await api.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['title'],
+        targetField: 'embedding',
+        provider: 'openai-compatible',
+        model: 'text-embedding-3-small',
+        dimensions: 3,
+        similarity: VectorSimilarity.Euclidean,
+        enabled: true,
+      },
+      { callerModule: 'database' },
+    );
+    assert.equal(saved.config.enabled, false);
+    assert.equal(configs[0].enabled, false);
+    assert.deepEqual(createdIndexes, []);
+    assert.deepEqual(deletedIndexes, []);
+    assert.equal(
+      indexes.some(index => index.name === 'embedding_vector' && index.queryable),
+      true,
+    );
+    assert.equal(
+      saved.warnings.some(
+        warning =>
+          /saved disabled because vector index provisioning failed/.test(warning) &&
+          /atlas rejected replacement/.test(warning),
+      ),
+      true,
+    );
+  });
+
+  it('keeps the previous index while a versioned replacement is not queryable', async () => {
+    const { api, configs, deletedIndexes, createdIndexes, indexes, enqueued } = createApi(
+      {
+        configs: [enabledConfig],
+      },
+    );
+    const saved = await api.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['title'],
+        targetField: 'embedding',
+        provider: 'openai-compatible',
+        model: 'text-embedding-3-small',
+        dimensions: 3,
+        similarity: VectorSimilarity.Euclidean,
+        enabled: true,
+      },
+      { callerModule: 'database' },
+    );
+    assert.equal(saved.config.enabled, false);
+    assert.equal(configs[0].enabled, false);
+    assert.deepEqual(createdIndexes, ['embedding_vector_v2']);
+    assert.deepEqual(deletedIndexes, []);
+    assert.equal(
+      indexes.some(index => index.name === 'embedding_vector' && index.queryable),
+      true,
+    );
+    assert.equal(
+      indexes.some(
+        index => index.name === 'embedding_vector_v2' && index.queryable !== true,
+      ),
+      true,
+    );
+    assert.equal(enqueued.length, 0);
+    assert.equal(
+      saved.warnings.some(warning =>
+        /saved disabled until the provisioned vector index/.test(warning),
+      ),
+      true,
+    );
+  });
+
+  it('retires the previous index after a pending replacement becomes queryable', async () => {
+    const pendingReplacement = {
+      field: 'embedding',
+      name: 'embedding_vector_v2',
+      queryable: false,
+      status: VectorIndexStatus.Pending,
+    };
+    const { api, configs, deletedIndexes, createdIndexes, indexes, enqueued } = createApi(
+      {
+        configs: [
+          { ...enabledConfig, similarity: VectorSimilarity.Euclidean, enabled: false },
+        ],
+        indexes: [readyIndex, pendingReplacement],
+      },
+    );
+    pendingReplacement.queryable = true;
+    pendingReplacement.status = VectorIndexStatus.Ready;
+    const saved = await api.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['title'],
+        targetField: 'embedding',
+        provider: 'openai-compatible',
+        model: 'text-embedding-3-small',
+        dimensions: 3,
+        similarity: VectorSimilarity.Euclidean,
+        enabled: true,
+      },
+      { callerModule: 'database' },
+    );
+    assert.equal(saved.config.enabled, true);
+    assert.equal(configs[0].enabled, true);
+    assert.deepEqual(createdIndexes, []);
+    assert.deepEqual(deletedIndexes, ['embedding_vector']);
+    assert.equal(
+      indexes.some(index => index.name === 'embedding_vector'),
+      false,
+    );
+    assert.equal(
+      indexes.some(index => index.name === 'embedding_vector_v2' && index.queryable),
+      true,
+    );
+    assert.equal(enqueued.length, 0);
   });
 
   it('is idempotent for start, cancel, and resume and does not duplicate active runs', async () => {

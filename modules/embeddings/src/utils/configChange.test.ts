@@ -7,7 +7,10 @@ import {
   hashedEmbeddingSource,
   isInPlaceDimensionChange,
   materialChangeWarnings,
+  nextEmbeddingVectorIndexName,
   requiresIndexRecreation,
+  selectEmbeddingVectorIndex,
+  sameEmbeddingVectorIndexFamily,
 } from './configChange.js';
 
 const base = {
@@ -92,6 +95,38 @@ describe('material embedding config changes', () => {
         /index recreation is required/i.test(warning),
       ),
       true,
+    );
+  });
+
+  it('versions replacement names from live provider-specific indexes', () => {
+    assert.equal(nextEmbeddingVectorIndexName('embedding', []), 'embedding_vector');
+    assert.equal(
+      nextEmbeddingVectorIndexName('embedding', [
+        { field: 'embedding', name: 'embedding_vector' },
+      ]),
+      'embedding_vector_v2',
+    );
+    assert.equal(
+      nextEmbeddingVectorIndexName('embedding', [
+        { field: 'embedding', name: 'cnd_Article_embedding_vector' },
+        { field: 'embedding', name: 'cnd_Article_embedding_vector_v2' },
+      ]),
+      'cnd_Article_embedding_vector_v3',
+    );
+    assert.equal(
+      sameEmbeddingVectorIndexFamily('embedding_vector', 'embedding_vector_v2'),
+      true,
+    );
+    assert.equal(
+      selectEmbeddingVectorIndex(
+        [
+          { field: 'embedding', name: 'embedding_vector' },
+          { field: 'embedding', name: 'embedding_vector_v2' },
+          { field: 'title', name: 'title_vector_v9' },
+        ],
+        'embedding',
+      )?.name,
+      'embedding_vector_v2',
     );
   });
 });

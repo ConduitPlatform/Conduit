@@ -22,6 +22,15 @@ export function vectorIndexMutationData(field?: string): Indexable | undefined {
   return { [field]: true };
 }
 
+export function vectorIndexDeleteMutationData(
+  liveIndexes: ReadonlyArray<{ name?: string; field?: string }>,
+  indexName: string,
+) {
+  if (typeof indexName !== 'string' || indexName.length === 0) return undefined;
+  const live = liveIndexes.find(index => index.name === indexName);
+  return vectorIndexMutationData(live?.field);
+}
+
 export async function canModify(moduleName: string, schema: Schema, data?: Indexable) {
   if (moduleName === 'database' && schema.originalSchema.name === '_DeclaredSchema')
     return true;

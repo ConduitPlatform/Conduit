@@ -57,6 +57,7 @@ import {
   canCreate,
   canDelete,
   canModify,
+  vectorIndexDeleteMutationData,
   vectorIndexMutationData,
 } from './permissions/index.js';
 import { runMigrations } from './migrations/index.js';
@@ -1109,7 +1110,16 @@ export default class DatabaseModule extends ManagedModule<Config> {
     try {
       const moduleName = call.metadata!.get('module-name')![0] as string;
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      if (!(await canModify(moduleName, schemaAdapter.model))) {
+      const liveIndexes = await this._activeAdapter.getVectorIndexes(
+        call.request.schemaName,
+      );
+      if (
+        !(await canModify(
+          moduleName,
+          schemaAdapter.model,
+          vectorIndexDeleteMutationData(liveIndexes, call.request.indexName),
+        ))
+      ) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to delete vector indexes for ${call.request.schemaName}!`,
