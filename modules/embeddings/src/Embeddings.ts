@@ -306,6 +306,20 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       getVectorCapabilities: schemaName =>
         this.database.getVectorCapabilities(schemaName),
       getVectorIndexes: schemaName => this.database.getVectorIndexes(schemaName),
+      createVectorIndex: (schemaName, index) =>
+        this.database.createVectorIndex(schemaName, index),
+      deleteVectorIndex: (schemaName, indexName) =>
+        this.database.deleteVectorIndex(schemaName, indexName),
+      invalidateHashes: async (schemaName, hashFields) => {
+        for (const field of hashFields) {
+          await this.database.updateMany(
+            schemaName,
+            {},
+            { [field]: null },
+            { suppressEvent: true },
+          );
+        }
+      },
       vectorSearch: input => this.database.vectorSearch(input),
       configs: {
         findMany: query => EmbeddingConfig.getInstance().findMany(query),
@@ -459,6 +473,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
   private async processBackfillJob(data: BackfillControllerJobData) {
     await processBackfillControllerJob(data, {
       maxBatchSize: this.currentConfig().queue.maxBatchSize ?? MAX_QUEUE_BATCH_SIZE,
+      drainTimeoutMs: this.currentConfig().queue.drainTimeoutMs,
       moduleEnabled: this.currentConfig().enabled,
       getRun: async id => {
         const doc = await BackfillRun.getInstance().findOne({ _id: id });

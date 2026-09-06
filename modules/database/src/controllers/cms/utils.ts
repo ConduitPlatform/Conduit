@@ -84,24 +84,75 @@ export function isCmsWriteOmittedField(name: string, field: unknown): boolean {
 }
 
 export function getAssignableCmsFields(sourceFields: ConduitModel): ConduitModel {
+  return stripAssignableModel(sourceFields);
+}
+
+const FIELD_DESCRIPTOR_KEYS = new Set([
+  'type',
+  'sqlType',
+  'default',
+  'description',
+  'required',
+  'select',
+  'unique',
+  'index',
+  'enum',
+  'model',
+  'validate',
+  'dimensions',
+  'similarity',
+  'provider',
+]);
+
+function isNestedConduitModel(field: unknown): field is ConduitModel {
+  if (!isPlainObject(field)) return false;
+  if (isVectorField(field) || isHiddenSelectField(field)) return false;
+  if ('type' in field || 'enum' in field || 'model' in field) return false;
+  return Object.keys(field).some(key => !FIELD_DESCRIPTOR_KEYS.has(key));
+}
+
+function stripAssignableModel(source: ConduitModel): ConduitModel {
   const assignable: ConduitModel = {};
-  for (const [name, field] of Object.entries(sourceFields)) {
+  for (const [name, field] of Object.entries(source)) {
     if (isCmsWriteOmittedField(name, field)) continue;
     assignable[name] = cloneAssignableValue(field);
   }
   return assignable;
 }
 
+function cloneAssignableArrayItem(item: unknown): unknown {
+  if (Array.isArray(item)) {
+    return item.map(cloneAssignableArrayItem);
+  }
+  if (!isPlainObject(item)) return item;
+  if (isCmsWriteOmittedField('item', item) && isVectorField(item)) {
+    return { ...item };
+  }
+  if (isNestedConduitModel(item)) {
+    return stripAssignableModel(item);
+  }
+  return cloneAssignableValue(item);
+}
+
 function cloneAssignableValue(field: unknown): ConduitModel[string] {
   if (Array.isArray(field)) {
-    return field.map(item =>
-      isPlainObject(item) ? { ...item } : item,
-    ) as ConduitModel[string];
+    return field.map(cloneAssignableArrayItem) as ConduitModel[string];
   }
-  if (isPlainObject(field)) {
-    return { ...field } as ConduitModel[string];
+  if (!isPlainObject(field)) {
+    return field as ConduitModel[string];
   }
-  return field as ConduitModel[string];
+  if (isNestedConduitModel(field)) {
+    return stripAssignableModel(field) as ConduitModel[string];
+  }
+  const cloned: Record<string, unknown> = { ...field };
+  if (Array.isArray(cloned.type)) {
+    cloned.type = cloned.type.map(cloneAssignableArrayItem);
+  } else if (isPlainObject(cloned.type) && !isVectorField(cloned)) {
+    if (isNestedConduitModel(cloned.type) || isPlainObject(cloned.type)) {
+      cloned.type = stripAssignableModel(cloned.type as ConduitModel);
+    }
+  }
+  return cloned as ConduitModel[string];
 }
 
 function cloneConduitModel(fields: ConduitModel): ConduitModel {
