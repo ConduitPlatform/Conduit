@@ -2,6 +2,7 @@ export interface EmbeddingJobData {
   schemaName: string;
   documentId: string;
   configId?: string;
+  backfillRunId?: string;
 }
 
 export const MAX_SCHEMA_NAME_LENGTH = 128;
@@ -49,7 +50,7 @@ export function parseEmbeddingJobData(
   }
   const record = value as Record<string, unknown>;
   const extraKeys = Object.keys(record).filter(
-    key => !['schemaName', 'documentId', 'configId'].includes(key),
+    key => !['schemaName', 'documentId', 'configId', 'backfillRunId'].includes(key),
   );
   if (extraKeys.length) return { ok: false, reason: 'malformed' };
   if (typeof record.schemaName !== 'string' || !SCHEMA_NAME.test(record.schemaName)) {
@@ -64,12 +65,19 @@ export function parseEmbeddingJobData(
   ) {
     return { ok: false, reason: 'configId' };
   }
+  if (
+    record.backfillRunId !== undefined &&
+    (typeof record.backfillRunId !== 'string' || !IDENTITY.test(record.backfillRunId))
+  ) {
+    return { ok: false, reason: 'backfillRunId' };
+  }
   return {
     ok: true,
     data: {
       schemaName: record.schemaName,
       documentId: record.documentId,
       ...(record.configId ? { configId: record.configId } : {}),
+      ...(record.backfillRunId ? { backfillRunId: record.backfillRunId } : {}),
     },
   };
 }
