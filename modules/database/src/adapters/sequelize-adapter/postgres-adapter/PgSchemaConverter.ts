@@ -18,10 +18,8 @@ import {
   extractRelations,
   RelationType,
 } from '../utils/extractors/index.js';
-import {
-  isVectorSchemaType,
-  vectorFieldStorageMapping,
-} from '../../utils/vectorMappings.js';
+import { vectorFieldStorageMapping } from '../../utils/vectorMappings.js';
+import { isVectorTypeName } from '../../utils/vectorField.js';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
@@ -158,7 +156,7 @@ function extractObjectType(objectField: Indexable):
       res.type = extractArrayType(objectField.type).type;
     } else {
       res.type = extractType(objectField.type, objectField.sqlType);
-      if (isVectorSchemaType(objectField.type)) {
+      if (isVectorTypeName(objectField.type)) {
         const mapping = vectorFieldStorageMapping('postgres', {
           dimensions: objectField.dimensions,
         });

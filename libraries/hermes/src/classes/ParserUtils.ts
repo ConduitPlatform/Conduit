@@ -78,14 +78,14 @@ export class ParserUtils {
    * Positive integer dimensions from a Vector field (or a raw dimensions value).
    */
   static getVectorDimensions(fieldOrDimensions: unknown): number | undefined {
-    const value =
-      typeof fieldOrDimensions === 'number'
-        ? fieldOrDimensions
-        : typeof fieldOrDimensions === 'object' &&
-            fieldOrDimensions !== null &&
-            'dimensions' in fieldOrDimensions
-          ? (fieldOrDimensions as { dimensions?: unknown }).dimensions
-          : undefined;
+    let value: unknown = fieldOrDimensions;
+    if (
+      typeof fieldOrDimensions === 'object' &&
+      fieldOrDimensions !== null &&
+      'dimensions' in fieldOrDimensions
+    ) {
+      value = (fieldOrDimensions as { dimensions?: unknown }).dimensions;
+    }
     if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
       return value;
     }

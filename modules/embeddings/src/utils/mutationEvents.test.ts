@@ -5,15 +5,18 @@ import {
   extractDocumentIds,
   isEmbeddingOwnedMutation,
   parseBoundedMutationEvent,
-  parseMutationEvent,
 } from './mutationEvents.js';
 
 describe('embedding mutation event parsing', () => {
   it('normalizes create, update, and bulk payloads to unique ids', () => {
-    assert.deepEqual(parseMutationEvent(JSON.stringify({ _id: 'a', title: 'x' })), {
-      payload: { _id: 'a', title: 'x' },
-      ids: ['a'],
-    });
+    const parsed = parseBoundedMutationEvent(JSON.stringify({ _id: 'a', title: 'x' }));
+    assert.equal(parsed.ok, true);
+    if (parsed.ok) {
+      assert.deepEqual(parsed.event, {
+        payload: { _id: 'a', title: 'x' },
+        ids: ['a'],
+      });
+    }
     assert.deepEqual(extractDocumentIds([{ _id: 'a' }, { _id: 'b' }, { _id: 'a' }]), [
       'a',
       'b',
@@ -30,12 +33,13 @@ describe('embedding mutation event parsing', () => {
       }),
       [],
     );
-    assert.equal(
-      parseMutationEvent(
-        JSON.stringify({ acknowledged: true, matchedCount: 2, modifiedCount: 2 }),
-      )?.ids.length,
-      0,
+    const parsed = parseBoundedMutationEvent(
+      JSON.stringify({ acknowledged: true, matchedCount: 2, modifiedCount: 2 }),
     );
+    assert.equal(parsed.ok, true);
+    if (parsed.ok) {
+      assert.equal(parsed.event.ids.length, 0);
+    }
   });
 
   it('parses bounded bulk id chunks', () => {
@@ -61,10 +65,6 @@ describe('embedding mutation event parsing', () => {
       false,
     );
     assert.equal(isEmbeddingOwnedMutation({ _id: 'a' }, owned), false);
-  });
-
-  it('returns null for malformed payloads', () => {
-    assert.equal(parseMutationEvent('{not json'), null);
   });
 
   it('fails closed on oversized bus payloads instead of crashing', () => {

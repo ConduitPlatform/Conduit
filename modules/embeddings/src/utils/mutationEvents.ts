@@ -12,11 +12,6 @@ export type MutationEventParseResult =
   | { ok: true; event: ParsedMutationEvent }
   | { ok: false; reason: 'malformed' | 'capped' };
 
-export function parseMutationEvent(message: string): ParsedMutationEvent | null {
-  const parsed = parseBoundedMutationEvent(message);
-  return parsed.ok ? parsed.event : null;
-}
-
 export function parseBoundedMutationEvent(
   message: string,
   maxIds: number = MAX_MUTATION_EVENT_IDS,

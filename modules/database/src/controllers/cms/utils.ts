@@ -125,7 +125,7 @@ function cloneAssignableArrayItem(item: unknown): unknown {
     return item.map(cloneAssignableArrayItem);
   }
   if (!isPlainObject(item)) return item;
-  if (isCmsWriteOmittedField('item', item) && isVectorField(item)) {
+  if (isVectorField(item)) {
     return { ...item };
   }
   if (isNestedConduitModel(item)) {
