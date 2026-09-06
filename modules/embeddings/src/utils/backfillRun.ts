@@ -1,3 +1,4 @@
+import type { Query } from '@conduitplatform/grpc-sdk';
 import { sanitizeErrorMessage } from './redactConfig.js';
 import { MAX_QUEUE_BATCH_SIZE } from './embeddingJobs.js';
 
@@ -316,9 +317,12 @@ export function applyBackfillPage(
   };
 }
 
-export type BackfillCountIncrementPatch = {
-  $inc: { processedCount?: number; failedCount?: number };
-};
+type BackfillCountDocument = Pick<BackfillRunProgress, 'processedCount' | 'failedCount'>;
+
+export type BackfillCountIncrementPatch = Extract<
+  Query<BackfillCountDocument>,
+  { $inc: unknown }
+>;
 
 export function backfillCountIncrementPatch(
   outcome: 'processed' | 'failed',
@@ -326,6 +330,12 @@ export function backfillCountIncrementPatch(
   return {
     $inc: outcome === 'processed' ? { processedCount: 1 } : { failedCount: 1 },
   };
+}
+
+export function toBackfillCountUpdateQuery(
+  patch: BackfillCountIncrementPatch,
+): Query<BackfillCountDocument> {
+  return patch;
 }
 
 export function applyAtomicBackfillCountDelta(
