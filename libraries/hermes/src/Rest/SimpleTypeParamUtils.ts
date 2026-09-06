@@ -1,4 +1,5 @@
 import { ConduitModel, ConduitValidationRules, TYPE } from '@conduitplatform/grpc-sdk';
+import { ParserUtils } from '../classes/index.js';
 
 export function applyOpenApiFieldValidation(
   res: Record<string, unknown>,
@@ -24,6 +25,7 @@ function extractParam(
   param: string,
   required: boolean = false,
   validate?: ConduitValidationRules,
+  sourceField?: unknown,
 ) {
   const res: Record<string, unknown> = { type: 'string' };
   switch (param) {
@@ -38,6 +40,10 @@ function extractParam(
     case TYPE.Relation:
       res.type = 'string';
       break;
+    case TYPE.Vector:
+      res.type = 'array';
+      res.items = { type: 'number' };
+      break;
     case 'String':
     case 'Number':
     case 'Boolean':
@@ -45,6 +51,9 @@ function extractParam(
       break;
   }
   applyOpenApiFieldValidation(res, validate);
+  if (param === TYPE.Vector) {
+    ParserUtils.applyVectorOpenApiConstraints(res, sourceField);
+  }
   return res;
 }
 
@@ -67,13 +76,13 @@ export function processSwaggerParams(paramObj: any) {
   let params: Record<string, unknown> = {};
 
   if (typeof paramObj === 'string') {
-    params = extractParam(paramObj);
+    params = extractParam(paramObj, false, undefined, paramObj);
   } else if (Array.isArray(paramObj)) {
     const elementZero = paramObj[0];
     if (typeof elementZero === 'string') {
       params = {
         type: 'array',
-        items: { ...extractParam(elementZero, false) },
+        items: { ...extractParam(elementZero, false, undefined, elementZero) },
         minItems: 0,
       };
     } else {
@@ -84,7 +93,12 @@ export function processSwaggerParams(paramObj: any) {
       params = {
         type: 'array',
         items: {
-          ...extractParam(typeZero! as string, typeZeroRequired, itemValidate),
+          ...extractParam(
+            typeZero! as string,
+            typeZeroRequired,
+            itemValidate,
+            elementZero,
+          ),
         },
         minItems: typeZeroRequired ? 1 : 0,
       };
@@ -94,7 +108,7 @@ export function processSwaggerParams(paramObj: any) {
     const typeZeroRequired = (paramObj as ConduitModel).required;
     const validate = (paramObj as { validate?: ConduitValidationRules }).validate;
     if (typeof typeZero === 'string') {
-      params = extractParam(typeZero, typeZeroRequired, validate);
+      params = extractParam(typeZero, typeZeroRequired, validate, paramObj);
     } else if (Array.isArray(typeZero)) {
       const elementZero = typeZero[0];
       if (typeof elementZero === 'string') {
@@ -107,7 +121,12 @@ export function processSwaggerParams(paramObj: any) {
         params = {
           type: 'array',
           items: {
-            ...extractParam(typeZeroTwo! as string, typeZeroTwoRequired, itemValidate),
+            ...extractParam(
+              typeZeroTwo! as string,
+              typeZeroTwoRequired,
+              itemValidate,
+              elementZero,
+            ),
           },
           minItems: typeZeroTwoRequired ? 1 : 0,
         };
