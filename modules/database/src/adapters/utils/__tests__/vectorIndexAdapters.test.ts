@@ -131,6 +131,34 @@ describe('mongoose vector index lifecycle', () => {
     }
     expect(aggregate).not.toHaveBeenCalled();
   });
+
+  it('drops Mongo search indexes only after verifying type vectorSearch', async () => {
+    const dropSearchIndex = jest.fn(async () => undefined);
+    const listSearchIndexes = jest.fn(() => ({
+      toArray: async () => [{ name: 'article_text', type: 'search' }],
+    }));
+    const adapter = Object.create(MongooseAdapter.prototype) as MongooseAdapter;
+    Object.assign(adapter, {
+      models: { Article: articleModel() },
+      mongoose: {
+        model: () => ({
+          collection: { dropSearchIndex, listSearchIndexes },
+        }),
+      },
+    });
+    await expect(adapter.deleteVectorIndex('Article', 'article_text')).rejects.toThrow(
+      /is not a vectorSearch index/,
+    );
+    expect(dropSearchIndex).not.toHaveBeenCalled();
+
+    listSearchIndexes.mockImplementation(() => ({
+      toArray: async () => [{ name: 'embedding_vector', type: 'vectorSearch' }],
+    }));
+    await expect(adapter.deleteVectorIndex('Article', 'embedding_vector')).resolves.toBe(
+      'Vector index deleted',
+    );
+    expect(dropSearchIndex).toHaveBeenCalledWith('embedding_vector');
+  });
 });
 
 describe('postgres vector index lifecycle', () => {

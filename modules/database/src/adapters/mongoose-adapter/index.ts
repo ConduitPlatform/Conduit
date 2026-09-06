@@ -28,6 +28,7 @@ import {
   planMongoVectorSearch,
   bindVectorIndexToField,
   planMongoVectorIndexCreate,
+  assertMongoVectorSearchIndexDropTarget,
 } from '../utils/index.js';
 import pluralize from '../../utils/pluralize.js';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils.js';
@@ -807,12 +808,20 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const collection: any = this.mongoose.model(schemaName).collection;
-    if (typeof collection.dropSearchIndex !== 'function') {
+    if (
+      typeof collection.dropSearchIndex !== 'function' ||
+      typeof collection.listSearchIndexes !== 'function'
+    ) {
       throw new GrpcError(
         status.FAILED_PRECONDITION,
         'MongoDB Vector Search index commands are not available for this deployment',
       );
     }
+    const indexes = await collection.listSearchIndexes().toArray();
+    const existing = (indexes as Array<{ name?: string; type?: string }>).find(
+      index => index.name === indexName,
+    );
+    assertMongoVectorSearchIndexDropTarget({ indexName, existing });
     await collection.dropSearchIndex(indexName);
     return 'Vector index deleted';
   }

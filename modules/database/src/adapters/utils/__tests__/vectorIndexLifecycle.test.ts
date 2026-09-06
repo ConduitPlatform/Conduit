@@ -8,6 +8,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
+  assertMongoVectorSearchIndexDropTarget,
   assertPostgresVectorIndexDropTarget,
   assertVectorIndexQueryable,
   bindVectorIndexToField,
@@ -262,6 +263,26 @@ describe('vector index lifecycle', () => {
         },
       }).indexname,
     ).toBe('cnd_Article_embedding_vector');
+  });
+
+  it('refuses to drop Mongo search indexes that are not vectorSearch', () => {
+    expect(() =>
+      assertMongoVectorSearchIndexDropTarget({
+        indexName: 'article_text',
+      }),
+    ).toThrow(/was not found/);
+    expect(() =>
+      assertMongoVectorSearchIndexDropTarget({
+        indexName: 'article_text',
+        existing: { name: 'article_text', type: 'search' },
+      }),
+    ).toThrow(/is not a vectorSearch index/);
+    expect(
+      assertMongoVectorSearchIndexDropTarget({
+        indexName: 'embedding_vector',
+        existing: { name: 'embedding_vector', type: 'vectorSearch' },
+      }),
+    ).toEqual({ name: 'embedding_vector', type: 'vectorSearch' });
   });
 
   it('restores Postgres dimensions and WITH options during catalog read-back', () => {

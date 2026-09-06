@@ -314,6 +314,122 @@ describe('typed embeddings API handlers', () => {
     );
   });
 
+  it('ignores caller-supplied sourceFieldAllowlist for schema-owner gRPC callers', async () => {
+    const sensitiveSchema = {
+      name: 'Article',
+      fields: {
+        title: { type: TYPE.String },
+        password: { type: TYPE.String },
+        notes: { type: TYPE.String, select: false },
+      },
+    };
+    const owner = { callerModule: 'cms-app' };
+    const declared = { Article: { name: 'Article', ownerModule: 'cms-app' } };
+    const { api: ownerApi } = createApi({
+      schemas: { Article: sensitiveSchema },
+      declared,
+      indexes: [readyIndex],
+    });
+    await assert.rejects(
+      () =>
+        ownerApi.upsertConfig(
+          {
+            schemaName: 'Article',
+            sourceFields: ['password'],
+            targetField: 'embedding',
+            model: 'm',
+            dimensions: 3,
+            sourceFieldAllowlist: ['password'],
+            enabled: false,
+          },
+          owner,
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /sensitive/.test(err.message),
+    );
+    await assert.rejects(
+      () =>
+        ownerApi.upsertConfig(
+          {
+            schemaName: 'Article',
+            sourceFields: ['notes'],
+            targetField: 'embedding',
+            model: 'm',
+            dimensions: 3,
+            sourceFieldAllowlist: ['notes'],
+            enabled: false,
+          },
+          owner,
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /hidden/.test(err.message),
+    );
+    await assert.rejects(
+      () =>
+        ownerApi.upsertConfig(
+          {
+            schemaName: 'Article',
+            sourceFields: ['password'],
+            targetField: 'embedding',
+            model: 'm',
+            dimensions: 3,
+            sourceFieldAllowlist: ['password'],
+            enabled: false,
+          },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /sensitive/.test(err.message),
+    );
+
+    const { api: operatorAllowlistApi } = createApi({
+      schemas: { Article: sensitiveSchema },
+      declared,
+      indexes: [readyIndex],
+      config: {
+        ...moduleConfig,
+        security: { ...moduleConfig.security, sourceFieldAllowlist: ['notes'] },
+      } as Config,
+    });
+    const operatorSaved = await operatorAllowlistApi.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['notes'],
+        targetField: 'embedding',
+        model: 'm',
+        dimensions: 3,
+        enabled: false,
+      },
+      owner,
+    );
+    assert.equal(operatorSaved.config.enabled, false);
+
+    const { api: adminApi } = createApi({
+      schemas: { Article: sensitiveSchema },
+      declared,
+      indexes: [readyIndex],
+    });
+    const adminSaved = await adminApi.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['notes'],
+        targetField: 'embedding',
+        model: 'm',
+        dimensions: 3,
+        sourceFieldAllowlist: ['notes'],
+        enabled: false,
+      },
+      { platformAdmin: true },
+    );
+    assert.equal(adminSaved.config.enabled, false);
+  });
+
   it('starts, lists, cancels, and resumes persisted backfill runs with onlyMissing', async () => {
     const { api, runs, enqueued } = createApi({ configs: [enabledConfig] });
     const started = await api.startBackfill(
@@ -418,6 +534,30 @@ describe('typed embeddings API handlers', () => {
       new GrpcError(status.FAILED_PRECONDITION, 'index not ready'),
     );
     assert.equal(mapped.code, status.FAILED_PRECONDITION);
+  });
+
+  it('caps client semantic-search limit below admin and gRPC callers', async () => {
+    const seen: number[] = [];
+    const { api } = createApi({
+      configs: [enabledConfig],
+      vectorSearch: async input => {
+        seen.push(input.limit ?? -1);
+        return [];
+      },
+    });
+    await api.semanticSearch(
+      { schemaName: 'Article', text: 'hello', userId: 'user-1', limit: 1000 },
+      { callerModule: 'router' },
+    );
+    await api.semanticSearch(
+      { schemaName: 'Article', text: 'hello', userId: 'user-1', limit: 1000 },
+      { callerModule: 'database' },
+    );
+    await api.semanticSearch(
+      { schemaName: 'Article', text: 'hello', userId: 'user-1', limit: 1000 },
+      { platformAdmin: true },
+    );
+    assert.deepEqual(seen, [50, 1000, 1000]);
   });
 
   it('maps provider dimension mismatches and illegal backfill transitions to typed statuses', async () => {
