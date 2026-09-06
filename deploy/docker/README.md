@@ -29,3 +29,6 @@ To run the microservices version:
 - Open the admin panel in your browser at [http://localhost:8080](http://localhost:8080)
 - Open the router in your browser at [http://localhost:8081](http://localhost:8081)
 - You can inject `--profile {profile_name}` command on compose to configure more services
+  (`mongodb` / `postgres` for the database engine, `embeddings` for the embeddings module).
+  Embeddings is disabled by default, omitted from standalone v1, and requires `GRPC_KEY` in
+  production. See the [embeddings rollout runbook](../embeddings.md).

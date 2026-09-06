@@ -16,7 +16,7 @@ COPY --from=conduit-base /app/packages/core/bundle /app/packages/core/bundle
 COPY --from=conduit-base /app/packages/core/package.bundle.json /app/packages/core/package.json
 COPY --from=conduit-base /app/packages/core/package.bundle-lock.json /app/packages/core/package-lock.json
 
-# Modules (standalone PM2 set — functions excluded)
+# Modules (standalone PM2 set — functions and embeddings excluded from v1)
 COPY --from=conduit-base /app/modules/database/bundle /app/modules/database/bundle
 COPY --from=conduit-base /app/modules/database/package.bundle.json /app/modules/database/package.json
 COPY --from=conduit-base /app/modules/database/package.bundle-lock.json /app/modules/database/package-lock.json

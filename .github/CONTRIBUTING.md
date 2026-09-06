@@ -95,6 +95,7 @@ You may find additional scripts in the `scripts` section of the `package.json` f
     - `authorization`: resource authorization based on Google Zanzibar
     - `chat`: chat room functionality
     - `database`: database engine (MongoDB, PostgreSQL), CMS, CRUD/functional endpoint generation
+    - `embeddings`: opt-in text-to-vector generation and semantic search (disabled by default; not in standalone v1)
     - `email`: email sending with templates support
     - `forms`: form generation and submission
     - `push-notifications`: provides support for push notifications
