@@ -8,6 +8,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isArray, isNil, isObject } from 'lodash-es';
 import { checkIfMongoOptions } from './utils.js';
+import { applyMongoVectorField, isVectorSchemaType } from '../utils/vectorMappings.js';
 
 import * as deepdash from 'deepdash-es/standalone';
 
@@ -87,8 +88,8 @@ function convert(value: any, key: any, parentValue: any) {
     parentValue[key].type = Schema.Types.Mixed;
   }
 
-  if (parentValue[key]?.type === 'Vector') {
-    parentValue[key].type = [Number];
+  if (isVectorSchemaType(parentValue[key]?.type)) {
+    parentValue[key] = applyMongoVectorField(parentValue[key]);
   }
 
   if (!isNil(parentValue[key]) && parentValue[key] === 'JSON') {

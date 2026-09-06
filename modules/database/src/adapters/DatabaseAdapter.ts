@@ -15,6 +15,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import type { Config } from '../config/index.js';
+import { unsupportedVectorCapabilities } from './utils/vectorCapabilities.js';
 import {
   _ConduitSchema,
   ConduitDatabaseSchema,
@@ -301,14 +302,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   ): Promise<any>;
 
   getVectorCapabilities(_schemaName?: string): Promise<VectorCapabilities> {
-    return Promise.resolve({
-      supported: false,
-      storage: false,
-      indexing: false,
-      search: false,
-      provider: 'unsupported',
-      reason: `${this.getDatabaseType()} does not support Conduit vector search`,
-    });
+    return Promise.resolve(unsupportedVectorCapabilities(this.getDatabaseType()));
   }
 
   createVectorIndex(_schemaName: string, _index: VectorIndexDefinition): Promise<string> {
