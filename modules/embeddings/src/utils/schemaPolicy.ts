@@ -4,6 +4,7 @@ import { BACKFILL_RUN_SCHEMA } from './backfillRun.js';
 
 export const EMBEDDING_CONFIG_SCHEMA = 'EmbeddingConfig';
 export { BACKFILL_RUN_SCHEMA };
+export const EMBEDDINGS_OWNER_MODULE = 'embeddings';
 export const EMBEDDING_OWNED_SCHEMA_NAMES = new Set([
   EMBEDDING_CONFIG_SCHEMA,
   BACKFILL_RUN_SCHEMA,
@@ -53,11 +54,16 @@ export function isHiddenField(field: unknown): boolean {
   return isRecord(field) && field.select === false;
 }
 
+/**
+ * Explicit denylist for embeddings sources. Owner-controlled business schemas
+ * (including authentication User/Team) are not denied by ownerModule alone.
+ */
 export function isDeniedEmbeddingSchema(schema: {
   name: string;
   ownerModule?: string;
 }): boolean {
   if (!schema.name) return true;
+  if (schema.ownerModule === EMBEDDINGS_OWNER_MODULE) return true;
   if (EMBEDDING_OWNED_SCHEMA_NAMES.has(schema.name)) return true;
   if (schema.name.startsWith('_')) return true;
   if (SYSTEM_SCHEMA_NAMES.has(schema.name)) return true;
@@ -124,6 +130,29 @@ export function assertSemanticSearchAccess(args: {
     status.PERMISSION_DENIED,
     'Semantic search requires a subject, scope, or admin operator context',
   );
+}
+
+export function normalizeSourceFieldAllowlist(fields?: string[]): string[] {
+  return [
+    ...new Set(
+      (fields ?? []).filter(field => typeof field === 'string' && field.length > 0),
+    ),
+  ];
+}
+
+export function resolveSourceFieldAllowlist(args: {
+  operatorAllowlist?: string[];
+  requestAllowlist?: string[];
+  platformAdmin?: boolean;
+}): string[] {
+  const operatorAllowlist = normalizeSourceFieldAllowlist(args.operatorAllowlist);
+  if (!args.platformAdmin) return operatorAllowlist;
+  return [
+    ...new Set([
+      ...operatorAllowlist,
+      ...normalizeSourceFieldAllowlist(args.requestAllowlist),
+    ]),
+  ];
 }
 
 export function assertSourceFields(args: {
