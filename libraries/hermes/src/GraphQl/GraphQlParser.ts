@@ -74,6 +74,8 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
         return 'ID';
       case 'JSON':
         return 'JSONObject';
+      case 'Vector':
+        return '[Number]';
       default:
         this.requestedTypes.add(conduitType);
         return conduitType;

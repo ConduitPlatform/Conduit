@@ -5,7 +5,7 @@ import {
   TYPE,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitParser } from '../classes/index.js';
+import { ConduitParser, ParserUtils } from '../classes/index.js';
 import { applyOpenApiFieldValidation } from './SimpleTypeParamUtils.js';
 
 export interface ParseResult {
@@ -65,6 +65,9 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
       $ref?: string;
       format?: string;
       properties?: object;
+      items?: { type?: string };
+      minItems?: number;
+      maxItems?: number;
     } = {};
     switch (conduitType) {
       case TYPE.JSON:
@@ -78,6 +81,10 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
       case TYPE.ObjectId:
       case TYPE.Relation:
         res.type = 'string';
+        break;
+      case TYPE.Vector:
+        res.type = 'array';
+        res.items = { type: 'number' };
         break;
       case 'String':
       case 'Number':
@@ -129,6 +136,10 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
         processingObject as unknown as Record<string, unknown>,
         v as any,
       );
+      ParserUtils.applyVectorOpenApiConstraints(
+        processingObject as unknown as Record<string, unknown>,
+        sourceField,
+      );
     } else {
       if (!processingObject.properties) {
         processingObject.properties = {};
@@ -139,6 +150,10 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
       applyOpenApiFieldValidation(
         processingObject.properties[name] as Record<string, unknown>,
         v as any,
+      );
+      ParserUtils.applyVectorOpenApiConstraints(
+        processingObject.properties[name] as Record<string, unknown>,
+        sourceField,
       );
     }
     this.addFieldToRequired(processingObject, name, isRequired);

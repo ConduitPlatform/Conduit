@@ -39,3 +39,7 @@ responses distinguish storage support from index/search support:
    filter fields.
 4. Backfill embeddings.
 5. Run `vectorSearch` with a query vector.
+
+CMS create/update bodies omit `TYPE.Vector` fields, `*SourceHash` fields, and
+any `select: false` field so clients cannot write managed embeddings. Read/return
+projections still include those schema fields.
