@@ -6,6 +6,9 @@ import {
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
+  VectorIndexDefinition,
+  VectorIndexMethod,
+  VectorSimilarity,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin/index.js';
 import { SchemaAdmin } from './admin/schema.admin.js';
@@ -1182,13 +1185,13 @@ export default class DatabaseModule extends ManagedModule<Config> {
     callback(null, { result });
   }
 
-  private parseVectorIndex(index: VectorIndex) {
+  private parseVectorIndex(index: VectorIndex): VectorIndexDefinition {
     return {
       field: index.field,
       dimensions: index.dimensions,
-      similarity: index.similarity as any,
+      similarity: index.similarity as VectorSimilarity,
       name: index.name,
-      method: index.method as any,
+      method: index.method as VectorIndexMethod,
       filterFields: index.filterFields,
       options: index.options ? JSON.parse(index.options) : undefined,
     };

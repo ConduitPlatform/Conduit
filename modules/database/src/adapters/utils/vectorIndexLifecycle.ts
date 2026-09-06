@@ -61,8 +61,8 @@ export function bindVectorIndexToField(args: {
     ...args.index,
     name:
       args.index.name ?? defaultVectorIndexName(args.index.field, args.physicalTableName),
-    dimensions: args.index.dimensions ?? field?.dimensions ?? args.index.dimensions,
-    similarity: args.index.similarity ?? field?.similarity ?? args.index.similarity,
+    dimensions: args.index.dimensions ?? field?.dimensions,
+    similarity: args.index.similarity ?? field?.similarity,
     filterFields:
       args.provider === 'mongodb'
         ? mongoVectorFilterFields(args.index.filterFields)
@@ -173,17 +173,22 @@ export function planMongoVectorIndexCreate(args: {
   );
 }
 
+function postgresSimilarityFromOperator(operator?: string): VectorSimilarity {
+  if (operator === 'l2' || operator === 'vector_l2_ops') {
+    return VectorSimilarity.Euclidean;
+  }
+  if (operator === 'ip' || operator === 'vector_ip_ops') {
+    return VectorSimilarity.DotProduct;
+  }
+  return VectorSimilarity.Cosine;
+}
+
 export function parsePostgresVectorIndexDef(indexdef: string): ParsedPostgresVectorIndex {
   const tableMatch = /ON\s+(?:(?:"[^"]+"|\w+)\.)?(?:"([^"]+)"|(\w+))/i.exec(indexdef);
   const method = /USING\s+(\w+)/i.exec(indexdef)?.[1]?.toLowerCase();
   const fieldMatch = /\((?:"([^"]+)"|(\w+))\s+vector_/i.exec(indexdef);
   const operator = /vector_(l2|cosine|ip)_ops/i.exec(indexdef)?.[1];
-  const similarity =
-    operator === 'l2'
-      ? VectorSimilarity.Euclidean
-      : operator === 'ip'
-        ? VectorSimilarity.DotProduct
-        : VectorSimilarity.Cosine;
+  const similarity = postgresSimilarityFromOperator(operator);
   return {
     tableName: tableMatch?.[1] ?? tableMatch?.[2],
     field: fieldMatch?.[1] ?? fieldMatch?.[2] ?? '',
@@ -209,13 +214,9 @@ export function postgresVectorIndexDefinitionMatches(
   if ((parsed.method ?? '').toLowerCase() !== expected.method.toLowerCase()) {
     return false;
   }
-  const expectedSimilarity =
-    expected.operator === 'vector_l2_ops'
-      ? VectorSimilarity.Euclidean
-      : expected.operator === 'vector_ip_ops'
-        ? VectorSimilarity.DotProduct
-        : VectorSimilarity.Cosine;
-  if (parsed.similarity !== expectedSimilarity) return false;
+  if (parsed.similarity !== postgresSimilarityFromOperator(expected.operator)) {
+    return false;
+  }
   return postgresRequestedOptionsMatch(expected.options, parsed.options, expected.method);
 }
 

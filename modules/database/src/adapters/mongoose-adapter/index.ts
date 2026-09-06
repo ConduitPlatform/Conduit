@@ -37,7 +37,7 @@ import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces/index.js';
-import { isArray, isEqual, isNil } from 'lodash-es';
+import { isArray, isEqual } from 'lodash-es';
 import { parseSchema } from 'mongodb-schema';
 
 const VIEW_LOCK_TTL_MS = 60_000;
@@ -767,7 +767,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    const schema = this.models[schemaName].originalSchema as any;
+    const schema = this.models[schemaName].originalSchema;
     const field = schema.compiledFields?.[index.field] ?? schema.fields?.[index.field];
     const bound = bindVectorIndexToField({
       provider: 'mongodb',

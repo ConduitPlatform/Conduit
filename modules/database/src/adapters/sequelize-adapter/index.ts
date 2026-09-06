@@ -45,6 +45,7 @@ import {
   planPostgresVectorSearch,
   postgresIndexMethodSql,
   postgresVectorCapabilities,
+  parsePostgresVectorIndexDef,
   resolveVectorFieldFromSchema,
   sqlFallbackVectorCapabilities,
   assertPostgresVectorIndexDropTarget,
@@ -511,10 +512,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     return rows
       .filter(row => /USING (hnsw|ivfflat)/i.test(row.indexdef))
       .map(row => {
-        const mapped = fromPostgresVectorIndex(row.indexname, row.indexdef);
-        const field = resolveVectorFieldFromSchema(schemaFields, mapped.field);
+        const parsed = parsePostgresVectorIndexDef(row.indexdef);
+        const field = resolveVectorFieldFromSchema(schemaFields, parsed.field);
         const matchingDeclared = declared.find(
-          item => item.name === row.indexname || item.field === mapped.field,
+          item => item.name === row.indexname || item.field === parsed.field,
         );
         return fromPostgresVectorIndex(
           row.indexname,
@@ -541,9 +542,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   async vectorSearch(request: VectorSearchInput): Promise<VectorSearchResult[]> {
     this.ensurePostgresVectorSupport(request.schemaName);
     const schema = this.models[request.schemaName];
-    const field = (schema.originalSchema.compiledFields?.[request.field] ??
-      schema.originalSchema.fields?.[request.field]) as any;
-    if (field?.type !== 'Vector') {
+    const schemaFields = (schema.originalSchema.compiledFields ??
+      schema.originalSchema.fields) as Record<string, unknown>;
+    const field = resolveVectorFieldFromSchema(schemaFields, request.field);
+    if (!field) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Requested field is not a vector');
     }
     if (request.vector.length !== field.dimensions) {
@@ -558,8 +560,6 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       scope: request.scope,
       adminOperator: request.adminOperator,
     });
-    const schemaFields = (schema.originalSchema.compiledFields ??
-      schema.originalSchema.fields) as Record<string, unknown>;
     const liveIndexes = await this.getVectorIndexes(request.schemaName);
     const planned = planPostgresVectorSearch({
       request,
