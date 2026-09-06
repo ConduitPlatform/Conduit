@@ -193,8 +193,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       id,
       query: this.processQuery(document),
-      ...o,
+      userId: o.userId,
+      scope: o.scope,
       populate: populateArray,
+      suppressEvent: o.suppressEvent,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -212,8 +214,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       id,
       query: this.processQuery(document),
-      ...o,
+      userId: o.userId,
+      scope: o.scope,
       populate: populateArray,
+      suppressEvent: o.suppressEvent,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -231,8 +235,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
-      ...o,
+      userId: o.userId,
+      scope: o.scope,
       populate: populateArray,
+      suppressEvent: o.suppressEvent,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -250,8 +256,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
-      ...o,
+      userId: o.userId,
+      scope: o.scope,
       populate: populateArray,
+      suppressEvent: o.suppressEvent,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -269,8 +277,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
-      ...o,
+      userId: o.userId,
+      scope: o.scope,
       populate: populateArray,
+      suppressEvent: o.suppressEvent,
     }).then(res => {
       return JSON.parse(res.result);
     });

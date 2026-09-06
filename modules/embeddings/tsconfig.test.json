@@ -8,8 +8,9 @@
     "types": ["node"]
   },
   "include": [
-    "src/utils/validateEmbeddingConfig.ts",
-    "src/utils/validateEmbeddingConfig.test.ts"
+    "src/utils/**/*.ts",
+    "src/controllers/**/*.ts",
+    "src/providers/index.ts"
   ],
   "exclude": []
 }
