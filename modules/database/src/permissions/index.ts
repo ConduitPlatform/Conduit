@@ -17,6 +17,11 @@ export async function canCreate(moduleName: string, schema: Schema) {
   );
 }
 
+export function vectorIndexMutationData(field?: string): Indexable | undefined {
+  if (typeof field !== 'string' || field.length === 0) return undefined;
+  return { [field]: true };
+}
+
 export async function canModify(moduleName: string, schema: Schema, data?: Indexable) {
   if (moduleName === 'database' && schema.originalSchema.name === '_DeclaredSchema')
     return true;
