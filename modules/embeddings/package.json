@@ -21,7 +21,7 @@
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto ./dist/",
     "generateTypes": "sh build.sh",
-    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/utils/validateEmbeddingConfig.test.js"
+    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/utils/*.test.js dist-test/controllers/*.test.js"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.10.2",

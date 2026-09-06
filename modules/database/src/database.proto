@@ -123,6 +123,8 @@ message UpdateRequest {
   repeated string populate = 4;
   optional string userId = 5;
   optional string scope = 6;
+  // When true, skip bus publication. Existing callers omit this and keep publishing.
+  optional bool suppressEvent = 7;
 }
 
 message UpdateManyRequest {
@@ -132,6 +134,8 @@ message UpdateManyRequest {
   repeated string populate = 4;
   optional string userId = 5;
   optional string scope = 6;
+  // When true, skip bus publication. Existing callers omit this and keep publishing.
+  optional bool suppressEvent = 7;
 }
 
 message DropCollectionRequest {

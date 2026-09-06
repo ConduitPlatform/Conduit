@@ -19,6 +19,15 @@ import { EmbeddingConfig } from './models/index.js';
 import { QueueController } from './controllers/queue.controller.js';
 import { getProvider, hashEmbeddingInput } from './providers/index.js';
 import { validateEmbeddingConfigInput } from './utils/validateEmbeddingConfig.js';
+import {
+  embeddingOwnedFields,
+  isEmbeddingOwnedMutation,
+  parseMutationEvent,
+} from './utils/mutationEvents.js';
+import {
+  buildEmbeddingDocumentSelect,
+  generateEmbeddingsForDocument,
+} from './utils/processEmbedding.js';
 import metricsSchema from './metrics/index.js';
 import {
   BackfillRequest,
@@ -47,7 +56,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
 
   private database: DatabaseProvider;
   private queueController: QueueController;
-  private subscribedSchemas = new Set<string>();
+  private subscribedSchemas = new Map<string, string[]>();
 
   constructor(peerManifestRoot?: string) {
     super('embeddings', peerManifestRoot);
@@ -107,7 +116,9 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       } else {
         await model.create({ ...config, enabled: true });
       }
-      this.subscribeToSchema(config.schemaName);
+      if (this.currentConfig().enabled) {
+        this.subscribeToSchema(config.schemaName);
+      }
       callback(null, { result: 'Embedding config saved' });
     } catch (err) {
       callback({ code: 13, message: (err as Error).message });
@@ -196,53 +207,103 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
 
   private async configureRuntime() {
     const config = this.currentConfig();
-    if (!config.enabled) return;
     this.queueController ??= QueueController.getInstance(this.grpcSdk);
-    this.queueController.addWorker(
+    if (!config.enabled) {
+      await this.queueController.closeWorker();
+      this.unsubscribeAll();
+      return;
+    }
+    await this.queueController.ensureWorker(
       data => this.processEmbeddingJob(data.schemaName, data.documentId, data.configId),
       config.queue.concurrency,
     );
     const configs = await EmbeddingConfig.getInstance().findMany({ enabled: true });
-    configs.forEach(config => this.subscribeToSchema(config.schemaName));
+    const enabledSchemas = new Set(configs.map(item => item.schemaName));
+    for (const schemaName of this.subscribedSchemas.keys()) {
+      if (!enabledSchemas.has(schemaName)) {
+        this.unsubscribeFromSchema(schemaName);
+      }
+    }
+    configs.forEach(item => this.subscribeToSchema(item.schemaName));
+  }
+
+  private schemaSubscriptionIds(schemaName: string): [string, string, string, string] {
+    const idPrefix = `embeddings:${schemaName}`;
+    return [
+      `${idPrefix}:create`,
+      `${idPrefix}:update`,
+      `${idPrefix}:createMany`,
+      `${idPrefix}:updateMany`,
+    ];
   }
 
   private subscribeToSchema(schemaName: string) {
     if (this.subscribedSchemas.has(schemaName)) return;
-    this.subscribedSchemas.add(schemaName);
-    const idPrefix = `embeddings:${schemaName}`;
+    const [createId, updateId, createManyId, updateManyId] =
+      this.schemaSubscriptionIds(schemaName);
     this.grpcSdk.bus?.subscribe(
       `database:create:${schemaName}`,
       message => this.enqueueMutation(schemaName, message),
-      `${idPrefix}:create`,
+      createId,
     );
     this.grpcSdk.bus?.subscribe(
       `database:update:${schemaName}`,
       message => this.enqueueMutation(schemaName, message),
-      `${idPrefix}:update`,
+      updateId,
     );
     this.grpcSdk.bus?.subscribe(
       `database:createMany:${schemaName}`,
       message => this.enqueueMutation(schemaName, message),
-      `${idPrefix}:createMany`,
+      createManyId,
     );
     this.grpcSdk.bus?.subscribe(
       `database:updateMany:${schemaName}`,
       message => this.enqueueMutation(schemaName, message),
-      `${idPrefix}:updateMany`,
+      updateManyId,
+    );
+    this.subscribedSchemas.set(schemaName, [
+      createId,
+      updateId,
+      createManyId,
+      updateManyId,
+    ]);
+  }
+
+  private unsubscribeFromSchema(schemaName: string) {
+    const ids = this.subscribedSchemas.get(schemaName);
+    if (!ids) return;
+    ids.forEach(id => this.grpcSdk.bus?.unsubscribe(id));
+    this.subscribedSchemas.delete(schemaName);
+  }
+
+  private unsubscribeAll() {
+    [...this.subscribedSchemas.keys()].forEach(schemaName =>
+      this.unsubscribeFromSchema(schemaName),
     );
   }
 
   private enqueueMutation(schemaName: string, message: string) {
+    this.enqueueMutationAsync(schemaName, message).catch(err =>
+      ConduitGrpcSdk.Logger.error(err),
+    );
+  }
+
+  private async enqueueMutationAsync(schemaName: string, message: string) {
+    const parsed = parseMutationEvent(message);
+    if (!parsed?.ids.length) return;
+    const configs = await EmbeddingConfig.getInstance().findMany({
+      schemaName,
+      enabled: true,
+    });
+    if (!configs.length) return;
+    if (isEmbeddingOwnedMutation(parsed.payload, embeddingOwnedFields(configs))) {
+      return;
+    }
     const attempts = this.currentConfig().queue.attempts;
-    const payload = JSON.parse(message);
-    const docs = Array.isArray(payload) ? payload : [payload];
-    docs
-      .filter(doc => doc?._id)
-      .forEach(doc => {
-        this.queueController
-          .addEmbeddingJob({ schemaName, documentId: String(doc._id) }, attempts)
-          .catch(err => ConduitGrpcSdk.Logger.error(err));
-      });
+    await this.queueController.addBulkEmbeddingJobs(
+      parsed.ids.map(documentId => ({ schemaName, documentId })),
+      attempts,
+    );
   }
 
   private async processEmbeddingJob(
@@ -250,31 +311,30 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     documentId: string,
     configId?: string,
   ) {
-    const configs = configId
-      ? [await EmbeddingConfig.getInstance().findOne({ _id: configId })]
-      : await EmbeddingConfig.getInstance().findMany({ schemaName, enabled: true });
-    const doc = await this.database.findOne<Record<string, unknown>>(schemaName, {
-      _id: documentId,
-    });
+    const configs = (
+      configId
+        ? [await EmbeddingConfig.getInstance().findOne({ _id: configId })]
+        : await EmbeddingConfig.getInstance().findMany({ schemaName, enabled: true })
+    ).filter(Boolean) as EmbeddingConfig[];
+    if (!configs.length) return;
+    const doc = await this.database.findOne<Record<string, unknown>>(
+      schemaName,
+      { _id: documentId },
+      { select: buildEmbeddingDocumentSelect(configs) },
+    );
     if (!doc) return;
-    for (const config of configs.filter(Boolean) as EmbeddingConfig[]) {
-      const input = config.sourceFields.map(field => doc[field] ?? '').join('\n');
-      const sourceHash = hashEmbeddingInput(input);
-      if (doc[`${config.targetField}SourceHash`] === sourceHash) continue;
-      const vector = await getProvider(config.provider).embed(
-        input,
-        this.providerConfig(config.provider, config.modelName),
-      );
-      if (vector.length !== config.dimensions) {
-        throw new Error(
-          `Embedding provider returned ${vector.length} dimensions; expected ${config.dimensions}`,
-        );
-      }
-      await this.database.findByIdAndUpdate(schemaName, documentId, {
-        [config.targetField]: vector,
-        [`${config.targetField}SourceHash`]: sourceHash,
-      });
-    }
+    await generateEmbeddingsForDocument({
+      doc,
+      configs,
+      hashInput: hashEmbeddingInput,
+      embed: (input, config) =>
+        getProvider(config.provider).embed(
+          input,
+          this.providerConfig(config.provider, config.modelName ?? ''),
+        ),
+      update: (fields, options) =>
+        this.database.findByIdAndUpdate(schemaName, documentId, fields, options),
+    });
   }
 
   private validateConfigRequest(request: EmbeddingConfigRequest) {

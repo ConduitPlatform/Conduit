@@ -69,6 +69,12 @@ import {
   type ImportResult,
 } from '@conduitplatform/module-tools';
 import { QueueController } from './controllers/queue.controller.js';
+import {
+  buildMutationEventChunks,
+  collectDocumentIds,
+  mutationEventChannel,
+  shouldPublishMutationEvent,
+} from './adapters/utils/mutationEvents.js';
 import AppConfigSchema, { Config } from './config/index.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
@@ -574,7 +580,10 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       const docString = JSON.stringify(doc);
 
-      this.grpcSdk.bus?.publish(`${this.name}:create:${schemaName}`, docString);
+      this.grpcSdk.bus?.publish(
+        mutationEventChannel(this.name, 'create', schemaName),
+        docString,
+      );
 
       callback(null, { result: docString });
     } catch (err) {
@@ -606,7 +615,10 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       const docsString = JSON.stringify(docs);
 
-      this.grpcSdk.bus?.publish(`${this.name}:createMany:${schemaName}`, docsString);
+      this.grpcSdk.bus?.publish(
+        mutationEventChannel(this.name, 'createMany', schemaName),
+        docsString,
+      );
 
       callback(null, { result: docsString });
     } catch (err) {
@@ -649,7 +661,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
+      if (shouldPublishMutationEvent(call.request.suppressEvent)) {
+        this.grpcSdk.bus?.publish(
+          mutationEventChannel(this.name, 'update', schemaName),
+          resultString,
+        );
+      }
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -686,7 +703,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
+      if (shouldPublishMutationEvent(call.request.suppressEvent)) {
+        this.grpcSdk.bus?.publish(
+          mutationEventChannel(this.name, 'update', schemaName),
+          resultString,
+        );
+      }
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -723,7 +745,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
+      if (shouldPublishMutationEvent(call.request.suppressEvent)) {
+        this.grpcSdk.bus?.publish(
+          mutationEventChannel(this.name, 'update', schemaName),
+          resultString,
+        );
+      }
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -766,7 +793,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:updateMany:${schemaName}`, resultString);
+      if (shouldPublishMutationEvent(call.request.suppressEvent)) {
+        this.grpcSdk.bus?.publish(
+          mutationEventChannel(this.name, 'update', schemaName),
+          resultString,
+        );
+      }
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -798,6 +830,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
         });
       }
 
+      const ids = shouldPublishMutationEvent(call.request.suppressEvent)
+        ? await this.collectMutationIds(schemaAdapter.model, call.request.filterQuery, {
+            userId: call.request.userId,
+            scope: call.request.scope,
+          })
+        : [];
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
@@ -809,7 +847,14 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:updateMany:${schemaName}`, resultString);
+      if (shouldPublishMutationEvent(call.request.suppressEvent)) {
+        for (const payload of buildMutationEventChunks(ids)) {
+          this.grpcSdk.bus?.publish(
+            mutationEventChannel(this.name, 'updateMany', schemaName),
+            payload,
+          );
+        }
+      }
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -841,7 +886,10 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:delete:${schemaName}`, resultString);
+      this.grpcSdk.bus?.publish(
+        mutationEventChannel(this.name, 'delete', schemaName),
+        resultString,
+      );
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -873,7 +921,10 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:delete:${schemaName}`, resultString);
+      this.grpcSdk.bus?.publish(
+        mutationEventChannel(this.name, 'delete', schemaName),
+        resultString,
+      );
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -1181,5 +1232,18 @@ export default class DatabaseModule extends ManagedModule<Config> {
         boundFunctionRef,
       );
     }
+  }
+
+  private async collectMutationIds(
+    model: MongooseSchema | SequelizeSchema,
+    filterQuery: string,
+    options: { userId?: string; scope?: string },
+  ): Promise<string[]> {
+    const docs = await model.findMany(filterQuery, {
+      select: '_id',
+      userId: options.userId,
+      scope: options.scope,
+    });
+    return collectDocumentIds(docs);
   }
 }

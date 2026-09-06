@@ -5,3 +5,4 @@ export * from './extensions.js';
 export * from './vectorField.js';
 export * from './vectorCapabilities.js';
 export * from './vectorMappings.js';
+export * from './mutationEvents.js';
