@@ -102,6 +102,70 @@ export function defaultEmbeddingVectorIndexName(field: string): string {
   return `${field}_vector`;
 }
 
+export function parseEmbeddingVectorIndexName(name: string): {
+  base: string;
+  generation: number;
+} {
+  const match = /^(.*)_v(\d+)$/.exec(name);
+  if (match) {
+    return { base: match[1], generation: Number(match[2]) };
+  }
+  return { base: name, generation: 1 };
+}
+
+export function embeddingVectorIndexGeneration(name?: string): number {
+  if (typeof name !== 'string' || name.length === 0) return 0;
+  return parseEmbeddingVectorIndexName(name).generation;
+}
+
+export function sameEmbeddingVectorIndexFamily(left: string, right: string): boolean {
+  return (
+    parseEmbeddingVectorIndexName(left).base === parseEmbeddingVectorIndexName(right).base
+  );
+}
+
+export function nextEmbeddingVectorIndexName(
+  field: string,
+  indexes: ReadonlyArray<{ field?: string; name?: string }>,
+): string {
+  const names = indexes
+    .filter(
+      index =>
+        index.field === field && typeof index.name === 'string' && index.name.length > 0,
+    )
+    .map(index => index.name as string);
+  if (!names.length) return defaultEmbeddingVectorIndexName(field);
+  let base = defaultEmbeddingVectorIndexName(field);
+  let maxGeneration = 0;
+  for (const name of names) {
+    const parsed = parseEmbeddingVectorIndexName(name);
+    if (parsed.generation >= maxGeneration) {
+      maxGeneration = parsed.generation;
+      base = parsed.base;
+    }
+  }
+  return `${base}_v${maxGeneration + 1}`;
+}
+
+export function selectEmbeddingVectorIndex<T extends { field?: string; name?: string }>(
+  indexes: readonly T[],
+  field: string,
+): T | undefined {
+  const matches = indexes.filter(index => index.field === field);
+  if (!matches.length) return undefined;
+  const defaultName = defaultEmbeddingVectorIndexName(field);
+  return matches.reduce((best, current) => {
+    const bestGeneration = embeddingVectorIndexGeneration(best.name);
+    const currentGeneration = embeddingVectorIndexGeneration(current.name);
+    if (currentGeneration !== bestGeneration) {
+      return currentGeneration > bestGeneration ? current : best;
+    }
+    if (current.name === defaultName) return current;
+    if (best.name === defaultName) return best;
+    return best;
+  });
+}
+
 export function materialChangeWarnings(
   changed: readonly MaterialEmbeddingConfigField[],
   scheduledBackfill: boolean,

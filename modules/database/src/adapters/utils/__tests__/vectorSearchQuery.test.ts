@@ -67,6 +67,45 @@ describe('vector search query planning', () => {
     });
   });
 
+  it('selects the highest generation live index when a named request is not provided', () => {
+    const planned = planMongoVectorSearch({
+      request,
+      indexes: [
+        indexes[0],
+        {
+          ...indexes[0],
+          name: 'embedding_vector_v2',
+        },
+      ],
+      schemaFields,
+    });
+    expect(planned.pipeline[0]).toEqual({
+      $vectorSearch: {
+        index: 'embedding_vector_v2',
+        path: 'embedding',
+        queryVector: request.vector,
+        numCandidates: 5,
+        limit: 5,
+        filter: { tenantId: 'org-1' },
+      },
+    });
+    expect(() =>
+      planMongoVectorSearch({
+        request,
+        indexes: [
+          indexes[0],
+          {
+            ...indexes[0],
+            name: 'embedding_vector_v2',
+            status: VectorIndexStatus.Pending,
+            queryable: false,
+          },
+        ],
+        schemaFields,
+      }),
+    ).toThrow(/not queryable/);
+  });
+
   it('short-circuits empty Mongo $in without emitting a pipeline', () => {
     const planned = planMongoVectorSearch({
       request: { ...request, filter: { tenantId: { $in: [] } } },
