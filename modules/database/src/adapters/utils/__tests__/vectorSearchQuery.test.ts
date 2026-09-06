@@ -8,6 +8,7 @@ import {
 import { status } from '@grpc/grpc-js';
 import {
   completeVectorSearch,
+  mergeVectorIndexes,
   planMongoVectorSearch,
   planPostgresVectorSearch,
 } from '../vectorSearchQuery.js';
@@ -31,6 +32,8 @@ const indexes = [
     dimensions: 3,
     similarity: VectorSimilarity.Cosine,
     filterFields: ['_id', 'tenantId'],
+    status: VectorIndexStatus.Ready,
+    queryable: true,
   },
 ];
 
@@ -125,6 +128,36 @@ describe('vector search query planning', () => {
       expect((err as GrpcError).code).toBe(status.FAILED_PRECONDITION);
       expect((err as GrpcError).message).toMatch(/not queryable/);
     }
+  });
+
+  it('does not treat declared-only modelOptions vector indexes as live or queryable', () => {
+    const declaredOnly = mergeVectorIndexes(indexes, []);
+    expect(declaredOnly).toEqual([]);
+    expect(() =>
+      planMongoVectorSearch({
+        request,
+        indexes: declaredOnly,
+        schemaFields,
+      }),
+    ).toThrow(GrpcError);
+    const livePending = mergeVectorIndexes(indexes, [
+      {
+        ...indexes[0],
+        status: VectorIndexStatus.Pending,
+        queryable: false,
+      },
+    ]);
+    expect(livePending[0]).toMatchObject({
+      status: VectorIndexStatus.Pending,
+      queryable: false,
+    });
+    expect(() =>
+      planMongoVectorSearch({
+        request,
+        indexes: livePending,
+        schemaFields,
+      }),
+    ).toThrow(/not queryable/);
   });
 });
 

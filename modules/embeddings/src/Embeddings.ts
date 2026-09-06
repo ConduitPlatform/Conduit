@@ -546,16 +546,13 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     outcome: 'processed' | 'failed',
   ) {
     if (!runId) return;
-    const doc = await BackfillRun.getInstance().findOne({ _id: runId });
-    if (!doc) return;
-    const run = backfillRunFromDocument(doc);
     await applyBackfillJobOutcome({
-      run,
+      runId,
       outcome,
-      saveRun: (id, next) =>
-        BackfillRun.getInstance()
-          .findByIdAndUpdate(id, persistableBackfillRun(next))
-          .then(() => undefined),
+      incrementCounts: async (id, patch) => {
+        const updated = await BackfillRun.getInstance().findByIdAndUpdate(id, patch);
+        return updated ? backfillRunFromDocument(updated) : null;
+      },
     });
   }
 

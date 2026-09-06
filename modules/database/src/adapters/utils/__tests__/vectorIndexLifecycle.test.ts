@@ -13,6 +13,7 @@ import {
   bindVectorIndexToField,
   defaultVectorIndexName,
   hydratePostgresVectorIndex,
+  isVectorIndexQueryable,
   mongoSearchIndexReadiness,
   mongoVectorFilterFields,
   planMongoVectorIndexCreate,
@@ -125,6 +126,14 @@ describe('vector index lifecycle', () => {
       expect((err as GrpcError).code).toBe(status.FAILED_PRECONDITION);
       expect((err as GrpcError).message).toMatch(/not queryable \(status: pending\)/);
     }
+    expect(
+      isVectorIndexQueryable({
+        name: 'embedding_vector',
+        field: 'embedding',
+        dimensions: 1536,
+        similarity: VectorSimilarity.Cosine,
+      }),
+    ).toBe(false);
   });
 
   it('reuses matching Mongo indexes and rejects silent definition changes', () => {

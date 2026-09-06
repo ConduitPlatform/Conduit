@@ -9,6 +9,7 @@ type StoredJob = {
   name: string;
   data: Record<string, unknown>;
   opts?: { jobId?: string; delay?: number; attempts?: number };
+  state?: string;
 };
 
 class FakeQueue {
@@ -19,13 +20,29 @@ class FakeQueue {
     if (opts?.jobId && this.jobs.some(job => job.opts?.jobId === opts.jobId)) {
       throw new Error(`Job ${opts.jobId} already exists`);
     }
-    this.jobs.push({ name, data, opts });
+    this.jobs.push({ name, data, opts, state: 'waiting' });
   }
 
   async addBulk(jobs: StoredJob[]) {
     for (const job of jobs) {
       await this.add(job.name, job.data, job.opts);
     }
+  }
+
+  async getJob(jobId: string) {
+    const job = this.jobs.find(stored => stored.opts?.jobId === jobId);
+    if (!job) return undefined;
+    return {
+      getState: async () => job.state ?? 'waiting',
+      remove: async () => {
+        this.jobs = this.jobs.filter(stored => stored !== job);
+      },
+    };
+  }
+
+  markState(jobId: string, state: string) {
+    const job = this.jobs.find(stored => stored.opts?.jobId === jobId);
+    if (job) job.state = state;
   }
 
   async getJobCounts() {
@@ -166,6 +183,29 @@ describe('embedding queue worker lifecycle', () => {
     );
   });
 
+  it('re-enqueues the same identity after a retained completed or failed job', async () => {
+    FakeWorker.instances = [];
+    const { queue, controller } = createController();
+    const job = { schemaName: 'Article', documentId: 'a' };
+    assert.equal(await controller.addEmbeddingJob(job, 3), 1);
+    queue.markState(embeddingJobId(job), 'completed');
+    assert.equal(await controller.addEmbeddingJob(job, 3), 1);
+    assert.equal(queue.jobs.length, 1);
+    assert.equal(queue.jobs[0].state, 'waiting');
+    queue.markState(embeddingJobId(job), 'failed');
+    assert.equal(
+      await controller.addBulkEmbeddingJobs(
+        [job, { schemaName: 'Article', documentId: 'b' }],
+        3,
+      ),
+      2,
+    );
+    assert.deepEqual(
+      queue.jobs.map(stored => stored.opts?.jobId),
+      [embeddingJobId(job), embeddingJobId({ schemaName: 'Article', documentId: 'b' })],
+    );
+  });
+
   it('skips malformed queue payloads instead of throwing', async () => {
     FakeWorker.instances = [];
     const { queue, controller } = createController();
@@ -213,6 +253,18 @@ describe('embedding queue status and backfill jobs', () => {
       backfillQueue.jobs.some(job => job.opts?.delay === 1000),
       true,
     );
+  });
+
+  it('does not let a completed backfill page job block a later scan of the same cursor', async () => {
+    const { backfillQueue, controller } = createController();
+    await controller.addBackfillControllerJob({ runId: 'run1', cursor: 'b' });
+    backfillQueue.markState('backfill:run1:b', 'completed');
+    await controller.addBackfillControllerJob({ runId: 'run1', cursor: 'b' });
+    assert.deepEqual(
+      backfillQueue.jobs.map(job => job.opts?.jobId),
+      ['backfill:run1:b'],
+    );
+    assert.equal(backfillQueue.jobs[0].state, 'waiting');
   });
 
   it('increments retried then failed metrics without job payload labels', async () => {

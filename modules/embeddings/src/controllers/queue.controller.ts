@@ -6,7 +6,9 @@ import {
   dedupeEmbeddingJobs,
   embeddingJobId,
   isDuplicateJobError,
+  isInFlightQueueJobState,
   parseEmbeddingJobData,
+  shouldReplaceRetainedQueueJob,
 } from '../utils/embeddingJobs.js';
 import {
   BackfillControllerJobData,
@@ -35,6 +37,11 @@ export interface EmbeddingQueueStatus {
   backfill: QueueJobCounts;
 }
 
+type QueueJobHandle = {
+  getState: () => Promise<string>;
+  remove: () => Promise<unknown>;
+};
+
 type QueueLike = {
   add: (
     name: string,
@@ -49,6 +56,7 @@ type QueueLike = {
     }>,
   ) => Promise<unknown>;
   close: () => Promise<unknown>;
+  getJob?: (jobId: string) => Promise<QueueJobHandle | undefined | null>;
   getJobCounts: () => Promise<Partial<QueueJobCounts> & Record<string, number>>;
 };
 
@@ -261,12 +269,15 @@ export class QueueController {
       incrementEmbeddingMetric('malformedJobs');
       return 0;
     }
+    const jobId = embeddingJobId(parsed.data);
+    const decision = await resolveExistingQueueJob(this.embeddingQueue, jobId);
+    if (decision === 'skip') return 0;
     try {
       await this.embeddingQueue.add(
-        embeddingJobId(parsed.data),
+        jobId,
         { ...parsed.data },
         {
-          jobId: embeddingJobId(parsed.data),
+          jobId,
           attempts,
           backoff: { type: 'exponential', delay: 1000 },
         },
@@ -290,9 +301,19 @@ export class QueueController {
     }
     const unique = dedupeEmbeddingJobs(jobs);
     if (!unique.length) return 0;
+    const enqueueable: EmbeddingJobData[] = [];
+    for (const job of unique) {
+      const decision = await resolveExistingQueueJob(
+        this.embeddingQueue,
+        embeddingJobId(job),
+      );
+      if (decision === 'skip') continue;
+      enqueueable.push(job);
+    }
+    if (!enqueueable.length) return 0;
     try {
       await this.embeddingQueue.addBulk(
-        unique.map(job => ({
+        enqueueable.map(job => ({
           name: embeddingJobId(job),
           data: { ...job },
           opts: {
@@ -302,11 +323,11 @@ export class QueueController {
           },
         })),
       );
-      return unique.length;
+      return enqueueable.length;
     } catch (err) {
       if (!isDuplicateJobError(err)) throw err;
       const added = await Promise.all(
-        unique.map(job => this.addEmbeddingJob(job, attempts)),
+        enqueueable.map(job => this.addEmbeddingJob(job, attempts)),
       );
       let queued = 0;
       for (const count of added) queued += count;
@@ -328,6 +349,10 @@ export class QueueController {
     const jobId = parsed.data.drain
       ? undefined
       : `backfill:${parsed.data.runId}:${parsed.data.cursor ?? 'start'}`;
+    if (jobId) {
+      const decision = await resolveExistingQueueJob(this.backfillQueue, jobId);
+      if (decision === 'skip') return;
+    }
     try {
       await this.backfillQueue.add(
         'backfill-page',
@@ -404,4 +429,22 @@ function normalizeJobCounts(
     delayed: counts.delayed ?? 0,
     paused: counts.paused ?? 0,
   };
+}
+
+async function resolveExistingQueueJob(
+  queue: QueueLike,
+  jobId: string,
+): Promise<'enqueue' | 'skip'> {
+  if (!queue.getJob) return 'enqueue';
+  const existing = await queue.getJob(jobId);
+  if (!existing) return 'enqueue';
+  const state = await existing.getState();
+  if (isInFlightQueueJobState(state)) return 'skip';
+  if (!shouldReplaceRetainedQueueJob(state)) return 'skip';
+  try {
+    await existing.remove();
+  } catch {
+    return 'skip';
+  }
+  return 'enqueue';
 }

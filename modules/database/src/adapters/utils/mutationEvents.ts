@@ -1,4 +1,9 @@
+import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
+
 export const MUTATION_EVENT_ID_CHUNK_SIZE = 500;
+export const MUTATION_EVENT_ID_PAGE_SIZE = MUTATION_EVENT_ID_CHUNK_SIZE;
+export const MAX_MUTATION_EVENT_COLLECT_IDS = 10_000;
 
 export type MutationOperation =
   'create' | 'createMany' | 'update' | 'updateMany' | 'delete';
@@ -36,6 +41,44 @@ export function collectDocumentIds(docs: unknown): string[] {
     if (id) ids.add(id);
   }
   return [...ids];
+}
+
+export function mutationIdCollectionExhaustedError(
+  cap: number = MAX_MUTATION_EVENT_COLLECT_IDS,
+): GrpcError {
+  return new GrpcError(
+    status.RESOURCE_EXHAUSTED,
+    `updateMany matched more than ${cap} documents; refuse unbounded mutation event collection`,
+  );
+}
+
+export async function collectBoundedMutationIds(args: {
+  findPage: (skip: number, limit: number) => Promise<unknown>;
+  cap?: number;
+  pageSize?: number;
+}): Promise<string[]> {
+  const cap = args.cap ?? MAX_MUTATION_EVENT_COLLECT_IDS;
+  const pageSize = args.pageSize ?? MUTATION_EVENT_ID_PAGE_SIZE;
+  if (!Number.isInteger(cap) || cap < 1 || !Number.isInteger(pageSize) || pageSize < 1) {
+    throw mutationIdCollectionExhaustedError(cap);
+  }
+  const ids: string[] = [];
+  let skip = 0;
+  while (ids.length <= cap) {
+    const remainingWithOverflowProbe = cap - ids.length + 1;
+    const limit = Math.min(pageSize, remainingWithOverflowProbe);
+    const page = await args.findPage(skip, limit);
+    const pageLength = Array.isArray(page) ? page.length : page == null ? 0 : 1;
+    if (!pageLength) break;
+    skip += pageLength;
+    const pageIds = collectDocumentIds(page);
+    if (ids.length + pageIds.length > cap) {
+      throw mutationIdCollectionExhaustedError(cap);
+    }
+    ids.push(...pageIds);
+    if (pageLength < limit) break;
+  }
+  return ids;
 }
 
 export function toIdEventPayload(ids: string[]): { _id: string }[] {

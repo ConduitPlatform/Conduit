@@ -1,9 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  applyAtomicBackfillCountDelta,
   applyBackfillJobCounts,
   applyBackfillPage,
   BACKFILL_RUN_STATES,
+  backfillCountIncrementPatch,
   boundBackfillBatchSize,
   boundBackfillPage,
   buildBackfillPageQuery,
@@ -185,6 +187,42 @@ describe('backfill counters', () => {
     assert.equal(negative.ok, false);
     const queuedCounts = applyBackfillJobCounts(queuedRun(), { processed: 1 });
     assert.equal(queuedCounts.ok, false);
+  });
+
+  it('loses concurrent updates when counts are applied via read-modify-write', () => {
+    const paged = applyBackfillPage(runningRun(), [{ _id: 'a' }, { _id: 'b' }], 2);
+    assert.equal(paged.ok, true);
+    if (!paged.ok) return;
+    const snapshot = { ...paged.run };
+    const first = applyBackfillJobCounts(snapshot, { processed: 1 });
+    const second = applyBackfillJobCounts(snapshot, { processed: 1 });
+    assert.equal(first.ok, true);
+    assert.equal(second.ok, true);
+    if (!first.ok || !second.ok) return;
+    assert.equal(first.run.processedCount, 1);
+    assert.equal(second.run.processedCount, 1);
+  });
+
+  it('keeps concurrent processed and failed increments with an atomic delta', async () => {
+    const counters = { processedCount: 0, failedCount: 0 };
+    assert.deepEqual(backfillCountIncrementPatch('processed'), {
+      $inc: { processedCount: 1 },
+    });
+    assert.deepEqual(backfillCountIncrementPatch('failed'), {
+      $inc: { failedCount: 1 },
+    });
+    await Promise.all(
+      Array.from({ length: 40 }, (_, index) =>
+        Promise.resolve(
+          applyAtomicBackfillCountDelta(
+            counters,
+            index % 4 === 0 ? 'failed' : 'processed',
+          ),
+        ),
+      ),
+    );
+    assert.equal(counters.processedCount, 30);
+    assert.equal(counters.failedCount, 10);
   });
 });
 

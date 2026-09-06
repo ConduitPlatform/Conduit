@@ -75,16 +75,24 @@ export function mergeVectorIndexes(
   declared: VectorIndexDefinition[],
   live: VectorIndexDefinition[],
 ): VectorIndexDefinition[] {
-  if (!live.length) return declared;
+  if (!live.length) return [];
   if (!declared.length) return live;
-  const merged = new Map<string, VectorIndexDefinition>();
+  const declaredByKey = new Map<string, VectorIndexDefinition>();
   for (const index of declared) {
-    merged.set(index.name ?? defaultVectorIndexName(index.field), index);
+    declaredByKey.set(index.name ?? defaultVectorIndexName(index.field), index);
   }
-  for (const index of live) {
-    merged.set(index.name ?? defaultVectorIndexName(index.field), index);
-  }
-  return [...merged.values()];
+  return live.map(liveIndex => {
+    const key = liveIndex.name ?? defaultVectorIndexName(liveIndex.field);
+    const declaredIndex =
+      declaredByKey.get(key) ?? declared.find(item => item.field === liveIndex.field);
+    if (!declaredIndex) return liveIndex;
+    return {
+      ...declaredIndex,
+      ...liveIndex,
+      status: liveIndex.status,
+      queryable: liveIndex.queryable,
+    };
+  });
 }
 
 export function buildMongoVectorSearchPipeline(args: {

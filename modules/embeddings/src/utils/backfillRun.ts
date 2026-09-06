@@ -291,6 +291,28 @@ export function applyBackfillPage(
   };
 }
 
+export type BackfillCountIncrementPatch = {
+  $inc: { processedCount?: number; failedCount?: number };
+};
+
+export function backfillCountIncrementPatch(
+  outcome: 'processed' | 'failed',
+): BackfillCountIncrementPatch {
+  return {
+    $inc: outcome === 'processed' ? { processedCount: 1 } : { failedCount: 1 },
+  };
+}
+
+export function applyAtomicBackfillCountDelta(
+  counters: { processedCount: number; failedCount: number },
+  outcome: 'processed' | 'failed',
+): { processedCount: number; failedCount: number } {
+  const patch = backfillCountIncrementPatch(outcome).$inc;
+  counters.processedCount += patch.processedCount ?? 0;
+  counters.failedCount += patch.failedCount ?? 0;
+  return counters;
+}
+
 export function applyBackfillJobCounts(
   run: BackfillRunProgress,
   counts: { processed?: number; failed?: number },
