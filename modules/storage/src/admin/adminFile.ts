@@ -17,6 +17,8 @@ import {
   applyCdnHost,
   deepPathHandler,
   normalizeFolderPath,
+  resolvePublicFileAccessUrl,
+  sanitizeFileForResponse,
   storeNewFile,
   validateName,
 } from '../utils/index.js';
@@ -50,7 +52,7 @@ export class AdminFileHandlers {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
     }
 
-    return file;
+    return sanitizeFileForResponse(file);
   }
 
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -204,10 +206,11 @@ export class AdminFileHandlers {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
       if (found.isPublic) {
+        const url = await resolvePublicFileAccessUrl(this.storageProvider, found);
         if (!call.request.params.redirect) {
-          return { result: found.url };
+          return { result: url };
         }
-        return { redirect: found.url };
+        return { redirect: url };
       }
       const options: UrlOptions = {
         download: call.request.params.download ?? false,
