@@ -137,12 +137,20 @@ export function persistableBackfillRun(
     filter: run.filter ?? undefined,
     scannedCount: run.scannedCount,
     queuedCount: run.queuedCount,
-    processedCount: run.processedCount,
-    failedCount: run.failedCount,
     startedAt: run.startedAt ?? undefined,
     finishedAt: run.finishedAt ?? undefined,
     drainStartedAt: run.drainStartedAt ?? undefined,
     error: run.error ?? undefined,
+  };
+}
+
+export function persistableNewBackfillRun(
+  run: BackfillRunProgress,
+): Record<string, unknown> {
+  return {
+    ...persistableBackfillRun(run),
+    processedCount: run.processedCount,
+    failedCount: run.failedCount,
   };
 }
 

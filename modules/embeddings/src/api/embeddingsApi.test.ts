@@ -78,6 +78,7 @@ function createApi(overrides?: {
   declared?: Record<string, { name: string; ownerModule: string }>;
   embed?: EmbeddingsApiDeps['embed'];
   vectorSearch?: EmbeddingsApiDeps['vectorSearch'];
+  createVectorIndex?: EmbeddingsApiDeps['createVectorIndex'];
   enqueue?: string[];
   invalidated?: string[];
   deletedIndexes?: string[];
@@ -175,10 +176,12 @@ function createApi(overrides?: {
     enqueueBackfill: async job => {
       enqueued.push(job.runId);
     },
-    createVectorIndex: async (_schema, index) => {
-      createdIndexes.push(index.name ?? index.field);
-      return 'created';
-    },
+    createVectorIndex:
+      overrides?.createVectorIndex ??
+      (async (_schema, index) => {
+        createdIndexes.push(index.name ?? index.field);
+        return 'created';
+      }),
     deleteVectorIndex: async (_schema, indexName) => {
       deletedIndexes.push(indexName);
       return 'deleted';
@@ -244,6 +247,73 @@ describe('typed embeddings API handlers', () => {
     );
     assert.equal(configs.length, 1);
     assert.equal(configs[0].enabled, false);
+  });
+
+  it('saves the config disabled when vector index provisioning fails', async () => {
+    const { api, configs, createdIndexes } = createApi({
+      indexes: [],
+      createVectorIndex: async () => {
+        throw new Error('atlas search index rejected');
+      },
+    });
+    const saved = await api.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['title'],
+        targetField: 'embedding',
+        provider: 'openai-compatible',
+        model: 'text-embedding-3-small',
+        dimensions: 3,
+        enabled: true,
+      },
+      { callerModule: 'database' },
+    );
+    assert.equal(saved.config.enabled, false);
+    assert.equal(configs.length, 1);
+    assert.equal(configs[0].enabled, false);
+    assert.equal(createdIndexes.length, 0);
+    assert.equal(
+      saved.warnings.some(
+        warning =>
+          /saved disabled because vector index provisioning failed/.test(warning) &&
+          /atlas search index rejected/.test(warning) &&
+          /queryable/.test(warning),
+      ),
+      true,
+    );
+  });
+
+  it('saves the updated config disabled when index recreation fails', async () => {
+    const { api, configs, deletedIndexes } = createApi({
+      configs: [enabledConfig],
+      createVectorIndex: async () => {
+        throw new Error('recreate rejected');
+      },
+    });
+    const saved = await api.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['title'],
+        targetField: 'embedding',
+        provider: 'openai-compatible',
+        model: 'text-embedding-3-small',
+        dimensions: 3,
+        similarity: VectorSimilarity.Euclidean,
+        enabled: true,
+      },
+      { callerModule: 'database' },
+    );
+    assert.equal(saved.config.enabled, false);
+    assert.equal(configs[0].enabled, false);
+    assert.deepEqual(deletedIndexes, ['embedding_vector']);
+    assert.equal(
+      saved.warnings.some(
+        warning =>
+          /saved disabled because vector index provisioning failed/.test(warning) &&
+          /recreate rejected/.test(warning),
+      ),
+      true,
+    );
   });
 
   it('reports a manual index lifecycle when Database indexing is unavailable', async () => {

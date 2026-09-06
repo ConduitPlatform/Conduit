@@ -53,7 +53,12 @@ import { MongooseAdapter } from './adapters/mongoose-adapter/index.js';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema.js';
 import { ConduitDatabaseSchema, IView, Schema } from './interfaces/index.js';
-import { canCreate, canDelete, canModify } from './permissions/index.js';
+import {
+  canCreate,
+  canDelete,
+  canModify,
+  vectorIndexMutationData,
+} from './permissions/index.js';
 import { runMigrations } from './migrations/index.js';
 import { SchemaController } from './controllers/cms/schema.controller.js';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller.js';
@@ -1050,7 +1055,14 @@ export default class DatabaseModule extends ManagedModule<Config> {
       }
       const moduleName = call.metadata!.get('module-name')![0] as string;
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      if (!(await canModify(moduleName, schemaAdapter.model))) {
+      const index = this.parseVectorIndex(call.request.index);
+      if (
+        !(await canModify(
+          moduleName,
+          schemaAdapter.model,
+          vectorIndexMutationData(index.field),
+        ))
+      ) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to create vector indexes for ${call.request.schemaName}!`,
@@ -1058,7 +1070,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       }
       const result = await this._activeAdapter.createVectorIndex(
         call.request.schemaName,
-        this.parseVectorIndex(call.request.index),
+        index,
       );
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
