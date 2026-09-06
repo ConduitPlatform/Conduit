@@ -372,6 +372,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
         method: index.method as VectorIndexDefinition['method'],
         filterFields: index.filterFields,
         options: index.options ? JSON.parse(index.options) : undefined,
+        status: index.status as VectorIndexDefinition['status'],
+        queryable: index.queryable,
       })),
     );
   }

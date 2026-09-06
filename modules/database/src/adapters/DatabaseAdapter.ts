@@ -16,6 +16,7 @@ import {
 import { ConfigController } from '@conduitplatform/module-tools';
 import type { Config } from '../config/index.js';
 import { unsupportedVectorCapabilities } from './utils/vectorCapabilities.js';
+import { declaredVectorIndexes } from './utils/vectorSearchQuery.js';
 import {
   _ConduitSchema,
   ConduitDatabaseSchema,
@@ -321,6 +322,20 @@ export abstract class DatabaseAdapter<T extends Schema> {
       status.UNIMPLEMENTED,
       `${this.getDatabaseType()} does not support vector indexes`,
     );
+  }
+
+  protected async applyDeclaredVectorIndexes(
+    schemaName: string,
+    isInstanceSync: boolean,
+  ): Promise<void> {
+    if (isInstanceSync) return;
+    const declared = declaredVectorIndexes(this.models[schemaName]?.originalSchema ?? {});
+    if (!declared.length) return;
+    const capabilities = await this.getVectorCapabilities(schemaName);
+    if (!capabilities.indexing) return;
+    for (const index of declared) {
+      await this.createVectorIndex(schemaName, index);
+    }
   }
 
   vectorSearch(_request: VectorSearchInput): Promise<VectorSearchResult[]> {

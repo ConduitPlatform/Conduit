@@ -95,6 +95,27 @@ describe('vector field and index mappings', () => {
     expect(converted.fields.embedding.type).toBe(DataTypes.JSON);
   });
 
+  it('always includes _id as a Mongo vector index filter field', () => {
+    expect(
+      toMongoVectorIndexDefinition({
+        name: 'embedding_vector',
+        field: 'embedding',
+        dimensions: 1536,
+        similarity: VectorSimilarity.Cosine,
+        filterFields: ['tenantId'],
+      }).fields,
+    ).toEqual([
+      {
+        type: 'vector',
+        path: 'embedding',
+        numDimensions: 1536,
+        similarity: VectorSimilarity.Cosine,
+      },
+      { type: 'filter', path: '_id' },
+      { type: 'filter', path: 'tenantId' },
+    ]);
+  });
+
   it('round-trips Mongo vector index definitions', () => {
     const definition = toMongoVectorIndexDefinition({
       name: 'embedding_vector',
@@ -123,6 +144,8 @@ describe('vector field and index mappings', () => {
     expect(
       fromMongoVectorIndex({
         name: 'embedding_vector',
+        status: 'READY',
+        queryable: true,
         latestDefinition: definition,
       }),
     ).toMatchObject({
@@ -132,6 +155,8 @@ describe('vector field and index mappings', () => {
       similarity: VectorSimilarity.Cosine,
       method: VectorIndexMethod.HNSW,
       filterFields: ['_id', 'tenantId'],
+      status: 'ready',
+      queryable: true,
     });
   });
 
@@ -159,7 +184,7 @@ describe('vector field and index mappings', () => {
     expect(
       fromPostgresVectorIndex(
         'cnd_article_embedding_vector',
-        'CREATE INDEX cnd_article_embedding_vector ON cnd_article USING ivfflat (embedding vector_l2_ops)',
+        'CREATE INDEX cnd_article_embedding_vector ON cnd_article USING ivfflat (embedding vector_l2_ops) WITH (lists=100)',
         { dimensions: 1536, similarity: VectorSimilarity.Euclidean },
       ),
     ).toMatchObject({
@@ -167,6 +192,8 @@ describe('vector field and index mappings', () => {
       dimensions: 1536,
       similarity: VectorSimilarity.Euclidean,
       method: 'ivfflat',
+      queryable: true,
+      options: { ivfflat: { lists: 100 } },
     });
   });
 });

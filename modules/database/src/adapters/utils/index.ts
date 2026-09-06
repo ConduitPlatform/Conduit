@@ -15,3 +15,4 @@ export * from './vectorSearchFilter.js';
 export * from './vectorSearchWhere.js';
 export * from './vectorSearchQuery.js';
 export * from './vectorProjection.js';
+export * from './vectorIndexLifecycle.js';
