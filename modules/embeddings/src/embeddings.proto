@@ -1,8 +1,21 @@
 syntax = 'proto3';
-import "google/protobuf/empty.proto";
 package embeddings;
 
-message EmbeddingConfigRequest {
+message EmbeddingConfig {
+  string id = 1;
+  string schemaName = 2;
+  repeated string sourceFields = 3;
+  string targetField = 4;
+  string provider = 5;
+  string model = 6;
+  int32 dimensions = 7;
+  string similarity = 8;
+  bool enabled = 9;
+  optional string createdAt = 10;
+  optional string updatedAt = 11;
+}
+
+message UpsertConfigRequest {
   string schemaName = 1;
   repeated string sourceFields = 2;
   string targetField = 3;
@@ -11,15 +24,134 @@ message EmbeddingConfigRequest {
   int32 dimensions = 6;
   optional string similarity = 7;
   repeated string sourceFieldAllowlist = 8;
+  optional bool enabled = 9;
 }
 
-message EmbeddingConfigResponse {
-  string result = 1;
+message UpsertConfigResponse {
+  EmbeddingConfig config = 1;
+  repeated string warnings = 2;
 }
 
-message BackfillRequest {
+message GetConfigsRequest {
+  optional string schemaName = 1;
+  optional string id = 2;
+}
+
+message GetConfigsResponse {
+  repeated EmbeddingConfig configs = 1;
+}
+
+message DeleteEmbeddingConfigRequest {
+  optional string id = 1;
+  optional string schemaName = 2;
+  optional string targetField = 3;
+}
+
+message DeleteEmbeddingConfigResponse {
+  EmbeddingConfig config = 1;
+}
+
+message VectorCapabilities {
+  bool supported = 1;
+  bool storage = 2;
+  bool indexing = 3;
+  bool search = 4;
+  string provider = 5;
+  optional string reason = 6;
+}
+
+message GetCapabilitiesRequest {
+  optional string schemaName = 1;
+}
+
+message GetCapabilitiesResponse {
+  VectorCapabilities capabilities = 1;
+  repeated string warnings = 2;
+}
+
+message QueueCounts {
+  int32 waiting = 1;
+  int32 active = 2;
+  int32 completed = 3;
+  int32 failed = 4;
+  int32 delayed = 5;
+  int32 paused = 6;
+}
+
+message GetStatusRequest {
+  optional string schemaName = 1;
+}
+
+message GetStatusResponse {
+  bool enabled = 1;
+  bool ready = 2;
+  VectorCapabilities capabilities = 3;
+  QueueCounts generationQueue = 4;
+  QueueCounts backfillQueue = 5;
+  repeated string warnings = 6;
+}
+
+message BackfillRun {
+  string id = 1;
+  string schemaName = 2;
+  optional string configId = 3;
+  string state = 4;
+  optional string cursor = 5;
+  int32 batchSize = 6;
+  bool onlyMissing = 7;
+  optional string filter = 8;
+  int32 scannedCount = 9;
+  int32 queuedCount = 10;
+  int32 processedCount = 11;
+  int32 failedCount = 12;
+  optional string startedAt = 13;
+  optional string finishedAt = 14;
+  optional string error = 15;
+  optional string createdAt = 16;
+  optional string updatedAt = 17;
+}
+
+message StartBackfillRequest {
   string schemaName = 1;
   optional int32 batchSize = 2;
+  optional string configId = 3;
+  optional bool onlyMissing = 4;
+  optional string filter = 5;
+}
+
+message StartBackfillResponse {
+  int32 queued = 1;
+  repeated BackfillRun runs = 2;
+  repeated string warnings = 3;
+}
+
+message GetBackfillRequest {
+  string id = 1;
+}
+
+message ListBackfillsRequest {
+  optional string schemaName = 1;
+  optional string state = 2;
+  optional string configId = 3;
+  optional int32 skip = 4;
+  optional int32 limit = 5;
+}
+
+message ListBackfillsResponse {
+  repeated BackfillRun runs = 1;
+  int32 count = 2;
+}
+
+message CancelBackfillRequest {
+  string id = 1;
+}
+
+message ResumeBackfillRequest {
+  string id = 1;
+}
+
+message BackfillMutationResponse {
+  BackfillRun run = 1;
 }
 
 message SemanticSearchRequest {
@@ -34,13 +166,28 @@ message SemanticSearchRequest {
   optional bool adminOperator = 8;
 }
 
-message EmbeddingsQueryResponse {
-  string result = 1;
+message SemanticSearchHit {
+  string document = 1;
+  double score = 2;
+  optional double distance = 3;
+  optional string metric = 4;
+  optional string provider = 5;
+}
+
+message SemanticSearchResponse {
+  repeated SemanticSearchHit hits = 1;
 }
 
 service EmbeddingsProvider {
-  rpc upsertConfig(EmbeddingConfigRequest) returns (EmbeddingConfigResponse);
-  rpc getConfigs(google.protobuf.Empty) returns (EmbeddingsQueryResponse);
-  rpc startBackfill(BackfillRequest) returns (EmbeddingsQueryResponse);
-  rpc semanticSearch(SemanticSearchRequest) returns (EmbeddingsQueryResponse);
+  rpc upsertConfig(UpsertConfigRequest) returns (UpsertConfigResponse);
+  rpc getConfigs(GetConfigsRequest) returns (GetConfigsResponse);
+  rpc deleteConfig(DeleteEmbeddingConfigRequest) returns (DeleteEmbeddingConfigResponse);
+  rpc getCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
+  rpc getStatus(GetStatusRequest) returns (GetStatusResponse);
+  rpc startBackfill(StartBackfillRequest) returns (StartBackfillResponse);
+  rpc getBackfill(GetBackfillRequest) returns (BackfillRun);
+  rpc listBackfills(ListBackfillsRequest) returns (ListBackfillsResponse);
+  rpc cancelBackfill(CancelBackfillRequest) returns (BackfillMutationResponse);
+  rpc resumeBackfill(ResumeBackfillRequest) returns (BackfillMutationResponse);
+  rpc semanticSearch(SemanticSearchRequest) returns (SemanticSearchResponse);
 }
