@@ -24,7 +24,7 @@
     "prebuild:bundle": "pnpm --filter @conduitplatform/service-bundle run build",
     "build:bundle": "rimraf bundle && node ../../libraries/service-bundle/dist/cli.js generate-manifest && tsup && node ../../libraries/service-bundle/dist/cli.js copy-assets && node ../../libraries/service-bundle/dist/cli.js generate-lockfile",
     "generateTypes": "sh build.sh",
-    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/utils/*.test.js dist-test/controllers/*.test.js dist-test/providers/*.test.js dist-test/api/*.test.js test/embedding-contract.test.mjs",
+    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/utils/*.test.js dist-test/controllers/*.test.js dist-test/providers/*.test.js dist-test/api/*.test.js test/embedding-contract.test.mjs test/deployment-contract.test.mjs",
     "build:docker": "docker build -t ghcr.io/conduitplatform/embeddings:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/embeddings:latest"
   },
   "dependencies": {

@@ -10,6 +10,9 @@ on:
       - 'libraries/grpc-sdk/**'
       - 'libraries/module-tools/**'
       - 'packages/core/**'
+      - 'docker/**'
+      - 'deploy/**'
+      - 'scripts/resolve-docker-targets.mjs'
       - '.github/workflows/embeddings-test.yml'
   push:
     branches:
@@ -21,6 +24,9 @@ on:
       - 'libraries/grpc-sdk/**'
       - 'libraries/module-tools/**'
       - 'packages/core/**'
+      - 'docker/**'
+      - 'deploy/**'
+      - 'scripts/resolve-docker-targets.mjs'
       - '.github/workflows/embeddings-test.yml'
 
 permissions:
@@ -77,3 +83,55 @@ jobs:
 
       - name: Run hermes vector offline tests
         run: pnpm --filter @conduitplatform/hermes test
+
+  deploy-contracts:
+    runs-on: ubuntu-24.04
+    name: Compose render and target discovery
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Render compose with embeddings profile
+        working-directory: docker
+        env:
+          GRPC_KEY: ci-nonempty-grpc-key
+        run: |
+          docker compose --profile mongodb --profile embeddings config --services > /tmp/compose-embeddings-services.txt
+          grep -qx 'embeddings' /tmp/compose-embeddings-services.txt
+          docker compose --profile mongodb --profile embeddings config > /tmp/compose-embeddings.yml
+          grep -q 'ci-nonempty-grpc-key' /tmp/compose-embeddings.yml
+          grep -q '55165' /tmp/compose-embeddings.yml
+
+      - name: Render compose without embeddings profile
+        working-directory: docker
+        run: |
+          docker compose --profile mongodb config --services > /tmp/compose-default-services.txt
+          if grep -qx 'embeddings' /tmp/compose-default-services.txt; then
+            echo 'embeddings service must stay profile-gated' >&2
+            exit 1
+          fi
+
+      - name: Discover docker targets for embeddings-only changes
+        env:
+          CHANGED_FILES: modules/embeddings/src/index.ts
+        run: |
+          node scripts/resolve-docker-targets.mjs > /tmp/targets.json
+          node -e '
+            const fs = require("fs");
+            const data = JSON.parse(fs.readFileSync("/tmp/targets.json", "utf8"));
+            const matrix = JSON.parse(data.matrix);
+            const targets = matrix.include.map((row) => row.target);
+            if (!targets.includes("embeddings")) {
+              throw new Error("expected embeddings target, got " + targets.join(","));
+            }
+            if (targets.includes("conduit-standalone")) {
+              throw new Error("embeddings-only changes must not select standalone: " + targets.join(","));
+            }
+          '
+
+      - name: Run deployment contract tests
+        run: node --test modules/embeddings/test/deployment-contract.test.mjs

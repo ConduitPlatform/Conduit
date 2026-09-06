@@ -6,10 +6,13 @@ for vector storage, index creation, and vector-in/vector-out search.
 
 ## Configuration
 
-The module is disabled by default. Production deployments require `GRPC_KEY`
-(`NODE_ENV=production` in the published image). The module is **not** included
-in the standalone image for the first production release; run it as a separate
-opt-in compose profile or Helm service.
+The module convict `enabled` setting is `false` by default. Production
+deployments require a non-empty `GRPC_KEY` (`NODE_ENV=production` in the
+image). The module is **not** included in the standalone image for the first
+production release; run it as a separate opt-in compose profile or Helm
+workload after a compatible image tag is published. Helm
+`install.embeddings.enabled` only deploys the process; it does not set convict
+`enabled`.
 
 Enable it and configure an OpenAI-compatible provider:
 
@@ -69,11 +72,16 @@ authenticated router context.
 
 ## Packaging
 
-- Bundle image: `docker.io/conduitplatform/embeddings` (BullMQ is an extra
-  bundle dependency). Bake target: `embeddings`.
-- Compose: `docker compose --profile embeddings up` (gRPC `55165`, metrics
-  `9192`). Set `GRPC_KEY` before starting.
+- Bake target: `embeddings` (BullMQ is an extra bundle dependency). The image
+  is not published until a compatible release; do not pull
+  `docker.io/conduitplatform/embeddings:latest` until that tag exists.
+- Compose: export a non-empty `GRPC_KEY`, then
+  `docker compose --profile embeddings up` (gRPC
+  `${EMBEDDINGS_GRPC_PORT:-55165}`, metrics `9192`).
 - Standalone v1 does not ship embeddings.
+- Helm `install.embeddings.enabled` (charts repo) deploys the workload only.
+  Module convict `enabled` (default false) is a separate Core config switch
+  for workers and search.
 
 Operator rollout, capability/index readiness, and rollback:
 [deploy/embeddings.md](../../deploy/embeddings.md).

@@ -30,5 +30,7 @@ To run the microservices version:
 - Open the router in your browser at [http://localhost:8081](http://localhost:8081)
 - You can inject `--profile {profile_name}` command on compose to configure more services
   (`mongodb` / `postgres` for the database engine, `embeddings` for the embeddings module).
-  Embeddings is disabled by default, omitted from standalone v1, and requires `GRPC_KEY` in
-  production. See the [embeddings rollout runbook](../embeddings.md).
+  Embeddings stays omitted until you pass `--profile embeddings` **and** export a
+  non-empty `GRPC_KEY`. The embeddings image is not published until a compatible
+  release tag exists. Helm workload `install.embeddings.enabled` is separate from
+  module convict `enabled`. See the [embeddings rollout runbook](../embeddings.md).

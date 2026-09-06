@@ -2,8 +2,10 @@
 # This compose file deploys a "standalone" version of conduit with most modules
 # packaged in a single image. Loki and Prometheus are not deployed, since
 # metrics and logs can be viewed directly from the Docker daemon.
-# Embeddings is not included in standalone v1; use docker-compose.yml with
-# --profile embeddings after publishing a compatible embeddings image.
+# Embeddings is not included in standalone v1. After a compatible embeddings
+# image is published, use docker-compose.yml with a non-empty GRPC_KEY:
+#   export GRPC_KEY='replace-with-a-non-empty-key'
+#   docker compose --profile embeddings up
 #-------------------------------------------------------------------------------------------
 
 version: '3.9'
