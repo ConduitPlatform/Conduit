@@ -87,9 +87,7 @@ export interface ConduitArrayValidation {
 }
 
 export type ConduitValidationRules =
-  | ConduitStringValidation
-  | ConduitNumberValidation
-  | ConduitArrayValidation;
+  ConduitStringValidation | ConduitNumberValidation | ConduitArrayValidation;
 
 type BaseConduitModelField = {
   type?: TYPE | TYPE[] | ConduitModel | ArrayConduitModel[];
@@ -318,6 +316,7 @@ export interface VectorSearchInput {
   select?: string;
   userId?: string;
   scope?: string;
+  adminOperator?: boolean;
 }
 
 export interface VectorSearchResult<T = Indexable> {

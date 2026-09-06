@@ -115,4 +115,24 @@ describe('embedding queue worker lifecycle', () => {
       [embeddingJobId(job), embeddingJobId({ schemaName: 'Article', documentId: 'b' })],
     );
   });
+
+  it('skips malformed queue payloads instead of throwing', async () => {
+    FakeWorker.instances = [];
+    const { queue, controller } = createController();
+    await controller.addEmbeddingJob(
+      { schemaName: '../nope', documentId: 'a' } as never,
+      3,
+    );
+    await controller.addBulkEmbeddingJobs(
+      [
+        { schemaName: 'Article', documentId: 'ok' },
+        { schemaName: 'Article', documentId: '' } as never,
+      ],
+      3,
+    );
+    assert.deepEqual(
+      queue.jobs.map(stored => stored.opts?.jobId),
+      [embeddingJobId({ schemaName: 'Article', documentId: 'ok' })],
+    );
+  });
 });

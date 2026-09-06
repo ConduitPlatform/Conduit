@@ -4,6 +4,7 @@ import {
   embeddingOwnedFields,
   extractDocumentIds,
   isEmbeddingOwnedMutation,
+  parseBoundedMutationEvent,
   parseMutationEvent,
 } from './mutationEvents.js';
 
@@ -64,5 +65,20 @@ describe('embedding mutation event parsing', () => {
 
   it('returns null for malformed payloads', () => {
     assert.equal(parseMutationEvent('{not json'), null);
+  });
+
+  it('fails closed on oversized bus payloads instead of crashing', () => {
+    assert.deepEqual(parseBoundedMutationEvent('{not json'), {
+      ok: false,
+      reason: 'malformed',
+    });
+    assert.deepEqual(parseBoundedMutationEvent('x'.repeat(300_000)), {
+      ok: false,
+      reason: 'capped',
+    });
+    assert.deepEqual(
+      parseBoundedMutationEvent(JSON.stringify({ ids: ['a', 'b', 'c'] }), 2),
+      { ok: false, reason: 'capped' },
+    );
   });
 });

@@ -5,16 +5,41 @@ export interface ParsedMutationEvent {
   ids: string[];
 }
 
+export const MAX_MUTATION_EVENT_BYTES = 256 * 1024;
+export const MAX_MUTATION_EVENT_IDS = 500;
+
+export type MutationEventParseResult =
+  | { ok: true; event: ParsedMutationEvent }
+  | { ok: false; reason: 'malformed' | 'capped' };
+
 export function parseMutationEvent(message: string): ParsedMutationEvent | null {
+  const parsed = parseBoundedMutationEvent(message);
+  return parsed.ok ? parsed.event : null;
+}
+
+export function parseBoundedMutationEvent(
+  message: string,
+  maxIds: number = MAX_MUTATION_EVENT_IDS,
+): MutationEventParseResult {
+  if (typeof message !== 'string' || !message.length) {
+    return { ok: false, reason: 'malformed' };
+  }
+  if (message.length > MAX_MUTATION_EVENT_BYTES) {
+    return { ok: false, reason: 'capped' };
+  }
   let payload: unknown;
   try {
     payload = JSON.parse(message);
   } catch {
-    return null;
+    return { ok: false, reason: 'malformed' };
+  }
+  const ids = uniqueIds(extractDocumentIds(payload));
+  if (ids.length > maxIds) {
+    return { ok: false, reason: 'capped' };
   }
   return {
-    payload,
-    ids: uniqueIds(extractDocumentIds(payload)),
+    ok: true,
+    event: { payload, ids },
   };
 }
 

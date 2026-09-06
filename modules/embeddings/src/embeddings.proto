@@ -10,6 +10,7 @@ message EmbeddingConfigRequest {
   string model = 5;
   int32 dimensions = 6;
   optional string similarity = 7;
+  repeated string sourceFieldAllowlist = 8;
 }
 
 message EmbeddingConfigResponse {
@@ -29,6 +30,8 @@ message SemanticSearchRequest {
   optional int32 limit = 5;
   optional string userId = 6;
   optional string scope = 7;
+  // Honored only when the verified caller is a platform operator module.
+  optional bool adminOperator = 8;
 }
 
 message EmbeddingsQueryResponse {

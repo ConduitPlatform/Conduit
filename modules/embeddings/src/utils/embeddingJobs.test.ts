@@ -4,6 +4,8 @@ import {
   dedupeEmbeddingJobs,
   embeddingJobId,
   isDuplicateJobError,
+  parseEmbeddingJobData,
+  parseEmbeddingJobBatch,
 } from './embeddingJobs.js';
 
 describe('embedding job identity', () => {
@@ -24,5 +26,27 @@ describe('embedding job identity', () => {
   it('detects BullMQ duplicate job errors', () => {
     assert.equal(isDuplicateJobError(new Error('Job Article__a already exists')), true);
     assert.equal(isDuplicateJobError(new Error('redis timeout')), false);
+  });
+
+  it('rejects malformed and oversized queue payloads', () => {
+    assert.equal(
+      parseEmbeddingJobData({ schemaName: 'Article', documentId: 'a' }).ok,
+      true,
+    );
+    assert.equal(parseEmbeddingJobData({ schemaName: 'Article' }).ok, false);
+    assert.equal(
+      parseEmbeddingJobData({ schemaName: '../etc', documentId: 'a' }).ok,
+      false,
+    );
+    assert.equal(
+      parseEmbeddingJobData({ schemaName: 'Article', documentId: 'a', extra: true }).ok,
+      false,
+    );
+    assert.equal(
+      parseEmbeddingJobBatch(
+        new Array(600).fill({ schemaName: 'Article', documentId: 'a' }),
+      ).length,
+      500,
+    );
   });
 });

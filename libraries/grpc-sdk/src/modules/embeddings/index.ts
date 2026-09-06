@@ -10,6 +10,7 @@ export interface EmbeddingConfigInput {
   model: string;
   dimensions: number;
   similarity?: string;
+  sourceFieldAllowlist?: string[];
 }
 
 export interface SemanticSearchInput {
@@ -20,6 +21,7 @@ export interface SemanticSearchInput {
   limit?: number;
   userId?: string;
   scope?: string;
+  adminOperator?: boolean;
 }
 
 export class EmbeddingsProvider extends ConduitModule<
@@ -59,6 +61,7 @@ export class EmbeddingsProvider extends ConduitModule<
       limit: input.limit,
       userId: input.userId,
       scope: input.scope,
+      adminOperator: input.adminOperator,
     }).then(res => JSON.parse(res.result));
   }
 }

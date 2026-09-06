@@ -6,6 +6,7 @@ import {
   dedupeEmbeddingJobs,
   embeddingJobId,
   isDuplicateJobError,
+  parseEmbeddingJobData,
 } from '../utils/embeddingJobs.js';
 
 export type { EmbeddingJobData } from '../utils/embeddingJobs.js';
@@ -98,7 +99,14 @@ export class QueueController {
     this.workerConnection = this.createConnection();
     const worker = new this.WorkerImpl(
       'embeddings-generation-queue',
-      job => processor(job.data),
+      job => {
+        const parsed = parseEmbeddingJobData(job.data);
+        if (!parsed.ok) {
+          ConduitGrpcSdk.Metrics?.increment('malformed_embedding_jobs_total');
+          return Promise.resolve();
+        }
+        return processor(parsed.data);
+      },
       {
         concurrency,
         connection: this.workerConnection,
@@ -136,9 +144,14 @@ export class QueueController {
   }
 
   async addEmbeddingJob(data: EmbeddingJobData, attempts: number) {
+    const parsed = parseEmbeddingJobData(data);
+    if (!parsed.ok) {
+      ConduitGrpcSdk.Metrics?.increment('malformed_embedding_jobs_total');
+      return;
+    }
     try {
-      await this.embeddingQueue.add(embeddingJobId(data), data, {
-        jobId: embeddingJobId(data),
+      await this.embeddingQueue.add(embeddingJobId(parsed.data), parsed.data, {
+        jobId: embeddingJobId(parsed.data),
         attempts,
         backoff: { type: 'exponential', delay: 1000 },
       });
@@ -148,11 +161,20 @@ export class QueueController {
   }
 
   async addBulkEmbeddingJobs(data: EmbeddingJobData[], attempts: number) {
-    const jobs = dedupeEmbeddingJobs(data);
-    if (!jobs.length) return;
+    const jobs: EmbeddingJobData[] = [];
+    for (const [index, item] of data.entries()) {
+      const parsed = parseEmbeddingJobData(item, index);
+      if (!parsed.ok) {
+        ConduitGrpcSdk.Metrics?.increment('malformed_embedding_jobs_total');
+        continue;
+      }
+      jobs.push(parsed.data);
+    }
+    const unique = dedupeEmbeddingJobs(jobs);
+    if (!unique.length) return;
     try {
       await this.embeddingQueue.addBulk(
-        jobs.map(job => ({
+        unique.map(job => ({
           name: embeddingJobId(job),
           data: job,
           opts: {
@@ -164,7 +186,7 @@ export class QueueController {
       );
     } catch (err) {
       if (!isDuplicateJobError(err)) throw err;
-      await Promise.all(jobs.map(job => this.addEmbeddingJob(job, attempts)));
+      await Promise.all(unique.map(job => this.addEmbeddingJob(job, attempts)));
     }
   }
 }

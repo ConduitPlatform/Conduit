@@ -23,6 +23,7 @@ import {
   mongoVectorCapabilities,
   fromMongoVectorIndex,
   toMongoVectorIndexDefinition,
+  assertVectorSearchAccess,
 } from '../utils/index.js';
 import pluralize from '../../utils/pluralize.js';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils.js';
@@ -821,15 +822,12 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       );
     }
 
-    const filter = request.filter ?? {};
-    const authorizedQuery = await model.getAuthorizedQuery(
-      'read',
-      filter,
-      true,
-      request.userId,
-      request.scope,
-    );
-    if (isNil(authorizedQuery)) return [];
+    assertVectorSearchAccess({
+      authzEnabled: !!model.authzEnabled,
+      userId: request.userId,
+      scope: request.scope,
+      adminOperator: request.adminOperator,
+    });
 
     const vectorStage: any = {
       index: request.indexName ?? `${request.field}_vector`,
@@ -838,8 +836,21 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       numCandidates: request.numCandidates ?? Math.max((request.limit ?? 10) * 10, 100),
       limit: request.limit ?? 10,
     };
-    if (Object.keys(authorizedQuery).length > 0) {
-      vectorStage.filter = authorizedQuery;
+    const filter = request.filter ?? {};
+    if (!request.adminOperator) {
+      const authorizedQuery = await model.getAuthorizedQuery(
+        'read',
+        filter,
+        true,
+        request.userId,
+        request.scope,
+      );
+      if (isNil(authorizedQuery)) return [];
+      if (Object.keys(authorizedQuery).length > 0) {
+        vectorStage.filter = authorizedQuery;
+      }
+    } else if (Object.keys(filter).length > 0) {
+      vectorStage.filter = filter;
     }
 
     const pipeline: any[] = [

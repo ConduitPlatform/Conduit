@@ -10,4 +10,9 @@ export type PopulateAuthzOptions = {
    * Existing callers omit this and keep the default publish behavior.
    */
   suppressEvent?: boolean;
+  /**
+   * When true, Database verifies the caller is the embeddings module
+   * and restricts the write to embeddings-owned vector/hash fields.
+   */
+  embeddingsJob?: boolean;
 } & AuthzOptions;

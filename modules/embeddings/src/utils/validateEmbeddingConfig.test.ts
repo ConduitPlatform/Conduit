@@ -24,6 +24,7 @@ describe('validateEmbeddingConfigInput', () => {
     assert.equal(result.similarity, VectorSimilarity.DotProduct);
     assert.equal(result.provider, 'openai-compatible');
     assert.equal(result.dimensions, 1536);
+    assert.deepEqual(result.sourceFieldAllowlist, []);
   });
 
   it('defaults omitted similarity to cosine', () => {
@@ -54,5 +55,21 @@ describe('validateEmbeddingConfigInput', () => {
       () => validateEmbeddingConfigInput({ ...valid, similarity: 'manhattan' }, defaults),
       /Unsupported similarity/,
     );
+  });
+
+  it('validates source fields against the schema when provided', () => {
+    assert.throws(
+      () =>
+        validateEmbeddingConfigInput(valid, defaults, {
+          title: { type: 'String' },
+          password: { type: 'String' },
+        }),
+      /does not exist/,
+    );
+    const result = validateEmbeddingConfigInput(valid, defaults, {
+      title: { type: 'String' },
+      body: { type: 'String' },
+    });
+    assert.deepEqual(result.sourceFields, ['title', 'body']);
   });
 });

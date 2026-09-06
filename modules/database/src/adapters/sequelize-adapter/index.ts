@@ -48,6 +48,7 @@ import {
   postgresIndexMethodSql,
   resolveVectorFieldFromSchema,
 } from '../utils/vectorMappings.js';
+import { assertVectorSearchAccess } from '../utils/vectorSearchAuth.js';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -530,13 +531,21 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         `Vector dimensions mismatch: expected ${field.dimensions}`,
       );
     }
-    const authorizedQuery = await schema.getAuthorizedQuery(
-      'read',
-      request.filter ?? {},
-      true,
-      request.userId,
-      request.scope,
-    );
+    assertVectorSearchAccess({
+      authzEnabled: !!schema.authzEnabled,
+      userId: request.userId,
+      scope: request.scope,
+      adminOperator: request.adminOperator,
+    });
+    const authorizedQuery = request.adminOperator
+      ? (request.filter ?? {})
+      : await schema.getAuthorizedQuery(
+          'read',
+          request.filter ?? {},
+          true,
+          request.userId,
+          request.scope,
+        );
     if (isNil(authorizedQuery)) return [];
     const tableName = this.getPhysicalTableName(request.schemaName);
     const distance = pgVectorDistanceOperator(field.similarity ?? 'cosine');
