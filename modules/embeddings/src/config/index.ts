@@ -53,6 +53,11 @@ const AppConfigSchema = {
       format: 'Number',
       default: 500,
     },
+    drainTimeoutMs: {
+      doc: 'Maximum time a backfill may wait for generation jobs during drain before failing',
+      format: 'Number',
+      default: 15 * 60 * 1000,
+    },
   },
   security: {
     requireGrpcKey: {

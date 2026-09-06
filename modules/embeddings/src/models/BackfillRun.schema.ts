@@ -27,6 +27,7 @@ const schema: ConduitModel = {
   failedCount: { type: TYPE.Number, default: 0 },
   startedAt: { type: TYPE.Date, required: false },
   finishedAt: { type: TYPE.Date, required: false },
+  drainStartedAt: { type: TYPE.Date, required: false },
   error: { type: TYPE.String, required: false },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -61,6 +62,7 @@ export class BackfillRun extends ConduitActiveSchema<BackfillRun> {
   failedCount: number;
   startedAt?: Date;
   finishedAt?: Date;
+  drainStartedAt?: Date;
   error?: string;
   createdAt: Date;
   updatedAt: Date;

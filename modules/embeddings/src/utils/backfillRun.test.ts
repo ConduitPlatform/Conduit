@@ -63,8 +63,8 @@ describe('backfill run state transitions', () => {
     assert.equal(isLegalBackfillTransition('running', 'canceled'), true);
     assert.equal(isLegalBackfillTransition('failed', 'queued'), true);
     assert.equal(isLegalBackfillTransition('canceled', 'queued'), true);
+    assert.equal(isLegalBackfillTransition('queued', 'failed'), true);
     assert.equal(isLegalBackfillTransition('queued', 'completed'), false);
-    assert.equal(isLegalBackfillTransition('queued', 'failed'), false);
     assert.equal(isLegalBackfillTransition('running', 'queued'), false);
     assert.equal(isLegalBackfillTransition('completed', 'queued'), false);
     assert.equal(isLegalBackfillTransition('completed', 'running'), false);
@@ -91,8 +91,8 @@ describe('backfill run state transitions', () => {
     assert.equal(resumed.ok, false);
     if (resumed.ok) return;
     assert.equal(resumed.reason, 'illegal_transition');
-    const failedFromQueued = failBackfillRun(queuedRun(), 'boom', now);
-    assert.equal(failedFromQueued.ok, false);
+    const failedFromCompleted = failBackfillRun(completed.run, 'boom', now);
+    assert.equal(failedFromCompleted.ok, false);
   });
 });
 
@@ -212,6 +212,27 @@ describe('backfill cancellation and resume', () => {
     assert.equal(resumed.run.error, null);
     assert.equal(resumed.run.cursor, canceled.run.cursor);
     assert.equal(resumed.run.scannedCount, canceled.run.scannedCount);
+
+    assert.equal(canCancelBackfill('canceled'), false);
+    const alreadyCanceled = cancelBackfillRun(canceled.run, now);
+    assert.equal(alreadyCanceled.ok, true);
+    if (!alreadyCanceled.ok) return;
+    assert.equal(alreadyCanceled.run.state, 'canceled');
+
+    const alreadyQueued = resumeBackfillRun(resumed.run);
+    assert.equal(alreadyQueued.ok, true);
+    if (!alreadyQueued.ok) return;
+    assert.equal(alreadyQueued.run.state, 'queued');
+
+    const queuedFailed = failBackfillRun(
+      queuedRun(),
+      'enqueue failed apiKey=sk-test',
+      now,
+    );
+    assert.equal(queuedFailed.ok, true);
+    if (!queuedFailed.ok) return;
+    assert.equal(queuedFailed.run.state, 'failed');
+    assert.doesNotMatch(queuedFailed.run.error ?? '', /sk-test|apiKey=/);
 
     const failed = failBackfillRun(runningRun(), 'provider timeout', now);
     assert.equal(failed.ok, true);

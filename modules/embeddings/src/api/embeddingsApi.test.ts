@@ -79,12 +79,18 @@ function createApi(overrides?: {
   embed?: EmbeddingsApiDeps['embed'];
   vectorSearch?: EmbeddingsApiDeps['vectorSearch'];
   enqueue?: string[];
+  invalidated?: string[];
+  deletedIndexes?: string[];
+  createdIndexes?: string[];
   config?: Config;
   queue?: { generation: QueueJobCounts; backfill: QueueJobCounts };
 }) {
   const configs = [...(overrides?.configs ?? [])];
   const runs = [...(overrides?.runs ?? [])];
   const enqueued = overrides?.enqueue ?? [];
+  const invalidated = overrides?.invalidated ?? [];
+  const deletedIndexes = overrides?.deletedIndexes ?? [];
+  const createdIndexes = overrides?.createdIndexes ?? [];
   const deps: EmbeddingsApiDeps = {
     currentConfig: () => overrides?.config ?? moduleConfig,
     getSchema: async name => {
@@ -169,11 +175,30 @@ function createApi(overrides?: {
     enqueueBackfill: async job => {
       enqueued.push(job.runId);
     },
+    createVectorIndex: async (_schema, index) => {
+      createdIndexes.push(index.name ?? index.field);
+      return 'created';
+    },
+    deleteVectorIndex: async (_schema, indexName) => {
+      deletedIndexes.push(indexName);
+      return 'deleted';
+    },
+    invalidateHashes: async (schemaName, hashFields) => {
+      invalidated.push(...hashFields.map(field => `${schemaName}.${field}`));
+    },
     embed:
       overrides?.embed ??
       (async () => Array.from({ length: 3 }, (_, index) => index + 0.1)),
   };
-  return { api: new EmbeddingsApi(deps), configs, runs, enqueued };
+  return {
+    api: new EmbeddingsApi(deps),
+    configs,
+    runs,
+    enqueued,
+    invalidated,
+    deletedIndexes,
+    createdIndexes,
+  };
 }
 
 const enabledConfig: EmbeddingConfigRecord = {
@@ -412,5 +437,87 @@ describe('typed embeddings API handlers', () => {
       (err: unknown) =>
         err instanceof GrpcError && err.code === status.FAILED_PRECONDITION,
     );
+  });
+
+  it('invalidates hashes, recreates the index, and schedules a backfill on material config changes', async () => {
+    const { api, invalidated, deletedIndexes, createdIndexes, enqueued, runs } =
+      createApi({
+        configs: [enabledConfig],
+      });
+    await assert.rejects(
+      () =>
+        api.upsertConfig(
+          {
+            schemaName: 'Article',
+            sourceFields: ['title'],
+            targetField: 'embedding',
+            provider: 'openai-compatible',
+            model: 'text-embedding-3-small',
+            dimensions: 8,
+            enabled: false,
+          },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.FAILED_PRECONDITION &&
+        /dimensions/.test(err.message),
+    );
+
+    const updated = await api.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['title', 'body'],
+        targetField: 'embedding',
+        provider: 'openai-compatible',
+        model: 'text-embedding-3-large',
+        dimensions: 3,
+        similarity: VectorSimilarity.Euclidean,
+        enabled: true,
+      },
+      { callerModule: 'database' },
+    );
+    assert.equal(updated.config.model, 'text-embedding-3-large');
+    assert.deepEqual(invalidated, ['Article.embeddingSourceHash']);
+    assert.deepEqual(deletedIndexes, ['embedding_vector']);
+    assert.equal(createdIndexes.includes('embedding_vector'), true);
+    assert.equal(enqueued.length, 1);
+    assert.equal(runs[0].state, 'queued');
+    assert.equal(runs[0].onlyMissing, false);
+    assert.equal(
+      updated.warnings.some(warning => /explicit backfill was scheduled/.test(warning)),
+      true,
+    );
+  });
+
+  it('is idempotent for start, cancel, and resume and does not duplicate active runs', async () => {
+    const { api, runs, enqueued } = createApi({ configs: [enabledConfig] });
+    const first = await api.startBackfill(
+      { schemaName: 'Article', configId: 'cfg1' },
+      { callerModule: 'database' },
+    );
+    const second = await api.startBackfill(
+      { schemaName: 'Article', configId: 'cfg1' },
+      { callerModule: 'database' },
+    );
+    assert.equal(first.runs[0].id, second.runs[0].id);
+    assert.equal(runs.filter(run => run.state === 'queued').length, 1);
+    const canceled = await api.cancelBackfill(first.runs[0].id, {
+      callerModule: 'database',
+    });
+    assert.equal(canceled.run.state, 'canceled');
+    const canceledAgain = await api.cancelBackfill(first.runs[0].id, {
+      callerModule: 'database',
+    });
+    assert.equal(canceledAgain.run.state, 'canceled');
+    const resumed = await api.resumeBackfill(first.runs[0].id, {
+      callerModule: 'database',
+    });
+    assert.equal(resumed.run.state, 'queued');
+    const resumedAgain = await api.resumeBackfill(first.runs[0].id, {
+      callerModule: 'database',
+    });
+    assert.equal(resumedAgain.run.state, 'queued');
+    assert.equal(enqueued.length >= 2, true);
   });
 });
