@@ -1062,7 +1062,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
-      callback({ code: status.INTERNAL, message: (err as Error).message });
+      callback(grpcStatusFromError(err));
     }
   }
 
@@ -1081,10 +1081,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
           method: index.method,
           filterFields: [...(index.filterFields ?? [])],
           options: index.options ? JSON.stringify(index.options) : undefined,
+          status: index.status,
+          queryable: index.queryable,
         })),
       });
     } catch (err) {
-      callback({ code: status.INTERNAL, message: (err as Error).message });
+      callback(grpcStatusFromError(err));
     }
   }
 
@@ -1107,7 +1109,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
-      callback({ code: status.INTERNAL, message: (err as Error).message });
+      callback(grpcStatusFromError(err));
     }
   }
 

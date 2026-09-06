@@ -1,5 +1,11 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import { TYPE, VectorSimilarity } from '@conduitplatform/grpc-sdk';
+import {
+  GrpcError,
+  TYPE,
+  VectorIndexStatus,
+  VectorSimilarity,
+} from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import {
   completeVectorSearch,
   planMongoVectorSearch,
@@ -85,6 +91,40 @@ describe('vector search query planning', () => {
     expect(planned.sql).toContain('LIMIT 5');
     expect(planned.sql).toMatch(/^SELECT "title", "_id",/);
     expect(planned.sql).toContain('<=>');
+  });
+
+  it('fails clearly when the selected vector index is not queryable', () => {
+    expect(() =>
+      planMongoVectorSearch({
+        request,
+        indexes: [
+          {
+            ...indexes[0],
+            status: VectorIndexStatus.Pending,
+            queryable: false,
+          },
+        ],
+        schemaFields,
+      }),
+    ).toThrow(GrpcError);
+    try {
+      planMongoVectorSearch({
+        request,
+        indexes: [
+          {
+            ...indexes[0],
+            status: VectorIndexStatus.Failed,
+            queryable: false,
+          },
+        ],
+        schemaFields,
+      });
+      throw new Error('expected failed index error');
+    } catch (err) {
+      expect(err).toBeInstanceOf(GrpcError);
+      expect((err as GrpcError).code).toBe(status.FAILED_PRECONDITION);
+      expect((err as GrpcError).message).toMatch(/not queryable/);
+    }
   });
 });
 

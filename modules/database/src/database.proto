@@ -186,6 +186,8 @@ message VectorIndex {
   optional string method = 5;
   repeated string filterFields = 6;
   optional string options = 7;
+  optional string status = 8;
+  optional bool queryable = 9;
 }
 
 message VectorIndexRequest {

@@ -21,6 +21,10 @@ import {
   toVectorSearchResult,
 } from './vectorScore.js';
 import { parseVectorSimilarity } from './vectorField.js';
+import {
+  assertVectorIndexQueryable,
+  defaultVectorIndexName,
+} from './vectorIndexLifecycle.js';
 
 export interface PlannedMongoVectorSearch {
   emptyResult: boolean;
@@ -60,7 +64,9 @@ export function findVectorIndexForSearch(
   }
   return (
     indexes.find(
-      item => item.field === request.field && item.name === `${request.field}_vector`,
+      item =>
+        item.field === request.field &&
+        item.name === defaultVectorIndexName(request.field),
     ) ?? indexes.find(item => item.field === request.field)
   );
 }
@@ -73,10 +79,10 @@ export function mergeVectorIndexes(
   if (!declared.length) return live;
   const merged = new Map<string, VectorIndexDefinition>();
   for (const index of declared) {
-    merged.set(index.name ?? `${index.field}_vector`, index);
+    merged.set(index.name ?? defaultVectorIndexName(index.field), index);
   }
   for (const index of live) {
-    merged.set(index.name ?? `${index.field}_vector`, index);
+    merged.set(index.name ?? defaultVectorIndexName(index.field), index);
   }
   return [...merged.values()];
 }
@@ -124,12 +130,16 @@ export function planMongoVectorSearch(args: {
   if (validated.emptyResult) {
     return { emptyResult: true, limits, index, pipeline: [] };
   }
+  assertVectorIndexQueryable(index, args.request);
   return {
     emptyResult: false,
     limits,
     index,
     pipeline: buildMongoVectorSearchPipeline({
-      indexName: args.request.indexName ?? index?.name ?? `${args.request.field}_vector`,
+      indexName:
+        args.request.indexName ??
+        index.name ??
+        defaultVectorIndexName(args.request.field),
       field: args.request.field,
       vector: args.request.vector,
       numCandidates: limits.numCandidates,
@@ -163,6 +173,7 @@ export function planPostgresVectorSearch(args: {
   if (validated.emptyResult) {
     return { emptyResult: true, limits, index, sql: '', distanceOperator };
   }
+  assertVectorIndexQueryable(index, args.request);
   const where = renderPostgresVectorWhere(validated.filter, args.renderer);
   const selectedColumns = postgresVectorSelectList(
     args.schemaFields,

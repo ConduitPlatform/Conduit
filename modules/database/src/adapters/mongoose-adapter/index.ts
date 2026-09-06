@@ -18,8 +18,6 @@ import { DatabaseAdapter } from '../DatabaseAdapter.js';
 import {
   validateFieldChanges,
   validateFieldConstraints,
-  assertVectorIndexContract,
-  assertVectorIndexMatchesField,
   mongoVectorCapabilities,
   fromMongoVectorIndex,
   toMongoVectorIndexDefinition,
@@ -28,6 +26,8 @@ import {
   declaredVectorIndexes,
   mergeVectorIndexes,
   planMongoVectorSearch,
+  bindVectorIndexToField,
+  planMongoVectorIndexCreate,
 } from '../utils/index.js';
 import pluralize from '../../utils/pluralize.js';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils.js';
@@ -767,8 +767,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    this.validateVectorField(schemaName, index);
-    assertVectorIndexContract('mongodb', index);
+    const schema = this.models[schemaName].originalSchema as any;
+    const field = schema.compiledFields?.[index.field] ?? schema.fields?.[index.field];
+    const bound = bindVectorIndexToField({
+      provider: 'mongodb',
+      index,
+      field,
+    });
     const collection: any = this.mongoose.model(schemaName).collection;
     if (typeof collection.createSearchIndex !== 'function') {
       throw new GrpcError(
@@ -776,10 +781,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         'MongoDB Vector Search index commands are not available for this deployment',
       );
     }
+    const existing = await this.getVectorIndexes(schemaName);
+    const plan = planMongoVectorIndexCreate({ requested: bound, existing });
+    if (plan.action === 'reuse') return 'Vector index created!';
     await collection.createSearchIndex({
-      name: index.name ?? `${index.field}_vector`,
+      name: bound.name,
       type: 'vectorSearch',
-      definition: toMongoVectorIndexDefinition(index),
+      definition: toMongoVectorIndexDefinition(bound),
     });
     return 'Vector index created!';
   }
@@ -835,7 +843,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
     const schemaFields = (model.originalSchema.compiledFields ??
       model.originalSchema.fields) as Record<string, unknown>;
-    const liveIndexes = await this.getVectorIndexes(request.schemaName).catch(() => []);
+    const liveIndexes = await this.getVectorIndexes(request.schemaName);
     const planned = planMongoVectorSearch({
       request,
       indexes: mergeVectorIndexes(
@@ -945,12 +953,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     );
   }
 
-  private validateVectorField(schemaName: string, index: VectorIndexDefinition) {
-    const schema = this.models[schemaName].originalSchema as any;
-    const field = schema.compiledFields?.[index.field] ?? schema.fields?.[index.field];
-    assertVectorIndexMatchesField(field, index);
-  }
-
   protected async _createSchemaFromAdapter(
     schema: ConduitDatabaseSchema,
     saveToDb: boolean = true,
@@ -994,6 +996,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!isInstanceSync) {
       await this.createMongooseFieldIndexes(schema.name);
     }
+    await this.applyDeclaredVectorIndexes(schema.name, isInstanceSync);
     return this.models[schema.name];
   }
 

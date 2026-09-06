@@ -5,6 +5,11 @@ import {
   VectorSimilarity,
 } from '@conduitplatform/grpc-sdk';
 import { isObjectFormVectorField } from './vectorField.js';
+import {
+  hydratePostgresVectorIndex,
+  mongoSearchIndexReadiness,
+  mongoVectorFilterFields,
+} from './vectorIndexLifecycle.js';
 
 export type VectorStorageBackend = 'mongodb' | 'postgres' | 'sql';
 
@@ -116,7 +121,10 @@ export function toMongoVectorIndexDefinition(index: VectorIndexDefinition) {
   return {
     fields: [
       vectorField,
-      ...(index.filterFields ?? []).map((path: string) => ({ type: 'filter', path })),
+      ...mongoVectorFilterFields(index.filterFields).map((path: string) => ({
+        type: 'filter',
+        path,
+      })),
     ],
     ...(index.options?.storedSource !== undefined && {
       storedSource: index.options.storedSource,
@@ -126,11 +134,14 @@ export function toMongoVectorIndexDefinition(index: VectorIndexDefinition) {
 
 export function fromMongoVectorIndex(index: {
   name?: string;
+  status?: string;
+  queryable?: boolean;
   latestDefinition?: { fields?: Array<Record<string, any>> };
   definition?: { fields?: Array<Record<string, any>> };
 }): VectorIndexDefinition {
   const fields = index.latestDefinition?.fields ?? index.definition?.fields ?? [];
   const vectorField = fields.find(field => field.type === 'vector') ?? {};
+  const readiness = mongoSearchIndexReadiness(index);
   return {
     name: index.name,
     field: vectorField.path,
@@ -140,6 +151,8 @@ export function fromMongoVectorIndex(index: {
     filterFields: fields
       .filter(field => field.type === 'filter')
       .map(field => field.path),
+    status: readiness.status,
+    queryable: readiness.queryable,
   };
 }
 
@@ -147,24 +160,14 @@ export function fromPostgresVectorIndex(
   name: string,
   definition: string,
   field?: { dimensions?: number; similarity?: VectorSimilarity },
+  declared?: VectorIndexDefinition,
 ): VectorIndexDefinition {
-  const method = /USING\s+(\w+)/i.exec(definition)?.[1];
-  const fieldMatch = /\((?:"([^"]+)"|(\w+))\s+vector_/i.exec(definition);
-  const operator = /vector_(l2|cosine|ip)_ops/i.exec(definition)?.[1];
-  const similarity =
-    field?.similarity ??
-    (operator === 'l2'
-      ? VectorSimilarity.Euclidean
-      : operator === 'ip'
-        ? VectorSimilarity.DotProduct
-        : VectorSimilarity.Cosine);
-  return {
+  return hydratePostgresVectorIndex({
     name,
-    field: fieldMatch?.[1] ?? fieldMatch?.[2] ?? '',
-    dimensions: field?.dimensions ?? 0,
-    similarity,
-    method: method as VectorIndexMethod | undefined,
-  };
+    indexdef: definition,
+    field,
+    declared,
+  });
 }
 
 export function postgresIndexMethodSql(method?: VectorIndexMethod | string) {
