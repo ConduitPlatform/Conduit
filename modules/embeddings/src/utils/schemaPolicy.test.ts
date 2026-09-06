@@ -12,8 +12,9 @@ import {
 } from './schemaPolicy.js';
 
 describe('embedding schema and source policies', () => {
-  it('denies system, auth-secret, and EmbeddingConfig schemas', () => {
+  it('denies system, auth-secret, and embeddings-owned schemas', () => {
     assert.equal(isDeniedEmbeddingSchema({ name: 'EmbeddingConfig' }), true);
+    assert.equal(isDeniedEmbeddingSchema({ name: 'BackfillRun' }), true);
     assert.equal(isDeniedEmbeddingSchema({ name: '_DeclaredSchema' }), true);
     assert.equal(isDeniedEmbeddingSchema({ name: 'Views' }), true);
     assert.equal(isDeniedEmbeddingSchema({ name: 'AccessToken' }), true);
