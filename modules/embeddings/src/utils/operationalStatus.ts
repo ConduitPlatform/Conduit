@@ -3,6 +3,7 @@ import { status } from '@grpc/grpc-js';
 import {
   assertBackfillExecutable,
   BackfillGateError,
+  embeddingIndexContractFromConfig,
   findTargetVectorIndex,
   isEmbeddingVectorIndexQueryable,
   type BackfillConfigGate,
@@ -72,9 +73,10 @@ export function assertSearchExecutable(args: {
       'Embedding config is missing a target vector field',
     );
   }
-  const index = findTargetVectorIndex(args.indexes ?? [], targetField);
-  if (isEmbeddingVectorIndexQueryable(index)) return;
-  const indexStatus = index?.status ?? 'missing';
+  const contract = embeddingIndexContractFromConfig(args.config);
+  const index = findTargetVectorIndex(args.indexes ?? [], targetField, contract);
+  if (contract && isEmbeddingVectorIndexQueryable(index)) return;
+  const indexStatus = contract ? (index?.status ?? 'missing') : 'missing';
   throw new SearchGateError(
     'index_not_queryable',
     `Vector index for field '${targetField}' is not queryable (status: ${indexStatus}). ` +
@@ -144,10 +146,13 @@ export function indexReadinessWarnings(
   for (const config of configs) {
     const targetField = config.targetField;
     if (!targetField) continue;
-    const index = findTargetVectorIndex(indexes, targetField);
-    if (isEmbeddingVectorIndexQueryable(index)) continue;
+    const contract = embeddingIndexContractFromConfig(config);
+    const index = findTargetVectorIndex(indexes, targetField, contract);
+    if (contract && isEmbeddingVectorIndexQueryable(index)) continue;
     warnings.push(
-      `Vector index for field '${targetField}' is not queryable (status: ${index?.status ?? 'missing'})`,
+      `Vector index for field '${targetField}' is not queryable (status: ${
+        contract ? (index?.status ?? 'missing') : 'missing'
+      })`,
     );
   }
   return warnings;

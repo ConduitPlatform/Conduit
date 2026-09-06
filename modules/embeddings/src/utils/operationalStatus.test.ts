@@ -1,8 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { VectorIndexStatus } from '@conduitplatform/grpc-sdk';
+import { GrpcError, VectorIndexStatus } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
+  assertConfigActivation,
   assertSearchExecutable,
   capabilityWarnings,
   grpcErrorFromSearchGate,
@@ -56,12 +57,20 @@ describe('embeddings operational warnings and search gates', () => {
             search: true,
             provider: 'mongodb',
           },
-          config: { _id: 'cfg1', enabled: true, targetField: 'embedding' },
+          config: {
+            _id: 'cfg1',
+            enabled: true,
+            targetField: 'embedding',
+            dimensions: 3,
+            similarity: 'cosine',
+          },
           indexes: [
             {
               field: 'embedding',
               status: VectorIndexStatus.Pending,
               queryable: false,
+              dimensions: 3,
+              similarity: 'cosine',
             },
           ],
         }),
@@ -72,6 +81,56 @@ describe('embeddings operational warnings and search gates', () => {
       new SearchGateError('index_not_queryable', 'index pending', 'pending'),
     );
     assert.equal(mapped.code, status.FAILED_PRECONDITION);
+  });
+
+  it('denies search and activation when a queryable live index does not match the config contract', () => {
+    const mismatched = {
+      field: 'embedding',
+      name: 'embedding_vector',
+      status: VectorIndexStatus.Ready,
+      queryable: true,
+      dimensions: 3,
+      similarity: 'cosine',
+    };
+    const config = {
+      _id: 'cfg1',
+      enabled: true,
+      schemaName: 'Article',
+      targetField: 'embedding',
+      dimensions: 3,
+      similarity: 'euclidean',
+    };
+    assert.throws(
+      () =>
+        assertSearchExecutable({
+          capabilities: {
+            supported: true,
+            search: true,
+            provider: 'mongodb',
+          },
+          config,
+          indexes: [mismatched],
+        }),
+      (err: unknown) =>
+        err instanceof SearchGateError && err.reason === 'index_not_queryable',
+    );
+    assert.throws(
+      () =>
+        assertConfigActivation({
+          moduleEnabled: true,
+          capabilities: {
+            supported: true,
+            storage: true,
+            provider: 'mongodb',
+          },
+          config,
+          indexes: [mismatched],
+        }),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.FAILED_PRECONDITION &&
+        /not queryable/.test(err.message),
+    );
   });
 });
 

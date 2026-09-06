@@ -17,6 +17,7 @@ import {
 } from './embeddingsApi.js';
 import type { Config } from '../config/index.js';
 import type { QueueJobCounts } from '../controllers/queue.controller.js';
+import { SearchGateError } from '../utils/operationalStatus.js';
 
 const articleSchema = {
   name: 'Article',
@@ -37,6 +38,8 @@ const readyIndex = {
   name: 'embedding_vector',
   queryable: true,
   status: VectorIndexStatus.Ready,
+  dimensions: 3,
+  similarity: VectorSimilarity.Cosine,
 };
 
 const moduleConfig = {
@@ -73,6 +76,9 @@ function createApi(overrides?: {
     name?: string;
     queryable?: boolean;
     status?: string;
+    dimensions?: number;
+    similarity?: string;
+    method?: string;
   }>;
   schemas?: Record<string, SchemaInfo>;
   declared?: Record<string, { name: string; ownerModule: string }>;
@@ -187,6 +193,9 @@ function createApi(overrides?: {
           indexes.push({
             field: index.field,
             name,
+            dimensions: index.dimensions,
+            similarity: index.similarity,
+            method: index.method,
             queryable: overrides?.createdIndexQueryable === true,
             status:
               overrides?.createdIndexQueryable === true
@@ -827,6 +836,8 @@ describe('typed embeddings API handlers', () => {
       name: 'embedding_vector_v2',
       queryable: false,
       status: VectorIndexStatus.Pending,
+      dimensions: 3,
+      similarity: VectorSimilarity.Euclidean,
     };
     const { api, configs, deletedIndexes, createdIndexes, indexes, enqueued } = createApi(
       {
@@ -864,6 +875,154 @@ describe('typed embeddings API handlers', () => {
       true,
     );
     assert.equal(enqueued.length, 0);
+  });
+
+  it('retries a failed similarity recreation without enabling the mismatched live index', async () => {
+    let attempts = 0;
+    const createdIndexes: string[] = [];
+    const { api, configs, deletedIndexes, indexes } = createApi({
+      configs: [enabledConfig],
+      createdIndexes,
+      createVectorIndex: async (_schema, index) => {
+        attempts += 1;
+        if (attempts === 1) {
+          throw new Error('atlas rejected replacement');
+        }
+        const name = index.name ?? `${index.field}_vector`;
+        createdIndexes.push(name);
+        indexes.push({
+          field: index.field,
+          name,
+          dimensions: index.dimensions,
+          similarity: index.similarity,
+          queryable: false,
+          status: VectorIndexStatus.Pending,
+        });
+        return 'created';
+      },
+    });
+    const euclideanUpsert = {
+      schemaName: 'Article',
+      sourceFields: ['title'],
+      targetField: 'embedding',
+      provider: 'openai-compatible',
+      model: 'text-embedding-3-small',
+      dimensions: 3,
+      similarity: VectorSimilarity.Euclidean,
+      enabled: true,
+    };
+    const first = await api.upsertConfig(euclideanUpsert, { callerModule: 'database' });
+    assert.equal(first.config.enabled, false);
+    assert.deepEqual(createdIndexes, []);
+    assert.deepEqual(deletedIndexes, []);
+
+    const retry = await api.upsertConfig(euclideanUpsert, { callerModule: 'database' });
+    assert.equal(retry.config.enabled, false);
+    assert.equal(configs[0].enabled, false);
+    assert.deepEqual(createdIndexes, ['embedding_vector_v2']);
+    assert.deepEqual(deletedIndexes, []);
+    assert.equal(
+      indexes.some(index => index.name === 'embedding_vector' && index.queryable),
+      true,
+    );
+    assert.equal(
+      indexes.some(
+        index =>
+          index.name === 'embedding_vector_v2' &&
+          index.similarity === VectorSimilarity.Euclidean &&
+          index.queryable !== true,
+      ),
+      true,
+    );
+    await assert.rejects(
+      () =>
+        api.semanticSearch(
+          { schemaName: 'Article', text: 'hello', userId: 'user-1' },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.NOT_FOUND &&
+        /No embedding config found/.test(err.message),
+    );
+  });
+
+  it('denies activation when the live index contract does not match', async () => {
+    const { api, configs, deletedIndexes, createdIndexes, indexes } = createApi({
+      configs: [
+        { ...enabledConfig, similarity: VectorSimilarity.Euclidean, enabled: false },
+      ],
+      capabilities: {
+        ...readyCapabilities,
+        indexing: false,
+        reason: 'indexing unavailable',
+      },
+    });
+    const saved = await api.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['title'],
+        targetField: 'embedding',
+        provider: 'openai-compatible',
+        model: 'text-embedding-3-small',
+        dimensions: 3,
+        similarity: VectorSimilarity.Euclidean,
+        enabled: true,
+      },
+      { callerModule: 'database' },
+    );
+    assert.equal(saved.config.enabled, false);
+    assert.equal(configs[0].enabled, false);
+    assert.deepEqual(createdIndexes, []);
+    assert.deepEqual(deletedIndexes, []);
+    assert.equal(
+      indexes.some(
+        index =>
+          index.name === 'embedding_vector' &&
+          index.queryable &&
+          index.similarity === VectorSimilarity.Cosine,
+      ),
+      true,
+    );
+    assert.equal(
+      saved.warnings.some(warning => /not queryable/.test(warning)),
+      true,
+    );
+    await assert.rejects(
+      () =>
+        api.semanticSearch(
+          { schemaName: 'Article', text: 'hello', userId: 'user-1' },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        (err.code === status.NOT_FOUND || err.code === status.FAILED_PRECONDITION),
+    );
+  });
+
+  it('does not search through a queryable index that does not match the config contract', async () => {
+    let searched = false;
+    const { api } = createApi({
+      configs: [
+        { ...enabledConfig, similarity: VectorSimilarity.Euclidean, enabled: true },
+      ],
+      vectorSearch: async () => {
+        searched = true;
+        return [];
+      },
+    });
+    await assert.rejects(
+      () =>
+        api.semanticSearch(
+          { schemaName: 'Article', text: 'hello', userId: 'user-1' },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof SearchGateError &&
+        err.reason === 'index_not_queryable' &&
+        api.mapGrpcError(err).code === status.FAILED_PRECONDITION,
+    );
+    assert.equal(searched, false);
   });
 
   it('is idempotent for start, cancel, and resume and does not duplicate active runs', async () => {

@@ -20,6 +20,8 @@ const config = {
   enabled: true,
   schemaName: 'Article',
   targetField: 'embedding',
+  dimensions: 3,
+  similarity: 'cosine',
 };
 
 const readyIndex = {
@@ -27,6 +29,8 @@ const readyIndex = {
   name: 'embedding_vector',
   status: VectorIndexStatus.Ready,
   queryable: true,
+  dimensions: 3,
+  similarity: 'cosine',
 };
 
 describe('backfill execution gates', () => {
@@ -132,6 +136,44 @@ describe('backfill execution gates', () => {
       )?.name,
       'embedding_vector_v2',
     );
+    assert.equal(
+      findTargetVectorIndex([readyIndex], 'embedding', {
+        dimensions: 3,
+        similarity: 'euclidean',
+      }),
+      undefined,
+    );
+    assert.equal(
+      findTargetVectorIndex(
+        [
+          readyIndex,
+          {
+            field: 'embedding',
+            name: 'embedding_vector_v2',
+            status: VectorIndexStatus.Pending,
+            queryable: false,
+            dimensions: 3,
+            similarity: 'euclidean',
+          },
+        ],
+        'embedding',
+        { dimensions: 3, similarity: 'euclidean' },
+      )?.name,
+      'embedding_vector_v2',
+    );
+    assert.throws(
+      () =>
+        assertBackfillExecutable({
+          moduleEnabled: true,
+          capabilities,
+          config: { ...config, similarity: 'euclidean' },
+          indexes: [readyIndex],
+        }),
+      (err: unknown) =>
+        err instanceof BackfillGateError &&
+        err.reason === 'index_not_queryable' &&
+        err.indexStatus === 'missing',
+    );
     assert.throws(
       () =>
         assertBackfillExecutable({
@@ -144,6 +186,8 @@ describe('backfill execution gates', () => {
               name: 'embedding_vector',
               status: VectorIndexStatus.Pending,
               queryable: false,
+              dimensions: 3,
+              similarity: 'cosine',
             },
           ],
         }),

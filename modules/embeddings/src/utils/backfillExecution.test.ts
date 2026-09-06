@@ -30,12 +30,16 @@ const config = {
   enabled: true,
   schemaName: 'Article',
   targetField: 'embedding',
+  dimensions: 3,
+  similarity: 'cosine',
 };
 const readyIndex = {
   field: 'embedding',
   name: 'embedding_vector',
   status: VectorIndexStatus.Ready,
   queryable: true,
+  dimensions: 3,
+  similarity: 'cosine',
 };
 
 function memoryStore(initial: PersistedBackfillRun[] = []) {
