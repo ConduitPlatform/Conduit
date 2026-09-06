@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import { TYPE, VectorSimilarity } from '@conduitplatform/grpc-sdk';
+import { TYPE, VectorIndexStatus, VectorSimilarity } from '@conduitplatform/grpc-sdk';
 import { MongooseAdapter } from '../../mongoose-adapter/index.js';
 import { SequelizeAdapter } from '../../sequelize-adapter/index.js';
 
@@ -38,6 +38,8 @@ function articleModel(overrides?: {
             dimensions: 3,
             similarity: VectorSimilarity.Cosine,
             filterFields: ['_id', 'tenantId'],
+            status: VectorIndexStatus.Ready,
+            queryable: true,
           },
         ],
       },

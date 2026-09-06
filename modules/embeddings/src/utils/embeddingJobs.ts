@@ -12,10 +12,36 @@ export const MAX_QUEUE_BATCH_SIZE = 500;
 const IDENTITY = /^[A-Za-z0-9._-]{1,128}$/;
 const SCHEMA_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
 
+export const IN_FLIGHT_QUEUE_JOB_STATES = [
+  'waiting',
+  'active',
+  'delayed',
+  'paused',
+  'waiting-children',
+  'prioritized',
+] as const;
+
+export const TERMINAL_QUEUE_JOB_STATES = ['completed', 'failed'] as const;
+
+export type InFlightQueueJobState = (typeof IN_FLIGHT_QUEUE_JOB_STATES)[number];
+export type TerminalQueueJobState = (typeof TERMINAL_QUEUE_JOB_STATES)[number];
+
 export function embeddingJobId(data: EmbeddingJobData): string {
   const parts = [data.schemaName, data.documentId];
   if (data.configId) parts.push(data.configId);
   return parts.join('__');
+}
+
+export function isInFlightQueueJobState(state: string): state is InFlightQueueJobState {
+  return (IN_FLIGHT_QUEUE_JOB_STATES as readonly string[]).includes(state);
+}
+
+export function isTerminalQueueJobState(state: string): state is TerminalQueueJobState {
+  return (TERMINAL_QUEUE_JOB_STATES as readonly string[]).includes(state);
+}
+
+export function shouldReplaceRetainedQueueJob(state: string): boolean {
+  return isTerminalQueueJobState(state);
 }
 
 export function dedupeEmbeddingJobs(jobs: EmbeddingJobData[]): EmbeddingJobData[] {

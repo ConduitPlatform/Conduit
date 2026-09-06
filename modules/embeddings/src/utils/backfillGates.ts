@@ -56,7 +56,8 @@ export function isEmbeddingVectorIndexQueryable(index?: VectorIndexGate): boolea
   ) {
     return false;
   }
-  return true;
+  if (index.queryable === true) return true;
+  return indexStatus === VectorIndexStatus.Ready || indexStatus === 'ready';
 }
 
 export function findTargetVectorIndex(

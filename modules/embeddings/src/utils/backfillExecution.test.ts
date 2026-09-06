@@ -55,6 +55,16 @@ function memoryStore(initial: PersistedBackfillRun[] = []) {
     saveRun: async (id: string, run: BackfillRunProgress) => {
       runs.set(id, { ...run, _id: id });
     },
+    incrementCounts: async (
+      id: string,
+      patch: { $inc: { processedCount?: number; failedCount?: number } },
+    ) => {
+      const run = runs.get(id);
+      if (!run || run.state !== 'running') return null;
+      run.processedCount += patch.$inc.processedCount ?? 0;
+      run.failedCount += patch.$inc.failedCount ?? 0;
+      return { ...run };
+    },
   };
 }
 
@@ -219,9 +229,9 @@ describe('cursor-based backfill continuation', () => {
     assert.equal(second.run?.state, 'running');
     for (let i = 0; i < 3; i += 1) {
       await applyBackfillJobOutcome({
-        run: (await store.getRun(created._id))!,
+        runId: created._id,
         outcome: 'processed',
-        saveRun: store.saveRun,
+        incrementCounts: store.incrementCounts,
       });
     }
     const drained = await processBackfillControllerJob(
@@ -329,15 +339,15 @@ describe('backfill cancellation, resume, and counters', () => {
     );
     const afterPage = (await store.getRun(created._id))!;
     const processed = await applyBackfillJobOutcome({
-      run: afterPage,
+      runId: created._id,
       outcome: 'processed',
-      saveRun: store.saveRun,
+      incrementCounts: store.incrementCounts,
     });
     assert.equal(processed.ok, true);
     const failed = await applyBackfillJobOutcome({
-      run: (await store.getRun(created._id))!,
+      runId: created._id,
       outcome: 'failed',
-      saveRun: store.saveRun,
+      incrementCounts: store.incrementCounts,
     });
     assert.equal(failed.ok, true);
     if (!failed.ok) return;
@@ -345,6 +355,35 @@ describe('backfill cancellation, resume, and counters', () => {
     assert.equal(failed.run.queuedCount, 2);
     assert.equal(failed.run.processedCount, 1);
     assert.equal(failed.run.failedCount, 1);
+  });
+
+  it('keeps concurrent processed and failed increments without lost updates', async () => {
+    const store = memoryStore();
+    const created = await store.createRun(
+      backfillRunFromDocument({
+        _id: 'ignored',
+        schemaName: 'Article',
+        configId: 'cfg1',
+        state: 'running',
+        batchSize: 2,
+        queuedCount: 40,
+      }),
+    );
+    await Promise.all(
+      Array.from({ length: 40 }, (_, index) =>
+        applyBackfillJobOutcome({
+          runId: created._id,
+          outcome: index % 5 === 0 ? 'failed' : 'processed',
+          incrementCounts: async (id, patch) => {
+            await Promise.resolve();
+            return store.incrementCounts(id, patch);
+          },
+        }),
+      ),
+    );
+    const latest = (await store.getRun(created._id))!;
+    assert.equal(latest.processedCount, 32);
+    assert.equal(latest.failedCount, 8);
   });
 
   it('fails the running run when the vector index is not queryable', async () => {

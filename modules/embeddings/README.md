@@ -34,8 +34,10 @@ Enable it and configure an OpenAI-compatible provider:
 ## Workflow
 
 1. Create an embedding config with `schemaName`, `sourceFields`, `targetField`,
-   `provider`, `model`, and `dimensions`. Save `enabled: false` until Database
-   reports vector storage and a queryable index.
+   `provider`, `model`, and `dimensions`. The first upsert provisions the vector
+   index when Database indexing is available. The config stays disabled until
+   Database reports a queryable index. If indexing is unavailable, status
+   returns a manual index lifecycle warning.
 2. The module adds a vector schema extension for the target field and a source
    hash field used to skip unchanged documents.
 3. Start a backfill, or rely on database create/update events to enqueue

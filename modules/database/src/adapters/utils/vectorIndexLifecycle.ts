@@ -112,7 +112,8 @@ export function isVectorIndexQueryable(index?: VectorIndexDefinition): boolean {
   if (index.status === VectorIndexStatus.Pending && index.queryable !== true) {
     return false;
   }
-  return true;
+  if (index.queryable === true) return true;
+  return index.status === VectorIndexStatus.Ready;
 }
 
 export function assertVectorIndexQueryable(
