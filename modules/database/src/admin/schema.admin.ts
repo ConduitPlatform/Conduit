@@ -736,6 +736,7 @@ export class SchemaAdmin {
       select: call.request.params.select,
       userId: call.request.context.user?._id,
       scope: call.request.params.scope,
+      adminOperator: true,
     });
     return { results };
   }

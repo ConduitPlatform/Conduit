@@ -197,6 +197,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       scope: o.scope,
       populate: populateArray,
       suppressEvent: o.suppressEvent,
+      embeddingsJob: o.embeddingsJob,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -395,6 +396,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       select: request.select,
       userId: request.userId,
       scope: request.scope,
+      adminOperator: request.adminOperator,
     }).then(res => JSON.parse(res.result));
   }
 
