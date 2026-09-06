@@ -51,6 +51,11 @@ case "$SERVICE" in
     SERVICE_DIR="$ROOT/modules/$SERVICE"
     SERVICE_PROTOS="database.proto"
     ;;
+  embeddings)
+    PKG="@conduitplatform/embeddings"
+    SERVICE_DIR="$ROOT/modules/$SERVICE"
+    SERVICE_PROTOS="embeddings.proto"
+    ;;
   router)
     PKG="@conduitplatform/router"
     SERVICE_DIR="$ROOT/modules/$SERVICE"

@@ -6,8 +6,12 @@ for vector storage, index creation, and vector-in/vector-out search.
 
 ## Configuration
 
-The module is disabled by default. Enable it and configure an OpenAI-compatible
-provider:
+The module is disabled by default. Production deployments require `GRPC_KEY`
+(`NODE_ENV=production` in the published image). The module is **not** included
+in the standalone image for the first production release; run it as a separate
+opt-in compose profile or Helm service.
+
+Enable it and configure an OpenAI-compatible provider:
 
 ```json
 {
@@ -60,3 +64,17 @@ tools through Hermes:
 Config and backfill APIs are never exposed as client routes. Client
 `POST /embeddings/search` accepts text only and takes user/scope from the
 authenticated router context.
+
+## Packaging
+
+- Bundle image: `docker.io/conduitplatform/embeddings` (BullMQ is an extra
+  bundle dependency). Bake target: `embeddings`.
+- Compose: `docker compose --profile embeddings up` (gRPC `55165`, metrics
+  `9192`). Set `GRPC_KEY` before starting.
+- Standalone v1 does not ship embeddings.
+
+Operator rollout, capability/index readiness, and rollback:
+[deploy/embeddings.md](../../deploy/embeddings.md).
+
+Live Atlas/pgvector/provider behavior is not covered by CI. Repeat the
+capability and index checks in the target environment before activation.

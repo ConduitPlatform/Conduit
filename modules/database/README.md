@@ -40,6 +40,10 @@ responses distinguish storage support from index/search support:
 4. Backfill embeddings.
 5. Run `vectorSearch` with a query vector.
 
+The Embeddings module is a separate opt-in image (not standalone v1). See
+[deploy/embeddings.md](../../deploy/embeddings.md) before enabling generation
+or search. Live Atlas/pgvector validation is an operator runbook step, not CI.
+
 CMS create/update bodies omit `TYPE.Vector` fields, `*SourceHash` fields, and
 any `select: false` field so clients cannot write managed embeddings. Read/return
 projections still include those schema fields.

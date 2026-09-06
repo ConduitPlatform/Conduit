@@ -99,6 +99,19 @@ const IMAGE_TARGETS = [
     ],
   },
   {
+    target: 'embeddings',
+    image: 'embeddings',
+    name: 'Build embeddings',
+    buildingService: 'modules/embeddings',
+    isBundle: true,
+    paths: [
+      'modules/embeddings/**',
+      ...SERVICE_BUNDLE_PATHS,
+      ...LIBRARY_BUILD_PATHS,
+      ...SHARED_BUILD_PATHS,
+    ],
+  },
+  {
     target: 'functions',
     image: 'functions',
     name: 'Build functions',
