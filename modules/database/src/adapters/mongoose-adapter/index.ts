@@ -15,7 +15,15 @@ import {
   VectorSearchResult,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter.js';
-import { validateFieldChanges, validateFieldConstraints } from '../utils/index.js';
+import {
+  validateFieldChanges,
+  validateFieldConstraints,
+  assertVectorIndexContract,
+  assertVectorIndexMatchesField,
+  mongoVectorCapabilities,
+  fromMongoVectorIndex,
+  toMongoVectorIndexDefinition,
+} from '../utils/index.js';
 import pluralize from '../../utils/pluralize.js';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils.js';
 import { status } from '@grpc/grpc-js';
@@ -727,45 +735,24 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   async getVectorCapabilities(schemaName?: string): Promise<VectorCapabilities> {
     const modelName = schemaName ?? Object.keys(this.models)[0];
     if (!modelName || !this.models[modelName]) {
-      return {
-        supported: true,
-        storage: true,
-        indexing: false,
-        search: false,
-        provider: 'mongodb',
-        reason: 'No schema is available to probe MongoDB Vector Search support',
-      };
+      return mongoVectorCapabilities({ hasSchema: false });
     }
 
     try {
       const collection: any = this.mongoose.model(modelName).collection;
       if (typeof collection.listSearchIndexes !== 'function') {
-        return {
-          supported: true,
-          storage: true,
-          indexing: false,
-          search: false,
-          provider: 'mongodb',
-          reason: 'MongoDB driver does not expose search index commands',
-        };
+        return mongoVectorCapabilities({
+          hasSchema: true,
+          searchIndexCommandsAvailable: false,
+        });
       }
       await collection.listSearchIndexes().toArray();
-      return {
-        supported: true,
-        storage: true,
-        indexing: true,
-        search: true,
-        provider: 'mongodb',
-      };
+      return mongoVectorCapabilities({ hasSchema: true });
     } catch (err) {
-      return {
-        supported: true,
-        storage: true,
-        indexing: false,
-        search: false,
-        provider: 'mongodb',
-        reason: (err as Error).message,
-      };
+      return mongoVectorCapabilities({
+        hasSchema: true,
+        probeError: (err as Error).message,
+      });
     }
   }
 
@@ -776,6 +763,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     this.validateVectorField(schemaName, index);
+    assertVectorIndexContract('mongodb', index);
     const collection: any = this.mongoose.model(schemaName).collection;
     if (typeof collection.createSearchIndex !== 'function') {
       throw new GrpcError(
@@ -786,7 +774,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     await collection.createSearchIndex({
       name: index.name ?? `${index.field}_vector`,
       type: 'vectorSearch',
-      definition: this.toMongoVectorIndexDefinition(index),
+      definition: toMongoVectorIndexDefinition(index),
     });
     return 'Vector index created!';
   }
@@ -799,7 +787,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     const indexes = await collection.listSearchIndexes().toArray();
     return indexes
       .filter((index: any) => index.type === 'vectorSearch')
-      .map((index: any) => this.fromMongoVectorIndex(index));
+      .map((index: any) => fromMongoVectorIndex(index));
   }
 
   async deleteVectorIndex(schemaName: string, indexName: string): Promise<string> {
@@ -960,59 +948,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   private validateVectorField(schemaName: string, index: VectorIndexDefinition) {
     const schema = this.models[schemaName].originalSchema as any;
     const field = schema.compiledFields?.[index.field] ?? schema.fields?.[index.field];
-    if (!field || field.type !== 'Vector') {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Vector index field is not a vector');
-    }
-    if (field.dimensions !== index.dimensions) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        `Vector index dimensions mismatch: field ${field.dimensions}, index ${index.dimensions}`,
-      );
-    }
-  }
-
-  private toMongoVectorIndexDefinition(index: VectorIndexDefinition) {
-    const vectorField: any = {
-      type: 'vector',
-      path: index.field,
-      numDimensions: index.dimensions,
-      similarity: index.similarity,
-    };
-    if (index.options?.quantization)
-      vectorField.quantization = index.options.quantization;
-    if (index.method) vectorField.indexingMethod = index.method;
-    if (index.options?.hnsw) {
-      vectorField.hnswOptions = {
-        ...(index.options.hnsw.maxEdges && { maxEdges: index.options.hnsw.maxEdges }),
-        ...(index.options.hnsw.numEdgeCandidates && {
-          numEdgeCandidates: index.options.hnsw.numEdgeCandidates,
-        }),
-      };
-    }
-    return {
-      fields: [
-        vectorField,
-        ...(index.filterFields ?? []).map((path: string) => ({ type: 'filter', path })),
-      ],
-      ...(index.options?.storedSource !== undefined && {
-        storedSource: index.options.storedSource,
-      }),
-    };
-  }
-
-  private fromMongoVectorIndex(index: any): VectorIndexDefinition {
-    const fields = index.latestDefinition?.fields ?? index.definition?.fields ?? [];
-    const vectorField = fields.find((field: any) => field.type === 'vector') ?? {};
-    return {
-      name: index.name,
-      field: vectorField.path,
-      dimensions: vectorField.numDimensions,
-      similarity: vectorField.similarity,
-      method: vectorField.indexingMethod,
-      filterFields: fields
-        .filter((field: any) => field.type === 'filter')
-        .map((field: any) => field.path),
-    };
+    assertVectorIndexMatchesField(field, index);
   }
 
   private buildVectorProjection(schema: ConduitDatabaseSchema, select?: string) {

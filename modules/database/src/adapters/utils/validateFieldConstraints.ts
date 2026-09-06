@@ -1,6 +1,7 @@
 import { ConduitError, ConduitModel, ConduitModelField } from '@conduitplatform/grpc-sdk';
 import { ConduitDatabaseSchema } from '../../interfaces/index.js';
 import { isObject } from 'lodash-es';
+import { assertVectorFieldIfPresent } from './vectorField.js';
 
 /*
  * Validates schema field constraints.
@@ -24,6 +25,7 @@ export function fieldsValidator(
         `Schema '${schemaName}' violates field '${f}' constraint (field names cannot contain '.').`,
       );
     }
+    assertVectorFieldIfPresent(schemaName, f, schemaFields[f]);
     if (typeof schemaFields[f] === 'object') {
       const target: ConduitModelField = schemaFields[f] as ConduitModelField;
       const isUnique = !!target.unique;
@@ -34,18 +36,6 @@ export function fieldsValidator(
           400,
           `Schema '${schemaName}' violates unique field '${f}' constraint (field should be 'required').`,
         );
-      }
-
-      if ((target as ConduitModelField & { type?: string }).type === 'Vector') {
-        const dimensions = (target as ConduitModelField & { dimensions?: number })
-          .dimensions;
-        if (!Number.isInteger(dimensions) || dimensions! <= 0) {
-          throw new ConduitError(
-            'INVALID_ARGUMENTS',
-            400,
-            `Schema '${schemaName}' vector field '${f}' requires a positive integer 'dimensions' value.`,
-          );
-        }
       }
 
       if (target.hasOwnProperty('type') && typeof target.type === 'object') {

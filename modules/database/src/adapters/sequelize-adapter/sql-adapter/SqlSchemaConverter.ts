@@ -18,6 +18,10 @@ import {
   extractRelations,
   RelationType,
 } from '../utils/extractors/index.js';
+import {
+  isVectorSchemaType,
+  vectorFieldStorageMapping,
+} from '../../utils/vectorMappings.js';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
@@ -163,6 +167,9 @@ function extractObjectType(objectField: Indexable, field: string) {
       res.type = extractType(objectField.type, objectField.sqlType);
     }
     res.type = extractType(objectField.type, objectField.sqlType);
+    if (isVectorSchemaType(objectField.type)) {
+      vectorFieldStorageMapping('sql', { dimensions: objectField.dimensions });
+    }
     if (objectField.hasOwnProperty('default')) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
     }

@@ -63,7 +63,7 @@ export const SchemaFieldsDescription = `Object mapping field names to field defi
 - Object: \`{ fieldName: { type: "String", required: true } }\`
 - Array: \`{ fieldName: ["String"] }\` or \`{ fieldName: [{ type: "String" }] }\`
 - Relation: \`{ fieldName: { type: "Relation", model: "SchemaName" } }\`
-- Vector: \`{ fieldName: { type: "Vector", dimensions: 1536, similarity: "cosine", select: false } }\`
+- Vector: \`{ fieldName: { type: "Vector", dimensions: 1536, similarity: "cosine", select: false } }\` (object form only; shorthand \`"Vector"\` is rejected)
 - Nested: \`{ fieldName: { nestedField: { type: "String" } } }\`
 
 **Field Properties:**
@@ -74,7 +74,7 @@ export const SchemaFieldsDescription = `Object mapping field names to field defi
 - \`default\` (optional): string - Default value for the field
 - \`description\` (optional): string - Field description
 - \`model\` (required for Relation): string - Name of the related schema
-- \`dimensions\` (required for Vector): number - Embedding vector dimensions
+- \`dimensions\` (required for Vector): positive integer - Embedding vector dimensions
 - \`similarity\` (optional for Vector): cosine | euclidean | dotProduct
 
 **Example:**
