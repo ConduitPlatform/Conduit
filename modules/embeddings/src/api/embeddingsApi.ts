@@ -12,6 +12,7 @@ import { QueueJobCounts } from '../controllers/queue.controller.js';
 import {
   cancelBackfillExecution,
   persistableBackfillRun,
+  persistableNewBackfillRun,
   queueBackfillRuns,
   resumeBackfillExecution,
   type BackfillControllerJobData,
@@ -230,16 +231,25 @@ export class EmbeddingsApi {
         },
       });
     }
+    let persistEnabled = enabled;
     let provisionedIndex = false;
-    if (existing && changed.length && requiresIndexRecreation(changed)) {
-      await this.recreateVectorIndex(existing, persisted, indexes);
-      indexes = await this.deps.getVectorIndexes(persisted.schemaName);
-      provisionedIndex = true;
-    } else {
-      provisionedIndex = await this.ensureVectorIndex(persisted, indexes, capabilities);
-      if (provisionedIndex) {
+    const provisionWarnings: string[] = [];
+    try {
+      if (existing && changed.length && requiresIndexRecreation(changed)) {
+        await this.recreateVectorIndex(existing, persisted, indexes);
         indexes = await this.deps.getVectorIndexes(persisted.schemaName);
+        provisionedIndex = true;
+      } else {
+        provisionedIndex = await this.ensureVectorIndex(persisted, indexes, capabilities);
+        if (provisionedIndex) {
+          indexes = await this.deps.getVectorIndexes(persisted.schemaName);
+        }
       }
+    } catch (err) {
+      persistEnabled = false;
+      provisionWarnings.push(
+        `Config was saved disabled because vector index provisioning failed for '${persisted.targetField}': ${sanitizeErrorMessage(err)}. Repair or create the index and enable the config once Database reports it queryable.`,
+      );
     }
     const warnings = [
       ...capabilityWarnings(capabilities),
@@ -257,6 +267,7 @@ export class EmbeddingsApi {
         configDefaults.providers[persisted.provider] ??
           configDefaults.providers[configDefaults.defaultProvider],
       ),
+      ...provisionWarnings,
     ];
     if (
       !findTargetVectorIndex(indexes, persisted.targetField) &&
@@ -266,8 +277,7 @@ export class EmbeddingsApi {
         `Vector index for field '${persisted.targetField}' was not provisioned automatically because Database indexing is unavailable. Create the index manually and wait until it is queryable before enabling this config.`,
       );
     }
-    let persistEnabled = enabled;
-    if (enabled) {
+    if (enabled && persistEnabled) {
       try {
         assertConfigActivation({
           moduleEnabled: configDefaults.enabled,
@@ -436,7 +446,8 @@ export class EmbeddingsApi {
         capabilities,
         configs,
         indexes,
-        createRun: async run => this.deps.backfills.create(persistableBackfillRun(run)),
+        createRun: async run =>
+          this.deps.backfills.create(persistableNewBackfillRun(run)),
         saveRun: async (id, run) => {
           await this.deps.backfills.findByIdAndUpdate(id, persistableBackfillRun(run));
         },
@@ -854,7 +865,8 @@ export class EmbeddingsApi {
           capabilities: args.capabilities,
           configs: [config],
           indexes: args.indexes,
-          createRun: async run => this.deps.backfills.create(persistableBackfillRun(run)),
+          createRun: async run =>
+            this.deps.backfills.create(persistableNewBackfillRun(run)),
           saveRun: async (id, run) => {
             await this.deps.backfills.findByIdAndUpdate(id, persistableBackfillRun(run));
           },

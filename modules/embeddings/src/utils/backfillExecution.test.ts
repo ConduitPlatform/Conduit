@@ -7,6 +7,7 @@ import {
   cancelBackfillExecution,
   parseBackfillControllerJob,
   persistableBackfillRun,
+  persistableNewBackfillRun,
   processBackfillControllerJob,
   queueBackfillRuns,
   resumeBackfillExecution,
@@ -53,7 +54,16 @@ function memoryStore(initial: PersistedBackfillRun[] = []) {
       return run ? { ...run } : null;
     },
     saveRun: async (id: string, run: BackfillRunProgress) => {
-      runs.set(id, { ...run, _id: id });
+      const existing = runs.get(id);
+      if (!existing) {
+        runs.set(id, {
+          ...run,
+          ...persistableNewBackfillRun(run),
+          _id: id,
+        } as PersistedBackfillRun);
+        return;
+      }
+      Object.assign(existing, persistableBackfillRun(run));
     },
     incrementCounts: async (
       id: string,
@@ -386,6 +396,54 @@ describe('backfill cancellation, resume, and counters', () => {
     assert.equal(latest.failedCount, 8);
   });
 
+  it('does not overwrite atomic processed/failed counts when a page save races with workers', async () => {
+    const store = memoryStore();
+    const created = await store.createRun(
+      backfillRunFromDocument({
+        _id: 'ignored',
+        schemaName: 'Article',
+        configId: 'cfg1',
+        state: 'running',
+        batchSize: 2,
+        queuedCount: 0,
+      }),
+    );
+    const originalSave = store.saveRun;
+    store.saveRun = async (id, run) => {
+      await Promise.resolve();
+      await originalSave(id, run);
+    };
+    const page = processBackfillControllerJob(
+      { runId: created._id, cursor: null },
+      deps({
+        store,
+        findPage: async () => {
+          await Promise.resolve();
+          return [{ _id: 'a' }, { _id: 'b' }];
+        },
+      }),
+    );
+    const workers = Promise.all(
+      Array.from({ length: 10 }, (_, index) =>
+        applyBackfillJobOutcome({
+          runId: created._id,
+          outcome: index % 2 === 0 ? 'processed' : 'failed',
+          incrementCounts: async (id, patch) => {
+            await Promise.resolve();
+            return store.incrementCounts(id, patch);
+          },
+        }),
+      ),
+    );
+    await Promise.all([page, workers]);
+    const latest = (await store.getRun(created._id))!;
+    assert.equal(latest.processedCount, 5);
+    assert.equal(latest.failedCount, 5);
+    assert.equal(latest.scannedCount, 2);
+    assert.equal(latest.queuedCount, 2);
+    assert.equal(latest.cursor, 'b');
+  });
+
   it('fails the running run when the vector index is not queryable', async () => {
     const store = memoryStore();
     const created = await store.createRun(
@@ -432,6 +490,10 @@ describe('backfill controller job parsing and persistence mapping', () => {
     });
     assert.equal(progress.cursor, null);
     assert.equal(persistableBackfillRun(progress).onlyMissing, true);
+    assert.equal('processedCount' in persistableBackfillRun(progress), false);
+    assert.equal('failedCount' in persistableBackfillRun(progress), false);
+    assert.equal(persistableNewBackfillRun(progress).processedCount, 0);
+    assert.equal(persistableNewBackfillRun(progress).failedCount, 0);
   });
 });
 
