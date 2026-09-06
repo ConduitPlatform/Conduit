@@ -3,24 +3,20 @@ import { fileURLToPath } from 'node:url';
 import {
   ConduitGrpcSdk,
   DatabaseProvider,
-  GrpcError,
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
-  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConfigController,
   ConduitActiveSchema,
   ManagedModule,
 } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
 import AppConfigSchema, { Config } from './config/index.js';
 import * as models from './models/index.js';
 import { BackfillRun, EmbeddingConfig } from './models/index.js';
 import { QueueController } from './controllers/queue.controller.js';
 import { getProvider, hashEmbeddingInput } from './providers/index.js';
-import { validateEmbeddingConfigInput } from './utils/validateEmbeddingConfig.js';
 import {
   embeddingOwnedFields,
   isEmbeddingOwnedMutation,
@@ -36,12 +32,6 @@ import {
   type EmbeddingJobData,
 } from './utils/embeddingJobs.js';
 import {
-  assertCanManageEmbeddingConfig,
-  assertEmbeddingTargetSchema,
-  assertSemanticSearchAccess,
-  resolveAdminOperatorContext,
-} from './utils/schemaPolicy.js';
-import {
   assertGrpcKeyRequirement,
   callerModuleName,
 } from './utils/productionSecurity.js';
@@ -51,18 +41,35 @@ import {
   backfillRunFromDocument,
   persistableBackfillRun,
   processBackfillControllerJob,
-  queueBackfillRuns,
   type BackfillControllerJobData,
 } from './utils/backfillExecution.js';
-import { BackfillGateError, grpcErrorFromBackfillGate } from './utils/backfillGates.js';
 import { incrementEmbeddingMetric } from './utils/embeddingMetrics.js';
 import metricsSchema from './metrics/index.js';
+import { EmbeddingsApi } from './api/embeddingsApi.js';
+import { AdminHandlers } from './admin/index.js';
+import { EmbeddingsRoutes } from './routes/index.js';
 import {
-  BackfillRequest,
-  EmbeddingConfigRequest,
-  EmbeddingConfigResponse,
-  EmbeddingsQueryResponse,
+  CancelBackfillRequest,
+  DeleteEmbeddingConfigRequest,
+  DeleteEmbeddingConfigResponse,
+  GetBackfillRequest,
+  GetCapabilitiesRequest,
+  GetCapabilitiesResponse,
+  GetConfigsRequest,
+  GetConfigsResponse,
+  GetStatusRequest,
+  GetStatusResponse,
+  ListBackfillsRequest,
+  ListBackfillsResponse,
+  ResumeBackfillRequest,
   SemanticSearchRequest,
+  SemanticSearchResponse,
+  StartBackfillRequest,
+  StartBackfillResponse,
+  UpsertConfigRequest,
+  UpsertConfigResponse,
+  BackfillMutationResponse,
+  BackfillRun as BackfillRunMessage,
 } from './protoTypes/embeddings.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -77,7 +84,14 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     functions: {
       upsertConfig: this.upsertConfig.bind(this),
       getConfigs: this.getConfigs.bind(this),
+      deleteConfig: this.deleteConfig.bind(this),
+      getCapabilities: this.getCapabilities.bind(this),
+      getStatus: this.getStatus.bind(this),
       startBackfill: this.startBackfill.bind(this),
+      getBackfill: this.getBackfill.bind(this),
+      listBackfills: this.listBackfills.bind(this),
+      cancelBackfill: this.cancelBackfill.bind(this),
+      resumeBackfill: this.resumeBackfill.bind(this),
       semanticSearch: this.semanticSearch.bind(this),
     },
   };
@@ -85,6 +99,10 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
   private database: DatabaseProvider;
   private queueController: QueueController;
   private subscribedSchemas = new Map<string, string[]>();
+  private api: EmbeddingsApi;
+  private adminRouter?: AdminHandlers;
+  private clientRouter?: EmbeddingsRoutes;
+  private routerWatchDispose?: () => void;
 
   constructor(peerManifestRoot?: string) {
     super('embeddings', peerManifestRoot);
@@ -97,6 +115,8 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
     this.queueController = QueueController.getInstance(this.grpcSdk);
+    this.api = this.createApi();
+    this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this.api);
     await this.configureRuntime();
     this.updateHealth(HealthCheckStatus.SERVING);
   }
@@ -111,177 +131,214 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     await this.configureRuntime();
   }
 
+  async onRegister() {
+    this.routerWatchDispose = this.grpcSdk.watchPeer(
+      'router',
+      serving => {
+        if (serving) void this.ensureClientRoutes();
+      },
+      { edge: 'rising', syncInitialState: true },
+    );
+  }
+
   async upsertConfig(
-    call: GrpcRequest<EmbeddingConfigRequest>,
-    callback: GrpcResponse<EmbeddingConfigResponse>,
+    call: GrpcRequest<UpsertConfigRequest>,
+    callback: GrpcResponse<UpsertConfigResponse>,
   ) {
     try {
-      const schema = await this.database.getSchema(call.request.schemaName);
-      const declared = await this.declaredSchema(call.request.schemaName);
-      assertEmbeddingTargetSchema({
-        name: schema.name,
-        ownerModule: declared?.ownerModule,
-      });
-      assertCanManageEmbeddingConfig({
+      const result = await this.api.upsertConfig(call.request, {
         callerModule: callerModuleName(call.metadata),
-        ownerModule: declared?.ownerModule,
-        schemaName: schema.name,
       });
-      const { sourceFieldAllowlist: _allowlist, ...persisted } =
-        validateEmbeddingConfigInput(
-          {
-            ...call.request,
-            sourceFieldAllowlist: [
-              ...(this.currentConfig().security.sourceFieldAllowlist ?? []),
-              ...(call.request.sourceFieldAllowlist ?? []),
-            ],
-          },
-          { provider: this.currentConfig().defaultProvider },
-          schema.fields,
-        );
-      await this.database.setSchemaExtension({
-        schemaName: persisted.schemaName,
-        fields: {
-          [persisted.targetField]: {
-            type: TYPE.Vector,
-            dimensions: persisted.dimensions,
-            similarity: persisted.similarity,
-            select: false,
-          },
-          [`${persisted.targetField}SourceHash`]: {
-            type: TYPE.String,
-            required: false,
-            select: false,
-          },
-        },
-      });
-      const model = EmbeddingConfig.getInstance();
-      const existing = await model.findOne({
-        schemaName: persisted.schemaName,
-        targetField: persisted.targetField,
-      });
-      if (existing) {
-        await model.findByIdAndUpdate(existing._id, persisted);
-      } else {
-        await model.create({ ...persisted, enabled: true });
-      }
-      if (this.currentConfig().enabled) {
-        this.subscribeToSchema(persisted.schemaName);
-      }
-      callback(null, { result: 'Embedding config saved' });
+      callback(null, result);
     } catch (err) {
-      callback(this.grpcError(err));
+      callback(this.api.mapGrpcError(err));
     }
   }
 
   async getConfigs(
-    _call: GrpcRequest<unknown>,
-    callback: GrpcResponse<EmbeddingsQueryResponse>,
+    call: GrpcRequest<GetConfigsRequest>,
+    callback: GrpcResponse<GetConfigsResponse>,
   ) {
     try {
-      const configs = await EmbeddingConfig.getInstance().findMany({});
-      callback(null, { result: JSON.stringify(configs) });
+      const result = await this.api.getConfigs(call.request, {
+        callerModule: callerModuleName(call.metadata),
+      });
+      callback(null, result);
     } catch (err) {
-      callback(this.grpcError(err));
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async deleteConfig(
+    call: GrpcRequest<DeleteEmbeddingConfigRequest>,
+    callback: GrpcResponse<DeleteEmbeddingConfigResponse>,
+  ) {
+    try {
+      const result = await this.api.deleteConfig(call.request, {
+        callerModule: callerModuleName(call.metadata),
+      });
+      callback(null, result);
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async getCapabilities(
+    call: GrpcRequest<GetCapabilitiesRequest>,
+    callback: GrpcResponse<GetCapabilitiesResponse>,
+  ) {
+    try {
+      const result = await this.api.getCapabilities(call.request.schemaName);
+      callback(null, result);
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async getStatus(
+    call: GrpcRequest<GetStatusRequest>,
+    callback: GrpcResponse<GetStatusResponse>,
+  ) {
+    try {
+      const result = await this.api.getStatus(call.request.schemaName);
+      callback(null, result);
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
     }
   }
 
   async startBackfill(
-    call: GrpcRequest<BackfillRequest>,
-    callback: GrpcResponse<EmbeddingsQueryResponse>,
+    call: GrpcRequest<StartBackfillRequest>,
+    callback: GrpcResponse<StartBackfillResponse>,
   ) {
     try {
-      const schema = await this.database.getSchema(call.request.schemaName);
-      const declared = await this.declaredSchema(call.request.schemaName);
-      assertEmbeddingTargetSchema({
-        name: schema.name,
-        ownerModule: declared?.ownerModule,
-      });
-      assertCanManageEmbeddingConfig({
+      const result = await this.api.startBackfill(call.request, {
         callerModule: callerModuleName(call.metadata),
-        ownerModule: declared?.ownerModule,
-        schemaName: schema.name,
       });
-      const [configs, capabilities, indexes] = await Promise.all([
-        EmbeddingConfig.getInstance().findMany({
-          schemaName: call.request.schemaName,
-          enabled: true,
-        }),
-        this.database.getVectorCapabilities(call.request.schemaName),
-        this.database.getVectorIndexes(call.request.schemaName),
-      ]);
-      const queued = await queueBackfillRuns(
-        {
-          schemaName: call.request.schemaName,
-          batchSize: call.request.batchSize,
-          maxBatchSize: this.currentConfig().queue.maxBatchSize ?? MAX_QUEUE_BATCH_SIZE,
-        },
-        {
-          moduleEnabled: this.currentConfig().enabled,
-          capabilities,
-          configs,
-          indexes,
-          createRun: async run => {
-            const created = await BackfillRun.getInstance().create(
-              persistableBackfillRun(run),
-            );
-            return { _id: created._id };
-          },
-          enqueueController: job => this.queueController.addBackfillControllerJob(job),
-        },
-      );
-      callback(null, { result: JSON.stringify(queued) });
+      callback(null, result);
     } catch (err) {
-      callback(this.grpcError(err));
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async getBackfill(
+    call: GrpcRequest<GetBackfillRequest>,
+    callback: GrpcResponse<BackfillRunMessage>,
+  ) {
+    try {
+      const result = await this.api.getBackfill(call.request.id, {
+        callerModule: callerModuleName(call.metadata),
+      });
+      callback(null, result);
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async listBackfills(
+    call: GrpcRequest<ListBackfillsRequest>,
+    callback: GrpcResponse<ListBackfillsResponse>,
+  ) {
+    try {
+      const result = await this.api.listBackfills(call.request, {
+        callerModule: callerModuleName(call.metadata),
+      });
+      callback(null, result);
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async cancelBackfill(
+    call: GrpcRequest<CancelBackfillRequest>,
+    callback: GrpcResponse<BackfillMutationResponse>,
+  ) {
+    try {
+      const result = await this.api.cancelBackfill(call.request.id, {
+        callerModule: callerModuleName(call.metadata),
+      });
+      callback(null, result);
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async resumeBackfill(
+    call: GrpcRequest<ResumeBackfillRequest>,
+    callback: GrpcResponse<BackfillMutationResponse>,
+  ) {
+    try {
+      const result = await this.api.resumeBackfill(call.request.id, {
+        callerModule: callerModuleName(call.metadata),
+      });
+      callback(null, result);
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
     }
   }
 
   async semanticSearch(
     call: GrpcRequest<SemanticSearchRequest>,
-    callback: GrpcResponse<EmbeddingsQueryResponse>,
+    callback: GrpcResponse<SemanticSearchResponse>,
   ) {
     try {
-      const adminOperator = resolveAdminOperatorContext({
-        requested: call.request.adminOperator,
+      const result = await this.api.semanticSearch(call.request, {
         callerModule: callerModuleName(call.metadata),
       });
-      const schema = await this.database.getSchema(call.request.schemaName);
-      if (schema.modelOptions?.conduit?.authorization?.enabled) {
-        assertSemanticSearchAccess({
-          userId: call.request.userId,
-          scope: call.request.scope,
-          adminOperator,
-        });
-      }
-      const config = await this.resolveConfig(
-        call.request.schemaName,
-        call.request.targetField,
-      );
-      const providerConfig = this.providerConfig(config.provider, config.modelName);
-      const vector = await getProvider(config.provider).embed(
-        call.request.text,
-        providerConfig,
-      );
-      if (vector.length !== config.dimensions) {
-        throw new GrpcError(
-          status.FAILED_PRECONDITION,
-          `Embedding provider returned ${vector.length} dimensions; expected ${config.dimensions}`,
-        );
-      }
-      const results = await this.database.vectorSearch({
-        schemaName: call.request.schemaName,
-        field: config.targetField,
-        vector,
-        filter: call.request.filter ? JSON.parse(call.request.filter) : undefined,
-        limit: call.request.limit,
-        userId: call.request.userId,
-        scope: call.request.scope,
-        adminOperator,
-      });
-      callback(null, { result: JSON.stringify(results) });
+      callback(null, result);
     } catch (err) {
-      callback(this.grpcError(err));
+      callback(this.api.mapGrpcError(err));
     }
+  }
+
+  private async ensureClientRoutes() {
+    if (!this.api || !this.grpcSdk.router) return;
+    this.clientRouter ??= new EmbeddingsRoutes(this.grpcServer, this.grpcSdk, this.api);
+    await this.clientRouter.registerRoutes();
+  }
+
+  private createApi() {
+    return new EmbeddingsApi({
+      currentConfig: () => this.currentConfig(),
+      getSchema: schemaName => this.database.getSchema(schemaName),
+      declaredSchema: schemaName => this.declaredSchema(schemaName),
+      setSchemaExtension: extension => this.database.setSchemaExtension(extension),
+      getVectorCapabilities: schemaName =>
+        this.database.getVectorCapabilities(schemaName),
+      getVectorIndexes: schemaName => this.database.getVectorIndexes(schemaName),
+      vectorSearch: input => this.database.vectorSearch(input),
+      configs: {
+        findMany: query => EmbeddingConfig.getInstance().findMany(query),
+        findOne: query => EmbeddingConfig.getInstance().findOne(query),
+        create: doc => EmbeddingConfig.getInstance().create(doc),
+        findByIdAndUpdate: (id, doc) =>
+          EmbeddingConfig.getInstance().findByIdAndUpdate(id, doc),
+        deleteOne: query => EmbeddingConfig.getInstance().deleteOne(query),
+      },
+      backfills: {
+        findMany: (query, options) => BackfillRun.getInstance().findMany(query, options),
+        findOne: query => BackfillRun.getInstance().findOne(query),
+        countDocuments: query => BackfillRun.getInstance().countDocuments(query),
+        create: doc => BackfillRun.getInstance().create(doc),
+        findByIdAndUpdate: (id, doc) =>
+          BackfillRun.getInstance().findByIdAndUpdate(id, doc),
+      },
+      getQueueStatus: () => this.queueController.getQueueStatus(),
+      enqueueBackfill: job => this.queueController.addBackfillControllerJob(job),
+      embed: (input, provider, model) =>
+        getProvider(provider).embed(input, this.providerConfig(provider, model)),
+      onConfigChanged: async schemaName => {
+        const enabled = await EmbeddingConfig.getInstance().findMany({
+          schemaName,
+          enabled: true,
+        });
+        if (this.currentConfig().enabled && enabled.length) {
+          this.subscribeToSchema(schemaName);
+        } else {
+          this.unsubscribeFromSchema(schemaName);
+        }
+      },
+    });
   }
 
   private async configureRuntime() {
@@ -522,17 +579,6 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     );
   }
 
-  private grpcError(err: unknown) {
-    if (err instanceof BackfillGateError) {
-      const mapped = grpcErrorFromBackfillGate(err);
-      return { code: mapped.code, message: sanitizeErrorMessage(mapped) };
-    }
-    if (err instanceof GrpcError) {
-      return { code: err.code, message: sanitizeErrorMessage(err) };
-    }
-    return { code: status.INTERNAL, message: sanitizeErrorMessage(err) };
-  }
-
   private providerConfig(provider: string, model: string) {
     const config = this.currentConfig();
     const providers = config.providers as Record<string, Record<string, unknown>>;
@@ -552,19 +598,6 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       maxInputBytes: config.security.maxEmbedInputBytes,
       maxResponseBytes: config.security.maxEmbedResponseBytes,
     };
-  }
-
-  private async resolveConfig(schemaName: string, targetField?: string) {
-    const query: Record<string, unknown> = { schemaName, enabled: true };
-    if (targetField) query.targetField = targetField;
-    const config = await EmbeddingConfig.getInstance().findOne(query);
-    if (!config) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        'No embedding config found for semantic search',
-      );
-    }
-    return config;
   }
 
   private currentConfig() {
