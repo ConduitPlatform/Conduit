@@ -4,6 +4,7 @@ import {
   VectorIndexStatus,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { selectEmbeddingVectorIndex } from './configChange.js';
 
 export const BACKFILL_GATE_REASONS = [
   'module_disabled',
@@ -64,11 +65,7 @@ export function findTargetVectorIndex(
   indexes: readonly VectorIndexGate[],
   targetField: string,
 ): VectorIndexGate | undefined {
-  return (
-    indexes.find(
-      index => index.field === targetField && index.name === `${targetField}_vector`,
-    ) ?? indexes.find(index => index.field === targetField)
-  );
+  return selectEmbeddingVectorIndex(indexes, targetField);
 }
 
 export function assertBackfillExecutable(args: {

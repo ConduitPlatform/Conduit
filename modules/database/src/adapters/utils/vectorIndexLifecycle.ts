@@ -40,6 +40,31 @@ export function defaultVectorIndexName(
   return physicalTableName ? `${physicalTableName}_${field}_vector` : `${field}_vector`;
 }
 
+export function vectorIndexGeneration(name?: string): number {
+  if (typeof name !== 'string' || name.length === 0) return 0;
+  const match = /_v(\d+)$/.exec(name);
+  if (match) return Number(match[1]);
+  return 1;
+}
+
+export function selectLiveVectorIndexForField<
+  T extends { field?: string; name?: string },
+>(indexes: readonly T[], field: string): T | undefined {
+  const matches = indexes.filter(index => index.field === field);
+  if (!matches.length) return undefined;
+  const defaultName = defaultVectorIndexName(field);
+  return matches.reduce((best, current) => {
+    const bestGeneration = vectorIndexGeneration(best.name);
+    const currentGeneration = vectorIndexGeneration(current.name);
+    if (currentGeneration !== bestGeneration) {
+      return currentGeneration > bestGeneration ? current : best;
+    }
+    if (current.name === defaultName) return current;
+    if (best.name === defaultName) return best;
+    return best;
+  });
+}
+
 export function mongoVectorFilterFields(filterFields?: readonly string[]): string[] {
   const fields: string[] = [];
   for (const field of [MONGO_VECTOR_ID_FILTER_FIELD, ...(filterFields ?? [])]) {

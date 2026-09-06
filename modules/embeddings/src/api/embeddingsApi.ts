@@ -22,6 +22,7 @@ import {
   BackfillGateError,
   findTargetVectorIndex,
   grpcErrorFromBackfillGate,
+  isEmbeddingVectorIndexQueryable,
 } from '../utils/backfillGates.js';
 import {
   defaultEmbeddingVectorIndexName,
@@ -29,7 +30,9 @@ import {
   hashFieldsToInvalidate,
   isInPlaceDimensionChange,
   materialChangeWarnings,
+  nextEmbeddingVectorIndexName,
   requiresIndexRecreation,
+  sameEmbeddingVectorIndexFamily,
 } from '../utils/configChange.js';
 import { MAX_QUEUE_BATCH_SIZE } from '../utils/embeddingJobs.js';
 import { ACTIVE_BACKFILL_STATES } from '../utils/backfillRun.js';
@@ -233,10 +236,15 @@ export class EmbeddingsApi {
     }
     let persistEnabled = enabled;
     let provisionedIndex = false;
+    let replacementIndexName: string | undefined;
     const provisionWarnings: string[] = [];
     try {
       if (existing && changed.length && requiresIndexRecreation(changed)) {
-        await this.recreateVectorIndex(existing, persisted, indexes);
+        replacementIndexName = await this.recreateVectorIndex(
+          existing,
+          persisted,
+          indexes,
+        );
         indexes = await this.deps.getVectorIndexes(persisted.schemaName);
         provisionedIndex = true;
       } else {
@@ -245,6 +253,12 @@ export class EmbeddingsApi {
           indexes = await this.deps.getVectorIndexes(persisted.schemaName);
         }
       }
+      indexes = await this.retireSupersededVectorIndexes({
+        schemaName: persisted.schemaName,
+        targetField: persisted.targetField,
+        previousField: existing?.targetField,
+        indexes,
+      });
     } catch (err) {
       persistEnabled = false;
       provisionWarnings.push(
@@ -279,6 +293,18 @@ export class EmbeddingsApi {
     }
     if (enabled && persistEnabled) {
       try {
+        if (replacementIndexName) {
+          const replacement = indexes.find(index => index.name === replacementIndexName);
+          if (!isEmbeddingVectorIndexQueryable(replacement)) {
+            throw new BackfillGateError(
+              'index_not_queryable',
+              `Vector index '${replacementIndexName}' is not queryable (status: ${
+                replacement?.status ?? 'missing'
+              }). Wait until the index is ready before enabling this config.`,
+              replacement?.status ?? 'missing',
+            );
+          }
+        }
         assertConfigActivation({
           moduleEnabled: configDefaults.enabled,
           capabilities,
@@ -785,7 +811,7 @@ export class EmbeddingsApi {
   }
 
   private async recreateVectorIndex(
-    existing: EmbeddingConfigRecord,
+    _existing: EmbeddingConfigRecord,
     next:
       | EmbeddingConfigRecord
       | {
@@ -800,31 +826,69 @@ export class EmbeddingsApi {
       queryable?: boolean;
       status?: string;
     }>,
-  ): Promise<void> {
-    const current = findTargetVectorIndex(indexes, existing.targetField);
-    if (current?.name) {
-      try {
-        await this.deps.deleteVectorIndex(existing.schemaName, current.name);
-      } catch (err) {
-        throw new GrpcError(
-          status.FAILED_PRECONDITION,
-          `Failed to delete vector index '${current.name}': ${sanitizeErrorMessage(err)}`,
-        );
-      }
-    }
+  ): Promise<string> {
+    const replacementName = nextEmbeddingVectorIndexName(next.targetField, indexes);
     try {
       await this.deps.createVectorIndex(next.schemaName, {
         field: next.targetField,
         dimensions: next.dimensions,
         similarity: next.similarity as VectorIndexDefinition['similarity'],
-        name: defaultEmbeddingVectorIndexName(next.targetField),
+        name: replacementName,
       });
     } catch (err) {
       throw new GrpcError(
         status.FAILED_PRECONDITION,
-        `Failed to recreate vector index for '${next.targetField}': ${sanitizeErrorMessage(err)}`,
+        `Failed to provision replacement vector index for '${next.targetField}': ${sanitizeErrorMessage(err)}`,
       );
     }
+    return replacementName;
+  }
+
+  private async retireSupersededVectorIndexes(args: {
+    schemaName: string;
+    targetField: string;
+    previousField?: string;
+    indexes: Array<{
+      field?: string;
+      name?: string;
+      queryable?: boolean;
+      status?: string;
+    }>;
+  }): Promise<
+    Array<{ field?: string; name?: string; queryable?: boolean; status?: string }>
+  > {
+    const selected = findTargetVectorIndex(args.indexes, args.targetField);
+    if (!selected?.name || !isEmbeddingVectorIndexQueryable(selected)) {
+      return args.indexes;
+    }
+    const retireNames = new Set<string>();
+    for (const index of args.indexes) {
+      if (!index.name || index.name === selected.name) continue;
+      if (
+        index.field === args.targetField &&
+        sameEmbeddingVectorIndexFamily(index.name, selected.name)
+      ) {
+        retireNames.add(index.name);
+      }
+    }
+    if (args.previousField && args.previousField !== args.targetField) {
+      const previous = findTargetVectorIndex(args.indexes, args.previousField);
+      if (previous?.name && previous.name !== selected.name) {
+        retireNames.add(previous.name);
+      }
+    }
+    if (!retireNames.size) return args.indexes;
+    for (const name of retireNames) {
+      try {
+        await this.deps.deleteVectorIndex(args.schemaName, name);
+      } catch (err) {
+        throw new GrpcError(
+          status.FAILED_PRECONDITION,
+          `Failed to retire superseded vector index '${name}': ${sanitizeErrorMessage(err)}`,
+        );
+      }
+    }
+    return this.deps.getVectorIndexes(args.schemaName);
   }
 
   private async supersedeActiveBackfills(configId: string): Promise<void> {

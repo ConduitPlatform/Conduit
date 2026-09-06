@@ -21,6 +21,7 @@ import {
   planPostgresVectorIndexCreate,
   postgresVectorIndexDefinitionMatches,
   renderPostgresCreateVectorIndexSql,
+  selectLiveVectorIndexForField,
 } from '../vectorIndexLifecycle.js';
 
 const vectorField = {
@@ -40,6 +41,28 @@ describe('vector index lifecycle', () => {
     expect(mongoVectorFilterFields(['tenantId'])).toEqual(['_id', 'tenantId']);
     expect(mongoVectorFilterFields(['_id', 'tenantId'])).toEqual(['_id', 'tenantId']);
     expect(mongoVectorFilterFields()).toEqual(['_id']);
+  });
+
+  it('selects the highest generation live index for a field', () => {
+    expect(
+      selectLiveVectorIndexForField(
+        [
+          { field: 'embedding', name: 'embedding_vector' },
+          { field: 'embedding', name: 'embedding_vector_v2' },
+          { field: 'title', name: 'title_vector_v4' },
+        ],
+        'embedding',
+      )?.name,
+    ).toBe('embedding_vector_v2');
+    expect(
+      selectLiveVectorIndexForField(
+        [
+          { field: 'embedding', name: 'cnd_Article_embedding_vector' },
+          { field: 'embedding', name: 'embedding_vector' },
+        ],
+        'embedding',
+      )?.name,
+    ).toBe('embedding_vector');
   });
 
   it('binds declared indexes to field dimensions/similarity and rejects mismatches', () => {

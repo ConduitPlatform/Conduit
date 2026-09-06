@@ -117,6 +117,21 @@ describe('backfill execution gates', () => {
       false,
     );
     assert.deepEqual(findTargetVectorIndex([readyIndex], 'embedding'), readyIndex);
+    assert.equal(
+      findTargetVectorIndex(
+        [
+          readyIndex,
+          {
+            field: 'embedding',
+            name: 'embedding_vector_v2',
+            status: VectorIndexStatus.Pending,
+            queryable: false,
+          },
+        ],
+        'embedding',
+      )?.name,
+      'embedding_vector_v2',
+    );
     assert.throws(
       () =>
         assertBackfillExecutable({
