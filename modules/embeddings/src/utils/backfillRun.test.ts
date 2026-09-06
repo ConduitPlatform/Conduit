@@ -1,5 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import type { Query } from '@conduitplatform/grpc-sdk';
+import type { BackfillRun } from '../models/BackfillRun.schema.js';
 import {
   applyAtomicBackfillCountDelta,
   applyBackfillJobCounts,
@@ -27,6 +29,7 @@ import {
   resumeBackfillRun,
   sanitizeBackfillError,
   startBackfillRun,
+  toBackfillCountUpdateQuery,
 } from './backfillRun.js';
 
 const now = new Date('2026-09-06T16:00:00.000Z');
@@ -225,6 +228,19 @@ describe('backfill counters', () => {
     );
     assert.equal(counters.processedCount, 30);
     assert.equal(counters.failedCount, 10);
+  });
+
+  it('types atomic count patches as Query-compatible $inc updates', () => {
+    const processed: Query<BackfillRun> = toBackfillCountUpdateQuery(
+      backfillCountIncrementPatch('processed'),
+    );
+    const failed: Query<BackfillRun> = toBackfillCountUpdateQuery(
+      backfillCountIncrementPatch('failed'),
+    );
+    assert.deepEqual(processed, { $inc: { processedCount: 1 } });
+    assert.deepEqual(failed, { $inc: { failedCount: 1 } });
+    assert.equal('$set' in processed, false);
+    assert.equal('$set' in failed, false);
   });
 });
 

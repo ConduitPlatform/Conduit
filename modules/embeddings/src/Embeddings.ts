@@ -43,6 +43,7 @@ import {
   processBackfillControllerJob,
   type BackfillControllerJobData,
 } from './utils/backfillExecution.js';
+import { toBackfillCountUpdateQuery } from './utils/backfillRun.js';
 import { incrementEmbeddingMetric } from './utils/embeddingMetrics.js';
 import metricsSchema from './metrics/index.js';
 import { EmbeddingsApi } from './api/embeddingsApi.js';
@@ -550,7 +551,10 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       runId,
       outcome,
       incrementCounts: async (id, patch) => {
-        const updated = await BackfillRun.getInstance().findByIdAndUpdate(id, patch);
+        const updated = await BackfillRun.getInstance().findByIdAndUpdate(
+          id,
+          toBackfillCountUpdateQuery(patch),
+        );
         return updated ? backfillRunFromDocument(updated) : null;
       },
     });
