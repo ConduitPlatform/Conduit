@@ -1,12 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { redactSensitiveConfig } from '@conduitplatform/module-tools';
-import { redactProviderConfig, redactSecretText } from './redactConfig.js';
+import { redactSecretText } from './redactConfig.js';
 
 describe('provider secret redaction', () => {
   it('redacts API keys from config objects and error text', () => {
     assert.equal(
-      redactProviderConfig({ endpoint: 'https://api.openai.com', apiKey: 'sk-secret' })
+      redactSensitiveConfig({ endpoint: 'https://api.openai.com', apiKey: 'sk-secret' })
         .apiKey,
       '[REDACTED]',
     );

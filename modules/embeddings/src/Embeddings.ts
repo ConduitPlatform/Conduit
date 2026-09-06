@@ -384,46 +384,19 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     configs.forEach(item => this.subscribeToSchema(item.schemaName));
   }
 
-  private schemaSubscriptionIds(schemaName: string): [string, string, string, string] {
-    const idPrefix = `embeddings:${schemaName}`;
-    return [
-      `${idPrefix}:create`,
-      `${idPrefix}:update`,
-      `${idPrefix}:createMany`,
-      `${idPrefix}:updateMany`,
-    ];
-  }
-
   private subscribeToSchema(schemaName: string) {
     if (this.subscribedSchemas.has(schemaName)) return;
-    const [createId, updateId, createManyId, updateManyId] =
-      this.schemaSubscriptionIds(schemaName);
-    this.grpcSdk.bus?.subscribe(
-      `database:create:${schemaName}`,
-      message => this.enqueueMutation(schemaName, message),
-      createId,
-    );
-    this.grpcSdk.bus?.subscribe(
-      `database:update:${schemaName}`,
-      message => this.enqueueMutation(schemaName, message),
-      updateId,
-    );
-    this.grpcSdk.bus?.subscribe(
-      `database:createMany:${schemaName}`,
-      message => this.enqueueMutation(schemaName, message),
-      createManyId,
-    );
-    this.grpcSdk.bus?.subscribe(
-      `database:updateMany:${schemaName}`,
-      message => this.enqueueMutation(schemaName, message),
-      updateManyId,
-    );
-    this.subscribedSchemas.set(schemaName, [
-      createId,
-      updateId,
-      createManyId,
-      updateManyId,
-    ]);
+    const events = ['create', 'update', 'createMany', 'updateMany'] as const;
+    const ids = events.map(event => {
+      const id = `embeddings:${schemaName}:${event}`;
+      this.grpcSdk.bus?.subscribe(
+        `database:${event}:${schemaName}`,
+        message => this.enqueueMutation(schemaName, message),
+        id,
+      );
+      return id;
+    });
+    this.subscribedSchemas.set(schemaName, ids);
   }
 
   private unsubscribeFromSchema(schemaName: string) {
@@ -514,7 +487,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
             schemaName: parsed.data.schemaName,
             enabled: true,
           })
-    ).filter(Boolean) as EmbeddingConfig[];
+    ).filter((config): config is EmbeddingConfig => Boolean(config));
     const matching = configs.filter(
       config => config.enabled && config.schemaName === parsed.data.schemaName,
     );

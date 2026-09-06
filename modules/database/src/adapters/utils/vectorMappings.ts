@@ -1,5 +1,4 @@
 import {
-  TYPE,
   VectorIndexDefinition,
   VectorIndexMethod,
   VectorSimilarity,
@@ -183,8 +182,4 @@ export function resolveVectorFieldFromSchema(
   const field = schemaFields?.[fieldName];
   if (!isObjectFormVectorField(field)) return undefined;
   return field;
-}
-
-export function isVectorSchemaType(type: unknown) {
-  return type === TYPE.Vector || type === 'Vector';
 }

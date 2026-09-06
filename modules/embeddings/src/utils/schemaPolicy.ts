@@ -1,5 +1,4 @@
-import { TYPE } from '@conduitplatform/grpc-sdk';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { GrpcError, TYPE } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { BACKFILL_RUN_SCHEMA } from './backfillRun.js';
 
