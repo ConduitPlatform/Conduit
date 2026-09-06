@@ -12,7 +12,6 @@ import {
   UntypedArray,
   VectorCapabilities,
   VectorIndexDefinition,
-  VectorIndexMethod,
   VectorSearchInput,
   VectorSearchResult,
 } from '@conduitplatform/grpc-sdk';
@@ -34,6 +33,21 @@ import {
 import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter.js';
 import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter.js';
 import { isEqual, isNil } from 'lodash-es';
+import {
+  assertVectorIndexContract,
+  assertVectorIndexMatchesField,
+} from '../utils/vectorField.js';
+import {
+  postgresVectorCapabilities,
+  sqlFallbackVectorCapabilities,
+} from '../utils/vectorCapabilities.js';
+import {
+  fromPostgresVectorIndex,
+  pgVectorDistanceOperator,
+  pgVectorOperator,
+  postgresIndexMethodSql,
+  resolveVectorFieldFromSchema,
+} from '../utils/vectorMappings.js';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -429,35 +443,17 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
 
   async getVectorCapabilities(schemaName?: string): Promise<VectorCapabilities> {
     if (this.sequelize.getDialect() !== 'postgres') {
-      return {
-        supported: false,
-        storage: false,
-        indexing: false,
-        search: false,
-        provider: 'unsupported',
-        reason: `${this.sequelize.getDialect()} does not support Conduit vector search`,
-      };
+      return sqlFallbackVectorCapabilities(this.sequelize.getDialect());
     }
     try {
       await this.sequelize.query("SELECT 'vector'::regtype");
-      return {
-        supported: true,
-        storage: true,
-        indexing: true,
-        search: true,
-        provider: 'postgres',
-      };
+      return postgresVectorCapabilities({ pgvectorAvailable: true });
     } catch (err) {
-      return {
-        supported: true,
-        storage: false,
-        indexing: false,
-        search: false,
-        provider: 'postgres',
-        reason: schemaName
-          ? `Schema ${schemaName} cannot use pgvector: ${(err as Error).message}`
-          : (err as Error).message,
-      };
+      return postgresVectorCapabilities({
+        pgvectorAvailable: false,
+        error: (err as Error).message,
+        schemaName,
+      });
     }
   }
 
@@ -467,12 +463,13 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   ): Promise<string> {
     this.ensurePostgresVectorSupport(schemaName);
     this.validateVectorField(schemaName, index);
+    assertVectorIndexContract('postgres', index);
     const tableName = this.getPhysicalTableName(schemaName);
     const indexName = this.quoteIdentifier(
       index.name ?? `${tableName}_${index.field}_vector`,
     );
-    const method = index.method === VectorIndexMethod.IVFFlat ? 'ivfflat' : 'hnsw';
-    const operator = this.pgVectorOperator(index.similarity);
+    const method = postgresIndexMethodSql(index.method);
+    const operator = pgVectorOperator(index.similarity);
     const withOptions =
       method === 'ivfflat'
         ? this.renderWithOptions({ lists: index.options?.ivfflat?.lists })
@@ -496,9 +493,21 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         tableName,
       )}`,
     );
+    const schema = this.models[schemaName]?.originalSchema;
+    const schemaFields = (schema?.compiledFields ?? schema?.fields) as
+      Record<string, unknown> | undefined;
     return (rows[0] as any[])
       .filter(row => /USING (hnsw|ivfflat)/i.test(row.indexdef))
-      .map(row => this.fromPostgresVectorIndex(row.indexname, row.indexdef));
+      .map(row => {
+        const mapped = fromPostgresVectorIndex(row.indexname, row.indexdef);
+        const field = resolveVectorFieldFromSchema(schemaFields, mapped.field);
+        if (!field) return mapped;
+        return {
+          ...mapped,
+          dimensions: field.dimensions,
+          similarity: field.similarity ?? mapped.similarity,
+        };
+      });
   }
 
   async deleteVectorIndex(schemaName: string, indexName: string): Promise<string> {
@@ -530,7 +539,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     );
     if (isNil(authorizedQuery)) return [];
     const tableName = this.getPhysicalTableName(request.schemaName);
-    const distance = this.pgVectorDistanceOperator(field.similarity ?? 'cosine');
+    const distance = pgVectorDistanceOperator(field.similarity ?? 'cosine');
     const where = this.renderSimpleWhere(authorizedQuery);
     const limit = Math.max(1, Math.min(request.limit ?? 10, 1000));
     const vector = `[${request.vector.join(',')}]`;
@@ -610,15 +619,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     const schema = this.models[schemaName].originalSchema;
     const field = (schema.compiledFields?.[index.field] ??
       schema.fields?.[index.field]) as any;
-    if (!field || field.type !== 'Vector') {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Vector index field is not a vector');
-    }
-    if (field.dimensions !== index.dimensions) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        `Vector index dimensions mismatch: field ${field.dimensions}, index ${index.dimensions}`,
-      );
-    }
+    assertVectorIndexMatchesField(field, index);
   }
 
   private getPhysicalTableName(schemaName: string) {
@@ -627,18 +628,6 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
 
   private quoteIdentifier(identifier: string) {
     return `"${identifier.replace(/"/g, '""')}"`;
-  }
-
-  private pgVectorOperator(similarity: string) {
-    if (similarity === 'euclidean') return 'vector_l2_ops';
-    if (similarity === 'dotProduct') return 'vector_ip_ops';
-    return 'vector_cosine_ops';
-  }
-
-  private pgVectorDistanceOperator(similarity: string) {
-    if (similarity === 'euclidean') return '<->';
-    if (similarity === 'dotProduct') return '<#>';
-    return '<=>';
   }
 
   private renderWithOptions(options: Record<string, number | undefined>) {
@@ -729,28 +718,6 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     hiddenFields.forEach(field => selected.delete(field));
     if (!selected.size) selected.add('_id');
     return [...selected].map(field => this.quoteIdentifier(field)).join(', ');
-  }
-
-  private fromPostgresVectorIndex(
-    name: string,
-    definition: string,
-  ): VectorIndexDefinition {
-    const method = /USING\s+(\w+)/i.exec(definition)?.[1] as
-      | VectorIndexMethod
-      | undefined;
-    const field = /\((?:"([^"]+)"|(\w+))\s+vector_/i.exec(definition);
-    const operator = /vector_(l2|cosine|ip)_ops/i.exec(definition)?.[1];
-    return {
-      name,
-      field: field?.[1] ?? field?.[2] ?? '',
-      dimensions: 0,
-      similarity: (operator === 'l2'
-        ? 'euclidean'
-        : operator === 'ip'
-          ? 'dotProduct'
-          : 'cosine') as any,
-      method: method as VectorIndexMethod | undefined,
-    };
   }
 
   private checkAndConvertIndexes(

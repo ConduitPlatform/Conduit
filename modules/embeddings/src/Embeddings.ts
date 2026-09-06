@@ -7,7 +7,6 @@ import {
   GrpcResponse,
   HealthCheckStatus,
   TYPE,
-  VectorSimilarity,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConfigController,
@@ -19,6 +18,7 @@ import * as models from './models/index.js';
 import { EmbeddingConfig } from './models/index.js';
 import { QueueController } from './controllers/queue.controller.js';
 import { getProvider, hashEmbeddingInput } from './providers/index.js';
+import { validateEmbeddingConfigInput } from './utils/validateEmbeddingConfig.js';
 import metricsSchema from './metrics/index.js';
 import {
   BackfillRequest,
@@ -278,21 +278,9 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
   }
 
   private validateConfigRequest(request: EmbeddingConfigRequest) {
-    if (!request.schemaName || !request.targetField || !request.sourceFields.length) {
-      throw new Error('schemaName, targetField, and sourceFields are required');
-    }
-    if (!Number.isInteger(request.dimensions) || request.dimensions <= 0) {
-      throw new Error('dimensions must be a positive integer');
-    }
-    return {
-      schemaName: request.schemaName,
-      sourceFields: request.sourceFields,
-      targetField: request.targetField,
-      provider: request.provider || this.currentConfig().defaultProvider,
-      modelName: request.model,
-      dimensions: request.dimensions,
-      similarity: (request.similarity || VectorSimilarity.Cosine) as VectorSimilarity,
-    };
+    return validateEmbeddingConfigInput(request, {
+      provider: this.currentConfig().defaultProvider,
+    });
   }
 
   private async resolveConfig(schemaName: string, targetField?: string) {
