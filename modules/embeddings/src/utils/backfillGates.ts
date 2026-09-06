@@ -4,7 +4,11 @@ import {
   VectorIndexStatus,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { selectEmbeddingVectorIndex } from './configChange.js';
+import {
+  selectEmbeddingVectorIndex,
+  type EmbeddingVectorIndexContract,
+  type EmbeddingVectorIndexShape,
+} from './configChange.js';
 
 export const BACKFILL_GATE_REASONS = [
   'module_disabled',
@@ -35,13 +39,27 @@ export interface BackfillConfigGate {
   enabled?: boolean;
   schemaName?: string;
   targetField?: string;
+  dimensions?: number;
+  similarity?: string;
+  method?: string;
 }
 
-export interface VectorIndexGate {
-  field?: string;
-  name?: string;
+export interface VectorIndexGate extends EmbeddingVectorIndexShape {
   queryable?: boolean;
   status?: string;
+}
+
+export type EmbeddingIndexContractInput = Omit<EmbeddingVectorIndexContract, 'field'>;
+
+export function embeddingIndexContractFromConfig(
+  config: BackfillConfigGate,
+): EmbeddingIndexContractInput | undefined {
+  if (typeof config.dimensions !== 'number') return undefined;
+  return {
+    dimensions: config.dimensions,
+    similarity: config.similarity,
+    method: config.method,
+  };
 }
 
 export function isEmbeddingVectorIndexQueryable(index?: VectorIndexGate): boolean {
@@ -64,8 +82,9 @@ export function isEmbeddingVectorIndexQueryable(index?: VectorIndexGate): boolea
 export function findTargetVectorIndex(
   indexes: readonly VectorIndexGate[],
   targetField: string,
+  contract?: EmbeddingIndexContractInput,
 ): VectorIndexGate | undefined {
-  return selectEmbeddingVectorIndex(indexes, targetField);
+  return selectEmbeddingVectorIndex(indexes, targetField, contract);
 }
 
 export function assertBackfillExecutable(args: {
@@ -117,9 +136,10 @@ export function assertBackfillExecutable(args: {
       'Embedding config is missing a target vector field',
     );
   }
-  const index = findTargetVectorIndex(args.indexes ?? [], targetField);
-  if (isEmbeddingVectorIndexQueryable(index)) return;
-  const indexStatus = index?.status ?? 'missing';
+  const contract = embeddingIndexContractFromConfig(args.config);
+  const index = findTargetVectorIndex(args.indexes ?? [], targetField, contract);
+  if (contract && isEmbeddingVectorIndexQueryable(index)) return;
+  const indexStatus = contract ? (index?.status ?? 'missing') : 'missing';
   throw new BackfillGateError(
     'index_not_queryable',
     `Vector index for field '${targetField}' is not queryable (status: ${indexStatus}). ` +

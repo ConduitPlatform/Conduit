@@ -11,6 +11,7 @@ import {
   requiresIndexRecreation,
   selectEmbeddingVectorIndex,
   sameEmbeddingVectorIndexFamily,
+  embeddingVectorIndexMatchesContract,
 } from './configChange.js';
 
 const base = {
@@ -127,6 +128,68 @@ describe('material embedding config changes', () => {
         'embedding',
       )?.name,
       'embedding_vector_v2',
+    );
+  });
+
+  it('matches live indexes only when field, dimensions, similarity, and method agree', () => {
+    const cosine = {
+      field: 'embedding',
+      name: 'embedding_vector',
+      dimensions: 3,
+      similarity: 'cosine',
+      method: 'hnsw',
+    };
+    const euclidean = {
+      ...cosine,
+      name: 'embedding_vector_v2',
+      similarity: 'euclidean',
+    };
+    const ivf = { ...cosine, method: 'ivfflat' };
+    assert.equal(
+      embeddingVectorIndexMatchesContract(cosine, {
+        field: 'embedding',
+        dimensions: 3,
+        similarity: 'cosine',
+      }),
+      true,
+    );
+    assert.equal(
+      embeddingVectorIndexMatchesContract(cosine, {
+        field: 'embedding',
+        dimensions: 3,
+        similarity: 'euclidean',
+      }),
+      false,
+    );
+    assert.equal(
+      embeddingVectorIndexMatchesContract(cosine, {
+        field: 'embedding',
+        dimensions: 8,
+        similarity: 'cosine',
+      }),
+      false,
+    );
+    assert.equal(
+      embeddingVectorIndexMatchesContract(ivf, {
+        field: 'embedding',
+        dimensions: 3,
+        similarity: 'cosine',
+      }),
+      false,
+    );
+    assert.equal(
+      selectEmbeddingVectorIndex([cosine, euclidean], 'embedding', {
+        dimensions: 3,
+        similarity: 'euclidean',
+      })?.name,
+      'embedding_vector_v2',
+    );
+    assert.equal(
+      selectEmbeddingVectorIndex([cosine], 'embedding', {
+        dimensions: 3,
+        similarity: 'euclidean',
+      }),
+      undefined,
     );
   });
 });

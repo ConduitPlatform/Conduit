@@ -20,9 +20,11 @@ import {
 } from '../utils/backfillExecution.js';
 import {
   BackfillGateError,
+  embeddingIndexContractFromConfig,
   findTargetVectorIndex,
   grpcErrorFromBackfillGate,
   isEmbeddingVectorIndexQueryable,
+  type VectorIndexGate,
 } from '../utils/backfillGates.js';
 import {
   defaultEmbeddingVectorIndexName,
@@ -31,7 +33,6 @@ import {
   isInPlaceDimensionChange,
   materialChangeWarnings,
   nextEmbeddingVectorIndexName,
-  requiresIndexRecreation,
   sameEmbeddingVectorIndexFamily,
 } from '../utils/configChange.js';
 import { MAX_QUEUE_BATCH_SIZE } from '../utils/embeddingJobs.js';
@@ -138,11 +139,7 @@ export interface EmbeddingsApiDeps {
     fields: ConduitModel;
   }) => Promise<unknown>;
   getVectorCapabilities: (schemaName?: string) => Promise<VectorCapabilities>;
-  getVectorIndexes: (
-    schemaName: string,
-  ) => Promise<
-    Array<{ field?: string; name?: string; queryable?: boolean; status?: string }>
-  >;
+  getVectorIndexes: (schemaName: string) => Promise<VectorIndexGate[]>;
   vectorSearch: (input: {
     schemaName: string;
     field: string;
@@ -238,16 +235,19 @@ export class EmbeddingsApi {
     let provisionedIndex = false;
     let replacementIndexName: string | undefined;
     const provisionWarnings: string[] = [];
+    const indexContract = embeddingIndexContractFromConfig(persisted);
     try {
-      if (existing && changed.length && requiresIndexRecreation(changed)) {
-        replacementIndexName = await this.recreateVectorIndex(
-          existing,
-          persisted,
-          indexes,
-        );
+      const matchingIndex = findTargetVectorIndex(
+        indexes,
+        persisted.targetField,
+        indexContract,
+      );
+      const hasFieldIndex = indexes.some(index => index.field === persisted.targetField);
+      if (!matchingIndex && hasFieldIndex && capabilities.indexing) {
+        replacementIndexName = await this.recreateVectorIndex(persisted, indexes);
         indexes = await this.deps.getVectorIndexes(persisted.schemaName);
         provisionedIndex = true;
-      } else {
+      } else if (!matchingIndex) {
         provisionedIndex = await this.ensureVectorIndex(persisted, indexes, capabilities);
         if (provisionedIndex) {
           indexes = await this.deps.getVectorIndexes(persisted.schemaName);
@@ -256,6 +256,8 @@ export class EmbeddingsApi {
       indexes = await this.retireSupersededVectorIndexes({
         schemaName: persisted.schemaName,
         targetField: persisted.targetField,
+        dimensions: persisted.dimensions,
+        similarity: persisted.similarity,
         previousField: existing?.targetField,
         indexes,
       });
@@ -273,6 +275,8 @@ export class EmbeddingsApi {
             targetField: persisted.targetField,
             enabled,
             schemaName: persisted.schemaName,
+            dimensions: persisted.dimensions,
+            similarity: persisted.similarity,
           },
         ],
         indexes,
@@ -284,7 +288,7 @@ export class EmbeddingsApi {
       ...provisionWarnings,
     ];
     if (
-      !findTargetVectorIndex(indexes, persisted.targetField) &&
+      !findTargetVectorIndex(indexes, persisted.targetField, indexContract) &&
       !capabilities.indexing
     ) {
       warnings.push(
@@ -312,6 +316,8 @@ export class EmbeddingsApi {
             enabled,
             schemaName: persisted.schemaName,
             targetField: persisted.targetField,
+            dimensions: persisted.dimensions,
+            similarity: persisted.similarity,
           },
           indexes,
         });
@@ -784,15 +790,18 @@ export class EmbeddingsApi {
       dimensions: number;
       similarity: string;
     },
-    indexes: Array<{
-      field?: string;
-      name?: string;
-      queryable?: boolean;
-      status?: string;
-    }>,
+    indexes: VectorIndexGate[],
     capabilities: VectorCapabilities,
   ): Promise<boolean> {
-    if (findTargetVectorIndex(indexes, next.targetField)) return false;
+    if (
+      findTargetVectorIndex(
+        indexes,
+        next.targetField,
+        embeddingIndexContractFromConfig(next),
+      )
+    ) {
+      return false;
+    }
     if (!capabilities.indexing) return false;
     try {
       await this.deps.createVectorIndex(next.schemaName, {
@@ -811,21 +820,13 @@ export class EmbeddingsApi {
   }
 
   private async recreateVectorIndex(
-    _existing: EmbeddingConfigRecord,
-    next:
-      | EmbeddingConfigRecord
-      | {
-          schemaName: string;
-          targetField: string;
-          dimensions: number;
-          similarity: string;
-        },
-    indexes: Array<{
-      field?: string;
-      name?: string;
-      queryable?: boolean;
-      status?: string;
-    }>,
+    next: {
+      schemaName: string;
+      targetField: string;
+      dimensions: number;
+      similarity: string;
+    },
+    indexes: VectorIndexGate[],
   ): Promise<string> {
     const replacementName = nextEmbeddingVectorIndexName(next.targetField, indexes);
     try {
@@ -847,17 +848,15 @@ export class EmbeddingsApi {
   private async retireSupersededVectorIndexes(args: {
     schemaName: string;
     targetField: string;
+    dimensions: number;
+    similarity: string;
     previousField?: string;
-    indexes: Array<{
-      field?: string;
-      name?: string;
-      queryable?: boolean;
-      status?: string;
-    }>;
-  }): Promise<
-    Array<{ field?: string; name?: string; queryable?: boolean; status?: string }>
-  > {
-    const selected = findTargetVectorIndex(args.indexes, args.targetField);
+    indexes: VectorIndexGate[];
+  }): Promise<VectorIndexGate[]> {
+    const selected = findTargetVectorIndex(args.indexes, args.targetField, {
+      dimensions: args.dimensions,
+      similarity: args.similarity,
+    });
     if (!selected?.name || !isEmbeddingVectorIndexQueryable(selected)) {
       return args.indexes;
     }
@@ -907,12 +906,7 @@ export class EmbeddingsApi {
     config: EmbeddingConfigRecord,
     args: {
       capabilities: VectorCapabilities;
-      indexes: Array<{
-        field?: string;
-        name?: string;
-        queryable?: boolean;
-        status?: string;
-      }>;
+      indexes: VectorIndexGate[];
     },
   ): Promise<boolean> {
     try {

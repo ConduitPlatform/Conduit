@@ -147,11 +147,48 @@ export function nextEmbeddingVectorIndexName(
   return `${base}_v${maxGeneration + 1}`;
 }
 
-export function selectEmbeddingVectorIndex<T extends { field?: string; name?: string }>(
+export interface EmbeddingVectorIndexContract {
+  field: string;
+  dimensions: number;
+  similarity?: string;
+  method?: string;
+}
+
+export interface EmbeddingVectorIndexShape {
+  field?: string;
+  name?: string;
+  dimensions?: number;
+  similarity?: string;
+  method?: string;
+}
+
+const DEFAULT_EMBEDDING_VECTOR_INDEX_METHOD = 'hnsw';
+
+export function embeddingVectorIndexMatchesContract(
+  index: EmbeddingVectorIndexShape,
+  contract: EmbeddingVectorIndexContract,
+): boolean {
+  if (index.field !== contract.field) return false;
+  if (typeof index.dimensions !== 'number' || index.dimensions !== contract.dimensions) {
+    return false;
+  }
+  if ((index.similarity ?? '') !== (contract.similarity ?? '')) return false;
+  return (
+    (index.method ?? DEFAULT_EMBEDDING_VECTOR_INDEX_METHOD) ===
+    (contract.method ?? DEFAULT_EMBEDDING_VECTOR_INDEX_METHOD)
+  );
+}
+
+export function selectEmbeddingVectorIndex<T extends EmbeddingVectorIndexShape>(
   indexes: readonly T[],
   field: string,
+  contract?: Omit<EmbeddingVectorIndexContract, 'field'>,
 ): T | undefined {
-  const matches = indexes.filter(index => index.field === field);
+  const matches = indexes.filter(index => {
+    if (index.field !== field) return false;
+    if (!contract) return true;
+    return embeddingVectorIndexMatchesContract(index, { field, ...contract });
+  });
   if (!matches.length) return undefined;
   const defaultName = defaultEmbeddingVectorIndexName(field);
   return matches.reduce((best, current) => {
