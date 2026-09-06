@@ -9,17 +9,42 @@ import {
   assertSourceFields,
   isDeniedEmbeddingSchema,
   resolveAdminOperatorContext,
+  resolveSourceFieldAllowlist,
 } from './schemaPolicy.js';
 
 describe('embedding schema and source policies', () => {
   it('denies system, auth-secret, and embeddings-owned schemas', () => {
     assert.equal(isDeniedEmbeddingSchema({ name: 'EmbeddingConfig' }), true);
     assert.equal(isDeniedEmbeddingSchema({ name: 'BackfillRun' }), true);
+    assert.equal(
+      isDeniedEmbeddingSchema({ name: 'CustomOps', ownerModule: 'embeddings' }),
+      true,
+    );
     assert.equal(isDeniedEmbeddingSchema({ name: '_DeclaredSchema' }), true);
-    assert.equal(isDeniedEmbeddingSchema({ name: 'Views' }), true);
-    assert.equal(isDeniedEmbeddingSchema({ name: 'AccessToken' }), true);
-    assert.equal(isDeniedEmbeddingSchema({ name: 'TwoFactorSecret' }), true);
-    assert.equal(isDeniedEmbeddingSchema({ name: 'Article' }), false);
+    assert.equal(
+      isDeniedEmbeddingSchema({ name: 'Views', ownerModule: 'database' }),
+      true,
+    );
+    assert.equal(
+      isDeniedEmbeddingSchema({ name: 'AccessToken', ownerModule: 'authentication' }),
+      true,
+    );
+    assert.equal(
+      isDeniedEmbeddingSchema({ name: 'TwoFactorSecret', ownerModule: 'authentication' }),
+      true,
+    );
+    assert.equal(
+      isDeniedEmbeddingSchema({ name: 'Article', ownerModule: 'cms-app' }),
+      false,
+    );
+    assert.equal(
+      isDeniedEmbeddingSchema({ name: 'User', ownerModule: 'authentication' }),
+      false,
+    );
+    assert.equal(
+      isDeniedEmbeddingSchema({ name: 'File', ownerModule: 'storage' }),
+      false,
+    );
     assert.throws(
       () => assertEmbeddingTargetSchema({ name: 'RefreshToken' }),
       err => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
@@ -89,6 +114,25 @@ describe('embedding schema and source policies', () => {
         schemaFields,
         allowlist: ['notes'],
       }),
+    );
+  });
+
+  it('honors caller-supplied sourceFieldAllowlist only for platform-admin context', () => {
+    assert.deepEqual(
+      resolveSourceFieldAllowlist({
+        operatorAllowlist: ['summary'],
+        requestAllowlist: ['password', 'notes'],
+        platformAdmin: false,
+      }),
+      ['summary'],
+    );
+    assert.deepEqual(
+      resolveSourceFieldAllowlist({
+        operatorAllowlist: ['summary'],
+        requestAllowlist: ['password', 'notes'],
+        platformAdmin: true,
+      }),
+      ['summary', 'password', 'notes'],
     );
   });
 

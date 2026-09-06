@@ -17,10 +17,12 @@ import {
   failBackfillRun,
   isLegalBackfillTransition,
   isResumeEligible,
+  isSafeBackfillFilter,
   LEGAL_BACKFILL_TRANSITIONS,
   MAX_BACKFILL_BATCH_SIZE,
   MAX_BACKFILL_ERROR_LENGTH,
   MAX_BACKFILL_FILTER_BYTES,
+  MAX_BACKFILL_FILTER_IN_VALUES,
   MIN_BACKFILL_BATCH_SIZE,
   resumeBackfillRun,
   sanitizeBackfillError,
@@ -342,6 +344,34 @@ describe('backfill bounds', () => {
       }).ok,
       false,
     );
+    assert.equal(
+      createQueuedBackfill({
+        schemaName: 'Article',
+        filter: { title: { $regex: 'a+' } },
+      }).ok,
+      false,
+    );
+    assert.equal(
+      createQueuedBackfill({
+        schemaName: 'Article',
+        filter: { $or: [{ published: true }] },
+      }).ok,
+      false,
+    );
+    assert.equal(
+      createQueuedBackfill({
+        schemaName: 'Article',
+        filter: { title: { $exists: true } },
+      }).ok,
+      false,
+    );
+    assert.equal(
+      createQueuedBackfill({
+        schemaName: 'Article',
+        filter: { body: { $like: '%secret%' } },
+      }).ok,
+      false,
+    );
     assert.equal(createQueuedBackfill({ schemaName: 'Article', filter: [] }).ok, false);
     assert.equal(
       createQueuedBackfill({
@@ -349,6 +379,25 @@ describe('backfill bounds', () => {
         filter: { body: 'x'.repeat(MAX_BACKFILL_FILTER_BYTES) },
       }).ok,
       false,
+    );
+    assert.equal(
+      createQueuedBackfill({
+        schemaName: 'Article',
+        filter: {
+          status: {
+            $in: Array.from({ length: MAX_BACKFILL_FILTER_IN_VALUES + 1 }, () => 'a'),
+          },
+        },
+      }).ok,
+      false,
+    );
+    assert.equal(
+      isSafeBackfillFilter({ published: true, status: { $in: ['draft', 'live'] } }),
+      true,
+    );
+    assert.equal(
+      isSafeBackfillFilter({ $and: [{ published: true }, { views: { $gte: 1 } }] }),
+      true,
     );
   });
 });

@@ -66,7 +66,7 @@ const AppConfigSchema = {
       default: false,
     },
     sourceFieldAllowlist: {
-      doc: 'Source fields allowed even when their names look sensitive',
+      doc: 'Operator-configured source fields allowed even when hidden or sensitive-named. Caller-supplied allowlists are honored only for platform-admin upserts.',
       format: Array,
       default: [],
     },

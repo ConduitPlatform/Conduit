@@ -304,6 +304,35 @@ export function assertPostgresVectorIndexDropTarget(args: {
   return args.existing;
 }
 
+export function isMongoVectorSearchIndex(index?: {
+  name?: string;
+  type?: string;
+}): boolean {
+  return index?.type === 'vectorSearch';
+}
+
+export function assertMongoVectorSearchIndexDropTarget(args: {
+  indexName: string;
+  existing?: { name?: string; type?: string };
+}): { name: string; type: 'vectorSearch' } {
+  if (!args.existing) {
+    throw new GrpcError(
+      status.NOT_FOUND,
+      `Vector search index '${args.indexName}' was not found.`,
+    );
+  }
+  if (!isMongoVectorSearchIndex(args.existing)) {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      `Search index '${args.indexName}' is not a vectorSearch index.`,
+    );
+  }
+  return {
+    name: args.existing.name ?? args.indexName,
+    type: 'vectorSearch',
+  };
+}
+
 export function hydratePostgresVectorIndex(args: {
   name: string;
   indexdef: string;

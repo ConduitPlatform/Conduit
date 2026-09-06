@@ -41,6 +41,12 @@ export function parseSelectFields(select?: string): string[] {
     .map(part => part.replace(/^[+-]/, ''));
 }
 
+export const EMBEDDINGS_JOB_DOCUMENT_ID = /^[A-Za-z0-9._-]{1,128}$/;
+
+export function isScalarDocumentId(value: unknown): value is string {
+  return typeof value === 'string' && EMBEDDINGS_JOB_DOCUMENT_ID.test(value);
+}
+
 export function isIdOnlyQuery(query: unknown): boolean {
   let parsed = query;
   if (typeof query === 'string') {
@@ -52,7 +58,10 @@ export function isIdOnlyQuery(query: unknown): boolean {
   }
   if (!isRecord(parsed)) return false;
   const keys = Object.keys(parsed);
-  return keys.length === 1 && (keys[0] === '_id' || keys[0] === 'id');
+  if (keys.length !== 1) return false;
+  const key = keys[0];
+  if (key !== '_id' && key !== 'id') return false;
+  return isScalarDocumentId(parsed[key]);
 }
 
 export function assertEmbeddingsJobCaller(moduleName?: string): void {

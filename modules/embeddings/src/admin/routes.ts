@@ -52,7 +52,7 @@ export const EMBEDDINGS_ADMIN_ROUTES: EmbeddingsAdminRouteContract[] = [
   contract(
     '/configs',
     ConduitRouteActions.POST,
-    'Creates or updates an embedding config for a schema. Operator-only. The first upsert provisions the vector index when Database indexing is available. Saving enabled=true while the index is pending stores the config disabled until it is queryable. If indexing is unavailable, status reports a manual index lifecycle warning.',
+    'Creates or updates an embedding config for a schema. Operator-only. The first upsert provisions the vector index when Database indexing is available. Saving enabled=true while the index is pending stores the config disabled until it is queryable. If indexing is unavailable, status reports a manual index lifecycle warning. Caller-supplied sourceFieldAllowlist is honored only for platform-admin upserts; schema-owner gRPC callers use operator config allowlists.',
   ),
   contract(
     '/configs/:id',

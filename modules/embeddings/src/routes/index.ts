@@ -16,6 +16,7 @@ import { EmbeddingsApi } from '../api/embeddingsApi.js';
 import { EMBEDDINGS_CLIENT_FORBIDDEN_PATHS } from '../admin/routes.js';
 import {
   assertClientSearchSubject,
+  clampClientSearchLimit,
   clientSearchSubject,
 } from '../utils/clientSearchContext.js';
 
@@ -42,7 +43,7 @@ export class EmbeddingsRoutes {
         schemaName: call.request.params.schemaName,
         text: call.request.params.text,
         targetField: call.request.params.targetField,
-        limit: call.request.params.limit,
+        limit: clampClientSearchLimit(call.request.params.limit),
         filter:
           filter == null
             ? undefined
@@ -69,7 +70,7 @@ export class EmbeddingsRoutes {
         path: '/search',
         action: ConduitRouteActions.POST,
         description:
-          'Client semantic search by text. User and scope are taken from the authenticated router context; raw vectors, userId, scope, and adminOperator are not accepted.',
+          'Client semantic search by text. User and scope are taken from the authenticated router context; raw vectors, userId, scope, and adminOperator are not accepted. Client limit is capped below the admin/gRPC vector-search maximum.',
         bodyParams: {
           schemaName: ConduitString.Required,
           text: ConduitString.Required,

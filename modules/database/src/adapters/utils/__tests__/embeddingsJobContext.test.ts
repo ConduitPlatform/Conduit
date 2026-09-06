@@ -50,6 +50,33 @@ describe('embeddings job context', () => {
         schema: articleSchema,
       }),
     ).not.toThrow();
+    expect(() =>
+      assertEmbeddingsJobRead({
+        query: JSON.stringify({ id: 'doc-1' }),
+        select: '+title',
+        allowedFields: ['title'],
+        schema: articleSchema,
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects embeddingsJob reads that use operator objects instead of scalar ids', () => {
+    const denied = (query: unknown) => {
+      expect(() =>
+        assertEmbeddingsJobRead({
+          query,
+          select: '+title',
+          allowedFields: ['title'],
+          schema: articleSchema,
+        }),
+      ).toThrow(GrpcError);
+    };
+    denied({ _id: { $gt: '' } });
+    denied({ _id: { $ne: null } });
+    denied({ _id: { $in: ['doc-1'] } });
+    denied({ _id: 123 });
+    denied({ _id: '' });
+    denied({ id: { $regex: '.*' } });
   });
 
   it('rejects collection scans, extra selected fields, and non-string sources', () => {

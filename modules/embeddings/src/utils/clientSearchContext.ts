@@ -1,6 +1,8 @@
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 
+export const CLIENT_SEMANTIC_SEARCH_MAX_LIMIT = 50;
+
 export function clientSearchSubject(context?: {
   user?: { _id?: unknown };
   scope?: unknown;
@@ -24,4 +26,12 @@ export function assertClientSearchSubject(subject: { userId?: string; scope?: st
     );
   }
   return subject;
+}
+
+export function clampClientSearchLimit(limit?: number): number | undefined {
+  if (limit === undefined || limit === null) return undefined;
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new GrpcError(status.INVALID_ARGUMENT, 'limit must be a positive integer');
+  }
+  return Math.min(limit, CLIENT_SEMANTIC_SEARCH_MAX_LIMIT);
 }

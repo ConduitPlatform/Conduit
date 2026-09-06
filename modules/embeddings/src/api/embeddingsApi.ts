@@ -38,7 +38,9 @@ import {
   assertSemanticSearchAccess,
   canManageEmbeddingConfig,
   resolveAdminOperatorContext,
+  resolveSourceFieldAllowlist,
 } from '../utils/schemaPolicy.js';
+import { clampClientSearchLimit } from '../utils/clientSearchContext.js';
 import { validateEmbeddingConfigInput } from '../utils/validateEmbeddingConfig.js';
 import {
   assertConfigActivation,
@@ -187,10 +189,11 @@ export class EmbeddingsApi {
       validateEmbeddingConfigInput(
         {
           ...request,
-          sourceFieldAllowlist: [
-            ...(configDefaults.security.sourceFieldAllowlist ?? []),
-            ...(request.sourceFieldAllowlist ?? []),
-          ],
+          sourceFieldAllowlist: resolveSourceFieldAllowlist({
+            operatorAllowlist: configDefaults.security.sourceFieldAllowlist,
+            requestAllowlist: request.sourceFieldAllowlist,
+            platformAdmin: caller.platformAdmin === true,
+          }),
         },
         { provider: configDefaults.defaultProvider },
         schema.fields,
@@ -616,7 +619,7 @@ export class EmbeddingsApi {
       field: config.targetField,
       vector,
       filter: this.parseOptionalFilter(request.filter),
-      limit: request.limit,
+      limit: this.clampSemanticSearchLimit(request.limit, caller),
       userId: request.userId,
       scope: request.scope,
       adminOperator,
@@ -637,6 +640,14 @@ export class EmbeddingsApi {
       return { code: err.code, message: sanitizeErrorMessage(err) };
     }
     return { code: status.INTERNAL, message: sanitizeErrorMessage(err) };
+  }
+
+  private clampSemanticSearchLimit(
+    limit: number | undefined,
+    caller: EmbeddingsApiCaller,
+  ): number | undefined {
+    if (caller.platformAdmin || caller.callerModule !== 'router') return limit;
+    return clampClientSearchLimit(limit);
   }
 
   private parseOptionalFilter(filter?: string): Record<string, unknown> | undefined {
