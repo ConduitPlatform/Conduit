@@ -38,6 +38,12 @@ export enum VectorIndexMethod {
   Flat = 'flat',
 }
 
+export enum VectorIndexStatus {
+  Pending = 'pending',
+  Ready = 'ready',
+  Failed = 'failed',
+}
+
 export type VectorSearchProvider = 'mongodb' | 'postgres';
 
 export enum MongoIndexType {
@@ -281,6 +287,8 @@ export interface VectorIndexDefinition {
   similarity: VectorSimilarity;
   method?: VectorIndexMethod;
   filterFields?: string[];
+  status?: VectorIndexStatus;
+  queryable?: boolean;
   options?: {
     numCandidates?: number;
     quantization?: 'none' | 'scalar' | 'binary';
