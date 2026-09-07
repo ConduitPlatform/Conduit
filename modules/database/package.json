@@ -46,7 +46,7 @@
     "escape-string-regexp": "^5.0.0",
     "ioredis": "^5.11.1",
     "lodash-es": "^4.18.1",
-    "mariadb": "^3.5.3",
+    "mariadb": "^3.5.4",
     "mongodb": "^7.3.0",
     "mongodb-schema": "^12.7.0",
     "mongoose": "^9.9.4",
