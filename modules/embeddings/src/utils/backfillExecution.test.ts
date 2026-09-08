@@ -351,7 +351,6 @@ describe('backfill cancellation, resume, and counters', () => {
       { runId: created._id, cursor: null },
       deps({ store }),
     );
-    const afterPage = (await store.getRun(created._id))!;
     const processed = await applyBackfillJobOutcome({
       runId: created._id,
       outcome: 'processed',

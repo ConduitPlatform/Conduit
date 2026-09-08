@@ -302,22 +302,28 @@ export abstract class DatabaseAdapter<T extends Schema> {
     rawQuery: RawMongoQuery | RawSQLQuery,
   ): Promise<any>;
 
-  getVectorCapabilities(_schemaName?: string): Promise<VectorCapabilities> {
+  getVectorCapabilities(schemaName?: string): Promise<VectorCapabilities> {
+    void schemaName;
     return Promise.resolve(unsupportedVectorCapabilities(this.getDatabaseType()));
   }
 
-  createVectorIndex(_schemaName: string, _index: VectorIndexDefinition): Promise<string> {
+  createVectorIndex(schemaName: string, index: VectorIndexDefinition): Promise<string> {
+    void schemaName;
+    void index;
     throw new GrpcError(
       status.UNIMPLEMENTED,
       `${this.getDatabaseType()} does not support vector indexes`,
     );
   }
 
-  getVectorIndexes(_schemaName: string): Promise<VectorIndexDefinition[]> {
+  getVectorIndexes(schemaName: string): Promise<VectorIndexDefinition[]> {
+    void schemaName;
     return Promise.resolve([]);
   }
 
-  deleteVectorIndex(_schemaName: string, _indexName: string): Promise<string> {
+  deleteVectorIndex(schemaName: string, indexName: string): Promise<string> {
+    void schemaName;
+    void indexName;
     throw new GrpcError(
       status.UNIMPLEMENTED,
       `${this.getDatabaseType()} does not support vector indexes`,
@@ -338,7 +344,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
   }
 
-  vectorSearch(_request: VectorSearchInput): Promise<VectorSearchResult[]> {
+  vectorSearch(request: VectorSearchInput): Promise<VectorSearchResult[]> {
+    void request;
     throw new GrpcError(
       status.UNIMPLEMENTED,
       `${this.getDatabaseType()} does not support vector search`,

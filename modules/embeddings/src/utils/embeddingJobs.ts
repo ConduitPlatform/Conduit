@@ -64,6 +64,17 @@ export function isDuplicateJobError(err: unknown): boolean {
 export type ParsedEmbeddingJob =
   { ok: true; data: EmbeddingJobData } | { ok: false; reason: string };
 
+function optionalIdentity(
+  value: unknown,
+  reason: 'configId' | 'backfillRunId',
+): { ok: true; value?: string } | { ok: false; reason: string } {
+  if (value === undefined) return { ok: true };
+  if (typeof value !== 'string' || !IDENTITY.test(value)) {
+    return { ok: false, reason };
+  }
+  return { ok: true, value };
+}
+
 export function parseEmbeddingJobData(
   value: unknown,
   maxBatchIndex?: number,
@@ -85,25 +96,17 @@ export function parseEmbeddingJobData(
   if (typeof record.documentId !== 'string' || !IDENTITY.test(record.documentId)) {
     return { ok: false, reason: 'documentId' };
   }
-  if (
-    record.configId !== undefined &&
-    (typeof record.configId !== 'string' || !IDENTITY.test(record.configId))
-  ) {
-    return { ok: false, reason: 'configId' };
-  }
-  if (
-    record.backfillRunId !== undefined &&
-    (typeof record.backfillRunId !== 'string' || !IDENTITY.test(record.backfillRunId))
-  ) {
-    return { ok: false, reason: 'backfillRunId' };
-  }
+  const configId = optionalIdentity(record.configId, 'configId');
+  if (!configId.ok) return configId;
+  const backfillRunId = optionalIdentity(record.backfillRunId, 'backfillRunId');
+  if (!backfillRunId.ok) return backfillRunId;
   return {
     ok: true,
     data: {
       schemaName: record.schemaName,
       documentId: record.documentId,
-      ...(record.configId ? { configId: record.configId } : {}),
-      ...(record.backfillRunId ? { backfillRunId: record.backfillRunId } : {}),
+      ...(configId.value ? { configId: configId.value } : {}),
+      ...(backfillRunId.value ? { backfillRunId: backfillRunId.value } : {}),
     },
   };
 }

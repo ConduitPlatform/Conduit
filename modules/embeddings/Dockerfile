@@ -1,3 +1,4 @@
+# hadolint ignore=DL3006
 FROM conduit-builder
 
 WORKDIR /app/modules/embeddings

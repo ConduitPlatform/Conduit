@@ -119,7 +119,7 @@ jobs:
         env:
           CHANGED_FILES: modules/embeddings/src/index.ts
         run: |
-          node scripts/resolve-docker-targets.mjs > /tmp/targets.json
+          env -u GITHUB_OUTPUT node scripts/resolve-docker-targets.mjs > /tmp/targets.json
           node -e '
             const fs = require("fs");
             const data = JSON.parse(fs.readFileSync("/tmp/targets.json", "utf8"));

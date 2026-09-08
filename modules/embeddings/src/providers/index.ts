@@ -35,6 +35,41 @@ export interface EmbeddingProviderDependencies {
   lookup?: SafeEndpointOptions['lookup'];
 }
 
+function mapEmbedFetchError(err: unknown): never {
+  if (err instanceof GrpcError) throw err;
+  const message = sanitizeErrorMessage(err);
+  if (/redirect/i.test(message)) {
+    throw new GrpcError(
+      status.PERMISSION_DENIED,
+      'Embedding provider redirects are not allowed',
+    );
+  }
+  if (err instanceof Error && err.name === 'TimeoutError') {
+    throw new GrpcError(status.DEADLINE_EXCEEDED, 'Embedding provider request timed out');
+  }
+  throw new GrpcError(status.UNAVAILABLE, message);
+}
+
+function parseEmbeddingResponse(bodyText: string): number[] {
+  let body: { data?: { embedding?: number[] }[] };
+  try {
+    body = JSON.parse(bodyText) as { data?: { embedding?: number[] }[] };
+  } catch {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      'Embedding provider response was not valid JSON',
+    );
+  }
+  const embedding = body.data?.[0]?.embedding;
+  if (!embedding?.length) {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      'Embedding provider response did not include an embedding',
+    );
+  }
+  return embedding;
+}
+
 export class OpenAICompatibleEmbeddingProvider implements EmbeddingProvider {
   constructor(private readonly deps: EmbeddingProviderDependencies = {}) {}
 
@@ -45,8 +80,9 @@ export class OpenAICompatibleEmbeddingProvider implements EmbeddingProvider {
         'Embedding provider endpoint is not configured',
       );
     }
-    const maxInput = config.maxInputBytes ?? DEFAULT_MAX_EMBED_INPUT_BYTES;
-    if (Buffer.byteLength(input) > maxInput) {
+    if (
+      Buffer.byteLength(input) > (config.maxInputBytes ?? DEFAULT_MAX_EMBED_INPUT_BYTES)
+    ) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
         'Embedding input exceeds the allowed size',
@@ -56,7 +92,6 @@ export class OpenAICompatibleEmbeddingProvider implements EmbeddingProvider {
       allowedHosts: config.allowedHosts ?? [],
       lookup: this.deps.lookup,
     });
-    const timeoutMs = config.timeoutMs ?? DEFAULT_EMBED_TIMEOUT_MS;
     const fetchImpl = this.deps.fetch ?? fetch;
     let response: Response;
     try {
@@ -71,24 +106,10 @@ export class OpenAICompatibleEmbeddingProvider implements EmbeddingProvider {
           model: config.model,
         }),
         redirect: 'error',
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.timeout(config.timeoutMs ?? DEFAULT_EMBED_TIMEOUT_MS),
       });
     } catch (err) {
-      if (err instanceof GrpcError) throw err;
-      const message = sanitizeErrorMessage(err);
-      if (/redirect/i.test(message)) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'Embedding provider redirects are not allowed',
-        );
-      }
-      if (err instanceof Error && err.name === 'TimeoutError') {
-        throw new GrpcError(
-          status.DEADLINE_EXCEEDED,
-          'Embedding provider request timed out',
-        );
-      }
-      throw new GrpcError(status.UNAVAILABLE, message);
+      mapEmbedFetchError(err);
     }
     if (!response.ok) {
       throw new GrpcError(
@@ -96,27 +117,12 @@ export class OpenAICompatibleEmbeddingProvider implements EmbeddingProvider {
         `Embedding provider failed with HTTP ${response.status}`,
       );
     }
-    const bodyText = await readCappedResponse(
-      response,
-      config.maxResponseBytes ?? DEFAULT_MAX_EMBED_RESPONSE_BYTES,
+    return parseEmbeddingResponse(
+      await readCappedResponse(
+        response,
+        config.maxResponseBytes ?? DEFAULT_MAX_EMBED_RESPONSE_BYTES,
+      ),
     );
-    let body: { data?: { embedding?: number[] }[] };
-    try {
-      body = JSON.parse(bodyText) as { data?: { embedding?: number[] }[] };
-    } catch {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Embedding provider response was not valid JSON',
-      );
-    }
-    const embedding = body.data?.[0]?.embedding;
-    if (!embedding?.length) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Embedding provider response did not include an embedding',
-      );
-    }
-    return embedding;
   }
 }
 

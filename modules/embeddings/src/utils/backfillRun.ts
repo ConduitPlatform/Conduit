@@ -461,6 +461,21 @@ function isMembershipOperator(
   return (BACKFILL_FILTER_MEMBERSHIP_OPERATORS as readonly string[]).includes(operator);
 }
 
+function isSafeComparisonOperand(operator: string, comparison: unknown): boolean {
+  if (operator === '$eq' || operator === '$ne') {
+    return isBackfillFilterScalar(comparison);
+  }
+  return typeof comparison === 'number' || typeof comparison === 'string';
+}
+
+function isSafeMembershipOperand(items: unknown): boolean {
+  return (
+    Array.isArray(items) &&
+    items.length <= MAX_BACKFILL_FILTER_IN_VALUES &&
+    items.every(isBackfillFilterScalar)
+  );
+}
+
 function isSafeBackfillPredicate(value: unknown, depth: number): boolean {
   if (depth > MAX_BACKFILL_FILTER_DEPTH) return false;
   if (isBackfillFilterScalar(value)) return true;
@@ -469,20 +484,11 @@ function isSafeBackfillPredicate(value: unknown, depth: number): boolean {
   if (!operators.length || operators.length > MAX_BACKFILL_FILTER_KEYS) return false;
   for (const operator of operators) {
     if (isComparisonOperator(operator)) {
-      const comparison = value[operator];
-      if (operator === '$eq' || operator === '$ne') {
-        if (!isBackfillFilterScalar(comparison)) return false;
-        continue;
-      }
-      if (typeof comparison !== 'number' && typeof comparison !== 'string') return false;
+      if (!isSafeComparisonOperand(operator, value[operator])) return false;
       continue;
     }
     if (isMembershipOperator(operator)) {
-      const items = value[operator];
-      if (!Array.isArray(items) || items.length > MAX_BACKFILL_FILTER_IN_VALUES) {
-        return false;
-      }
-      if (!items.every(isBackfillFilterScalar)) return false;
+      if (!isSafeMembershipOperand(value[operator])) return false;
       continue;
     }
     return false;

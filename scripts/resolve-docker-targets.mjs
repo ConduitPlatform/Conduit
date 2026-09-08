@@ -235,14 +235,19 @@ function resolveTargets({ changedFiles, forceAll } = {}) {
 
 function writeOutput(matrix, channel) {
   const payload = JSON.stringify({ include: matrix });
+  const result = {
+    matrix: payload,
+    channel,
+    has_targets: matrix.length > 0,
+  };
+  console.log(JSON.stringify(result, null, 2));
   const outputFile = process.env.GITHUB_OUTPUT;
-  if (outputFile) {
-    appendFileSync(outputFile, `matrix=${payload}\n`, 'utf8');
-    appendFileSync(outputFile, `channel=${channel}\n`, 'utf8');
-    appendFileSync(outputFile, `has_targets=${matrix.length > 0}\n`, 'utf8');
-  } else {
-    console.log(JSON.stringify({ matrix: payload, channel, has_targets: matrix.length > 0 }, null, 2));
+  if (!outputFile) {
+    return;
   }
+  appendFileSync(outputFile, `matrix=${payload}\n`, 'utf8');
+  appendFileSync(outputFile, `channel=${channel}\n`, 'utf8');
+  appendFileSync(outputFile, `has_targets=${matrix.length > 0}\n`, 'utf8');
 }
 
 function isMainModule() {

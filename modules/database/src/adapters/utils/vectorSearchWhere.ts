@@ -40,6 +40,26 @@ function renderComparison(
   }
 }
 
+function renderInPredicate(
+  fieldSql: string,
+  operand: unknown,
+  renderer: PostgresWhereRenderer,
+): string {
+  const values = operand as unknown[];
+  if (!values.length) return 'FALSE';
+  return `${fieldSql} IN (${values.map(item => renderer.escape(item)).join(', ')})`;
+}
+
+function renderNinPredicate(
+  fieldSql: string,
+  operand: unknown,
+  renderer: PostgresWhereRenderer,
+): string | undefined {
+  const values = operand as unknown[];
+  if (!values.length) return undefined;
+  return `${fieldSql} NOT IN (${values.map(item => renderer.escape(item)).join(', ')})`;
+}
+
 function renderFieldPredicate(
   field: string,
   value: unknown,
@@ -61,28 +81,18 @@ function renderFieldPredicate(
   const clauses: string[] = [];
   for (const [operator, operand] of Object.entries(value as Record<string, unknown>)) {
     if (operator === '$in') {
-      const values = operand as unknown[];
-      if (!values.length) {
-        return 'FALSE';
-      }
-      clauses.push(
-        `${fieldSql} IN (${values.map(item => renderer.escape(item)).join(', ')})`,
-      );
+      const rendered = renderInPredicate(fieldSql, operand, renderer);
+      if (rendered === 'FALSE') return 'FALSE';
+      clauses.push(rendered);
       continue;
     }
     if (operator === '$nin') {
-      const values = operand as unknown[];
-      if (!values.length) {
-        continue;
-      }
-      clauses.push(
-        `${fieldSql} NOT IN (${values.map(item => renderer.escape(item)).join(', ')})`,
-      );
+      const rendered = renderNinPredicate(fieldSql, operand, renderer);
+      if (rendered) clauses.push(rendered);
       continue;
     }
     if (operator === '$not') {
-      const nested = renderFieldPredicate(field, operand, renderer);
-      clauses.push(`NOT (${nested})`);
+      clauses.push(`NOT (${renderFieldPredicate(field, operand, renderer)})`);
       continue;
     }
     clauses.push(renderComparison(fieldSql, operator, operand, renderer));

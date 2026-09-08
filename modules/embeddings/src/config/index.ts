@@ -94,8 +94,8 @@ const AppConfigSchema = {
 };
 
 const config = convict(AppConfigSchema);
-const configProperties = config.getProperties();
-export type Config = typeof configProperties & {
+void config;
+export type Config = ReturnType<typeof config.getProperties> & {
   providers: Record<
     string,
     {
