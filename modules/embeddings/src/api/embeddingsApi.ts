@@ -3,6 +3,7 @@ import {
   TYPE,
   VectorCapabilities,
   VectorSearchResult,
+  VectorSimilarity,
   type ConduitModel,
   type VectorIndexDefinition,
 } from '@conduitplatform/grpc-sdk';
@@ -34,6 +35,7 @@ import {
   materialChangeWarnings,
   nextEmbeddingVectorIndexName,
   sameEmbeddingVectorIndexFamily,
+  type MaterialEmbeddingConfigField,
 } from '../utils/configChange.js';
 import { MAX_QUEUE_BATCH_SIZE } from '../utils/embeddingJobs.js';
 import { ACTIVE_BACKFILL_STATES } from '../utils/backfillRun.js';
@@ -214,152 +216,46 @@ export class EmbeddingsApi {
       );
     }
     if (capabilities.storage) {
-      await this.deps.setSchemaExtension({
-        schemaName: persisted.schemaName,
-        fields: {
-          [persisted.targetField]: {
-            type: TYPE.Vector,
-            dimensions: persisted.dimensions,
-            similarity: persisted.similarity,
-            select: false,
-          },
-          [`${persisted.targetField}SourceHash`]: {
-            type: TYPE.String,
-            required: false,
-            select: false,
-          },
-        },
-      });
+      await this.extendEmbeddingSchema(persisted);
     }
-    let persistEnabled = enabled;
-    let provisionedIndex = false;
-    let replacementIndexName: string | undefined;
-    const provisionWarnings: string[] = [];
-    const indexContract = embeddingIndexContractFromConfig(persisted);
-    try {
-      const matchingIndex = findTargetVectorIndex(
-        indexes,
-        persisted.targetField,
-        indexContract,
-      );
-      const hasFieldIndex = indexes.some(index => index.field === persisted.targetField);
-      if (!matchingIndex && hasFieldIndex && capabilities.indexing) {
-        replacementIndexName = await this.recreateVectorIndex(persisted, indexes);
-        indexes = await this.deps.getVectorIndexes(persisted.schemaName);
-        provisionedIndex = true;
-      } else if (!matchingIndex) {
-        provisionedIndex = await this.ensureVectorIndex(persisted, indexes, capabilities);
-        if (provisionedIndex) {
-          indexes = await this.deps.getVectorIndexes(persisted.schemaName);
-        }
-      }
-      indexes = await this.retireSupersededVectorIndexes({
-        schemaName: persisted.schemaName,
-        targetField: persisted.targetField,
-        dimensions: persisted.dimensions,
-        similarity: persisted.similarity,
-        previousField: existing?.targetField,
-        indexes,
-      });
-    } catch (err) {
-      persistEnabled = false;
-      provisionWarnings.push(
-        `Config was saved disabled because vector index provisioning failed for '${persisted.targetField}': ${sanitizeErrorMessage(err)}. Repair or create the index and enable the config once Database reports it queryable.`,
-      );
-    }
-    const warnings = [
-      ...capabilityWarnings(capabilities),
-      ...indexReadinessWarnings(
-        [
-          {
-            targetField: persisted.targetField,
-            enabled,
-            schemaName: persisted.schemaName,
-            dimensions: persisted.dimensions,
-            similarity: persisted.similarity,
-          },
-        ],
-        indexes,
-      ),
-      ...providerReadinessWarnings(
-        configDefaults.providers[persisted.provider] ??
-          configDefaults.providers[configDefaults.defaultProvider],
-      ),
-      ...provisionWarnings,
-    ];
-    if (
-      !findTargetVectorIndex(indexes, persisted.targetField, indexContract) &&
-      !capabilities.indexing
-    ) {
-      warnings.push(
-        `Vector index for field '${persisted.targetField}' was not provisioned automatically because Database indexing is unavailable. Create the index manually and wait until it is queryable before enabling this config.`,
-      );
-    }
+    const provisioned = await this.provisionUpsertIndexes({
+      persisted,
+      existing,
+      capabilities,
+      indexes,
+    });
+    indexes = provisioned.indexes;
+    let persistEnabled = enabled && provisioned.persistEnabled;
+    const warnings = this.upsertConfigWarnings({
+      capabilities,
+      indexes,
+      persisted,
+      enabled,
+      configDefaults,
+      provisionWarnings: provisioned.provisionWarnings,
+    });
     if (enabled && persistEnabled) {
-      try {
-        if (replacementIndexName) {
-          const replacement = indexes.find(index => index.name === replacementIndexName);
-          if (!isEmbeddingVectorIndexQueryable(replacement)) {
-            throw new BackfillGateError(
-              'index_not_queryable',
-              `Vector index '${replacementIndexName}' is not queryable (status: ${
-                replacement?.status ?? 'missing'
-              }). Wait until the index is ready before enabling this config.`,
-              replacement?.status ?? 'missing',
-            );
-          }
-        }
-        assertConfigActivation({
-          moduleEnabled: configDefaults.enabled,
-          capabilities,
-          config: {
-            enabled,
-            schemaName: persisted.schemaName,
-            targetField: persisted.targetField,
-            dimensions: persisted.dimensions,
-            similarity: persisted.similarity,
-          },
-          indexes,
-        });
-      } catch (err) {
-        const indexPending =
-          (err instanceof BackfillGateError && err.reason === 'index_not_queryable') ||
-          (err instanceof GrpcError &&
-            err.code === status.FAILED_PRECONDITION &&
-            /not queryable/.test(err.message));
-        if (!indexPending) throw err;
-        persistEnabled = false;
-        warnings.push(
-          provisionedIndex
-            ? 'Config was saved disabled until the provisioned vector index is queryable. Enable it once Database reports the index ready.'
-            : 'Config was saved disabled until the vector index is queryable. Enable it once Database reports the index ready.',
-        );
-      }
+      const activation = this.deferEnablementIfIndexPending({
+        replacementIndexName: provisioned.replacementIndexName,
+        provisionedIndex: provisioned.provisionedIndex,
+        enabled,
+        capabilities,
+        persisted,
+        indexes,
+        moduleEnabled: configDefaults.enabled,
+      });
+      persistEnabled = activation.persistEnabled;
+      warnings.push(...activation.warnings);
     }
-    const saved = existing
-      ? await this.deps.configs.findByIdAndUpdate(existing._id, {
-          ...persisted,
-          enabled: persistEnabled,
-        })
-      : await this.deps.configs.create({ ...persisted, enabled: persistEnabled });
-    if (!saved) {
-      throw new GrpcError(status.INTERNAL, 'Failed to persist embedding config');
-    }
-    if (existing && changed.length) {
-      await this.deps.invalidateHashes(
-        saved.schemaName,
-        hashFieldsToInvalidate(existing, saved),
-      );
-      await this.supersedeActiveBackfills(saved._id);
-      let scheduledBackfill = false;
-      if (persistEnabled) {
-        scheduledBackfill = await this.scheduleExplicitBackfill(saved, {
-          capabilities,
-          indexes,
-        });
-      }
-      warnings.push(...materialChangeWarnings(changed, scheduledBackfill));
-    }
+    const saved = await this.saveUpsertedConfig({
+      existing,
+      persisted,
+      persistEnabled,
+      changed,
+      capabilities,
+      indexes,
+      warnings,
+    });
     await this.deps.onConfigChanged?.(saved.schemaName);
     return { config: mapEmbeddingConfig(saved), warnings };
   }
@@ -772,6 +668,249 @@ export class EmbeddingsApi {
       );
     }
     return config;
+  }
+
+  private async extendEmbeddingSchema(persisted: {
+    schemaName: string;
+    targetField: string;
+    dimensions: number;
+    similarity: VectorSimilarity;
+  }) {
+    await this.deps.setSchemaExtension({
+      schemaName: persisted.schemaName,
+      fields: {
+        [persisted.targetField]: {
+          type: TYPE.Vector,
+          dimensions: persisted.dimensions,
+          similarity: persisted.similarity,
+          select: false,
+        },
+        [`${persisted.targetField}SourceHash`]: {
+          type: TYPE.String,
+          required: false,
+          select: false,
+        },
+      },
+    });
+  }
+
+  private async provisionUpsertIndexes(args: {
+    persisted: {
+      schemaName: string;
+      targetField: string;
+      dimensions: number;
+      similarity: string;
+    };
+    existing: EmbeddingConfigRecord | null;
+    capabilities: VectorCapabilities;
+    indexes: VectorIndexGate[];
+  }): Promise<{
+    indexes: VectorIndexGate[];
+    persistEnabled: boolean;
+    provisionedIndex: boolean;
+    replacementIndexName?: string;
+    provisionWarnings: string[];
+  }> {
+    let { indexes } = args;
+    let persistEnabled = true;
+    let provisionedIndex = false;
+    let replacementIndexName: string | undefined;
+    const provisionWarnings: string[] = [];
+    try {
+      const matchingIndex = findTargetVectorIndex(
+        indexes,
+        args.persisted.targetField,
+        embeddingIndexContractFromConfig(args.persisted),
+      );
+      const hasFieldIndex = indexes.some(
+        index => index.field === args.persisted.targetField,
+      );
+      if (!matchingIndex && hasFieldIndex && args.capabilities.indexing) {
+        replacementIndexName = await this.recreateVectorIndex(args.persisted, indexes);
+        indexes = await this.deps.getVectorIndexes(args.persisted.schemaName);
+        provisionedIndex = true;
+      } else if (!matchingIndex) {
+        provisionedIndex = await this.ensureVectorIndex(
+          args.persisted,
+          indexes,
+          args.capabilities,
+        );
+        if (provisionedIndex) {
+          indexes = await this.deps.getVectorIndexes(args.persisted.schemaName);
+        }
+      }
+      indexes = await this.retireSupersededVectorIndexes({
+        schemaName: args.persisted.schemaName,
+        targetField: args.persisted.targetField,
+        dimensions: args.persisted.dimensions,
+        similarity: args.persisted.similarity,
+        previousField: args.existing?.targetField,
+        indexes,
+      });
+    } catch (err) {
+      persistEnabled = false;
+      provisionWarnings.push(
+        `Config was saved disabled because vector index provisioning failed for '${args.persisted.targetField}': ${sanitizeErrorMessage(err)}. Repair or create the index and enable the config once Database reports it queryable.`,
+      );
+    }
+    return {
+      indexes,
+      persistEnabled,
+      provisionedIndex,
+      replacementIndexName,
+      provisionWarnings,
+    };
+  }
+
+  private upsertConfigWarnings(args: {
+    capabilities: VectorCapabilities;
+    indexes: VectorIndexGate[];
+    persisted: {
+      schemaName: string;
+      targetField: string;
+      dimensions: number;
+      similarity: string;
+      provider: string;
+    };
+    enabled: boolean;
+    configDefaults: Config;
+    provisionWarnings: string[];
+  }): string[] {
+    const warnings = [
+      ...capabilityWarnings(args.capabilities),
+      ...indexReadinessWarnings(
+        [
+          {
+            targetField: args.persisted.targetField,
+            enabled: args.enabled,
+            schemaName: args.persisted.schemaName,
+            dimensions: args.persisted.dimensions,
+            similarity: args.persisted.similarity,
+          },
+        ],
+        args.indexes,
+      ),
+      ...providerReadinessWarnings(
+        args.configDefaults.providers[args.persisted.provider] ??
+          args.configDefaults.providers[args.configDefaults.defaultProvider],
+      ),
+      ...args.provisionWarnings,
+    ];
+    if (
+      !findTargetVectorIndex(
+        args.indexes,
+        args.persisted.targetField,
+        embeddingIndexContractFromConfig(args.persisted),
+      ) &&
+      !args.capabilities.indexing
+    ) {
+      warnings.push(
+        `Vector index for field '${args.persisted.targetField}' was not provisioned automatically because Database indexing is unavailable. Create the index manually and wait until it is queryable before enabling this config.`,
+      );
+    }
+    return warnings;
+  }
+
+  private deferEnablementIfIndexPending(args: {
+    replacementIndexName?: string;
+    provisionedIndex: boolean;
+    enabled: boolean;
+    capabilities: VectorCapabilities;
+    persisted: {
+      schemaName: string;
+      targetField: string;
+      dimensions: number;
+      similarity: string;
+    };
+    indexes: VectorIndexGate[];
+    moduleEnabled: boolean;
+  }): { persistEnabled: boolean; warnings: string[] } {
+    try {
+      if (args.replacementIndexName) {
+        const replacement = args.indexes.find(
+          index => index.name === args.replacementIndexName,
+        );
+        if (!isEmbeddingVectorIndexQueryable(replacement)) {
+          throw new BackfillGateError(
+            'index_not_queryable',
+            `Vector index '${args.replacementIndexName}' is not queryable (status: ${
+              replacement?.status ?? 'missing'
+            }). Wait until the index is ready before enabling this config.`,
+            replacement?.status ?? 'missing',
+          );
+        }
+      }
+      assertConfigActivation({
+        moduleEnabled: args.moduleEnabled,
+        capabilities: args.capabilities,
+        config: {
+          enabled: args.enabled,
+          schemaName: args.persisted.schemaName,
+          targetField: args.persisted.targetField,
+          dimensions: args.persisted.dimensions,
+          similarity: args.persisted.similarity,
+        },
+        indexes: args.indexes,
+      });
+      return { persistEnabled: true, warnings: [] };
+    } catch (err) {
+      const indexPending =
+        (err instanceof BackfillGateError && err.reason === 'index_not_queryable') ||
+        (err instanceof GrpcError &&
+          err.code === status.FAILED_PRECONDITION &&
+          /not queryable/.test(err.message));
+      if (!indexPending) throw err;
+      return {
+        persistEnabled: false,
+        warnings: [
+          args.provisionedIndex
+            ? 'Config was saved disabled until the provisioned vector index is queryable. Enable it once Database reports the index ready.'
+            : 'Config was saved disabled until the vector index is queryable. Enable it once Database reports the index ready.',
+        ],
+      };
+    }
+  }
+
+  private async saveUpsertedConfig(args: {
+    existing: EmbeddingConfigRecord | null;
+    persisted: Record<string, unknown> & {
+      schemaName: string;
+      targetField: string;
+    };
+    persistEnabled: boolean;
+    changed: MaterialEmbeddingConfigField[];
+    capabilities: VectorCapabilities;
+    indexes: VectorIndexGate[];
+    warnings: string[];
+  }): Promise<EmbeddingConfigRecord> {
+    const saved = args.existing
+      ? await this.deps.configs.findByIdAndUpdate(args.existing._id, {
+          ...args.persisted,
+          enabled: args.persistEnabled,
+        })
+      : await this.deps.configs.create({
+          ...args.persisted,
+          enabled: args.persistEnabled,
+        });
+    if (!saved) {
+      throw new GrpcError(status.INTERNAL, 'Failed to persist embedding config');
+    }
+    if (args.existing && args.changed.length) {
+      await this.deps.invalidateHashes(
+        saved.schemaName,
+        hashFieldsToInvalidate(args.existing, saved),
+      );
+      await this.supersedeActiveBackfills(saved._id);
+      let scheduledBackfill = false;
+      if (args.persistEnabled) {
+        scheduledBackfill = await this.scheduleExplicitBackfill(saved, {
+          capabilities: args.capabilities,
+          indexes: args.indexes,
+        });
+      }
+      args.warnings.push(...materialChangeWarnings(args.changed, scheduledBackfill));
+    }
+    return saved;
   }
 
   private async findActiveBackfills(configId: string): Promise<PersistedBackfillRun[]> {

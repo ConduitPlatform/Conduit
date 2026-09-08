@@ -106,7 +106,7 @@ test('PR CI runs compose render and target discovery', () => {
     /docker compose --profile mongodb --profile embeddings config --services/,
   );
   assert.match(workflow, /docker compose --profile mongodb config --services/);
-  assert.match(workflow, /node scripts\/resolve-docker-targets\.mjs/);
+  assert.match(workflow, /env -u GITHUB_OUTPUT node scripts\/resolve-docker-targets\.mjs/);
   assert.match(workflow, /docker\/\*\*/);
   assert.match(workflow, /scripts\/resolve-docker-targets\.mjs/);
 });

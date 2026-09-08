@@ -81,15 +81,6 @@ export interface QueueControllerDependencies {
   ) => WorkerLike;
 }
 
-const EMPTY_COUNTS: QueueJobCounts = {
-  waiting: 0,
-  active: 0,
-  completed: 0,
-  failed: 0,
-  delayed: 0,
-  paused: 0,
-};
-
 export class QueueController {
   private static _instance: QueueController;
   private readonly createConnection: () => RedisConnection;
