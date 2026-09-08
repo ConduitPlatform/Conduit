@@ -192,8 +192,8 @@ importers:
         specifier: ^1.60.0
         version: 1.60.0(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)
       '@scalar/express-api-reference':
-        specifier: ^0.10.16
-        version: 0.10.16
+        specifier: ^0.10.17
+        version: 0.10.17
       '@socket.io/redis-streams-adapter':
         specifier: ^0.3.1
         version: 0.3.1(socket.io-adapter@2.5.8)
@@ -857,8 +857,8 @@ importers:
         specifier: ^4.18.1
         version: 4.18.1
       mariadb:
-        specifier: ^3.5.3
-        version: 3.5.3
+        specifier: ^3.5.4
+        version: 3.5.4
       mongodb:
         specifier: ^7.3.0
         version: 7.3.0(snappy@7.4.1)
@@ -882,10 +882,10 @@ importers:
         version: 2.3.4
       sequelize:
         specifier: ^6.37.8
-        version: 6.37.8(mariadb@3.5.3)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1)
+        version: 6.37.8(mariadb@3.5.4)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1)
       sequelize-auto:
         specifier: ^0.8.8
-        version: 0.8.8(sequelize@6.37.8(mariadb@3.5.3)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1))
+        version: 0.8.8(sequelize@6.37.8(mariadb@3.5.4)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1))
       sqlite3:
         specifier: ^6.0.1
         version: 6.0.1
@@ -2979,8 +2979,8 @@ packages:
     resolution: {integrity: sha512-godMRo3E/m6uZtm0zVfDa5xCg1IGD+eEt4uVWzR0v62mbm2O70ZWY9l+ondg8CrPQFsCdtWpWW+nYdzvp1tWTw==}
     engines: {node: '>=22'}
 
-  '@scalar/client-side-rendering@0.3.9':
-    resolution: {integrity: sha512-Gg+VLhreiWHmHN0i9uatEoIxzsr0FaJoq0x+PkypmFgZFniD477DVCAnmWqx+KXlpFg0VtDanDHARIJXZ1fIeQ==}
+  '@scalar/client-side-rendering@0.3.10':
+    resolution: {integrity: sha512-FlUByzYhsas54zIvsiTJ7UgAZiVUQmErWvrQm+CKTBnIvSmIb5eWowJ4/O0bbkUa8rsOIdmCcX+HtX+EDdf0CA==}
     engines: {node: '>=22'}
 
   '@scalar/code-highlight@0.3.6':
@@ -2991,12 +2991,12 @@ packages:
     resolution: {integrity: sha512-cwIf042ehbD4dZWUIIlXZp0VWvaH7jznj/gpuLEqtuEDla5MrhTWYWj20aufpTpCeGexf1mqgouaWHUZ7lYByQ==}
     engines: {node: '>=22'}
 
-  '@scalar/express-api-reference@0.10.16':
-    resolution: {integrity: sha512-Jh7gDxGjJZjkJK3nmGVmLL7Ti6EP69Q2KEOnSCI/mtQxjRuavZt3XnYobubkoHUg9aUErvEpDcPH+ANNa4pggg==}
+  '@scalar/express-api-reference@0.10.17':
+    resolution: {integrity: sha512-+44Z5YBGwDBjm/tN2L3ep2VGsgR2msw06GKYnYEVaLpsj39C83HavNLL1eI8LOAFFE/Jw0u3NdpEiWA8ZpmucA==}
     engines: {node: '>=22'}
 
-  '@scalar/helpers@0.11.1':
-    resolution: {integrity: sha512-Knwbe0IYqFk0PPDoOKLasqglBHfyf9/zwWWqFsSNi/AtdjM29wSZXN6p8DFid6iB5B9epYH9YiSgJ6tpD00TEw==}
+  '@scalar/helpers@0.11.2':
+    resolution: {integrity: sha512-IgHW/hIj1XAvsPIBKiOgmK87qbyDjaQQg9S/auXU4MUtvnwKKpOeIOJc0NC71FkMdr4Mok0SSVI748cmlptoXQ==}
     engines: {node: '>=22'}
 
   '@scalar/helpers@0.8.2':
@@ -3027,8 +3027,8 @@ packages:
     resolution: {integrity: sha512-aV0PWqFpQft9a6d4Z6HOTHKDaA+K4AquxSPfBDI1c5f6lMe5l3zViww/iBQA/Yw+V1+Y2iwSVzhuxaktC1UiMg==}
     engines: {node: '>=22'}
 
-  '@scalar/schemas@0.8.3':
-    resolution: {integrity: sha512-cTjgiJxXFXMqXlFZafXOyTOKm1lUfbDTbe9La+dPcQPe6q0zXAiVtys0IKILQWNrjXPidY0eaB9Va/rd16bfxw==}
+  '@scalar/schemas@0.8.4':
+    resolution: {integrity: sha512-gbx/UjAswjJc+OZp/vcVRIopjqoJ62pOkrKLvVHa1MuMRoVxcPyNzW2/SQmnvdJku7C7a6PsKaPUQ6gZXGA4eg==}
     engines: {node: '>=22'}
 
   '@scalar/sidebar@0.9.23':
@@ -3050,8 +3050,8 @@ packages:
     resolution: {integrity: sha512-aS1FvHbKhBC51mWqXmhkPe6lmhCd9+u//DQ1YTiCWOz4/fXAdWfwHvW9UZ7AzzcGwGiCo9diE81xV+UvSI1qIg==}
     engines: {node: '>=22'}
 
-  '@scalar/types@0.18.2':
-    resolution: {integrity: sha512-q7fGMn0IygdLbYk9W4quM0w1caHDfL9FIxsYXNsgIep6uuO0T/t4BOStyf0qyzQ3pjt0B7rWFxO//EM9I7F/Tw==}
+  '@scalar/types@0.18.3':
+    resolution: {integrity: sha512-hPLLxVt/ah4RpCVp5UrLEpnBEgTwf+RvPtRiSEty3QqfBJUfADMXHz+oWK6UAa/vALg2AWuJLCD8hRlyQ2ET9w==}
     engines: {node: '>=22'}
 
   '@scalar/use-codemirror@0.14.12':
@@ -6191,6 +6191,10 @@ packages:
     resolution: {integrity: sha512-RPimw/7aMdv2oqRrxKwvZXcPfwBrn/JZ2xYcY9Hus/6LaS3VOAKVWKWgNLCFSiOm1ESXinjsDlidVU7JlnCN2A==}
     engines: {node: 20 || >=22}
 
+  lru-cache@11.5.2:
+    resolution: {integrity: sha512-4pfM1Ff0x50o0tQwb5ucw/RzNyD0/YJME6IVcStalZuMWxdt3sR3huStTtxz4PUmvZfRguvDejasvQ2kifR11g==}
+    engines: {node: 20 || >=22}
+
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
@@ -6245,8 +6249,8 @@ packages:
     resolution: {integrity: sha512-hdN1wVrZbb29eBGiGjJbeP8JbKjq1urkHJ/LIP/NY48MZ1QVXUsQBV1G1zvYFHn1XE06cwjBsOI2K3Ulnj1YXQ==}
     engines: {node: '>=8'}
 
-  mariadb@3.5.3:
-    resolution: {integrity: sha512-i053Kc0MgdUv/hu9mCyq67TYfPXFj3/MV8I7ZW5wvJNixIyXC0VztMPUjIVj/449nQo+BsxFD4Fdk/sA/uqKPQ==}
+  mariadb@3.5.4:
+    resolution: {integrity: sha512-3m0vdfgRkjle5/9hHl4R7rlVvnDA7QfuFSNkdIAQNROWKOS0J3b9IQK9HaZSCGEVKiDUbFXFiINfC+cmR5P/aA==}
     engines: {node: '>= 20.0.0'}
 
   markdown-table@3.0.4:
@@ -7989,8 +7993,8 @@ packages:
     resolution: {integrity: sha512-1URUxUqfHFM1c+zfSPsa3gnkO7Aq21qyH75SIduNYz4SzY964rn1X2vCMQaHSHhktiw+0kPa2iyb6PUpXqB6Vg==}
     engines: {node: '>=20'}
 
-  type-fest@5.8.0:
-    resolution: {integrity: sha512-YGYEVz3Fm5iy/AybuA0oyNFq7H4CgQNfRp/qfe8nurE1kuCeNm3/vfm9X4Mtl+qLyaKJUh5xrFZwogr41SMjYA==}
+  type-fest@5.9.0:
+    resolution: {integrity: sha512-yANm3Jr3GiJ1qgJlxGAVxTOIcEOk1rhQHamlXtnrCK7EHP4HeM9OGxtMg/W7HFdrVzw/ZWJKGVIJusVH85sLtw==}
     engines: {node: '>=20'}
 
   type-is@2.1.0:
@@ -10483,10 +10487,10 @@ snapshots:
       - universal-cookie
       - zod
 
-  '@scalar/client-side-rendering@0.3.9':
+  '@scalar/client-side-rendering@0.3.10':
     dependencies:
-      '@scalar/schemas': 0.8.3
-      '@scalar/types': 0.18.2
+      '@scalar/schemas': 0.8.4
+      '@scalar/types': 0.18.3
       '@scalar/validation': 0.6.3
 
   '@scalar/code-highlight@0.3.6':
@@ -10531,11 +10535,11 @@ snapshots:
       - tailwindcss
       - typescript
 
-  '@scalar/express-api-reference@0.10.16':
+  '@scalar/express-api-reference@0.10.17':
     dependencies:
-      '@scalar/client-side-rendering': 0.3.9
+      '@scalar/client-side-rendering': 0.3.10
 
-  '@scalar/helpers@0.11.1': {}
+  '@scalar/helpers@0.11.2': {}
 
   '@scalar/helpers@0.8.2': {}
 
@@ -10577,9 +10581,9 @@ snapshots:
       '@scalar/helpers': 0.8.2
       '@scalar/validation': 0.6.0
 
-  '@scalar/schemas@0.8.3':
+  '@scalar/schemas@0.8.4':
     dependencies:
-      '@scalar/helpers': 0.11.1
+      '@scalar/helpers': 0.11.2
       '@scalar/validation': 0.6.3
 
   '@scalar/sidebar@0.9.23(tailwindcss@4.3.1)(typescript@6.0.3)':
@@ -10617,11 +10621,11 @@ snapshots:
       type-fest: 5.7.0
       zod: 4.4.3
 
-  '@scalar/types@0.18.2':
+  '@scalar/types@0.18.3':
     dependencies:
-      '@scalar/helpers': 0.11.1
+      '@scalar/helpers': 0.11.2
       nanoid: 5.1.16
-      type-fest: 5.8.0
+      type-fest: 5.9.0
       zod: 4.4.3
 
   '@scalar/use-codemirror@0.14.12(typescript@6.0.3)':
@@ -14074,6 +14078,8 @@ snapshots:
 
   lru-cache@11.5.1: {}
 
+  lru-cache@11.5.2: {}
+
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
@@ -14138,13 +14144,13 @@ snapshots:
 
   map-obj@4.3.0: {}
 
-  mariadb@3.5.3:
+  mariadb@3.5.4:
     dependencies:
       '@types/geojson': 7946.0.16
       '@types/node': 24.13.3
       denque: 2.1.0
-      iconv-lite: 0.7.2
-      lru-cache: 11.5.1
+      iconv-lite: 0.7.3
+      lru-cache: 11.5.2
 
   markdown-table@3.0.4: {}
 
@@ -15020,7 +15026,7 @@ snapshots:
 
   path-scurry@2.0.2:
     dependencies:
-      lru-cache: 11.5.1
+      lru-cache: 11.5.2
       minipass: 7.1.3
 
   path-to-regexp@8.4.2: {}
@@ -15548,17 +15554,17 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  sequelize-auto@0.8.8(sequelize@6.37.8(mariadb@3.5.3)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1)):
+  sequelize-auto@0.8.8(sequelize@6.37.8(mariadb@3.5.4)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1)):
     dependencies:
       lodash: 4.18.1
       mkdirp: 1.0.4
       reserved-words: 0.1.2
-      sequelize: 6.37.8(mariadb@3.5.3)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1)
+      sequelize: 6.37.8(mariadb@3.5.4)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1)
       yargs: 16.2.0
 
   sequelize-pool@7.1.0: {}
 
-  sequelize@6.37.8(mariadb@3.5.3)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1):
+  sequelize@6.37.8(mariadb@3.5.4)(mysql2@3.23.1(@types/node@24.13.3))(pg-hstore@2.3.4)(pg@8.22.0)(sqlite3@6.0.1):
     dependencies:
       '@types/debug': 4.1.13
       '@types/validator': 13.15.10
@@ -15577,7 +15583,7 @@ snapshots:
       validator: 13.15.35
       wkx: 0.5.0
     optionalDependencies:
-      mariadb: 3.5.3
+      mariadb: 3.5.4
       mysql2: 3.23.1(@types/node@24.13.3)
       pg: 8.22.0
       pg-hstore: 2.3.4
@@ -16227,7 +16233,7 @@ snapshots:
     dependencies:
       tagged-tag: 1.0.0
 
-  type-fest@5.8.0:
+  type-fest@5.9.0:
     dependencies:
       tagged-tag: 1.0.0
 
