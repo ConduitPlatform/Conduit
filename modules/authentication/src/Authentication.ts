@@ -6,6 +6,7 @@ import {
   GrpcRequest,
   HealthCheckStatus,
   Indexable,
+  Query,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isEmpty, isNil } from 'lodash-es';
@@ -788,10 +789,9 @@ export default class Authentication extends ManagedModule<Config> {
 
     try {
       const deletedToken = await Token.getInstance().deleteOne({
-        // @ts-expect-error Unsafe nested property access
         'data.teamId': teamId,
         'data.email': email,
-      });
+      } as Query<Token>);
 
       if (deletedToken.deletedCount === 0) {
         return callback({
