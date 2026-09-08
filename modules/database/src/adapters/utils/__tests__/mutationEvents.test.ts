@@ -1,5 +1,4 @@
 import { describe, expect, it } from '@jest/globals';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
   buildMutationEventChunks,

@@ -372,12 +372,11 @@ export async function processBackfillControllerJob(
   return scanBackfillPage(parsed.data, persisted, deps);
 }
 
-async function scanBackfillPage(
-  job: BackfillControllerJobData,
+async function startQueuedBackfill(
   persisted: PersistedBackfillRun,
   deps: ProcessBackfillDeps,
-): Promise<{ action: string; run?: BackfillRunProgress }> {
-  const now = deps.now ?? new Date();
+  now: Date,
+): Promise<{ action: string; run?: BackfillRunProgress } | { run: BackfillRunProgress }> {
   let run: BackfillRunProgress = persisted;
   if (run.state === 'queued') {
     const started = startBackfillRun(run, now);
@@ -388,15 +387,52 @@ async function scanBackfillPage(
   if (run.state !== 'running') {
     return { action: run.state, run };
   }
+  return { run };
+}
+
+async function rescheduleStaleBackfill(
+  persisted: PersistedBackfillRun,
+  run: BackfillRunProgress,
+  job: BackfillControllerJobData,
+  deps: ProcessBackfillDeps,
+): Promise<{ action: string; run: BackfillRunProgress } | undefined> {
   const jobCursor = job.cursor ?? null;
   const runCursor = run.cursor ?? null;
-  if (jobCursor !== runCursor) {
-    await deps.enqueueContinuation({
-      runId: persisted._id,
-      cursor: runCursor,
-    });
-    return { action: 'stale', run };
-  }
+  if (jobCursor === runCursor) return undefined;
+  await deps.enqueueContinuation({
+    runId: persisted._id,
+    cursor: runCursor,
+  });
+  return { action: 'stale', run };
+}
+
+function pageEmbeddingJobs(
+  run: BackfillRunProgress,
+  persistedId: string,
+  docs: Array<{ _id?: unknown }>,
+  maxBatchSize: number,
+): EmbeddingJobData[] {
+  return docs
+    .map(doc => ({
+      schemaName: run.schemaName,
+      documentId: String(doc._id),
+      ...(run.configId ? { configId: run.configId } : {}),
+      backfillRunId: persistedId,
+    }))
+    .slice(0, Math.min(run.batchSize, maxBatchSize, MAX_QUEUE_BATCH_SIZE));
+}
+
+async function scanBackfillPage(
+  job: BackfillControllerJobData,
+  persisted: PersistedBackfillRun,
+  deps: ProcessBackfillDeps,
+): Promise<{ action: string; run?: BackfillRunProgress }> {
+  const now = deps.now ?? new Date();
+  const started = await startQueuedBackfill(persisted, deps, now);
+  if ('action' in started) return started;
+  let run = started.run;
+  const stale = await rescheduleStaleBackfill(persisted, run, job, deps);
+  if (stale) return stale;
 
   try {
     if (!run.configId) {
@@ -423,14 +459,7 @@ async function scanBackfillPage(
       await deps.findPage(run.schemaName, pageQuery.page),
       run.batchSize,
     );
-    const jobs = docs
-      .map(doc => ({
-        schemaName: run.schemaName,
-        documentId: String(doc._id),
-        ...(run.configId ? { configId: run.configId } : {}),
-        backfillRunId: persisted._id,
-      }))
-      .slice(0, Math.min(run.batchSize, deps.maxBatchSize, MAX_QUEUE_BATCH_SIZE));
+    const jobs = pageEmbeddingJobs(run, persisted._id, docs, deps.maxBatchSize);
     const queuedDelta = jobs.length ? await deps.enqueueEmbeddingJobs(jobs) : 0;
     incrementEmbeddingMetric('backfill', queuedDelta);
     const applied = applyBackfillPage(
@@ -456,9 +485,6 @@ async function scanBackfillPage(
     });
     return { action: 'continue', run };
   } catch (err) {
-    if (err instanceof BackfillGateError) {
-      return failPersistedRun(persisted._id, run, err, deps, now);
-    }
     return failPersistedRun(persisted._id, run, err, deps, now);
   }
 }
