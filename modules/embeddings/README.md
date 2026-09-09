@@ -37,8 +37,9 @@ Enable it and configure an OpenAI-compatible provider:
 
 ## Workflow
 
-1. Create an embedding config with `schemaName`, `sourceFields`, `targetField`,
-   `provider`, `model`, and `dimensions`. The first upsert provisions the vector
+1. Create an embedding config with `schemaName`, `sourceFields`, and
+   `targetField`. `provider`, `model`, and `dimensions` default from the
+   provider catalogue when omitted. The first upsert provisions the vector
    index when Database indexing is available. The config stays disabled until
    Database reports a queryable index. If indexing is unavailable, status
    returns a manual index lifecycle warning.
