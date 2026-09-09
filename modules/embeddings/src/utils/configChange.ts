@@ -89,15 +89,20 @@ export function isInPlaceDimensionChange(
   );
 }
 
+export function sourceHashField(targetField: string): string {
+  return `${targetField}SourceHash`;
+}
+
 export function hashFieldsToInvalidate(
   existing: MaterialEmbeddingConfig,
   next: MaterialEmbeddingConfig,
 ): string[] {
-  const fields = new Set<string>([
-    `${existing.targetField}SourceHash`,
-    `${next.targetField}SourceHash`,
-  ]);
-  return [...fields];
+  return [
+    ...new Set([
+      sourceHashField(existing.targetField),
+      sourceHashField(next.targetField),
+    ]),
+  ];
 }
 
 export function defaultEmbeddingVectorIndexName(field: string): string {

@@ -25,6 +25,7 @@ import {
 import {
   buildEmbeddingDocumentSelect,
   generateEmbeddingsForDocument,
+  sourceHashField,
 } from './utils/processEmbedding.js';
 import {
   MAX_QUEUE_BATCH_SIZE,
@@ -50,7 +51,7 @@ import {
 import { toBackfillCountUpdateQuery } from './utils/backfillRun.js';
 import { incrementEmbeddingMetric } from './utils/embeddingMetrics.js';
 import metricsSchema from './metrics/index.js';
-import { EmbeddingsApi } from './api/embeddingsApi.js';
+import { EmbeddingsApi, type DeclaredSchemaInfo } from './api/embeddingsApi.js';
 import { AdminHandlers } from './admin/index.js';
 import { EmbeddingsRoutes } from './routes/index.js';
 import {
@@ -504,7 +505,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       ...new Set(
         matching.flatMap(config => [
           ...config.sourceFields,
-          `${config.targetField}SourceHash`,
+          sourceHashField(config.targetField),
         ]),
       ),
     ];
@@ -565,12 +566,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
   }
 
   private async declaredSchema(schemaName: string) {
-    return this.database.findOne<{
-      name: string;
-      ownerModule: string;
-      fields?: Record<string, unknown>;
-      extensions?: Array<{ ownerModule: string; fields: Record<string, unknown> }>;
-    }>(
+    return this.database.findOne<DeclaredSchemaInfo>(
       '_DeclaredSchema',
       { name: schemaName },
       { select: 'name ownerModule fields extensions' },
@@ -581,10 +577,8 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     const config = this.currentConfig();
     const providerConfig = config.providers[provider] ?? {};
     return {
-      endpoint:
-        typeof providerConfig.endpoint === 'string' ? providerConfig.endpoint : undefined,
-      apiKey:
-        typeof providerConfig.apiKey === 'string' ? providerConfig.apiKey : undefined,
+      endpoint: providerConfig.endpoint,
+      apiKey: providerConfig.apiKey,
       model: resolveProviderModelName(providerConfig, model),
       timeoutMs: config.security.embedTimeoutMs,
       maxInputBytes: config.security.maxEmbedInputBytes,

@@ -168,7 +168,9 @@ export default class DatabaseModule extends ManagedModule<Config> {
     await this._activeAdapter.registerSystemSchema(models.DeclaredSchema, isReplica);
     await this._activeAdapter.registerSystemSchema(models.MigratedSchemas, isReplica);
     let modelPromises = DATABASE_SYSTEM_SCHEMAS.filter(
-      model => !['_DeclaredSchema', 'MigratedSchemas'].includes(model.name),
+      model =>
+        model.name !== models.DeclaredSchema.name &&
+        model.name !== models.MigratedSchemas.name,
     ).map(model => this._activeAdapter.registerSystemSchema(model, isReplica));
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();

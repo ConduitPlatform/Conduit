@@ -1,4 +1,6 @@
-import { hashedEmbeddingSource } from './configChange.js';
+import { hashedEmbeddingSource, sourceHashField } from './configChange.js';
+
+export { sourceHashField };
 
 export interface EmbeddingConfigLike {
   sourceFields: string[];
@@ -22,13 +24,9 @@ export function buildEmbeddingDocumentSelect(
     for (const field of config.sourceFields) {
       fields.add(`+${field}`);
     }
-    fields.add(`+${config.targetField}SourceHash`);
+    fields.add(`+${sourceHashField(config.targetField)}`);
   }
   return [...fields].join(' ');
-}
-
-export function sourceHashField(targetField: string): string {
-  return `${targetField}SourceHash`;
 }
 
 export function buildEmbeddingInput(

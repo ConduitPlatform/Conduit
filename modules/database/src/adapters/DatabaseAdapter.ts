@@ -461,7 +461,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
       { readPreference: 'primary' },
     );
     models = models
-      // do not recover system schemas as they have already been
+      // do not recover system schemas; they are already registered
       .filter((model: _ConduitSchema) => !DATABASE_SYSTEM_SCHEMA_NAME_SET.has(model.name))
       .map((model: _ConduitSchema) => {
         const schema = new ConduitSchema(
