@@ -135,13 +135,12 @@ describe('provider model catalogue', () => {
         err.code === status.INVALID_ARGUMENT &&
         /not a configured provider/.test(err.message),
     );
-    assert.equal(resolveCatalogueModel(providers['openai-compatible']).name, 'small');
-    assert.equal(
-      resolveCatalogueDimensions(providers['openai-compatible'].models![1], 0),
-      3072,
-    );
+    const openai = providers['openai-compatible'];
+    const [small, large] = openai.models;
+    assert.equal(resolveCatalogueModel(openai).name, 'small');
+    assert.equal(resolveCatalogueDimensions(large, 0), 3072);
     assert.throws(
-      () => resolveCatalogueDimensions(providers['openai-compatible'].models![0], 768),
+      () => resolveCatalogueDimensions(small, 768),
       err =>
         err instanceof GrpcError &&
         err.code === status.INVALID_ARGUMENT &&
@@ -174,12 +173,9 @@ describe('provider model catalogue', () => {
         },
       },
     });
-    assert.equal(
-      'requireGrpcKey' in (normalized.security as Record<string, unknown>),
-      false,
-    );
+    assert.equal('requireGrpcKey' in normalized.security, false);
     assert.deepEqual(
-      (normalized.providers['openai-compatible'] as { models?: unknown }).models,
+      normalizeProviderSettings(normalized.providers['openai-compatible']).models,
       [{ name: 'text-embedding-3-small', dimensions: 1536 }],
     );
   });
