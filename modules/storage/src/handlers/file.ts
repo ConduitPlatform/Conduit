@@ -116,10 +116,13 @@ export class FileHandlers {
       return;
     }
 
+    if (!file) {
+      throw new GrpcError(status.NOT_FOUND, 'File does not exist');
+    }
     const allowed = await this.grpcSdk.authorization?.can({
       subject: `User:${userId}`,
       actions: [action],
-      resource: `File:${file!._id}`,
+      resource: `File:${file._id}`,
     });
     if (!allowed || !allowed.allow) {
       throw new GrpcError(
@@ -291,7 +294,7 @@ export class FileHandlers {
   async getFileUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     try {
       const found = await File.getInstance().findOne({
-        _id: resolveFileId(call.request) ?? call.request.params.id,
+        _id: resolveFileId(call.request),
       });
       if (isNil(found)) {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');

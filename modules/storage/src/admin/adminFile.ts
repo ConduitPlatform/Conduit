@@ -53,7 +53,7 @@ export class AdminFileHandlers {
   }
 
   async getFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const file = await File.getInstance().findOne({ _id: call.request.params.id });
+    const file = await File.getInstance().findOne({ _id: resolveFileId(call.request) });
     if (isNil(file)) {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
     }
@@ -65,22 +65,8 @@ export class AdminFileHandlers {
     const { name, alias, data, container, mimeType, isPublic } = call.request.params;
     const scope = resolveScope(call.request);
     const folder = normalizeFolderPath(call.request.params.folder);
-    const config = ConfigController.getInstance().config;
-    const usedContainer = isNil(container)
-      ? config.defaultContainer
-      : await this.findOrCreateContainer(container, isPublic);
-    if (folder !== '/') {
-      await findOrCreateFolders(
-        this.grpcSdk,
-        this.storageProvider,
-        folder,
-        usedContainer,
-        {
-          isPublic,
-          scope,
-        },
-      );
-    }
+    const usedContainer = await this.resolveAdminContainer(container, isPublic);
+    await this.ensureAdminFolder(folder, usedContainer, isPublic, scope);
     const validatedName = await validateName(name, folder, usedContainer);
     if (!isString(data)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid data provided');
@@ -107,22 +93,8 @@ export class AdminFileHandlers {
     const { name, alias, container, size = 0, mimeType, isPublic } = call.request.params;
     const scope = resolveScope(call.request);
     const folder = normalizeFolderPath(call.request.params.folder);
-    const config = ConfigController.getInstance().config;
-    const usedContainer = isNil(container)
-      ? config.defaultContainer
-      : await this.findOrCreateContainer(container, isPublic);
-    if (folder !== '/') {
-      await findOrCreateFolders(
-        this.grpcSdk,
-        this.storageProvider,
-        folder,
-        usedContainer,
-        {
-          isPublic,
-          scope,
-        },
-      );
-    }
+    const usedContainer = await this.resolveAdminContainer(container, isPublic);
+    await this.ensureAdminFolder(folder, usedContainer, isPublic, scope);
     const validatedName = await validateName(name, folder, usedContainer);
 
     try {
@@ -225,7 +197,7 @@ export class AdminFileHandlers {
 
   async getFileUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     try {
-      const found = await File.getInstance().findOne({ _id: call.request.params.id });
+      const found = await File.getInstance().findOne({ _id: resolveFileId(call.request) });
       if (isNil(found)) {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
@@ -281,6 +253,31 @@ export class AdminFileHandlers {
     }
   }
 
+  private async resolveAdminContainer(
+    container?: string,
+    isPublic?: boolean,
+  ): Promise<string> {
+    if (isNil(container)) {
+      return ConfigController.getInstance().config.defaultContainer;
+    }
+    return this.findOrCreateContainer(container, isPublic);
+  }
+
+  private async ensureAdminFolder(
+    folder: string,
+    container: string,
+    isPublic?: boolean,
+    scope?: string,
+  ): Promise<void> {
+    if (folder === '/') {
+      return;
+    }
+    await findOrCreateFolders(this.grpcSdk, this.storageProvider, folder, container, {
+      isPublic,
+      scope,
+    });
+  }
+
   private async findOrCreateContainer(
     container: string,
     isPublic?: boolean,
@@ -317,15 +314,11 @@ export class AdminFileHandlers {
     }
     const newFolder = isNil(folder) ? file.folder : normalizeFolderPath(folder);
     if (newFolder !== file.folder && newFolder !== '/') {
-      await findOrCreateFolders(
-        this.grpcSdk,
-        this.storageProvider,
+      await this.ensureAdminFolder(
         newFolder,
         newContainer,
-        {
-          isPublic: file.isPublic,
-          scope: resolveScope(call.request),
-        },
+        file.isPublic,
+        resolveScope(call.request),
       );
     }
     const isDataUpdate =
