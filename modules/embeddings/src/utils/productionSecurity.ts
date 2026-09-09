@@ -1,12 +1,8 @@
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 
-export function assertGrpcKeyRequirement(
-  env: NodeJS.ProcessEnv = process.env,
-  config?: { security?: { requireGrpcKey?: boolean } },
-): void {
-  const required =
-    env.NODE_ENV === 'production' || config?.security?.requireGrpcKey === true;
+export function assertGrpcKeyRequirement(env: NodeJS.ProcessEnv = process.env): void {
+  const required = env.NODE_ENV === 'production';
   if (required && !env.GRPC_KEY) {
     throw new GrpcError(
       status.FAILED_PRECONDITION,

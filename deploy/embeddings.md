@@ -48,8 +48,9 @@ pod with module convict `enabled` still false.
    true for the target backend (MongoDB Atlas Vector Search or Postgres
    pgvector). Saving a disabled config may succeed with capability warnings;
    activation must not.
-5. Configure the HTTPS provider (`endpoint`, `apiKey`, `allowedHosts`). Check
-   `GET /embeddings/status` for provider/index warnings.
+5. Configure the HTTPS provider (`endpoint`, `apiKey`, and model catalogue).
+   `GRPC_KEY` is supplied by the deployment (`NODE_ENV=production`), not by
+   module settings. Check `GET /embeddings/status` for provider/index warnings.
 6. Create an embedding config. The first upsert provisions the vector index
    when Database indexing is available. The config stays disabled until the
    index for `targetField` is queryable (`status` ready, not pending/failed).
