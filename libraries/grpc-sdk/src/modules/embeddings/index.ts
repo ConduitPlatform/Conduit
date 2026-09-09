@@ -10,9 +10,9 @@ export interface EmbeddingConfigInput {
   schemaName: string;
   sourceFields: string[];
   targetField: string;
-  provider: string;
-  model: string;
-  dimensions: number;
+  provider?: string;
+  model?: string;
+  dimensions?: number;
   similarity?: string;
   sourceFieldAllowlist?: string[];
   enabled?: boolean;

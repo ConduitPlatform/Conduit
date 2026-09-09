@@ -41,11 +41,16 @@ import { MAX_QUEUE_BATCH_SIZE } from '../utils/embeddingJobs.js';
 import { ACTIVE_BACKFILL_STATES } from '../utils/backfillRun.js';
 import {
   assertCanManageEmbeddingConfig,
+  assertEmbeddingExtensionAvailability,
   assertEmbeddingTargetSchema,
+  assertSchemaCanReceiveEmbeddings,
   assertSemanticSearchAccess,
   canManageEmbeddingConfig,
+  embeddingSourceHashField,
+  EMBEDDINGS_OWNER_MODULE,
   resolveAdminOperatorContext,
   resolveSourceFieldAllowlist,
+  type SchemaExtensionInfo,
 } from '../utils/schemaPolicy.js';
 import { clampClientSearchLimit } from '../utils/clientSearchContext.js';
 import { validateEmbeddingConfigInput } from '../utils/validateEmbeddingConfig.js';
@@ -75,12 +80,20 @@ import { sanitizeErrorMessage } from '../utils/redactConfig.js';
 export interface DeclaredSchemaInfo {
   name: string;
   ownerModule?: string;
+  fields?: Record<string, unknown>;
+  extensions?: SchemaExtensionInfo[];
 }
 
 export interface SchemaInfo {
   name: string;
   fields: Record<string, unknown>;
-  modelOptions?: { conduit?: { authorization?: { enabled?: boolean } } };
+  modelOptions?: {
+    conduit?: {
+      cms?: { enabled?: boolean };
+      permissions?: { extendable?: boolean };
+      authorization?: { enabled?: boolean };
+    };
+  };
 }
 
 export interface EmbeddingConfigRecord {
@@ -179,7 +192,7 @@ export class EmbeddingsApi {
       targetField: string;
       provider?: string;
       model?: string;
-      dimensions: number;
+      dimensions?: number;
       similarity?: string;
       sourceFieldAllowlist?: string[];
       enabled?: boolean;
@@ -187,6 +200,8 @@ export class EmbeddingsApi {
     caller: EmbeddingsApiCaller,
   ): Promise<{ config: MappedEmbeddingConfig; warnings: string[] }> {
     const schema = await this.loadTargetSchema(request.schemaName, caller);
+    assertSchemaCanReceiveEmbeddings(schema);
+    const declared = await this.deps.declaredSchema(request.schemaName);
     const configDefaults = this.deps.currentConfig();
     const { sourceFieldAllowlist: _allowlist, ...persisted } =
       validateEmbeddingConfigInput(
@@ -198,9 +213,21 @@ export class EmbeddingsApi {
             platformAdmin: caller.platformAdmin === true,
           }),
         },
-        { provider: configDefaults.defaultProvider },
+        {
+          provider: configDefaults.defaultProvider,
+          providers: configDefaults.providers,
+        },
         schema.fields,
       );
+    assertEmbeddingExtensionAvailability({
+      schemaName: persisted.schemaName,
+      targetField: persisted.targetField,
+      dimensions: persisted.dimensions,
+      similarity: persisted.similarity,
+      baseFields: declared?.fields,
+      compiledFields: schema.fields,
+      extensions: declared?.extensions,
+    });
     const enabled = request.enabled ?? true;
     const capabilities = await this.deps.getVectorCapabilities(persisted.schemaName);
     let indexes = await this.deps.getVectorIndexes(persisted.schemaName);
@@ -216,7 +243,7 @@ export class EmbeddingsApi {
       );
     }
     if (capabilities.storage) {
-      await this.extendEmbeddingSchema(persisted);
+      await this.extendEmbeddingSchema(persisted, declared);
     }
     const provisioned = await this.provisionUpsertIndexes({
       persisted,
@@ -670,27 +697,36 @@ export class EmbeddingsApi {
     return config;
   }
 
-  private async extendEmbeddingSchema(persisted: {
-    schemaName: string;
-    targetField: string;
-    dimensions: number;
-    similarity: VectorSimilarity;
-  }) {
+  private async extendEmbeddingSchema(
+    persisted: {
+      schemaName: string;
+      targetField: string;
+      dimensions: number;
+      similarity: VectorSimilarity;
+    },
+    declared?: DeclaredSchemaInfo | null,
+  ) {
+    const hashField = embeddingSourceHashField(persisted.targetField);
+    const existing =
+      declared?.extensions?.find(
+        extension => extension.ownerModule === EMBEDDINGS_OWNER_MODULE,
+      )?.fields ?? {};
     await this.deps.setSchemaExtension({
       schemaName: persisted.schemaName,
       fields: {
+        ...existing,
         [persisted.targetField]: {
           type: TYPE.Vector,
           dimensions: persisted.dimensions,
           similarity: persisted.similarity,
           select: false,
         },
-        [`${persisted.targetField}SourceHash`]: {
+        [hashField]: {
           type: TYPE.String,
           required: false,
           select: false,
         },
-      },
+      } as ConduitModel,
     });
   }
 

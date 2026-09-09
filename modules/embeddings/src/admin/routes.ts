@@ -21,7 +21,7 @@ const CONFIG_BODY = {
   targetField: ConduitString.Required,
   provider: ConduitString.Optional,
   model: ConduitString.Optional,
-  dimensions: ConduitNumber.Required,
+  dimensions: ConduitNumber.Optional,
   similarity: ConduitString.Optional,
   sourceFieldAllowlist: { type: [TYPE.String], required: false },
   enabled: ConduitBoolean.Optional,

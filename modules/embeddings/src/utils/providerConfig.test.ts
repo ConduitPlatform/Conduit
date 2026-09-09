@@ -7,6 +7,9 @@ import {
   normalizeEmbeddingsConfig,
   normalizeProviderSettings,
   resolveProviderModelName,
+  assertConfiguredProvider,
+  resolveCatalogueDimensions,
+  resolveCatalogueModel,
 } from './providerConfig.js';
 
 describe('provider model catalogue', () => {
@@ -99,6 +102,41 @@ describe('provider model catalogue', () => {
     assert.equal(resolveProviderModelName(normalized), 'small');
     assert.equal(findProviderModel(normalized, 'large')?.dimensions, 3072);
     assert.equal(findProviderModel(normalized, 'missing'), undefined);
+  });
+
+  it('resolves configured providers and catalogue dimensions, rejecting mismatches', () => {
+    const providers = {
+      'openai-compatible': {
+        models: [
+          { name: 'small', dimensions: 1536 },
+          { name: 'large', dimensions: 3072 },
+        ],
+        defaultModel: 'small',
+      },
+    };
+    assert.equal(
+      assertConfiguredProvider(providers, 'openai-compatible').name,
+      'openai-compatible',
+    );
+    assert.throws(
+      () => assertConfiguredProvider(providers, 'missing'),
+      err =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /not a configured provider/.test(err.message),
+    );
+    assert.equal(resolveCatalogueModel(providers['openai-compatible']).name, 'small');
+    assert.equal(
+      resolveCatalogueDimensions(providers['openai-compatible'].models![1], 0),
+      3072,
+    );
+    assert.throws(
+      () => resolveCatalogueDimensions(providers['openai-compatible'].models![0], 768),
+      err =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /do not match catalogue dimensions/.test(err.message),
+    );
   });
 
   it('allows an empty catalogue and does not throw on incomplete legacy reads', () => {

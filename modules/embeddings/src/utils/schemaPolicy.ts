@@ -70,6 +70,31 @@ export function isDeniedEmbeddingSchema(schema: {
   return AUTH_SECRET_SCHEMA_NAMES.has(schema.name);
 }
 
+export function embeddingSourceHashField(targetField: string): string {
+  return `${targetField}SourceHash`;
+}
+
+export interface EmbeddingSchemaOptions {
+  conduit?: {
+    cms?: { enabled?: boolean };
+    permissions?: { extendable?: boolean };
+    authorization?: { enabled?: boolean };
+  };
+}
+
+export function isCmsEnabled(modelOptions?: EmbeddingSchemaOptions): boolean {
+  return modelOptions?.conduit?.cms?.enabled === true;
+}
+
+export function isSchemaExtendable(modelOptions?: EmbeddingSchemaOptions): boolean {
+  return modelOptions?.conduit?.permissions?.extendable === true;
+}
+
+export function isEmbeddingSchemaEnabled(modelOptions?: EmbeddingSchemaOptions): boolean {
+  if (modelOptions?.conduit?.cms == null) return true;
+  return isCmsEnabled(modelOptions);
+}
+
 export function assertEmbeddingTargetSchema(schema: {
   name: string;
   ownerModule?: string;
@@ -79,6 +104,24 @@ export function assertEmbeddingTargetSchema(schema: {
     status.PERMISSION_DENIED,
     `Schema '${schema.name}' cannot be used as an embedding source`,
   );
+}
+
+export function assertSchemaCanReceiveEmbeddings(schema: {
+  name: string;
+  modelOptions?: EmbeddingSchemaOptions;
+}): void {
+  if (!isEmbeddingSchemaEnabled(schema.modelOptions)) {
+    throw new GrpcError(
+      status.FAILED_PRECONDITION,
+      `Schema '${schema.name}' is not enabled`,
+    );
+  }
+  if (!isSchemaExtendable(schema.modelOptions)) {
+    throw new GrpcError(
+      status.FAILED_PRECONDITION,
+      `Schema '${schema.name}' is not extendable`,
+    );
+  }
 }
 
 export function canManageEmbeddingConfig(args: {
@@ -195,4 +238,125 @@ export function assertSourceFields(args: {
       );
     }
   }
+}
+
+export interface SchemaExtensionInfo {
+  ownerModule: string;
+  fields: Record<string, unknown>;
+}
+
+export interface EmbeddingExtensionField {
+  type: string;
+  dimensions?: number;
+  similarity?: string;
+  required?: boolean;
+  select?: boolean;
+}
+
+export function assertEmbeddingExtensionAvailability(args: {
+  schemaName: string;
+  targetField: string;
+  dimensions: number;
+  similarity: string;
+  baseFields?: Record<string, unknown>;
+  compiledFields: Record<string, unknown>;
+  extensions?: SchemaExtensionInfo[];
+}): void {
+  const hashField = embeddingSourceHashField(args.targetField);
+  const proposed: Record<string, EmbeddingExtensionField> = {
+    [args.targetField]: {
+      type: TYPE.Vector,
+      dimensions: args.dimensions,
+      similarity: args.similarity,
+      select: false,
+    },
+    [hashField]: {
+      type: TYPE.String,
+      required: false,
+      select: false,
+    },
+  };
+  for (const [name, definition] of Object.entries(proposed)) {
+    assertExtensionFieldAvailable({
+      schemaName: args.schemaName,
+      fieldName: name,
+      proposed: definition,
+      baseFields: args.baseFields,
+      compiledFields: args.compiledFields,
+      extensions: args.extensions ?? [],
+    });
+  }
+}
+
+function fieldOwner(
+  fieldName: string,
+  extensions: SchemaExtensionInfo[],
+): SchemaExtensionInfo | undefined {
+  return extensions.find(extension => fieldName in (extension.fields ?? {}));
+}
+
+function assertExtensionFieldAvailable(args: {
+  schemaName: string;
+  fieldName: string;
+  proposed: EmbeddingExtensionField;
+  baseFields?: Record<string, unknown>;
+  compiledFields: Record<string, unknown>;
+  extensions: SchemaExtensionInfo[];
+}): void {
+  const owned = fieldOwner(args.fieldName, args.extensions);
+  if (owned && owned.ownerModule !== EMBEDDINGS_OWNER_MODULE) {
+    throw extensionCollision(args.schemaName, args.fieldName);
+  }
+  if (owned?.ownerModule === EMBEDDINGS_OWNER_MODULE) {
+    if (!isCompatibleEmbeddingField(owned.fields[args.fieldName], args.proposed)) {
+      throw extensionCollision(args.schemaName, args.fieldName);
+    }
+    return;
+  }
+  if (args.baseFields && args.fieldName in args.baseFields) {
+    throw extensionCollision(args.schemaName, args.fieldName);
+  }
+  if (args.fieldName in args.compiledFields) {
+    if (!isCompatibleEmbeddingField(args.compiledFields[args.fieldName], args.proposed)) {
+      throw extensionCollision(args.schemaName, args.fieldName);
+    }
+  }
+}
+
+function extensionCollision(schemaName: string, fieldName: string): GrpcError {
+  return new GrpcError(
+    status.ALREADY_EXISTS,
+    `Field '${fieldName}' already exists on schema '${schemaName}' and is not a compatible embeddings extension`,
+  );
+}
+
+function fieldType(field: unknown): string | undefined {
+  if (typeof field === 'string') return field;
+  if (!isRecord(field)) return undefined;
+  if (typeof field.type === 'string') return field.type;
+  return undefined;
+}
+
+function isCompatibleEmbeddingField(
+  existing: unknown,
+  proposed: EmbeddingExtensionField,
+): boolean {
+  const type = fieldType(existing);
+  if (type !== proposed.type) return false;
+  if (proposed.type === TYPE.Vector) {
+    if (!isRecord(existing)) return false;
+    if (existing.dimensions !== proposed.dimensions) return false;
+    if (
+      typeof existing.similarity === 'string' &&
+      existing.similarity !== proposed.similarity
+    ) {
+      return false;
+    }
+    return true;
+  }
+  if (proposed.type === TYPE.String) {
+    if (isRecord(existing) && existing.required === true) return false;
+    return isStringLikeField(existing);
+  }
+  return false;
 }

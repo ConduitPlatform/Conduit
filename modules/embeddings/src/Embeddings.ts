@@ -565,10 +565,15 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
   }
 
   private async declaredSchema(schemaName: string) {
-    return this.database.findOne<{ name: string; ownerModule: string }>(
+    return this.database.findOne<{
+      name: string;
+      ownerModule: string;
+      fields?: Record<string, unknown>;
+      extensions?: Array<{ ownerModule: string; fields: Record<string, unknown> }>;
+    }>(
       '_DeclaredSchema',
       { name: schemaName },
-      { select: 'name ownerModule' },
+      { select: 'name ownerModule fields extensions' },
     );
   }
 
