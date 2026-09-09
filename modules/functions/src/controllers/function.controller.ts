@@ -114,7 +114,9 @@ export class FunctionController {
         if (ConfigController.getInstance().config.active) {
           const cronQueue = CronQueueController.getInstance(this.grpcSdk);
           cronQueue.setCompiledFunctions(this.compiledCronFunctions);
-          await cronQueue.syncCronJobs();
+          if (ConfigController.getInstance().config.active) {
+            await cronQueue.syncCronJobs();
+          }
         }
       })
       .catch((err: Error) => {

@@ -63,6 +63,7 @@ export default class Functions extends ManagedModule<Config> {
       this.trustModelNoticeLoggedForActiveSession = true;
     }
     if (configActive) {
+      CronQueueController.getInstance(this.grpcSdk).enableCronScheduling();
       this.registerDeclaredPeerWatches();
       this.updateHealth(HealthCheckStatus.SERVING);
     }
