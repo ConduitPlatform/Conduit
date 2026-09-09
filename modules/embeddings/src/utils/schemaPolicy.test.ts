@@ -9,12 +9,18 @@ import {
   assertSchemaCanReceiveEmbeddings,
   assertSemanticSearchAccess,
   assertSourceFields,
+  DATABASE_SYSTEM_SCHEMA_NAMES,
   isDeniedEmbeddingSchema,
+  PLATFORM_INTERNAL_SCHEMA_NAMES,
   resolveAdminOperatorContext,
   resolveSourceFieldAllowlist,
 } from './schemaPolicy.js';
 
 describe('embedding schema and source policies', () => {
+  const extendableEnabled = {
+    conduit: { cms: { enabled: true }, permissions: { extendable: true } },
+  };
+
   it('denies system, auth-secret, and embeddings-owned schemas', () => {
     assert.equal(isDeniedEmbeddingSchema({ name: 'EmbeddingConfig' }), true);
     assert.equal(isDeniedEmbeddingSchema({ name: 'BackfillRun' }), true);
@@ -25,6 +31,10 @@ describe('embedding schema and source policies', () => {
     assert.equal(isDeniedEmbeddingSchema({ name: '_DeclaredSchema' }), true);
     assert.equal(
       isDeniedEmbeddingSchema({ name: 'Views', ownerModule: 'database' }),
+      true,
+    );
+    assert.equal(
+      isDeniedEmbeddingSchema({ name: 'CustomEndpoints', ownerModule: 'database' }),
       true,
     );
     assert.equal(
@@ -44,12 +54,80 @@ describe('embedding schema and source policies', () => {
       false,
     );
     assert.equal(
+      isDeniedEmbeddingSchema({ name: 'Team', ownerModule: 'authentication' }),
+      false,
+    );
+    assert.equal(
       isDeniedEmbeddingSchema({ name: 'File', ownerModule: 'storage' }),
       false,
     );
     assert.throws(
       () => assertEmbeddingTargetSchema({ name: 'RefreshToken' }),
       err => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+    );
+  });
+
+  it('denies platform internal schemas even when they are enabled and extendable', () => {
+    assert.deepEqual(
+      [...DATABASE_SYSTEM_SCHEMA_NAMES],
+      [
+        '_DeclaredSchema',
+        'MigratedSchemas',
+        'CustomEndpoints',
+        '_PendingSchemas',
+        'Views',
+      ],
+    );
+    for (const name of ['Admin', 'AdminMiddleware', 'AppMiddleware', 'Client'] as const) {
+      assert.equal(PLATFORM_INTERNAL_SCHEMA_NAMES.has(name), true);
+    }
+    const internals = [
+      { name: 'Admin', ownerModule: 'core' },
+      { name: 'AdminMiddleware', ownerModule: 'core' },
+      { name: 'AppMiddleware', ownerModule: 'router' },
+      { name: 'Client', ownerModule: 'router' },
+      { name: 'Config', ownerModule: 'core' },
+      { name: 'CustomEndpoints', ownerModule: 'database' },
+      { name: 'ActorIndex', ownerModule: 'authorization' },
+    ];
+    for (const schema of internals) {
+      assert.equal(isDeniedEmbeddingSchema(schema), true);
+      assert.throws(
+        () =>
+          assertSchemaCanReceiveEmbeddings({
+            ...schema,
+            modelOptions: extendableEnabled,
+          }),
+        err => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+      );
+    }
+    assert.equal(
+      isDeniedEmbeddingSchema({ name: 'FutureCoreDoc', ownerModule: 'core' }),
+      true,
+    );
+  });
+
+  it('allows enabled and extendable owner-controlled business schemas', () => {
+    assert.doesNotThrow(() =>
+      assertSchemaCanReceiveEmbeddings({
+        name: 'Article',
+        ownerModule: 'cms-app',
+        modelOptions: extendableEnabled,
+      }),
+    );
+    assert.doesNotThrow(() =>
+      assertSchemaCanReceiveEmbeddings({
+        name: 'User',
+        ownerModule: 'authentication',
+        modelOptions: { conduit: { permissions: { extendable: true } } },
+      }),
+    );
+    assert.doesNotThrow(() =>
+      assertSchemaCanReceiveEmbeddings({
+        name: 'Team',
+        ownerModule: 'authentication',
+        modelOptions: extendableEnabled,
+      }),
     );
   });
 

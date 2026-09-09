@@ -15,6 +15,7 @@ import { SchemaAdmin } from './admin/schema.admin.js';
 import { CustomEndpointsAdmin } from './admin/customEndpoints/customEndpoints.admin.js';
 import { DatabaseRoutes } from './routes/index.js';
 import * as models from './models/index.js';
+import { DATABASE_SYSTEM_SCHEMAS } from './models/systemSchemas.js';
 import {
   ColumnExistenceRequest,
   ColumnExistenceResponse,
@@ -166,10 +167,9 @@ export default class DatabaseModule extends ManagedModule<Config> {
     const isReplica = this.grpcSdk.isAvailable('database');
     await this._activeAdapter.registerSystemSchema(models.DeclaredSchema, isReplica);
     await this._activeAdapter.registerSystemSchema(models.MigratedSchemas, isReplica);
-    let modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      if (['_DeclaredSchema', 'MigratedSchemas'].includes(model.name)) return [];
-      return this._activeAdapter.registerSystemSchema(model, isReplica);
-    });
+    let modelPromises = DATABASE_SYSTEM_SCHEMAS.filter(
+      model => !['_DeclaredSchema', 'MigratedSchemas'].includes(model.name),
+    ).map(model => this._activeAdapter.registerSystemSchema(model, isReplica));
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
@@ -177,7 +177,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
     if (!isReplica) {
       await runMigrations(this._activeAdapter);
     }
-    modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
+    modelPromises = DATABASE_SYSTEM_SCHEMAS.map(model => {
       return this._activeAdapter.registerSystemSchema(model, isReplica).then(() => {
         if (this._activeAdapter.getDatabaseType() !== 'MongoDB' && !isReplica) {
           return this._activeAdapter.syncSchema(model.name);
