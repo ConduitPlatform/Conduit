@@ -39,6 +39,15 @@ describe('embeddings operational warnings and search gates', () => {
       true,
     );
     assert.equal(warnings.join(' ').includes('sk-secret'), false);
+    assert.deepEqual(
+      providerReadinessWarnings({
+        endpoint: 'https://api.openai.com/v1/embeddings',
+        apiKey: 'sk-secret',
+        models: [{ name: 'small', dimensions: 1536 }],
+        defaultModel: 'missing',
+      }),
+      ["Provider default model 'missing' is not in the catalogue"],
+    );
     assert.equal(
       isEmbeddingsReady({
         moduleEnabled: false,

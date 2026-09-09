@@ -102,6 +102,16 @@ describe('provider model catalogue', () => {
     assert.equal(resolveProviderModelName(normalized), 'small');
     assert.equal(findProviderModel(normalized, 'large')?.dimensions, 3072);
     assert.equal(findProviderModel(normalized, 'missing'), undefined);
+    const preferred = normalizeProviderSettings({
+      models: [
+        { name: 'small', dimensions: 1536 },
+        { name: 'large', dimensions: 3072 },
+      ],
+      defaultModel: 'large',
+    });
+    assert.equal(resolveProviderModelName(preferred), 'large');
+    assert.equal(resolveCatalogueModel(preferred).name, 'large');
+    assert.equal(resolveCatalogueDimensions(resolveCatalogueModel(preferred)), 3072);
   });
 
   it('resolves configured providers and catalogue dimensions, rejecting mismatches', () => {
