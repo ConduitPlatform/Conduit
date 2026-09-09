@@ -4,7 +4,7 @@ import { status } from '@grpc/grpc-js';
 import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { _StorageContainer, _StorageFolder } from '../models/index.js';
-import { assertNoPersonalFolderSquat, findOrCreateFolders } from './folders.js';
+import { assertNoPersonalFolderSquat, findOrCreateFolders } from '../authz/folders.js';
 
 const originalConfig = ConfigController.getInstance().config;
 const originalContainerGetInstance =

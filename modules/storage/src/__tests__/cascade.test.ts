@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { _StorageContainer, _StorageFolder, File } from '../models/index.js';
-import { folderPrefixRegex } from './helpers.js';
-import { deleteContainerTree, deleteFolderTree } from './cascade.js';
+import { folderPrefixRegex } from '../authz/helpers.js';
+import { deleteContainerTree, deleteFolderTree } from '../authz/cascade.js';
 
 const originalConfig = ConfigController.getInstance().config;
 const originalFileGetInstance = File.getInstance.bind(File);

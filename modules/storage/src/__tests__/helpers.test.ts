@@ -17,7 +17,7 @@ import {
   resolveScope,
   resolveUserId,
   rethrowGrpcOrInternal,
-} from './helpers.js';
+} from '../authz/helpers.js';
 
 const originalConfig = ConfigController.getInstance().config;
 
