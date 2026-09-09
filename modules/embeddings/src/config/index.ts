@@ -25,15 +25,15 @@ const AppConfigSchema = {
         default: '',
         sensitive: true,
       },
-      model: {
-        doc: 'Default provider model name',
-        format: String,
-        default: '',
-      },
-      allowedHosts: {
-        doc: 'Allowed HTTPS hosts for this provider after DNS resolution',
+      models: {
+        doc: 'Operator-managed embedding models and output dimensions',
         format: Array,
         default: [],
+      },
+      defaultModel: {
+        doc: 'Default model name from the provider catalogue',
+        format: String,
+        default: '',
       },
     },
   },
@@ -60,11 +60,6 @@ const AppConfigSchema = {
     },
   },
   security: {
-    requireGrpcKey: {
-      doc: 'Require GRPC_KEY. Always enforced when NODE_ENV is production.',
-      format: 'Boolean',
-      default: false,
-    },
     sourceFieldAllowlist: {
       doc: 'Operator-configured source fields allowed even when hidden or sensitive-named. Caller-supplied allowlists are honored only for platform-admin upserts.',
       format: Array,
@@ -95,15 +90,17 @@ const AppConfigSchema = {
 
 const config = convict(AppConfigSchema);
 void config;
+export type EmbeddingProviderModel = {
+  name: string;
+  dimensions: number;
+};
+export type EmbeddingProviderSettings = {
+  endpoint?: string;
+  apiKey?: string;
+  models?: EmbeddingProviderModel[];
+  defaultModel?: string;
+};
 export type Config = ReturnType<typeof config.getProperties> & {
-  providers: Record<
-    string,
-    {
-      endpoint?: string;
-      apiKey?: string;
-      model?: string;
-      allowedHosts?: string[];
-    }
-  >;
+  providers: Record<string, EmbeddingProviderSettings>;
 };
 export default AppConfigSchema;

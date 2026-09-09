@@ -25,7 +25,11 @@ describe('provider secret redaction', () => {
       {
         enabled: true,
         providers: {
-          'openai-compatible': { endpoint: 'https://api.openai.com', apiKey: 'sk-live' },
+          'openai-compatible': {
+            endpoint: 'https://api.openai.com',
+            apiKey: 'sk-live',
+            models: [{ name: 'text-embedding-3-small', dimensions: 1536 }],
+          },
         },
       },
       {
@@ -33,6 +37,8 @@ describe('provider secret redaction', () => {
           'openai-compatible': {
             apiKey: { format: 'String', default: '', sensitive: true },
             endpoint: { format: 'String', default: '' },
+            models: { format: Array, default: [] },
+            defaultModel: { format: 'String', default: '' },
           },
         },
       },
@@ -42,5 +48,8 @@ describe('provider secret redaction', () => {
       redacted.providers['openai-compatible'].endpoint,
       'https://api.openai.com',
     );
+    assert.deepEqual(redacted.providers['openai-compatible'].models, [
+      { name: 'text-embedding-3-small', dimensions: 1536 },
+    ]);
   });
 });

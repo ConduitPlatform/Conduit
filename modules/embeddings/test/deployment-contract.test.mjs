@@ -7,8 +7,7 @@ import {
 } from '../../../scripts/resolve-docker-targets.mjs';
 
 const repo = new URL('../../..', import.meta.url);
-const readRepo = relativePath =>
-  readFileSync(new URL(relativePath, repo), 'utf8');
+const readRepo = relativePath => readFileSync(new URL(relativePath, repo), 'utf8');
 
 const runbook = readRepo('deploy/embeddings.md');
 const moduleReadme = readRepo('modules/embeddings/README.md');
@@ -58,10 +57,7 @@ test('runbook distinguishes Helm workload install.embeddings.enabled from convic
   assert.match(runbook, /Helm workload `install\.embeddings\.enabled`/);
   assert.match(runbook, /Module convict `enabled`/);
   assert.match(runbook, /install\.embeddings\.enabled=false/);
-  assert.match(
-    runbook,
-    /This is not `install\.embeddings\.enabled`/,
-  );
+  assert.match(runbook, /This is not `install\.embeddings\.enabled`/);
   assert.doesNotMatch(runbook, /Helm: `install\.embeddings: false`/);
   assert.match(k8sReadme, /install\.embeddings\.enabled/);
   assert.match(moduleReadme, /install\.embeddings\.enabled/);
@@ -71,7 +67,17 @@ test('rollback retains vector, index, config, and Redis state', () => {
   assert.match(runbook, /Rollback \*\*retains\*\*/);
   assert.match(runbook, /vector fields, indexes, `EmbeddingConfig` documents/);
   assert.match(runbook, /Redis\/BullMQ queue state/);
-  assert.match(k8sReadme, /retained vector\/index\/config\/\nRedis state|retained vector/);
+  assert.match(
+    k8sReadme,
+    /retained vector\/index\/config\/\nRedis state|retained vector/,
+  );
+});
+
+test('module settings omit gRPC-key and host allowlists in favor of a model catalogue', () => {
+  assert.doesNotMatch(convictConfig, /requireGrpcKey/);
+  assert.doesNotMatch(convictConfig, /allowedHosts/);
+  assert.match(convictConfig, /defaultModel/);
+  assert.match(convictConfig, /Operator-managed embedding models/);
 });
 
 test('docs stay default-off and do not claim a published embeddings image', () => {
@@ -86,10 +92,7 @@ test('docs stay default-off and do not claim a published embeddings image', () =
 });
 
 test('compose maps container GRPC_PORT through EMBEDDINGS_GRPC_PORT', () => {
-  assert.match(
-    composeSource,
-    /GRPC_PORT: '\$\{EMBEDDINGS_GRPC_PORT:-55165\}'/,
-  );
+  assert.match(composeSource, /GRPC_PORT: '\$\{EMBEDDINGS_GRPC_PORT:-55165\}'/);
   assert.match(
     composeSource,
     /SERVICE_URL: 'conduit-embeddings:\$\{EMBEDDINGS_GRPC_PORT:-55165\}'/,
@@ -106,7 +109,10 @@ test('PR CI runs compose render and target discovery', () => {
     /docker compose --profile mongodb --profile embeddings config --services/,
   );
   assert.match(workflow, /docker compose --profile mongodb config --services/);
-  assert.match(workflow, /env -u GITHUB_OUTPUT node scripts\/resolve-docker-targets\.mjs/);
+  assert.match(
+    workflow,
+    /env -u GITHUB_OUTPUT node scripts\/resolve-docker-targets\.mjs/,
+  );
   assert.match(workflow, /docker\/\*\*/);
   assert.match(workflow, /scripts\/resolve-docker-targets\.mjs/);
 });
@@ -135,10 +141,7 @@ test('other module rebuilds still select standalone', () => {
   assert.ok(!chatSelected.includes('embeddings'));
 
   const mixed = resolveTargets({
-    changedFiles: [
-      'modules/embeddings/src/index.ts',
-      'modules/storage/src/Storage.ts',
-    ],
+    changedFiles: ['modules/embeddings/src/index.ts', 'modules/storage/src/Storage.ts'],
     forceAll: false,
   }).map(entry => entry.target);
   assert.ok(mixed.includes('embeddings'));

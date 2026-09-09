@@ -35,6 +35,10 @@ import {
   assertGrpcKeyRequirement,
   callerModuleName,
 } from './utils/productionSecurity.js';
+import {
+  normalizeEmbeddingsConfig,
+  resolveProviderModelName,
+} from './utils/providerConfig.js';
 import { sanitizeErrorMessage } from './utils/redactConfig.js';
 import {
   applyBackfillJobOutcome,
@@ -123,8 +127,8 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
   }
 
   async preConfig(config: Config) {
-    assertGrpcKeyRequirement(process.env, config);
-    return config;
+    assertGrpcKeyRequirement(process.env);
+    return normalizeEmbeddingsConfig(config);
   }
 
   async onConfig() {
@@ -570,19 +574,13 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
 
   private providerConfig(provider: string, model: string) {
     const config = this.currentConfig();
-    const providers = config.providers as Record<string, Record<string, unknown>>;
-    const providerConfig = providers[provider] ?? {};
+    const providerConfig = config.providers[provider] ?? {};
     return {
       endpoint:
         typeof providerConfig.endpoint === 'string' ? providerConfig.endpoint : undefined,
       apiKey:
         typeof providerConfig.apiKey === 'string' ? providerConfig.apiKey : undefined,
-      model: String(providerConfig.model ?? model),
-      allowedHosts: [
-        ...new Set(
-          ((providerConfig.allowedHosts as string[] | undefined) ?? []).filter(Boolean),
-        ),
-      ],
+      model: resolveProviderModelName(providerConfig, model),
       timeoutMs: config.security.embedTimeoutMs,
       maxInputBytes: config.security.maxEmbedInputBytes,
       maxResponseBytes: config.security.maxEmbedResponseBytes,
@@ -590,7 +588,9 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
   }
 
   private currentConfig() {
-    return ConfigController.getInstance().config as Config;
+    return normalizeEmbeddingsConfig(ConfigController.getInstance().config as Config, {
+      strict: false,
+    });
   }
 
   protected registerSchemas(): Promise<unknown> {

@@ -12,12 +12,11 @@ describe('openai-compatible provider security', () => {
     },
   });
 
-  it('rejects redirects, oversize input, and missing allowlists', async () => {
+  it('rejects redirects, oversize input, and blocked endpoints', async () => {
     await assert.rejects(
       () =>
         provider.embed('hello', {
           endpoint: 'https://api.openai.com/v1/embeddings',
-          allowedHosts: ['api.openai.com'],
         }),
       err => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
     );
@@ -25,7 +24,6 @@ describe('openai-compatible provider security', () => {
       () =>
         provider.embed('x'.repeat(100), {
           endpoint: 'https://api.openai.com/v1/embeddings',
-          allowedHosts: ['api.openai.com'],
           maxInputBytes: 8,
         }),
       err => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
@@ -33,18 +31,19 @@ describe('openai-compatible provider security', () => {
     await assert.rejects(
       () =>
         provider.embed('hello', {
-          endpoint: 'https://api.openai.com/v1/embeddings',
-          allowedHosts: [],
+          endpoint: 'https://127.0.0.1/v1/embeddings',
         }),
       err => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
     );
   });
 
-  it('returns embeddings when the allowlisted HTTPS endpoint is safe', async () => {
+  it('returns embeddings from a public HTTPS endpoint using the selected model', async () => {
     const safe = new OpenAICompatibleEmbeddingProvider({
       lookup: async () => [{ address: '104.18.0.1', family: 4 }],
       fetch: async (_url, init) => {
         assert.equal(init?.redirect, 'error');
+        const body = JSON.parse(String(init?.body ?? '{}')) as { model?: string };
+        assert.equal(body.model, 'text-embedding-3-small');
         return new Response(JSON.stringify({ data: [{ embedding: [0.1, 0.2] }] }), {
           status: 200,
         });
@@ -52,8 +51,8 @@ describe('openai-compatible provider security', () => {
     });
     const vector = await safe.embed('hello', {
       endpoint: 'https://api.openai.com/v1/embeddings',
-      allowedHosts: ['api.openai.com'],
       apiKey: 'sk-test',
+      model: 'text-embedding-3-small',
     });
     assert.deepEqual(vector, [0.1, 0.2]);
   });

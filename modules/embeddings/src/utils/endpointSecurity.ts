@@ -28,7 +28,6 @@ privateNetworks.addSubnet('fc00::', 7, 'ipv6');
 privateNetworks.addSubnet('fe80::', 10, 'ipv6');
 
 export interface SafeEndpointOptions {
-  allowedHosts: string[];
   lookup?: (
     hostname: string,
     options: { all: true; verbatim: true },
@@ -45,7 +44,7 @@ export function isBlockedIp(address: string): boolean {
 
 export async function assertSafeEmbeddingEndpoint(
   endpoint: string,
-  options: SafeEndpointOptions,
+  options: SafeEndpointOptions = {},
 ): Promise<URL> {
   let url: URL;
   try {
@@ -73,13 +72,6 @@ export async function assertSafeEmbeddingEndpoint(
     throw new GrpcError(
       status.PERMISSION_DENIED,
       'Embedding provider endpoint host is not allowed',
-    );
-  }
-  const allowed = new Set(options.allowedHosts.map(host => host.toLowerCase()));
-  if (!allowed.has(hostname)) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'Embedding provider endpoint host is not allowlisted',
     );
   }
   if (isIP(hostname)) {

@@ -15,15 +15,8 @@ describe('production GRPC_KEY requirement', () => {
     );
   });
 
-  it('does not require GRPC_KEY in non-production unless configured', () => {
+  it('does not require GRPC_KEY outside production', () => {
     assert.doesNotThrow(() => assertGrpcKeyRequirement({ NODE_ENV: 'test' }));
-    assert.throws(
-      () =>
-        assertGrpcKeyRequirement(
-          { NODE_ENV: 'development' },
-          { security: { requireGrpcKey: true } },
-        ),
-      err => err instanceof GrpcError && err.code === status.FAILED_PRECONDITION,
-    );
+    assert.doesNotThrow(() => assertGrpcKeyRequirement({ NODE_ENV: 'development' }));
   });
 });

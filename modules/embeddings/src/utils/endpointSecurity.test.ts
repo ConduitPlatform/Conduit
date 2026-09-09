@@ -19,40 +19,55 @@ describe('embedding endpoint SSRF controls', () => {
     assert.equal(isBlockedIp('8.8.8.8'), false);
   });
 
-  it('requires HTTPS and an allowlisted host', async () => {
+  it('requires HTTPS and rejects URL credentials', async () => {
     await assert.rejects(
-      () =>
-        assertSafeEmbeddingEndpoint('http://api.openai.com/v1/embeddings', {
-          allowedHosts: ['api.openai.com'],
-        }),
+      () => assertSafeEmbeddingEndpoint('http://api.openai.com/v1/embeddings'),
       err => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
     );
     await assert.rejects(
       () =>
-        assertSafeEmbeddingEndpoint('https://evil.example/v1/embeddings', {
-          allowedHosts: ['api.openai.com'],
+        assertSafeEmbeddingEndpoint('https://user:pass@api.openai.com/v1/embeddings', {
+          lookup: async () => [{ address: '104.18.0.1', family: 4 }],
         }),
-      err => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+      err =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /credentials/.test(err.message),
     );
+  });
+
+  it('derives the hostname from the HTTPS endpoint and allows public resolutions', async () => {
+    const url = await assertSafeEmbeddingEndpoint(
+      'https://api.openai.com/v1/embeddings',
+      {
+        lookup: async () => [{ address: '104.18.0.1', family: 4 }],
+      },
+    );
+    assert.equal(url.hostname, 'api.openai.com');
+    const other = await assertSafeEmbeddingEndpoint(
+      'https://evil.example/v1/embeddings',
+      {
+        lookup: async () => [{ address: '104.18.0.1', family: 4 }],
+      },
+    );
+    assert.equal(other.hostname, 'evil.example');
   });
 
   it('rejects DNS results that resolve to private or metadata addresses', async () => {
     await assert.rejects(
       () =>
         assertSafeEmbeddingEndpoint('https://api.openai.com/v1/embeddings', {
-          allowedHosts: ['api.openai.com'],
           lookup: async () => [{ address: '169.254.169.254', family: 4 }],
         }),
       err => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
     );
-    const url = await assertSafeEmbeddingEndpoint(
-      'https://api.openai.com/v1/embeddings',
-      {
-        allowedHosts: ['api.openai.com'],
-        lookup: async () => [{ address: '104.18.0.1', family: 4 }],
-      },
+    await assert.rejects(
+      () =>
+        assertSafeEmbeddingEndpoint('https://localhost/v1/embeddings', {
+          lookup: async () => [{ address: '127.0.0.1', family: 4 }],
+        }),
+      err => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
     );
-    assert.equal(url.hostname, 'api.openai.com');
   });
 
   it('caps response payload size', async () => {

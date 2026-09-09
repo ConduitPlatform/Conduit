@@ -1,0 +1,225 @@
+import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
+import type {
+  EmbeddingProviderModel,
+  EmbeddingProviderSettings,
+} from '../config/index.js';
+
+export type { EmbeddingProviderModel, EmbeddingProviderSettings };
+
+export interface LegacyEmbeddingProviderSettings extends EmbeddingProviderSettings {
+  model?: string;
+  dimensions?: number;
+  allowedHosts?: string[];
+}
+
+function invalidProviderConfig(message: string): GrpcError {
+  return new GrpcError(status.INVALID_ARGUMENT, message);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function trimName(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function parseDimensions(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
+    return undefined;
+  }
+  return value;
+}
+
+function parseModelEntry(value: unknown, index: number): EmbeddingProviderModel {
+  if (!isRecord(value)) {
+    throw invalidProviderConfig(`Provider model at index ${index} is invalid`);
+  }
+  const name = trimName(value.name);
+  if (!name) {
+    throw invalidProviderConfig(
+      `Provider model at index ${index} must have a non-empty name`,
+    );
+  }
+  const dimensions = parseDimensions(value.dimensions);
+  if (dimensions == null) {
+    throw invalidProviderConfig(
+      `Provider model '${name}' dimensions must be a positive integer`,
+    );
+  }
+  return { name, dimensions };
+}
+
+function parseModelList(
+  values: unknown[],
+  options?: { strict?: boolean },
+): EmbeddingProviderModel[] {
+  const models: EmbeddingProviderModel[] = [];
+  const names = new Set<string>();
+  for (const [index, value] of values.entries()) {
+    try {
+      const parsed = parseModelEntry(value, index);
+      if (names.has(parsed.name)) {
+        throw invalidProviderConfig(`Provider model '${parsed.name}' is duplicated`);
+      }
+      names.add(parsed.name);
+      models.push(parsed);
+    } catch (err) {
+      if (options?.strict !== false) throw err;
+    }
+  }
+  return models;
+}
+
+function migrateLegacyModels(
+  raw: LegacyEmbeddingProviderSettings,
+): EmbeddingProviderModel[] | undefined {
+  if (Array.isArray(raw.models) && raw.models.length > 0) return undefined;
+  const name = trimName(raw.model);
+  if (!name) return [];
+  const dimensions = parseDimensions(raw.dimensions);
+  if (dimensions == null) {
+    throw invalidProviderConfig(
+      `Provider model '${name}' dimensions must be a positive integer`,
+    );
+  }
+  return [{ name, dimensions }];
+}
+
+export function providerCatalogueIssues(provider?: {
+  models?: Array<{ name?: string; dimensions?: number }>;
+  defaultModel?: string;
+}): string[] {
+  const issues: string[] = [];
+  const models = provider?.models;
+  if (models != null && !Array.isArray(models)) {
+    return ['Embedding provider model catalogue is invalid'];
+  }
+  const list = models ?? [];
+  const names = new Set<string>();
+  for (const [index, model] of list.entries()) {
+    const name = trimName(model?.name);
+    const dimensions = parseDimensions(model?.dimensions);
+    if (!name) {
+      issues.push(`Provider model at index ${index} must have a non-empty name`);
+      continue;
+    }
+    if (dimensions == null) {
+      issues.push(`Provider model '${name}' dimensions must be a positive integer`);
+    }
+    if (names.has(name)) {
+      issues.push(`Provider model '${name}' is duplicated`);
+    }
+    names.add(name);
+  }
+  const defaultModel = trimName(provider?.defaultModel);
+  if (defaultModel && !names.has(defaultModel)) {
+    issues.push(`Provider default model '${defaultModel}' is not in the catalogue`);
+  }
+  if (!list.length) {
+    issues.push('Embedding provider model catalogue is empty');
+  }
+  return issues;
+}
+
+export function assertProviderCatalogue(
+  provider?: Pick<EmbeddingProviderSettings, 'models' | 'defaultModel'>,
+): void {
+  const models = provider?.models ?? [];
+  if (!Array.isArray(models)) {
+    throw invalidProviderConfig('Provider model catalogue must be an array');
+  }
+  parseModelList(models);
+  const names = new Set(models.map(model => trimName(model?.name)));
+  const defaultModel = trimName(provider?.defaultModel);
+  if (defaultModel && !names.has(defaultModel)) {
+    throw invalidProviderConfig(
+      `Provider default model '${defaultModel}' is not in the catalogue`,
+    );
+  }
+}
+
+export function normalizeProviderSettings(
+  raw: unknown,
+  options?: { strict?: boolean },
+): EmbeddingProviderSettings {
+  const source = isRecord(raw) ? (raw as LegacyEmbeddingProviderSettings) : {};
+  let models: EmbeddingProviderModel[];
+  let migratedFromSingular = false;
+  try {
+    const migrated = migrateLegacyModels(source);
+    migratedFromSingular = migrated != null && migrated.length > 0;
+    models =
+      migrated ??
+      (Array.isArray(source.models) ? parseModelList(source.models, options) : []);
+  } catch (err) {
+    if (options?.strict !== false) throw err;
+    models = [];
+  }
+  const names = new Set(models.map(model => model.name));
+  const configuredDefault = trimName(source.defaultModel);
+  const defaultModel = configuredDefault
+    ? names.has(configuredDefault)
+      ? configuredDefault
+      : ''
+    : migratedFromSingular
+      ? (models[0]?.name ?? '')
+      : '';
+  if (configuredDefault && !defaultModel && options?.strict !== false) {
+    throw invalidProviderConfig(
+      `Provider default model '${configuredDefault}' is not in the catalogue`,
+    );
+  }
+  if (options?.strict !== false) {
+    assertProviderCatalogue({ models, defaultModel });
+  }
+  return {
+    ...(typeof source.endpoint === 'string' ? { endpoint: source.endpoint } : {}),
+    ...(typeof source.apiKey === 'string' ? { apiKey: source.apiKey } : {}),
+    models,
+    ...(defaultModel ? { defaultModel } : {}),
+  };
+}
+
+export function findProviderModel(
+  provider: EmbeddingProviderSettings | undefined,
+  name?: string,
+): EmbeddingProviderModel | undefined {
+  const selected = trimName(name);
+  if (!selected) return undefined;
+  return provider?.models?.find(model => model.name === selected);
+}
+
+export function resolveProviderModelName(
+  provider: EmbeddingProviderSettings | undefined,
+  selected?: string,
+): string {
+  const trimmed = trimName(selected);
+  if (trimmed) return trimmed;
+  const defaultModel = trimName(provider?.defaultModel);
+  if (defaultModel) return defaultModel;
+  return provider?.models?.[0]?.name ?? '';
+}
+
+export function normalizeEmbeddingsConfig<
+  T extends {
+    providers?: Record<string, unknown>;
+    security?: Record<string, unknown>;
+  },
+>(config: T, options?: { strict?: boolean }): T {
+  const next = { ...config };
+  if (isRecord(next.security)) {
+    const security = { ...next.security };
+    delete (security as { requireGrpcKey?: boolean }).requireGrpcKey;
+    next.security = security as T['security'];
+  }
+  if (isRecord(next.providers)) {
+    const providers: Record<string, EmbeddingProviderSettings> = {};
+    for (const [key, value] of Object.entries(next.providers)) {
+      providers[key] = normalizeProviderSettings(value, options);
+    }
+    next.providers = providers as T['providers'];
+  }
+  return next;
+}

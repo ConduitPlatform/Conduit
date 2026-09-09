@@ -15,7 +15,6 @@ export interface EmbeddingProviderConfig {
   endpoint?: string;
   apiKey?: string;
   model?: string;
-  allowedHosts?: string[];
   timeoutMs?: number;
   maxInputBytes?: number;
   maxResponseBytes?: number;
@@ -89,7 +88,6 @@ export class OpenAICompatibleEmbeddingProvider implements EmbeddingProvider {
       );
     }
     await assertSafeEmbeddingEndpoint(config.endpoint, {
-      allowedHosts: config.allowedHosts ?? [],
       lookup: this.deps.lookup,
     });
     const fetchImpl = this.deps.fetch ?? fetch;

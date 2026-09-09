@@ -9,6 +9,7 @@ import {
   type BackfillConfigGate,
   type VectorIndexGate,
 } from './backfillGates.js';
+import { providerCatalogueIssues } from './providerConfig.js';
 import type { QueueJobCounts } from '../controllers/queue.controller.js';
 
 export const SEARCH_GATE_REASONS = [
@@ -161,7 +162,8 @@ export function indexReadinessWarnings(
 export function providerReadinessWarnings(provider?: {
   endpoint?: string;
   apiKey?: string;
-  allowedHosts?: string[];
+  models?: Array<{ name?: string; dimensions?: number }>;
+  defaultModel?: string;
 }): string[] {
   const warnings: string[] = [];
   if (!provider?.endpoint) {
@@ -170,9 +172,7 @@ export function providerReadinessWarnings(provider?: {
   if (!provider?.apiKey) {
     warnings.push('Embedding provider API key is not configured');
   }
-  if (!provider?.allowedHosts?.length) {
-    warnings.push('Embedding provider host allowlist is empty');
-  }
+  warnings.push(...providerCatalogueIssues(provider));
   return warnings;
 }
 
