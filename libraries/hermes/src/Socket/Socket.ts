@@ -15,6 +15,7 @@ import {
 } from '../interfaces/index.js';
 import ObjectHash from 'object-hash';
 import { ConduitError, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { applySocketGlobalMiddlewares } from './applySocketGlobalMiddlewares.js';
 import { buildSocketMiddlewareParams } from './buildSocketMiddlewareParams.js';
 
 export class SocketController extends ConduitRouter {
@@ -57,9 +58,17 @@ export class SocketController extends ConduitRouter {
     };
     this.io = new IOServer(this.httpServer, this.options);
     this.redisClient = grpcSdk.redisManager.getClient();
+    // Admin (e.g. :3031) and Router (e.g. :3001) are separate Socket.IO
+    // servers that share Redis. The adapter defaults would put both on the
+    // same stream, so a database change pushed to admin *and* router is
+    // delivered twice to every socket in those rooms.
+    const adapterKey = `socket.io:${this.port}`;
     this.io.adapter(
       createAdapter(this.redisClient, {
         onlyPlaintext: true,
+        streamName: adapterKey,
+        channelPrefix: adapterKey,
+        sessionKeyPrefix: `sio:session:${this.port}:`,
       }),
     );
     this.httpServer.listen(this.port);
@@ -107,20 +116,18 @@ export class SocketController extends ConduitRouter {
     this._registeredNamespaces.set(namespace, conduitSocket);
 
     const self = this;
-    this.globalMiddlewares.forEach(middleware => {
-      self.io.engine.use((req: any, res: any, next: any) => {
-        req.path = namespace;
-        middleware(req, res, next);
-      });
-    });
     this.io.of(namespace).use((socket, next) => {
-      const context = buildSocketMiddlewareParams(socket);
-      self
-        .checkMiddlewares(context, conduitSocket.input.middlewares)
-        .then(r => {
-          Object.assign(context.context, r);
-          socket.data = context.context;
-          next();
+      applySocketGlobalMiddlewares(socket, self.globalMiddlewares)
+        .then(() => {
+          const context = buildSocketMiddlewareParams(socket);
+          Object.assign(context.context, socket.data);
+          return self
+            .checkMiddlewares(context, conduitSocket.input.middlewares)
+            .then(r => {
+              Object.assign(context.context, r);
+              socket.data = context.context;
+              next();
+            });
         })
         .catch((err: Error | ConduitError) => {
           next(err);

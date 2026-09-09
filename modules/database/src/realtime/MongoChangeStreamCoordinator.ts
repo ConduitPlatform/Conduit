@@ -55,6 +55,7 @@ export class MongoChangeStreamCoordinator {
   private topology: TopologyResult = { supported: false };
   private retryAttempt = 0;
   private watching = false;
+  private opening = false;
   private ignoreClose = false;
 
   constructor(private readonly options: CoordinatorOptions) {}
@@ -90,6 +91,14 @@ export class MongoChangeStreamCoordinator {
       await this.releaseLeader();
       this.streamState = 'idle';
       this.lastError = this.topology.message;
+      // Hello can fail during startup before Mongo is ready. Keep retrying
+      // that case; a confirmed standalone topology will not recover.
+      if (
+        !this.topology.message ||
+        this.topology.message.includes('Unable to determine')
+      ) {
+        this.scheduleRetry();
+      }
       return;
     }
     if (this.options.getOptedInSchemas().length === 0) {
@@ -121,7 +130,11 @@ export class MongoChangeStreamCoordinator {
         LOCK_TTL_MS,
       );
       if (!acquired) {
+        // Another instance holds the lock, or a crashed holder has not
+        // expired yet. Without a retry, a standalone process stays idle
+        // forever after a restart races the previous TTL.
         this.streamState = 'idle';
+        this.scheduleRetry();
         return;
       }
       this.lock = acquired;
@@ -153,13 +166,15 @@ export class MongoChangeStreamCoordinator {
   }
 
   private async openStream() {
-    if (this.watching || this.closed) return;
+    if (this.watching || this.closed || this.opening) return;
+    this.opening = true;
     this.streamState = 'starting';
     this.ignoreClose = false;
-    const resumeAfter = parseResumeToken(
-      (await this.options.grpcSdk.state!.getKey(RESUME_TOKEN_KEY)) ?? undefined,
-    );
     try {
+      const resumeAfter = parseResumeToken(
+        (await this.options.grpcSdk.state!.getKey(RESUME_TOKEN_KEY)) ?? undefined,
+      );
+      if (this.watching || this.closed) return;
       const stream = this.options.watch({ resumeAfter: resumeAfter ?? undefined });
       this.stream = stream;
       this.watching = true;
@@ -180,6 +195,8 @@ export class MongoChangeStreamCoordinator {
     } catch (err) {
       this.watching = false;
       await this.handleStreamError(err);
+    } finally {
+      this.opening = false;
     }
   }
 

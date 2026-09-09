@@ -29,6 +29,7 @@ class MemoryStore {
 function createCoordinator(overrides?: {
   allow?: boolean;
   schemas?: { name: string; collectionName: string; authorizationEnabled: boolean }[];
+  getKeyDelayMs?: number;
 }) {
   const stream = new EventEmitter() as EventEmitter & { close: () => Promise<void> };
   stream.close = async () => {
@@ -42,12 +43,18 @@ function createCoordinator(overrides?: {
   const routerPush = jest.fn(async () => undefined);
   const adminPush = jest.fn(async () => undefined);
   const publish = jest.fn();
+  const watch = jest.fn(() => stream as never);
   const subscriptions = new RealtimeSubscriptionTracker(new MemoryStore());
   const grpcSdk = {
     state: {
       tryAcquireLock: jest.fn(async () => lock),
       releaseLock: jest.fn(async () => undefined),
-      getKey: jest.fn(async (key: string) => state.get(key) ?? null),
+      getKey: jest.fn(async (key: string) => {
+        if (overrides?.getKeyDelayMs) {
+          await new Promise(resolve => setTimeout(resolve, overrides.getKeyDelayMs));
+        }
+        return state.get(key) ?? null;
+      }),
       setKey: jest.fn(async (key: string, value: string) => {
         state.set(key, value);
       }),
@@ -65,7 +72,7 @@ function createCoordinator(overrides?: {
   };
   const coordinator = new MongoChangeStreamCoordinator({
     grpcSdk: grpcSdk as never,
-    watch: () => stream as never,
+    watch,
     hello: async () => ({ setName: 'rs0' }),
     getOptedInSchemas: () =>
       overrides?.schemas ?? [
@@ -78,6 +85,7 @@ function createCoordinator(overrides?: {
   return {
     coordinator,
     stream,
+    watch,
     routerPush,
     adminPush,
     publish,
@@ -152,6 +160,25 @@ describe('MongoChangeStreamCoordinator', () => {
     expect(authorizedDocumentRoom('Order', '64b64c4c4c4c4c4c4c4c4c', 'user-1')).toContain(
       'user-1',
     );
+    await coordinator.shutdown();
+  });
+
+  it('retries later when the leader lock is held by another instance', async () => {
+    jest.useFakeTimers();
+    const { coordinator, grpcSdk, lock } = createCoordinator();
+    grpcSdk.state.tryAcquireLock.mockResolvedValueOnce(null).mockResolvedValue(lock);
+    await coordinator.reconcile();
+    expect(coordinator.getState()).toBe('idle');
+    await jest.advanceTimersByTimeAsync(1_000);
+    expect(coordinator.getState()).toBe('live');
+    await coordinator.shutdown();
+    jest.useRealTimers();
+  });
+
+  it('opens a single watch when reconcile runs concurrently', async () => {
+    const { coordinator, watch } = createCoordinator({ getKeyDelayMs: 40 });
+    await Promise.all([coordinator.reconcile(), coordinator.reconcile()]);
+    expect(watch).toHaveBeenCalledTimes(1);
     await coordinator.shutdown();
   });
 

@@ -183,10 +183,11 @@ function validateModelOptions(modelOptions: ConduitSchemaOptions) {
           conduitKey !== 'cms' &&
           conduitKey !== 'permissions' &&
           conduitKey !== 'authorization' &&
-          conduitKey !== 'imported'
+          conduitKey !== 'imported' &&
+          conduitKey !== 'realtime'
         )
           throw new Error(
-            "Only 'cms', 'permissions', 'authorization', 'imported', and 'readPreference' fields allowed inside 'conduit' field",
+            "Only 'cms', 'permissions', 'authorization', 'imported', 'readPreference', and 'realtime' fields allowed inside 'conduit' field",
           );
         if (conduitKey === 'imported') {
           if (!isBoolean(modelOptions.conduit!.imported))
