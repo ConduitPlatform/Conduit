@@ -5,3 +5,4 @@ export * from './exportHelpers.js';
 export * from './conduitPeers.js';
 export * from './convictConfigParser.js';
 export * from './redactSensitiveConfig.js';
+export * from './reconcileModuleConfig.js';

@@ -20,6 +20,7 @@ import type {
   VectorSearchInput,
   VectorSearchResult,
 } from '../../interfaces/Model.js';
+import { defaultVectorIndexMethod } from '../../interfaces/Model.js';
 
 export type CountDocumentsOptions = AuthzOptions & { readPreference?: string };
 
@@ -355,7 +356,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
         dimensions: index.dimensions,
         similarity: index.similarity,
         name: index.name,
-        method: index.method,
+        method: defaultVectorIndexMethod(index.method),
         filterFields: [...(index.filterFields ?? [])],
         options: index.options ? JSON.stringify(index.options) : undefined,
       },
@@ -369,7 +370,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
         dimensions: index.dimensions,
         similarity: index.similarity as VectorIndexDefinition['similarity'],
         name: index.name,
-        method: index.method as VectorIndexDefinition['method'],
+        method: defaultVectorIndexMethod(index.method),
         filterFields: index.filterFields,
         options: index.options ? JSON.parse(index.options) : undefined,
         status: index.status as VectorIndexDefinition['status'],

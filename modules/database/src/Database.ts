@@ -7,8 +7,8 @@ import {
   GrpcResponse,
   HealthCheckStatus,
   VectorIndexDefinition,
-  VectorIndexMethod,
   VectorSimilarity,
+  defaultVectorIndexMethod,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin/index.js';
 import { SchemaAdmin } from './admin/schema.admin.js';
@@ -1091,7 +1091,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
           dimensions: index.dimensions,
           similarity: index.similarity,
           name: index.name,
-          method: index.method,
+          method: defaultVectorIndexMethod(index.method),
           filterFields: [...(index.filterFields ?? [])],
           options: index.options ? JSON.stringify(index.options) : undefined,
           status: index.status,
@@ -1210,7 +1210,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       dimensions: index.dimensions,
       similarity: index.similarity as VectorSimilarity,
       name: index.name,
-      method: index.method as VectorIndexMethod,
+      method: defaultVectorIndexMethod(index.method),
       filterFields: index.filterFields,
       options: index.options ? JSON.parse(index.options) : undefined,
     };

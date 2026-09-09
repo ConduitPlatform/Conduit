@@ -24,6 +24,8 @@ function unwrapSchema(schema: unknown): unknown {
   return schema;
 }
 
+const REDACTED_MARKER = '[REDACTED]';
+
 export function redactSensitiveConfig<T>(config: T, schema?: unknown): T {
   if (!isRecord(config)) return config;
   const redacted = Array.isArray(config) ? [...config] : { ...config };
@@ -32,7 +34,7 @@ export function redactSensitiveConfig<T>(config: T, schema?: unknown): T {
     const childSchema = isRecord(node) ? node[key] : undefined;
     if (isSensitiveLeaf(childSchema) || WELL_KNOWN_SECRET_KEYS.test(key)) {
       if (typeof value === 'string' && value.length > 0) {
-        (redacted as Record<string, unknown>)[key] = '[REDACTED]';
+        (redacted as Record<string, unknown>)[key] = REDACTED_MARKER;
       }
       continue;
     }
@@ -44,4 +46,37 @@ export function redactSensitiveConfig<T>(config: T, schema?: unknown): T {
     }
   }
   return redacted as T;
+}
+
+export function restoreRedactedSecrets<T>(incoming: T, current: T, schema?: unknown): T {
+  if (Array.isArray(incoming) && Array.isArray(current)) {
+    return incoming.map((item, index) =>
+      restoreRedactedSecrets(item, current[index], schema),
+    ) as T;
+  }
+  if (!isRecord(incoming) || !isRecord(current)) return incoming;
+  const restored: Record<string, unknown> = { ...incoming };
+  const node = unwrapSchema(schema);
+  for (const [key, value] of Object.entries(restored)) {
+    const childSchema = isRecord(node) ? node[key] : undefined;
+    const currentValue = current[key];
+    if (isSensitiveLeaf(childSchema) || WELL_KNOWN_SECRET_KEYS.test(key)) {
+      if (
+        value === REDACTED_MARKER &&
+        typeof currentValue === 'string' &&
+        currentValue.length > 0 &&
+        currentValue !== REDACTED_MARKER
+      ) {
+        restored[key] = currentValue;
+      }
+      continue;
+    }
+    if (
+      (isRecord(value) || Array.isArray(value)) &&
+      (isRecord(currentValue) || Array.isArray(currentValue))
+    ) {
+      restored[key] = restoreRedactedSecrets(value, currentValue, childSchema);
+    }
+  }
+  return restored as T;
 }

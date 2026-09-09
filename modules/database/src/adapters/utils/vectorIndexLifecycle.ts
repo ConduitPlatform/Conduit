@@ -1,9 +1,10 @@
 import {
   GrpcError,
   VectorIndexDefinition,
-  VectorIndexMethod,
   VectorIndexStatus,
   VectorSimilarity,
+  defaultVectorIndexMethod,
+  vectorIndexMethodsEquivalent,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
@@ -88,6 +89,7 @@ export function bindVectorIndexToField(args: {
       args.index.name ?? defaultVectorIndexName(args.index.field, args.physicalTableName),
     dimensions: args.index.dimensions ?? field?.dimensions,
     similarity: args.index.similarity ?? field?.similarity,
+    method: defaultVectorIndexMethod(args.index.method),
     filterFields:
       args.provider === 'mongodb'
         ? mongoVectorFilterFields(args.index.filterFields)
@@ -171,9 +173,7 @@ export function vectorIndexesEquivalent(
   if (left.field !== right.field) return false;
   if (left.dimensions !== right.dimensions) return false;
   if (left.similarity !== right.similarity) return false;
-  const leftMethod = left.method ?? VectorIndexMethod.HNSW;
-  const rightMethod = right.method ?? VectorIndexMethod.HNSW;
-  if (leftMethod !== rightMethod) return false;
+  if (!vectorIndexMethodsEquivalent(left.method, right.method)) return false;
   if (provider === 'mongodb') {
     return sameStringSet(
       mongoVectorFilterFields(left.filterFields),
@@ -365,14 +365,13 @@ export function hydratePostgresVectorIndex(args: {
   declared?: VectorIndexDefinition;
 }): VectorIndexDefinition {
   const parsed = parsePostgresVectorIndexDef(args.indexdef);
-  const method =
-    (parsed.method as VectorIndexMethod | undefined) ?? args.declared?.method;
+  const method = defaultVectorIndexMethod(parsed.method ?? args.declared?.method);
   return {
     name: args.name,
     field: parsed.field || args.declared?.field || '',
     dimensions: args.field?.dimensions ?? args.declared?.dimensions ?? 0,
     similarity: args.field?.similarity ?? parsed.similarity,
-    method: method ?? VectorIndexMethod.HNSW,
+    method,
     options: mergeVectorIndexOptions(args.declared?.options, parsed.options),
     status: VectorIndexStatus.Ready,
     queryable: true,

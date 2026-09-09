@@ -38,6 +38,20 @@ export enum VectorIndexMethod {
   Flat = 'flat',
 }
 
+export function defaultVectorIndexMethod(method?: string | null): VectorIndexMethod {
+  if (method == null || method === '') {
+    return VectorIndexMethod.HNSW;
+  }
+  return method as VectorIndexMethod;
+}
+
+export function vectorIndexMethodsEquivalent(
+  left?: string | null,
+  right?: string | null,
+): boolean {
+  return defaultVectorIndexMethod(left) === defaultVectorIndexMethod(right);
+}
+
 export enum VectorIndexStatus {
   Pending = 'pending',
   Ready = 'ready',

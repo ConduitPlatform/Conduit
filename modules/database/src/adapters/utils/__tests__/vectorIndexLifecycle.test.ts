@@ -188,6 +188,47 @@ describe('vector index lifecycle', () => {
     ).toThrow(/different definition/);
   });
 
+  it('reuses Mongo indexes when method is empty, missing, or default hnsw', () => {
+    const requested = bindVectorIndexToField({
+      provider: 'mongodb',
+      field: vectorField,
+      index: {
+        name: 'embedding_vector',
+        field: 'embedding',
+        dimensions: 1536,
+        similarity: VectorSimilarity.Cosine,
+        method: '' as VectorIndexMethod,
+        filterFields: ['tenantId'],
+      },
+    });
+    expect(requested.method).toBe(VectorIndexMethod.HNSW);
+    expect(
+      planMongoVectorIndexCreate({
+        requested,
+        existing: [
+          {
+            name: 'embedding_vector',
+            field: 'embedding',
+            dimensions: 1536,
+            similarity: VectorSimilarity.Cosine,
+            filterFields: ['_id', 'tenantId'],
+          },
+        ],
+      }),
+    ).toEqual({ action: 'reuse' });
+    expect(
+      planMongoVectorIndexCreate({
+        requested: { ...requested, method: VectorIndexMethod.HNSW },
+        existing: [
+          {
+            ...requested,
+            method: '' as VectorIndexMethod,
+          },
+        ],
+      }),
+    ).toEqual({ action: 'reuse' });
+  });
+
   it('creates Postgres vector indexes without IF NOT EXISTS and detects mismatches', () => {
     const sql = renderPostgresCreateVectorIndexSql({
       indexName: 'cnd_Article_embedding_vector',

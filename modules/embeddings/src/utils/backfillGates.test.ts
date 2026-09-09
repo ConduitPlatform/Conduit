@@ -197,6 +197,14 @@ describe('backfill execution gates', () => {
         err.indexStatus === VectorIndexStatus.Pending &&
         /Wait until the index is ready/.test(err.message),
     );
+    assert.doesNotThrow(() =>
+      assertBackfillExecutable({
+        moduleEnabled: true,
+        capabilities,
+        config,
+        indexes: [{ ...readyIndex, method: '' }],
+      }),
+    );
     const mapped = grpcErrorFromBackfillGate(
       new BackfillGateError(
         'index_not_queryable',

@@ -98,6 +98,75 @@ describe('mongoose vector index lifecycle', () => {
     expect(createSearchIndex).toHaveBeenCalledTimes(1);
   });
 
+  it('creates explicit hnsw when method is omitted and reuses missing indexingMethod', async () => {
+    const createSearchIndex = jest.fn(async () => undefined);
+    const listSearchIndexes = jest.fn(() => ({
+      toArray: async () => [],
+    }));
+    const adapter = Object.create(MongooseAdapter.prototype) as MongooseAdapter;
+    Object.assign(adapter, {
+      models: { Article: articleModel() },
+      mongoose: {
+        model: () => ({
+          collection: { createSearchIndex, listSearchIndexes },
+        }),
+      },
+    });
+
+    const withoutMethod = {
+      field: 'embedding',
+      dimensions: 3,
+      similarity: VectorSimilarity.Cosine,
+      filterFields: ['tenantId'],
+    };
+    await adapter.createVectorIndex('Article', withoutMethod);
+    expect(createSearchIndex).toHaveBeenCalledWith({
+      name: 'embedding_vector',
+      type: 'vectorSearch',
+      definition: {
+        fields: [
+          {
+            type: 'vector',
+            path: 'embedding',
+            numDimensions: 3,
+            similarity: VectorSimilarity.Cosine,
+            indexingMethod: VectorIndexMethod.HNSW,
+          },
+          { type: 'filter', path: '_id' },
+          { type: 'filter', path: 'tenantId' },
+        ],
+      },
+    });
+
+    listSearchIndexes.mockImplementation(() => ({
+      toArray: async () => [
+        {
+          name: 'embedding_vector',
+          type: 'vectorSearch',
+          status: 'READY',
+          queryable: true,
+          latestDefinition: {
+            fields: [
+              {
+                type: 'vector',
+                path: 'embedding',
+                numDimensions: 3,
+                similarity: VectorSimilarity.Cosine,
+              },
+              { type: 'filter', path: '_id' },
+              { type: 'filter', path: 'tenantId' },
+            ],
+          },
+        },
+      ],
+    }));
+    await adapter.createVectorIndex('Article', {
+      ...withoutMethod,
+      method: '' as VectorIndexMethod,
+    });
+    expect(createSearchIndex).toHaveBeenCalledTimes(1);
+  });
+
   it('rejects vector search against a pending Mongo index', async () => {
     const aggregate = jest.fn();
     const adapter = Object.create(MongooseAdapter.prototype) as MongooseAdapter;

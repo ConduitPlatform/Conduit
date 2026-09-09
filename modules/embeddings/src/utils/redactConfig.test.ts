@@ -1,6 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { redactSensitiveConfig } from '@conduitplatform/module-tools';
+import {
+  redactSensitiveConfig,
+  restoreRedactedSecrets,
+} from '@conduitplatform/module-tools';
 import AppConfigSchema from '../config/index.js';
 import { normalizeEmbeddingsConfig } from './providerConfig.js';
 import { redactSecretText } from './redactConfig.js';
@@ -122,5 +125,23 @@ describe('provider secret redaction', () => {
       AppConfigSchema,
     );
     assert.equal(emptyKey.providers['openai-compatible'].apiKey, '');
+  });
+
+  it('restores redacted API keys from the currently stored config', () => {
+    const current = normalizeEmbeddingsConfig({
+      providers: {
+        'openai-compatible': {
+          endpoint: 'https://api.openai.com/v1/embeddings',
+          apiKey: 'sk-live',
+          models: [{ name: 'text-embedding-3-small', dimensions: 1536 }],
+        },
+      },
+    });
+    const incoming = redactSensitiveConfig(current, AppConfigSchema);
+    const restored = restoreRedactedSecrets(incoming, current, AppConfigSchema);
+    assert.equal(restored.providers['openai-compatible'].apiKey, 'sk-live');
+    assert.deepEqual(restored.providers['openai-compatible'].models, [
+      { name: 'text-embedding-3-small', dimensions: 1536 },
+    ]);
   });
 });
