@@ -21,6 +21,14 @@ service Config {
 service Admin {
   rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (google.protobuf.Empty);
   rpc PatchRouteMiddlewares(PatchRouteMiddlewaresRequest) returns (google.protobuf.Empty);
+  rpc SocketPush (SocketPushRequest) returns (google.protobuf.Empty);
+}
+
+message SocketPushRequest {
+  string event = 1;
+  optional string data = 2;
+  repeated string receivers = 3;
+  repeated string rooms = 4;
 }
 
 message RegisterAdminRouteRequest {

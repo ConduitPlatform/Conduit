@@ -4,6 +4,7 @@ import { isNil } from 'lodash-es';
 import { isDev } from '../utils/middleware.js';
 import { ConduitRequest } from '@conduitplatform/hermes';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { isSocketHandshake } from '../realtime/handshake.js';
 
 export function getAdminMiddleware(configManager: any) {
   return async function adminMiddleware(
@@ -28,9 +29,14 @@ export function getAdminMiddleware(configManager: any) {
     ) {
       return next();
     }
-    // Allow API tokens (cdt_*) to bypass masterkey; Auth.middleware will validate the token
+    // Allow API tokens (cdt_*) and Socket.IO handshakes with a Bearer token to
+    // skip masterkey. Auth.middleware still validates the credential.
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer cdt_')) {
+    if (
+      typeof authHeader === 'string' &&
+      authHeader.startsWith('Bearer ') &&
+      (authHeader.startsWith('Bearer cdt_') || isSocketHandshake(req))
+    ) {
       return next();
     }
     const masterKey = req.headers.masterkey;

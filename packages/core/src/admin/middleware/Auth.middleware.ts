@@ -7,6 +7,8 @@ import { isDev } from '../utils/middleware.js';
 import { ConduitRequest } from '@conduitplatform/hermes';
 import { gql } from 'graphql-tag';
 import { ConfigController } from '@conduitplatform/module-tools';
+import { isSocketHandshake } from '../realtime/handshake.js';
+import { isRealtimeTicket } from '../realtime/ticket.js';
 
 const excludedRestRoutes = ['/ready', '/live', '/login', '/config/modules'];
 const excludedGqlOperations = [
@@ -113,6 +115,10 @@ async function handleJwtToken(
   }
 
   const { id } = decoded;
+  if (isRealtimeTicket(decoded) && !isSocketHandshake(req)) {
+    res.status(401).json({ error: 'Realtime ticket cannot be used for HTTP requests' });
+    return;
+  }
   if (decoded.twoFaRequired && req.path !== '/verify-twofa') {
     res.status(401).json({ error: 'Two FA required' });
     return;

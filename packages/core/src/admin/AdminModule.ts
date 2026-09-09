@@ -14,6 +14,7 @@ import {
   PatchRouteMiddlewaresRequest,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
+  SocketPushRequest,
 } from '../interfaces/index.js';
 import { hashPassword } from './utils/auth.js';
 import AdminConfigRawSchema from './config/index.js';
@@ -33,6 +34,7 @@ import {
   ConduitSocket,
   grpcToConduitRoute,
   RouteT,
+  SocketPush,
 } from '@conduitplatform/hermes';
 import convict from 'convict';
 import { NextFunction, Request, Response } from 'express';
@@ -48,6 +50,7 @@ import { getReadinessMiddleware } from '../health/readinessMiddleware.js';
 import { ReadinessService } from '../health/ReadinessService.js';
 import type { CoreHealthProvider } from '../health/types.js';
 import { stripUndeclaredConfigParams } from '../utils/stripUndeclaredConfigParams.js';
+import { adminSocketNamespace } from './realtime/namespace.js';
 
 export default class AdminModule {
   grpcSdk: ConduitGrpcSdk;
@@ -93,6 +96,7 @@ export default class AdminModule {
       adminRoutes.createApiTokenRoute(),
       adminRoutes.getApiTokensRoute(),
       adminRoutes.deleteApiTokenRoute(),
+      adminRoutes.getRealtimeTicketRoute(),
       configRoutes.getModulesRoute(),
       adminRoutes.getStateExportRoute(this),
       adminRoutes.getStateImportRoute(this),
@@ -131,6 +135,7 @@ export default class AdminModule {
       {
         registerAdminRoute: this.registerAdminRoute.bind(this),
         patchRouteMiddlewares: this.patchRouteMiddlewares.bind(this),
+        socketPush: this.socketPush.bind(this),
       },
     );
   }
@@ -238,6 +243,27 @@ export default class AdminModule {
     callback(null, {});
   }
 
+  async socketPush(
+    call: GrpcRequest<SocketPushRequest>,
+    callback: GrpcCallback<Record<string, never>>,
+  ) {
+    try {
+      const moduleName = call.metadata?.get('module-name')?.[0] as string | undefined;
+      const socketData: SocketPush = {
+        event: call.request.event,
+        data: call.request.data ? JSON.parse(call.request.data) : undefined,
+        receivers: call.request.receivers,
+        rooms: call.request.rooms,
+        namespace: adminSocketNamespace(moduleName),
+      };
+      await this._router.socketPush(socketData);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(err as Error);
+      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
+    }
+    callback(null, {});
+  }
+
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push(route);
     this._router.registerConduitRoute(route);
@@ -288,6 +314,16 @@ export default class AdminModule {
           `New admin route registered: ${r.input.action} ${r.input.path} handler url: ${url}`,
         );
         this._router.registerConduitRoute(r);
+      } else if (r instanceof ConduitMiddleware) {
+        ConduitGrpcSdk.Logger.log(
+          `New admin middleware registered: ${r.input.path} handler url: ${url}`,
+        );
+        this._router.registerRouteMiddleware(r, url);
+      } else if (r instanceof ConduitSocket) {
+        ConduitGrpcSdk.Logger.log(
+          `New admin socket registered: ${r.input.path} handler url: ${url}`,
+        );
+        this._router.registerConduitSocket(r);
       }
     });
     // @ts-ignore
