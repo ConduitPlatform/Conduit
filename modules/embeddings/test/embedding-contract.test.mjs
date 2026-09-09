@@ -11,6 +11,10 @@ const sdkSource = readFileSync(
   new URL('../../../libraries/grpc-sdk/src/modules/embeddings/index.ts', import.meta.url),
   'utf8',
 );
+const adminRoutesSource = readFileSync(
+  new URL('../src/admin/routes.ts', import.meta.url),
+  'utf8',
+);
 
 test('embeddings proto exposes typed config, status, backfill, and search RPCs', () => {
   assert.match(
@@ -75,6 +79,30 @@ test('grpc-sdk embeddings client maps typed proto messages instead of JSON-strin
   assert.match(sdkSource, /resumeBackfill\(/);
   assert.doesNotMatch(sdkSource, /JSON\.parse\(res\.result\)/);
   assert.match(sdkSource, /JSON\.parse\(hit\.document\)/);
+  assert.match(
+    protoSource,
+    /message EmbeddingConfig \{\n  string id = 1;[\s\S]*string model = 6;[\s\S]*int32 dimensions = 7;/,
+  );
+  assert.doesNotMatch(protoSource, /string modelName/);
+  assert.doesNotMatch(protoSource, /string _id/);
+  assert.match(
+    protoSource,
+    /message UpsertConfigRequest \{[\s\S]*string model = 5;[\s\S]*int32 dimensions = 6;[\s\S]*optional bool enabled = 9;/,
+  );
+  assert.match(
+    protoSource,
+    /message GetStatusResponse \{\n  bool enabled = 1;\n  bool ready = 2;\n  VectorCapabilities capabilities = 3;/,
+  );
+  assert.match(
+    sdkSource,
+    /export interface EmbeddingConfigRecord \{\n  id: string;[\s\S]*model: string;[\s\S]*dimensions: number;/,
+  );
+  assert.match(
+    sdkSource,
+    /export interface EmbeddingConfigInput \{[\s\S]*model\?: string;[\s\S]*dimensions\?: number;/,
+  );
+  assert.match(adminRoutesSource, /model: ConduitString\.Optional/);
+  assert.match(adminRoutesSource, /dimensions: ConduitNumber\.Optional/);
 });
 
 test('deployment docs describe provider configuration and rollout workflow', () => {

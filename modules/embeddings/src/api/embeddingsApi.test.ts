@@ -619,8 +619,13 @@ describe('typed embeddings API handlers', () => {
   });
 
   it('runs semantic search with typed hits and fail-closed auth', async () => {
+    const embedCalls: Array<[string, string, string]> = [];
     const { api } = createApi({
       configs: [enabledConfig],
+      embed: async (input, provider, model) => {
+        embedCalls.push([input, provider, model]);
+        return [0.1, 1.1, 2.1];
+      },
       vectorSearch: async input => {
         assert.equal(input.userId, 'user-1');
         assert.equal(input.adminOperator, false);
@@ -648,6 +653,9 @@ describe('typed embeddings API handlers', () => {
       { schemaName: 'Article', text: 'hello', userId: 'user-1' },
       { callerModule: 'database' },
     );
+    assert.deepEqual(embedCalls, [
+      ['hello', 'openai-compatible', 'text-embedding-3-small'],
+    ]);
     assert.equal(result.hits.length, 1);
     assert.equal(JSON.parse(result.hits[0].document)._id, 'doc1');
     assert.equal(result.hits[0].score, 0.91);
@@ -1153,6 +1161,64 @@ describe('typed embeddings API handlers', () => {
     assert.equal(saved.config.dimensions, 3);
     assert.equal(configs[0].dimensions, 3);
     assert.equal(saved.config.model, 'text-embedding-3-small');
+  });
+
+  it('selects the catalogue default model when upsert omits model', async () => {
+    const { api, configs } = createApi({
+      indexes: [readyIndex],
+      config: {
+        ...moduleConfig,
+        providers: {
+          'openai-compatible': {
+            ...moduleConfig.providers['openai-compatible'],
+            defaultModel: 'text-embedding-3-large',
+          },
+        },
+      },
+    });
+    const saved = await api.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['title'],
+        targetField: 'embedding',
+        enabled: false,
+      },
+      { callerModule: 'database' },
+    );
+    assert.equal(saved.config.model, 'text-embedding-3-large');
+    assert.equal(saved.config.dimensions, 3);
+    assert.equal(configs[0].modelName, 'text-embedding-3-large');
+  });
+
+  it('reports catalogue readiness on status without leaking provider secrets', async () => {
+    const { api } = createApi({
+      config: {
+        ...moduleConfig,
+        providers: {
+          'openai-compatible': {
+            endpoint: 'https://api.openai.com/v1/embeddings',
+            apiKey: 'sk-status',
+            models: [],
+            defaultModel: 'missing',
+          },
+        },
+      },
+    });
+    const statusResult = await api.getStatus();
+    assert.equal(statusResult.ready, false);
+    assert.equal(
+      statusResult.warnings.some(warning => /model catalogue is empty/.test(warning)),
+      true,
+    );
+    assert.equal(JSON.stringify(statusResult).includes('sk-status'), false);
+    const capabilities = await api.getCapabilities();
+    assert.deepEqual(Object.keys(capabilities.capabilities).sort(), [
+      'indexing',
+      'provider',
+      'search',
+      'storage',
+      'supported',
+    ]);
   });
 
   it('rejects CMS-enabled schemas that are not extendable', async () => {
