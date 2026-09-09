@@ -15,8 +15,12 @@ services:
     image: 'docker.io/conduitplatform/conduit-standalone:${IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
-      - redis
-      - mongodb
+      redis:
+        condition: service_started
+      mongodb:
+        condition: service_started
+      mongo-init-replica:
+        condition: service_completed_successfully
     ports:
       - '${CORE_GRPC_PORT:-55152}:55152'
       - '${DB_GRPC_PORT:-55160}:55160'

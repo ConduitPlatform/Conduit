@@ -71,10 +71,21 @@ services:
     image: 'docker.io/conduitplatform/database:${IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
-      - core
-      - ${DB_TYPE:-mongodb}
-      - prometheus
-      - loki
+      core:
+        condition: service_started
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+      mongodb:
+        condition: service_started
+        required: false
+      postgres:
+        condition: service_started
+        required: false
+      mongo-init-replica:
+        condition: service_completed_successfully
+        required: false
     ports:
       - '${DB_GRPC_PORT:-55160}:${DB_GRPC_PORT:-55160}'
     environment:
