@@ -433,12 +433,20 @@ describe('typed embeddings API handlers', () => {
 
   it('gates system schemas and owner policies on config and backfill', async () => {
     const { api } = createApi({
-      declared: { Article: { name: 'Article', ownerModule: 'cms-app' } },
+      declared: {
+        Article: { name: 'Article', ownerModule: 'cms-app' },
+        Admin: { name: 'Admin', ownerModule: 'core' },
+      },
       schemas: {
         Article: articleSchema,
         AccessToken: {
           name: 'AccessToken',
           fields: { token: { type: TYPE.String } },
+        },
+        Admin: {
+          name: 'Admin',
+          fields: { username: { type: TYPE.String } },
+          modelOptions: articleSchema.modelOptions,
         },
       },
     });
@@ -448,6 +456,21 @@ describe('typed embeddings API handlers', () => {
           {
             schemaName: 'AccessToken',
             sourceFields: ['token'],
+            targetField: 'embedding',
+            model: 'text-embedding-3-small',
+            dimensions: 3,
+            enabled: false,
+          },
+          { platformAdmin: true },
+        ),
+      (err: unknown) => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+    );
+    await assert.rejects(
+      () =>
+        api.upsertConfig(
+          {
+            schemaName: 'Admin',
+            sourceFields: ['username'],
             targetField: 'embedding',
             model: 'text-embedding-3-small',
             dimensions: 3,

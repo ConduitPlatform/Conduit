@@ -23,12 +23,34 @@ export const AUTH_SECRET_SCHEMA_NAMES = new Set([
   'AdminApiToken',
 ]);
 
-export const SYSTEM_SCHEMA_NAMES = new Set([
-  'Views',
-  'Config',
+export const DATABASE_SYSTEM_SCHEMA_NAMES = new Set([
+  '_DeclaredSchema',
   'MigratedSchemas',
-  'PendingSchemas',
   'CustomEndpoints',
+  '_PendingSchemas',
+  'Views',
+]);
+
+export const PLATFORM_INTERNAL_SCHEMA_NAMES = new Set([
+  'Admin',
+  'AdminMiddleware',
+  'AdminApiToken',
+  'AdminTwoFactorSecret',
+  'Config',
+  'Client',
+  'AppMiddleware',
+  'ResourceDefinition',
+  'Relationship',
+  'ObjectIndex',
+  'Permission',
+  'ActorIndex',
+]);
+
+export const INTERNAL_OWNER_MODULES = new Set(['core', 'router', 'authorization']);
+
+export const SYSTEM_SCHEMA_NAMES = new Set([
+  ...DATABASE_SYSTEM_SCHEMA_NAMES,
+  ...PLATFORM_INTERNAL_SCHEMA_NAMES,
 ]);
 
 const SENSITIVE_FIELD_NAME =
@@ -55,8 +77,10 @@ export function isHiddenField(field: unknown): boolean {
 }
 
 /**
- * Explicit denylist for embeddings sources. Owner-controlled business schemas
- * (including authentication User/Team) are not denied by ownerModule alone.
+ * Explicit denylist for embeddings sources. Platform internals (Database system
+ * schemas, core/router/authorization) are denied even when extendable.
+ * Owner-controlled business schemas (including authentication User/Team) are
+ * not denied by ownerModule alone.
  */
 export function isDeniedEmbeddingSchema(schema: {
   name: string;
@@ -67,6 +91,7 @@ export function isDeniedEmbeddingSchema(schema: {
   if (EMBEDDING_OWNED_SCHEMA_NAMES.has(schema.name)) return true;
   if (schema.name.startsWith('_')) return true;
   if (SYSTEM_SCHEMA_NAMES.has(schema.name)) return true;
+  if (schema.ownerModule && INTERNAL_OWNER_MODULES.has(schema.ownerModule)) return true;
   return AUTH_SECRET_SCHEMA_NAMES.has(schema.name);
 }
 
@@ -108,8 +133,10 @@ export function assertEmbeddingTargetSchema(schema: {
 
 export function assertSchemaCanReceiveEmbeddings(schema: {
   name: string;
+  ownerModule?: string;
   modelOptions?: EmbeddingSchemaOptions;
 }): void {
+  assertEmbeddingTargetSchema(schema);
   if (!isEmbeddingSchemaEnabled(schema.modelOptions)) {
     throw new GrpcError(
       status.FAILED_PRECONDITION,

@@ -27,7 +27,7 @@ import { stitchSchema, validateExtensionFields } from './utils/extensions.js';
 import { status } from '@grpc/grpc-js';
 import { isEqual, isNil } from 'lodash-es';
 import ObjectHash from 'object-hash';
-import * as systemModels from '../models/index.js';
+import { DATABASE_SYSTEM_SCHEMA_NAME_SET } from '../models/systemSchemas.js';
 
 export abstract class DatabaseAdapter<T extends Schema> {
   registeredSchemas: Map<string, ConduitDatabaseSchema>;
@@ -462,13 +462,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     );
     models = models
       // do not recover system schemas as they have already been
-      .filter((model: _ConduitSchema) => {
-        let isSystemModel = false;
-        Object.values(systemModels).forEach((systemModel: ConduitSchema) => {
-          systemModel.name === model.name && (isSystemModel = true);
-        });
-        return !isSystemModel;
-      })
+      .filter((model: _ConduitSchema) => !DATABASE_SYSTEM_SCHEMA_NAME_SET.has(model.name))
       .map((model: _ConduitSchema) => {
         const schema = new ConduitSchema(
           model.name,
