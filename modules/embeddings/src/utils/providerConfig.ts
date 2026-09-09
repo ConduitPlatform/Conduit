@@ -7,8 +7,14 @@ import type {
 
 export type { EmbeddingProviderModel, EmbeddingProviderSettings };
 
+type CatalogueOptions = { strict?: boolean };
+
 function invalidProviderConfig(message: string): GrpcError {
   return new GrpcError(status.INVALID_ARGUMENT, message);
+}
+
+function isStrict(options?: CatalogueOptions): boolean {
+  return options?.strict !== false;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -47,11 +53,11 @@ function parseModelEntry(value: unknown, index: number): EmbeddingProviderModel 
 
 function parseModelList(
   values: unknown[],
-  options?: { strict?: boolean },
+  options?: CatalogueOptions,
 ): EmbeddingProviderModel[] {
   const models: EmbeddingProviderModel[] = [];
   const names = new Set<string>();
-  const strict = options?.strict !== false;
+  const strict = isStrict(options);
   for (const [index, value] of values.entries()) {
     const parsed = strict ? parseModelEntry(value, index) : optionalModelEntry(value);
     if (!parsed) continue;
@@ -77,14 +83,14 @@ function optionalModelEntry(value: unknown): EmbeddingProviderModel | undefined 
 
 function migrateLegacyModels(
   raw: Record<string, unknown>,
-  options?: { strict?: boolean },
+  options?: CatalogueOptions,
 ): EmbeddingProviderModel[] | undefined {
   if (Array.isArray(raw.models) && raw.models.length > 0) return undefined;
   const name = trimName(raw.model);
   if (!name) return [];
   const dimensions = parseDimensions(raw.dimensions);
   if (dimensions == null) {
-    if (options?.strict === false) return [];
+    if (!isStrict(options)) return [];
     throw invalidProviderConfig(
       `Provider model '${name}' dimensions must be a positive integer`,
     );
@@ -143,7 +149,7 @@ function resolveDefaultModelName(
 
 export function normalizeProviderSettings(
   raw: unknown,
-  options?: { strict?: boolean },
+  options?: CatalogueOptions,
 ): EmbeddingProviderSettings {
   const source = isRecord(raw) ? raw : {};
   const migrated = migrateLegacyModels(source, options);
@@ -153,7 +159,7 @@ export function normalizeProviderSettings(
     (Array.isArray(source.models) ? parseModelList(source.models, options) : []);
   const names = new Set(models.map(model => model.name));
   const configuredDefault = trimName(source.defaultModel);
-  if (configuredDefault && !names.has(configuredDefault) && options?.strict !== false) {
+  if (configuredDefault && !names.has(configuredDefault) && isStrict(options)) {
     throw invalidProviderConfig(
       `Provider default model '${configuredDefault}' is not in the catalogue`,
     );
@@ -247,7 +253,7 @@ export function normalizeEmbeddingsConfig<
     providers?: Record<string, unknown>;
     security?: Record<string, unknown>;
   },
->(config: T, options?: { strict?: boolean }): T {
+>(config: T, options?: CatalogueOptions): T {
   const next = { ...config };
   if (isRecord(next.security)) {
     const security = { ...next.security };

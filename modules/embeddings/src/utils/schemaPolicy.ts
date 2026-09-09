@@ -1,6 +1,7 @@
 import { GrpcError, TYPE } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { BACKFILL_RUN_SCHEMA } from './backfillRun.js';
+import { sourceHashField } from './configChange.js';
 
 export const EMBEDDING_CONFIG_SCHEMA = 'EmbeddingConfig';
 export { BACKFILL_RUN_SCHEMA };
@@ -95,10 +96,6 @@ export function isDeniedEmbeddingSchema(schema: {
   return AUTH_SECRET_SCHEMA_NAMES.has(schema.name);
 }
 
-export function embeddingSourceHashField(targetField: string): string {
-  return `${targetField}SourceHash`;
-}
-
 export interface EmbeddingSchemaOptions {
   conduit?: {
     cms?: { enabled?: boolean };
@@ -107,17 +104,13 @@ export interface EmbeddingSchemaOptions {
   };
 }
 
-export function isCmsEnabled(modelOptions?: EmbeddingSchemaOptions): boolean {
-  return modelOptions?.conduit?.cms?.enabled === true;
-}
-
-export function isSchemaExtendable(modelOptions?: EmbeddingSchemaOptions): boolean {
+function isSchemaExtendable(modelOptions?: EmbeddingSchemaOptions): boolean {
   return modelOptions?.conduit?.permissions?.extendable === true;
 }
 
-export function isEmbeddingSchemaEnabled(modelOptions?: EmbeddingSchemaOptions): boolean {
+function isEmbeddingSchemaEnabled(modelOptions?: EmbeddingSchemaOptions): boolean {
   if (modelOptions?.conduit?.cms == null) return true;
-  return isCmsEnabled(modelOptions);
+  return modelOptions.conduit.cms.enabled === true;
 }
 
 export function assertEmbeddingTargetSchema(schema: {
@@ -289,7 +282,7 @@ export function assertEmbeddingExtensionAvailability(args: {
   compiledFields: Record<string, unknown>;
   extensions?: SchemaExtensionInfo[];
 }): void {
-  const hashField = embeddingSourceHashField(args.targetField);
+  const hashField = sourceHashField(args.targetField);
   const proposed: Record<string, EmbeddingExtensionField> = {
     [args.targetField]: {
       type: TYPE.Vector,
@@ -319,7 +312,7 @@ function fieldOwner(
   fieldName: string,
   extensions: SchemaExtensionInfo[],
 ): SchemaExtensionInfo | undefined {
-  return extensions.find(extension => fieldName in (extension.fields ?? {}));
+  return extensions.find(extension => fieldName in extension.fields);
 }
 
 function assertExtensionFieldAvailable(args: {
@@ -331,10 +324,10 @@ function assertExtensionFieldAvailable(args: {
   extensions: SchemaExtensionInfo[];
 }): void {
   const owned = fieldOwner(args.fieldName, args.extensions);
-  if (owned && owned.ownerModule !== EMBEDDINGS_OWNER_MODULE) {
-    throw extensionCollision(args.schemaName, args.fieldName);
-  }
-  if (owned?.ownerModule === EMBEDDINGS_OWNER_MODULE) {
+  if (owned) {
+    if (owned.ownerModule !== EMBEDDINGS_OWNER_MODULE) {
+      throw extensionCollision(args.schemaName, args.fieldName);
+    }
     if (!isCompatibleEmbeddingField(owned.fields[args.fieldName], args.proposed)) {
       throw extensionCollision(args.schemaName, args.fieldName);
     }
@@ -343,10 +336,9 @@ function assertExtensionFieldAvailable(args: {
   if (args.baseFields && args.fieldName in args.baseFields) {
     throw extensionCollision(args.schemaName, args.fieldName);
   }
-  if (args.fieldName in args.compiledFields) {
-    if (!isCompatibleEmbeddingField(args.compiledFields[args.fieldName], args.proposed)) {
-      throw extensionCollision(args.schemaName, args.fieldName);
-    }
+  if (!(args.fieldName in args.compiledFields)) return;
+  if (!isCompatibleEmbeddingField(args.compiledFields[args.fieldName], args.proposed)) {
+    throw extensionCollision(args.schemaName, args.fieldName);
   }
 }
 

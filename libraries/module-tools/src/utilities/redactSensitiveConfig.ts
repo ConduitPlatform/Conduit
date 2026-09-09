@@ -26,6 +26,15 @@ function unwrapSchema(schema: unknown): unknown {
 
 const REDACTED_MARKER = '[REDACTED]';
 
+export function containsRedactedMarker(value: unknown): boolean {
+  if (value === REDACTED_MARKER) return true;
+  if (Array.isArray(value)) {
+    return value.some(containsRedactedMarker);
+  }
+  if (!isRecord(value)) return false;
+  return Object.values(value).some(containsRedactedMarker);
+}
+
 export function redactSensitiveConfig<T>(config: T, schema?: unknown): T {
   if (!isRecord(config)) return config;
   const redacted = Array.isArray(config) ? [...config] : { ...config };
