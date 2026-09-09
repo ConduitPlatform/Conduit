@@ -289,5 +289,17 @@ describe('embedding schema and source policies', () => {
         }),
       err => err instanceof GrpcError && err.code === status.ALREADY_EXISTS,
     );
+    assert.throws(
+      () =>
+        assertEmbeddingExtensionAvailability({
+          ...proposed,
+          compiledFields: {
+            title: { type: TYPE.String },
+            embeddingSourceHash: { type: TYPE.Number },
+          },
+          extensions: undefined,
+        }),
+      err => err instanceof GrpcError && err.code === status.ALREADY_EXISTS,
+    );
   });
 });

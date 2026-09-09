@@ -1,8 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
+import { ConduitNumber, ConduitString } from '@conduitplatform/module-tools';
 import { embeddingsMcpToolName, embeddingsPublicPath } from './mcpToolNames.js';
 import {
+  CONFIG_BODY,
   EMBEDDINGS_ADMIN_ROUTES,
   EMBEDDINGS_CLIENT_FORBIDDEN_PATHS,
   EMBEDDINGS_CLIENT_SEARCH_PATH,
@@ -69,5 +71,22 @@ describe('embeddings MCP tool names', () => {
       );
     }
     assert.equal(EMBEDDINGS_CLIENT_SEARCH_PATH, '/search');
+  });
+
+  it('accepts optional catalogue fields on Admin config upsert', () => {
+    assert.deepEqual(Object.keys(CONFIG_BODY), [
+      'schemaName',
+      'sourceFields',
+      'targetField',
+      'provider',
+      'model',
+      'dimensions',
+      'similarity',
+      'sourceFieldAllowlist',
+      'enabled',
+    ]);
+    assert.equal(CONFIG_BODY.model, ConduitString.Optional);
+    assert.equal(CONFIG_BODY.dimensions, ConduitNumber.Optional);
+    assert.equal(CONFIG_BODY.provider, ConduitString.Optional);
   });
 });
