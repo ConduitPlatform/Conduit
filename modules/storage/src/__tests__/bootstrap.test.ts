@@ -2,7 +2,7 @@ import { afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { _StorageContainer } from '../models/index.js';
-import { ensureDefaultContainer } from './bootstrap.js';
+import { ensureDefaultContainer } from '../authz/bootstrap.js';
 
 const originalConfig = ConfigController.getInstance().config;
 const originalGetInstance = _StorageContainer.getInstance.bind(_StorageContainer);

@@ -8,7 +8,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { _StorageContainer, File } from '../models/index.js';
-import { FileHandlers } from './file.js';
+import { FileHandlers } from '../handlers/file.js';
 
 const originalConfig = ConfigController.getInstance().config;
 const originalContainerGetInstance =

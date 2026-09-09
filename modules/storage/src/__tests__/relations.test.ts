@@ -10,7 +10,7 @@ import {
   createOwnerRelation,
   forEachDocumentPage,
   updateFileRelations,
-} from './relations.js';
+} from '../authz/relations.js';
 
 const originalConfig = ConfigController.getInstance().config;
 const originalContainerGetInstance =
