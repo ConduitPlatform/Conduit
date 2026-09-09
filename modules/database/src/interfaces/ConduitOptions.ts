@@ -30,5 +30,8 @@ export const ConduitOptions = {
   authorization: {
     enabled: ConduitBoolean.Optional,
   },
+  realtime: {
+    enabled: ConduitBoolean.Optional,
+  },
   readPreference: ConduitString.Optional,
 };

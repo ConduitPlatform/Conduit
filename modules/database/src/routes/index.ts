@@ -13,6 +13,7 @@ import {
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
+import type { RealtimeService } from '../realtime/index.js';
 
 export class DatabaseRoutes {
   private readonly handlers: CmsHandlers;
@@ -34,6 +35,7 @@ export class DatabaseRoutes {
     readonly server: GrpcServer,
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
     private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly realtimeService?: RealtimeService,
   ) {
     this.handlers = new CmsHandlers(grpcSdk, database);
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
@@ -55,7 +57,6 @@ export class DatabaseRoutes {
   }
 
   requestRefresh() {
-    if (this.crudRoutes.length === 0 && this.customRoutes.length === 0) return;
     this._scheduleTimeout();
   }
 
@@ -86,6 +87,7 @@ export class DatabaseRoutes {
     this.crudRoutes.concat(this.customRoutes).forEach(route => {
       this._routingManager.route(route.input, route.returnType, route.handler);
     });
+    this.realtimeService?.registerClient(this._routingManager);
     this._routingManager
       .registerRoutes()
       .then(() => {

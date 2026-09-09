@@ -31,4 +31,19 @@ export default {
       help: 'Tracks the total number of custom endpoints',
     },
   },
+  realtimeEvents: {
+    type: MetricType.Counter,
+    config: {
+      name: 'database_realtime_events_total',
+      help: 'Tracks normalized database change-stream events',
+      labelNames: ['operation'],
+    },
+  },
+  realtimeStreamErrors: {
+    type: MetricType.Counter,
+    config: {
+      name: 'database_realtime_stream_errors_total',
+      help: 'Tracks change-stream errors',
+    },
+  },
 };

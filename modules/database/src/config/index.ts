@@ -47,6 +47,13 @@ const AppConfigSchema = {
       default: 0,
     },
   },
+  realtime: {
+    enabled: {
+      doc: 'Enable MongoDB change-stream live updates for opted-in schemas',
+      format: 'Boolean',
+      default: false,
+    },
+  },
 };
 
 const config = convict(AppConfigSchema);

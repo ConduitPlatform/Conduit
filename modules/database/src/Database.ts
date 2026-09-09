@@ -64,6 +64,7 @@ import { QueueController } from './controllers/queue.controller.js';
 import AppConfigSchema, { Config } from './config/index.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
+import { RealtimeService } from './realtime/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -107,6 +108,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
   private customEndpointController?: CustomEndpointController;
   private _authorizationDefinitionsRegistered = false;
   private _databaseRouterWatchDispose: (() => void) | null = null;
+  private realtimeService?: RealtimeService;
 
   constructor(dbType: string, dbUri: string, peerManifestRoot?: string) {
     super('database', peerManifestRoot);
@@ -164,6 +166,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
         readConcern: config.readConcern ?? 'local',
       });
     }
+    void this.realtimeService?.reconcile();
     if (!config.viewCleanup.enabled) {
       try {
         await QueueController.getInstance().drainViewCleanupQueue();
@@ -1015,13 +1018,16 @@ export default class DatabaseModule extends ManagedModule<Config> {
         this.grpcSdk,
         this._activeAdapter,
       );
+      this.realtimeService = new RealtimeService(this.grpcSdk, this._activeAdapter);
       this.adminRouter = new AdminHandlers(
         this.grpcServer,
         this.grpcSdk,
         this._activeAdapter,
         this.schemaController,
         this.customEndpointController,
+        this.realtimeService,
       );
+      void this.realtimeService.reconcile();
       this._databaseRouterWatchDispose?.();
       this._databaseRouterWatchDispose = this.grpcSdk.watchPeer(
         'router',
@@ -1031,6 +1037,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
             this.grpcServer,
             this._activeAdapter,
             this.grpcSdk,
+            this.realtimeService,
           );
           this.schemaController?.setRouter(this.userRouter);
           this.customEndpointController?.setRouter(this.userRouter);

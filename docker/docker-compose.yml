@@ -85,7 +85,7 @@ services:
       LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
       DB_TYPE: '${DB_TYPE:-mongodb}'
-      DB_CONN_URI: '${DB_CONN_URI:-mongodb://conduit:pass@conduit-mongo:27017/conduit?authSource=admin}'
+      DB_CONN_URI: '${DB_CONN_URI:-mongodb://conduit:pass@conduit-mongo:27017/conduit?authSource=admin&replicaSet=rs0}'
     networks:
       default:
         aliases:
@@ -271,12 +271,40 @@ services:
       MONGO_INITDB_ROOT_USERNAME: '${DB_USER:-conduit}'
       MONGO_INITDB_ROOT_PASSWORD: '${DB_PASS:-pass}'
     profiles: ['mongodb']
+    entrypoint:
+      - bash
+      - -c
+      - |
+        cp /mongo-keyfile /tmp/keyfile
+        chmod 400 /tmp/keyfile
+        chown mongodb:mongodb /tmp/keyfile
+        exec docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --keyFile /tmp/keyfile
     networks:
       default:
         aliases:
           - conduit-mongo
     volumes:
       - mongo:/data/db
+      - ./mongo/keyfile:/mongo-keyfile:ro
+
+  mongo-init-replica:
+    container_name: 'conduit-mongo-init'
+    image: 'docker.io/library/mongo:4.4.15'
+    restart: on-failure
+    profiles: ['mongodb']
+    depends_on:
+      - mongodb
+    environment:
+      MONGO_HOST: 'conduit-mongo'
+      MONGO_INITDB_ROOT_USERNAME: '${DB_USER:-conduit}'
+      MONGO_INITDB_ROOT_PASSWORD: '${DB_PASS:-pass}'
+    volumes:
+      - ./mongo/init-replica.sh:/init-replica.sh:ro
+    command: ['bash', '/init-replica.sh']
+    networks:
+      default:
+        aliases:
+          - conduit-mongo-init
 
   postgres:
     container_name: 'conduit-postgres'
