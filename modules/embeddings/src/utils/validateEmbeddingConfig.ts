@@ -1,5 +1,11 @@
 import { GrpcError, VectorSimilarity } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import type { EmbeddingProviderSettings } from '../config/index.js';
+import {
+  assertConfiguredProvider,
+  resolveCatalogueDimensions,
+  resolveCatalogueModel,
+} from './providerConfig.js';
 import { assertSourceFields } from './schemaPolicy.js';
 
 export interface EmbeddingConfigInput {
@@ -18,17 +24,22 @@ export interface ValidatedEmbeddingConfig {
   sourceFields: string[];
   targetField: string;
   provider: string;
-  modelName: string | undefined;
+  modelName: string;
   dimensions: number;
   similarity: VectorSimilarity;
   sourceFieldAllowlist: string[];
+}
+
+export interface EmbeddingConfigDefaults {
+  provider: string;
+  providers: Record<string, EmbeddingProviderSettings>;
 }
 
 const SUPPORTED_SIMILARITY = Object.values(VectorSimilarity);
 
 export function validateEmbeddingConfigInput(
   request: EmbeddingConfigInput,
-  defaults: { provider: string },
+  defaults: EmbeddingConfigDefaults,
   schemaFields?: Record<string, unknown>,
 ): ValidatedEmbeddingConfig {
   if (!request.schemaName || !request.targetField || !request.sourceFields?.length) {
@@ -43,14 +54,12 @@ export function validateEmbeddingConfigInput(
   if (!/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(request.targetField)) {
     throw new GrpcError(status.INVALID_ARGUMENT, 'targetField is invalid');
   }
-  const dimensions = request.dimensions;
-  if (
-    typeof dimensions !== 'number' ||
-    !Number.isInteger(dimensions) ||
-    dimensions <= 0
-  ) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'dimensions must be a positive integer');
-  }
+  const { name: provider, settings: providerSettings } = assertConfiguredProvider(
+    defaults.providers,
+    request.provider || defaults.provider,
+  );
+  const model = resolveCatalogueModel(providerSettings, request.model);
+  const dimensions = resolveCatalogueDimensions(model, request.dimensions);
   const similarity = request.similarity || VectorSimilarity.Cosine;
   if (!SUPPORTED_SIMILARITY.includes(similarity as VectorSimilarity)) {
     throw new GrpcError(
@@ -72,8 +81,8 @@ export function validateEmbeddingConfigInput(
     schemaName: request.schemaName,
     sourceFields: request.sourceFields,
     targetField: request.targetField,
-    provider: request.provider || defaults.provider,
-    modelName: request.model,
+    provider,
+    modelName: model.name,
     dimensions,
     similarity: similarity as VectorSimilarity,
     sourceFieldAllowlist,

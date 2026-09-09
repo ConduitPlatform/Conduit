@@ -22,7 +22,13 @@ import { SearchGateError } from '../utils/operationalStatus.js';
 const articleSchema = {
   name: 'Article',
   fields: { title: { type: TYPE.String }, body: { type: TYPE.String } },
-  modelOptions: { conduit: { authorization: { enabled: true } } },
+  modelOptions: {
+    conduit: {
+      cms: { enabled: true },
+      permissions: { extendable: true },
+      authorization: { enabled: true },
+    },
+  },
 };
 
 const readyCapabilities = {
@@ -49,7 +55,11 @@ const moduleConfig = {
     'openai-compatible': {
       endpoint: 'https://api.openai.com/v1/embeddings',
       apiKey: 'sk-test',
-      models: [{ name: 'text-embedding-3-small', dimensions: 1536 }],
+      models: [
+        { name: 'text-embedding-3-small', dimensions: 3 },
+        { name: 'text-embedding-3-large', dimensions: 3 },
+        { name: 'text-embedding-3-wide', dimensions: 8 },
+      ],
       defaultModel: 'text-embedding-3-small',
     },
   },
@@ -81,7 +91,15 @@ function createApi(overrides?: {
     method?: string;
   }>;
   schemas?: Record<string, SchemaInfo>;
-  declared?: Record<string, { name: string; ownerModule: string }>;
+  declared?: Record<
+    string,
+    {
+      name: string;
+      ownerModule: string;
+      fields?: Record<string, unknown>;
+      extensions?: Array<{ ownerModule: string; fields: Record<string, unknown> }>;
+    }
+  >;
   embed?: EmbeddingsApiDeps['embed'];
   vectorSearch?: EmbeddingsApiDeps['vectorSearch'];
   createVectorIndex?: EmbeddingsApiDeps['createVectorIndex'];
@@ -90,6 +108,7 @@ function createApi(overrides?: {
   invalidated?: string[];
   deletedIndexes?: string[];
   createdIndexes?: string[];
+  schemaExtensions?: Array<{ schemaName: string; fields: Record<string, unknown> }>;
   config?: Config;
   queue?: { generation: QueueJobCounts; backfill: QueueJobCounts };
 }) {
@@ -100,6 +119,7 @@ function createApi(overrides?: {
   const invalidated = overrides?.invalidated ?? [];
   const deletedIndexes = overrides?.deletedIndexes ?? [];
   const createdIndexes = overrides?.createdIndexes ?? [];
+  const schemaExtensions = overrides?.schemaExtensions ?? [];
   const deps: EmbeddingsApiDeps = {
     currentConfig: () => overrides?.config ?? moduleConfig,
     getSchema: async name => {
@@ -110,7 +130,10 @@ function createApi(overrides?: {
     },
     declaredSchema: async name =>
       overrides?.declared?.[name] ?? { name, ownerModule: 'database' },
-    setSchemaExtension: async () => undefined,
+    setSchemaExtension: async args => {
+      schemaExtensions.push(args);
+      return undefined;
+    },
     getVectorCapabilities: async () => overrides?.capabilities ?? readyCapabilities,
     getVectorIndexes: async () => indexes,
     vectorSearch: overrides?.vectorSearch ?? (async () => []),
@@ -226,6 +249,7 @@ function createApi(overrides?: {
     invalidated,
     deletedIndexes,
     createdIndexes,
+    schemaExtensions,
     indexes,
   };
 }
@@ -392,7 +416,7 @@ describe('typed embeddings API handlers', () => {
             schemaName: 'AccessToken',
             sourceFields: ['token'],
             targetField: 'embedding',
-            model: 'm',
+            model: 'text-embedding-3-small',
             dimensions: 3,
             enabled: false,
           },
@@ -418,6 +442,7 @@ describe('typed embeddings API handlers', () => {
         password: { type: TYPE.String },
         notes: { type: TYPE.String, select: false },
       },
+      modelOptions: articleSchema.modelOptions,
     };
     const owner = { callerModule: 'cms-app' };
     const declared = { Article: { name: 'Article', ownerModule: 'cms-app' } };
@@ -433,7 +458,7 @@ describe('typed embeddings API handlers', () => {
             schemaName: 'Article',
             sourceFields: ['password'],
             targetField: 'embedding',
-            model: 'm',
+            model: 'text-embedding-3-small',
             dimensions: 3,
             sourceFieldAllowlist: ['password'],
             enabled: false,
@@ -452,7 +477,7 @@ describe('typed embeddings API handlers', () => {
             schemaName: 'Article',
             sourceFields: ['notes'],
             targetField: 'embedding',
-            model: 'm',
+            model: 'text-embedding-3-small',
             dimensions: 3,
             sourceFieldAllowlist: ['notes'],
             enabled: false,
@@ -471,7 +496,7 @@ describe('typed embeddings API handlers', () => {
             schemaName: 'Article',
             sourceFields: ['password'],
             targetField: 'embedding',
-            model: 'm',
+            model: 'text-embedding-3-small',
             dimensions: 3,
             sourceFieldAllowlist: ['password'],
             enabled: false,
@@ -498,7 +523,7 @@ describe('typed embeddings API handlers', () => {
         schemaName: 'Article',
         sourceFields: ['notes'],
         targetField: 'embedding',
-        model: 'm',
+        model: 'text-embedding-3-small',
         dimensions: 3,
         enabled: false,
       },
@@ -516,7 +541,7 @@ describe('typed embeddings API handlers', () => {
         schemaName: 'Article',
         sourceFields: ['notes'],
         targetField: 'embedding',
-        model: 'm',
+        model: 'text-embedding-3-small',
         dimensions: 3,
         sourceFieldAllowlist: ['notes'],
         enabled: false,
@@ -712,7 +737,7 @@ describe('typed embeddings API handlers', () => {
             sourceFields: ['title'],
             targetField: 'embedding',
             provider: 'openai-compatible',
-            model: 'text-embedding-3-small',
+            model: 'text-embedding-3-wide',
             dimensions: 8,
             enabled: false,
           },
@@ -1054,5 +1079,219 @@ describe('typed embeddings API handlers', () => {
     });
     assert.equal(resumedAgain.run.state, 'queued');
     assert.equal(enqueued.length >= 2, true);
+  });
+
+  it('rejects unknown providers, unknown models, and explicit catalogue dimension mismatches', async () => {
+    const { api } = createApi();
+    await assert.rejects(
+      () =>
+        api.upsertConfig(
+          {
+            schemaName: 'Article',
+            sourceFields: ['title'],
+            targetField: 'embedding',
+            provider: 'missing',
+            model: 'text-embedding-3-small',
+            enabled: false,
+          },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /not a configured provider/.test(err.message),
+    );
+    await assert.rejects(
+      () =>
+        api.upsertConfig(
+          {
+            schemaName: 'Article',
+            sourceFields: ['title'],
+            targetField: 'embedding',
+            model: 'missing-model',
+            enabled: false,
+          },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /not in the catalogue/.test(err.message),
+    );
+    await assert.rejects(
+      () =>
+        api.upsertConfig(
+          {
+            schemaName: 'Article',
+            sourceFields: ['title'],
+            targetField: 'embedding',
+            model: 'text-embedding-3-small',
+            dimensions: 1536,
+            enabled: false,
+          },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /do not match catalogue dimensions/.test(err.message),
+    );
+  });
+
+  it('derives dimensions from the catalogue when the client omits them', async () => {
+    const { api, configs } = createApi({ indexes: [readyIndex] });
+    const saved = await api.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['title'],
+        targetField: 'embedding',
+        model: 'text-embedding-3-small',
+        enabled: false,
+      },
+      { callerModule: 'database' },
+    );
+    assert.equal(saved.config.dimensions, 3);
+    assert.equal(configs[0].dimensions, 3);
+    assert.equal(saved.config.model, 'text-embedding-3-small');
+  });
+
+  it('rejects CMS-enabled schemas that are not extendable', async () => {
+    const { api, configs, createdIndexes, schemaExtensions } = createApi({
+      schemas: {
+        Article: {
+          ...articleSchema,
+          modelOptions: {
+            conduit: {
+              cms: { enabled: true },
+              permissions: { extendable: false },
+              authorization: { enabled: true },
+            },
+          },
+        },
+      },
+    });
+    await assert.rejects(
+      () =>
+        api.upsertConfig(
+          {
+            schemaName: 'Article',
+            sourceFields: ['title'],
+            targetField: 'embedding',
+            model: 'text-embedding-3-small',
+            enabled: false,
+          },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.FAILED_PRECONDITION &&
+        /not extendable/.test(err.message),
+    );
+    assert.equal(configs.length, 0);
+    assert.equal(createdIndexes.length, 0);
+    assert.equal(schemaExtensions.length, 0);
+  });
+
+  it('rejects incompatible field collisions before provisioning extensions or indexes', async () => {
+    const { api, configs, createdIndexes, schemaExtensions } = createApi({
+      schemas: {
+        Article: {
+          ...articleSchema,
+          fields: {
+            ...articleSchema.fields,
+            embedding: { type: TYPE.String },
+          },
+        },
+      },
+      declared: {
+        Article: {
+          name: 'Article',
+          ownerModule: 'database',
+          fields: {
+            title: { type: TYPE.String },
+            body: { type: TYPE.String },
+            embedding: { type: TYPE.String },
+          },
+        },
+      },
+    });
+    await assert.rejects(
+      () =>
+        api.upsertConfig(
+          {
+            schemaName: 'Article',
+            sourceFields: ['title'],
+            targetField: 'embedding',
+            model: 'text-embedding-3-small',
+            enabled: false,
+          },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.ALREADY_EXISTS &&
+        /not a compatible embeddings extension/.test(err.message),
+    );
+    assert.equal(configs.length, 0);
+    assert.equal(createdIndexes.length, 0);
+    assert.equal(schemaExtensions.length, 0);
+  });
+
+  it('is idempotent for compatible existing embeddings extensions', async () => {
+    const compatibleFields = {
+      embedding: {
+        type: TYPE.Vector,
+        dimensions: 3,
+        similarity: VectorSimilarity.Cosine,
+        select: false,
+      },
+      embeddingSourceHash: { type: TYPE.String, required: false, select: false },
+      otherEmbedding: {
+        type: TYPE.Vector,
+        dimensions: 3,
+        similarity: VectorSimilarity.Cosine,
+        select: false,
+      },
+    };
+    const { api, configs, schemaExtensions } = createApi({
+      indexes: [readyIndex],
+      schemas: {
+        Article: {
+          ...articleSchema,
+          fields: {
+            ...articleSchema.fields,
+            ...compatibleFields,
+          },
+        },
+      },
+      declared: {
+        Article: {
+          name: 'Article',
+          ownerModule: 'database',
+          fields: articleSchema.fields,
+          extensions: [
+            {
+              ownerModule: 'embeddings',
+              fields: compatibleFields,
+            },
+          ],
+        },
+      },
+    });
+    const saved = await api.upsertConfig(
+      {
+        schemaName: 'Article',
+        sourceFields: ['title'],
+        targetField: 'embedding',
+        model: 'text-embedding-3-small',
+        enabled: false,
+      },
+      { callerModule: 'database' },
+    );
+    assert.equal(saved.config.enabled, false);
+    assert.equal(configs.length, 1);
+    assert.equal(schemaExtensions.length, 1);
+    assert.equal('otherEmbedding' in schemaExtensions[0].fields, true);
+    assert.equal('embedding' in schemaExtensions[0].fields, true);
   });
 });

@@ -1,10 +1,22 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { VectorSimilarity } from '@conduitplatform/grpc-sdk';
+import { GrpcError, VectorSimilarity } from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import { validateEmbeddingConfigInput } from './validateEmbeddingConfig.js';
 
 describe('validateEmbeddingConfigInput', () => {
-  const defaults = { provider: 'openai-compatible' };
+  const defaults = {
+    provider: 'openai-compatible',
+    providers: {
+      'openai-compatible': {
+        models: [
+          { name: 'text-embedding-3-small', dimensions: 1536 },
+          { name: 'text-embedding-3-large', dimensions: 3072 },
+        ],
+        defaultModel: 'text-embedding-3-small',
+      },
+    },
+  };
   const valid = {
     schemaName: 'Article',
     sourceFields: ['title', 'body'],
@@ -23,13 +35,19 @@ describe('validateEmbeddingConfigInput', () => {
     );
     assert.equal(result.similarity, VectorSimilarity.DotProduct);
     assert.equal(result.provider, 'openai-compatible');
+    assert.equal(result.modelName, 'text-embedding-3-small');
     assert.equal(result.dimensions, 1536);
     assert.deepEqual(result.sourceFieldAllowlist, []);
   });
 
-  it('defaults omitted similarity to cosine', () => {
-    const result = validateEmbeddingConfigInput(valid, defaults);
+  it('defaults omitted similarity to cosine and omitted model to the catalogue default', () => {
+    const result = validateEmbeddingConfigInput(
+      { schemaName: 'Article', sourceFields: ['title'], targetField: 'embedding' },
+      defaults,
+    );
     assert.equal(result.similarity, VectorSimilarity.Cosine);
+    assert.equal(result.modelName, 'text-embedding-3-small');
+    assert.equal(result.dimensions, 1536);
   });
 
   it('rejects missing identity fields', () => {
@@ -39,15 +57,47 @@ describe('validateEmbeddingConfigInput', () => {
     );
   });
 
-  it('rejects non-positive and non-integer dimensions', () => {
+  it('rejects unknown providers and models', () => {
     assert.throws(
-      () => validateEmbeddingConfigInput({ ...valid, dimensions: 0 }, defaults),
-      /positive integer/,
+      () => validateEmbeddingConfigInput({ ...valid, provider: 'missing' }, defaults),
+      err =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /not a configured provider/.test(err.message),
     );
     assert.throws(
-      () => validateEmbeddingConfigInput({ ...valid, dimensions: 12.3 }, defaults),
-      /positive integer/,
+      () => validateEmbeddingConfigInput({ ...valid, model: 'missing' }, defaults),
+      err =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /not in the catalogue/.test(err.message),
     );
+  });
+
+  it('rejects explicit dimension mismatches and ignores omitted proto dimensions', () => {
+    assert.throws(
+      () =>
+        validateEmbeddingConfigInput(
+          { ...valid, model: 'text-embedding-3-small', dimensions: 768 },
+          defaults,
+        ),
+      err =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /do not match catalogue dimensions/.test(err.message),
+    );
+    const omitted = validateEmbeddingConfigInput(
+      {
+        schemaName: 'Article',
+        sourceFields: ['title'],
+        targetField: 'embedding',
+        model: 'text-embedding-3-large',
+        dimensions: 0,
+      },
+      defaults,
+    );
+    assert.equal(omitted.dimensions, 3072);
+    assert.equal(omitted.modelName, 'text-embedding-3-large');
   });
 
   it('rejects unsupported similarity values', () => {

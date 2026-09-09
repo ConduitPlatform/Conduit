@@ -56,7 +56,7 @@ export class AdminHandlers {
       targetField: string;
       provider?: string;
       model?: string;
-      dimensions: number;
+      dimensions?: number;
       similarity?: string;
       sourceFieldAllowlist?: string[];
       enabled?: boolean;
