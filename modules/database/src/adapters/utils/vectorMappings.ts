@@ -2,6 +2,7 @@ import {
   VectorIndexDefinition,
   VectorIndexMethod,
   VectorSimilarity,
+  defaultVectorIndexMethod,
 } from '@conduitplatform/grpc-sdk';
 import { isObjectFormVectorField } from './vectorField.js';
 import {
@@ -106,9 +107,7 @@ export function toMongoVectorIndexDefinition(index: VectorIndexDefinition) {
   if (index.options?.quantization) {
     vectorField.quantization = index.options.quantization;
   }
-  if (index.method) {
-    vectorField.indexingMethod = index.method;
-  }
+  vectorField.indexingMethod = defaultVectorIndexMethod(index.method);
   if (index.options?.hnsw) {
     vectorField.hnswOptions = {
       ...(index.options.hnsw.maxEdges && { maxEdges: index.options.hnsw.maxEdges }),
@@ -146,7 +145,7 @@ export function fromMongoVectorIndex(index: {
     field: vectorField.path,
     dimensions: vectorField.numDimensions,
     similarity: vectorField.similarity,
-    method: vectorField.indexingMethod,
+    method: defaultVectorIndexMethod(vectorField.indexingMethod),
     filterFields: fields
       .filter(field => field.type === 'filter')
       .map(field => field.path),

@@ -398,6 +398,39 @@ describe('typed embeddings API handlers', () => {
     );
   });
 
+  it('does not recreate _vN indexes when live method is empty or missing', async () => {
+    const missingMethod = {
+      ...readyIndex,
+      method: undefined,
+    };
+    const emptyMethod = {
+      ...readyIndex,
+      method: '',
+    };
+    for (const indexes of [[missingMethod], [emptyMethod]]) {
+      const { api, createdIndexes, deletedIndexes } = createApi({
+        configs: [enabledConfig],
+        indexes,
+      });
+      const saved = await api.upsertConfig(
+        {
+          schemaName: 'Article',
+          sourceFields: ['title'],
+          targetField: 'embedding',
+          provider: 'openai-compatible',
+          model: 'text-embedding-3-small',
+          dimensions: 3,
+          similarity: VectorSimilarity.Cosine,
+          enabled: true,
+        },
+        { callerModule: 'database' },
+      );
+      assert.equal(saved.config.enabled, true);
+      assert.deepEqual(createdIndexes, []);
+      assert.deepEqual(deletedIndexes, []);
+    }
+  });
+
   it('gates system schemas and owner policies on config and backfill', async () => {
     const { api } = createApi({
       declared: { Article: { name: 'Article', ownerModule: 'cms-app' } },

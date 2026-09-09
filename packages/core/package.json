@@ -19,7 +19,8 @@
     "prebuild:bundle": "pnpm --filter @conduitplatform/service-bundle run build",
     "build:bundle": "rimraf bundle && node ../../libraries/service-bundle/dist/cli.js generate-manifest && tsup && node ../../libraries/service-bundle/dist/cli.js copy-assets && node ../../libraries/service-bundle/dist/cli.js generate-lockfile",
     "prepare": "npm run build",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
   },
   "license": "ISC",
   "dependencies": {

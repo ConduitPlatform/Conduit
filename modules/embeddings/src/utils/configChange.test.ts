@@ -192,4 +192,37 @@ describe('material embedding config changes', () => {
       undefined,
     );
   });
+
+  it('treats empty and missing index methods as default hnsw', () => {
+    const missingMethod = {
+      field: 'embedding',
+      name: 'embedding_vector',
+      dimensions: 3,
+      similarity: 'cosine',
+    };
+    const emptyMethod = { ...missingMethod, method: '' };
+    const hnsw = { ...missingMethod, method: 'hnsw' };
+    const contract = {
+      field: 'embedding',
+      dimensions: 3,
+      similarity: 'cosine',
+    };
+    assert.equal(embeddingVectorIndexMatchesContract(missingMethod, contract), true);
+    assert.equal(embeddingVectorIndexMatchesContract(emptyMethod, contract), true);
+    assert.equal(
+      embeddingVectorIndexMatchesContract(hnsw, { ...contract, method: '' }),
+      true,
+    );
+    assert.equal(
+      selectEmbeddingVectorIndex([missingMethod], 'embedding', {
+        dimensions: 3,
+        similarity: 'cosine',
+      })?.name,
+      'embedding_vector',
+    );
+    assert.equal(
+      nextEmbeddingVectorIndexName('embedding', [missingMethod]),
+      'embedding_vector_v2',
+    );
+  });
 });

@@ -92,6 +92,62 @@ describe('embeddings operational warnings and search gates', () => {
     assert.equal(mapped.code, status.FAILED_PRECONDITION);
   });
 
+  it('allows search when the live index method is empty or omitted', () => {
+    assert.doesNotThrow(() =>
+      assertSearchExecutable({
+        capabilities: {
+          supported: true,
+          search: true,
+          provider: 'mongodb',
+        },
+        config: {
+          _id: 'cfg1',
+          enabled: true,
+          targetField: 'embedding',
+          dimensions: 3,
+          similarity: 'cosine',
+        },
+        indexes: [
+          {
+            field: 'embedding',
+            name: 'embedding_vector',
+            status: VectorIndexStatus.Ready,
+            queryable: true,
+            dimensions: 3,
+            similarity: 'cosine',
+          },
+        ],
+      }),
+    );
+    assert.doesNotThrow(() =>
+      assertSearchExecutable({
+        capabilities: {
+          supported: true,
+          search: true,
+          provider: 'mongodb',
+        },
+        config: {
+          _id: 'cfg1',
+          enabled: true,
+          targetField: 'embedding',
+          dimensions: 3,
+          similarity: 'cosine',
+        },
+        indexes: [
+          {
+            field: 'embedding',
+            name: 'embedding_vector',
+            status: VectorIndexStatus.Ready,
+            queryable: true,
+            dimensions: 3,
+            similarity: 'cosine',
+            method: '',
+          },
+        ],
+      }),
+    );
+  });
+
   it('denies search and activation when a queryable live index does not match the config contract', () => {
     const mismatched = {
       field: 'embedding',
