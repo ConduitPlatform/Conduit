@@ -458,12 +458,10 @@ export async function sanitizeFilesForResponse(files: File[]): Promise<File[]> {
   }
 
   const containerNames = [...new Set(files.map(file => file.container))];
-  const containers = await _StorageContainer
-    .getInstance()
-    .findMany(
-      { name: { $in: containerNames } },
-      { select: 'name isPublic', readPreference: 'primary' },
-    );
+  const containers = await _StorageContainer.getInstance().findMany(
+    { name: { $in: containerNames } },
+    { select: 'name isPublic', readPreference: 'primary' },
+  );
   const containerIsPublic = new Map(
     containers.map(container => [container.name, container.isPublic ?? false]),
   );

@@ -1,6 +1,6 @@
 # Storage
 
-Filesystem-shaped authorization for containers, folders, and files. Client list-files is deferred.
+Authorization for containers, folders, and files. Client list-files is deferred.
 
 ## Client breaking changes
 
