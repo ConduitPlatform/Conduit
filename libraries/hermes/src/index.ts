@@ -47,6 +47,15 @@ export class ConduitRoutingController {
   private _cleanupTimeout: NodeJS.Timeout | null = null;
   /** Routes registered before MCP starts; replayed in initMCP. */
   private readonly _conduitRoutesByKey: Map<string, ConduitRoute> = new Map();
+  /** Sockets registered before Socket.IO starts; replayed in initSockets. */
+  private readonly _conduitSocketsByPath: Map<string, ConduitSocket> = new Map();
+  private readonly _socketMiddlewares: Array<
+    (req: ConduitRequest, res: Response, next: NextFunction) => void
+  > = [];
+  private readonly _socketRouteMiddlewares: Array<{
+    middleware: ConduitMiddleware;
+    moduleUrl: string;
+  }> = [];
   private readonly routeTrie: RouteTrie = new RouteTrie();
   readonly expressApp: Express = express();
   readonly server = http.createServer(this.expressApp);
@@ -143,6 +152,15 @@ export class ConduitRoutingController {
       this.expressApp,
       this.metrics,
     );
+    for (const middleware of this._socketMiddlewares) {
+      this._socketRouter.registerGlobalMiddleware(middleware);
+    }
+    for (const { middleware, moduleUrl } of this._socketRouteMiddlewares) {
+      this._socketRouter.registerMiddleware(middleware, moduleUrl);
+    }
+    for (const socket of this._conduitSocketsByPath.values()) {
+      this._socketRouter.registerConduitSocket(socket);
+    }
   }
 
   initMCP(config?: {
@@ -231,6 +249,7 @@ export class ConduitRoutingController {
   ) {
     this._middlewareRouter.use(middleware);
     if (socketMiddleware) {
+      this._socketMiddlewares.push(middleware);
       this._socketRouter?.registerGlobalMiddleware(middleware);
     }
   }
@@ -238,6 +257,7 @@ export class ConduitRoutingController {
   registerRouteMiddleware(middleware: ConduitMiddleware, moduleUrl: string) {
     this._restRouter?.registerMiddleware(middleware, moduleUrl);
     this._graphQLRouter?.registerMiddleware(middleware, moduleUrl);
+    this._socketRouteMiddlewares.push({ middleware, moduleUrl });
     this._socketRouter?.registerMiddleware(middleware, moduleUrl);
     this._mcpRouter?.registerMiddleware(middleware, moduleUrl);
   }
@@ -286,6 +306,7 @@ export class ConduitRoutingController {
   }
 
   registerConduitSocket(socket: ConduitSocket) {
+    this._conduitSocketsByPath.set(socket.input.path, socket);
     this._socketRouter?.registerConduitSocket(socket);
   }
 
