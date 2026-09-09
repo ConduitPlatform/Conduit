@@ -202,6 +202,57 @@ export function resolveProviderModelName(
   return provider?.models?.[0]?.name ?? '';
 }
 
+export function assertConfiguredProvider(
+  providers: Record<string, EmbeddingProviderSettings> | undefined,
+  requested?: string,
+): { name: string; settings: EmbeddingProviderSettings } {
+  const name = trimName(requested);
+  if (!name) {
+    throw invalidProviderConfig('Embedding provider is required');
+  }
+  const settings = providers?.[name];
+  if (!settings) {
+    throw invalidProviderConfig(
+      `Embedding provider '${name}' is not a configured provider`,
+    );
+  }
+  return { name, settings };
+}
+
+export function resolveCatalogueModel(
+  provider: EmbeddingProviderSettings | undefined,
+  requested?: string,
+): EmbeddingProviderModel {
+  const name = resolveProviderModelName(provider, requested);
+  const model = findProviderModel(provider, name);
+  if (!model) {
+    throw invalidProviderConfig(
+      name
+        ? `Model '${name}' is not in the catalogue for this provider`
+        : 'Provider model catalogue has no selectable model',
+    );
+  }
+  return model;
+}
+
+export function resolveCatalogueDimensions(
+  model: EmbeddingProviderModel,
+  requested?: number,
+): number {
+  if (requested == null || requested === 0) {
+    return model.dimensions;
+  }
+  if (!Number.isInteger(requested) || requested <= 0) {
+    throw invalidProviderConfig('dimensions must be a positive integer');
+  }
+  if (requested !== model.dimensions) {
+    throw invalidProviderConfig(
+      `Requested dimensions ${requested} do not match catalogue dimensions ${model.dimensions} for model '${model.name}'`,
+    );
+  }
+  return model.dimensions;
+}
+
 export function normalizeEmbeddingsConfig<
   T extends {
     providers?: Record<string, unknown>;

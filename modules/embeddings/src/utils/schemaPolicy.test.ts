@@ -1,10 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { GrpcError, TYPE } from '@conduitplatform/grpc-sdk';
+import { GrpcError, TYPE, VectorSimilarity } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
   assertCanManageEmbeddingConfig,
+  assertEmbeddingExtensionAvailability,
   assertEmbeddingTargetSchema,
+  assertSchemaCanReceiveEmbeddings,
   assertSemanticSearchAccess,
   assertSourceFields,
   isDeniedEmbeddingSchema,
@@ -157,6 +159,135 @@ describe('embedding schema and source policies', () => {
           callerModule: 'chat',
         }),
       err => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+    );
+  });
+
+  it('requires an enabled schema and extendable permissions, not CMS enablement alone', () => {
+    assert.doesNotThrow(() =>
+      assertSchemaCanReceiveEmbeddings({
+        name: 'Article',
+        modelOptions: {
+          conduit: { cms: { enabled: true }, permissions: { extendable: true } },
+        },
+      }),
+    );
+    assert.doesNotThrow(() =>
+      assertSchemaCanReceiveEmbeddings({
+        name: 'User',
+        modelOptions: { conduit: { permissions: { extendable: true } } },
+      }),
+    );
+    assert.throws(
+      () =>
+        assertSchemaCanReceiveEmbeddings({
+          name: 'Article',
+          modelOptions: {
+            conduit: { cms: { enabled: true }, permissions: { extendable: false } },
+          },
+        }),
+      err =>
+        err instanceof GrpcError &&
+        err.code === status.FAILED_PRECONDITION &&
+        /not extendable/.test(err.message),
+    );
+    assert.throws(
+      () =>
+        assertSchemaCanReceiveEmbeddings({
+          name: 'Article',
+          modelOptions: {
+            conduit: { cms: { enabled: true } },
+          },
+        }),
+      err =>
+        err instanceof GrpcError &&
+        err.code === status.FAILED_PRECONDITION &&
+        /not extendable/.test(err.message),
+    );
+    assert.throws(
+      () =>
+        assertSchemaCanReceiveEmbeddings({
+          name: 'Article',
+          modelOptions: {
+            conduit: { cms: { enabled: false }, permissions: { extendable: true } },
+          },
+        }),
+      err =>
+        err instanceof GrpcError &&
+        err.code === status.FAILED_PRECONDITION &&
+        /not enabled/.test(err.message),
+    );
+  });
+
+  it('rejects incompatible vector and hash collisions and allows compatible embeddings extensions', () => {
+    const proposed = {
+      schemaName: 'Article',
+      targetField: 'embedding',
+      dimensions: 3,
+      similarity: VectorSimilarity.Cosine,
+      compiledFields: {
+        title: { type: TYPE.String },
+        embedding: {
+          type: TYPE.Vector,
+          dimensions: 3,
+          similarity: VectorSimilarity.Cosine,
+          select: false,
+        },
+        embeddingSourceHash: { type: TYPE.String, required: false, select: false },
+      },
+      extensions: [
+        {
+          ownerModule: 'embeddings',
+          fields: {
+            embedding: {
+              type: TYPE.Vector,
+              dimensions: 3,
+              similarity: VectorSimilarity.Cosine,
+              select: false,
+            },
+            embeddingSourceHash: { type: TYPE.String, required: false, select: false },
+          },
+        },
+      ],
+    };
+    assert.doesNotThrow(() => assertEmbeddingExtensionAvailability(proposed));
+    assert.throws(
+      () =>
+        assertEmbeddingExtensionAvailability({
+          ...proposed,
+          compiledFields: {
+            title: { type: TYPE.String },
+            embedding: { type: TYPE.String },
+          },
+          extensions: undefined,
+        }),
+      err => err instanceof GrpcError && err.code === status.ALREADY_EXISTS,
+    );
+    assert.throws(
+      () =>
+        assertEmbeddingExtensionAvailability({
+          ...proposed,
+          dimensions: 8,
+        }),
+      err => err instanceof GrpcError && err.code === status.ALREADY_EXISTS,
+    );
+    assert.throws(
+      () =>
+        assertEmbeddingExtensionAvailability({
+          ...proposed,
+          extensions: [
+            {
+              ownerModule: 'chat',
+              fields: {
+                embedding: {
+                  type: TYPE.Vector,
+                  dimensions: 3,
+                  similarity: VectorSimilarity.Cosine,
+                },
+              },
+            },
+          ],
+        }),
+      err => err instanceof GrpcError && err.code === status.ALREADY_EXISTS,
     );
   });
 });
