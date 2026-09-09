@@ -3,8 +3,16 @@ import { status } from '@grpc/grpc-js';
 import cronParser from 'cron-parser';
 import type { IWebInputsInterface } from '../interfaces/IWebInputs.interface.js';
 
+export const CRON_JOB_ID_PREFIX = 'cron-';
+
 export function buildCronJobId(functionId: string): string {
-  return `cron-${functionId}`;
+  return `${CRON_JOB_ID_PREFIX}${functionId}`;
+}
+
+export function parseCronJobFunctionId(jobId?: string | null): string | undefined {
+  if (!jobId?.startsWith(CRON_JOB_ID_PREFIX)) return undefined;
+  const functionId = jobId.slice(CRON_JOB_ID_PREFIX.length);
+  return functionId.length > 0 ? functionId : undefined;
 }
 
 export function getCronPatternFromInputs(
@@ -53,16 +61,14 @@ export function normalizeCronInputs(
   }
   const timezone = getCronTimezone(inputs);
   validateCronPattern(pattern, timezone);
-  const normalized: IWebInputsInterface = {
+  // cronPattern + timezone (default UTC) is the schedule. event is not used for
+  // scheduling; leave it if present so operators can cross-check. Runtime prefers
+  // cronPattern via getCronPatternFromInputs.
+  return {
     ...inputs,
     cronPattern: pattern,
     timezone,
   };
-  // event is the bus channel; do not persist the cron expression there.
-  if (normalized.event === pattern) {
-    delete normalized.event;
-  }
-  return normalized;
 }
 
 export type RepeatableJobView = {

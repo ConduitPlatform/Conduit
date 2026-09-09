@@ -50,9 +50,11 @@ export default class Functions extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
       this.trustModelNoticeLoggedForActiveSession = false;
       try {
-        await CronQueueController.getInstance().drainCronQueue();
-      } catch {
-        // Queue was never initialized while inactive.
+        await CronQueueController.getInstance(this.grpcSdk).drainCronQueue();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(
+          `Failed to drain cron queue: ${(err as Error).message}`,
+        );
       }
     } else if (!this.trustModelNoticeLoggedForActiveSession) {
       ConduitGrpcSdk.Logger.log(

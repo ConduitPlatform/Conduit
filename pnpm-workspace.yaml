@@ -22,6 +22,8 @@ overrides:
 allowBuilds:
   '@apollo/protobufjs': true
   '@firebase/util': true
+  '@parcel/watcher': true
+  '@scarf/scarf': false
   bcrypt: true
   core-js: true
   esbuild: true

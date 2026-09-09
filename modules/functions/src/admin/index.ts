@@ -20,8 +20,12 @@ import { isEmpty, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { FunctionExecutions, Functions } from '../models/index.js';
 import { FunctionController } from '../controllers/function.controller.js';
+import { CronQueueController } from '../controllers/cronQueue.controller.js';
 import { compileUserFunctionScript } from '../sandbox/functionSandbox.js';
-import { normalizeCronInputs } from '../controllers/cron.utils.js';
+import {
+  normalizeCronInputs,
+  parseCronJobFunctionId,
+} from '../controllers/cron.utils.js';
 
 import escapeStringRegexp from 'escape-string-regexp';
 
@@ -151,6 +155,47 @@ export class AdminHandlers {
     return { updated: true };
   }
 
+  async listCronJobs(): Promise<UnparsedRouterResponse> {
+    try {
+      const repeatables = await CronQueueController.getInstance(
+        this.grpcSdk,
+      ).listRepeatableJobs();
+      const functionIds = [
+        ...new Set(
+          repeatables
+            .map(job => parseCronJobFunctionId(job.id))
+            .filter((id): id is string => id !== undefined),
+        ),
+      ];
+      type FunctionName = Pick<Functions, '_id' | 'name'>;
+      const named: FunctionName[] =
+        functionIds.length > 0
+          ? await Functions.getInstance().findMany(
+              { _id: { $in: functionIds } },
+              { select: '_id name' },
+            )
+          : [];
+      const nameById = new Map(named.map(func => [func._id, func.name]));
+      const jobs = repeatables.map(job => {
+        const functionId = parseCronJobFunctionId(job.id);
+        return {
+          id: job.id ?? null,
+          key: job.key,
+          name: job.name,
+          pattern: job.pattern ?? null,
+          tz: job.tz ?? null,
+          next: job.next ?? null,
+          functionId: functionId ?? null,
+          functionName: functionId ? (nameById.get(functionId) ?? null) : null,
+        };
+      });
+      return { jobs, count: jobs.length };
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(`Failed to list cron jobs: ${(err as Error).message}`);
+      return { jobs: [], count: 0 };
+    }
+  }
+
   async getFunctionsExecutions(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
@@ -257,6 +302,29 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('GetFunction', 'String'),
       this.getFunction.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/list/cron-jobs',
+        action: ConduitRouteActions.GET,
+        description: 'List Redis cron scheduler jobs',
+      },
+      new ConduitRouteReturnDefinition('ListCronJobs', {
+        jobs: [
+          {
+            id: TYPE.String,
+            key: TYPE.String,
+            name: TYPE.String,
+            pattern: TYPE.String,
+            tz: TYPE.String,
+            next: TYPE.Number,
+            functionId: TYPE.String,
+            functionName: TYPE.String,
+          },
+        ],
+        count: ConduitNumber.Required,
+      }),
+      this.listCronJobs.bind(this),
     );
     this.routingManager.route(
       {

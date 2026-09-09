@@ -1,21 +1,28 @@
-import { Job, Queue, Worker } from 'bullmq';
+import { Job, Queue, Worker, type RepeatableJob } from 'bullmq';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { Cluster, Redis } from 'ioredis';
 import { Functions } from '../models/index.js';
 import { getCronPatternFromInputs, planCronSync } from './cron.utils.js';
 import type { CompiledUserFunction } from '../sandbox/functionSandbox.js';
-import { compileFunctionCode, executeBackgroundFunction } from './utils.js';
+import {
+  compileFunctionCode,
+  executeBackgroundFunction,
+  filterSchedulableCronFunctions,
+} from './utils.js';
 
 const CRON_QUEUE_NAME = 'functions-cron-queue';
 const CRON_JOB_NAME = 'execute-cron';
 const CRON_SYNC_LOCK = 'functions-cron-sync';
 const CRON_SYNC_LOCK_TTL_MS = 60_000;
+const DEFAULT_FUNCTION_TIMEOUT_MS = 180_000;
+const LOCK_BUFFER_MS = 60_000;
 
 export class CronQueueController {
   private static _instance: CronQueueController;
   private readonly redisConnection: Redis | Cluster;
   private readonly cronQueue: Queue;
   private cronWorker?: Worker;
+  private workerLockDuration = 0;
   private compiledFunctions = new Map<string, CompiledUserFunction>();
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {
@@ -40,9 +47,18 @@ export class CronQueueController {
     this.compiledFunctions = compiled;
   }
 
-  ensureWorker(): Worker {
-    if (this.cronWorker) {
+  async listRepeatableJobs(): Promise<RepeatableJob[]> {
+    return this.cronQueue.getRepeatableJobs();
+  }
+
+  async ensureWorker(lockDuration: number): Promise<Worker> {
+    if (this.cronWorker && this.workerLockDuration >= lockDuration) {
       return this.cronWorker;
+    }
+    if (this.cronWorker) {
+      await this.cronWorker.close();
+      this.cronWorker = undefined;
+      this.workerLockDuration = 0;
     }
     this.cronWorker = new Worker(
       CRON_QUEUE_NAME,
@@ -81,34 +97,65 @@ export class CronQueueController {
       },
       {
         concurrency: 1,
+        lockDuration,
+        maxStalledCount: 0,
         removeOnComplete: { age: 3600, count: 1000 },
         removeOnFail: { age: 24 * 3600 },
         connection: this.redisConnection,
       },
     );
+    this.workerLockDuration = lockDuration;
     this.setupWorkerEventHandlers(this.cronWorker);
     return this.cronWorker;
   }
 
-  async syncCronJobs(cronFunctions: Functions[]): Promise<void> {
-    this.ensureWorker();
-    await this.withCronSyncLock(() => this.reconcileCronJobs(cronFunctions));
+  async syncCronJobs(): Promise<void> {
+    let lockDuration = DEFAULT_FUNCTION_TIMEOUT_MS + LOCK_BUFFER_MS;
+    try {
+      const reconciled = await this.withCronSyncLock(async () => {
+        lockDuration = await this.reconcileCronJobs();
+      });
+      if (!reconciled) {
+        lockDuration = await this.lockDurationForCronFunctions();
+      }
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(`Cron sync failed: ${(err as Error).message}`);
+      try {
+        lockDuration = await this.lockDurationForCronFunctions();
+      } catch {
+        // keep default lock duration
+      }
+    }
+    await this.ensureWorker(lockDuration);
   }
 
-  // Local worker only. Shared Redis repeatables stay so other replicas keep ticking.
+  // Cluster-wide off: close the local worker, then remove shared Redis
+  // repeatables and delayed/wait children so reactivate does not catch up.
   async drainCronQueue(): Promise<void> {
     if (this.cronWorker) {
       await this.cronWorker.close();
       this.cronWorker = undefined;
+      this.workerLockDuration = 0;
     }
     this.compiledFunctions.clear();
+    const repeatables = await this.cronQueue.getRepeatableJobs();
+    for (const job of repeatables) {
+      try {
+        await this.cronQueue.removeRepeatableByKey(job.key);
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(
+          `Failed to remove cron job ${job.key}: ${(err as Error).message}`,
+        );
+      }
+    }
+    await this.cronQueue.drain(true);
   }
 
-  private async withCronSyncLock(fn: () => Promise<void>): Promise<void> {
+  private async withCronSyncLock(fn: () => Promise<void>): Promise<boolean> {
     const state = this.grpcSdk.state;
     if (!state) {
       await fn();
-      return;
+      return true;
     }
     let lock;
     try {
@@ -118,14 +165,15 @@ export class CronQueueController {
         `Failed to acquire cron sync lock: ${(err as Error).message}; continuing without lock`,
       );
       await fn();
-      return;
+      return true;
     }
     if (!lock) {
       ConduitGrpcSdk.Logger.log('Skipping cron sync; another replica holds the lock');
-      return;
+      return false;
     }
     try {
       await fn();
+      return true;
     } finally {
       try {
         await state.releaseLock(lock);
@@ -137,7 +185,34 @@ export class CronQueueController {
     }
   }
 
-  private async reconcileCronJobs(cronFunctions: Functions[]): Promise<void> {
+  private async lockDurationForCronFunctions(): Promise<number> {
+    type CronTimeout = Pick<Functions, 'timeout'>;
+    const cronDocs = (await Functions.getInstance().findMany(
+      { functionType: 'cron' },
+      { select: 'timeout', readPreference: 'primary' },
+    )) as CronTimeout[];
+    const maxTimeout = cronDocs.reduce(
+      (max, func) => Math.max(max, func.timeout ?? DEFAULT_FUNCTION_TIMEOUT_MS),
+      DEFAULT_FUNCTION_TIMEOUT_MS,
+    );
+    return maxTimeout + LOCK_BUFFER_MS;
+  }
+
+  private lockDurationFromFunctions(cronFunctions: Functions[]): number {
+    const maxTimeout = cronFunctions.reduce(
+      (max, func) => Math.max(max, func.timeout ?? DEFAULT_FUNCTION_TIMEOUT_MS),
+      DEFAULT_FUNCTION_TIMEOUT_MS,
+    );
+    return maxTimeout + LOCK_BUFFER_MS;
+  }
+
+  private async reconcileCronJobs(): Promise<number> {
+    const cronDocs = await Functions.getInstance().findMany(
+      { functionType: 'cron' },
+      { readPreference: 'primary' },
+    );
+    const cronFunctions = filterSchedulableCronFunctions(cronDocs);
+
     const repeatables = await this.cronQueue.getRepeatableJobs();
     const plan = planCronSync(cronFunctions, repeatables);
 
@@ -190,6 +265,7 @@ export class CronQueueController {
     ConduitGrpcSdk.Logger.log(
       `Cron sync complete: registered=${registered}, updated=${updated}, unchanged=${plan.unchangedJobIds.length}, removed=${removed}, skipped=${plan.skipped.length}, errors=${errors}`,
     );
+    return this.lockDurationFromFunctions(cronFunctions);
   }
 
   private setupWorkerEventHandlers(worker: Worker): void {

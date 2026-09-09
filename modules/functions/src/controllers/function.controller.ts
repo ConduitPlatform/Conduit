@@ -15,11 +15,7 @@ import { ConfigController } from '@conduitplatform/module-tools';
 
 import { Functions } from '../models/index.js';
 import { CronQueueController } from './cronQueue.controller.js';
-import {
-  compileFunctionCode,
-  createFunctionRoute,
-  validateCronFunctionConfig,
-} from './utils.js';
+import { createFunctionRoute, tryPrepareCronFunction } from './utils.js';
 import type { CompiledUserFunction } from '../sandbox/functionSandbox.js';
 
 type Socket = {
@@ -68,17 +64,11 @@ export class FunctionController {
         this.functionRoutes = [];
         this.compiledCronFunctions.clear();
 
-        const cronFunctions: Functions[] = [];
         for (const func of r) {
           try {
             if (func.functionType === 'cron') {
               try {
-                validateCronFunctionConfig(func);
-                this.compiledCronFunctions.set(
-                  func._id,
-                  compileFunctionCode(func.functionCode),
-                );
-                cronFunctions.push(func);
+                this.compiledCronFunctions.set(func._id, tryPrepareCronFunction(func));
               } catch (err) {
                 ConduitGrpcSdk.Logger.error(
                   `Failed to prepare cron function ${func.name} (${func._id})`,
@@ -124,7 +114,7 @@ export class FunctionController {
         if (ConfigController.getInstance().config.active) {
           const cronQueue = CronQueueController.getInstance(this.grpcSdk);
           cronQueue.setCompiledFunctions(this.compiledCronFunctions);
-          await cronQueue.syncCronJobs(cronFunctions);
+          await cronQueue.syncCronJobs();
         }
       })
       .catch((err: Error) => {

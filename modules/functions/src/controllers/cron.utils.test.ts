@@ -5,11 +5,24 @@ import {
   getCronPatternFromInputs,
   getCronTimezone,
   normalizeCronInputs,
+  parseCronJobFunctionId,
   planCronSync,
   validateCronPattern,
 } from './cron.utils.js';
 
 describe('cron.utils', () => {
+  describe('parseCronJobFunctionId', () => {
+    it('parses cron-{functionId}', () => {
+      assert.equal(parseCronJobFunctionId(buildCronJobId('abc123')), 'abc123');
+    });
+
+    it('ignores other job ids', () => {
+      assert.equal(parseCronJobFunctionId('execute-cron'), undefined);
+      assert.equal(parseCronJobFunctionId('cron-'), undefined);
+      assert.equal(parseCronJobFunctionId(undefined), undefined);
+    });
+  });
+
   describe('validateCronPattern', () => {
     it('accepts a 5-field pattern in UTC', () => {
       assert.doesNotThrow(() => validateCronPattern('*/5 * * * *', 'UTC'));
@@ -43,22 +56,22 @@ describe('cron.utils', () => {
       assert.equal(normalized.event, undefined);
     });
 
-    it('migrates a legacy inputs.event pattern to cronPattern and strips event', () => {
+    it('migrates a legacy inputs.event pattern to cronPattern and keeps event', () => {
       const normalized = normalizeCronInputs({
         event: '0 9 * * 1',
       });
       assert.equal(normalized.cronPattern, '0 9 * * 1');
       assert.equal(normalized.timezone, 'UTC');
-      assert.equal(normalized.event, undefined);
+      assert.equal(normalized.event, '0 9 * * 1');
     });
 
-    it('strips a client-supplied event alias that duplicates cronPattern', () => {
+    it('keeps a client-supplied event that duplicates cronPattern', () => {
       const normalized = normalizeCronInputs({
         cronPattern: '*/10 * * * *',
         event: '*/10 * * * *',
       });
       assert.equal(normalized.cronPattern, '*/10 * * * *');
-      assert.equal(normalized.event, undefined);
+      assert.equal(normalized.event, '*/10 * * * *');
     });
 
     it('validates against inputs.timezone', () => {

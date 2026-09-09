@@ -249,6 +249,27 @@ export function validateCronFunctionConfig(func: Functions): void {
   validateCronPattern(pattern, getCronTimezone(func.inputs));
 }
 
+export function tryPrepareCronFunction(func: Functions): CompiledUserFunction {
+  validateCronFunctionConfig(func);
+  return compileFunctionCode(func.functionCode);
+}
+
+export function filterSchedulableCronFunctions(functions: Functions[]): Functions[] {
+  const eligible: Functions[] = [];
+  for (const func of functions) {
+    try {
+      tryPrepareCronFunction(func);
+      eligible.push(func);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(
+        `Failed to prepare cron function ${func.name} (${func._id})`,
+      );
+      ConduitGrpcSdk.Logger.error(err as Error);
+    }
+  }
+  return eligible;
+}
+
 export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
   switch (func.functionType) {
     case 'request':
