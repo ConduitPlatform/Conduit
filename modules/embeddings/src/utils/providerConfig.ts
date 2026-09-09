@@ -7,12 +7,6 @@ import type {
 
 export type { EmbeddingProviderModel, EmbeddingProviderSettings };
 
-export interface LegacyEmbeddingProviderSettings extends EmbeddingProviderSettings {
-  model?: string;
-  dimensions?: number;
-  allowedHosts?: string[];
-}
-
 function invalidProviderConfig(message: string): GrpcError {
   return new GrpcError(status.INVALID_ARGUMENT, message);
 }
@@ -57,29 +51,40 @@ function parseModelList(
 ): EmbeddingProviderModel[] {
   const models: EmbeddingProviderModel[] = [];
   const names = new Set<string>();
+  const strict = options?.strict !== false;
   for (const [index, value] of values.entries()) {
-    try {
-      const parsed = parseModelEntry(value, index);
-      if (names.has(parsed.name)) {
+    const parsed = strict ? parseModelEntry(value, index) : optionalModelEntry(value);
+    if (!parsed) continue;
+    if (names.has(parsed.name)) {
+      if (strict) {
         throw invalidProviderConfig(`Provider model '${parsed.name}' is duplicated`);
       }
-      names.add(parsed.name);
-      models.push(parsed);
-    } catch (err) {
-      if (options?.strict !== false) throw err;
+      continue;
     }
+    names.add(parsed.name);
+    models.push(parsed);
   }
   return models;
 }
 
+function optionalModelEntry(value: unknown): EmbeddingProviderModel | undefined {
+  if (!isRecord(value)) return undefined;
+  const name = trimName(value.name);
+  const dimensions = parseDimensions(value.dimensions);
+  if (!name || dimensions == null) return undefined;
+  return { name, dimensions };
+}
+
 function migrateLegacyModels(
-  raw: LegacyEmbeddingProviderSettings,
+  raw: Record<string, unknown>,
+  options?: { strict?: boolean },
 ): EmbeddingProviderModel[] | undefined {
   if (Array.isArray(raw.models) && raw.models.length > 0) return undefined;
   const name = trimName(raw.model);
   if (!name) return [];
   const dimensions = parseDimensions(raw.dimensions);
   if (dimensions == null) {
+    if (options?.strict === false) return [];
     throw invalidProviderConfig(
       `Provider model '${name}' dimensions must be a positive integer`,
     );
@@ -123,57 +128,41 @@ export function providerCatalogueIssues(provider?: {
   return issues;
 }
 
-export function assertProviderCatalogue(
-  provider?: Pick<EmbeddingProviderSettings, 'models' | 'defaultModel'>,
-): void {
-  const models = provider?.models ?? [];
-  if (!Array.isArray(models)) {
-    throw invalidProviderConfig('Provider model catalogue must be an array');
+function resolveDefaultModelName(
+  models: EmbeddingProviderModel[],
+  requested: unknown,
+  migratedFromSingular: boolean,
+): string {
+  const configured = trimName(requested);
+  if (configured) {
+    return models.some(model => model.name === configured) ? configured : '';
   }
-  parseModelList(models);
-  const names = new Set(models.map(model => trimName(model?.name)));
-  const defaultModel = trimName(provider?.defaultModel);
-  if (defaultModel && !names.has(defaultModel)) {
-    throw invalidProviderConfig(
-      `Provider default model '${defaultModel}' is not in the catalogue`,
-    );
-  }
+  if (migratedFromSingular) return models[0]?.name ?? '';
+  return '';
 }
 
 export function normalizeProviderSettings(
   raw: unknown,
   options?: { strict?: boolean },
 ): EmbeddingProviderSettings {
-  const source = isRecord(raw) ? (raw as LegacyEmbeddingProviderSettings) : {};
-  let models: EmbeddingProviderModel[];
-  let migratedFromSingular = false;
-  try {
-    const migrated = migrateLegacyModels(source);
-    migratedFromSingular = migrated != null && migrated.length > 0;
-    models =
-      migrated ??
-      (Array.isArray(source.models) ? parseModelList(source.models, options) : []);
-  } catch (err) {
-    if (options?.strict !== false) throw err;
-    models = [];
-  }
+  const source = isRecord(raw) ? raw : {};
+  const migrated = migrateLegacyModels(source, options);
+  const migratedFromSingular = migrated != null && migrated.length > 0;
+  const models =
+    migrated ??
+    (Array.isArray(source.models) ? parseModelList(source.models, options) : []);
   const names = new Set(models.map(model => model.name));
   const configuredDefault = trimName(source.defaultModel);
-  const defaultModel = configuredDefault
-    ? names.has(configuredDefault)
-      ? configuredDefault
-      : ''
-    : migratedFromSingular
-      ? (models[0]?.name ?? '')
-      : '';
-  if (configuredDefault && !defaultModel && options?.strict !== false) {
+  if (configuredDefault && !names.has(configuredDefault) && options?.strict !== false) {
     throw invalidProviderConfig(
       `Provider default model '${configuredDefault}' is not in the catalogue`,
     );
   }
-  if (options?.strict !== false) {
-    assertProviderCatalogue({ models, defaultModel });
-  }
+  const defaultModel = resolveDefaultModelName(
+    models,
+    source.defaultModel,
+    migratedFromSingular,
+  );
   return {
     ...(typeof source.endpoint === 'string' ? { endpoint: source.endpoint } : {}),
     ...(typeof source.apiKey === 'string' ? { apiKey: source.apiKey } : {}),
@@ -262,7 +251,7 @@ export function normalizeEmbeddingsConfig<
   const next = { ...config };
   if (isRecord(next.security)) {
     const security = { ...next.security };
-    delete (security as { requireGrpcKey?: boolean }).requireGrpcKey;
+    delete security.requireGrpcKey;
     next.security = security as T['security'];
   }
   if (isRecord(next.providers)) {
