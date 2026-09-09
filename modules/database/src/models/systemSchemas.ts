@@ -12,9 +12,6 @@ export const DATABASE_SYSTEM_SCHEMAS = [
   Views,
 ] as const;
 
-export const DATABASE_SYSTEM_SCHEMA_NAMES: readonly string[] =
-  DATABASE_SYSTEM_SCHEMAS.map(schema => schema.name);
-
-export const DATABASE_SYSTEM_SCHEMA_NAME_SET = new Set<string>(
-  DATABASE_SYSTEM_SCHEMA_NAMES,
+export const DATABASE_SYSTEM_SCHEMA_NAME_SET = new Set(
+  DATABASE_SYSTEM_SCHEMAS.map(schema => schema.name),
 );

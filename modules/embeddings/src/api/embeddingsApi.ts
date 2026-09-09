@@ -36,6 +36,7 @@ import {
   materialChangeWarnings,
   nextEmbeddingVectorIndexName,
   sameEmbeddingVectorIndexFamily,
+  sourceHashField,
   type MaterialEmbeddingConfigField,
 } from '../utils/configChange.js';
 import { MAX_QUEUE_BATCH_SIZE } from '../utils/embeddingJobs.js';
@@ -47,10 +48,10 @@ import {
   assertSchemaCanReceiveEmbeddings,
   assertSemanticSearchAccess,
   canManageEmbeddingConfig,
-  embeddingSourceHashField,
   EMBEDDINGS_OWNER_MODULE,
   resolveAdminOperatorContext,
   resolveSourceFieldAllowlist,
+  type EmbeddingSchemaOptions,
   type SchemaExtensionInfo,
 } from '../utils/schemaPolicy.js';
 import { clampClientSearchLimit } from '../utils/clientSearchContext.js';
@@ -88,13 +89,7 @@ export interface DeclaredSchemaInfo {
 export interface SchemaInfo {
   name: string;
   fields: Record<string, unknown>;
-  modelOptions?: {
-    conduit?: {
-      cms?: { enabled?: boolean };
-      permissions?: { extendable?: boolean };
-      authorization?: { enabled?: boolean };
-    };
-  };
+  modelOptions?: EmbeddingSchemaOptions;
 }
 
 export interface EmbeddingConfigRecord {
@@ -707,7 +702,7 @@ export class EmbeddingsApi {
     },
     declared?: DeclaredSchemaInfo | null,
   ) {
-    const hashField = embeddingSourceHashField(persisted.targetField);
+    const hashField = sourceHashField(persisted.targetField);
     const existing =
       declared?.extensions?.find(
         extension => extension.ownerModule === EMBEDDINGS_OWNER_MODULE,
