@@ -49,12 +49,12 @@ const moduleConfig = {
     'openai-compatible': {
       endpoint: 'https://api.openai.com/v1/embeddings',
       apiKey: 'sk-test',
-      allowedHosts: ['api.openai.com'],
+      models: [{ name: 'text-embedding-3-small', dimensions: 1536 }],
+      defaultModel: 'text-embedding-3-small',
     },
   },
   queue: { concurrency: 1, attempts: 3, maxBatchSize: 50 },
   security: {
-    requireGrpcKey: false,
     sourceFieldAllowlist: [],
     maxMutationEventIds: 10,
     embedTimeoutMs: 1000,

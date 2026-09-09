@@ -24,7 +24,8 @@ Enable it and configure an OpenAI-compatible provider:
     "openai-compatible": {
       "endpoint": "https://api.openai.com/v1/embeddings",
       "apiKey": "...",
-      "allowedHosts": ["api.openai.com"]
+      "models": [{ "name": "text-embedding-3-small", "dimensions": 1536 }],
+      "defaultModel": "text-embedding-3-small"
     }
   },
   "queue": {

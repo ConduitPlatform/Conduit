@@ -27,7 +27,7 @@ describe('embeddings operational warnings and search gates', () => {
       ...providerReadinessWarnings({
         endpoint: '',
         apiKey: 'sk-secret',
-        allowedHosts: [],
+        models: [],
       }),
     ];
     assert.equal(
@@ -35,7 +35,7 @@ describe('embeddings operational warnings and search gates', () => {
       true,
     );
     assert.equal(
-      warnings.some(warning => /allowlist is empty/.test(warning)),
+      warnings.some(warning => /model catalogue is empty/.test(warning)),
       true,
     );
     assert.equal(warnings.join(' ').includes('sk-secret'), false);
