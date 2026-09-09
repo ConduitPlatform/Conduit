@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   DatabaseProvider,
   GrpcError,
-  Indexable,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -16,13 +15,32 @@ import {
   _updateFile,
   _updateFileUploadUrl,
   applyCdnHost,
-  deepPathHandler,
   normalizeFolderPath,
   resolvePublicFileAccessUrl,
   sanitizeFileForResponse,
   storeNewFile,
   validateName,
 } from '../utils/index.js';
+import {
+  actorSubject,
+  isAuthzEnabled,
+  isDefaultContainer,
+  rethrowGrpcOrInternal,
+  resolveClientFolder,
+  resolveFileId,
+  resolveScope,
+  resolveUserId,
+} from '../authz/helpers.js';
+import {
+  assertFolderEditAccess,
+  assertNoPersonalFolderSquat,
+  findOrCreateFolders,
+} from '../authz/folders.js';
+import {
+  createFileRelations,
+  deleteAllRelationsSafe,
+  updateFileRelations,
+} from '../authz/relations.js';
 
 export class FileHandlers {
   private readonly database: DatabaseProvider;
@@ -49,46 +67,25 @@ export class FileHandlers {
 
   async fileAccessCheck(
     action: 'read' | 'create' | 'edit' | 'delete',
-    request: Indexable,
+    request: ParsedRouterRequest['request'],
     file?: File,
+    container?: string,
   ) {
-    if (!request.context.user) {
+    const userId = resolveUserId(request);
+    if (!userId) {
       throw new GrpcError(status.PERMISSION_DENIED, 'File access is not public');
     }
-    if (ConfigController.getInstance().config.authorization.enabled) {
-      if (action === 'create' && request.queryParams.scope) {
-        const allowed = await this.grpcSdk.authorization?.can({
-          subject: `User:${request.context.user._id}`,
-          actions: ['read'],
-          resource: request.params.scope,
-        });
-        if (!allowed || !allowed.allow) {
-          throw new GrpcError(
-            status.PERMISSION_DENIED,
-            'You are not allowed to create files in this scope',
-          );
-        }
-      }
-      if (['read', 'edit', 'delete'].includes(action)) {
-        const allowed = await this.grpcSdk.authorization?.can({
-          subject: `User:${request.context.user._id}`,
-          actions: [action],
-          resource: `File:${file!._id}`,
-        });
-        if (!allowed || !allowed.allow) {
-          throw new GrpcError(status.PERMISSION_DENIED, 'You do not have access to file');
-        }
-      }
+    if (!isAuthzEnabled()) {
+      return;
     }
-  }
 
-  async fileAccessAdd(file: File, request: Indexable) {
-    if (ConfigController.getInstance().config.authorization.enabled) {
-      if (request.queryParams.scope) {
+    const scope = resolveScope(request);
+    if (action === 'create') {
+      if (scope) {
         const allowed = await this.grpcSdk.authorization?.can({
-          subject: `User:${request.context.user._id}`,
-          actions: ['read'],
-          resource: request.params.scope,
+          subject: `User:${userId}`,
+          actions: ['edit'],
+          resource: scope,
         });
         if (!allowed || !allowed.allow) {
           throw new GrpcError(
@@ -97,16 +94,43 @@ export class FileHandlers {
           );
         }
       }
-      await this.grpcSdk.authorization?.createRelation({
-        subject: request.params.scope ?? `User:${request.context.user._id}`,
-        relation: 'owner',
-        resource: `File:${file._id}`,
-      });
+      if (container && !isDefaultContainer(container)) {
+        const containerDoc = await _StorageContainer.getInstance().findOne({
+          name: container,
+        });
+        if (!containerDoc) {
+          throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
+        }
+        const allowed = await this.grpcSdk.authorization?.can({
+          subject: scope ?? `User:${userId}`,
+          actions: ['edit'],
+          resource: `Container:${containerDoc._id}`,
+        });
+        if (!allowed || !allowed.allow) {
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'You are not allowed to create files in this container',
+          );
+        }
+      }
+      return;
+    }
+
+    const allowed = await this.grpcSdk.authorization?.can({
+      subject: `User:${userId}`,
+      actions: [action],
+      resource: `File:${file!._id}`,
+    });
+    if (!allowed || !allowed.allow) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        `You are not allowed to ${action} this file`,
+      );
     }
   }
 
   async getFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const file = await File.getInstance().findOne({ _id: call.request.params.id });
+    const file = await File.getInstance().findOne({ _id: resolveFileId(call.request) });
     if (isNil(file)) {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
     }
@@ -119,15 +143,14 @@ export class FileHandlers {
 
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, alias, data, container, mimeType, isPublic } = call.request.params;
-    await this.fileAccessCheck('create', call.request);
-    const folder = normalizeFolderPath(call.request.params.folder);
-    const config = ConfigController.getInstance().config;
-    const usedContainer = isNil(container)
-      ? config.defaultContainer
-      : await this.findOrCreateContainer(container, isPublic);
-    if (folder !== '/') {
-      await this.findOrCreateFolders(folder, usedContainer, isPublic);
+    const userId = resolveUserId(call.request);
+    if (!userId) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'File access is not public');
     }
+    const usedContainer = await this.resolveClientContainer(container);
+    await this.fileAccessCheck('create', call.request, undefined, usedContainer);
+    const folder = resolveClientFolder(call.request.params.folder, userId);
+    await this.prepareClientFolder(call, usedContainer, folder, isPublic);
     const validatedName = await validateName(name, folder, usedContainer);
     try {
       const file = await storeNewFile(this.storageProvider, {
@@ -139,27 +162,26 @@ export class FileHandlers {
         isPublic,
         mimeType,
       });
-      await this.fileAccessAdd(file, call.request);
+      await createFileRelations(this.grpcSdk, file, {
+        scope: resolveScope(call.request),
+        userId,
+      });
       return file;
     } catch (e) {
-      throw new GrpcError(
-        status.INTERNAL,
-        (e as Error).message ?? 'Something went wrong',
-      );
+      rethrowGrpcOrInternal(e);
     }
   }
 
   async createFileUploadUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, alias, container, size = 0, mimeType, isPublic } = call.request.params;
-    await this.fileAccessCheck('create', call.request);
-    const folder = normalizeFolderPath(call.request.params.folder);
-    const config = ConfigController.getInstance().config;
-    const usedContainer = isNil(container)
-      ? config.defaultContainer
-      : await this.findOrCreateContainer(container, isPublic);
-    if (folder !== '/') {
-      await this.findOrCreateFolders(folder, usedContainer, isPublic);
+    const userId = resolveUserId(call.request);
+    if (!userId) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'File access is not public');
     }
+    const usedContainer = await this.resolveClientContainer(container);
+    await this.fileAccessCheck('create', call.request, undefined, usedContainer);
+    const folder = resolveClientFolder(call.request.params.folder, userId);
+    await this.prepareClientFolder(call, usedContainer, folder, isPublic);
     const validatedName = await validateName(name, folder, usedContainer);
     try {
       const { file, url } = await _createFileUploadUrl(this.storageProvider, {
@@ -171,19 +193,19 @@ export class FileHandlers {
         size,
         mimeType,
       });
-      await this.fileAccessAdd(file, call.request);
+      await createFileRelations(this.grpcSdk, file, {
+        scope: resolveScope(call.request),
+        userId,
+      });
       return { file, url };
     } catch (e) {
-      throw new GrpcError(
-        status.INTERNAL,
-        (e as Error).message ?? 'Something went wrong',
-      );
+      rethrowGrpcOrInternal(e);
     }
   }
 
   async updateFileUploadUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, alias, mimeType, size } = call.request.params;
-    const found = await File.getInstance().findOne({ _id: id });
+    const { alias, mimeType, size } = call.request.params;
+    const found = await File.getInstance().findOne({ _id: resolveFileId(call.request) });
     if (isNil(found)) {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
     }
@@ -193,7 +215,7 @@ export class FileHandlers {
       found,
     );
     try {
-      return await _updateFileUploadUrl(this.storageProvider, found, {
+      const result = await _updateFileUploadUrl(this.storageProvider, found, {
         name,
         alias,
         folder,
@@ -201,17 +223,18 @@ export class FileHandlers {
         mimeType: mimeType ?? found.mimeType,
         size,
       });
+      await updateFileRelations(this.grpcSdk, found, result.file, {
+        scope: resolveScope(call.request),
+      });
+      return result;
     } catch (e) {
-      throw new GrpcError(
-        status.INTERNAL,
-        (e as Error).message ?? 'Something went wrong',
-      );
+      rethrowGrpcOrInternal(e);
     }
   }
 
   async updateFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, alias, data, mimeType } = call.request.params;
-    const found = await File.getInstance().findOne({ _id: id });
+    const { alias, data, mimeType } = call.request.params;
+    const found = await File.getInstance().findOne({ _id: resolveFileId(call.request) });
     if (isNil(found)) {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
     }
@@ -221,28 +244,30 @@ export class FileHandlers {
       found,
     );
     try {
-      return await _updateFile(this.storageProvider, found, {
+      const updated = (await _updateFile(this.storageProvider, found, {
         name,
         alias,
         folder,
         container,
         data: Buffer.from(data, 'base64'),
         mimeType: mimeType ?? found.mimeType,
+      })) as File;
+      await updateFileRelations(this.grpcSdk, found, updated, {
+        scope: resolveScope(call.request),
       });
+      return updated;
     } catch (e) {
-      throw new GrpcError(
-        status.INTERNAL,
-        (e as Error).message ?? 'Something went wrong!',
-      );
+      rethrowGrpcOrInternal(e);
     }
   }
 
   async deleteFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!isString(call.request.params.id)) {
+    const id = resolveFileId(call.request);
+    if (!isString(id)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'The provided id is invalid');
     }
     try {
-      const found = await File.getInstance().findOne({ _id: call.request.params.id });
+      const found = await File.getInstance().findOne({ _id: id });
       if (isNil(found)) {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
@@ -253,21 +278,21 @@ export class FileHandlers {
       if (!success) {
         throw new GrpcError(status.INTERNAL, 'File could not be deleted');
       }
-      await File.getInstance().deleteOne({ _id: call.request.params.id });
+      await File.getInstance().deleteOne({ _id: id });
       ConduitGrpcSdk.Metrics?.decrement('files_total');
       ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', found.size);
+      await deleteAllRelationsSafe(this.grpcSdk, { resource: `File:${id}` });
       return { success: true };
     } catch (e) {
-      throw new GrpcError(
-        status.INTERNAL,
-        (e as Error).message ?? 'Something went wrong!',
-      );
+      rethrowGrpcOrInternal(e);
     }
   }
 
   async getFileUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     try {
-      const found = await File.getInstance().findOne({ _id: call.request.params.id });
+      const found = await File.getInstance().findOne({
+        _id: resolveFileId(call.request) ?? call.request.params.id,
+      });
       if (isNil(found)) {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
@@ -293,19 +318,17 @@ export class FileHandlers {
       }
       return { redirect: url };
     } catch (e) {
-      throw new GrpcError(
-        status.INTERNAL,
-        (e as Error).message ?? 'Something went wrong!',
-      );
+      rethrowGrpcOrInternal(e);
     }
   }
 
   async getFileData(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!isString(call.request.params.id)) {
+    const id = resolveFileId(call.request);
+    if (!isString(id)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'The provided id is invalid');
     }
     try {
-      const file = await File.getInstance().findOne({ _id: call.request.params.id });
+      const file = await File.getInstance().findOne({ _id: id });
       if (isNil(file)) {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
@@ -323,69 +346,42 @@ export class FileHandlers {
       }
       return { data: data.toString('base64') };
     } catch (e) {
-      throw new GrpcError(
-        status.INTERNAL,
-        (e as Error).message ?? 'Something went wrong!',
-      );
+      rethrowGrpcOrInternal(e);
     }
   }
 
-  private async findOrCreateContainer(
-    container: string,
-    isPublic?: boolean,
-  ): Promise<string> {
+  private async resolveClientContainer(container?: string): Promise<string> {
     const config = ConfigController.getInstance().config;
-    // the container is sent from the client
-    const found = await _StorageContainer.getInstance().findOne({
-      name: container,
-    });
+    const name = isNil(container) ? config.defaultContainer : container;
+    const found = await _StorageContainer.getInstance().findOne({ name });
     if (!found) {
-      if (!config.allowContainerCreation) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'Container creation is not allowed!',
-        );
-      }
-      const exists = await this.storageProvider.containerExists(container);
-      if (!exists) {
-        await this.storageProvider.createContainer(container, isPublic);
-      }
-      await _StorageContainer.getInstance().create({
-        name: container,
-        isPublic,
-      });
+      throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
     }
-    return container;
+    return name;
   }
 
-  async findOrCreateFolders(
-    folderPath: string,
+  private async prepareClientFolder(
+    call: ParsedRouterRequest,
     container: string,
+    folder: string,
     isPublic?: boolean,
-    lastExistsHandler?: () => void,
-  ): Promise<_StorageFolder[]> {
-    const createdFolders: _StorageFolder[] = [];
-    let folder: _StorageFolder | null = null;
-    await deepPathHandler(folderPath, async (folderPath, isLast) => {
-      folder = await _StorageFolder
-        .getInstance()
-        .findOne({ name: folderPath, container });
-      if (isNil(folder)) {
-        folder = await _StorageFolder.getInstance().create({
-          name: folderPath,
-          container,
-          isPublic,
-        });
-        createdFolders.push(folder);
-        const exists = await this.storage.container(container).folderExists(folderPath);
-        if (!exists) {
-          await this.storage.container(container).createFolder(folderPath);
-        }
-      } else if (isLast) {
-        lastExistsHandler?.();
-      }
+  ) {
+    if (folder === '/') {
+      return;
+    }
+    const userId = resolveUserId(call.request);
+    if (!userId) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'File access is not public');
+    }
+    await assertNoPersonalFolderSquat(folder, userId, container);
+    const subject = actorSubject(call.request);
+    if (subject) {
+      await assertFolderEditAccess(this.grpcSdk, container, folder, subject);
+    }
+    await findOrCreateFolders(this.grpcSdk, this.storageProvider, folder, container, {
+      isPublic,
+      scope: subject,
     });
-    return createdFolders;
   }
 
   private async validateFilenameAndContainer(call: ParsedRouterRequest, file: File) {
@@ -393,11 +389,12 @@ export class FileHandlers {
     const newName = name ?? file.name;
     const newContainer = container ?? file.container;
     if (newContainer !== file.container) {
-      await this.findOrCreateContainer(newContainer);
+      await this.resolveClientContainer(newContainer);
+      await this.fileAccessCheck('create', call.request, undefined, newContainer);
     }
     const newFolder = isNil(folder) ? file.folder : normalizeFolderPath(folder);
     if (newFolder !== file.folder && newFolder !== '/') {
-      await this.findOrCreateFolders(newFolder, newContainer);
+      await this.prepareClientFolder(call, newContainer, newFolder, file.isPublic);
     }
     const isDataUpdate =
       newName === file.name &&
