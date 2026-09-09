@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [Unreleased]
+
+### ⚠ BREAKING CHANGES
+
+* **storage:** Client APIs no longer create missing containers (404). An omitted folder now resolves to a personal `cnd_<userId>/` folder. Client list-files is deferred.
+
+### Features
+
+* **storage:** complete filesystem-shaped ReBAC for Container, Folder, and File ([#1173](https://github.com/ConduitPlatform/Conduit/issues/1173))
+
 ## [0.17.0-alpha.6](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.5...v0.17.0-alpha.6) (2026-07-26)
 
 
