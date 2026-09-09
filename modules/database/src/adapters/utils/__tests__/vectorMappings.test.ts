@@ -110,6 +110,7 @@ describe('vector field and index mappings', () => {
         path: 'embedding',
         numDimensions: 1536,
         similarity: VectorSimilarity.Cosine,
+        indexingMethod: VectorIndexMethod.HNSW,
       },
       { type: 'filter', path: '_id' },
       { type: 'filter', path: 'tenantId' },
@@ -195,5 +196,60 @@ describe('vector field and index mappings', () => {
       queryable: true,
       options: { ivfflat: { lists: 100 } },
     });
+  });
+
+  it('treats empty proto method and missing Mongo indexingMethod as hnsw', () => {
+    expect(
+      toMongoVectorIndexDefinition({
+        name: 'embedding_vector',
+        field: 'embedding',
+        dimensions: 1536,
+        similarity: VectorSimilarity.Cosine,
+      }).fields[0],
+    ).toMatchObject({ indexingMethod: VectorIndexMethod.HNSW });
+    expect(
+      toMongoVectorIndexDefinition({
+        name: 'embedding_vector',
+        field: 'embedding',
+        dimensions: 1536,
+        similarity: VectorSimilarity.Cosine,
+        method: '' as VectorIndexMethod,
+      }).fields[0],
+    ).toMatchObject({ indexingMethod: VectorIndexMethod.HNSW });
+
+    const withoutMethod = fromMongoVectorIndex({
+      name: 'embedding_vector',
+      status: 'READY',
+      queryable: true,
+      latestDefinition: {
+        fields: [
+          {
+            type: 'vector',
+            path: 'embedding',
+            numDimensions: 1536,
+            similarity: VectorSimilarity.Cosine,
+          },
+        ],
+      },
+    });
+    expect(withoutMethod.method).toBe(VectorIndexMethod.HNSW);
+
+    const emptyMethod = fromMongoVectorIndex({
+      name: 'embedding_vector',
+      status: 'READY',
+      queryable: true,
+      latestDefinition: {
+        fields: [
+          {
+            type: 'vector',
+            path: 'embedding',
+            numDimensions: 1536,
+            similarity: VectorSimilarity.Cosine,
+            indexingMethod: '',
+          },
+        ],
+      },
+    });
+    expect(emptyMethod.method).toBe(VectorIndexMethod.HNSW);
   });
 });

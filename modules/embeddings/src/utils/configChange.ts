@@ -1,3 +1,5 @@
+import { vectorIndexMethodsEquivalent } from '@conduitplatform/grpc-sdk';
+
 export const MATERIAL_EMBEDDING_CONFIG_FIELDS = [
   'provider',
   'modelName',
@@ -162,8 +164,6 @@ export interface EmbeddingVectorIndexShape {
   method?: string;
 }
 
-const DEFAULT_EMBEDDING_VECTOR_INDEX_METHOD = 'hnsw';
-
 export function embeddingVectorIndexMatchesContract(
   index: EmbeddingVectorIndexShape,
   contract: EmbeddingVectorIndexContract,
@@ -173,10 +173,7 @@ export function embeddingVectorIndexMatchesContract(
     return false;
   }
   if ((index.similarity ?? '') !== (contract.similarity ?? '')) return false;
-  return (
-    (index.method ?? DEFAULT_EMBEDDING_VECTOR_INDEX_METHOD) ===
-    (contract.method ?? DEFAULT_EMBEDDING_VECTOR_INDEX_METHOD)
-  );
+  return vectorIndexMethodsEquivalent(index.method, contract.method);
 }
 
 export function selectEmbeddingVectorIndex<T extends EmbeddingVectorIndexShape>(

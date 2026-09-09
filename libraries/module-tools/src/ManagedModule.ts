@@ -13,6 +13,8 @@ import {
 import { initializeSdk, merge, readConduitPeersManifest } from './utilities/index.js';
 import type { ConduitPeersManifest } from './utilities/conduitPeers.js';
 import { convictConfigParser } from './utilities/convictConfigParser.js';
+import { reconcileStoredModuleConfig } from './utilities/reconcileModuleConfig.js';
+import { restoreRedactedSecrets } from './utilities/redactSensitiveConfig.js';
 import { RoutingManager } from './routing/index.js';
 import { RoutingController } from './routing/RoutingController.js';
 
@@ -268,9 +270,10 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         });
       }
       let config = JSON.parse(call.request.newConfig);
-      config = merge(this.config.getProperties(), config);
-      config = await this.preConfig(config);
       const previousConfig = this.config.getProperties();
+      config = merge(previousConfig, config);
+      config = restoreRedactedSecrets(config, previousConfig, this.configSchema);
+      config = await this.preConfig(config);
       try {
         this.config.load(config).validate({
           allowed: 'warn',
@@ -354,8 +357,20 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
 
       ConfigController.getInstance();
       if (config) {
+        const migrated = await this.preConfig(config);
+        this.config.load(migrated).validate({
+          allowed: 'warn',
+        });
+        const persistable = this.config.getProperties();
+        const reconciled = await reconcileStoredModuleConfig({
+          stored: config,
+          migrated: persistable,
+          configureOverride: next =>
+            this.grpcSdk.config.configure(next, convictConfigParser(configSchema), true),
+        });
+        config = reconciled.config;
         this.config.load(config);
-        ConfigController.getInstance().config = config;
+        ConfigController.getInstance().config = this.config.getProperties();
       }
       if (!config || config.active || !config.hasOwnProperty('active'))
         await this.onConfig();

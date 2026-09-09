@@ -2,6 +2,7 @@ import {
   GrpcError,
   TYPE,
   VectorCapabilities,
+  VectorIndexMethod,
   VectorSearchResult,
   VectorSimilarity,
   type ConduitModel,
@@ -984,6 +985,7 @@ export class EmbeddingsApi {
         dimensions: next.dimensions,
         similarity: next.similarity as VectorIndexDefinition['similarity'],
         name: defaultEmbeddingVectorIndexName(next.targetField),
+        method: VectorIndexMethod.HNSW,
       });
     } catch (err) {
       throw new GrpcError(
@@ -1010,6 +1012,7 @@ export class EmbeddingsApi {
         dimensions: next.dimensions,
         similarity: next.similarity as VectorIndexDefinition['similarity'],
         name: replacementName,
+        method: VectorIndexMethod.HNSW,
       });
     } catch (err) {
       throw new GrpcError(

@@ -23,7 +23,8 @@
   "type": "module",
   "scripts": {
     "prepublish": "npm run build",
-    "build": "rimraf dist && tsup"
+    "build": "rimraf dist && tsup",
+    "test": "node --experimental-strip-types --test src/utilities/reconcileModuleConfig.test.ts"
   },
   "license": "MIT",
   "dependencies": {
