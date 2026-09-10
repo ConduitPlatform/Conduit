@@ -755,7 +755,7 @@ importers:
         version: 4.0.1
       nodemailer:
         specifier: '>=9.0.1'
-        version: 9.0.6
+        version: 9.1.1
       nodemailer-mailgun-transport:
         specifier: ^2.1.5
         version: 2.1.5(handlebars@4.7.9)(lodash@4.18.1)(underscore@1.13.8)
@@ -6752,8 +6752,8 @@ packages:
   nodemailer-mandrill-transport@1.2.0:
     resolution: {integrity: sha512-Dli7B8D0Q2EkLi01ajSS4zaSfB1Vpv0s5539Dgjr6/XmQaXX7zVtzUvicWg38brgmFAaQ3HyXNFK6lWsF5I27A==}
 
-  nodemailer@9.0.6:
-    resolution: {integrity: sha512-IQUGFdhdGwI9+AWX+FpUt4DLmvFaOjTMEoneTIWX/RXxuy1TdenPwWrvFMSfLkPKl+HQEXWuSAxEMMbPYXtBmg==}
+  nodemailer@9.1.1:
+    resolution: {integrity: sha512-izw9mVKFix6YSnC9eLgV6g1opl9DUlRio9ZNcq+Wu9Ujn2UwF+8Nl0B8nz22kEC+CTZCvinkxwJ0DeFbb6NwcQ==}
     engines: {node: '>=6.0.0'}
 
   noms@0.0.0:
@@ -7194,8 +7194,8 @@ packages:
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
 
-  react-is@19.2.8:
-    resolution: {integrity: sha512-s5un28nYxKJw5gvUHyW5PCC28CvBqLu9r3cWgzHT4Vo/5fqqkFcdRYsGcKf50WMPpjjFZS5d76fn3YCo2njKwQ==}
+  react-is@19.3.0:
+    resolution: {integrity: sha512-UpMYezM4v5/18F28aC66AEsjXIgE02kyEMH6yLdgLXu/UTfa1Ntwck/nNLrbqJsEXW7gPb0coNO9FQse9WTovA==}
 
   read-pkg-up@3.0.0:
     resolution: {integrity: sha512-YFzFrVvpC6frF1sz8psoHDBGF7fLPc+llq/8NB43oagqWkx8ar5zYtsTORtOjw9W2RHLpWP+zTWwBvf1bCmcSw==}
@@ -14912,7 +14912,7 @@ snapshots:
       extend: 3.0.2
       mandrill-api: 1.0.45
 
-  nodemailer@9.0.6: {}
+  nodemailer@9.1.1: {}
 
   noms@0.0.0:
     dependencies:
@@ -15228,12 +15228,12 @@ snapshots:
       '@jest/schemas': 30.4.1
       ansi-styles: 5.2.0
       react-is-18: react-is@18.3.1
-      react-is-19: react-is@19.2.8
+      react-is-19: react-is@19.3.0
 
   pretty-format@30.5.1:
     dependencies:
       '@jest/react-is-18': react-is@18.3.1
-      '@jest/react-is-19': react-is@19.2.8
+      '@jest/react-is-19': react-is@19.3.0
       '@jest/schemas': 30.5.0
       ansi-styles: 5.2.0
 
@@ -15332,7 +15332,7 @@ snapshots:
 
   react-is@18.3.1: {}
 
-  react-is@19.2.8: {}
+  react-is@19.3.0: {}
 
   read-pkg-up@3.0.0:
     dependencies:
@@ -15748,7 +15748,7 @@ snapshots:
   smtp-server@3.19.7:
     dependencies:
       ipv6-normalize: 1.0.1
-      nodemailer: 9.0.6
+      nodemailer: 9.1.1
       punycode.js: 2.3.1
 
   snappy@7.4.1:
