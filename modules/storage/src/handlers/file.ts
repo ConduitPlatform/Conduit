@@ -57,6 +57,18 @@ export class FileHandlers {
     request: Indexable,
     file?: File,
   ) {
+    const scope = requestScope(request);
+    if (!request.context.user && scope && file && action !== 'create') {
+      const allowed = await this.grpcSdk.authorization?.can({
+        subject: scope,
+        actions: [action],
+        resource: `File:${file._id}`,
+      });
+      if (!allowed?.allow) {
+        throw new GrpcError(status.PERMISSION_DENIED, 'You do not have access to file');
+      }
+      return;
+    }
     if (!request.context.user) {
       throw new GrpcError(status.PERMISSION_DENIED, 'File access is not public');
     }
@@ -475,4 +487,12 @@ export class FileHandlers {
       container: newContainer,
     };
   }
+}
+
+function requestScope(request: Indexable): string | undefined {
+  const queryScope = request.queryParams?.scope;
+  const contextScope = request.context?.scope;
+  if (typeof queryScope === 'string' && queryScope.length > 0) return queryScope;
+  if (typeof contextScope === 'string' && contextScope.length > 0) return contextScope;
+  return undefined;
 }

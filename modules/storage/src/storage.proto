@@ -97,6 +97,9 @@ message FileByUrlResponse {
   string name = 3;
   string uploadUrl = 4;
   string uri = 5;
+  optional string uploadStatus = 6;
+  optional string contentVersion = 7;
+  optional int32 size = 8;
 }
 
 message UpdateFileByUrlRequest {

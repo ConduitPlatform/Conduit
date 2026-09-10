@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import {
   IMAGE_TARGETS,
   resolveTargets,
@@ -16,6 +17,8 @@ const standaloneCompose = readRepo('docker/docker-compose.standalone.yml');
 const dockerReadme = readRepo('deploy/docker/README.md');
 const k8sReadme = readRepo('deploy/k8s/README.md');
 const convictConfig = readRepo('modules/embeddings/src/config/index.ts');
+const tsupConfig = readRepo('modules/embeddings/tsup.config.ts');
+const dockerfile = readRepo('modules/embeddings/Dockerfile');
 const workflow = readRepo('.github/workflows/embeddings-test.yml');
 
 const PROFILE_ENABLEMENT_DOCS = [
@@ -169,4 +172,21 @@ test('other module rebuilds still select standalone', () => {
   }).map(entry => entry.target);
   assert.ok(shared.includes('embeddings'));
   assert.ok(shared.includes('conduit-standalone'));
+});
+
+test('production bundle emits pdfExtract.worker beside the entry', () => {
+  assert.match(tsupConfig, /'pdfExtract\.worker': 'src\/utils\/pdfExtract\.worker\.ts'/);
+  assert.match(dockerfile, /COPY --from=conduit-base \/app\/modules\/embeddings\/bundle/);
+  assert.match(dockerfile, /CMD \["node", "bundle\/index\.js"\]/);
+  const bundleIndex = fileURLToPath(new URL('../bundle/index.js', import.meta.url));
+  const bundleWorker = fileURLToPath(
+    new URL('../bundle/pdfExtract.worker.js', import.meta.url),
+  );
+  if (existsSync(bundleIndex)) {
+    assert.equal(
+      existsSync(bundleWorker),
+      true,
+      'built bundle must include pdfExtract.worker.js beside index.js',
+    );
+  }
 });

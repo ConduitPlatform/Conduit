@@ -225,4 +225,39 @@ describe('material embedding config changes', () => {
       'embedding_vector_v2',
     );
   });
+
+  it('treats missing Mongo filter fields as an incompatible vector index', () => {
+    const live = {
+      field: 'embedding',
+      name: 'embedding_vector',
+      dimensions: 3,
+      similarity: 'cosine',
+      method: 'hnsw',
+      filterFields: ['_id', 'sourceId'],
+    };
+    const required = {
+      field: 'embedding',
+      dimensions: 3,
+      similarity: 'cosine',
+      method: 'hnsw',
+      filterFields: ['partitionSubject', 'sourceId', 'documentId', 'mimeType', 'status'],
+    };
+    assert.equal(embeddingVectorIndexMatchesContract(live, required), false);
+    assert.equal(
+      embeddingVectorIndexMatchesContract(
+        { ...live, filterFields: ['_id', ...required.filterFields] },
+        required,
+      ),
+      true,
+    );
+    assert.equal(
+      selectEmbeddingVectorIndex([live], 'embedding', {
+        dimensions: 3,
+        similarity: 'cosine',
+        method: 'hnsw',
+        filterFields: required.filterFields,
+      }),
+      undefined,
+    );
+  });
 });

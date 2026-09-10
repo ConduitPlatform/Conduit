@@ -3,7 +3,12 @@ import assert from 'node:assert/strict';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { File, _StorageContainer } from '../models/index.js';
 import { IStorageProvider } from '../interfaces/index.js';
-import { _createFileUploadUrl, _updateFile, storeNewFile } from './index.js';
+import {
+  _createFileUploadUrl,
+  _updateFile,
+  _updateFileUploadUrl,
+  storeNewFile,
+} from './index.js';
 import { FILE_LIFECYCLE_EVENTS } from './fileEvents.js';
 import { FILE_UPLOAD_STATUS, PENDING_UPLOAD_PLACEHOLDER } from './fileUploadState.js';
 
@@ -164,5 +169,43 @@ describe('_updateFile', () => {
     assert.equal(file.size, 7);
     assert.equal(file.contentVersion, 'updated-1');
     assert.deepEqual(published, [FILE_LIFECYCLE_EVENTS.update]);
+  });
+});
+
+describe('_updateFileUploadUrl', () => {
+  it('marks same-path replacements pending and clears the previous content version', async () => {
+    stubContainers();
+    const files = stubFileStore();
+    files.push({
+      _id: 'file-1',
+      name: 'hello.txt',
+      folder: '/',
+      container: 'docs',
+      size: 5,
+      isPublic: false,
+      mimeType: 'text/plain',
+      uploadStatus: FILE_UPLOAD_STATUS.ready,
+      contentVersion: 'ready-v1',
+      etag: 'old-etag',
+      checksum: 'old-sum',
+    });
+    const provider = mockProvider(async () => ({
+      exists: true,
+      size: 5,
+      etag: 'old-etag',
+    }));
+    const { file, url } = await _updateFileUploadUrl(provider, files[0] as never, {
+      name: 'hello.txt',
+      container: 'docs',
+      folder: '/',
+      mimeType: 'text/plain',
+      size: 9,
+    });
+    assert.equal(url, 'https://upload.example/put');
+    assert.equal(file.uploadStatus, FILE_UPLOAD_STATUS.pending);
+    assert.equal(file.contentVersion, undefined);
+    assert.equal(file.etag, undefined);
+    assert.equal(file.checksum, undefined);
+    assert.equal(file.size, 9);
   });
 });

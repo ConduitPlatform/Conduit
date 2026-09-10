@@ -167,6 +167,11 @@ export const EMBEDDINGS_ADMIN_ROUTES: EmbeddingsAdminRouteContract[] = [
     'Disables a generic embedding source. Operator-only. Ingest and search fail closed afterwards.',
   ),
   contract(
+    '/sources/:id/enable',
+    ConduitRouteActions.POST,
+    'Resumes a disabled generic embedding source. Operator-only. Failed and revoked sources stay non-enableable. Reprovisions the chunk index and reconciles Storage sources when ready.',
+  ),
+  contract(
     '/sources/:id/revoke',
     ConduitRouteActions.POST,
     'Revokes a generic embedding source and deletes its ReBAC relations. Operator-only. Ingest and search fail closed afterwards.',

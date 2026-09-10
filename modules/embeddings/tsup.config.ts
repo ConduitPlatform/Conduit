@@ -3,4 +3,8 @@ import bundleConfig from './service-bundle.config.json' with { type: 'json' };
 
 export default createServiceTsupConfig({
   extraExternal: bundleConfig.extraDependencies,
+  entry: {
+    index: 'src/index.ts',
+    'pdfExtract.worker': 'src/utils/pdfExtract.worker.ts',
+  },
 });

@@ -357,10 +357,10 @@ export function sourceSearchFilter(args: {
   };
   if (!args.extra) return filter;
   for (const [key, value] of Object.entries(args.extra)) {
-    if (key === 'partitionSubject' || key === 'sourceId') {
+    if (key === 'partitionSubject' || key === 'sourceId' || key === 'status') {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Source search cannot override partition or source filters',
+        'Source search cannot override partition, source, or status filters',
       );
     }
     if (!ALLOWED_SOURCE_FILTER_FIELDS.has(key)) {
@@ -371,6 +371,7 @@ export function sourceSearchFilter(args: {
     }
     if (value !== undefined) filter[key] = value;
   }
+  filter.status = 'indexed';
   return filter;
 }
 
@@ -440,6 +441,46 @@ export function documentResource(id: string): string {
 
 export function userSubject(userId: string): string {
   return `User:${userId}`;
+}
+
+export function isDuplicateKeyError(err: unknown): boolean {
+  const code = (err as { code?: number | string } | undefined)?.code;
+  if (code === 11000 || code === '11000' || code === '23505') return true;
+  return /duplicate key|E11000/i.test((err as { message?: string })?.message ?? '');
+}
+
+export async function createOrResolveDuplicate<T extends { _id: string }>(args: {
+  create: () => Promise<T>;
+  findExisting: () => Promise<T | null>;
+}): Promise<T> {
+  try {
+    return await args.create();
+  } catch (err) {
+    if (!isDuplicateKeyError(err)) throw err;
+    const existing = await args.findExisting();
+    if (!existing) throw err;
+    return existing;
+  }
+}
+
+export async function upsertUniqueRecord<T extends { _id?: string }>(args: {
+  findExisting: () => Promise<T | null>;
+  update: (id: string) => Promise<unknown>;
+  create: () => Promise<T>;
+}): Promise<void> {
+  const existing = await args.findExisting();
+  if (existing?._id) {
+    await args.update(existing._id);
+    return;
+  }
+  try {
+    await args.create();
+  } catch (err) {
+    if (!isDuplicateKeyError(err)) throw err;
+    const raced = await args.findExisting();
+    if (!raced?._id) throw err;
+    await args.update(raced._id);
+  }
 }
 
 export function assertClientSourceSearchRequest(request: {

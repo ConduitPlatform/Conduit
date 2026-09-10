@@ -40,6 +40,7 @@ import {
   type MaterialEmbeddingConfigField,
 } from '../utils/configChange.js';
 import { MAX_QUEUE_BATCH_SIZE } from '../utils/embeddingJobs.js';
+import { assertCanManageSources } from '../utils/genericIngest.js';
 import { ACTIVE_BACKFILL_STATES } from '../utils/backfillRun.js';
 import {
   assertCanManageEmbeddingConfig,
@@ -654,6 +655,7 @@ export class EmbeddingsApi {
     sourceId: string,
     caller: EmbeddingsApiCaller,
   ): Promise<{ queued: number; scanned: number; warnings: string[] }> {
+    assertCanManageSources(caller);
     if (!this.deps.reconcileStorageSource) {
       throw new GrpcError(
         status.FAILED_PRECONDITION,

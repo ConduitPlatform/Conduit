@@ -439,6 +439,16 @@ export class EmbeddingsProvider extends ConduitModule<
     return this.client!.disableSource({ id }).then(mapEmbeddingSource);
   }
 
+  enableSource(id: string): Promise<{
+    source: EmbeddingSourceRecord;
+    warnings: string[];
+  }> {
+    return this.client!.enableSource({ id }).then(res => ({
+      source: mapEmbeddingSource(res.source!),
+      warnings: [...(res.warnings ?? [])],
+    }));
+  }
+
   revokeSource(id: string): Promise<EmbeddingSourceRecord> {
     return this.client!.revokeSource({ id }).then(mapEmbeddingSource);
   }

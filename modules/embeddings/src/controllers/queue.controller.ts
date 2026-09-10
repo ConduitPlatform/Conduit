@@ -47,6 +47,7 @@ export interface EmbeddingQueueStatus {
 type QueueJobHandle = {
   getState: () => Promise<string>;
   remove: () => Promise<unknown>;
+  data?: { sourceId?: string };
 };
 
 type QueueLike = {
@@ -64,6 +65,7 @@ type QueueLike = {
   ) => Promise<unknown>;
   close: () => Promise<unknown>;
   getJob?: (jobId: string) => Promise<QueueJobHandle | undefined | null>;
+  getJobs?: (types: string[]) => Promise<QueueJobHandle[]>;
   getJobCounts: () => Promise<Partial<QueueJobCounts> & Record<string, number>>;
 };
 
@@ -466,8 +468,53 @@ export class QueueController {
       return enqueueable.length;
     } catch (err) {
       if (!isDuplicateJobError(err)) throw err;
+      const added = await Promise.all(
+        enqueueable.map(job => this.addStorageJob(job, attempts)),
+      );
+      let queued = 0;
+      for (const count of added) queued += count;
+      return queued;
+    }
+  }
+
+  async addStorageJob(data: StorageIngestJobData, attempts: number) {
+    const parsed = parseStorageIngestJob(data);
+    if (!parsed.ok) {
+      incrementEmbeddingMetric('malformedJobs');
       return 0;
     }
+    const jobId = storageIngestJobId(parsed.data);
+    const decision = await resolveExistingQueueJob(this.storageQueue, jobId);
+    if (decision === 'skip') return 0;
+    try {
+      await this.storageQueue.add(
+        jobId,
+        { ...parsed.data },
+        {
+          jobId,
+          attempts,
+          backoff: { type: 'exponential', delay: 1000 },
+        },
+      );
+      return 1;
+    } catch (err) {
+      if (!isDuplicateJobError(err)) throw err;
+      return 0;
+    }
+  }
+
+  async cancelStorageJobsForSource(sourceId: string): Promise<number> {
+    const jobs =
+      (await this.storageQueue.getJobs?.(['waiting', 'delayed', 'paused'])) ?? [];
+    let removed = 0;
+    for (const job of jobs) {
+      if (job.data?.sourceId !== sourceId) continue;
+      const state = await job.getState();
+      if (state === 'active') continue;
+      await job.remove();
+      removed += 1;
+    }
+    return removed;
   }
 
   private async closeGenerationWorker() {

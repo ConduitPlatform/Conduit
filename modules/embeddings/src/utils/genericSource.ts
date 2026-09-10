@@ -12,6 +12,7 @@ import {
 import { status } from '@grpc/grpc-js';
 import {
   defaultEmbeddingVectorIndexName,
+  nextEmbeddingVectorIndexName,
   selectEmbeddingVectorIndex,
   type EmbeddingVectorIndexShape,
 } from './configChange.js';
@@ -364,14 +365,26 @@ export async function ensureProfileChunkSchema(
     dimensions: profile.dimensions,
     similarity: profile.similarity,
     method: VectorIndexMethod.HNSW,
+    filterFields: contract.filterFields,
   });
   if (!existing) {
-    await store.createVectorIndex(schema.name, contract);
+    const replacement = {
+      ...contract,
+      name: indexes.some(index => index.field === CHUNK_VECTOR_FIELD)
+        ? nextEmbeddingVectorIndexName(CHUNK_VECTOR_FIELD, indexes)
+        : (contract.name ?? defaultEmbeddingVectorIndexName(CHUNK_VECTOR_FIELD)),
+    };
+    await store.createVectorIndex(schema.name, replacement);
+    return {
+      schemaName: schema.name,
+      indexName: replacement.name,
+      created: true,
+    };
   }
   return {
     schemaName: schema.name,
-    indexName: existing?.name ?? defaultEmbeddingVectorIndexName(CHUNK_VECTOR_FIELD),
-    created: !existing,
+    indexName: existing.name ?? defaultEmbeddingVectorIndexName(CHUNK_VECTOR_FIELD),
+    created: false,
   };
 }
 

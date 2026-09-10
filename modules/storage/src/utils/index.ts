@@ -349,6 +349,10 @@ export async function _updateFileUploadUrl(
       sourceUrl: refs.sourceUrl,
       url: refs.url,
       uri: refs.uri,
+      uploadStatus: FILE_UPLOAD_STATUS.pending,
+      etag: undefined,
+      contentVersion: undefined,
+      checksum: undefined,
       ...{ size: size ?? file.size },
     });
   } else {

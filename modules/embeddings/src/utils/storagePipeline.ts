@@ -59,11 +59,16 @@ export interface StoragePipelineDeps {
     query: Record<string, unknown>,
     options?: { skip?: number; limit?: number; sort?: Record<string, unknown> },
   ) => Promise<StorageFileRecord[]>;
-  getFile: (id: string) => Promise<StorageFileRecord | null>;
+  getFile: (
+    id: string,
+    options?: { scope?: string },
+  ) => Promise<StorageFileRecord | null>;
   getFileBytes: (
     id: string,
     maxBytes: number,
+    options?: { scope?: string },
   ) => Promise<{ data: Buffer; mimeType?: string; name?: string }>;
+  canReadFile?: (fileId: string, subject: string) => Promise<boolean>;
   enqueue: (jobs: StorageIngestJobData[]) => Promise<number>;
   api: GenericSourceApi;
 }
@@ -142,6 +147,7 @@ export class StorageExtractionPipeline {
         scanned += 1;
         cursor = file._id;
         if (!fileMatchesSelectors(file, selectors)) continue;
+        if (!(await this.isAuthorizedForFile(source, file._id))) continue;
         matchingIds.add(file._id);
         jobs.push({
           kind: 'ingest',
@@ -295,15 +301,33 @@ export class StorageExtractionPipeline {
   }
 
   private async ingestFile(source: EmbeddingSourceRecord, fileId: string): Promise<void> {
-    const selectors = parseStorageSelectors(source.selectors);
-    const file = await this.deps.getFile(fileId);
-    if (!file || !isFileBytesReady(file) || !fileMatchesSelectors(file, selectors)) {
-      await this.markDocument(source, fileId, 'skipped', file ?? undefined);
+    const liveSource = await this.deps.sources.findOne({ _id: source._id });
+    if (!liveSource || liveSource.state !== 'ready') return;
+    const selectors = parseStorageSelectors(liveSource.selectors);
+    const file = await this.deps.getFile(fileId, {
+      scope: liveSource.partitionSubject,
+    });
+    if (
+      !file ||
+      !isFileBytesReady(file) ||
+      !fileMatchesSelectors(file, selectors) ||
+      !(await this.isAuthorizedForFile(liveSource, fileId))
+    ) {
+      await this.markDocument(
+        liveSource,
+        fileId,
+        'skipped',
+        file ?? undefined,
+        undefined,
+        {
+          preserveIndexed: true,
+        },
+      );
       incrementEmbeddingMetric('storageSkipped');
       return;
     }
     const existing = await this.deps.documents.findOne({
-      sourceId: source._id,
+      sourceId: liveSource._id,
       externalDocumentId: fileId,
     });
     if (
@@ -313,10 +337,23 @@ export class StorageExtractionPipeline {
     ) {
       return;
     }
-    await this.markDocument(source, fileId, 'extracting', file);
+    const previousStatus = existing?.status;
+    await this.markDocument(liveSource, fileId, 'extracting', file);
     const limits = storageExtractionLimits(this.deps.currentConfig());
     try {
-      const bytes = await this.deps.getFileBytes(fileId, limits.maxFileBytes);
+      const bytes = await this.deps.getFileBytes(fileId, limits.maxFileBytes, {
+        scope: liveSource.partitionSubject,
+      });
+      const current = await this.deps.sources.findOne({ _id: liveSource._id });
+      if (!current || current.state !== 'ready') {
+        if (existing && previousStatus === 'indexed') {
+          await this.deps.documents.findByIdAndUpdate(existing._id, {
+            status: 'indexed',
+            contentVersion: existing.contentVersion,
+          });
+        }
+        return;
+      }
       const sniffed = sniffMimeType(bytes.data);
       const mime = assertAutomaticExtractable({
         declaredMime: file.mimeType ?? bytes.mimeType,
@@ -333,13 +370,13 @@ export class StorageExtractionPipeline {
         `file:${fileId}`,
       );
       if (!chunks.length) {
-        await this.markDocument(source, fileId, 'skipped', file);
+        await this.markDocument(current, fileId, 'skipped', file);
         incrementEmbeddingMetric('storageSkipped');
         return;
       }
       await this.deps.api.syncDocument(
         {
-          sourceId: source._id,
+          sourceId: current._id,
           externalDocumentId: fileId,
           contentVersion: file.contentVersion,
           metadata: JSON.stringify(safeFileMetadata(file)),
@@ -357,7 +394,7 @@ export class StorageExtractionPipeline {
         { callerModule: 'embeddings' },
       );
       const saved = await this.deps.documents.findOne({
-        sourceId: source._id,
+        sourceId: current._id,
         externalDocumentId: fileId,
       });
       if (saved) {
@@ -369,7 +406,17 @@ export class StorageExtractionPipeline {
       }
       incrementEmbeddingMetric('storageExtracted');
     } catch (err) {
-      await this.markDocument(source, fileId, 'failed', file, sanitizeErrorMessage(err));
+      const current = await this.deps.sources.findOne({ _id: liveSource._id });
+      if (!current || current.state !== 'ready') {
+        if (existing && previousStatus === 'indexed') {
+          await this.deps.documents.findByIdAndUpdate(existing._id, {
+            status: 'indexed',
+            contentVersion: existing.contentVersion,
+          });
+        }
+        return;
+      }
+      await this.markDocument(current, fileId, 'failed', file, sanitizeErrorMessage(err));
       throw err;
     }
   }
@@ -399,11 +446,22 @@ export class StorageExtractionPipeline {
           mimeType?: string;
         },
     error?: string,
+    options?: { preserveIndexed?: boolean },
   ) {
+    if (source.state !== 'ready' && !options?.preserveIndexed) {
+      return;
+    }
     const existing = await this.deps.documents.findOne({
       sourceId: source._id,
       externalDocumentId: fileId,
     });
+    if (
+      options?.preserveIndexed &&
+      existing?.status === 'indexed' &&
+      (status === 'skipped' || status === 'queued')
+    ) {
+      return;
+    }
     const patch = {
       status,
       storageFileId: fileId,
@@ -419,24 +477,47 @@ export class StorageExtractionPipeline {
       await this.deps.documents.findByIdAndUpdate(existing._id, patch);
       return;
     }
-    await this.deps.documents.create({
-      sourceId: source._id,
-      externalDocumentId: fileId,
-      ...patch,
-    });
+    if (source.state !== 'ready') return;
+    try {
+      await this.deps.documents.create({
+        sourceId: source._id,
+        externalDocumentId: fileId,
+        ...patch,
+      });
+    } catch (err) {
+      const raced = await this.deps.documents.findOne({
+        sourceId: source._id,
+        externalDocumentId: fileId,
+      });
+      if (!raced) throw err;
+      await this.deps.documents.findByIdAndUpdate(raced._id, patch);
+    }
+  }
+
+  private async isAuthorizedForFile(
+    source: EmbeddingSourceRecord,
+    fileId: string,
+  ): Promise<boolean> {
+    if (!this.deps.canReadFile) return true;
+    return this.deps.canReadFile(fileId, source.partitionSubject);
   }
 
   private async matchingSources(file: {
+    id: string;
     container?: string;
     folder?: string;
     mimeType?: string;
     uploadStatus?: string;
   }): Promise<EmbeddingSourceRecord[]> {
     const sources = await this.enabledStorageSources();
-    return sources.filter(source => {
+    const matched: EmbeddingSourceRecord[] = [];
+    for (const source of sources) {
       const selectors = safeSelectors(source);
-      return selectors ? fileMatchesSelectors(file, selectors) : false;
-    });
+      if (!selectors || !fileMatchesSelectors(file, selectors)) continue;
+      if (!(await this.isAuthorizedForFile(source, file.id))) continue;
+      matched.push(source);
+    }
+    return matched;
   }
 
   private async enabledStorageSources(): Promise<EmbeddingSourceRecord[]> {

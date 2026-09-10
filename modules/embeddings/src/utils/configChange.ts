@@ -159,6 +159,7 @@ export interface EmbeddingVectorIndexContract {
   dimensions: number;
   similarity?: string;
   method?: string;
+  filterFields?: readonly string[];
 }
 
 export interface EmbeddingVectorIndexShape {
@@ -167,6 +168,23 @@ export interface EmbeddingVectorIndexShape {
   dimensions?: number;
   similarity?: string;
   method?: string;
+  filterFields?: readonly string[];
+}
+
+export function normalizeVectorFilterFields(fields?: readonly string[]): string[] {
+  return [...(fields ?? [])]
+    .map(field => field.trim())
+    .filter(field => field.length > 0)
+    .sort();
+}
+
+export function vectorFilterFieldsCoverContract(
+  live?: readonly string[],
+  required?: readonly string[],
+): boolean {
+  if (!required?.length) return true;
+  const present = new Set(normalizeVectorFilterFields(live));
+  return normalizeVectorFilterFields(required).every(field => present.has(field));
 }
 
 export function embeddingVectorIndexMatchesContract(
@@ -178,6 +196,9 @@ export function embeddingVectorIndexMatchesContract(
     return false;
   }
   if ((index.similarity ?? '') !== (contract.similarity ?? '')) return false;
+  if (!vectorFilterFieldsCoverContract(index.filterFields, contract.filterFields)) {
+    return false;
+  }
   return vectorIndexMethodsEquivalent(index.method, contract.method);
 }
 

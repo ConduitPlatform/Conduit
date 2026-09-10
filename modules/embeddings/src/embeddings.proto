@@ -345,6 +345,7 @@ service EmbeddingsProvider {
   rpc getSource(GetSourceRequest) returns (EmbeddingSource);
   rpc getSourceStatus(GetSourceRequest) returns (SourceStatusResponse);
   rpc disableSource(SourceMutationRequest) returns (EmbeddingSource);
+  rpc enableSource(SourceMutationRequest) returns (UpsertSourceResponse);
   rpc revokeSource(SourceMutationRequest) returns (EmbeddingSource);
   rpc purgeSource(SourceMutationRequest) returns (PurgeSourceResponse);
   rpc syncDocument(SyncDocumentRequest) returns (SyncDocumentResponse);

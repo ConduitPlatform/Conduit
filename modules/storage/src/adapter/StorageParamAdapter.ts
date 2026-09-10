@@ -28,6 +28,9 @@ export class StorageParamAdapter {
       uri: file.uri ?? '',
       name: file.name,
       uploadUrl: (response as Indexable).url,
+      uploadStatus: file.uploadStatus,
+      contentVersion: file.contentVersion,
+      size: file.size,
     };
   }
 }

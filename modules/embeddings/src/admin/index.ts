@@ -223,6 +223,10 @@ export class AdminHandlers {
     return this.requireGeneric().disableSource(call.request.params.id, ADMIN_CALLER);
   }
 
+  async enableSource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return this.requireGeneric().enableSource(call.request.params.id, ADMIN_CALLER);
+  }
+
   async revokeSource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     return this.requireGeneric().revokeSource(call.request.params.id, ADMIN_CALLER);
   }
@@ -534,6 +538,19 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('DisableEmbeddingSource', TYPE.JSON),
       this.disableSource.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sources/:id/enable',
+        action: ConduitRouteActions.POST,
+        description: descriptions.get(`${ConduitRouteActions.POST}:/sources/:id/enable`),
+        urlParams: { id: ConduitString.Required },
+      },
+      new ConduitRouteReturnDefinition('EnableEmbeddingSource', {
+        source: ConduitJson.Required,
+        warnings: [ConduitString.Required],
+      }),
+      this.enableSource.bind(this),
     );
     this.routingManager.route(
       {

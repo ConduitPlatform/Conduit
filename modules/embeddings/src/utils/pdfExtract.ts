@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { Worker, isMainThread } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 
@@ -8,13 +10,34 @@ export interface PdfExtractLimits {
 }
 
 const ENCRYPT_MARKER = Buffer.from('/Encrypt');
+const ENCRYPT_SCAN_WINDOW = 64 * 1024;
+
+export function resolvePdfExtractWorkerPath(moduleUrl = import.meta.url): string {
+  const candidates = [
+    fileURLToPath(new URL('./pdfExtract.worker.js', moduleUrl)),
+    path.join(path.dirname(fileURLToPath(moduleUrl)), 'pdfExtract.worker.js'),
+    path.join(process.cwd(), 'bundle', 'pdfExtract.worker.js'),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  throw new Error('PDF extraction worker is not available beside the production bundle');
+}
+
+export function pdfContainsEncryptMarker(bytes: Buffer): boolean {
+  if (bytes.length <= ENCRYPT_SCAN_WINDOW * 2) {
+    return bytes.includes(ENCRYPT_MARKER);
+  }
+  const head = bytes.subarray(0, ENCRYPT_SCAN_WINDOW);
+  const tail = bytes.subarray(bytes.length - ENCRYPT_SCAN_WINDOW);
+  return head.includes(ENCRYPT_MARKER) || tail.includes(ENCRYPT_MARKER);
+}
 
 export function assertSafePdfEnvelope(bytes: Buffer): void {
   if (!bytes.subarray(0, 5).equals(Buffer.from('%PDF-'))) {
     throw new Error('PDF magic bytes are missing');
   }
-  const head = bytes.subarray(0, Math.min(bytes.length, 64 * 1024));
-  if (head.includes(ENCRYPT_MARKER)) {
+  if (pdfContainsEncryptMarker(bytes)) {
     throw new Error('Encrypted PDFs are not supported');
   }
   if (bytes.length < 8) {
@@ -38,12 +61,9 @@ async function extractPdfTextInWorker(
   limits: PdfExtractLimits,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(
-      fileURLToPath(new URL('./pdfExtract.worker.js', import.meta.url)),
-      {
-        workerData: { bytes: Uint8Array.from(bytes), limits },
-      },
-    );
+    const worker = new Worker(resolvePdfExtractWorkerPath(), {
+      workerData: { bytes: Uint8Array.from(bytes), limits },
+    });
     const timer = setTimeout(() => {
       void worker.terminate();
       reject(new Error(`PDF extraction timed out after ${limits.timeoutMs}ms`));

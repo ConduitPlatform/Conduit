@@ -77,6 +77,10 @@ test('embeddings proto exposes typed config, status, backfill, and search RPCs',
     protoSource,
     /rpc reconcileSource\(ReconcileSourceRequest\) returns \(ReconcileSourceResponse\)/,
   );
+  assert.match(
+    protoSource,
+    /rpc enableSource\(SourceMutationRequest\) returns \(UpsertSourceResponse\)/,
+  );
   assert.match(protoSource, /optional string sourceId = 9;/);
   assert.match(protoSource, /repeated double queryVector = 10;/);
   assert.doesNotMatch(
@@ -124,6 +128,8 @@ test('grpc-sdk embeddings client maps typed proto messages instead of JSON-strin
   assert.match(sdkSource, /upsertSource\(/);
   assert.match(sdkSource, /syncDocument\(/);
   assert.match(sdkSource, /reconcileSource\(/);
+  assert.match(sdkSource, /enableSource\(/);
+  assert.match(adminRoutesSource, /'\/sources\/:id\/enable'/);
   assert.match(sdkSource, /sourceId\?: string;/);
   assert.match(sdkSource, /queryVector\?: number\[\];/);
   assert.match(adminRoutesSource, /'\/sources'/);

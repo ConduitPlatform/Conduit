@@ -14,7 +14,7 @@ import {
   type GenericSourceApiDeps,
 } from './genericSourceApi.js';
 import type { Config } from '../config/index.js';
-import { CHUNK_VECTOR_FIELD } from '../utils/genericSource.js';
+import { CHUNK_FILTER_FIELDS, CHUNK_VECTOR_FIELD } from '../utils/genericSource.js';
 
 const moduleConfig = {
   enabled: true,
@@ -63,6 +63,9 @@ function createGeneric(overrides?: {
   createdIndexQueryable?: boolean;
   storageAvailable?: () => boolean;
   getStorageQueue?: GenericSourceApiDeps['getStorageQueue'];
+  onStorageSourceReady?: GenericSourceApiDeps['onStorageSourceReady'];
+  cancelStorageJobs?: GenericSourceApiDeps['cancelStorageJobs'];
+  throwOnDocumentCreate?: () => boolean;
 }) {
   const sources: EmbeddingSourceRecord[] = [];
   const documents: EmbeddingDocumentRecord[] = [];
@@ -110,6 +113,11 @@ function createGeneric(overrides?: {
       countDocuments: async query =>
         documents.filter(document => matches(document, query)).length,
       create: async doc => {
+        if (overrides?.throwOnDocumentCreate?.()) {
+          const err = new Error('E11000 duplicate key error');
+          (err as { code?: number }).code = 11000;
+          throw err;
+        }
         const created = {
           _id: `doc${documents.length + 1}`,
           ...doc,
@@ -169,6 +177,7 @@ function createGeneric(overrides?: {
               : VectorIndexStatus.Ready,
           dimensions: 3,
           similarity: VectorSimilarity.Cosine,
+          filterFields: [...CHUNK_FILTER_FIELDS],
         },
       ],
       createVectorIndex: async () => 'created',
@@ -188,6 +197,7 @@ function createGeneric(overrides?: {
         status: VectorIndexStatus.Ready,
         dimensions: 3,
         similarity: VectorSimilarity.Cosine,
+        filterFields: [...CHUNK_FILTER_FIELDS],
       },
     ],
     vectorSearch: async input => {
@@ -217,6 +227,7 @@ function createGeneric(overrides?: {
       (async check => ({
         allow:
           check.resource.startsWith('EmbeddingDocument:') ||
+          check.resource.startsWith('EmbeddingSource:') ||
           check.resource === 'Team:org',
       })),
     createRelation: async relation => {
@@ -227,6 +238,8 @@ function createGeneric(overrides?: {
     },
     storageAvailable: overrides?.storageAvailable,
     getStorageQueue: overrides?.getStorageQueue,
+    onStorageSourceReady: overrides?.onStorageSourceReady,
+    cancelStorageJobs: overrides?.cancelStorageJobs,
   };
   return {
     api: new GenericSourceApi(deps),
@@ -283,6 +296,7 @@ function createGeneric(overrides?: {
         },
       }),
       enqueueBackfill: async () => undefined,
+      reconcileStorageSource: async () => ({ queued: 1, scanned: 1, warnings: [] }),
       generic: deps,
     }),
     sources,
@@ -546,6 +560,9 @@ describe('generic embedding source API', () => {
       can: async check => {
         if (check.resource === 'Team:org') return { allow: true };
         if (check.resource === 'Team:other') return { allow: false };
+        if (check.resource.startsWith('EmbeddingSource:')) {
+          return { allow: check.subject !== 'User:stranger' };
+        }
         if (
           check.resource === 'EmbeddingDocument:doc1' &&
           check.subject === 'User:owner'
@@ -679,5 +696,131 @@ describe('generic embedding source API', () => {
       true,
     );
     assert.equal(JSON.stringify(statusResult.warnings).includes('file-secret'), false);
+  });
+
+  it('enables only disabled sources and hides missing sources from client search', async () => {
+    const reconciled: string[] = [];
+    const cancelled: string[] = [];
+    const { api, documents } = createGeneric({
+      onStorageSourceReady: async sourceId => {
+        reconciled.push(sourceId);
+      },
+      cancelStorageJobs: async sourceId => {
+        cancelled.push(sourceId);
+        return 1;
+      },
+    });
+    const created = await api.upsertSource(
+      {
+        kind: 'conduit-storage',
+        partitionSubject: 'Team:org',
+        selectors: JSON.stringify({ container: 'docs' }),
+      },
+      { platformAdmin: true },
+    );
+    await assert.rejects(
+      () => api.enableSource(created.source.id, { platformAdmin: true }),
+      (err: unknown) =>
+        err instanceof GrpcError && err.code === status.FAILED_PRECONDITION,
+    );
+    documents.push({
+      _id: 'queued-1',
+      sourceId: created.source.id,
+      externalDocumentId: 'file-1',
+      partitionSubject: 'Team:org',
+      status: 'queued',
+    });
+    documents.push({
+      _id: 'indexed-1',
+      sourceId: created.source.id,
+      externalDocumentId: 'file-2',
+      partitionSubject: 'Team:org',
+      status: 'indexed',
+    });
+    await api.disableSource(created.source.id, { platformAdmin: true });
+    assert.deepEqual(cancelled, [created.source.id]);
+    assert.equal(documents.find(doc => doc._id === 'queued-1')?.status, 'skipped');
+    assert.equal(documents.find(doc => doc._id === 'indexed-1')?.status, 'indexed');
+    const enabled = await api.enableSource(created.source.id, { platformAdmin: true });
+    assert.equal(enabled.source.state, 'ready');
+    assert.equal(reconciled.includes(created.source.id), true);
+    await api.revokeSource(created.source.id, { platformAdmin: true });
+    await assert.rejects(
+      () => api.enableSource(created.source.id, { platformAdmin: true }),
+      (err: unknown) =>
+        err instanceof GrpcError && err.code === status.FAILED_PRECONDITION,
+    );
+    await assert.rejects(
+      () =>
+        api.search(
+          { sourceId: 'missing', text: 'hello', userId: 'owner' },
+          { callerModule: 'router' },
+        ),
+      (err: unknown) => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+    );
+    await assert.rejects(
+      () =>
+        api.search(
+          { sourceId: created.source.id, text: 'hello', userId: 'stranger' },
+          { callerModule: 'router' },
+        ),
+      (err: unknown) => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+    );
+  });
+
+  it('queues reconcile when storage selectors change and recovers document create races', async () => {
+    const reconciled: string[] = [];
+    let throwOnce = true;
+    const { api, documents, embeddings } = createGeneric({
+      onStorageSourceReady: async sourceId => {
+        reconciled.push(sourceId);
+      },
+      throwOnDocumentCreate: () => throwOnce,
+    });
+    const created = await api.upsertSource(
+      {
+        kind: 'conduit-storage',
+        partitionSubject: 'Team:org',
+        selectors: JSON.stringify({ container: 'docs' }),
+      },
+      { platformAdmin: true },
+    );
+    documents.push({
+      _id: 'raced',
+      sourceId: created.source.id,
+      externalDocumentId: 'ext-race',
+      partitionSubject: 'Team:org',
+      status: 'pending',
+    });
+    const synced = await api.syncDocument(
+      {
+        sourceId: created.source.id,
+        externalDocumentId: 'ext-race',
+        chunks: [{ chunkKey: 'c1', ordinal: 0, text: 'hello' }],
+      },
+      { callerModule: 'database' },
+    );
+    throwOnce = false;
+    assert.equal(synced.documentId, 'raced');
+    const updated = await api.updateSource(
+      {
+        id: created.source.id,
+        selectors: JSON.stringify({ container: 'docs', folderPrefix: 'inbox/' }),
+      },
+      { platformAdmin: true },
+    );
+    assert.equal(reconciled.includes(created.source.id), true);
+    assert.equal(
+      updated.warnings.some(warning => /reconcile/.test(warning)),
+      true,
+    );
+    await assert.rejects(
+      () => embeddings.reconcileSource(created.source.id, { callerModule: 'embeddings' }),
+      (err: unknown) => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+    );
+    const reconcileResult = await embeddings.reconcileSource(created.source.id, {
+      platformAdmin: true,
+    });
+    assert.equal(reconcileResult.queued, 1);
   });
 });

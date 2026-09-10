@@ -43,7 +43,11 @@ function matches(doc: object, query: Record<string, unknown>) {
   });
 }
 
-function createHarness(args?: { sourceState?: EmbeddingSourceRecord['state'] }) {
+function createHarness(args?: {
+  sourceState?: EmbeddingSourceRecord['state'];
+  extraSources?: EmbeddingSourceRecord[];
+  canReadFile?: (fileId: string, subject: string) => Promise<boolean>;
+}) {
   const sources: EmbeddingSourceRecord[] = [
     {
       _id: 'src-storage',
@@ -56,6 +60,7 @@ function createHarness(args?: { sourceState?: EmbeddingSourceRecord['state'] }) 
       similarity: 'cosine',
       selectors: { container: 'docs', folderPrefix: 'inbox/', mimeTypes: ['text/plain'] },
     },
+    ...(args?.extraSources ?? []),
   ];
   const documents: EmbeddingDocumentRecord[] = [];
   const files: StorageFileRecord[] = [];
@@ -74,6 +79,8 @@ function createHarness(args?: { sourceState?: EmbeddingSourceRecord['state'] }) 
   const deletes: Array<{ externalDocumentId?: string }> = [];
   const byteReads: Array<{ id: string; maxBytes: number }> = [];
   const fileReads: string[] = [];
+  const scopes: Array<{ id: string; scope: string; bytes?: boolean }> = [];
+  let beforeBytes: (() => void) | undefined;
 
   const pipeline = new StorageExtractionPipeline({
     currentConfig: () => config,
@@ -105,12 +112,15 @@ function createHarness(args?: { sourceState?: EmbeddingSourceRecord['state'] }) 
       const sorted = [...matched].sort((a, b) => a._id.localeCompare(b._id));
       return sorted.slice(0, options?.limit ?? sorted.length);
     },
-    getFile: async id => {
+    getFile: async (id, options) => {
       fileReads.push(id);
+      if (options?.scope) scopes.push({ id, scope: options.scope });
       return files.find(file => file._id === id) ?? null;
     },
-    getFileBytes: async (id, maxBytes) => {
+    getFileBytes: async (id, maxBytes, options) => {
+      beforeBytes?.();
       byteReads.push({ id, maxBytes });
+      if (options?.scope) scopes.push({ id, scope: options.scope, bytes: true });
       const file = files.find(item => item._id === id);
       if (!file) throw new Error('missing file');
       return {
@@ -121,6 +131,7 @@ function createHarness(args?: { sourceState?: EmbeddingSourceRecord['state'] }) 
         name: file.name,
       };
     },
+    canReadFile: args?.canReadFile ?? (async () => true),
     enqueue: async queued => {
       jobs.push(...queued);
       return queued.length;
@@ -197,6 +208,10 @@ function createHarness(args?: { sourceState?: EmbeddingSourceRecord['state'] }) 
     deletes,
     byteReads,
     fileReads,
+    scopes,
+    beforeBytes: (fn: () => void) => {
+      beforeBytes = fn;
+    },
   };
 }
 
@@ -527,5 +542,84 @@ describe('storage extraction pipeline', () => {
       reason: 'delete',
     });
     assert.equal(harness.deletes.length, 1);
+  });
+
+  it('does not cross-index a shared container for an unauthorized tenant', async () => {
+    const harness = createHarness({
+      extraSources: [
+        {
+          _id: 'src-other',
+          kind: 'conduit-storage',
+          state: 'ready',
+          partitionSubject: 'Team:tenant-b',
+          provider: 'openai-compatible',
+          modelName: 'text-embedding-3-small',
+          dimensions: 3,
+          similarity: 'cosine',
+          selectors: { container: 'docs' },
+        },
+      ],
+      canReadFile: async (fileId, subject) =>
+        fileId === 'file-shared' && subject === 'Team:tenant-a',
+    });
+    harness.sources[0].selectors = { container: 'docs' };
+    const queued = await harness.pipeline.handleBusEvent(
+      FILE_LIFECYCLE_EVENTS.ready,
+      JSON.stringify({
+        id: 'file-shared',
+        container: 'docs',
+        folder: '/',
+        mimeType: 'text/plain',
+        contentVersion: 'v1',
+      }),
+    );
+    assert.equal(queued, 1);
+    assert.deepEqual(
+      harness.jobs.map(job => job.sourceId),
+      ['src-storage'],
+    );
+    harness.files.push({
+      _id: 'file-shared',
+      container: 'docs',
+      folder: '/',
+      mimeType: 'text/plain',
+      contentVersion: 'v1',
+    });
+    const other = await harness.pipeline.reconcileSource('src-other', {
+      callerModule: 'embeddings',
+    });
+    assert.equal(other.queued, 0);
+  });
+
+  it('preserves an indexed document when disable races an in-flight extract', async () => {
+    const harness = createHarness();
+    harness.files.push({
+      _id: 'file-1',
+      container: 'docs',
+      folder: 'inbox/',
+      mimeType: 'text/plain',
+      contentVersion: 'v2',
+      body: 'replacement',
+    } as StorageFileRecord & { body: string });
+    harness.documents.push({
+      _id: 'doc-1',
+      sourceId: 'src-storage',
+      externalDocumentId: 'file-1',
+      contentVersion: 'v1',
+      partitionSubject: 'Team:tenant-a',
+      status: 'indexed',
+    });
+    harness.beforeBytes(() => {
+      harness.sources[0].state = 'disabled';
+    });
+    await harness.pipeline.processJob({
+      kind: 'ingest',
+      sourceId: 'src-storage',
+      fileId: 'file-1',
+      reason: 'update',
+    });
+    assert.equal(harness.documents[0].status, 'indexed');
+    assert.equal(harness.documents[0].contentVersion, 'v1');
+    assert.equal(harness.syncs.length, 0);
   });
 });

@@ -1,5 +1,6 @@
 import {
   GrpcError,
+  VectorIndexMethod,
   VectorIndexStatus,
   VectorSimilarity,
 } from '@conduitplatform/grpc-sdk';
@@ -8,6 +9,7 @@ import type { Config } from '../config/index.js';
 import {
   EMBEDDING_DOCUMENT_SCHEMA,
   EMBEDDING_SOURCE_SCHEMA,
+  CHUNK_FILTER_FIELDS,
   CHUNK_VECTOR_FIELD,
   assertVectorProfile,
   ensureProfileChunkSchema,
@@ -37,6 +39,7 @@ import {
   assertXorTextOrVector,
   assertBoundedBytes,
   classifyIngestError,
+  createOrResolveDuplicate,
   documentResource,
   hashChunkContent,
   ingestErrorMessage,
@@ -54,6 +57,7 @@ import {
   isEmbeddingVectorIndexQueryable,
   type VectorIndexGate,
 } from '../utils/backfillGates.js';
+import { selectEmbeddingVectorIndex } from '../utils/configChange.js';
 import { clampClientSearchLimit } from '../utils/clientSearchContext.js';
 import { parseJsonObject, toIsoString } from '../utils/protoMappers.js';
 import {
@@ -216,6 +220,7 @@ export interface GenericSourceApiDeps {
     subject?: string;
   }) => Promise<unknown>;
   onStorageSourceReady?: (sourceId: string) => Promise<void> | void;
+  cancelStorageJobs?: (sourceId: string) => Promise<number>;
   storageAvailable?: () => boolean;
   getStorageQueue?: () => Promise<{
     waiting: number;
@@ -399,7 +404,17 @@ export class GenericSourceApi {
     }
     const updated =
       (await this.deps.sources.findByIdAndUpdate(existing._id, patch)) ?? existing;
-    return { source: mapEmbeddingSource(updated), warnings: [] };
+    const warnings: string[] = [];
+    if (
+      request.selectors !== undefined &&
+      existing.kind === 'conduit-storage' &&
+      updated.state === 'ready' &&
+      JSON.stringify(existing.selectors ?? {}) !== JSON.stringify(updated.selectors ?? {})
+    ) {
+      await this.deps.onStorageSourceReady?.(updated._id);
+      warnings.push('Selector change queued a Storage reconcile');
+    }
+    return { source: mapEmbeddingSource(updated), warnings };
   }
 
   async getSources(
@@ -462,6 +477,11 @@ export class GenericSourceApi {
         storageAvailable: this.deps.storageAvailable?.(),
       }),
     );
+    if (counts.indexedCount > 0 && counts.queuedCount + counts.extractingCount > 0) {
+      warnings.push(
+        `${counts.queuedCount + counts.extractingCount} document(s) are replacing previously indexed content`,
+      );
+    }
     return {
       source: mapEmbeddingSource(source),
       ready,
@@ -483,7 +503,31 @@ export class GenericSourceApi {
       ...source,
       state: 'disabled' as const,
     };
+    await this.deps.cancelStorageJobs?.(source._id);
+    await this.resolveActiveDocuments(source._id, 'skipped');
     return mapEmbeddingSource(updated);
+  }
+
+  async enableSource(
+    id: string,
+    caller: GenericSourceCaller,
+  ): Promise<{ source: MappedEmbeddingSource; warnings: string[] }> {
+    assertCanManageSources(caller);
+    const source = await this.requireSource(id);
+    if (source.state !== 'disabled') {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'Only disabled embedding sources can be enabled',
+      );
+    }
+    const pending = (await this.deps.sources.findByIdAndUpdate(source._id, {
+      state: 'pending',
+    })) ?? { ...source, state: 'pending' as const };
+    const { source: provisioned, warnings } = await this.provisionSourceIndex(pending);
+    if (provisioned.kind === 'conduit-storage' && provisioned.state === 'ready') {
+      await this.deps.onStorageSourceReady?.(provisioned._id);
+    }
+    return { source: mapEmbeddingSource(provisioned), warnings };
   }
 
   async revokeSource(
@@ -499,6 +543,8 @@ export class GenericSourceApi {
       ...source,
       state: 'revoked' as const,
     };
+    await this.deps.cancelStorageJobs?.(source._id);
+    await this.resolveActiveDocuments(source._id, 'skipped');
     return mapEmbeddingSource(updated);
   }
 
@@ -506,6 +552,7 @@ export class GenericSourceApi {
     assertCanManageSources(caller);
     const source = await this.requireSource(id);
     await this.deps.sources.findByIdAndUpdate(source._id, { state: 'revoked' });
+    await this.deps.cancelStorageJobs?.(source._id);
     await this.purgeRelations(source);
     const documents = await this.deps.documents.findMany({ sourceId: source._id });
     const existingChunks = source.chunkSchemaName
@@ -617,19 +664,27 @@ export class GenericSourceApi {
     }
     const document =
       existing ??
-      (await this.deps.documents.create({
-        sourceId: source._id,
-        externalDocumentId,
-        contentVersion: request.contentVersion,
-        etag: request.etag,
-        metadata,
-        storageFileId,
-        connectorReference,
-        mimeType: request.mimeType,
-        container: request.container,
-        folder: request.folder,
-        partitionSubject: source.partitionSubject,
-        status: 'pending',
+      (await createOrResolveDuplicate({
+        create: () =>
+          this.deps.documents.create({
+            sourceId: source._id,
+            externalDocumentId,
+            contentVersion: request.contentVersion,
+            etag: request.etag,
+            metadata,
+            storageFileId,
+            connectorReference,
+            mimeType: request.mimeType,
+            container: request.container,
+            folder: request.folder,
+            partitionSubject: source.partitionSubject,
+            status: 'pending',
+          }),
+        findExisting: () =>
+          this.deps.documents.findOne({
+            sourceId: source._id,
+            externalDocumentId,
+          }),
       }));
     await this.createOwnedRelation(
       documentResource(document._id),
@@ -734,14 +789,6 @@ export class GenericSourceApi {
     },
     caller: GenericSourceCaller,
   ) {
-    const source = await this.requireSource(request.sourceId);
-    assertSourceSearchable(source.state);
-    if (!source.chunkSchemaName) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        `Embedding source '${source._id}' has no chunk index`,
-      );
-    }
     assertClientSourceSearchRequest({
       queryVector: request.queryVector,
       adminOperator: request.adminOperator,
@@ -753,36 +800,19 @@ export class GenericSourceApi {
           requested: request.adminOperator,
           callerModule: caller.callerModule,
         });
+    const source = await this.authorizeSourceSearch(
+      request.sourceId,
+      request.userId,
+      request.scope,
+      adminOperator,
+    );
     assertSemanticSearchAccess({
       userId: request.userId,
-      scope: request.scope,
+      scope: request.scope ?? source.partitionSubject,
       adminOperator,
     });
-    if (!adminOperator && !request.userId) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Source search requires an authenticated user to authorize parent documents',
-      );
-    }
-    if (request.scope && request.scope !== source.partitionSubject) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Requested scope does not match the source partition',
-      );
-    }
-    if (request.scope && request.userId && !adminOperator) {
-      const allowed = await this.deps.can?.({
-        subject: userSubject(request.userId),
-        actions: ['read'],
-        resource: request.scope,
-      });
-      if (!allowed?.allow) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'Authenticated user cannot read the requested scope',
-        );
-      }
-    }
+    const boundScope = source.partitionSubject;
+    const chunkSchemaName = source.chunkSchemaName!;
     const profile = assertVectorProfile(source);
     const text = request.text?.trim() ?? '';
     const hasText = text.length > 0;
@@ -808,13 +838,18 @@ export class GenericSourceApi {
         ? Math.min(request.limit ?? 10, limits.sourceSearchMaxLimit)
         : (clampClientSearchLimit(request.limit) ?? 10);
     const [capabilities, indexes] = await Promise.all([
-      this.deps.getVectorCapabilities(source.chunkSchemaName),
-      this.deps.getVectorIndexes(source.chunkSchemaName),
+      this.deps.getVectorCapabilities(chunkSchemaName),
+      this.deps.getVectorIndexes(chunkSchemaName),
     ]);
     if (!capabilities.search) {
       throw new GrpcError(status.FAILED_PRECONDITION, 'Vector search is unavailable');
     }
-    const index = indexes.find(item => item.field === CHUNK_VECTOR_FIELD);
+    const index = selectEmbeddingVectorIndex(indexes, CHUNK_VECTOR_FIELD, {
+      dimensions: source.dimensions,
+      similarity: source.similarity,
+      method: VectorIndexMethod.HNSW,
+      filterFields: CHUNK_FILTER_FIELDS,
+    });
     if (!isEmbeddingVectorIndexQueryable(index)) {
       throw new GrpcError(
         status.FAILED_PRECONDITION,
@@ -822,13 +857,13 @@ export class GenericSourceApi {
       );
     }
     const results = await this.deps.vectorSearch({
-      schemaName: source.chunkSchemaName,
+      schemaName: chunkSchemaName,
       field: CHUNK_VECTOR_FIELD,
       vector,
       filter,
       limit,
       userId: request.userId,
-      scope: request.scope,
+      scope: adminOperator ? request.scope : boundScope,
       adminOperator,
     });
     const candidateIds = [
@@ -854,7 +889,7 @@ export class GenericSourceApi {
       const allowed = await this.authorizeDocument({
         documentId,
         userId: request.userId,
-        scope: request.scope,
+        scope: adminOperator ? request.scope : boundScope,
         adminOperator,
         cache: authorized,
       });
@@ -954,7 +989,12 @@ export class GenericSourceApi {
       );
       const indexes = await this.deps.getVectorIndexes(backing.schemaName);
       const queryable = isEmbeddingVectorIndexQueryable(
-        indexes.find(index => index.field === CHUNK_VECTOR_FIELD),
+        selectEmbeddingVectorIndex(indexes, CHUNK_VECTOR_FIELD, {
+          dimensions: source.dimensions,
+          similarity: source.similarity,
+          method: VectorIndexMethod.HNSW,
+          filterFields: CHUNK_FILTER_FIELDS,
+        }),
       );
       const indexStatus = queryable ? VectorIndexStatus.Ready : VectorIndexStatus.Pending;
       const state: EmbeddingSourceState =
@@ -1055,7 +1095,16 @@ export class GenericSourceApi {
   }
 
   private async documentStatusCounts(sourceId: string) {
-    const documents = await this.deps.documents.findMany({ sourceId });
+    const statuses = [
+      'pending',
+      'queued',
+      'extracting',
+      'indexed',
+      'skipped',
+      'failed',
+      'stale',
+      'deleted',
+    ] as const;
     const counts = {
       pendingCount: 0,
       queuedCount: 0,
@@ -1066,39 +1115,83 @@ export class GenericSourceApi {
       staleCount: 0,
       deletedCount: 0,
     };
-    for (const document of documents) {
-      switch (document.status) {
-        case 'pending':
-          counts.pendingCount += 1;
-          break;
-        case 'queued':
-          counts.queuedCount += 1;
-          break;
-        case 'extracting':
-          counts.extractingCount += 1;
-          break;
-        case 'indexed':
-          counts.indexedCount += 1;
-          break;
-        case 'skipped':
-          counts.skippedCount += 1;
-          break;
-        case 'failed':
-          counts.failedCount += 1;
-          break;
-        case 'stale':
-          counts.staleCount += 1;
-          break;
-        case 'deleted':
-          counts.deletedCount += 1;
-          break;
-        default: {
-          const _never: never = document.status;
-          void _never;
-        }
-      }
-    }
+    await Promise.all(
+      statuses.map(async status => {
+        counts[`${status}Count`] = await this.deps.documents.countDocuments({
+          sourceId,
+          status,
+        });
+      }),
+    );
     return counts;
+  }
+
+  private async resolveActiveDocuments(
+    sourceId: string,
+    status: 'skipped' | 'stale',
+  ): Promise<void> {
+    const active = await this.deps.documents.findMany({
+      sourceId,
+      status: { $in: ['queued', 'extracting', 'pending'] },
+    });
+    await Promise.all(
+      active.map(document =>
+        this.deps.documents.findByIdAndUpdate(document._id, { status }),
+      ),
+    );
+  }
+
+  private async authorizeSourceSearch(
+    sourceId: string,
+    userId: string | undefined,
+    requestedScope: string | undefined,
+    adminOperator: boolean,
+  ): Promise<EmbeddingSourceRecord> {
+    const unavailable = () =>
+      new GrpcError(status.PERMISSION_DENIED, 'Embedding source is not available');
+    const source = await this.deps.sources.findOne({ _id: sourceId });
+    if (adminOperator) {
+      if (!source) {
+        throw new GrpcError(
+          status.NOT_FOUND,
+          `Embedding source '${sourceId}' was not found`,
+        );
+      }
+      assertSourceSearchable(source.state);
+      if (!source.chunkSchemaName) {
+        throw new GrpcError(
+          status.FAILED_PRECONDITION,
+          `Embedding source '${source._id}' has no chunk index`,
+        );
+      }
+      if (requestedScope && requestedScope !== source.partitionSubject) {
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          'Requested scope does not match the source partition',
+        );
+      }
+      return source;
+    }
+    if (!userId) throw unavailable();
+    const allowed = source
+      ? await this.deps.can?.({
+          subject: userSubject(userId),
+          actions: ['read'],
+          resource: resourceRef(EMBEDDING_SOURCE_SCHEMA, source._id),
+        })
+      : undefined;
+    if (
+      !source ||
+      allowed?.allow !== true ||
+      source.state !== 'ready' ||
+      !source.chunkSchemaName
+    ) {
+      throw unavailable();
+    }
+    if (requestedScope && requestedScope !== source.partitionSubject) {
+      throw unavailable();
+    }
+    return source;
   }
 
   private async createOwnedRelation(resource: string, subject: string) {

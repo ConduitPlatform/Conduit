@@ -56,6 +56,7 @@ import {
 } from './utils/backfillExecution.js';
 import { toBackfillCountUpdateQuery } from './utils/backfillRun.js';
 import { incrementEmbeddingMetric } from './utils/embeddingMetrics.js';
+import { upsertUniqueRecord } from './utils/genericIngest.js';
 import metricsSchema from './metrics/index.js';
 import { EmbeddingsApi, type DeclaredSchemaInfo } from './api/embeddingsApi.js';
 import { AdminHandlers } from './admin/index.js';
@@ -133,6 +134,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       getSource: this.getSource.bind(this),
       getSourceStatus: this.getSourceStatus.bind(this),
       disableSource: this.disableSource.bind(this),
+      enableSource: this.enableSource.bind(this),
       revokeSource: this.revokeSource.bind(this),
       purgeSource: this.purgeSource.bind(this),
       syncDocument: this.syncDocument.bind(this),
@@ -424,6 +426,20 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     }
   }
 
+  async enableSource(
+    call: GrpcRequest<SourceMutationRequest>,
+    callback: GrpcResponse<UpsertSourceResponse>,
+  ) {
+    try {
+      callback(
+        null,
+        await this.requireGeneric().enableSource(call.request.id, this.caller(call)),
+      );
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
   async revokeSource(
     call: GrpcRequest<SourceMutationRequest>,
     callback: GrpcResponse<EmbeddingSourceMessage>,
@@ -485,13 +501,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     callback: GrpcResponse<ReconcileSourceResponse>,
   ) {
     try {
-      callback(
-        null,
-        await this.ensureStoragePipeline().reconcileSource(
-          call.request.id,
-          this.caller(call),
-        ),
-      );
+      callback(null, await this.api.reconcileSource(call.request.id, this.caller(call)));
     } catch (err) {
       callback(this.api.mapGrpcError(err));
     }
@@ -599,15 +609,15 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
             this.database.findMany(schemaName, query as never),
           upsertMany: async (schemaName, docs) => {
             for (const doc of docs) {
-              const existing = await this.database.findOne<{ _id?: string }>(schemaName, {
-                documentId: doc.documentId,
-                chunkKey: doc.chunkKey,
-              } as never);
-              if (existing?._id) {
-                await this.database.findByIdAndUpdate(schemaName, existing._id, doc);
-              } else {
-                await this.database.create(schemaName, doc);
-              }
+              await upsertUniqueRecord({
+                findExisting: () =>
+                  this.database.findOne<{ _id?: string }>(schemaName, {
+                    documentId: doc.documentId,
+                    chunkKey: doc.chunkKey,
+                  } as never),
+                update: id => this.database.findByIdAndUpdate(schemaName, id, doc),
+                create: () => this.database.create(schemaName, doc),
+              });
             }
           },
           deleteMany: (schemaName, query) =>
@@ -644,6 +654,8 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
           this.ensureStoragePipeline()
             .reconcileSource(sourceId, { callerModule: 'embeddings' })
             .then(() => undefined),
+        cancelStorageJobs: sourceId =>
+          this.queueController.cancelStorageJobsForSource(sourceId),
         storageAvailable: () => Boolean(this.grpcSdk.storage),
         getStorageQueue: async () =>
           (await this.queueController.getQueueStatus()).storage,
@@ -765,9 +777,11 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
           sort: options?.sort as { [field: string]: 1 | -1 } | undefined,
           select: fileSelect,
         }),
-      getFile: async id => {
+      getFile: async (id, options) => {
         if (!this.grpcSdk.storage) return null;
-        const file = await this.grpcSdk.storage.getFile(id);
+        const file = await this.grpcSdk.storage.getFile(id, {
+          scope: options?.scope,
+        });
         return {
           _id: file.id,
           name: file.name,
@@ -779,16 +793,26 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
           contentVersion: file.contentVersion,
         };
       },
-      getFileBytes: async (id, maxBytes) => {
+      getFileBytes: async (id, maxBytes, options) => {
         if (!this.grpcSdk.storage) {
           throw new Error('Storage module is not available');
         }
-        const result = await this.grpcSdk.storage.getFileBytes(id, maxBytes);
+        const result = await this.grpcSdk.storage.getFileBytes(id, maxBytes, {
+          scope: options?.scope,
+        });
         return {
           data: Buffer.from(result.data),
           mimeType: result.mimeType,
           name: result.name,
         };
+      },
+      canReadFile: async (fileId, subject) => {
+        const decision = await this.grpcSdk.authorization?.can({
+          subject,
+          actions: ['read'],
+          resource: `File:${fileId}`,
+        });
+        return decision?.allow === true;
       },
       enqueue: jobs =>
         this.queueController.addStorageJobs(

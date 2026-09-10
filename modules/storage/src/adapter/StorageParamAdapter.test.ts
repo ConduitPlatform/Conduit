@@ -49,6 +49,24 @@ describe('StorageParamAdapter.getFileByUrlResponse', () => {
     assert.equal(response.fileUrl, '');
     assert.equal(response.uri, '/storage/getFileUrl/file-3');
   });
+
+  it('includes uploadStatus, contentVersion, and size on presigned responses', () => {
+    const response = adapter.getFileByUrlResponse({
+      url: 'https://uploads.example/presign',
+      file: {
+        _id: 'file-4',
+        url: '',
+        uri: '/storage/getFileUrl/file-4',
+        name: 'pending.txt',
+        uploadStatus: 'pending',
+        contentVersion: undefined,
+        size: 12,
+      },
+    });
+    assert.equal(response.uploadStatus, 'pending');
+    assert.equal(response.size, 12);
+    assert.equal(response.contentVersion, undefined);
+  });
 });
 
 describe('StorageParamAdapter.getFileResponse', () => {

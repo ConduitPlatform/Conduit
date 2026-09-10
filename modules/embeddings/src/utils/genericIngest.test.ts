@@ -14,6 +14,9 @@ import {
   parseBoundedObject,
   sanitizeSourceSearchDocument,
   sourceSearchFilter,
+  createOrResolveDuplicate,
+  isDuplicateKeyError,
+  upsertUniqueRecord,
 } from './genericIngest.js';
 import { toPersistedChunk } from './genericSource.js';
 
@@ -90,7 +93,7 @@ describe('generic ingest validation', () => {
     const filter = sourceSearchFilter({
       sourceId: 'src1',
       partitionSubject: 'Team:org',
-      extra: { mimeType: 'text/plain', status: 'indexed' },
+      extra: { mimeType: 'text/plain' },
     });
     assert.deepEqual(filter, {
       sourceId: 'src1',
@@ -98,6 +101,15 @@ describe('generic ingest validation', () => {
       status: 'indexed',
       mimeType: 'text/plain',
     });
+    assert.throws(
+      () =>
+        sourceSearchFilter({
+          sourceId: 'src1',
+          partitionSubject: 'Team:org',
+          extra: { status: 'failed' },
+        }),
+      (err: unknown) => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
+    );
     assert.throws(
       () =>
         sourceSearchFilter({
@@ -185,5 +197,35 @@ describe('generic ingest validation', () => {
       ),
       /sk-secret|file-1/,
     );
+  });
+
+  it('treats duplicate-key races as idempotent creates', async () => {
+    const duplicate = Object.assign(new Error('E11000 duplicate key error'), {
+      code: 11000,
+    });
+    assert.equal(isDuplicateKeyError(duplicate), true);
+    assert.equal(isDuplicateKeyError(new Error('timeout')), false);
+    const created = await createOrResolveDuplicate({
+      create: async () => {
+        throw duplicate;
+      },
+      findExisting: async () => ({ _id: 'existing' }),
+    });
+    assert.equal(created._id, 'existing');
+    const updates: string[] = [];
+    let attempts = 0;
+    await upsertUniqueRecord({
+      findExisting: async () => {
+        attempts += 1;
+        return attempts === 1 ? null : { _id: 'raced' };
+      },
+      create: async () => {
+        throw duplicate;
+      },
+      update: async id => {
+        updates.push(id);
+      },
+    });
+    assert.deepEqual(updates, ['raced']);
   });
 });

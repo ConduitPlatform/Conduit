@@ -49,6 +49,7 @@ function memoryStore(): ChunkSchemaStore & {
     name?: string;
     dimensions?: number;
     similarity?: string;
+    filterFields?: readonly string[];
   }>;
 } {
   const schemas: ConduitSchema[] = [];
@@ -58,6 +59,7 @@ function memoryStore(): ChunkSchemaStore & {
     name?: string;
     dimensions?: number;
     similarity?: string;
+    filterFields?: readonly string[];
   }> = [];
   return {
     schemas,
@@ -75,6 +77,7 @@ function memoryStore(): ChunkSchemaStore & {
         name: index.name,
         dimensions: index.dimensions,
         similarity: index.similarity,
+        filterFields: index.filterFields,
       });
     },
   };
@@ -185,6 +188,25 @@ describe('generic embedding source contracts', () => {
     assert.equal(store.indexes[0].similarity, VectorSimilarity.Cosine);
     assert.equal(store.indexes[0].name, 'embedding_vector');
     assert.equal(chunkVectorIndexDefinition(smallProfile).method, VectorIndexMethod.HNSW);
+  });
+
+  it('recreates a profile index when live filter fields are incomplete', async () => {
+    const store = memoryStore();
+    store.indexes.push({
+      schemaName: chunkSchemaNameForProfile(smallProfile),
+      field: CHUNK_VECTOR_FIELD,
+      name: 'embedding_vector',
+      dimensions: 1536,
+      similarity: VectorSimilarity.Cosine,
+      filterFields: ['sourceId'],
+    });
+    const state = await ensureProfileChunkSchema(store, smallProfile);
+    assert.equal(state.created, true);
+    assert.equal(state.indexName, 'embedding_vector_v2');
+    assert.equal(
+      store.indexes.filter(index => index.schemaName === state.schemaName).length,
+      2,
+    );
   });
 
   it('reconciles existing sources onto profile-isolated backing indexes', async () => {

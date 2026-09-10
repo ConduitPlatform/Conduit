@@ -45,6 +45,7 @@ describe('embeddings MCP tool names', () => {
       'patch_embeddings_sources_id',
       'delete_embeddings_sources_id',
       'post_embeddings_sources_id_disable',
+      'post_embeddings_sources_id_enable',
       'post_embeddings_sources_id_revoke',
       'get_embeddings_sources_id_status',
       'post_embeddings_sources_id_reconcile',
