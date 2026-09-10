@@ -44,6 +44,19 @@ export interface StorageFileRecord {
   contentVersion?: string;
 }
 
+export const STORAGE_FILE_LIST_FIELDS = [
+  '_id',
+  'name',
+  'container',
+  'folder',
+  'mimeType',
+  'size',
+  'uploadStatus',
+  'contentVersion',
+] as const;
+
+export const STORAGE_FILE_LIST_SELECT = STORAGE_FILE_LIST_FIELDS.join(' ');
+
 export interface StoragePipelineDeps {
   currentConfig: () => Config;
   sources: {

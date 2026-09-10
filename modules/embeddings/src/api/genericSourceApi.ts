@@ -364,9 +364,7 @@ export class GenericSourceApi {
       partitionSubject,
     );
     const { source, warnings } = await this.provisionSourceIndex(created);
-    if (source.kind === 'conduit-storage' && source.state === 'ready') {
-      await this.deps.onStorageSourceReady?.(source._id);
-    }
+    await this.queueStorageReconcile(source, warnings);
     return { source: mapEmbeddingSource(source), warnings };
   }
 
@@ -417,8 +415,11 @@ export class GenericSourceApi {
       updated.state === 'ready' &&
       JSON.stringify(existing.selectors ?? {}) !== JSON.stringify(updated.selectors ?? {})
     ) {
-      await this.deps.onStorageSourceReady?.(updated._id);
-      warnings.push('Selector change queued a Storage reconcile');
+      await this.queueStorageReconcile(
+        updated,
+        warnings,
+        'Selector change queued a Storage reconcile',
+      );
     }
     return { source: mapEmbeddingSource(updated), warnings };
   }
@@ -547,9 +548,7 @@ export class GenericSourceApi {
       state: 'pending',
     })) ?? { ...source, state: 'pending' as const };
     const { source: provisioned, warnings } = await this.provisionSourceIndex(pending);
-    if (provisioned.kind === 'conduit-storage' && provisioned.state === 'ready') {
-      await this.deps.onStorageSourceReady?.(provisioned._id);
-    }
+    await this.queueStorageReconcile(provisioned, warnings);
     return { source: mapEmbeddingSource(provisioned), warnings };
   }
 
@@ -1008,6 +1007,20 @@ export class GenericSourceApi {
       throw new GrpcError(status.NOT_FOUND, `Embedding source '${id}' was not found`);
     }
     return source;
+  }
+
+  private async queueStorageReconcile(
+    source: EmbeddingSourceRecord,
+    warnings: string[],
+    queuedWarning?: string,
+  ): Promise<void> {
+    if (source.kind !== 'conduit-storage' || source.state !== 'ready') return;
+    try {
+      await this.deps.onStorageSourceReady?.(source._id);
+      if (queuedWarning) warnings.push(queuedWarning);
+    } catch (err) {
+      warnings.push(`Storage reconcile enqueue failed: ${sanitizeErrorMessage(err)}`);
+    }
   }
 
   private async provisionSourceIndex(source: EmbeddingSourceRecord): Promise<{

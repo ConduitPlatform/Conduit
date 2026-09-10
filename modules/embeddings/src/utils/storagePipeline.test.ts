@@ -9,7 +9,12 @@ import type {
   GenericSourceApi,
 } from '../api/genericSourceApi.js';
 import { FILE_LIFECYCLE_EVENTS } from './storageEventNames.js';
-import { StorageExtractionPipeline, type StorageFileRecord } from './storagePipeline.js';
+import {
+  STORAGE_FILE_LIST_FIELDS,
+  STORAGE_FILE_LIST_SELECT,
+  StorageExtractionPipeline,
+  type StorageFileRecord,
+} from './storagePipeline.js';
 import { EMBEDDING_METRICS } from './embeddingMetrics.js';
 import type { StorageAuthorizationState } from './storageAuthorization.js';
 
@@ -222,6 +227,33 @@ function createHarness(args?: {
     },
   };
 }
+
+describe('storage file list select', () => {
+  it('uses whitespace-separated fields and omits internal URL columns', () => {
+    assert.equal(STORAGE_FILE_LIST_SELECT.includes(','), false);
+    assert.deepEqual(
+      [...STORAGE_FILE_LIST_FIELDS],
+      STORAGE_FILE_LIST_SELECT.split(/\s+/),
+    );
+    assert.deepEqual(
+      [...STORAGE_FILE_LIST_FIELDS],
+      [
+        '_id',
+        'name',
+        'container',
+        'folder',
+        'mimeType',
+        'size',
+        'uploadStatus',
+        'contentVersion',
+      ],
+    );
+    const selected = new Set<string>(STORAGE_FILE_LIST_FIELDS);
+    for (const field of ['url', 'uri', 'sourceUrl']) {
+      assert.equal(selected.has(field), false);
+    }
+  });
+});
 
 describe('storage extraction pipeline', () => {
   it('enqueues only matching ready files and ignores pending', async () => {

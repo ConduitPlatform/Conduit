@@ -884,6 +884,51 @@ describe('generic embedding source API', () => {
     assert.equal(reconcileResult.queued, 1);
   });
 
+  it('keeps persisted storage sources ready when post-create reconcile enqueue fails', async () => {
+    const { api } = createGeneric({
+      onStorageSourceReady: async () => {
+        throw new Error('column "url=https://files.example/secret" does not exist');
+      },
+    });
+    const created = await api.upsertSource(
+      {
+        kind: 'conduit-storage',
+        partitionSubject: 'Team:org',
+        selectors: JSON.stringify({ container: 'docs' }),
+      },
+      { platformAdmin: true },
+    );
+    assert.equal(created.source.state, 'ready');
+    assert.equal(
+      created.warnings.some(warning => /Storage reconcile enqueue failed/.test(warning)),
+      true,
+    );
+    assert.equal(JSON.stringify(created.warnings).includes('files.example'), false);
+    await api.disableSource(created.source.id, { platformAdmin: true });
+    const enabled = await api.enableSource(created.source.id, { platformAdmin: true });
+    assert.equal(enabled.source.state, 'ready');
+    assert.equal(
+      enabled.warnings.some(warning => /Storage reconcile enqueue failed/.test(warning)),
+      true,
+    );
+    const updated = await api.updateSource(
+      {
+        id: created.source.id,
+        selectors: JSON.stringify({ container: 'docs', folderPrefix: 'inbox/' }),
+      },
+      { platformAdmin: true },
+    );
+    assert.equal(updated.source.state, 'ready');
+    assert.equal(
+      updated.warnings.some(warning => /Storage reconcile enqueue failed/.test(warning)),
+      true,
+    );
+    assert.equal(
+      updated.warnings.some(warning => /queued a Storage reconcile/.test(warning)),
+      false,
+    );
+  });
+
   it('persists optional container and folder locators on trusted ingest', async () => {
     const { api, documents } = createGeneric();
     const source = await readySource(api);

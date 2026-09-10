@@ -63,6 +63,7 @@ import { EmbeddingsApi, type DeclaredSchemaInfo } from './api/embeddingsApi.js';
 import { AdminHandlers } from './admin/index.js';
 import { EmbeddingsRoutes } from './routes/index.js';
 import {
+  STORAGE_FILE_LIST_SELECT,
   StorageExtractionPipeline,
   type StorageFileRecord,
 } from './utils/storagePipeline.js';
@@ -788,8 +789,6 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
   }
 
   private createStoragePipeline() {
-    const fileSelect =
-      '_id,name,container,folder,mimeType,size,uploadStatus,contentVersion';
     return new StorageExtractionPipeline({
       currentConfig: () => this.currentConfig(),
       sources: {
@@ -808,7 +807,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
           skip: options?.skip,
           limit: options?.limit,
           sort: options?.sort as { [field: string]: 1 | -1 } | undefined,
-          select: fileSelect,
+          select: STORAGE_FILE_LIST_SELECT,
         }),
       getFile: async (id, options) => {
         if (!this.grpcSdk.storage) return null;
