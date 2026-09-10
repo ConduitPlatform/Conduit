@@ -107,18 +107,14 @@ export class CronQueueController {
       this.cronWorker = undefined;
       this.workerLockDuration = 0;
     }
-    this.cronWorker = new Worker(
-      CRON_QUEUE_NAME,
-      job => this.executeCronJob(job),
-      {
-        concurrency: 1,
-        lockDuration,
-        maxStalledCount: 0,
-        removeOnComplete: { age: 3600, count: 1000 },
-        removeOnFail: { age: 24 * 3600 },
-        connection: this.redisConnection,
-      },
-    );
+    this.cronWorker = new Worker(CRON_QUEUE_NAME, job => this.executeCronJob(job), {
+      concurrency: 1,
+      lockDuration,
+      maxStalledCount: 0,
+      removeOnComplete: { age: 3600, count: 1000 },
+      removeOnFail: { age: 24 * 3600 },
+      connection: this.redisConnection,
+    });
     this.workerLockDuration = lockDuration;
     this.setupWorkerEventHandlers(this.cronWorker);
     if (!this.shouldSchedule()) {
