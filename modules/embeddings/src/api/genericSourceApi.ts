@@ -87,7 +87,7 @@ export interface EmbeddingSourceRecord {
   provider: string;
   modelName: string;
   dimensions: number;
-  similarity: string;
+  similarity: VectorSimilarity;
   selectors?: Record<string, unknown>;
   metadataAllowlist?: string[];
   syncCheckpoint?: Record<string, unknown>;
@@ -311,7 +311,7 @@ export class GenericSourceApi {
           provider: existing.provider,
           modelName: existing.modelName,
           dimensions: existing.dimensions,
-          similarity: existing.similarity as VectorSimilarity,
+          similarity: existing.similarity,
         },
         {
           kind: request.kind,
@@ -319,7 +319,7 @@ export class GenericSourceApi {
           provider: request.provider,
           modelName: request.model,
           dimensions: request.dimensions,
-          similarity: request.similarity as VectorSimilarity | undefined,
+          similarity: request.similarity,
         },
       );
       return this.updateSource(
@@ -913,7 +913,6 @@ export class GenericSourceApi {
       const allowed = await this.authorizeDocument({
         documentId,
         userId: request.userId,
-        scope: adminOperator ? request.scope : boundScope,
         adminOperator,
         cache: authorized,
       });
@@ -938,19 +937,18 @@ export class GenericSourceApi {
   private async authorizeDocument(args: {
     documentId: string;
     userId?: string;
-    scope?: string;
     adminOperator: boolean;
     cache: Map<string, boolean>;
   }): Promise<boolean> {
     if (args.adminOperator) return true;
-    if (args.cache.has(args.documentId)) return args.cache.get(args.documentId)!;
-    const resource = documentResource(args.documentId);
+    const cached = args.cache.get(args.documentId);
+    if (cached !== undefined) return cached;
     let allow = false;
     if (args.userId) {
       const decision = await this.deps.can?.({
         subject: userSubject(args.userId),
         actions: ['read'],
-        resource,
+        resource: documentResource(args.documentId),
       });
       allow = decision?.allow === true;
     }
@@ -1081,7 +1079,8 @@ export class GenericSourceApi {
           );
         }
         seen.add(chunkKey);
-        if (!Number.isInteger(chunk.ordinal) || (chunk.ordinal ?? 0) < 0) {
+        const ordinal = chunk.ordinal;
+        if (ordinal == null || !Number.isInteger(ordinal) || ordinal < 0) {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
             'ordinal must be a non-negative integer',
@@ -1109,7 +1108,7 @@ export class GenericSourceApi {
         }
         prepared.push({
           chunkKey,
-          ordinal: chunk.ordinal as number,
+          ordinal,
           embedding,
           contentHash,
           metadata,

@@ -8,14 +8,13 @@ import {
   EMBEDDING_SOURCE_KINDS,
   CHUNK_FILTER_FIELDS,
   CHUNK_VECTOR_FIELD,
-  PERSISTED_CHUNK_FIELDS,
   assertVectorProfile,
   modelFingerprint,
-  toPersistedChunk,
   type EmbeddingSourceKind,
   type EmbeddingSourceState,
   type VectorProfile,
 } from './genericSource.js';
+import { CONFIG_OPERATOR_MODULES } from './schemaPolicy.js';
 import type { Config } from '../config/index.js';
 
 export const DEFAULT_TRUSTED_INGEST_MODULES = [
@@ -24,7 +23,6 @@ export const DEFAULT_TRUSTED_INGEST_MODULES = [
   'storage',
   'embeddings',
 ] as const;
-export const SOURCE_OPERATOR_MODULES = ['database', 'core'] as const;
 
 export const DEFAULT_MAX_INGEST_BATCH = 100;
 export const DEFAULT_MAX_CHUNKS_PER_DOCUMENT = 256;
@@ -75,21 +73,19 @@ export interface PreparedChunk {
 }
 
 export function ingestLimits(config?: Config): IngestLimits {
-  const security = (config?.security ?? {}) as Partial<IngestLimits> & {
-    maxEmbedInputBytes?: number;
-  };
+  const security = config?.security;
   return {
-    trustedIngestModules: security.trustedIngestModules ?? [
+    trustedIngestModules: security?.trustedIngestModules ?? [
       ...DEFAULT_TRUSTED_INGEST_MODULES,
     ],
-    maxIngestBatchSize: security.maxIngestBatchSize ?? DEFAULT_MAX_INGEST_BATCH,
+    maxIngestBatchSize: security?.maxIngestBatchSize ?? DEFAULT_MAX_INGEST_BATCH,
     maxChunksPerDocument:
-      security.maxChunksPerDocument ?? DEFAULT_MAX_CHUNKS_PER_DOCUMENT,
+      security?.maxChunksPerDocument ?? DEFAULT_MAX_CHUNKS_PER_DOCUMENT,
     maxChunkTextBytes:
-      security.maxChunkTextBytes ?? security.maxEmbedInputBytes ?? 32 * 1024,
-    maxMetadataBytes: security.maxMetadataBytes ?? DEFAULT_MAX_METADATA_BYTES,
-    maxReferenceBytes: security.maxReferenceBytes ?? DEFAULT_MAX_REFERENCE_BYTES,
-    sourceSearchMaxLimit: security.sourceSearchMaxLimit ?? SOURCE_SEARCH_MAX_LIMIT,
+      security?.maxChunkTextBytes ?? security?.maxEmbedInputBytes ?? 32 * 1024,
+    maxMetadataBytes: security?.maxMetadataBytes ?? DEFAULT_MAX_METADATA_BYTES,
+    maxReferenceBytes: security?.maxReferenceBytes ?? DEFAULT_MAX_REFERENCE_BYTES,
+    sourceSearchMaxLimit: security?.sourceSearchMaxLimit ?? SOURCE_SEARCH_MAX_LIMIT,
   };
 }
 
@@ -98,7 +94,8 @@ export function assertCanManageSources(args: {
   platformAdmin?: boolean;
 }): void {
   if (args.platformAdmin) return;
-  if (args.callerModule && SOURCE_OPERATOR_MODULES.includes(args.callerModule as never)) {
+  const operators: readonly string[] = CONFIG_OPERATOR_MODULES;
+  if (args.callerModule && operators.includes(args.callerModule)) {
     return;
   }
   throw new GrpcError(
@@ -122,7 +119,7 @@ export function assertTrustedIngest(args: {
 }
 
 export function assertSourceKind(kind?: string): EmbeddingSourceKind {
-  if (!kind || !EMBEDDING_SOURCE_KINDS.includes(kind as EmbeddingSourceKind)) {
+  if (!kind || !(EMBEDDING_SOURCE_KINDS as readonly string[]).includes(kind)) {
     throw new GrpcError(
       status.INVALID_ARGUMENT,
       `kind must be one of ${EMBEDDING_SOURCE_KINDS.join(', ')}`,
@@ -178,7 +175,11 @@ export function assertSourceSearchable(state?: string): void {
 
 export function assertImmutableProfile(
   existing: VectorProfile & { kind: string; partitionSubject: string },
-  next: Partial<VectorProfile> & { kind?: string; partitionSubject?: string },
+  next: Partial<Omit<VectorProfile, 'similarity'>> & {
+    kind?: string;
+    partitionSubject?: string;
+    similarity?: string;
+  },
 ): void {
   if (next.kind != null && next.kind !== existing.kind) {
     throw new GrpcError(status.FAILED_PRECONDITION, 'Embedding source kind is immutable');
@@ -192,29 +193,14 @@ export function assertImmutableProfile(
       'Embedding source partitionSubject is immutable',
     );
   }
-  if (next.provider != null && next.provider !== existing.provider) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      'Embedding source profile is immutable',
-    );
-  }
-  if (next.modelName != null && next.modelName !== existing.modelName) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      'Embedding source profile is immutable',
-    );
-  }
-  if (next.dimensions != null && next.dimensions !== existing.dimensions) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      'Embedding source profile is immutable',
-    );
-  }
-  if (next.similarity != null && next.similarity !== existing.similarity) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      'Embedding source profile is immutable',
-    );
+  const profileKeys = ['provider', 'modelName', 'dimensions', 'similarity'] as const;
+  for (const key of profileKeys) {
+    if (next[key] != null && next[key] !== existing[key]) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'Embedding source profile is immutable',
+      );
+    }
   }
 }
 
@@ -388,15 +374,14 @@ export function sanitizeSourceSearchDocument(args: {
   const allowlist = new Set(args.metadataAllowlist ?? []);
   const rawMetadata =
     args.document?.metadata ?? (args.hit.metadata as Record<string, unknown> | undefined);
-  const metadata =
-    rawMetadata && allowlist.size
+  const metadata = rawMetadata
+    ? allowlist.size
       ? Object.fromEntries(
           Object.entries(rawMetadata).filter(([key]) => allowlist.has(key)),
         )
-      : rawMetadata && !allowlist.size
-        ? {}
-        : undefined;
-  const safe: Record<string, unknown> = {
+      : {}
+    : undefined;
+  return {
     sourceId: args.hit.sourceId,
     documentId: args.hit.documentId,
     chunkKey: args.hit.chunkKey,
@@ -413,22 +398,6 @@ export function sanitizeSourceSearchDocument(args: {
       : {}),
     ...(metadata && Object.keys(metadata).length ? { metadata } : {}),
   };
-  for (const field of HIDDEN_CHUNK_RESULT_FIELDS) {
-    delete safe[field];
-  }
-  for (const field of PERSISTED_CHUNK_FIELDS) {
-    if (
-      field !== 'sourceId' &&
-      field !== 'documentId' &&
-      field !== 'chunkKey' &&
-      field !== 'ordinal' &&
-      field !== 'mimeType' &&
-      field !== 'metadata'
-    ) {
-      delete safe[field];
-    }
-  }
-  return safe;
 }
 
 export function resourceRef(schemaName: string, id: string): string {
@@ -485,9 +454,7 @@ export async function upsertUniqueRecord<T extends { _id?: string }>(args: {
 
 export function assertClientSourceSearchRequest(request: {
   queryVector?: number[];
-  userId?: string;
   adminOperator?: boolean;
-  filter?: Record<string, unknown>;
   callerModule?: string;
 }): void {
   if (request.callerModule !== 'router') return;

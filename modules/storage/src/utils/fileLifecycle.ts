@@ -9,6 +9,7 @@ import {
   emitFileUpdate,
   emitFolderDeleted,
 } from './fileEvents.js';
+import { objectPathForFile } from './fileBytes.js';
 import {
   applyObjectStatToFile,
   isFileBytesReady,
@@ -16,10 +17,6 @@ import {
 } from './fileUploadState.js';
 
 const FILE_DELETE_SCAN_BATCH = 500;
-
-function fileObjectKey(folder: string, name?: string): string {
-  return (folder === '/' ? '' : folder) + (name ?? '');
-}
 
 function updateFileMetrics(currentSize: number, newSize: number) {
   const fileSizeDiff = Math.abs(currentSize - newSize);
@@ -51,7 +48,7 @@ export async function completeFileUpload(
   file: File,
   grpcSdk?: ConduitGrpcSdk,
 ): Promise<File> {
-  const fileName = fileObjectKey(file.folder, file.name);
+  const fileName = objectPathForFile(file);
   const objectStat = await storageProvider.container(file.container).stat(fileName);
   if (objectStat instanceof Error) {
     throw new GrpcError(

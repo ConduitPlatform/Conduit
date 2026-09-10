@@ -71,7 +71,7 @@ async function extractPdfTextInWorker(
     worker.once('message', message => {
       clearTimeout(timer);
       void worker.terminate();
-      if (message?.ok) resolve(message.text as string);
+      if (message?.ok && typeof message.text === 'string') resolve(message.text);
       else reject(new Error(message?.error ?? 'PDF extraction failed'));
     });
     worker.once('error', error => {

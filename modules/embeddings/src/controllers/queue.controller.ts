@@ -18,6 +18,7 @@ import {
 import { incrementEmbeddingMetric } from '../utils/embeddingMetrics.js';
 import { sanitizeErrorMessage } from '../utils/redactConfig.js';
 import {
+  dedupeStorageIngestJobs,
   parseStorageIngestJob,
   storageIngestJobId,
   type StorageIngestJobData,
@@ -429,19 +430,16 @@ export class QueueController {
   }
 
   async addStorageJobs(data: StorageIngestJobData[], attempts: number) {
-    const unique: StorageIngestJobData[] = [];
-    const seen = new Set<string>();
+    const parsedJobs: StorageIngestJobData[] = [];
     for (const item of data) {
       const parsed = parseStorageIngestJob(item);
       if (!parsed.ok) {
         incrementEmbeddingMetric('malformedJobs');
         continue;
       }
-      const jobId = storageIngestJobId(parsed.data);
-      if (seen.has(jobId)) continue;
-      seen.add(jobId);
-      unique.push(parsed.data);
+      parsedJobs.push(parsed.data);
     }
+    const unique = dedupeStorageIngestJobs(parsedJobs);
     if (!unique.length) return 0;
     const enqueueable: StorageIngestJobData[] = [];
     for (const job of unique) {

@@ -32,16 +32,21 @@ export function assertAutomaticExtractable(args: {
   sniffed: SniffedMime;
 }): (typeof AUTOMATIC_STORAGE_MIME_TYPES)[number] {
   const declared = (args.declaredMime ?? '').toLowerCase();
-  const allowed = new Set<string>(AUTOMATIC_STORAGE_MIME_TYPES);
-  if (!allowed.has(args.sniffed)) {
+  if (!isAutomaticStorageMime(args.sniffed)) {
     throw new Error(`Unsupported or binary payload (${args.sniffed})`);
   }
-  if (declared && allowed.has(declared) && declared !== args.sniffed) {
+  if (declared && isAutomaticStorageMime(declared) && declared !== args.sniffed) {
     if (!compatibleTextMismatch(declared, args.sniffed)) {
       throw new Error(`Declared MIME ${declared} does not match sniffed ${args.sniffed}`);
     }
   }
-  return args.sniffed as (typeof AUTOMATIC_STORAGE_MIME_TYPES)[number];
+  return args.sniffed;
+}
+
+function isAutomaticStorageMime(
+  mime: string,
+): mime is (typeof AUTOMATIC_STORAGE_MIME_TYPES)[number] {
+  return (AUTOMATIC_STORAGE_MIME_TYPES as readonly string[]).includes(mime);
 }
 
 function compatibleTextMismatch(declared: string, sniffed: SniffedMime): boolean {

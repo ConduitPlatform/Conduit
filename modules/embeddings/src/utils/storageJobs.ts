@@ -54,7 +54,7 @@ export function parseStorageIngestJob(value: unknown): ParsedStorageIngestJob {
   const record = value as Record<string, unknown>;
   if (
     typeof record.kind !== 'string' ||
-    !STORAGE_INGEST_JOB_KINDS.includes(record.kind as StorageIngestJobKind)
+    !(STORAGE_INGEST_JOB_KINDS as readonly string[]).includes(record.kind)
   ) {
     return { ok: false, reason: 'kind' };
   }

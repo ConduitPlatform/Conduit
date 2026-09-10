@@ -57,37 +57,34 @@ const POSITIVE_EXTRACTION_PATHS = [
 ] as const;
 
 export function storageExtractionLimits(config?: Config): StorageExtractionLimits {
-  const extraction = (config?.storageExtraction ??
-    {}) as Partial<StorageExtractionLimits>;
-  const security = (config?.security ?? {}) as {
-    maxChunksPerDocument?: number;
-    maxChunkTextBytes?: number;
-    maxEmbedInputBytes?: number;
-  };
+  const extraction = config?.storageExtraction;
+  const security = config?.security;
   const maxChunksPerDocument =
-    security.maxChunksPerDocument ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.maxChunksPerFile;
+    security?.maxChunksPerDocument ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.maxChunksPerFile;
   const limits: StorageExtractionLimits = {
     maxFileBytes:
-      extraction.maxFileBytes ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.maxFileBytes,
+      extraction?.maxFileBytes ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.maxFileBytes,
     maxExtractedBytes:
-      extraction.maxExtractedBytes ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.maxExtractedBytes,
-    maxPdfPages: extraction.maxPdfPages ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.maxPdfPages,
+      extraction?.maxExtractedBytes ??
+      DEFAULT_STORAGE_EXTRACTION_LIMITS.maxExtractedBytes,
+    maxPdfPages: extraction?.maxPdfPages ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.maxPdfPages,
     extractTimeoutMs:
-      extraction.extractTimeoutMs ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.extractTimeoutMs,
+      extraction?.extractTimeoutMs ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.extractTimeoutMs,
     maxChunksPerFile: Math.min(
-      extraction.maxChunksPerFile ?? maxChunksPerDocument,
+      extraction?.maxChunksPerFile ?? maxChunksPerDocument,
       maxChunksPerDocument,
     ),
     chunkOverlapBytes:
-      extraction.chunkOverlapBytes ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.chunkOverlapBytes,
+      extraction?.chunkOverlapBytes ??
+      DEFAULT_STORAGE_EXTRACTION_LIMITS.chunkOverlapBytes,
     maxChunkBytes:
-      security.maxChunkTextBytes ??
-      security.maxEmbedInputBytes ??
+      security?.maxChunkTextBytes ??
+      security?.maxEmbedInputBytes ??
       DEFAULT_STORAGE_EXTRACTION_LIMITS.maxChunkBytes,
     queueConcurrency:
-      extraction.queueConcurrency ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.queueConcurrency,
+      extraction?.queueConcurrency ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.queueConcurrency,
     queueAttempts:
-      extraction.queueAttempts ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.queueAttempts,
+      extraction?.queueAttempts ?? DEFAULT_STORAGE_EXTRACTION_LIMITS.queueAttempts,
   };
   validateStorageExtractionLimits(limits);
   return limits;

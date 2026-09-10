@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, GrpcError, VectorSimilarity } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import type { Config } from '../config/index.js';
 import type {
@@ -61,7 +61,7 @@ function createHarness(args?: {
       provider: 'openai-compatible',
       modelName: 'text-embedding-3-small',
       dimensions: 3,
-      similarity: 'cosine',
+      similarity: VectorSimilarity.Cosine,
       selectors: { container: 'docs', folderPrefix: 'inbox/', mimeTypes: ['text/plain'] },
     },
     ...(args?.extraSources ?? []),
@@ -563,7 +563,7 @@ describe('storage extraction pipeline', () => {
           provider: 'openai-compatible',
           modelName: 'text-embedding-3-small',
           dimensions: 3,
-          similarity: 'cosine',
+          similarity: VectorSimilarity.Cosine,
           selectors: { container: 'docs' },
         },
       ],
@@ -658,7 +658,7 @@ describe('storage extraction pipeline', () => {
           provider: 'openai-compatible',
           modelName: 'text-embedding-3-small',
           dimensions: 3,
-          similarity: 'cosine',
+          similarity: VectorSimilarity.Cosine,
           selectors: { container: 'docs' },
         },
       ],

@@ -181,15 +181,15 @@ export class StorageExtractionPipeline {
       }
     }
     const queued = await this.deps.enqueue(dedupeStorageIngestJobs(jobs));
-    return { queued, scanned, warnings: [] as string[] };
+    return { queued, scanned, warnings: [] };
   }
 
   async processJob(job: StorageIngestJobData): Promise<void> {
     const source = await this.deps.sources.findOne({ _id: job.sourceId });
     if (!source) return;
     if (job.kind === 'ingest') {
-      if (source.state !== 'ready') return;
-      await this.ingestFile(source, job.fileId!);
+      if (source.state !== 'ready' || !job.fileId) return;
+      await this.ingestFile(source, job.fileId);
       return;
     }
     if (job.kind === 'delete' && job.fileId) {
@@ -346,18 +346,21 @@ export class StorageExtractionPipeline {
     const previousStatus = existing?.status;
     await this.markDocument(liveSource, fileId, 'extracting', file);
     const limits = storageExtractionLimits(this.deps.currentConfig());
+    const restoreIndexedIfAborted = async () => {
+      if (existing && previousStatus === 'indexed') {
+        await this.deps.documents.findByIdAndUpdate(existing._id, {
+          status: 'indexed',
+          contentVersion: existing.contentVersion,
+        });
+      }
+    };
     try {
       const bytes = await this.deps.getFileBytes(fileId, limits.maxFileBytes, {
         scope: liveSource.partitionSubject,
       });
       const current = await this.deps.sources.findOne({ _id: liveSource._id });
       if (!current || current.state !== 'ready') {
-        if (existing && previousStatus === 'indexed') {
-          await this.deps.documents.findByIdAndUpdate(existing._id, {
-            status: 'indexed',
-            contentVersion: existing.contentVersion,
-          });
-        }
+        await restoreIndexedIfAborted();
         return;
       }
       const sniffed = sniffMimeType(bytes.data);
@@ -414,12 +417,7 @@ export class StorageExtractionPipeline {
     } catch (err) {
       const current = await this.deps.sources.findOne({ _id: liveSource._id });
       if (!current || current.state !== 'ready') {
-        if (existing && previousStatus === 'indexed') {
-          await this.deps.documents.findByIdAndUpdate(existing._id, {
-            status: 'indexed',
-            contentVersion: existing.contentVersion,
-          });
-        }
+        await restoreIndexedIfAborted();
         return;
       }
       await this.markDocument(current, fileId, 'failed', file, sanitizeErrorMessage(err));
