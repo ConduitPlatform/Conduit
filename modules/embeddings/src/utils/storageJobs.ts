@@ -1,3 +1,5 @@
+import { hashedQueueJobId } from './queueJobId.js';
+
 export const STORAGE_INGEST_JOB_KINDS = [
   'ingest',
   'delete',
@@ -26,17 +28,39 @@ const IDENTITY = /^[A-Za-z0-9._:-]{1,128}$/;
 export function storageIngestJobId(data: StorageIngestJobData): string {
   switch (data.kind) {
     case 'ingest':
-      return `storage-ingest:${data.sourceId}:${data.fileId}:${data.contentVersion ?? 'unknown'}`;
+      return hashedQueueJobId('ingest', [
+        data.kind,
+        data.sourceId,
+        data.fileId ?? '',
+        data.contentVersion ?? 'unknown',
+      ]);
     case 'delete':
-      return `storage-delete:${data.sourceId}:${data.fileId}`;
+      return hashedQueueJobId('delete', [data.kind, data.sourceId, data.fileId ?? '']);
     case 'deleteMany':
-      return `storage-deletemany:${data.sourceId}:${(data.fileIds ?? []).join(',')}`;
+      return hashedQueueJobId('deletemany', [
+        data.kind,
+        data.sourceId,
+        ...(data.fileIds ?? []).toSorted(),
+      ]);
     case 'deleteFolder':
-      return `storage-deletefolder:${data.sourceId}:${data.container}:${data.folder}`;
+      return hashedQueueJobId('deletefolder', [
+        data.kind,
+        data.sourceId,
+        data.container ?? '',
+        data.folder ?? '',
+      ]);
     case 'deleteContainer':
-      return `storage-deletecontainer:${data.sourceId}:${data.container}`;
+      return hashedQueueJobId('deletecontainer', [
+        data.kind,
+        data.sourceId,
+        data.container ?? '',
+      ]);
     case 'reconcile':
-      return `storage-reconcile:${data.sourceId}:${data.cursor ?? 'start'}`;
+      return hashedQueueJobId('reconcile', [
+        data.kind,
+        data.sourceId,
+        data.cursor ?? 'start',
+      ]);
     default: {
       const _never: never = data.kind;
       return _never;

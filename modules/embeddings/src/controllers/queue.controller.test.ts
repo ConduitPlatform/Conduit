@@ -2,8 +2,10 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { QueueController } from './queue.controller.js';
+import { backfillControllerJobId } from '../utils/backfillExecution.js';
 import { embeddingJobId } from '../utils/embeddingJobs.js';
 import { EMBEDDING_METRICS } from '../utils/embeddingMetrics.js';
+import { storageIngestJobId } from '../utils/storageJobs.js';
 
 type StoredJob = {
   name: string;
@@ -18,6 +20,14 @@ class FakeQueue {
   missOnce = new Set<string>();
 
   async add(name: string, data: Record<string, unknown>, opts?: StoredJob['opts']) {
+    if (opts?.jobId) {
+      if (`${Number.parseInt(opts.jobId, 10)}` === opts.jobId) {
+        throw new Error('Custom Id cannot be integers');
+      }
+      if (opts.jobId.includes(':')) {
+        throw new Error('Custom Id cannot contain :');
+      }
+    }
     if (opts?.jobId && this.jobs.some(job => job.opts?.jobId === opts.jobId)) {
       throw new Error(`Job ${opts.jobId} already exists`);
     }
@@ -286,50 +296,62 @@ describe('embedding queue status and backfill jobs', () => {
     );
     assert.equal(queued, 1);
     assert.equal(queue.jobs.length, 0);
-    assert.equal(storageQueue.jobs[0]?.opts?.jobId, 'storage-ingest:src1:file1:v1');
+    assert.equal(
+      storageQueue.jobs[0]?.opts?.jobId,
+      storageIngestJobId({
+        kind: 'ingest',
+        sourceId: 'src1',
+        fileId: 'file1',
+        contentVersion: 'v1',
+      }),
+    );
     assert.equal(storageQueue.jobs[0]?.opts?.attempts, 5);
   });
 
   it('enqueues remaining storage jobs when a mixed bulk hits a duplicate', async () => {
     const { controller, storageQueue } = createController();
-    await storageQueue.add(
-      'storage-ingest:src1:file1:v2',
-      {
-        kind: 'ingest',
-        sourceId: 'src1',
-        fileId: 'file1',
-        contentVersion: 'v2',
-        reason: 'update',
-      },
-      { jobId: 'storage-ingest:src1:file1:v2' },
-    );
-    storageQueue.missOnce.add('storage-ingest:src1:file1:v2');
-    const queued = await controller.addStorageJobs(
-      [
-        {
-          kind: 'ingest',
-          sourceId: 'src1',
-          fileId: 'file1',
-          contentVersion: 'v2',
-          reason: 'update',
-        },
-        {
-          kind: 'ingest',
-          sourceId: 'src1',
-          fileId: 'file2',
-          contentVersion: 'v1',
-          reason: 'ready',
-        },
-      ],
-      3,
-    );
-    assert.equal(queued, 1);
+    const duplicate = {
+      kind: 'ingest' as const,
+      sourceId: 'src1',
+      fileId: 'file1',
+      contentVersion: 'v2',
+      reason: 'update' as const,
+    };
+    const leftover = {
+      kind: 'ingest' as const,
+      sourceId: 'src1',
+      fileId: 'file2',
+      contentVersion: 'v1',
+      reason: 'ready' as const,
+    };
+    const otherSource = {
+      kind: 'delete' as const,
+      sourceId: 'src2',
+      fileId: 'file1',
+    };
+    const duplicateId = storageIngestJobId(duplicate);
+    await storageQueue.add(duplicateId, duplicate, { jobId: duplicateId });
+    storageQueue.missOnce.add(duplicateId);
+    const queued = await controller.addStorageJobs([duplicate, leftover, otherSource], 3);
+    assert.equal(queued, 2);
     assert.equal(
-      storageQueue.jobs.some(job => job.opts?.jobId === 'storage-ingest:src1:file2:v1'),
+      storageQueue.jobs.some(job => job.opts?.jobId === storageIngestJobId(leftover)),
+      true,
+    );
+    assert.equal(
+      storageQueue.jobs.some(job => job.opts?.jobId === storageIngestJobId(otherSource)),
       true,
     );
     const removed = await controller.cancelStorageJobsForSource('src1');
     assert.equal(removed >= 1, true);
+    assert.equal(
+      storageQueue.jobs.every(job => job.data.sourceId !== 'src1'),
+      true,
+    );
+    assert.equal(
+      storageQueue.jobs.some(job => job.data.sourceId === 'src2'),
+      true,
+    );
   });
 
   it('enqueues lightweight backfill controller jobs with cursor identity', async () => {
@@ -340,7 +362,11 @@ describe('embedding queue status and backfill jobs', () => {
     await controller.addBackfillControllerJob({ runId: 'run1', drain: true });
     assert.deepEqual(
       backfillQueue.jobs.map(job => job.opts?.jobId),
-      ['backfill:run1:start', 'backfill:run1:b', undefined],
+      [
+        backfillControllerJobId({ runId: 'run1', cursor: null }),
+        backfillControllerJobId({ runId: 'run1', cursor: 'b' }),
+        undefined,
+      ],
     );
     assert.equal(
       backfillQueue.jobs.some(job => job.opts?.delay === 1000),
@@ -351,11 +377,12 @@ describe('embedding queue status and backfill jobs', () => {
   it('does not let a completed backfill page job block a later scan of the same cursor', async () => {
     const { backfillQueue, controller } = createController();
     await controller.addBackfillControllerJob({ runId: 'run1', cursor: 'b' });
-    backfillQueue.markState('backfill:run1:b', 'completed');
+    const pageId = backfillControllerJobId({ runId: 'run1', cursor: 'b' });
+    backfillQueue.markState(pageId, 'completed');
     await controller.addBackfillControllerJob({ runId: 'run1', cursor: 'b' });
     assert.deepEqual(
       backfillQueue.jobs.map(job => job.opts?.jobId),
-      ['backfill:run1:b'],
+      [pageId],
     );
     assert.equal(backfillQueue.jobs[0].state, 'waiting');
   });

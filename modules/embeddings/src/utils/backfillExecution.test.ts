@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { VectorIndexStatus } from '@conduitplatform/grpc-sdk';
 import {
   applyBackfillJobOutcome,
+  backfillControllerJobId,
   backfillRunFromDocument,
   cancelBackfillExecution,
   parseBackfillControllerJob,
@@ -18,6 +19,7 @@ import {
 import { BackfillGateError } from './backfillGates.js';
 import type { EmbeddingJobData } from './embeddingJobs.js';
 import type { BackfillRunProgress } from './backfillRun.js';
+import { isBullMqCompatibleJobId } from './queueJobId.js';
 
 const now = new Date('2026-09-06T18:00:00.000Z');
 const capabilities = {
@@ -483,6 +485,9 @@ describe('backfill controller job parsing and persistence mapping', () => {
     assert.equal(parseBackfillControllerJob({ runId: 'run1', cursor: null }).ok, true);
     assert.equal(parseBackfillControllerJob({ runId: '../nope' }).ok, false);
     assert.equal(parseBackfillControllerJob({ runId: 'run1', extra: true }).ok, false);
+    const pageId = backfillControllerJobId({ runId: 'run1', cursor: 'b' });
+    assert.equal(isBullMqCompatibleJobId(pageId), true);
+    assert.notEqual(pageId, backfillControllerJobId({ runId: 'run1', cursor: 'start' }));
     const progress = backfillRunFromDocument({
       _id: 'run1',
       schemaName: 'Article',

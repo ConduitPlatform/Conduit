@@ -24,6 +24,7 @@ import {
 } from './backfillGates.js';
 import { EmbeddingJobData, MAX_QUEUE_BATCH_SIZE } from './embeddingJobs.js';
 import { incrementEmbeddingMetric } from './embeddingMetrics.js';
+import { hashedQueueJobId } from './queueJobId.js';
 import { sanitizeErrorMessage } from './redactConfig.js';
 
 const IDENTITY = /^[A-Za-z0-9._-]{1,128}$/;
@@ -41,6 +42,10 @@ export interface BackfillControllerJobData {
   runId: string;
   cursor?: string | null;
   drain?: boolean;
+}
+
+export function backfillControllerJobId(data: BackfillControllerJobData): string {
+  return hashedQueueJobId('backfill', [data.runId, data.cursor ?? 'start']);
 }
 
 export type ParsedBackfillControllerJob =

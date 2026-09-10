@@ -12,6 +12,7 @@ import {
 } from '../utils/embeddingJobs.js';
 import {
   BackfillControllerJobData,
+  backfillControllerJobId,
   parseBackfillControllerJob,
   BACKFILL_DRAIN_DELAY_MS,
 } from '../utils/backfillExecution.js';
@@ -406,9 +407,7 @@ export class QueueController {
     }
     const delay =
       parsed.data.drain === true ? (opts?.delay ?? BACKFILL_DRAIN_DELAY_MS) : opts?.delay;
-    const jobId = parsed.data.drain
-      ? undefined
-      : `backfill:${parsed.data.runId}:${parsed.data.cursor ?? 'start'}`;
+    const jobId = parsed.data.drain ? undefined : backfillControllerJobId(parsed.data);
     if (jobId) {
       const decision = await resolveExistingQueueJob(this.backfillQueue, jobId);
       if (decision === 'skip') return;
@@ -506,7 +505,8 @@ export class QueueController {
       (await this.storageQueue.getJobs?.(['waiting', 'delayed', 'paused'])) ?? [];
     let removed = 0;
     for (const job of jobs) {
-      if (job.data?.sourceId !== sourceId) continue;
+      const parsed = parseStorageIngestJob(job.data);
+      if (!parsed.ok || parsed.data.sourceId !== sourceId) continue;
       const state = await job.getState();
       if (state === 'active') continue;
       await job.remove();
