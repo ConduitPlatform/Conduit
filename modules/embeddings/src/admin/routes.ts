@@ -56,6 +56,8 @@ export const DOCUMENT_BODY = {
   storageFileId: ConduitString.Optional,
   connectorReference: ConduitString.Optional,
   mimeType: ConduitString.Optional,
+  container: ConduitString.Optional,
+  folder: ConduitString.Optional,
   chunks: { type: [TYPE.JSON], required: true },
 };
 
@@ -164,7 +166,7 @@ export const EMBEDDINGS_ADMIN_ROUTES: EmbeddingsAdminRouteContract[] = [
   contract(
     '/sources/:id/disable',
     ConduitRouteActions.POST,
-    'Disables a generic embedding source. Operator-only. Ingest and search fail closed afterwards.',
+    'Disables a ready generic embedding source. Operator-only. Ingest and search fail closed afterwards.',
   ),
   contract(
     '/sources/:id/enable',
@@ -189,7 +191,7 @@ export const EMBEDDINGS_ADMIN_ROUTES: EmbeddingsAdminRouteContract[] = [
   contract(
     '/sources/:id/documents',
     ConduitRouteActions.POST,
-    'Trusted document and chunk ingest. Operator-only. Accepts XOR bounded text or a precomputed finite exact-dimension vector. Embeds, hashes, and discards text. Idempotent on source, externalDocument, version, and chunk key.',
+    'Trusted document and chunk ingest. Operator-only. Accepts XOR bounded text or a precomputed finite exact-dimension vector plus optional container and folder locators. Embeds, hashes, and discards text. Idempotent on source, externalDocument, version, and chunk key.',
   ),
   contract(
     '/sources/:id/documents/:externalDocumentId',

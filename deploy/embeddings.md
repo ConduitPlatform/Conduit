@@ -132,7 +132,7 @@ Existing schema-field `EmbeddingConfig` documents are unchanged by generic sourc
 
 ## Generic sources, connectors, and Storage extraction
 
-Schema-field embeddings and generic sources coexist. There is no global Storage index: create an enabled `kind=conduit-storage` source with `selectors.container` (optional `folderPrefix`, optional MIME allowlist). MIME allowlist is a subset of `text/plain`, `text/markdown`, `application/json`, `text/csv`, `application/pdf`.
+Schema-field embeddings and generic sources coexist. There is no global Storage index: create an enabled `kind=conduit-storage` source with `selectors.container` (optional `folderPrefix`, optional MIME allowlist). MIME allowlist is a subset of `text/plain`, `text/markdown`, `application/json`, `text/csv`, `application/pdf`. Selectors are not a tenant boundary. `conduit-storage` create, enable, reconcile, and status require Storage `authorization.enabled` and a serving Authorization module; missing or disabled ReBAC returns `FAILED_PRECONDITION` or a status warning instead of silently indexing. External sources are unaffected. Admin/MCP `POST /embeddings/sources/:id/documents` accepts optional `container` and `folder` locators so trusted ingest matches the generic metadata/reference contract.
 
 Admin/MCP (never client): `GET|POST /embeddings/sources`, `GET|PATCH|DELETE /embeddings/sources/:id`, disable/revoke, `GET /embeddings/sources/:id/status`, `POST /embeddings/sources/:id/reconcile`, trusted `POST /embeddings/sources/:id/documents`. Client search stays `POST /embeddings/search` with query text only.
 

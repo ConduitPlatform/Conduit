@@ -67,6 +67,7 @@ import {
 } from './utils/storagePipeline.js';
 import { FILE_LIFECYCLE_EVENTS } from './utils/storageEventNames.js';
 import { storageExtractionLimits } from './utils/storageLimits.js';
+import { resolveStorageAuthorizationState } from './utils/storageAuthorization.js';
 import {
   CancelBackfillRequest,
   DeleteEmbeddingConfigRequest,
@@ -657,6 +658,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
         cancelStorageJobs: sourceId =>
           this.queueController.cancelStorageJobsForSource(sourceId),
         storageAvailable: () => Boolean(this.grpcSdk.storage),
+        getStorageAuthorization: () => this.resolveStorageAuthorization(),
         getStorageQueue: async () =>
           (await this.queueController.getQueueStatus()).storage,
       },
@@ -749,6 +751,14 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     this.storageSubscriptionIds = [];
   }
 
+  private resolveStorageAuthorization() {
+    return resolveStorageAuthorizationState({
+      storageAvailable: this.grpcSdk.isAvailable('storage'),
+      authorizationAvailable: this.grpcSdk.isAvailable('authorization'),
+      getStorageConfig: () => this.grpcSdk.config.get('storage'),
+    });
+  }
+
   private ensureStoragePipeline() {
     this.storagePipeline ??= this.createStoragePipeline();
     return this.storagePipeline;
@@ -814,6 +824,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
         });
         return decision?.allow === true;
       },
+      getStorageAuthorization: () => this.resolveStorageAuthorization(),
       enqueue: jobs =>
         this.queueController.addStorageJobs(
           jobs,

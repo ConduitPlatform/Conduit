@@ -13,6 +13,7 @@ import {
   type EmbeddingSourceRecord,
   type GenericSourceApiDeps,
 } from './genericSourceApi.js';
+import type { StorageAuthorizationState } from '../utils/storageAuthorization.js';
 import type { Config } from '../config/index.js';
 import { CHUNK_FILTER_FIELDS, CHUNK_VECTOR_FIELD } from '../utils/genericSource.js';
 
@@ -62,6 +63,7 @@ function createGeneric(overrides?: {
   can?: GenericSourceApiDeps['can'];
   createdIndexQueryable?: boolean;
   storageAvailable?: () => boolean;
+  getStorageAuthorization?: GenericSourceApiDeps['getStorageAuthorization'];
   getStorageQueue?: GenericSourceApiDeps['getStorageQueue'];
   onStorageSourceReady?: GenericSourceApiDeps['onStorageSourceReady'];
   cancelStorageJobs?: GenericSourceApiDeps['cancelStorageJobs'];
@@ -237,6 +239,8 @@ function createGeneric(overrides?: {
       deletedRelations.push(query);
     },
     storageAvailable: overrides?.storageAvailable,
+    getStorageAuthorization:
+      overrides?.getStorageAuthorization ?? (async () => ({ usable: true })),
     getStorageQueue: overrides?.getStorageQueue,
     onStorageSourceReady: overrides?.onStorageSourceReady,
     cancelStorageJobs: overrides?.cancelStorageJobs,
@@ -741,10 +745,22 @@ describe('generic embedding source API', () => {
     assert.deepEqual(cancelled, [created.source.id]);
     assert.equal(documents.find(doc => doc._id === 'queued-1')?.status, 'skipped');
     assert.equal(documents.find(doc => doc._id === 'indexed-1')?.status, 'indexed');
+    await assert.rejects(
+      () => api.disableSource(created.source.id, { platformAdmin: true }),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.FAILED_PRECONDITION &&
+        /Only ready/.test((err as GrpcError).message),
+    );
     const enabled = await api.enableSource(created.source.id, { platformAdmin: true });
     assert.equal(enabled.source.state, 'ready');
     assert.equal(reconciled.includes(created.source.id), true);
     await api.revokeSource(created.source.id, { platformAdmin: true });
+    await assert.rejects(
+      () => api.disableSource(created.source.id, { platformAdmin: true }),
+      (err: unknown) =>
+        err instanceof GrpcError && err.code === status.FAILED_PRECONDITION,
+    );
     await assert.rejects(
       () => api.enableSource(created.source.id, { platformAdmin: true }),
       (err: unknown) =>
@@ -822,5 +838,99 @@ describe('generic embedding source API', () => {
       platformAdmin: true,
     });
     assert.equal(reconcileResult.queued, 1);
+  });
+
+  it('persists optional container and folder locators on trusted ingest', async () => {
+    const { api, documents } = createGeneric();
+    const source = await readySource(api);
+    await api.syncDocument(
+      {
+        sourceId: source.id,
+        externalDocumentId: 'ext-loc',
+        container: 'docs',
+        folder: 'inbox/',
+        chunks: [{ chunkKey: 'c1', ordinal: 0, text: 'hello' }],
+      },
+      { callerModule: 'database' },
+    );
+    assert.equal(documents[0]?.container, 'docs');
+    assert.equal(documents[0]?.folder, 'inbox/');
+  });
+
+  it('requires usable Storage ReBAC for conduit-storage create, enable, and status', async () => {
+    let authz: StorageAuthorizationState = {
+      usable: false,
+      reason: 'storage_authorization_disabled',
+    };
+    const { api } = createGeneric({
+      getStorageAuthorization: async () => authz,
+    });
+    await assert.rejects(
+      () =>
+        api.upsertSource(
+          {
+            kind: 'conduit-storage',
+            partitionSubject: 'Team:org',
+            selectors: JSON.stringify({ container: 'docs' }),
+          },
+          { platformAdmin: true },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.FAILED_PRECONDITION &&
+        /Storage authorization is disabled/.test((err as GrpcError).message),
+    );
+    const external = await api.upsertSource(
+      {
+        kind: 'external',
+        partitionSubject: 'Team:org',
+      },
+      { platformAdmin: true },
+    );
+    assert.equal(external.source.state, 'ready');
+    authz = { usable: true };
+    const created = await api.upsertSource(
+      {
+        kind: 'conduit-storage',
+        partitionSubject: 'Team:org',
+        selectors: JSON.stringify({ container: 'docs' }),
+      },
+      { platformAdmin: true },
+    );
+    assert.equal(created.source.state, 'ready');
+    authz = {
+      usable: false,
+      reason: 'storage_authorization_disabled',
+    };
+    const blocked = await api.getSourceStatus(created.source.id, {
+      platformAdmin: true,
+    });
+    assert.equal(blocked.source.state, 'ready');
+    assert.equal(blocked.ready, false);
+    assert.equal(
+      blocked.warnings.some(warning => /Storage authorization is disabled/.test(warning)),
+      true,
+    );
+    authz = { usable: true };
+    await api.disableSource(created.source.id, { platformAdmin: true });
+    authz = {
+      usable: false,
+      reason: 'authorization_unavailable',
+    };
+    await assert.rejects(
+      () => api.enableSource(created.source.id, { platformAdmin: true }),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.FAILED_PRECONDITION &&
+        /Authorization is unavailable/.test((err as GrpcError).message),
+    );
+    const statusResult = await api.getSourceStatus(created.source.id, {
+      platformAdmin: true,
+    });
+    assert.equal(statusResult.ready, false);
+    assert.equal(
+      statusResult.warnings.some(warning => /Authorization is unavailable/.test(warning)),
+      true,
+    );
   });
 });

@@ -339,48 +339,32 @@ export async function _updateFileUploadUrl(
     isPublic: file.isPublic,
     fileId: file._id,
   });
-  let updatedFile;
   const onlyDataUpdate =
     name === file.name && folder === file.folder && container === file.container;
-  if (onlyDataUpdate) {
-    updatedFile = await File.getInstance().findByIdAndUpdate(file._id, {
-      mimeType,
-      alias,
-      sourceUrl: refs.sourceUrl,
-      url: refs.url,
-      uri: refs.uri,
-      uploadStatus: FILE_UPLOAD_STATUS.pending,
-      etag: undefined,
-      contentVersion: undefined,
-      checksum: undefined,
-      ...{ size: size ?? file.size },
-    });
-  } else {
-    const fileName = getStorageFileKey(folder, name);
-    await storageProvider
-      .container(container)
-      .store(fileName, Buffer.from(PENDING_UPLOAD_PLACEHOLDER), file.isPublic);
-    const placeholderStat = await safeStat(storageProvider, container, fileName);
+  const fileName = getStorageFileKey(folder, name);
+  await storageProvider
+    .container(container)
+    .store(fileName, Buffer.from(PENDING_UPLOAD_PLACEHOLDER), file.isPublic);
+  const placeholderStat = await safeStat(storageProvider, container, fileName);
+  if (!onlyDataUpdate) {
     await storageProvider
       .container(file.container)
       .delete(getStorageFileKey(file.folder, file.name));
-
-    updatedFile = await File.getInstance().findByIdAndUpdate(file._id, {
-      name,
-      alias,
-      folder,
-      container,
-      sourceUrl: refs.sourceUrl,
-      url: refs.url,
-      uri: refs.uri,
-      mimeType,
-      uploadStatus: FILE_UPLOAD_STATUS.pending,
-      etag: placeholderStat?.etag,
-      contentVersion: undefined,
-      checksum: undefined,
-      ...{ size: size ?? file.size },
-    });
   }
+
+  const updatedFile = await File.getInstance().findByIdAndUpdate(file._id, {
+    ...(onlyDataUpdate ? {} : { name, folder, container }),
+    alias,
+    sourceUrl: refs.sourceUrl,
+    url: refs.url,
+    uri: refs.uri,
+    mimeType,
+    uploadStatus: FILE_UPLOAD_STATUS.pending,
+    etag: placeholderStat?.etag,
+    contentVersion: undefined,
+    checksum: undefined,
+    ...{ size: size ?? file.size },
+  });
   if (!isNil(size)) updateFileMetrics(file.size, size!);
   const uploadUrl = (await storageProvider
     .container(container)

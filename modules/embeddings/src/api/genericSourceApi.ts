@@ -72,6 +72,11 @@ import {
 import { sanitizeErrorMessage } from '../utils/redactConfig.js';
 import { parseStorageSelectors } from '../utils/storageSelectors.js';
 import { sourceExtractionWarnings } from '../utils/operationalStatus.js';
+import {
+  assertStorageAuthorizationUsable,
+  storageAuthorizationWarnings,
+  type StorageAuthorizationState,
+} from '../utils/storageAuthorization.js';
 
 export interface EmbeddingSourceRecord {
   _id: string;
@@ -222,6 +227,7 @@ export interface GenericSourceApiDeps {
   onStorageSourceReady?: (sourceId: string) => Promise<void> | void;
   cancelStorageJobs?: (sourceId: string) => Promise<number>;
   storageAvailable?: () => boolean;
+  getStorageAuthorization?: () => Promise<StorageAuthorizationState>;
   getStorageQueue?: () => Promise<{
     waiting: number;
     active: number;
@@ -337,6 +343,7 @@ export class GenericSourceApi {
     );
     if (kind === 'conduit-storage') {
       parseStorageSelectors(selectors);
+      await this.assertStorageAuthorizationUsable();
     }
     const metadataAllowlist = (request.metadataAllowlist ?? []).filter(
       field => typeof field === 'string' && field.length > 0,
@@ -461,14 +468,22 @@ export class GenericSourceApi {
     const extractionQueue = this.deps.getStorageQueue
       ? await this.deps.getStorageQueue()
       : undefined;
+    const storageAuthorization =
+      source.kind === 'conduit-storage'
+        ? await this.storageAuthorizationState()
+        : undefined;
     const warnings: string[] = [];
-    const ready = source.state === 'ready';
-    if (!ready) {
+    const authorizationBlocking = Boolean(
+      storageAuthorization && !storageAuthorization.usable,
+    );
+    const ready = source.state === 'ready' && !authorizationBlocking;
+    if (source.state !== 'ready') {
       warnings.push(`Embedding source '${source._id}' is ${source.state}`);
     }
     if (source.chunkIndexStatus && source.chunkIndexStatus !== VectorIndexStatus.Ready) {
       warnings.push(`Chunk index status is ${source.chunkIndexStatus}`);
     }
+    warnings.push(...storageAuthorizationWarnings(storageAuthorization));
     warnings.push(
       ...sourceExtractionWarnings({
         kind: source.kind,
@@ -497,6 +512,12 @@ export class GenericSourceApi {
   ): Promise<MappedEmbeddingSource> {
     assertCanManageSources(caller);
     const source = await this.requireSource(id);
+    if (source.state !== 'ready') {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'Only ready embedding sources can be disabled',
+      );
+    }
     const updated = (await this.deps.sources.findByIdAndUpdate(source._id, {
       state: 'disabled',
     })) ?? {
@@ -519,6 +540,9 @@ export class GenericSourceApi {
         status.FAILED_PRECONDITION,
         'Only disabled embedding sources can be enabled',
       );
+    }
+    if (source.kind === 'conduit-storage') {
+      await this.assertStorageAuthorizationUsable();
     }
     const pending = (await this.deps.sources.findByIdAndUpdate(source._id, {
       state: 'pending',
@@ -966,6 +990,17 @@ export class GenericSourceApi {
       dimensions,
       similarity: request.similarity || VectorSimilarity.Cosine,
     });
+  }
+
+  private async storageAuthorizationState(): Promise<StorageAuthorizationState> {
+    if (!this.deps.getStorageAuthorization) {
+      return { usable: false, reason: 'authorization_unavailable' };
+    }
+    return this.deps.getStorageAuthorization();
+  }
+
+  private async assertStorageAuthorizationUsable() {
+    assertStorageAuthorizationUsable(await this.storageAuthorizationState());
   }
 
   private async requireSource(id: string): Promise<EmbeddingSourceRecord> {

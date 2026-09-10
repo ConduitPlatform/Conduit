@@ -1,6 +1,7 @@
 import { afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
+import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { File, _StorageContainer } from '../models/index.js';
 import { IStorageProvider } from '../interfaces/index.js';
 import {
@@ -9,6 +10,7 @@ import {
   _updateFileUploadUrl,
   storeNewFile,
 } from './index.js';
+import { completeFileUpload } from './fileLifecycle.js';
 import { FILE_LIFECYCLE_EVENTS } from './fileEvents.js';
 import { FILE_UPLOAD_STATUS, PENDING_UPLOAD_PLACEHOLDER } from './fileUploadState.js';
 
@@ -64,6 +66,47 @@ function mockProvider(statImpl: IStorageProvider['stat']): IStorageProvider & {
   };
   return provider as unknown as IStorageProvider & {
     stored: Array<{ fileName: string; data: Buffer }>;
+  };
+}
+
+function memoryProvider(
+  initial?: Array<{ fileName: string; data: Buffer; etag: string }>,
+) {
+  const objects = new Map<string, { data: Buffer; etag: string }>();
+  for (const object of initial ?? []) {
+    objects.set(object.fileName, { data: Buffer.from(object.data), etag: object.etag });
+  }
+  const provider = {
+    objects,
+    container: () => provider,
+    store: async (fileName: string, data: Buffer) => {
+      const bytes = Buffer.from(data);
+      objects.set(fileName, {
+        data: bytes,
+        etag: bytes.equals(Buffer.from(PENDING_UPLOAD_PLACEHOLDER))
+          ? 'placeholder'
+          : `etag-${bytes.toString('hex').slice(0, 8)}`,
+      });
+      return true;
+    },
+    stat: async (fileName: string) => {
+      const object = objects.get(fileName);
+      if (!object) return { exists: false };
+      return { exists: true, size: object.data.length, etag: object.etag };
+    },
+    get: async (fileName: string) => {
+      const object = objects.get(fileName);
+      return object ? Buffer.from(object.data) : new Error('missing');
+    },
+    getUploadUrl: async () => 'https://upload.example/put',
+    getPublicUrl: async () => new Error('private'),
+    delete: async (fileName: string) => {
+      objects.delete(fileName);
+      return true;
+    },
+  };
+  return provider as unknown as IStorageProvider & {
+    objects: Map<string, { data: Buffer; etag: string }>;
   };
 }
 
@@ -173,7 +216,7 @@ describe('_updateFile', () => {
 });
 
 describe('_updateFileUploadUrl', () => {
-  it('marks same-path replacements pending and clears the previous content version', async () => {
+  it('overwrites same-path replacements with a pending placeholder and clears version', async () => {
     stubContainers();
     const files = stubFileStore();
     files.push({
@@ -189,11 +232,9 @@ describe('_updateFileUploadUrl', () => {
       etag: 'old-etag',
       checksum: 'old-sum',
     });
-    const provider = mockProvider(async () => ({
-      exists: true,
-      size: 5,
-      etag: 'old-etag',
-    }));
+    const provider = memoryProvider([
+      { fileName: 'hello.txt', data: Buffer.from('hello'), etag: 'old-etag' },
+    ]);
     const { file, url } = await _updateFileUploadUrl(provider, files[0] as never, {
       name: 'hello.txt',
       container: 'docs',
@@ -204,8 +245,106 @@ describe('_updateFileUploadUrl', () => {
     assert.equal(url, 'https://upload.example/put');
     assert.equal(file.uploadStatus, FILE_UPLOAD_STATUS.pending);
     assert.equal(file.contentVersion, undefined);
-    assert.equal(file.etag, undefined);
+    assert.equal(file.etag, 'placeholder');
     assert.equal(file.checksum, undefined);
     assert.equal(file.size, 9);
+    assert.equal(
+      provider.objects.get('hello.txt')?.data.toString(),
+      PENDING_UPLOAD_PLACEHOLDER,
+    );
+    await assert.rejects(
+      () => completeFileUpload(provider, files[0] as never),
+      (error: unknown) =>
+        error instanceof GrpcError &&
+        error.code === status.FAILED_PRECONDITION &&
+        error.message === 'Upload is not complete',
+    );
+    assert.equal(files[0].uploadStatus, FILE_UPLOAD_STATUS.pending);
+    assert.equal(files[0].contentVersion, undefined);
+  });
+
+  it('completes a same-path replacement only after a new PUT replaces the placeholder', async () => {
+    stubContainers();
+    const files = stubFileStore();
+    files.push({
+      _id: 'file-2',
+      name: 'hello.txt',
+      folder: '/',
+      container: 'docs',
+      size: 5,
+      isPublic: false,
+      mimeType: 'text/plain',
+      uploadStatus: FILE_UPLOAD_STATUS.ready,
+      contentVersion: 'ready-v1',
+      etag: 'old-etag',
+    });
+    const provider = memoryProvider([
+      { fileName: 'hello.txt', data: Buffer.from('hello'), etag: 'old-etag' },
+    ]);
+    await _updateFileUploadUrl(provider, files[0] as never, {
+      name: 'hello.txt',
+      container: 'docs',
+      folder: '/',
+      mimeType: 'text/plain',
+      size: 7,
+    });
+    await provider.store('hello.txt', Buffer.from('updated'));
+    const completed = await completeFileUpload(
+      provider,
+      files[0] as never,
+      {
+        bus: { publish: () => undefined },
+      } as unknown as ConduitGrpcSdk,
+    );
+    assert.equal(completed.uploadStatus, FILE_UPLOAD_STATUS.ready);
+    assert.equal(completed.size, 7);
+    assert.equal(typeof completed.contentVersion, 'string');
+    assert.notEqual(completed.contentVersion, 'ready-v1');
+    assert.notEqual(completed.contentVersion, 'placeholder');
+  });
+
+  it('completes a same-content replacement after the placeholder is overwritten', async () => {
+    stubContainers();
+    const files = stubFileStore();
+    files.push({
+      _id: 'file-3',
+      name: 'hello.txt',
+      folder: '/',
+      container: 'docs',
+      size: 5,
+      isPublic: false,
+      mimeType: 'text/plain',
+      uploadStatus: FILE_UPLOAD_STATUS.ready,
+      contentVersion: 'ready-v1',
+      etag: 'old-etag',
+    });
+    const original = Buffer.from('hello');
+    const provider = memoryProvider([
+      { fileName: 'hello.txt', data: original, etag: 'old-etag' },
+    ]);
+    await _updateFileUploadUrl(provider, files[0] as never, {
+      name: 'hello.txt',
+      container: 'docs',
+      folder: '/',
+      mimeType: 'text/plain',
+      size: 5,
+    });
+    assert.equal(
+      provider.objects.get('hello.txt')?.data.toString(),
+      PENDING_UPLOAD_PLACEHOLDER,
+    );
+    await provider.store('hello.txt', Buffer.from('hello'));
+    const completed = await completeFileUpload(
+      provider,
+      files[0] as never,
+      {
+        bus: { publish: () => undefined },
+      } as unknown as ConduitGrpcSdk,
+    );
+    assert.equal(completed.uploadStatus, FILE_UPLOAD_STATUS.ready);
+    assert.equal(completed.size, 5);
+    assert.equal(typeof completed.contentVersion, 'string');
+    assert.notEqual(completed.contentVersion, 'ready-v1');
+    assert.notEqual(completed.contentVersion, 'placeholder');
   });
 });

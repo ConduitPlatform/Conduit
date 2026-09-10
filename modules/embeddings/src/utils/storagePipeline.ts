@@ -28,6 +28,10 @@ import { chunkExtractedText } from './storageChunker.js';
 import { storageExtractionLimits } from './storageLimits.js';
 import { incrementEmbeddingMetric } from './embeddingMetrics.js';
 import { sanitizeErrorMessage } from './redactConfig.js';
+import {
+  assertStorageAuthorizationUsable,
+  type StorageAuthorizationState,
+} from './storageAuthorization.js';
 
 export interface StorageFileRecord {
   _id: string;
@@ -69,6 +73,7 @@ export interface StoragePipelineDeps {
     options?: { scope?: string },
   ) => Promise<{ data: Buffer; mimeType?: string; name?: string }>;
   canReadFile?: (fileId: string, subject: string) => Promise<boolean>;
+  getStorageAuthorization?: () => Promise<StorageAuthorizationState>;
   enqueue: (jobs: StorageIngestJobData[]) => Promise<number>;
   api: GenericSourceApi;
 }
@@ -126,6 +131,7 @@ export class StorageExtractionPipeline {
         `Embedding source '${source._id}' is not ready for reconcile`,
       );
     }
+    assertStorageAuthorizationUsable(await this.deps.getStorageAuthorization?.());
     const selectors = parseStorageSelectors(source.selectors);
     const matchingIds = new Set<string>();
     const jobs: StorageIngestJobData[] = [];
@@ -498,7 +504,7 @@ export class StorageExtractionPipeline {
     source: EmbeddingSourceRecord,
     fileId: string,
   ): Promise<boolean> {
-    if (!this.deps.canReadFile) return true;
+    if (!this.deps.canReadFile) return false;
     return this.deps.canReadFile(fileId, source.partitionSubject);
   }
 

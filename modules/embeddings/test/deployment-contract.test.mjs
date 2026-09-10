@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -178,11 +179,28 @@ test('production bundle emits pdfExtract.worker beside the entry', () => {
   assert.match(tsupConfig, /'pdfExtract\.worker': 'src\/utils\/pdfExtract\.worker\.ts'/);
   assert.match(dockerfile, /COPY --from=conduit-base \/app\/modules\/embeddings\/bundle/);
   assert.match(dockerfile, /CMD \["node", "bundle\/index\.js"\]/);
+  const moduleRoot = fileURLToPath(new URL('..', import.meta.url));
   const bundleIndex = fileURLToPath(new URL('../bundle/index.js', import.meta.url));
   const bundleWorker = fileURLToPath(
     new URL('../bundle/pdfExtract.worker.js', import.meta.url),
   );
-  if (existsSync(bundleIndex)) {
+  const canBuild =
+    existsSync(new URL('../node_modules', import.meta.url)) ||
+    existsSync(new URL('../../../node_modules', import.meta.url));
+  if ((!existsSync(bundleIndex) || !existsSync(bundleWorker)) && canBuild) {
+    const result = spawnSync('pnpm', ['build:bundle'], {
+      cwd: moduleRoot,
+      encoding: 'utf8',
+      env: process.env,
+    });
+    assert.equal(
+      result.status,
+      0,
+      `pnpm build:bundle failed:\n${result.stdout}\n${result.stderr}`,
+    );
+  }
+  if (existsSync(bundleIndex) || canBuild) {
+    assert.equal(existsSync(bundleIndex), true, 'production bundle index is missing');
     assert.equal(
       existsSync(bundleWorker),
       true,

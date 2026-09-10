@@ -94,7 +94,14 @@ configs.
 Enabled `kind=conduit-storage` sources index only files that match their
 selectors: required `container`, optional `folderPrefix`, and an optional MIME
 allowlist subset of `text/plain`, `text/markdown`, `application/json`,
-`text/csv`, and `application/pdf`. There is no global default index.
+`text/csv`, and `application/pdf`. There is no global default index. Selectors
+are not a tenant boundary: create, enable, reconcile, and status require
+Storage `authorization.enabled` plus a serving Authorization module. External
+sources are unaffected.
+
+Trusted Admin/MCP ingest accepts optional `container` and `folder` locators so
+operator-submitted documents keep the same generic metadata/reference contract
+as Storage extraction.
 
 Storage lifecycle events (`storage:ready:File`, `storage:update:File`,
 `storage:delete:File`, chunked `storage:deleteMany:File`, folder/container

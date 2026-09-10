@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import type { Config } from '../config/index.js';
 import type {
   EmbeddingDocumentRecord,
@@ -10,6 +11,7 @@ import type {
 import { FILE_LIFECYCLE_EVENTS } from './storageEventNames.js';
 import { StorageExtractionPipeline, type StorageFileRecord } from './storagePipeline.js';
 import { EMBEDDING_METRICS } from './embeddingMetrics.js';
+import type { StorageAuthorizationState } from './storageAuthorization.js';
 
 const config = {
   enabled: true,
@@ -47,6 +49,8 @@ function createHarness(args?: {
   sourceState?: EmbeddingSourceRecord['state'];
   extraSources?: EmbeddingSourceRecord[];
   canReadFile?: (fileId: string, subject: string) => Promise<boolean>;
+  getStorageAuthorization?: () => Promise<StorageAuthorizationState>;
+  omitCanReadFile?: boolean;
 }) {
   const sources: EmbeddingSourceRecord[] = [
     {
@@ -131,7 +135,11 @@ function createHarness(args?: {
         name: file.name,
       };
     },
-    canReadFile: args?.canReadFile ?? (async () => true),
+    ...(args?.omitCanReadFile
+      ? {}
+      : { canReadFile: args?.canReadFile ?? (async () => true) }),
+    getStorageAuthorization:
+      args?.getStorageAuthorization ?? (async () => ({ usable: true })),
     enqueue: async queued => {
       jobs.push(...queued);
       return queued.length;
@@ -621,5 +629,88 @@ describe('storage extraction pipeline', () => {
     assert.equal(harness.documents[0].status, 'indexed');
     assert.equal(harness.documents[0].contentVersion, 'v1');
     assert.equal(harness.syncs.length, 0);
+  });
+
+  it('does not fail open when File read authorization is omitted', async () => {
+    const harness = createHarness({ omitCanReadFile: true });
+    const queued = await harness.pipeline.handleBusEvent(
+      FILE_LIFECYCLE_EVENTS.ready,
+      JSON.stringify({
+        id: 'file-1',
+        container: 'docs',
+        folder: 'inbox/',
+        mimeType: 'text/plain',
+        contentVersion: 'v1',
+      }),
+    );
+    assert.equal(queued, 0);
+    assert.equal(harness.jobs.length, 0);
+  });
+
+  it('does not cross-index a shared container for an unauthorized user partition', async () => {
+    const harness = createHarness({
+      extraSources: [
+        {
+          _id: 'src-user-b',
+          kind: 'conduit-storage',
+          state: 'ready',
+          partitionSubject: 'User:user-b',
+          provider: 'openai-compatible',
+          modelName: 'text-embedding-3-small',
+          dimensions: 3,
+          similarity: 'cosine',
+          selectors: { container: 'docs' },
+        },
+      ],
+      canReadFile: async (fileId, subject) =>
+        fileId === 'file-user' && subject === 'User:user-a',
+    });
+    harness.sources[0].partitionSubject = 'User:user-a';
+    harness.sources[0].selectors = { container: 'docs' };
+    const queued = await harness.pipeline.handleBusEvent(
+      FILE_LIFECYCLE_EVENTS.ready,
+      JSON.stringify({
+        id: 'file-user',
+        container: 'docs',
+        folder: '/',
+        mimeType: 'text/plain',
+        contentVersion: 'v1',
+      }),
+    );
+    assert.equal(queued, 1);
+    assert.deepEqual(
+      harness.jobs.map(job => job.sourceId),
+      ['src-storage'],
+    );
+    harness.files.push({
+      _id: 'file-user',
+      container: 'docs',
+      folder: '/',
+      mimeType: 'text/plain',
+      contentVersion: 'v1',
+    });
+    const other = await harness.pipeline.reconcileSource('src-user-b', {
+      callerModule: 'embeddings',
+    });
+    assert.equal(other.queued, 0);
+  });
+
+  it('refuses reconcile when Storage ReBAC is not usable', async () => {
+    const harness = createHarness({
+      getStorageAuthorization: async () => ({
+        usable: false,
+        reason: 'storage_authorization_disabled',
+      }),
+    });
+    await assert.rejects(
+      () =>
+        harness.pipeline.reconcileSource('src-storage', {
+          callerModule: 'embeddings',
+        }),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.FAILED_PRECONDITION &&
+        /Storage authorization is disabled/.test((err as GrpcError).message),
+    );
   });
 });

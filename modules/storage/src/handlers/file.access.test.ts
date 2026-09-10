@@ -61,4 +61,40 @@ describe('FileHandlers.fileAccessCheck', () => {
       { subject: 'Team:tenant-b', actions: ['read'], resource: 'File:file-1' },
     ]);
   });
+
+  it('authorizes module-to-module reads by User partition scope', async () => {
+    stubModels();
+    const checked: Array<Record<string, unknown>> = [];
+    const handlers = new FileHandlers(
+      {
+        databaseProvider: {},
+        authorization: {
+          can: async (input: Record<string, unknown>) => {
+            checked.push(input);
+            return { allow: input.subject === 'User:user-a' };
+          },
+        },
+      } as never,
+      {} as never,
+    );
+    ConfigController.getInstance().config = { authorization: { enabled: true } };
+    await handlers.fileAccessCheck(
+      'read',
+      { context: {}, queryParams: { scope: 'User:user-a' } },
+      { _id: 'file-2' } as never,
+    );
+    await assert.rejects(
+      () =>
+        handlers.fileAccessCheck(
+          'read',
+          { context: {}, queryParams: { scope: 'User:user-b' } },
+          { _id: 'file-2' } as never,
+        ),
+      (err: unknown) => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+    );
+    assert.deepEqual(checked, [
+      { subject: 'User:user-a', actions: ['read'], resource: 'File:file-2' },
+      { subject: 'User:user-b', actions: ['read'], resource: 'File:file-2' },
+    ]);
+  });
 });

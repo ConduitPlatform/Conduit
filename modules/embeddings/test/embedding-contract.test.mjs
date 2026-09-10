@@ -135,6 +135,10 @@ test('grpc-sdk embeddings client maps typed proto messages instead of JSON-strin
   assert.match(adminRoutesSource, /'\/sources'/);
   assert.match(adminRoutesSource, /'\/sources\/:id\/documents'/);
   assert.match(adminRoutesSource, /'\/sources\/:id\/reconcile'/);
+  assert.match(
+    adminRoutesSource,
+    /export const DOCUMENT_BODY = \{[\s\S]*container: ConduitString\.Optional,[\s\S]*folder: ConduitString\.Optional/,
+  );
 });
 
 test('deployment docs describe provider configuration and rollout workflow', () => {

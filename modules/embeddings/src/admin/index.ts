@@ -247,6 +247,8 @@ export class AdminHandlers {
         storageFileId: params.storageFileId,
         connectorReference: params.connectorReference,
         mimeType: params.mimeType,
+        container: params.container,
+        folder: params.folder,
         chunks: params.chunks ?? [],
       },
       ADMIN_CALLER,
