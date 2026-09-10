@@ -30,6 +30,7 @@ export const errors = {
     conduitCode: 'REGISTRATION_NOT_ALLOWED',
     grpcCode: status.PERMISSION_DENIED,
     message: 'User registration is not allowed for this request',
-    description: 'OAuth was started in sign-in-only mode and no existing user was found',
+    description:
+      'OAuth registration is disabled for this request (sign-in-only mode or provider allowRegistration is false)',
   },
 } as const satisfies Record<string, ModuleErrorDefinition>;

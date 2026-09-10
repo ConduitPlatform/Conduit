@@ -262,6 +262,10 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     anonymousUserId?: string,
     mode: OAuthMode = 'both',
   ): Promise<User> {
+    const allowRegistration =
+      ConfigController.getInstance().config[this.providerName]?.allowRegistration !==
+      false;
+    mode = resolveOAuthMode(mode, allowRegistration);
     let user: User | null = null;
     if (payload.hasOwnProperty('email') && !isNil(payload.email)) {
       user = await User.getInstance().findOne({
