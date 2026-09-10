@@ -16,6 +16,8 @@ import {
   Payload,
   ProviderConfig,
 } from '../interfaces/index.js';
+import { OAUTH_MODE_PARAM } from '../utils/index.js';
+import { errors } from '../../../errors.js';
 
 // todo migrate to use native method properly
 export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
@@ -61,7 +63,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
       {
         path: '/google',
         action: ConduitRouteActions.POST,
-        description: `Login/register with Google by providing a token from the client.`,
+        description: `Login/register with Google by providing a token from the client. Optional mode: "both" (default, login and register) or "signIn" (existing users only).`,
         bodyParams: {
           id_token: ConduitString.Required,
           access_token: ConduitString.Required,
@@ -69,8 +71,10 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
           invitationToken: ConduitString.Optional,
           captchaToken: ConduitString.Optional,
           scopes: [ConduitString.Optional],
+          mode: OAUTH_MODE_PARAM,
         },
         middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
+        errors: [errors.REGISTRATION_NOT_ALLOWED],
       },
       new ConduitRouteReturnDefinition('GoogleResponse', {
         userId: ConduitString.Required,
