@@ -30,6 +30,19 @@ describe('resolveOAuthMode', () => {
         err.message.includes('mode must be "signIn" or "both"'),
     );
   });
+
+  it('caps to signIn when provider registration is disabled', () => {
+    assert.equal(resolveOAuthMode(undefined, false), 'signIn');
+    assert.equal(resolveOAuthMode('both', false), 'signIn');
+    assert.equal(resolveOAuthMode('signIn', false), 'signIn');
+  });
+
+  it('still rejects invalid values when registration is disabled', () => {
+    assert.throws(
+      () => resolveOAuthMode('register', false),
+      (err: unknown) => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
+    );
+  });
 });
 
 describe('assertOAuthRegistrationAllowed', () => {

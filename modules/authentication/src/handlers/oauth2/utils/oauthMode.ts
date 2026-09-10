@@ -3,26 +3,26 @@ import { ConduitString, ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { errors } from '../../../errors.js';
 
-export const OAUTH_MODES = ['signIn', 'both'] as const;
-export type OAuthMode = (typeof OAUTH_MODES)[number];
+export type OAuthMode = 'signIn' | 'both';
 
 export const OAUTH_MODE_PARAM = ConduitString.OptionalWith({
   pattern: '^(signIn|both)$',
   message: 'mode must be "signIn" or "both"',
 });
 
-export function isOAuthMode(value: unknown): value is OAuthMode {
-  return value === 'signIn' || value === 'both';
-}
-
-export function resolveOAuthMode(value: unknown): OAuthMode {
+export function resolveOAuthMode(
+  value: unknown,
+  allowRegistration: boolean = true,
+): OAuthMode {
+  let requested: OAuthMode;
   if (value === undefined || value === null || value === '') {
-    return 'both';
+    requested = 'both';
+  } else if (value === 'signIn' || value === 'both') {
+    requested = value;
+  } else {
+    throw new GrpcError(status.INVALID_ARGUMENT, 'mode must be "signIn" or "both"');
   }
-  if (isOAuthMode(value)) {
-    return value;
-  }
-  throw new GrpcError(status.INVALID_ARGUMENT, 'mode must be "signIn" or "both"');
+  return allowRegistration ? requested : 'signIn';
 }
 
 export function assertOAuthRegistrationAllowed(mode: OAuthMode): void {
