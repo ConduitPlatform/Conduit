@@ -12,6 +12,7 @@ import {
   ConduitBoolean,
   ConduitNumber,
   ConduitString,
+  ConfigController,
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
@@ -20,6 +21,10 @@ import { isEmpty, isNil } from 'lodash-es';
 import { _StorageContainer, _StorageFolder, File } from '../models/index.js';
 import { normalizeFolderPath, sanitizeFilesForResponse } from '../utils/index.js';
 import { AdminFileHandlers } from './adminFile.js';
+import { rethrowGrpcOrInternal, resolveScope } from '../authz/helpers.js';
+import { findOrCreateFolders } from '../authz/folders.js';
+import { createContainerOwnerRelation } from '../authz/relations.js';
+import { deleteContainerTree, deleteFolderTree } from '../authz/cascade.js';
 
 export class AdminRoutes {
   private readonly routingManager: RoutingManager;
@@ -97,6 +102,7 @@ export class AdminRoutes {
 
   async createFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { container, isPublic } = call.request.params;
+    const scope = resolveScope(call.request);
     const name = normalizeFolderPath(call.request.params.name);
     if (name === '/') {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Folder name may not be empty');
@@ -105,16 +111,19 @@ export class AdminRoutes {
       .getInstance()
       .findOne({ name: container });
     if (isNil(containerDocument)) {
-      await this._createContainer(container, isPublic).catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      await this._createContainer(container, isPublic, scope);
     }
-    const createdFolders = await this.fileHandlers.findOrCreateFolders(
+    const createdFolders = await findOrCreateFolders(
+      this.grpcSdk,
+      this.fileHandlers.storage,
       name,
       container,
-      isPublic,
-      () => {
-        throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
+      {
+        isPublic,
+        scope,
+        lastExistsHandler: () => {
+          throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
+        },
       },
     );
     return createdFolders[createdFolders.length - 1];
@@ -128,19 +137,8 @@ export class AdminRoutes {
     });
     if (isNil(folder)) {
       throw new GrpcError(status.NOT_FOUND, 'Folder does not exist');
-    } else {
-      await this.fileHandlers.storage
-        .container(folder.container)
-        .deleteFolder(folder.name);
-      await _StorageFolder.getInstance().deleteOne({
-        name: folder.name,
-        container: folder.container,
-      });
-      await File.getInstance().deleteMany({
-        folder: folder.name,
-        container: folder.container,
-      });
     }
+    await deleteFolderTree(this.grpcSdk, this.fileHandlers.storage, folder);
     return 'OK';
   }
 
@@ -158,7 +156,7 @@ export class AdminRoutes {
 
   async createContainer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, isPublic } = call.request.params;
-    return await this._createContainer(name, isPublic);
+    return await this._createContainer(name, isPublic, resolveScope(call.request));
   }
 
   async deleteContainer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -169,29 +167,17 @@ export class AdminRoutes {
       });
       if (isNil(container)) {
         throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
-      } else {
-        await this.fileHandlers.storage.deleteContainer(container.name);
-        await _StorageContainer.getInstance().deleteOne({
-          _id: id,
-        });
-        await File.getInstance().deleteMany({
-          container: container.name,
-        });
-        await _StorageFolder.getInstance().deleteMany({
-          container: container.name,
-        });
       }
+      await deleteContainerTree(this.grpcSdk, this.fileHandlers.storage, container);
       return container;
     } catch (e) {
-      throw new GrpcError(
-        status.INTERNAL,
-        (e as Error).message ?? 'Something went wrong',
-      );
+      rethrowGrpcOrInternal(e);
     }
   }
 
   private registerAdminRoutes() {
     this.routingManager.clear();
+    const authzEnabled = ConfigController.getInstance().config.authorization.enabled;
     this.routingManager.route(
       {
         path: '/files/:id',
@@ -238,6 +224,9 @@ export class AdminRoutes {
           mimeType: ConduitString.Optional,
           isPublic: ConduitBoolean.Optional,
         },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+        },
       },
       new ConduitRouteReturnDefinition('CreateFile', File.name),
       this.fileHandlers.createFile.bind(this.fileHandlers),
@@ -252,6 +241,9 @@ export class AdminRoutes {
           size: { type: TYPE.Number, required: false },
           container: { type: TYPE.String, required: false },
           isPublic: TYPE.Boolean,
+        },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
         },
         action: ConduitRouteActions.POST,
         path: '/files/upload',
@@ -279,6 +271,9 @@ export class AdminRoutes {
           data: ConduitString.Required,
           mimeType: ConduitString.Optional,
         },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+        },
       },
       new ConduitRouteReturnDefinition('PatchFile', File.name),
       this.fileHandlers.updateFile.bind(this.fileHandlers),
@@ -295,6 +290,9 @@ export class AdminRoutes {
           container: ConduitString.Optional,
           mimeType: ConduitString.Optional,
           size: ConduitNumber.Optional,
+        },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
         },
         action: ConduitRouteActions.PATCH,
         path: '/files/upload/:id',
@@ -383,6 +381,9 @@ export class AdminRoutes {
           container: ConduitString.Required,
           isPublic: ConduitBoolean.Optional,
         },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+        },
       },
       new ConduitRouteReturnDefinition('CreateFolder', _StorageFolder.name),
       this.createFolder.bind(this),
@@ -425,6 +426,9 @@ export class AdminRoutes {
           name: ConduitString.Required,
           isPublic: ConduitBoolean.Optional,
         },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+        },
       },
       new ConduitRouteReturnDefinition(_StorageContainer.name),
       this.createContainer.bind(this),
@@ -444,7 +448,11 @@ export class AdminRoutes {
     this.routingManager.registerRoutes();
   }
 
-  private async _createContainer(name: string, isPublic: boolean | undefined) {
+  private async _createContainer(
+    name: string,
+    isPublic: boolean | undefined,
+    scope?: string,
+  ) {
     try {
       let container = await _StorageContainer.getInstance().findOne({
         name,
@@ -459,15 +467,13 @@ export class AdminRoutes {
           name,
           isPublic,
         });
+        await createContainerOwnerRelation(this.grpcSdk, container, scope);
       } else {
         throw new GrpcError(status.ALREADY_EXISTS, 'Container already exists');
       }
       return container;
     } catch (e) {
-      throw new GrpcError(
-        status.INTERNAL,
-        (e as Error).message ?? 'Something went wrong',
-      );
+      rethrowGrpcOrInternal(e);
     }
   }
 }
