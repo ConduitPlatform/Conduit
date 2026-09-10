@@ -748,8 +748,8 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
       mailgun.js:
-        specifier: ^13.2.0
-        version: 13.2.0
+        specifier: ^14.0.0
+        version: 14.0.0
       messagebird:
         specifier: ^4.0.1
         version: 4.0.1
@@ -6245,8 +6245,8 @@ packages:
   mailersend@3.0.0:
     resolution: {integrity: sha512-CvP96bV4Z/4VaQmLTHDOSu2HKXjB2pwXLq76uukqdzRjoLtStCKqsHnMM/PwqEaamXHRpiHSWdNo7EdRYe00vg==}
 
-  mailgun.js@13.2.0:
-    resolution: {integrity: sha512-CJHDYagRuvN3IELgItQ9gToHDUh7KUtOsb9DtlW9bG2NhiXGsE63ehUNj0TTaU5TNlzp5A1jfBpnZPdWHEFxRA==}
+  mailgun.js@14.0.0:
+    resolution: {integrity: sha512-3JOytYg/Ff8Itrw74gfwQjylcu/tBEMf4O2HdpfgMqCLON6kypreVDYy5nUqrvMYjtDPVsCV1yKU8mvWsg4VPw==}
     engines: {node: '>=18.0.0'}
 
   mailgun.js@8.2.2:
@@ -14180,7 +14180,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  mailgun.js@13.2.0:
+  mailgun.js@14.0.0:
     dependencies:
       axios: 1.18.0(debug@4.4.3)
       base-64: 1.0.0
