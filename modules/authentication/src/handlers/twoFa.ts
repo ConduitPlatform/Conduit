@@ -345,8 +345,17 @@ export class TwoFa implements IAuthenticationStrategy {
       if (!token) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
       }
-      const verified = await AuthUtils.verifyCode(this.grpcSdk, token, code);
-      if (!verified) {
+      const verificationSid = token.data?.verification ?? token.token;
+      const verified = await this.grpcSdk.sms!.verify(verificationSid, code);
+      if (!verified.verified) {
+        throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
+      }
+      const consumed = await Token.getInstance().deleteOne({
+        _id: token._id,
+        user: user._id,
+        tokenType: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
+      });
+      if (consumed.deletedCount === 0) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
       }
       const config = ConfigController.getInstance().config;
@@ -406,18 +415,20 @@ export class TwoFa implements IAuthenticationStrategy {
         status.INVALID_ARGUMENT,
         'No verification record for this user',
       );
-    const verified = await this.smsModule.verify(verificationRecord.token, code);
+    const verificationSid =
+      verificationRecord.data?.verification ?? verificationRecord.token;
+    const verified = await this.grpcSdk.sms!.verify(verificationSid, code);
     if (!verified.verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
     }
-    await Token.getInstance()
-      .deleteMany({
-        user: user._id,
-        tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
+    const consumed = await Token.getInstance().deleteOne({
+      _id: verificationRecord._id,
+      user: user._id,
+      tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+    });
+    if (consumed.deletedCount === 0) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
+    }
     await User.getInstance().findByIdAndUpdate(user._id, {
       phoneNumber: verificationRecord.data.phoneNumber,
       hasTwoFA: true,
@@ -535,7 +546,7 @@ export class TwoFa implements IAuthenticationStrategy {
   }
 
   private async enableAuthenticator2Fa(user: User): Promise<string> {
-    const secret = node2fa.generateSecret({
+    const secret = await node2fa.generateSecret({
       //to do: add logic for app name insertion
       name: 'Conduit',
       // add another string when mail is not available
