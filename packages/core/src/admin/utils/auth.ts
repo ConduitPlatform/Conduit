@@ -51,6 +51,6 @@ export async function verify2Fa(admin: Admin, code: string) {
   return signToken({ id: admin._id }, tokenSecret, tokenExpirationTime);
 }
 
-export async function generateSecret(options?: { name: string; account: string }) {
+export function generateSecret(options?: { name: string; account: string }) {
   return twoFactor.generateSecret(options);
 }

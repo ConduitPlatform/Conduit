@@ -61,6 +61,40 @@ export class CronQueueController {
     return this.cronQueue.getRepeatableJobs();
   }
 
+  private async executeCronJob(job: Job<{ functionId: string }>): Promise<void> {
+    const func = await Functions.getInstance().findOne(
+      { _id: job.data.functionId },
+      { readPreference: 'primary' },
+    );
+    if (!func || func.functionType !== 'cron') {
+      return;
+    }
+    const cronPattern = getCronPatternFromInputs(func.inputs);
+    if (!cronPattern) {
+      ConduitGrpcSdk.Logger.warn(
+        `Cron function ${func.name} (${func._id}) has no pattern; skipping tick`,
+      );
+      return;
+    }
+    const compiled =
+      this.compiledFunctions.get(func._id) ?? compileFunctionCode(func.functionCode);
+    const scheduledAt = new Date().toISOString();
+    ConduitGrpcSdk.Logger.log(
+      `Cron tick for ${func.name} (${cronPattern}) at ${scheduledAt}`,
+    );
+    await executeBackgroundFunction(
+      func,
+      {
+        scheduledAt,
+        cronPattern,
+        trigger: 'cron',
+      },
+      compiled,
+      this.grpcSdk,
+    );
+    ConduitGrpcSdk.Logger.log(`Cron execution completed for ${func.name}`);
+  }
+
   async ensureWorker(lockDuration: number): Promise<Worker | undefined> {
     if (!this.shouldSchedule()) {
       return this.cronWorker;
@@ -75,39 +109,7 @@ export class CronQueueController {
     }
     this.cronWorker = new Worker(
       CRON_QUEUE_NAME,
-      async (job: Job<{ functionId: string }>) => {
-        const func = await Functions.getInstance().findOne(
-          { _id: job.data.functionId },
-          { readPreference: 'primary' },
-        );
-        if (!func || func.functionType !== 'cron') {
-          return;
-        }
-        const cronPattern = getCronPatternFromInputs(func.inputs);
-        if (!cronPattern) {
-          ConduitGrpcSdk.Logger.warn(
-            `Cron function ${func.name} (${func._id}) has no pattern; skipping tick`,
-          );
-          return;
-        }
-        const compiled =
-          this.compiledFunctions.get(func._id) ?? compileFunctionCode(func.functionCode);
-        const scheduledAt = new Date().toISOString();
-        ConduitGrpcSdk.Logger.log(
-          `Cron tick for ${func.name} (${cronPattern}) at ${scheduledAt}`,
-        );
-        await executeBackgroundFunction(
-          func,
-          {
-            scheduledAt,
-            cronPattern,
-            trigger: 'cron',
-          },
-          compiled,
-          this.grpcSdk,
-        );
-        ConduitGrpcSdk.Logger.log(`Cron execution completed for ${func.name}`);
-      },
+      job => this.executeCronJob(job),
       {
         concurrency: 1,
         lockDuration,
@@ -220,25 +222,21 @@ export class CronQueueController {
     }
   }
 
+  private lockDurationFromTimeouts(timeouts: Array<number | undefined>): number {
+    const maxTimeout = timeouts.reduce(
+      (max, timeout) => Math.max(max, timeout ?? DEFAULT_FUNCTION_TIMEOUT_MS),
+      DEFAULT_FUNCTION_TIMEOUT_MS,
+    );
+    return maxTimeout + LOCK_BUFFER_MS;
+  }
+
   private async lockDurationForCronFunctions(): Promise<number> {
     type CronTimeout = Pick<Functions, 'timeout'>;
     const cronDocs = (await Functions.getInstance().findMany(
       { functionType: 'cron' },
       { select: 'timeout', readPreference: 'primary' },
     )) as CronTimeout[];
-    const maxTimeout = cronDocs.reduce(
-      (max, func) => Math.max(max, func.timeout ?? DEFAULT_FUNCTION_TIMEOUT_MS),
-      DEFAULT_FUNCTION_TIMEOUT_MS,
-    );
-    return maxTimeout + LOCK_BUFFER_MS;
-  }
-
-  private lockDurationFromFunctions(cronFunctions: Functions[]): number {
-    const maxTimeout = cronFunctions.reduce(
-      (max, func) => Math.max(max, func.timeout ?? DEFAULT_FUNCTION_TIMEOUT_MS),
-      DEFAULT_FUNCTION_TIMEOUT_MS,
-    );
-    return maxTimeout + LOCK_BUFFER_MS;
+    return this.lockDurationFromTimeouts(cronDocs.map(func => func.timeout));
   }
 
   private async reconcileCronJobs(): Promise<number> {
@@ -270,9 +268,6 @@ export class CronQueueController {
       try {
         if (item.existingKey) {
           await this.cronQueue.removeRepeatableByKey(item.existingKey);
-          updated += 1;
-        } else {
-          registered += 1;
         }
         await this.cronQueue.add(
           CRON_JOB_NAME,
@@ -284,23 +279,23 @@ export class CronQueueController {
             removeOnFail: { age: 24 * 3600 },
           },
         );
+        if (item.existingKey) {
+          updated += 1;
+        } else {
+          registered += 1;
+        }
       } catch (err) {
         ConduitGrpcSdk.Logger.error(
           `Failed to schedule cron job ${item.jobId}: ${(err as Error).message}`,
         );
         errors += 1;
-        if (item.existingKey) {
-          updated -= 1;
-        } else {
-          registered -= 1;
-        }
       }
     }
 
     ConduitGrpcSdk.Logger.log(
       `Cron sync complete: registered=${registered}, updated=${updated}, unchanged=${plan.unchangedJobIds.length}, removed=${removed}, skipped=${plan.skipped.length}, errors=${errors}`,
     );
-    return this.lockDurationFromFunctions(cronFunctions);
+    return this.lockDurationFromTimeouts(cronFunctions.map(func => func.timeout));
   }
 
   private setupWorkerEventHandlers(worker: Worker): void {

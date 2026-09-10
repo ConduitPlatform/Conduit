@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { FunctionExecutions } from '../models/index.js';
 import type { Functions } from '../models/index.js';
-import { compileFunctionCode, executeBackgroundFunction } from './utils.js';
+import { compileFunctionCode, executeBackgroundFunction } from '../controllers/utils.js';
 
 const originalGetInstance = FunctionExecutions.getInstance;
 

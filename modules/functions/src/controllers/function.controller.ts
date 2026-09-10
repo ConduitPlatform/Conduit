@@ -6,12 +6,12 @@ import {
   ConduitSocketOptions,
 } from '@conduitplatform/grpc-sdk';
 import {
+  ConfigController,
   GrpcServer,
   RequestHandlers,
   RoutingManager,
   SocketEventHandler,
 } from '@conduitplatform/module-tools';
-import { ConfigController } from '@conduitplatform/module-tools';
 
 import { Functions } from '../models/index.js';
 import { CronQueueController } from './cronQueue.controller.js';
@@ -33,8 +33,10 @@ type Middleware = {
   handler: RequestHandlers;
 };
 
+type FunctionRoute = Route | Socket | Middleware;
+
 export class FunctionController {
-  private functionRoutes: (Route | Socket | Middleware)[] = [];
+  private functionRoutes: FunctionRoute[] = [];
   private readonly compiledCronFunctions = new Map<string, CompiledUserFunction>();
 
   private _routingManager: RoutingManager;
@@ -54,77 +56,66 @@ export class FunctionController {
     });
   }
 
-  refreshRoutes() {
-    return Functions.getInstance()
-      .findMany({}, { readPreference: 'primary' })
-      .then(async r => {
-        if (!r || r.length == 0) {
-          ConduitGrpcSdk.Logger.log('No functions to register');
-        }
-        this.functionRoutes = [];
-        this.compiledCronFunctions.clear();
+  async refreshRoutes() {
+    try {
+      const functions = await Functions.getInstance().findMany(
+        {},
+        { readPreference: 'primary' },
+      );
+      if (!functions || functions.length === 0) {
+        ConduitGrpcSdk.Logger.log('No functions to register');
+      }
+      this.functionRoutes = [];
+      this.compiledCronFunctions.clear();
 
-        for (const func of r) {
-          try {
-            if (func.functionType === 'cron') {
-              try {
-                this.compiledCronFunctions.set(func._id, tryPrepareCronFunction(func));
-              } catch (err) {
-                ConduitGrpcSdk.Logger.error(
-                  `Failed to prepare cron function ${func.name} (${func._id})`,
-                );
-                ConduitGrpcSdk.Logger.error(err as Error);
-              }
-              continue;
-            }
-            const route = createFunctionRoute(func, this.grpcSdk);
-            if (route) {
-              this.functionRoutes.push(route as any);
-            }
-          } catch (err) {
-            ConduitGrpcSdk.Logger.error(
-              `Failed to process function ${func.name} (${func._id}); skipping`,
-            );
-            ConduitGrpcSdk.Logger.error(err as Error);
+      for (const func of functions) {
+        try {
+          if (func.functionType === 'cron') {
+            this.compiledCronFunctions.set(func._id, tryPrepareCronFunction(func));
+            continue;
           }
+          const route = createFunctionRoute(func, this.grpcSdk);
+          if (route) {
+            this.functionRoutes.push(route as FunctionRoute);
+          }
+        } catch (err) {
+          ConduitGrpcSdk.Logger.error(
+            `Failed to process function ${func.name} (${func._id}); skipping`,
+          );
+          ConduitGrpcSdk.Logger.error(err as Error);
         }
-        this._routingManager.clear();
-        this.functionRoutes.forEach(route => {
-          if ((route as Socket).events) {
-            this._routingManager.socket(
-              (route as Socket).input,
-              (route as Socket).events,
-            );
-          } else if (!(route as Middleware).hasOwnProperty('returnType')) {
-            this._routingManager.middleware(
-              (route as Middleware).input,
-              (route as Middleware).handler,
-            );
-          } else {
-            this._routingManager.route(
-              (route as Route).input,
-              (route as Route).returnType,
-              (route as Route).handler,
-            );
-          }
-        });
-        await this._routingManager.registerRoutes();
-        ConduitGrpcSdk.Logger.log('Refreshed routes');
-
-        if (ConfigController.getInstance().config.active) {
-          const cronQueue = CronQueueController.getInstance(this.grpcSdk);
-          cronQueue.setCompiledFunctions(this.compiledCronFunctions);
-          if (ConfigController.getInstance().config.active) {
-            await cronQueue.syncCronJobs();
-          }
+      }
+      this._routingManager.clear();
+      this.functionRoutes.forEach(route => {
+        if ((route as Socket).events) {
+          this._routingManager.socket((route as Socket).input, (route as Socket).events);
+        } else if (!(route as Middleware).hasOwnProperty('returnType')) {
+          this._routingManager.middleware(
+            (route as Middleware).input,
+            (route as Middleware).handler,
+          );
+        } else {
+          this._routingManager.route(
+            (route as Route).input,
+            (route as Route).returnType,
+            (route as Route).handler,
+          );
         }
-      })
-      .catch((err: Error) => {
-        ConduitGrpcSdk.Logger.error(
-          'Something went wrong when loading functions to the router',
-        );
-        ConduitGrpcSdk.Logger.error(err);
       });
+      await this._routingManager.registerRoutes();
+      ConduitGrpcSdk.Logger.log('Refreshed routes');
+
+      if (ConfigController.getInstance().config.active) {
+        const cronQueue = CronQueueController.getInstance(this.grpcSdk);
+        cronQueue.setCompiledFunctions(this.compiledCronFunctions);
+        await cronQueue.syncCronJobs();
+      }
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(
+        'Something went wrong when loading functions to the router',
+      );
+      ConduitGrpcSdk.Logger.error(err as Error);
+    }
   }
 
   refreshEndpoints(): void {

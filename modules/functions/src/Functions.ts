@@ -76,7 +76,6 @@ export default class Functions extends ManagedModule<Config> {
     if (moduleName !== 'router' || !serving || this.isRunning) return;
     this.isRunning = true;
     this.functionsController = new FunctionController(this.grpcServer, this.grpcSdk);
-    CronQueueController.getInstance(this.grpcSdk);
     this.adminRouter = new AdminHandlers(
       this.grpcServer,
       this.grpcSdk,

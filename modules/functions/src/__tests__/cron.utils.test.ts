@@ -8,7 +8,7 @@ import {
   parseCronJobFunctionId,
   planCronSync,
   validateCronPattern,
-} from './cron.utils.js';
+} from '../controllers/cron.utils.js';
 
 describe('cron.utils', () => {
   describe('parseCronJobFunctionId', () => {
