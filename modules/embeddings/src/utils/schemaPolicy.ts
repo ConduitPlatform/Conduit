@@ -2,13 +2,20 @@ import { GrpcError, TYPE } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { BACKFILL_RUN_SCHEMA } from './backfillRun.js';
 import { sourceHashField } from './configChange.js';
+import {
+  EMBEDDING_DOCUMENT_SCHEMA,
+  EMBEDDING_SOURCE_SCHEMA,
+  isEmbeddingChunkSchema,
+} from './genericSource.js';
 
 export const EMBEDDING_CONFIG_SCHEMA = 'EmbeddingConfig';
-export { BACKFILL_RUN_SCHEMA };
+export { BACKFILL_RUN_SCHEMA, EMBEDDING_DOCUMENT_SCHEMA, EMBEDDING_SOURCE_SCHEMA };
 export const EMBEDDINGS_OWNER_MODULE = 'embeddings';
 export const EMBEDDING_OWNED_SCHEMA_NAMES = new Set([
   EMBEDDING_CONFIG_SCHEMA,
   BACKFILL_RUN_SCHEMA,
+  EMBEDDING_SOURCE_SCHEMA,
+  EMBEDDING_DOCUMENT_SCHEMA,
 ]);
 export const CONFIG_OPERATOR_MODULES = ['database', 'core'] as const;
 export const SEARCH_OPERATOR_MODULES = ['database', 'core', 'embeddings'] as const;
@@ -90,6 +97,7 @@ export function isDeniedEmbeddingSchema(schema: {
   if (!schema.name) return true;
   if (schema.ownerModule === EMBEDDINGS_OWNER_MODULE) return true;
   if (EMBEDDING_OWNED_SCHEMA_NAMES.has(schema.name)) return true;
+  if (isEmbeddingChunkSchema(schema.name)) return true;
   if (schema.name.startsWith('_')) return true;
   if (SYSTEM_SCHEMA_NAMES.has(schema.name)) return true;
   if (schema.ownerModule && INTERNAL_OWNER_MODULES.has(schema.ownerModule)) return true;

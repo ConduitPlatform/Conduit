@@ -14,7 +14,8 @@ import {
 } from '@conduitplatform/module-tools';
 import AppConfigSchema, { Config } from './config/index.js';
 import * as models from './models/index.js';
-import { BackfillRun, EmbeddingConfig } from './models/index.js';
+import { BackfillRun, EmbeddingConfig, EmbeddingSource } from './models/index.js';
+import { reconcileSourceChunkSchemas } from './utils/genericSource.js';
 import { QueueController } from './controllers/queue.controller.js';
 import { getProvider, hashEmbeddingInput } from './providers/index.js';
 import {
@@ -120,6 +121,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     await this.awaitPeersFromManifest();
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
+    await this.reconcileGenericChunkSchemas();
     this.queueController = QueueController.getInstance(this.grpcSdk);
     this.api = this.createApi();
     this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this.api);
@@ -605,5 +607,24 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       }
     });
     return Promise.all(promises);
+  }
+
+  private async reconcileGenericChunkSchemas() {
+    const sources = await EmbeddingSource.getInstance().findMany({});
+    await reconcileSourceChunkSchemas(
+      sources,
+      {
+        createSchemaFromAdapter: schema => this.database.createSchemaFromAdapter(schema),
+        migrate: schemaName => this.database.migrate(schemaName),
+        getVectorIndexes: schemaName => this.database.getVectorIndexes(schemaName),
+        createVectorIndex: (schemaName, index) =>
+          this.database.createVectorIndex(schemaName, index),
+      },
+      (id, state) =>
+        EmbeddingSource.getInstance().findByIdAndUpdate(id, {
+          chunkSchemaName: state.schemaName,
+          chunkIndexName: state.indexName,
+        }),
+    );
   }
 }

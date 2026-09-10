@@ -24,6 +24,15 @@ describe('embedding schema and source policies', () => {
   it('denies system, auth-secret, and embeddings-owned schemas', () => {
     assert.equal(isDeniedEmbeddingSchema({ name: 'EmbeddingConfig' }), true);
     assert.equal(isDeniedEmbeddingSchema({ name: 'BackfillRun' }), true);
+    assert.equal(isDeniedEmbeddingSchema({ name: 'EmbeddingSource' }), true);
+    assert.equal(isDeniedEmbeddingSchema({ name: 'EmbeddingDocument' }), true);
+    assert.equal(
+      isDeniedEmbeddingSchema({
+        name: '_EmbeddingChunk_abc123',
+        ownerModule: 'cms-app',
+      }),
+      true,
+    );
     assert.equal(
       isDeniedEmbeddingSchema({ name: 'CustomOps', ownerModule: 'embeddings' }),
       true,
