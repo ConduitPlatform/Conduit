@@ -61,6 +61,20 @@ test('embeddings proto exposes typed config, status, backfill, and search RPCs',
     protoSource,
     /rpc semanticSearch\(SemanticSearchRequest\) returns \(SemanticSearchResponse\)/,
   );
+  assert.match(
+    protoSource,
+    /rpc upsertSource\(UpsertSourceRequest\) returns \(UpsertSourceResponse\)/,
+  );
+  assert.match(
+    protoSource,
+    /rpc syncDocument\(SyncDocumentRequest\) returns \(SyncDocumentResponse\)/,
+  );
+  assert.match(
+    protoSource,
+    /rpc purgeSource\(SourceMutationRequest\) returns \(PurgeSourceResponse\)/,
+  );
+  assert.match(protoSource, /optional string sourceId = 9;/);
+  assert.match(protoSource, /repeated double queryVector = 10;/);
   assert.doesNotMatch(
     protoSource,
     /message EmbeddingConfigResponse \{\n  string result = 1;/,
@@ -103,6 +117,12 @@ test('grpc-sdk embeddings client maps typed proto messages instead of JSON-strin
   );
   assert.match(adminRoutesSource, /model: ConduitString\.Optional/);
   assert.match(adminRoutesSource, /dimensions: ConduitNumber\.Optional/);
+  assert.match(sdkSource, /upsertSource\(/);
+  assert.match(sdkSource, /syncDocument\(/);
+  assert.match(sdkSource, /sourceId\?: string;/);
+  assert.match(sdkSource, /queryVector\?: number\[\];/);
+  assert.match(adminRoutesSource, /'\/sources'/);
+  assert.match(adminRoutesSource, /'\/sources\/:id\/documents'/);
 });
 
 test('deployment docs describe provider configuration and rollout workflow', () => {

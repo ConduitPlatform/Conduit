@@ -78,6 +78,7 @@ import {
   type MappedEmbeddingConfig,
 } from '../utils/protoMappers.js';
 import { sanitizeErrorMessage } from '../utils/redactConfig.js';
+import { GenericSourceApi, type GenericSourceApiDeps } from './genericSourceApi.js';
 
 export interface DeclaredSchemaInfo {
   name: string;
@@ -173,13 +174,18 @@ export interface EmbeddingsApiDeps {
   invalidateHashes: (schemaName: string, hashFields: string[]) => Promise<void>;
   embed: (input: string, provider: string, model: string) => Promise<number[]>;
   onConfigChanged?: (schemaName: string) => Promise<void> | void;
+  generic?: GenericSourceApiDeps;
 }
 
 const DEFAULT_LIST_LIMIT = 25;
 const MAX_LIST_LIMIT = 100;
 
 export class EmbeddingsApi {
-  constructor(private readonly deps: EmbeddingsApiDeps) {}
+  readonly generic: GenericSourceApi | null;
+
+  constructor(private readonly deps: EmbeddingsApiDeps) {
+    this.generic = deps.generic ? new GenericSourceApi(deps.generic) : null;
+  }
 
   async upsertConfig(
     request: {
@@ -523,8 +529,10 @@ export class EmbeddingsApi {
 
   async semanticSearch(
     request: {
-      schemaName: string;
-      text: string;
+      schemaName?: string;
+      sourceId?: string;
+      text?: string;
+      queryVector?: number[];
       targetField?: string;
       filter?: string;
       limit?: number;
@@ -534,17 +542,54 @@ export class EmbeddingsApi {
     },
     caller: EmbeddingsApiCaller,
   ): Promise<{ hits: ReturnType<typeof mapSearchHits> }> {
+    if (request.sourceId && request.schemaName) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Search accepts exactly one of schemaName or sourceId',
+      );
+    }
+    if (request.sourceId) {
+      if (!this.generic) {
+        throw new GrpcError(
+          status.FAILED_PRECONDITION,
+          'Generic embedding sources are not configured',
+        );
+      }
+      return this.generic.search(
+        {
+          sourceId: request.sourceId,
+          text: request.text,
+          queryVector: request.queryVector,
+          filter: request.filter,
+          limit: request.limit,
+          userId: request.userId,
+          scope: request.scope,
+          adminOperator: request.adminOperator,
+        },
+        caller,
+      );
+    }
+    if (request.queryVector?.length) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Query vectors are only supported for source search',
+      );
+    }
     if (typeof request.text !== 'string' || request.text.trim().length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Search text is required');
     }
+    if (!request.schemaName) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'schemaName or sourceId is required');
+    }
+    const schemaName = request.schemaName;
     const adminOperator = caller.platformAdmin
       ? true
       : resolveAdminOperatorContext({
           requested: request.adminOperator,
           callerModule: caller.callerModule,
         });
-    const schema = await this.deps.getSchema(request.schemaName);
-    const declared = await this.deps.declaredSchema(request.schemaName);
+    const schema = await this.deps.getSchema(schemaName);
+    const declared = await this.deps.declaredSchema(schemaName);
     assertEmbeddingTargetSchema({
       name: schema.name,
       ownerModule: declared?.ownerModule,
@@ -556,13 +601,10 @@ export class EmbeddingsApi {
         adminOperator,
       });
     }
-    const config = await this.resolveEnabledConfig(
-      request.schemaName,
-      request.targetField,
-    );
+    const config = await this.resolveEnabledConfig(schemaName, request.targetField);
     const [capabilities, indexes] = await Promise.all([
-      this.deps.getVectorCapabilities(request.schemaName),
-      this.deps.getVectorIndexes(request.schemaName),
+      this.deps.getVectorCapabilities(schemaName),
+      this.deps.getVectorIndexes(schemaName),
     ]);
     assertSearchExecutable({
       capabilities,
@@ -577,7 +619,7 @@ export class EmbeddingsApi {
       );
     }
     const results = await this.deps.vectorSearch({
-      schemaName: request.schemaName,
+      schemaName,
       field: config.targetField,
       vector,
       filter: this.parseOptionalFilter(request.filter),

@@ -1,6 +1,7 @@
 import { ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
 import {
   ConduitBoolean,
+  ConduitJson,
   ConduitNumber,
   ConduitString,
 } from '@conduitplatform/module-tools';
@@ -25,6 +26,37 @@ const CONFIG_BODY = {
   similarity: ConduitString.Optional,
   sourceFieldAllowlist: { type: [TYPE.String], required: false },
   enabled: ConduitBoolean.Optional,
+};
+
+export const SOURCE_BODY = {
+  id: ConduitString.Optional,
+  label: ConduitString.Optional,
+  kind: ConduitString.Required,
+  partitionSubject: ConduitString.Required,
+  provider: ConduitString.Optional,
+  model: ConduitString.Optional,
+  dimensions: ConduitNumber.Optional,
+  similarity: ConduitString.Optional,
+  selectors: ConduitJson.Optional,
+  metadataAllowlist: { type: [TYPE.String], required: false },
+};
+
+export const UPDATE_SOURCE_BODY = {
+  label: ConduitString.Optional,
+  selectors: ConduitJson.Optional,
+  metadataAllowlist: { type: [TYPE.String], required: false },
+  syncCheckpoint: ConduitJson.Optional,
+};
+
+export const DOCUMENT_BODY = {
+  externalDocumentId: ConduitString.Required,
+  contentVersion: ConduitString.Optional,
+  etag: ConduitString.Optional,
+  metadata: ConduitJson.Optional,
+  storageFileId: ConduitString.Optional,
+  connectorReference: ConduitString.Optional,
+  mimeType: ConduitString.Optional,
+  chunks: { type: [TYPE.JSON], required: true },
 };
 
 function contract(
@@ -102,7 +134,57 @@ export const EMBEDDINGS_ADMIN_ROUTES: EmbeddingsAdminRouteContract[] = [
   contract(
     '/search',
     ConduitRouteActions.POST,
-    'Runs operator semantic search by text. Generates a query embedding and delegates vector search to Database. Operator-only; does not accept raw vectors.',
+    'Runs operator semantic search by schemaName or sourceId. Schema search requires query text. Source search accepts query text or a matching finite query vector. Operator-only; never hybrid.',
+  ),
+  contract(
+    '/sources',
+    ConduitRouteActions.GET,
+    'Lists generic embedding sources. Operator-only. Filter by kind, state, or partitionSubject.',
+  ),
+  contract(
+    '/sources',
+    ConduitRouteActions.POST,
+    'Creates a generic embedding source with an immutable kind, partition, and vector profile. Operator-only. Provisions a hidden profile-isolated chunk index. Never stores credentials or fetches references.',
+  ),
+  contract(
+    '/sources/:id',
+    ConduitRouteActions.GET,
+    'Returns one generic embedding source by id. Operator-only.',
+  ),
+  contract(
+    '/sources/:id',
+    ConduitRouteActions.PATCH,
+    'Updates mutable embedding source label, selectors, metadata allowlist, or sync checkpoint. Operator-only. Kind, partitionSubject, and vector profile stay immutable.',
+  ),
+  contract(
+    '/sources/:id',
+    ConduitRouteActions.DELETE,
+    'Purges a generic embedding source and cascades relations, documents, and chunks. Operator-only.',
+  ),
+  contract(
+    '/sources/:id/disable',
+    ConduitRouteActions.POST,
+    'Disables a generic embedding source. Operator-only. Ingest and search fail closed afterwards.',
+  ),
+  contract(
+    '/sources/:id/revoke',
+    ConduitRouteActions.POST,
+    'Revokes a generic embedding source and deletes its ReBAC relations. Operator-only. Ingest and search fail closed afterwards.',
+  ),
+  contract(
+    '/sources/:id/status',
+    ConduitRouteActions.GET,
+    'Returns embedding source readiness and per-document status counts. Operator-only.',
+  ),
+  contract(
+    '/sources/:id/documents',
+    ConduitRouteActions.POST,
+    'Trusted document and chunk ingest. Operator-only. Accepts XOR bounded text or a precomputed finite exact-dimension vector. Embeds, hashes, and discards text. Idempotent on source, externalDocument, version, and chunk key.',
+  ),
+  contract(
+    '/sources/:id/documents/:externalDocumentId',
+    ConduitRouteActions.DELETE,
+    'Deletes one embedding document and its chunks. Operator-only.',
   ),
 ];
 
@@ -112,6 +194,7 @@ export const EMBEDDINGS_CLIENT_FORBIDDEN_PATHS = [
   '/backfills',
   '/capabilities',
   '/status',
+  '/sources',
 ];
 
 export { CONFIG_BODY };

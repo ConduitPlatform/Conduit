@@ -39,6 +39,16 @@ describe('embeddings MCP tool names', () => {
       'post_embeddings_backfills_id_cancel',
       'post_embeddings_backfills_id_resume',
       'post_embeddings_search',
+      'get_embeddings_sources',
+      'post_embeddings_sources',
+      'get_embeddings_sources_id',
+      'patch_embeddings_sources_id',
+      'delete_embeddings_sources_id',
+      'post_embeddings_sources_id_disable',
+      'post_embeddings_sources_id_revoke',
+      'get_embeddings_sources_id_status',
+      'post_embeddings_sources_id_documents',
+      'delete_embeddings_sources_id_documents_externaldocumentid',
     ]);
     for (const route of EMBEDDINGS_ADMIN_ROUTES) {
       assert.equal(route.publicPath.startsWith('/embeddings/'), true);
@@ -55,12 +65,13 @@ describe('embeddings MCP tool names', () => {
     );
   });
 
-  it('never exposes config, backfill, capabilities, or status as client routes', () => {
+  it('never exposes config, backfill, capabilities, status, or sources as client routes', () => {
     assert.deepEqual(EmbeddingsRoutes.clientForbiddenPaths(), [
       '/configs',
       '/backfills',
       '/capabilities',
       '/status',
+      '/sources',
     ]);
     for (const path of EMBEDDINGS_CLIENT_FORBIDDEN_PATHS) {
       assert.equal(

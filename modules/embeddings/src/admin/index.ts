@@ -2,6 +2,7 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+  GrpcError,
   ParsedRouterRequest,
   TYPE,
   UnparsedRouterResponse,
@@ -15,9 +16,21 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { EmbeddingsApi } from '../api/embeddingsApi.js';
-import { CONFIG_BODY, EMBEDDINGS_ADMIN_ROUTES } from './routes.js';
+import {
+  CONFIG_BODY,
+  DOCUMENT_BODY,
+  EMBEDDINGS_ADMIN_ROUTES,
+  SOURCE_BODY,
+  UPDATE_SOURCE_BODY,
+} from './routes.js';
+import { status } from '@grpc/grpc-js';
 
 const ADMIN_CALLER = { platformAdmin: true as const };
+
+function asJsonString(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  return typeof value === 'string' ? value : JSON.stringify(value);
+}
 
 export class AdminHandlers {
   private readonly routingManager: RoutingManager;
@@ -125,7 +138,9 @@ export class AdminHandlers {
     const result = await this.api.semanticSearch(
       {
         schemaName: call.request.params.schemaName,
+        sourceId: call.request.params.sourceId,
         text: call.request.params.text,
+        queryVector: call.request.params.queryVector,
         targetField: call.request.params.targetField,
         limit: call.request.params.limit,
         filter:
@@ -144,6 +159,110 @@ export class AdminHandlers {
         document: JSON.parse(hit.document),
       })),
     };
+  }
+
+  async listSources(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return this.requireGeneric().getSources(
+      {
+        kind: call.request.params.kind,
+        state: call.request.params.state,
+        partitionSubject: call.request.params.partitionSubject,
+        skip: call.request.params.skip,
+        limit: call.request.params.limit,
+      },
+      ADMIN_CALLER,
+    );
+  }
+
+  async upsertSource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const params = call.request.params;
+    return this.requireGeneric().upsertSource(
+      {
+        id: params.id,
+        label: params.label,
+        kind: params.kind,
+        partitionSubject: params.partitionSubject,
+        provider: params.provider,
+        model: params.model,
+        dimensions: params.dimensions,
+        similarity: params.similarity,
+        selectors: asJsonString(params.selectors),
+        metadataAllowlist: params.metadataAllowlist,
+      },
+      ADMIN_CALLER,
+    );
+  }
+
+  async getSource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return this.requireGeneric().getSource(call.request.params.id, ADMIN_CALLER);
+  }
+
+  async updateSource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const params = call.request.params;
+    return this.requireGeneric().updateSource(
+      {
+        id: params.id,
+        label: params.label,
+        selectors: asJsonString(params.selectors),
+        metadataAllowlist: params.metadataAllowlist,
+        syncCheckpoint: asJsonString(params.syncCheckpoint),
+      },
+      ADMIN_CALLER,
+    );
+  }
+
+  async getSourceStatus(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return this.requireGeneric().getSourceStatus(call.request.params.id, ADMIN_CALLER);
+  }
+
+  async disableSource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return this.requireGeneric().disableSource(call.request.params.id, ADMIN_CALLER);
+  }
+
+  async revokeSource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return this.requireGeneric().revokeSource(call.request.params.id, ADMIN_CALLER);
+  }
+
+  async purgeSource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return this.requireGeneric().purgeSource(call.request.params.id, ADMIN_CALLER);
+  }
+
+  async syncDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const params = call.request.params;
+    return this.requireGeneric().syncDocument(
+      {
+        sourceId: params.id,
+        externalDocumentId: params.externalDocumentId,
+        contentVersion: params.contentVersion,
+        etag: params.etag,
+        metadata: asJsonString(params.metadata),
+        storageFileId: params.storageFileId,
+        connectorReference: params.connectorReference,
+        mimeType: params.mimeType,
+        chunks: params.chunks ?? [],
+      },
+      ADMIN_CALLER,
+    );
+  }
+
+  async deleteDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return this.requireGeneric().deleteDocument(
+      {
+        sourceId: call.request.params.id,
+        externalDocumentId: call.request.params.externalDocumentId,
+      },
+      ADMIN_CALLER,
+    );
+  }
+
+  private requireGeneric() {
+    if (!this.api.generic) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'Generic embedding sources are not configured',
+      );
+    }
+    return this.api.generic;
   }
 
   private registerAdminRoutes() {
@@ -317,8 +436,10 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: descriptions.get(`${ConduitRouteActions.POST}:/search`),
         bodyParams: {
-          schemaName: ConduitString.Required,
-          text: ConduitString.Required,
+          schemaName: ConduitString.Optional,
+          sourceId: ConduitString.Optional,
+          text: ConduitString.Optional,
+          queryVector: { type: [TYPE.Number], required: false },
           targetField: ConduitString.Optional,
           filter: ConduitJson.Optional,
           limit: ConduitNumber.Optional,
@@ -328,6 +449,137 @@ export class AdminHandlers {
         hits: [ConduitJson.Required],
       }),
       this.semanticSearch.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sources',
+        action: ConduitRouteActions.GET,
+        description: descriptions.get(`${ConduitRouteActions.GET}:/sources`),
+        queryParams: {
+          kind: ConduitString.Optional,
+          state: ConduitString.Optional,
+          partitionSubject: ConduitString.Optional,
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetEmbeddingSources', {
+        sources: [ConduitJson.Required],
+        count: ConduitNumber.Required,
+      }),
+      this.listSources.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sources',
+        action: ConduitRouteActions.POST,
+        description: descriptions.get(`${ConduitRouteActions.POST}:/sources`),
+        bodyParams: SOURCE_BODY as never,
+      },
+      new ConduitRouteReturnDefinition('UpsertEmbeddingSource', {
+        source: ConduitJson.Required,
+        warnings: [ConduitString.Required],
+      }),
+      this.upsertSource.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sources/:id',
+        action: ConduitRouteActions.GET,
+        description: descriptions.get(`${ConduitRouteActions.GET}:/sources/:id`),
+        urlParams: { id: ConduitString.Required },
+      },
+      new ConduitRouteReturnDefinition('GetEmbeddingSource', TYPE.JSON),
+      this.getSource.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sources/:id',
+        action: ConduitRouteActions.PATCH,
+        description: descriptions.get(`${ConduitRouteActions.PATCH}:/sources/:id`),
+        urlParams: { id: ConduitString.Required },
+        bodyParams: UPDATE_SOURCE_BODY as never,
+      },
+      new ConduitRouteReturnDefinition('UpdateEmbeddingSource', {
+        source: ConduitJson.Required,
+        warnings: [ConduitString.Required],
+      }),
+      this.updateSource.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sources/:id',
+        action: ConduitRouteActions.DELETE,
+        description: descriptions.get(`${ConduitRouteActions.DELETE}:/sources/:id`),
+        urlParams: { id: ConduitString.Required },
+      },
+      new ConduitRouteReturnDefinition('PurgeEmbeddingSource', {
+        source: ConduitJson.Required,
+        deletedDocuments: ConduitNumber.Required,
+        deletedChunks: ConduitNumber.Required,
+      }),
+      this.purgeSource.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sources/:id/disable',
+        action: ConduitRouteActions.POST,
+        description: descriptions.get(`${ConduitRouteActions.POST}:/sources/:id/disable`),
+        urlParams: { id: ConduitString.Required },
+      },
+      new ConduitRouteReturnDefinition('DisableEmbeddingSource', TYPE.JSON),
+      this.disableSource.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sources/:id/revoke',
+        action: ConduitRouteActions.POST,
+        description: descriptions.get(`${ConduitRouteActions.POST}:/sources/:id/revoke`),
+        urlParams: { id: ConduitString.Required },
+      },
+      new ConduitRouteReturnDefinition('RevokeEmbeddingSource', TYPE.JSON),
+      this.revokeSource.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sources/:id/status',
+        action: ConduitRouteActions.GET,
+        description: descriptions.get(`${ConduitRouteActions.GET}:/sources/:id/status`),
+        urlParams: { id: ConduitString.Required },
+      },
+      new ConduitRouteReturnDefinition('GetEmbeddingSourceStatus', TYPE.JSON),
+      this.getSourceStatus.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sources/:id/documents',
+        action: ConduitRouteActions.POST,
+        description: descriptions.get(
+          `${ConduitRouteActions.POST}:/sources/:id/documents`,
+        ),
+        urlParams: { id: ConduitString.Required },
+        bodyParams: DOCUMENT_BODY as never,
+      },
+      new ConduitRouteReturnDefinition('SyncEmbeddingDocument', TYPE.JSON),
+      this.syncDocument.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sources/:id/documents/:externalDocumentId',
+        action: ConduitRouteActions.DELETE,
+        description: descriptions.get(
+          `${ConduitRouteActions.DELETE}:/sources/:id/documents/:externalDocumentId`,
+        ),
+        urlParams: {
+          id: ConduitString.Required,
+          externalDocumentId: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('DeleteEmbeddingDocument', {
+        documentId: ConduitString.Required,
+        deletedChunks: ConduitNumber.Required,
+      }),
+      this.deleteDocument.bind(this),
     );
     void this.routingManager.registerRoutes();
   }

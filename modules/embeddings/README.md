@@ -67,10 +67,20 @@ tools through Hermes:
 - `POST /embeddings/backfills/:id/cancel`
 - `POST /embeddings/backfills/:id/resume`
 - `POST /embeddings/search`
+- `GET|POST /embeddings/sources`
+- `GET|PATCH|DELETE /embeddings/sources/:id`
+- `POST /embeddings/sources/:id/disable`
+- `POST /embeddings/sources/:id/revoke`
+- `GET /embeddings/sources/:id/status`
+- `POST /embeddings/sources/:id/documents`
+- `DELETE /embeddings/sources/:id/documents/:externalDocumentId`
 
-Config and backfill APIs are never exposed as client routes. Client
-`POST /embeddings/search` accepts text only and takes user/scope from the
-authenticated router context.
+Config, backfill, and source ingest APIs are never exposed as client routes.
+Client `POST /embeddings/search` accepts query text only, optional
+`schemaName` or `sourceId`, and an optional CMS-style `scope`. User comes from
+the authenticated router context. Raw vectors, `userId`, `adminOperator`, and
+partition overrides are rejected. Source hits return score plus safe
+identifiers/metadata only.
 
 ## Packaging
 

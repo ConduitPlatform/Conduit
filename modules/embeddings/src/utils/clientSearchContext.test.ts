@@ -3,9 +3,11 @@ import assert from 'node:assert/strict';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
+  assertClientSearchOverrides,
   assertClientSearchSubject,
   clampClientSearchLimit,
   clientSearchSubject,
+  resolveClientSearchScope,
   CLIENT_SEMANTIC_SEARCH_MAX_LIMIT,
 } from './clientSearchContext.js';
 
@@ -25,6 +27,44 @@ describe('client semantic search context', () => {
     );
     assert.doesNotThrow(() =>
       assertClientSearchSubject(clientSearchSubject({ user: { _id: 'user-1' } })),
+    );
+  });
+
+  it('rejects client vector, userId, adminOperator, and partition overrides', () => {
+    assert.doesNotThrow(() =>
+      assertClientSearchOverrides({ schemaName: 'Article', text: 'hello' }),
+    );
+    assert.throws(
+      () => assertClientSearchOverrides({ queryVector: [1, 2] }),
+      (err: unknown) => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
+    );
+    assert.throws(
+      () => assertClientSearchOverrides({ userId: 'user-1' }),
+      (err: unknown) => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
+    );
+    assert.throws(
+      () => assertClientSearchOverrides({ adminOperator: true }),
+      (err: unknown) => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
+    );
+    assert.throws(
+      () => assertClientSearchOverrides({ partitionSubject: 'Team:other' }),
+      (err: unknown) => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
+    );
+  });
+
+  it('accepts CMS-style request scope when it matches router context', () => {
+    assert.equal(
+      resolveClientSearchScope({ contextScope: 'Team:org', requestScope: 'Team:org' }),
+      'Team:org',
+    );
+    assert.equal(resolveClientSearchScope({ requestScope: 'Team:org' }), 'Team:org');
+    assert.throws(
+      () =>
+        resolveClientSearchScope({
+          contextScope: 'Team:org',
+          requestScope: 'Team:other',
+        }),
+      (err: unknown) => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
     );
   });
 

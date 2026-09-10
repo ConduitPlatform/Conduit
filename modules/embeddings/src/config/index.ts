@@ -85,6 +85,41 @@ const AppConfigSchema = {
       format: 'Number',
       default: 1024 * 1024,
     },
+    trustedIngestModules: {
+      doc: 'Modules allowed to call trusted generic document and chunk ingest APIs',
+      format: Array,
+      default: ['database', 'core', 'storage', 'embeddings'],
+    },
+    maxIngestBatchSize: {
+      doc: 'Maximum chunks accepted in a single document sync',
+      format: 'Number',
+      default: 100,
+    },
+    maxChunksPerDocument: {
+      doc: 'Maximum persisted chunks per generic embedding document',
+      format: 'Number',
+      default: 256,
+    },
+    maxChunkTextBytes: {
+      doc: 'Maximum UTF-8 bytes of transient chunk text accepted for embedding',
+      format: 'Number',
+      default: 32 * 1024,
+    },
+    maxMetadataBytes: {
+      doc: 'Maximum JSON bytes of persisted generic metadata',
+      format: 'Number',
+      default: 4 * 1024,
+    },
+    maxReferenceBytes: {
+      doc: 'Maximum bytes of a storage or connector reference',
+      format: 'Number',
+      default: 1024,
+    },
+    sourceSearchMaxLimit: {
+      doc: 'Maximum hits returned from generic source search',
+      format: 'Number',
+      default: 100,
+    },
   },
 };
 

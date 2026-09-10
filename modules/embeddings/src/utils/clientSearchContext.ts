@@ -28,6 +28,37 @@ export function assertClientSearchSubject(subject: { userId?: string; scope?: st
   return subject;
 }
 
+export const CLIENT_SEARCH_FORBIDDEN_FIELDS = [
+  'queryVector',
+  'userId',
+  'adminOperator',
+  'partitionSubject',
+] as const;
+
+export function assertClientSearchOverrides(params: Record<string, unknown>): void {
+  for (const field of CLIENT_SEARCH_FORBIDDEN_FIELDS) {
+    const value = params[field];
+    if (value !== undefined && value !== null && value !== '') {
+      throw new GrpcError(status.INVALID_ARGUMENT, `Client search cannot set ${field}`);
+    }
+  }
+}
+
+export function resolveClientSearchScope(args: {
+  contextScope?: string;
+  requestScope?: string;
+}): string | undefined {
+  const context = args.contextScope?.trim() ?? '';
+  const requested = args.requestScope?.trim() ?? '';
+  if (requested && context && requested !== context) {
+    throw new GrpcError(
+      status.PERMISSION_DENIED,
+      'Requested scope does not match router context scope',
+    );
+  }
+  return requested || context || undefined;
+}
+
 export function clampClientSearchLimit(limit?: number): number | undefined {
   if (limit === undefined || limit === null) return undefined;
   if (!Number.isInteger(limit) || limit < 1) {

@@ -164,6 +164,8 @@ message SemanticSearchRequest {
   optional string scope = 7;
   // Honored only when the verified caller is a platform operator module.
   optional bool adminOperator = 8;
+  optional string sourceId = 9;
+  repeated double queryVector = 10;
 }
 
 message SemanticSearchHit {
@@ -178,6 +180,136 @@ message SemanticSearchResponse {
   repeated SemanticSearchHit hits = 1;
 }
 
+message EmbeddingSource {
+  string id = 1;
+  optional string label = 2;
+  string kind = 3;
+  string state = 4;
+  string partitionSubject = 5;
+  string provider = 6;
+  string model = 7;
+  int32 dimensions = 8;
+  string similarity = 9;
+  optional string selectors = 10;
+  repeated string metadataAllowlist = 11;
+  optional string syncCheckpoint = 12;
+  optional string chunkSchemaName = 13;
+  optional string chunkIndexName = 14;
+  optional string chunkIndexStatus = 15;
+  optional string createdAt = 16;
+  optional string updatedAt = 17;
+}
+
+message UpsertSourceRequest {
+  optional string id = 1;
+  optional string label = 2;
+  string kind = 3;
+  string partitionSubject = 4;
+  optional string provider = 5;
+  optional string model = 6;
+  optional int32 dimensions = 7;
+  optional string similarity = 8;
+  optional string selectors = 9;
+  repeated string metadataAllowlist = 10;
+}
+
+message UpdateSourceRequest {
+  string id = 1;
+  optional string label = 2;
+  optional string selectors = 3;
+  repeated string metadataAllowlist = 4;
+  optional string syncCheckpoint = 5;
+}
+
+message UpsertSourceResponse {
+  EmbeddingSource source = 1;
+  repeated string warnings = 2;
+}
+
+message GetSourcesRequest {
+  optional string kind = 1;
+  optional string state = 2;
+  optional string partitionSubject = 3;
+  optional int32 skip = 4;
+  optional int32 limit = 5;
+}
+
+message GetSourcesResponse {
+  repeated EmbeddingSource sources = 1;
+  int32 count = 2;
+}
+
+message GetSourceRequest {
+  string id = 1;
+}
+
+message SourceMutationRequest {
+  string id = 1;
+}
+
+message PurgeSourceResponse {
+  EmbeddingSource source = 1;
+  int32 deletedDocuments = 2;
+  int32 deletedChunks = 3;
+}
+
+message SourceStatusResponse {
+  EmbeddingSource source = 1;
+  bool ready = 2;
+  int32 pendingCount = 3;
+  int32 indexedCount = 4;
+  int32 skippedCount = 5;
+  int32 failedCount = 6;
+  int32 staleCount = 7;
+  int32 deletedCount = 8;
+  repeated string warnings = 9;
+}
+
+message IngestChunk {
+  string chunkKey = 1;
+  int32 ordinal = 2;
+  optional string text = 3;
+  repeated double vector = 4;
+  optional string metadata = 5;
+}
+
+message SyncDocumentRequest {
+  string sourceId = 1;
+  string externalDocumentId = 2;
+  optional string contentVersion = 3;
+  optional string etag = 4;
+  optional string metadata = 5;
+  optional string storageFileId = 6;
+  optional string connectorReference = 7;
+  optional string mimeType = 8;
+  repeated IngestChunk chunks = 9;
+}
+
+message IngestChunkResult {
+  string chunkKey = 1;
+  string status = 2;
+  optional string error = 3;
+}
+
+message SyncDocumentResponse {
+  string documentId = 1;
+  string sourceId = 2;
+  string externalDocumentId = 3;
+  string status = 4;
+  bool replaced = 5;
+  repeated IngestChunkResult chunks = 6;
+}
+
+message DeleteDocumentRequest {
+  string sourceId = 1;
+  string externalDocumentId = 2;
+}
+
+message DeleteDocumentResponse {
+  string documentId = 1;
+  int32 deletedChunks = 2;
+}
+
 service EmbeddingsProvider {
   rpc upsertConfig(UpsertConfigRequest) returns (UpsertConfigResponse);
   rpc getConfigs(GetConfigsRequest) returns (GetConfigsResponse);
@@ -190,4 +322,14 @@ service EmbeddingsProvider {
   rpc cancelBackfill(CancelBackfillRequest) returns (BackfillMutationResponse);
   rpc resumeBackfill(ResumeBackfillRequest) returns (BackfillMutationResponse);
   rpc semanticSearch(SemanticSearchRequest) returns (SemanticSearchResponse);
+  rpc upsertSource(UpsertSourceRequest) returns (UpsertSourceResponse);
+  rpc updateSource(UpdateSourceRequest) returns (UpsertSourceResponse);
+  rpc getSources(GetSourcesRequest) returns (GetSourcesResponse);
+  rpc getSource(GetSourceRequest) returns (EmbeddingSource);
+  rpc getSourceStatus(GetSourceRequest) returns (SourceStatusResponse);
+  rpc disableSource(SourceMutationRequest) returns (EmbeddingSource);
+  rpc revokeSource(SourceMutationRequest) returns (EmbeddingSource);
+  rpc purgeSource(SourceMutationRequest) returns (PurgeSourceResponse);
+  rpc syncDocument(SyncDocumentRequest) returns (SyncDocumentResponse);
+  rpc deleteDocument(DeleteDocumentRequest) returns (DeleteDocumentResponse);
 }

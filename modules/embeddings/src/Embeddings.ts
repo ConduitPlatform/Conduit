@@ -14,7 +14,12 @@ import {
 } from '@conduitplatform/module-tools';
 import AppConfigSchema, { Config } from './config/index.js';
 import * as models from './models/index.js';
-import { BackfillRun, EmbeddingConfig, EmbeddingSource } from './models/index.js';
+import {
+  BackfillRun,
+  EmbeddingConfig,
+  EmbeddingDocument,
+  EmbeddingSource,
+} from './models/index.js';
 import { reconcileSourceChunkSchemas } from './utils/genericSource.js';
 import { QueueController } from './controllers/queue.controller.js';
 import { getProvider, hashEmbeddingInput } from './providers/index.js';
@@ -77,6 +82,20 @@ import {
   UpsertConfigResponse,
   BackfillMutationResponse,
   BackfillRun as BackfillRunMessage,
+  UpsertSourceRequest,
+  UpdateSourceRequest,
+  UpsertSourceResponse,
+  GetSourcesRequest,
+  GetSourcesResponse,
+  GetSourceRequest,
+  SourceStatusResponse,
+  SourceMutationRequest,
+  PurgeSourceResponse,
+  SyncDocumentRequest,
+  SyncDocumentResponse,
+  DeleteDocumentRequest,
+  DeleteDocumentResponse,
+  EmbeddingSource as EmbeddingSourceMessage,
 } from './protoTypes/embeddings.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -100,6 +119,16 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       cancelBackfill: this.cancelBackfill.bind(this),
       resumeBackfill: this.resumeBackfill.bind(this),
       semanticSearch: this.semanticSearch.bind(this),
+      upsertSource: this.upsertSource.bind(this),
+      updateSource: this.updateSource.bind(this),
+      getSources: this.getSources.bind(this),
+      getSource: this.getSource.bind(this),
+      getSourceStatus: this.getSourceStatus.bind(this),
+      disableSource: this.disableSource.bind(this),
+      revokeSource: this.revokeSource.bind(this),
+      purgeSource: this.purgeSource.bind(this),
+      syncDocument: this.syncDocument.bind(this),
+      deleteDocument: this.deleteDocument.bind(this),
     },
   };
 
@@ -299,6 +328,157 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     }
   }
 
+  async upsertSource(
+    call: GrpcRequest<UpsertSourceRequest>,
+    callback: GrpcResponse<UpsertSourceResponse>,
+  ) {
+    try {
+      callback(
+        null,
+        await this.requireGeneric().upsertSource(call.request, this.caller(call)),
+      );
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async updateSource(
+    call: GrpcRequest<UpdateSourceRequest>,
+    callback: GrpcResponse<UpsertSourceResponse>,
+  ) {
+    try {
+      callback(
+        null,
+        await this.requireGeneric().updateSource(call.request, this.caller(call)),
+      );
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async getSources(
+    call: GrpcRequest<GetSourcesRequest>,
+    callback: GrpcResponse<GetSourcesResponse>,
+  ) {
+    try {
+      callback(
+        null,
+        await this.requireGeneric().getSources(call.request, this.caller(call)),
+      );
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async getSource(
+    call: GrpcRequest<GetSourceRequest>,
+    callback: GrpcResponse<EmbeddingSourceMessage>,
+  ) {
+    try {
+      callback(
+        null,
+        await this.requireGeneric().getSource(call.request.id, this.caller(call)),
+      );
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async getSourceStatus(
+    call: GrpcRequest<GetSourceRequest>,
+    callback: GrpcResponse<SourceStatusResponse>,
+  ) {
+    try {
+      callback(
+        null,
+        await this.requireGeneric().getSourceStatus(call.request.id, this.caller(call)),
+      );
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async disableSource(
+    call: GrpcRequest<SourceMutationRequest>,
+    callback: GrpcResponse<EmbeddingSourceMessage>,
+  ) {
+    try {
+      callback(
+        null,
+        await this.requireGeneric().disableSource(call.request.id, this.caller(call)),
+      );
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async revokeSource(
+    call: GrpcRequest<SourceMutationRequest>,
+    callback: GrpcResponse<EmbeddingSourceMessage>,
+  ) {
+    try {
+      callback(
+        null,
+        await this.requireGeneric().revokeSource(call.request.id, this.caller(call)),
+      );
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async purgeSource(
+    call: GrpcRequest<SourceMutationRequest>,
+    callback: GrpcResponse<PurgeSourceResponse>,
+  ) {
+    try {
+      callback(
+        null,
+        await this.requireGeneric().purgeSource(call.request.id, this.caller(call)),
+      );
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async syncDocument(
+    call: GrpcRequest<SyncDocumentRequest>,
+    callback: GrpcResponse<SyncDocumentResponse>,
+  ) {
+    try {
+      callback(
+        null,
+        await this.requireGeneric().syncDocument(call.request, this.caller(call)),
+      );
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  async deleteDocument(
+    call: GrpcRequest<DeleteDocumentRequest>,
+    callback: GrpcResponse<DeleteDocumentResponse>,
+  ) {
+    try {
+      callback(
+        null,
+        await this.requireGeneric().deleteDocument(call.request, this.caller(call)),
+      );
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
+  private caller(call: { metadata?: { get(key: string): Array<string | Buffer> } }) {
+    return { callerModule: callerModuleName(call.metadata) };
+  }
+
+  private requireGeneric() {
+    if (!this.api.generic) {
+      throw new Error('Generic embedding sources are not configured');
+    }
+    return this.api.generic;
+  }
+
   private async ensureClientRoutes() {
     if (!this.api || !this.grpcSdk.router) return;
     this.clientRouter ??= new EmbeddingsRoutes(this.grpcServer, this.grpcSdk, this.api);
@@ -359,6 +539,75 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
         } else {
           this.unsubscribeFromSchema(schemaName);
         }
+      },
+      generic: {
+        currentConfig: () => this.currentConfig(),
+        sources: {
+          findMany: (query, options) =>
+            EmbeddingSource.getInstance().findMany(query, options),
+          findOne: query => EmbeddingSource.getInstance().findOne(query),
+          countDocuments: query => EmbeddingSource.getInstance().countDocuments(query),
+          create: doc => EmbeddingSource.getInstance().create(doc),
+          findByIdAndUpdate: (id, doc) =>
+            EmbeddingSource.getInstance().findByIdAndUpdate(id, doc),
+          deleteOne: query => EmbeddingSource.getInstance().deleteOne(query),
+        },
+        documents: {
+          findMany: query => EmbeddingDocument.getInstance().findMany(query),
+          findOne: query => EmbeddingDocument.getInstance().findOne(query),
+          countDocuments: query => EmbeddingDocument.getInstance().countDocuments(query),
+          create: doc => EmbeddingDocument.getInstance().create(doc),
+          findByIdAndUpdate: (id, doc) =>
+            EmbeddingDocument.getInstance().findByIdAndUpdate(id, doc),
+          deleteOne: query => EmbeddingDocument.getInstance().deleteOne(query),
+          deleteMany: query => EmbeddingDocument.getInstance().deleteMany(query),
+        },
+        chunks: {
+          findMany: (schemaName, query) =>
+            this.database.findMany(schemaName, query as never),
+          upsertMany: async (schemaName, docs) => {
+            for (const doc of docs) {
+              const existing = await this.database.findOne<{ _id?: string }>(schemaName, {
+                documentId: doc.documentId,
+                chunkKey: doc.chunkKey,
+              } as never);
+              if (existing?._id) {
+                await this.database.findByIdAndUpdate(schemaName, existing._id, doc);
+              } else {
+                await this.database.create(schemaName, doc);
+              }
+            }
+          },
+          deleteMany: (schemaName, query) =>
+            this.database.deleteMany(schemaName, query as never),
+        },
+        chunkSchemas: {
+          createSchemaFromAdapter: schema =>
+            this.database.createSchemaFromAdapter(schema),
+          migrate: schemaName => this.database.migrate(schemaName),
+          getVectorIndexes: schemaName => this.database.getVectorIndexes(schemaName),
+          createVectorIndex: (schemaName, index) =>
+            this.database.createVectorIndex(schemaName, index),
+        },
+        getVectorCapabilities: schemaName =>
+          this.database.getVectorCapabilities(schemaName),
+        getVectorIndexes: schemaName => this.database.getVectorIndexes(schemaName),
+        vectorSearch: input => this.database.vectorSearch(input),
+        embed: (input, provider, model) =>
+          getProvider(provider).embed(input, this.providerConfig(provider, model)),
+        ...(this.grpcSdk.authorization
+          ? {
+              can: (check: { subject: string; actions: string[]; resource: string }) =>
+                this.grpcSdk.authorization!.can(check),
+              createRelation: (relation: {
+                subject: string;
+                relation: string;
+                resource: string;
+              }) => this.grpcSdk.authorization!.createRelation(relation),
+              deleteAllRelations: (query: { resource?: string; subject?: string }) =>
+                this.grpcSdk.authorization!.deleteAllRelations(query),
+            }
+          : {}),
       },
     });
   }

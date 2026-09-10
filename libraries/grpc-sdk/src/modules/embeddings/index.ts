@@ -79,14 +79,69 @@ export interface StartBackfillInput {
 }
 
 export interface SemanticSearchInput {
-  schemaName: string;
-  text: string;
+  schemaName?: string;
+  sourceId?: string;
+  text?: string;
+  queryVector?: number[];
   targetField?: string;
   filter?: Indexable;
   limit?: number;
   userId?: string;
   scope?: string;
   adminOperator?: boolean;
+}
+
+export interface EmbeddingSourceInput {
+  id?: string;
+  label?: string;
+  kind: string;
+  partitionSubject: string;
+  provider?: string;
+  model?: string;
+  dimensions?: number;
+  similarity?: string;
+  selectors?: Indexable;
+  metadataAllowlist?: string[];
+}
+
+export interface EmbeddingSourceRecord {
+  id: string;
+  label?: string;
+  kind: string;
+  state: string;
+  partitionSubject: string;
+  provider: string;
+  model: string;
+  dimensions: number;
+  similarity: string;
+  selectors?: Indexable;
+  metadataAllowlist: string[];
+  syncCheckpoint?: Indexable;
+  chunkSchemaName?: string;
+  chunkIndexName?: string;
+  chunkIndexStatus?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface IngestChunkInput {
+  chunkKey: string;
+  ordinal: number;
+  text?: string;
+  vector?: number[];
+  metadata?: Indexable;
+}
+
+export interface SyncDocumentInput {
+  sourceId: string;
+  externalDocumentId: string;
+  contentVersion?: string;
+  etag?: string;
+  metadata?: Indexable;
+  storageFileId?: string;
+  connectorReference?: string;
+  mimeType?: string;
+  chunks: IngestChunkInput[];
 }
 
 function parseOptionalJson(value?: string): Indexable | undefined {
@@ -116,6 +171,32 @@ function mapBackfillRun(run: {
   return {
     ...run,
     filter: parseOptionalJson(run.filter),
+  };
+}
+
+function mapEmbeddingSource(source: {
+  id: string;
+  label?: string;
+  kind: string;
+  state: string;
+  partitionSubject: string;
+  provider: string;
+  model: string;
+  dimensions: number;
+  similarity: string;
+  selectors?: string;
+  metadataAllowlist: string[];
+  syncCheckpoint?: string;
+  chunkSchemaName?: string;
+  chunkIndexName?: string;
+  chunkIndexStatus?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}): EmbeddingSourceRecord {
+  return {
+    ...source,
+    selectors: parseOptionalJson(source.selectors),
+    syncCheckpoint: parseOptionalJson(source.syncCheckpoint),
   };
 }
 
@@ -242,7 +323,9 @@ export class EmbeddingsProvider extends ConduitModule<
   ): Promise<VectorSearchResult<T>[]> {
     return this.client!.semanticSearch({
       schemaName: input.schemaName,
+      sourceId: input.sourceId,
       text: input.text,
+      queryVector: input.queryVector,
       targetField: input.targetField,
       filter: input.filter ? JSON.stringify(input.filter) : undefined,
       limit: input.limit,
@@ -258,5 +341,141 @@ export class EmbeddingsProvider extends ConduitModule<
         provider: hit.provider as VectorSearchResult<T>['provider'],
       })),
     );
+  }
+
+  upsertSource(
+    input: EmbeddingSourceInput,
+  ): Promise<{ source: EmbeddingSourceRecord; warnings: string[] }> {
+    return this.client!.upsertSource({
+      id: input.id,
+      label: input.label,
+      kind: input.kind,
+      partitionSubject: input.partitionSubject,
+      provider: input.provider,
+      model: input.model,
+      dimensions: input.dimensions,
+      similarity: input.similarity,
+      selectors: input.selectors ? JSON.stringify(input.selectors) : undefined,
+      metadataAllowlist: input.metadataAllowlist,
+    }).then(res => ({
+      source: mapEmbeddingSource(res.source!),
+      warnings: res.warnings,
+    }));
+  }
+
+  updateSource(input: {
+    id: string;
+    label?: string;
+    selectors?: Indexable;
+    metadataAllowlist?: string[];
+    syncCheckpoint?: Indexable;
+  }): Promise<{ source: EmbeddingSourceRecord; warnings: string[] }> {
+    return this.client!.updateSource({
+      id: input.id,
+      label: input.label,
+      selectors: input.selectors ? JSON.stringify(input.selectors) : undefined,
+      metadataAllowlist: input.metadataAllowlist,
+      syncCheckpoint: input.syncCheckpoint
+        ? JSON.stringify(input.syncCheckpoint)
+        : undefined,
+    }).then(res => ({
+      source: mapEmbeddingSource(res.source!),
+      warnings: res.warnings,
+    }));
+  }
+
+  getSources(query?: {
+    kind?: string;
+    state?: string;
+    partitionSubject?: string;
+    skip?: number;
+    limit?: number;
+  }): Promise<{ sources: EmbeddingSourceRecord[]; count: number }> {
+    return this.client!.getSources(query ?? {}).then(res => ({
+      sources: res.sources.map(mapEmbeddingSource),
+      count: res.count,
+    }));
+  }
+
+  getSource(id: string): Promise<EmbeddingSourceRecord> {
+    return this.client!.getSource({ id }).then(mapEmbeddingSource);
+  }
+
+  getSourceStatus(id: string): Promise<{
+    source: EmbeddingSourceRecord;
+    ready: boolean;
+    pendingCount: number;
+    indexedCount: number;
+    skippedCount: number;
+    failedCount: number;
+    staleCount: number;
+    deletedCount: number;
+    warnings: string[];
+  }> {
+    return this.client!.getSourceStatus({ id }).then(res => ({
+      source: mapEmbeddingSource(res.source!),
+      ready: res.ready,
+      pendingCount: res.pendingCount,
+      indexedCount: res.indexedCount,
+      skippedCount: res.skippedCount,
+      failedCount: res.failedCount,
+      staleCount: res.staleCount,
+      deletedCount: res.deletedCount,
+      warnings: res.warnings,
+    }));
+  }
+
+  disableSource(id: string): Promise<EmbeddingSourceRecord> {
+    return this.client!.disableSource({ id }).then(mapEmbeddingSource);
+  }
+
+  revokeSource(id: string): Promise<EmbeddingSourceRecord> {
+    return this.client!.revokeSource({ id }).then(mapEmbeddingSource);
+  }
+
+  purgeSource(id: string): Promise<{
+    source: EmbeddingSourceRecord;
+    deletedDocuments: number;
+    deletedChunks: number;
+  }> {
+    return this.client!.purgeSource({ id }).then(res => ({
+      source: mapEmbeddingSource(res.source!),
+      deletedDocuments: res.deletedDocuments,
+      deletedChunks: res.deletedChunks,
+    }));
+  }
+
+  syncDocument(input: SyncDocumentInput): Promise<{
+    documentId: string;
+    sourceId: string;
+    externalDocumentId: string;
+    status: string;
+    replaced: boolean;
+    chunks: Array<{ chunkKey: string; status: string; error?: string }>;
+  }> {
+    return this.client!.syncDocument({
+      sourceId: input.sourceId,
+      externalDocumentId: input.externalDocumentId,
+      contentVersion: input.contentVersion,
+      etag: input.etag,
+      metadata: input.metadata ? JSON.stringify(input.metadata) : undefined,
+      storageFileId: input.storageFileId,
+      connectorReference: input.connectorReference,
+      mimeType: input.mimeType,
+      chunks: input.chunks.map(chunk => ({
+        chunkKey: chunk.chunkKey,
+        ordinal: chunk.ordinal,
+        text: chunk.text,
+        vector: chunk.vector,
+        metadata: chunk.metadata ? JSON.stringify(chunk.metadata) : undefined,
+      })),
+    });
+  }
+
+  deleteDocument(input: {
+    sourceId: string;
+    externalDocumentId: string;
+  }): Promise<{ documentId: string; deletedChunks: number }> {
+    return this.client!.deleteDocument(input);
   }
 }

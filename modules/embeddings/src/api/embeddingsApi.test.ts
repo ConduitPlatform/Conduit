@@ -1416,4 +1416,44 @@ describe('typed embeddings API handlers', () => {
     assert.equal('otherEmbedding' in schemaExtensions[0].fields, true);
     assert.equal('embedding' in schemaExtensions[0].fields, true);
   });
+
+  it('keeps schema search and rejects source/schema XOR and schema query vectors', async () => {
+    const { api } = createApi({ configs: [enabledConfig] });
+    await assert.rejects(
+      () =>
+        api.semanticSearch(
+          { schemaName: 'Article', sourceId: 'src1', text: 'hello', userId: 'user-1' },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /exactly one/.test(err.message),
+    );
+    await assert.rejects(
+      () =>
+        api.semanticSearch(
+          {
+            schemaName: 'Article',
+            text: 'hello',
+            queryVector: [1, 2, 3],
+            userId: 'user-1',
+          },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.INVALID_ARGUMENT &&
+        /source search/.test(err.message),
+    );
+    await assert.rejects(
+      () =>
+        api.semanticSearch(
+          { sourceId: 'src1', text: 'hello', userId: 'user-1' },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof GrpcError && err.code === status.FAILED_PRECONDITION,
+    );
+  });
 });
