@@ -18,6 +18,8 @@ import {
 } from '../interfaces/index.js';
 import { OAuth2 } from '../OAuth2.js';
 import { FacebookUser } from './facebook.user.js';
+import { OAUTH_MODE_PARAM } from '../utils/index.js';
+import { errors } from '../../../errors.js';
 
 // todo migrate to use native method properly
 export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
@@ -80,14 +82,16 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
       {
         path: '/facebook',
         action: ConduitRouteActions.POST,
-        description: `Login/register with Facebook by providing a token from the client.`,
+        description: `Login/register with Facebook by providing a token from the client. Optional mode: "both" (default, login and register) or "signIn" (existing users only).`,
         bodyParams: {
           access_token: ConduitString.Required,
           invitationToken: ConduitString.Optional,
           captchaToken: ConduitString.Optional,
           scopes: [ConduitString.Optional],
+          mode: OAUTH_MODE_PARAM,
         },
         middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
+        errors: [errors.REGISTRATION_NOT_ALLOWED],
         rateLimit: OAUTH_NATIVE_COMPLETE,
       },
       new ConduitRouteReturnDefinition('FacebookResponse', {

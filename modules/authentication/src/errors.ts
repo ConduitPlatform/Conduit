@@ -26,4 +26,10 @@ export const errors = {
     message: 'This email address is not allowed',
     description: 'The provided email address is blocked by email restrictions',
   },
+  REGISTRATION_NOT_ALLOWED: {
+    conduitCode: 'REGISTRATION_NOT_ALLOWED',
+    grpcCode: status.PERMISSION_DENIED,
+    message: 'User registration is not allowed for this request',
+    description: 'OAuth was started in sign-in-only mode and no existing user was found',
+  },
 } as const satisfies Record<string, ModuleErrorDefinition>;
