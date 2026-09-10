@@ -3,23 +3,23 @@ import { ConduitString, ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { errors } from '../../../errors.js';
 
-export type OAuthMode = 'signIn' | 'both';
+export const OAUTH_MODES = ['signIn', 'both'] as const;
+export type OAuthMode = (typeof OAUTH_MODES)[number];
 
 export const OAUTH_MODE_PARAM = ConduitString.Optional;
 
-export function resolveOAuthMode(
-  value: unknown,
-  allowRegistration: boolean = true,
-): OAuthMode {
-  let requested: OAuthMode;
+export function isOAuthMode(value: unknown): value is OAuthMode {
+  return value === 'signIn' || value === 'both';
+}
+
+export function resolveOAuthMode(value: unknown): OAuthMode {
   if (value === undefined || value === null || value === '') {
-    requested = 'both';
-  } else if (value === 'signIn' || value === 'both') {
-    requested = value;
-  } else {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'mode must be "signIn" or "both"');
+    return 'both';
   }
-  return allowRegistration ? requested : 'signIn';
+  if (isOAuthMode(value)) {
+    return value;
+  }
+  throw new GrpcError(status.INVALID_ARGUMENT, 'mode must be "signIn" or "both"');
 }
 
 export function assertOAuthRegistrationAllowed(mode: OAuthMode): void {
