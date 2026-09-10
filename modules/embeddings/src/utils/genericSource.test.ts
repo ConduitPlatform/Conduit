@@ -205,7 +205,7 @@ describe('generic embedding source contracts', () => {
     assert.equal(chunkVectorIndexDefinition(smallProfile).method, VectorIndexMethod.HNSW);
   });
 
-  it('recreates a profile index when live filter fields are incomplete', async () => {
+  it('recreates a Mongo profile index when live filter fields are incomplete', async () => {
     const store = memoryStore();
     store.indexes.push({
       schemaName: chunkSchemaNameForProfile(smallProfile),
@@ -215,12 +215,42 @@ describe('generic embedding source contracts', () => {
       similarity: VectorSimilarity.Cosine,
       filterFields: ['sourceId'],
     });
-    const state = await ensureProfileChunkSchema(store, smallProfile);
+    const state = await ensureProfileChunkSchema(store, smallProfile, undefined, {
+      provider: 'mongodb',
+    });
     assert.equal(state.created, true);
     assert.equal(state.indexName, 'embedding_vector_v2');
     assert.equal(
       store.indexes.filter(index => index.schemaName === state.schemaName).length,
       2,
+    );
+  });
+
+  it('reuses a ready Postgres index that has no declared filterFields', async () => {
+    const store = memoryStore();
+    store.indexes.push({
+      schemaName: chunkSchemaNameForProfile(smallProfile),
+      field: CHUNK_VECTOR_FIELD,
+      name: 'embedding_vector',
+      dimensions: 1536,
+      similarity: VectorSimilarity.Cosine,
+    });
+    const first = await ensureProfileChunkSchema(store, smallProfile, undefined, {
+      provider: 'postgres',
+    });
+    const second = await ensureProfileChunkSchema(store, smallProfile, undefined, {
+      provider: 'postgres',
+    });
+    const third = await ensureProfileChunkSchema(store, smallProfile, undefined, {
+      provider: 'postgres',
+    });
+    assert.equal(first.created, false);
+    assert.equal(second.created, false);
+    assert.equal(third.created, false);
+    assert.equal(first.indexName, 'embedding_vector');
+    assert.equal(
+      store.indexes.filter(index => index.schemaName === first.schemaName).length,
+      1,
     );
   });
 

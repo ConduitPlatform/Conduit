@@ -1048,6 +1048,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
 
   private async reconcileGenericChunkSchemas() {
     const sources = await EmbeddingSource.getInstance().findMany({});
+    const capabilities = await this.database.getVectorCapabilities();
     await reconcileSourceChunkSchemas(
       sources,
       {
@@ -1062,6 +1063,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
           chunkSchemaName: state.schemaName,
           chunkIndexName: state.indexName,
         }),
+      { provider: capabilities.provider },
     );
   }
 }

@@ -1,6 +1,5 @@
 import {
   GrpcError,
-  VectorIndexMethod,
   VectorIndexStatus,
   VectorSimilarity,
 } from '@conduitplatform/grpc-sdk';
@@ -9,10 +8,10 @@ import type { Config } from '../config/index.js';
 import {
   EMBEDDING_DOCUMENT_SCHEMA,
   EMBEDDING_SOURCE_SCHEMA,
-  CHUNK_FILTER_FIELDS,
   CHUNK_VECTOR_FIELD,
   assertVectorProfile,
   ensureProfileChunkSchema,
+  genericChunkIndexContract,
   modelFingerprint,
   toPersistedChunk,
   type BackingIndexState,
@@ -868,12 +867,14 @@ export class GenericSourceApi {
     if (!capabilities.search) {
       throw new GrpcError(status.FAILED_PRECONDITION, 'Vector search is unavailable');
     }
-    const index = selectEmbeddingVectorIndex(indexes, CHUNK_VECTOR_FIELD, {
-      dimensions: source.dimensions,
-      similarity: source.similarity,
-      method: VectorIndexMethod.HNSW,
-      filterFields: CHUNK_FILTER_FIELDS,
-    });
+    const index = selectEmbeddingVectorIndex(
+      indexes,
+      CHUNK_VECTOR_FIELD,
+      genericChunkIndexContract(
+        { dimensions: source.dimensions, similarity: source.similarity },
+        capabilities.provider,
+      ),
+    );
     if (!isEmbeddingVectorIndexQueryable(index)) {
       throw new GrpcError(
         status.FAILED_PRECONDITION,
@@ -1020,15 +1021,18 @@ export class GenericSourceApi {
         this.deps.chunkSchemas,
         source,
         source.chunkSchemaName,
+        { provider: capabilities.provider },
       );
       const indexes = await this.deps.getVectorIndexes(backing.schemaName);
       const queryable = isEmbeddingVectorIndexQueryable(
-        selectEmbeddingVectorIndex(indexes, CHUNK_VECTOR_FIELD, {
-          dimensions: source.dimensions,
-          similarity: source.similarity,
-          method: VectorIndexMethod.HNSW,
-          filterFields: CHUNK_FILTER_FIELDS,
-        }),
+        selectEmbeddingVectorIndex(
+          indexes,
+          CHUNK_VECTOR_FIELD,
+          genericChunkIndexContract(
+            { dimensions: source.dimensions, similarity: source.similarity },
+            capabilities.provider,
+          ),
+        ),
       );
       const indexStatus = queryable ? VectorIndexStatus.Ready : VectorIndexStatus.Pending;
       const state: EmbeddingSourceState =

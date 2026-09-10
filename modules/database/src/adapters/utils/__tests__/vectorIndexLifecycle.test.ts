@@ -359,9 +359,11 @@ describe('vector index lifecycle', () => {
         field: 'embedding',
         dimensions: 1536,
         similarity: VectorSimilarity.Cosine,
+        filterFields: ['tenantId', 'sourceId'],
         options: { hnsw: { m: 16 } },
       },
     });
+    expect(hydrated.filterFields).toBeUndefined();
     expect(hydrated).toMatchObject({
       name: 'cnd_Article_embedding_vector',
       field: 'embedding',

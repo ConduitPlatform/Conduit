@@ -198,6 +198,31 @@ describe('vector search query planning', () => {
       }),
     ).toThrow(/not queryable/);
   });
+
+  it('does not copy declared filterFields onto a hydrated Postgres index', () => {
+    const declared = [
+      {
+        name: 'embedding_vector',
+        field: 'embedding',
+        dimensions: 3,
+        similarity: VectorSimilarity.Cosine,
+        filterFields: ['tenantId', 'sourceId'],
+      },
+    ];
+    const live = [
+      {
+        name: 'embedding_vector',
+        field: 'embedding',
+        dimensions: 3,
+        similarity: VectorSimilarity.Cosine,
+        status: VectorIndexStatus.Ready,
+        queryable: true,
+      },
+    ];
+    const merged = mergeVectorIndexes(declared, live);
+    expect(merged[0].filterFields).toBeUndefined();
+    expect(merged[0].queryable).toBe(true);
+  });
 });
 
 describe('bounded vector search completion', () => {

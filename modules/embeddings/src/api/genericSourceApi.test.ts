@@ -62,6 +62,8 @@ function createGeneric(overrides?: {
   vectorSearch?: GenericSourceApiDeps['vectorSearch'];
   can?: GenericSourceApiDeps['can'];
   createdIndexQueryable?: boolean;
+  vectorProvider?: 'mongodb' | 'postgres';
+  indexFilterFields?: string[] | false;
   storageAvailable?: () => boolean;
   getStorageAuthorization?: GenericSourceApiDeps['getStorageAuthorization'];
   getStorageQueue?: GenericSourceApiDeps['getStorageQueue'];
@@ -76,6 +78,22 @@ function createGeneric(overrides?: {
   const deletedRelations: Array<{ resource?: string; subject?: string }> = [];
   const lastSearch: Array<Record<string, unknown>> = [];
   const persistedTexts: unknown[] = [];
+  const liveIndex = () => ({
+    field: CHUNK_VECTOR_FIELD,
+    name: 'embedding_vector',
+    queryable: overrides?.createdIndexQueryable !== false,
+    status:
+      overrides?.createdIndexQueryable === false
+        ? VectorIndexStatus.Pending
+        : VectorIndexStatus.Ready,
+    dimensions: 3,
+    similarity: VectorSimilarity.Cosine,
+    ...(overrides?.indexFilterFields === false
+      ? {}
+      : {
+          filterFields: overrides?.indexFilterFields ?? [...CHUNK_FILTER_FIELDS],
+        }),
+  });
   const deps: GenericSourceApiDeps = {
     currentConfig: () => moduleConfig,
     sources: {
@@ -168,20 +186,7 @@ function createGeneric(overrides?: {
     chunkSchemas: {
       createSchemaFromAdapter: async () => undefined,
       migrate: async () => undefined,
-      getVectorIndexes: async () => [
-        {
-          field: CHUNK_VECTOR_FIELD,
-          name: 'embedding_vector',
-          queryable: overrides?.createdIndexQueryable !== false,
-          status:
-            overrides?.createdIndexQueryable === false
-              ? VectorIndexStatus.Pending
-              : VectorIndexStatus.Ready,
-          dimensions: 3,
-          similarity: VectorSimilarity.Cosine,
-          filterFields: [...CHUNK_FILTER_FIELDS],
-        },
-      ],
+      getVectorIndexes: async () => [liveIndex()],
       createVectorIndex: async () => 'created',
     },
     getVectorCapabilities: async () => ({
@@ -189,19 +194,9 @@ function createGeneric(overrides?: {
       storage: true,
       indexing: true,
       search: true,
-      provider: 'mongodb',
+      provider: overrides?.vectorProvider ?? 'mongodb',
     }),
-    getVectorIndexes: async () => [
-      {
-        field: CHUNK_VECTOR_FIELD,
-        name: 'embedding_vector',
-        queryable: true,
-        status: VectorIndexStatus.Ready,
-        dimensions: 3,
-        similarity: VectorSimilarity.Cosine,
-        filterFields: [...CHUNK_FILTER_FIELDS],
-      },
-    ],
+    getVectorIndexes: async () => [liveIndex()],
     vectorSearch: async input => {
       lastSearch.push(input);
       return (
@@ -362,6 +357,55 @@ describe('generic embedding source API', () => {
     assert.equal(statusResult.ready, true);
     assert.equal(statusResult.queuedCount, 0);
     assert.equal(statusResult.extractingCount, 0);
+  });
+
+  it('marks a Postgres source ready when the live HNSW index has no filterFields', async () => {
+    const { api } = createGeneric({
+      vectorProvider: 'postgres',
+      indexFilterFields: false,
+    });
+    const created = await api.upsertSource(
+      {
+        label: 'Notes',
+        kind: 'external',
+        partitionSubject: 'Team:org',
+      },
+      { platformAdmin: true },
+    );
+    assert.equal(created.source.state, 'ready');
+    const statusResult = await api.getSourceStatus(created.source.id, {
+      platformAdmin: true,
+    });
+    assert.equal(statusResult.ready, true);
+    await api.syncDocument(
+      {
+        sourceId: created.source.id,
+        externalDocumentId: 'ext-1',
+        chunks: [{ chunkKey: 'c1', ordinal: 0, text: 'hello' }],
+      },
+      { callerModule: 'database' },
+    );
+    const hits = await api.search(
+      { sourceId: created.source.id, text: 'hello', userId: 'owner', scope: 'Team:org' },
+      { platformAdmin: true },
+    );
+    assert.equal(hits.hits.length, 1);
+  });
+
+  it('keeps a Mongo source pending when the live index omits required filterFields', async () => {
+    const { api } = createGeneric({
+      vectorProvider: 'mongodb',
+      indexFilterFields: false,
+    });
+    const created = await api.upsertSource(
+      {
+        label: 'Notes',
+        kind: 'external',
+        partitionSubject: 'Team:org',
+      },
+      { platformAdmin: true },
+    );
+    assert.equal(created.source.state, 'pending');
   });
 
   it('requires container selectors for conduit-storage sources', async () => {

@@ -160,6 +160,7 @@ export interface EmbeddingVectorIndexContract {
   similarity?: string;
   method?: string;
   filterFields?: readonly string[];
+  provider?: string;
 }
 
 export interface EmbeddingVectorIndexShape {
@@ -169,6 +170,10 @@ export interface EmbeddingVectorIndexShape {
   similarity?: string;
   method?: string;
   filterFields?: readonly string[];
+}
+
+export function vectorIndexDeclaresFilterFields(provider?: string): boolean {
+  return provider !== 'postgres';
 }
 
 export function normalizeVectorFilterFields(fields?: readonly string[]): string[] {
@@ -196,7 +201,10 @@ export function embeddingVectorIndexMatchesContract(
     return false;
   }
   if ((index.similarity ?? '') !== (contract.similarity ?? '')) return false;
-  if (!vectorFilterFieldsCoverContract(index.filterFields, contract.filterFields)) {
+  if (
+    vectorIndexDeclaresFilterFields(contract.provider) &&
+    !vectorFilterFieldsCoverContract(index.filterFields, contract.filterFields)
+  ) {
     return false;
   }
   return vectorIndexMethodsEquivalent(index.method, contract.method);

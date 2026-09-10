@@ -14,6 +14,7 @@ import {
   defaultEmbeddingVectorIndexName,
   nextEmbeddingVectorIndexName,
   selectEmbeddingVectorIndex,
+  type EmbeddingVectorIndexContract,
   type EmbeddingVectorIndexShape,
 } from './configChange.js';
 
@@ -117,6 +118,10 @@ export interface ChunkSchemaStore {
     schemaName: string,
     index: VectorIndexDefinition,
   ) => Promise<unknown>;
+}
+
+export interface VectorIndexMatchContext {
+  provider?: string;
 }
 
 export interface GenericSourceProfile {
@@ -297,6 +302,19 @@ export function chunkVectorIndexDefinition(
   };
 }
 
+export function genericChunkIndexContract(
+  profile: Pick<VectorProfile, 'dimensions' | 'similarity'>,
+  provider?: string,
+): Omit<EmbeddingVectorIndexContract, 'field'> {
+  return {
+    dimensions: profile.dimensions,
+    similarity: profile.similarity,
+    method: VectorIndexMethod.HNSW,
+    filterFields: [...CHUNK_FILTER_FIELDS],
+    provider,
+  };
+}
+
 function hiddenChunkModelOptions(profile: VectorProfile): ConduitSchemaOptions {
   return {
     timestamps: true,
@@ -415,6 +433,7 @@ export async function ensureProfileChunkSchema(
     chunkSchemaName?: string;
   },
   existingSchemaName?: string,
+  context?: VectorIndexMatchContext,
 ): Promise<BackingIndexState> {
   const profile = assertVectorProfile(profileInput);
   const schema = buildChunkBackingSchema(
@@ -425,12 +444,11 @@ export async function ensureProfileChunkSchema(
   await store.migrate?.(schema.name);
   const indexes = await store.getVectorIndexes(schema.name);
   const contract = chunkVectorIndexDefinition(profile);
-  const existing = selectEmbeddingVectorIndex(indexes, CHUNK_VECTOR_FIELD, {
-    dimensions: profile.dimensions,
-    similarity: profile.similarity,
-    method: VectorIndexMethod.HNSW,
-    filterFields: contract.filterFields,
-  });
+  const existing = selectEmbeddingVectorIndex(
+    indexes,
+    CHUNK_VECTOR_FIELD,
+    genericChunkIndexContract(profile, context?.provider),
+  );
   if (!existing) {
     const replacement = {
       ...contract,
@@ -456,10 +474,16 @@ export async function reconcileSourceChunkSchemas(
   sources: GenericSourceProfile[],
   store: ChunkSchemaStore,
   persistBackingIndex?: (id: string, state: BackingIndexState) => Promise<unknown>,
+  context?: VectorIndexMatchContext,
 ): Promise<BackingIndexState[]> {
   const states: BackingIndexState[] = [];
   for (const source of sources) {
-    const state = await ensureProfileChunkSchema(store, source, source.chunkSchemaName);
+    const state = await ensureProfileChunkSchema(
+      store,
+      source,
+      source.chunkSchemaName,
+      context,
+    );
     states.push(state);
     if (
       persistBackingIndex &&

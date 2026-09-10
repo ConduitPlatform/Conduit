@@ -81,12 +81,16 @@ export function mergeVectorIndexes(
     const declaredIndex =
       declaredByKey.get(key) ?? declared.find(item => item.field === liveIndex.field);
     if (!declaredIndex) return liveIndex;
-    return {
+    const merged = {
       ...declaredIndex,
       ...liveIndex,
       status: liveIndex.status,
       queryable: liveIndex.queryable,
     };
+    if (liveIndex.filterFields === undefined) {
+      delete merged.filterFields;
+    }
+    return merged;
   });
 }
 

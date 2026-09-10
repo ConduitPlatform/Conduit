@@ -226,7 +226,7 @@ describe('material embedding config changes', () => {
     );
   });
 
-  it('treats missing Mongo filter fields as an incompatible vector index', () => {
+  it('requires Mongo filter fields and accepts a ready Postgres index without them', () => {
     const live = {
       field: 'embedding',
       name: 'embedding_vector',
@@ -258,6 +258,33 @@ describe('material embedding config changes', () => {
         filterFields: required.filterFields,
       }),
       undefined,
+    );
+    const hydratedPostgres = {
+      field: 'embedding',
+      name: 'embedding_vector',
+      dimensions: 3,
+      similarity: 'cosine',
+      method: 'hnsw',
+      queryable: true,
+      status: 'ready',
+    };
+    assert.equal(
+      embeddingVectorIndexMatchesContract(hydratedPostgres, {
+        ...required,
+        provider: 'postgres',
+      }),
+      true,
+    );
+    assert.equal(embeddingVectorIndexMatchesContract(hydratedPostgres, required), false);
+    assert.equal(
+      selectEmbeddingVectorIndex([hydratedPostgres], 'embedding', {
+        dimensions: 3,
+        similarity: 'cosine',
+        method: 'hnsw',
+        filterFields: required.filterFields,
+        provider: 'postgres',
+      })?.name,
+      'embedding_vector',
     );
   });
 });
