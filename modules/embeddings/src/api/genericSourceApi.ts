@@ -67,6 +67,7 @@ import {
 } from '../utils/schemaPolicy.js';
 import { sanitizeErrorMessage } from '../utils/redactConfig.js';
 import { parseStorageSelectors } from '../utils/storageSelectors.js';
+import { sourceExtractionWarnings } from '../utils/operationalStatus.js';
 
 export interface EmbeddingSourceRecord {
   _id: string;
@@ -215,6 +216,7 @@ export interface GenericSourceApiDeps {
     subject?: string;
   }) => Promise<unknown>;
   onStorageSourceReady?: (sourceId: string) => Promise<void> | void;
+  storageAvailable?: () => boolean;
   getStorageQueue?: () => Promise<{
     waiting: number;
     active: number;
@@ -441,6 +443,9 @@ export class GenericSourceApi {
     assertCanManageSources(caller);
     const source = await this.requireSource(id);
     const counts = await this.documentStatusCounts(source._id);
+    const extractionQueue = this.deps.getStorageQueue
+      ? await this.deps.getStorageQueue()
+      : undefined;
     const warnings: string[] = [];
     const ready = source.state === 'ready';
     if (!ready) {
@@ -449,13 +454,19 @@ export class GenericSourceApi {
     if (source.chunkIndexStatus && source.chunkIndexStatus !== VectorIndexStatus.Ready) {
       warnings.push(`Chunk index status is ${source.chunkIndexStatus}`);
     }
+    warnings.push(
+      ...sourceExtractionWarnings({
+        kind: source.kind,
+        failedCount: counts.failedCount,
+        extractionQueue,
+        storageAvailable: this.deps.storageAvailable?.(),
+      }),
+    );
     return {
       source: mapEmbeddingSource(source),
       ready,
       ...counts,
-      extractionQueue: this.deps.getStorageQueue
-        ? await this.deps.getStorageQueue()
-        : undefined,
+      extractionQueue,
       warnings,
     };
   }

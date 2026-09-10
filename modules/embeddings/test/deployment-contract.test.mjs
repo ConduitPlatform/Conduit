@@ -67,6 +67,7 @@ test('rollback retains vector, index, config, and Redis state', () => {
   assert.match(runbook, /Rollback \*\*retains\*\*/);
   assert.match(runbook, /vector fields, indexes, `EmbeddingConfig` documents/);
   assert.match(runbook, /Redis\/BullMQ queue state/);
+  assert.match(runbook, /embeddings-storage-queue/);
   assert.match(
     k8sReadme,
     /retained vector\/index\/config\/\nRedis state|retained vector/,
@@ -89,6 +90,20 @@ test('docs stay default-off and do not claim a published embeddings image', () =
     /Image: `docker\.io\/conduitplatform\/embeddings:\$\{IMAGE_TAG\}`/,
   );
   assert.match(composeSource, /profiles: \['embeddings'\]/);
+});
+
+test('runbook covers Storage extraction operations and trusted ingest', () => {
+  assert.match(runbook, /trustedIngestModules/);
+  assert.match(runbook, /CompleteFileUpload/);
+  assert.match(runbook, /Office/);
+  assert.match(runbook, /OCR/);
+  assert.match(runbook, /pdfjs-dist/);
+  assert.match(runbook, /storage_extracted_total/);
+  assert.match(runbook, /Extracted and submitted chunk text is embedded then discarded|No-text retention/i);
+  assert.match(runbook, /POST \/embeddings\/sources\/:id\/reconcile/);
+  assert.match(moduleReadme, /trustedIngestModules/);
+  assert.match(moduleReadme, /Office/);
+  assert.doesNotMatch(runbook, /sk-live|sas=/);
 });
 
 test('compose maps container GRPC_PORT through EMBEDDINGS_GRPC_PORT', () => {

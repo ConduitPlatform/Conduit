@@ -179,4 +179,20 @@ describe('provider model catalogue', () => {
       [{ name: 'text-embedding-3-small', dimensions: 1536 }],
     );
   });
+
+  it('rejects invalid extraction and ingest operational limits during config normalize', () => {
+    assert.throws(
+      () =>
+        normalizeEmbeddingsConfig({
+          storageExtraction: { maxFileBytes: 0 },
+        }),
+      err => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
+    );
+    assert.doesNotThrow(() =>
+      normalizeEmbeddingsConfig({
+        storageExtraction: { maxFileBytes: 1024, chunkOverlapBytes: 0 },
+        security: { trustedIngestModules: ['embeddings'] },
+      }),
+    );
+  });
 });

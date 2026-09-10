@@ -50,4 +50,25 @@ export default {
       help: 'Tracks malformed or oversized embedding queue payloads',
     },
   },
+  storageExtracted: {
+    type: MetricType.Counter,
+    config: {
+      name: 'storage_extracted_total',
+      help: 'Tracks Storage files that were extracted, embedded, and indexed',
+    },
+  },
+  storageSkipped: {
+    type: MetricType.Counter,
+    config: {
+      name: 'storage_skipped_total',
+      help: 'Tracks Storage files skipped as pending, unmatched, empty, or unsupported',
+    },
+  },
+  storageFailed: {
+    type: MetricType.Counter,
+    config: {
+      name: 'storage_extraction_failed_total',
+      help: 'Tracks Storage extraction jobs that exhausted retries',
+    },
+  },
 };

@@ -4,6 +4,7 @@ import type {
   EmbeddingProviderModel,
   EmbeddingProviderSettings,
 } from '../config/index.js';
+import { validateOperationalLimits } from './storageLimits.js';
 
 export type { EmbeddingProviderModel, EmbeddingProviderSettings };
 
@@ -252,6 +253,8 @@ export function normalizeEmbeddingsConfig<
   T extends {
     providers?: Record<string, unknown>;
     security?: Record<string, unknown>;
+    queue?: Record<string, unknown>;
+    storageExtraction?: Record<string, unknown>;
   },
 >(config: T, options?: CatalogueOptions): T {
   const next = { ...config };
@@ -267,5 +270,12 @@ export function normalizeEmbeddingsConfig<
     }
     next.providers = providers as T['providers'];
   }
+  validateOperationalLimits({
+    queue: isRecord(next.queue) ? next.queue : undefined,
+    security: isRecord(next.security) ? next.security : undefined,
+    storageExtraction: isRecord(next.storageExtraction)
+      ? next.storageExtraction
+      : undefined,
+  });
   return next;
 }

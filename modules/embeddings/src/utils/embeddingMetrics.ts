@@ -8,6 +8,9 @@ export const EMBEDDING_METRICS = {
   backfill: 'embedding_backfill_jobs_total',
   malformedEvents: 'malformed_embedding_events_total',
   malformedJobs: 'malformed_embedding_jobs_total',
+  storageExtracted: 'storage_extracted_total',
+  storageSkipped: 'storage_skipped_total',
+  storageFailed: 'storage_extraction_failed_total',
 } as const;
 
 export type EmbeddingMetric = keyof typeof EMBEDDING_METRICS;

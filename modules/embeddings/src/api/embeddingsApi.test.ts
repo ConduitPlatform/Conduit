@@ -110,7 +110,12 @@ function createApi(overrides?: {
   createdIndexes?: string[];
   schemaExtensions?: Array<{ schemaName: string; fields: Record<string, unknown> }>;
   config?: Config;
-  queue?: { generation: QueueJobCounts; backfill: QueueJobCounts };
+  storageAvailable?: () => boolean;
+  queue?: {
+    generation: QueueJobCounts;
+    backfill: QueueJobCounts;
+    storage?: QueueJobCounts;
+  };
 }) {
   const configs = [...(overrides?.configs ?? [])];
   const runs = [...(overrides?.runs ?? [])];
@@ -204,6 +209,7 @@ function createApi(overrides?: {
         generation: { ...emptyCounts(), waiting: 2 },
         backfill: emptyCounts(),
       },
+    storageAvailable: overrides?.storageAvailable,
     enqueueBackfill: async job => {
       enqueued.push(job.runId);
     },
@@ -655,6 +661,7 @@ describe('typed embeddings API handlers', () => {
       queue: {
         generation: { ...emptyCounts(), waiting: 4, failed: 1 },
         backfill: { ...emptyCounts(), active: 1 },
+        storage: { ...emptyCounts(), waiting: 3, failed: 2 },
       },
     });
     const statusResult = await api.getStatus();
@@ -662,8 +669,16 @@ describe('typed embeddings API handlers', () => {
     assert.equal(statusResult.ready, false);
     assert.equal(statusResult.generationQueue.waiting, 4);
     assert.equal(statusResult.backfillQueue.active, 1);
+    assert.equal(statusResult.storageQueue.waiting, 3);
+    assert.equal(statusResult.storageQueue.failed, 2);
     assert.equal(
       statusResult.warnings.some(warning => /disabled/.test(warning)),
+      true,
+    );
+    assert.equal(
+      statusResult.warnings.some(warning =>
+        /Storage extraction queue has 2 failed/.test(warning),
+      ),
       true,
     );
     assert.equal(
@@ -1267,6 +1282,28 @@ describe('typed embeddings API handlers', () => {
       true,
     );
     assert.equal(JSON.stringify(statusResult).includes('sk-status'), false);
+    const storageDown = await createApi({
+      config: { ...moduleConfig, enabled: true },
+      storageAvailable: () => false,
+      queue: {
+        generation: emptyCounts(),
+        backfill: emptyCounts(),
+        storage: { ...emptyCounts(), failed: 2 },
+      },
+    }).api.getStatus();
+    assert.equal(
+      storageDown.warnings.some(warning =>
+        /Storage module is unavailable; conduit-storage extraction is idle/.test(warning),
+      ),
+      true,
+    );
+    assert.equal(
+      storageDown.warnings.some(warning =>
+        /Storage extraction queue has 2 failed/.test(warning),
+      ),
+      true,
+    );
+    assert.equal(JSON.stringify(storageDown).includes('sk-status'), false);
     const capabilities = await api.getCapabilities();
     assert.deepEqual(Object.keys(capabilities.capabilities).sort(), [
       'indexing',

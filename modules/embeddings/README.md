@@ -83,6 +83,12 @@ the authenticated router context. Raw vectors, `userId`, `adminOperator`, and
 partition overrides are rejected. Source hits return score plus safe
 identifiers/metadata only.
 
+Trusted document ingest (`POST /embeddings/sources/:id/documents`) is
+restricted to `security.trustedIngestModules` (`database`, `core`, `storage`,
+`embeddings`) or platform admin. Source create/update/disable is platform
+admin or `database`/`core`. Client routes never expose sources, status, or
+configs.
+
 ## Storage extraction
 
 Enabled `kind=conduit-storage` sources index only files that match their
@@ -107,13 +113,9 @@ and is listed in `service-bundle.config.json`. Office and OCR stay on the
 trusted external ingest path.
 
 Extracted chunk text is embedded through `syncDocument` and discarded. Persisted
-references keep `storageFileId` plus safe locator metadata only.
-
-`storageExtraction` convict caps: `maxFileBytes` (8MiB), `maxExtractedBytes`
-(2MiB), `maxPdfPages` (50), `extractTimeoutMs` (15s), `maxChunksPerFile`
-(256), `chunkOverlapBytes` (256), `queueConcurrency` (1), `queueAttempts` (5).
-Chunk size is also bounded by `security.maxEmbedInputBytes` /
-`maxChunkTextBytes`.
+references keep `storageFileId` plus safe locator metadata only. Extraction,
+queue, and security limits are positive integers validated at config load;
+see [deploy/embeddings.md](../../deploy/embeddings.md).
 
 ## Packaging
 
@@ -128,7 +130,8 @@ Chunk size is also bounded by `security.maxEmbedInputBytes` /
   Module convict `enabled` (default false) is a separate Core config switch
   for workers and search.
 
-Operator rollout, capability/index readiness, and rollback:
+Operator rollout, capability/index readiness, Storage extraction
+lifecycle/reconcile, trusted ingest boundary, and rollback:
 [deploy/embeddings.md](../../deploy/embeddings.md).
 
 Live Atlas/pgvector/provider behavior is not covered by CI. Repeat the

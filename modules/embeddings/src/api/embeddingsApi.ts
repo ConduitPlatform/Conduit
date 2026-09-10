@@ -66,6 +66,8 @@ import {
   providerReadinessWarnings,
   SearchGateError,
   grpcErrorFromSearchGate,
+  storagePeerWarnings,
+  storageQueueWarnings,
 } from '../utils/operationalStatus.js';
 import {
   mapBackfillRun,
@@ -178,6 +180,7 @@ export interface EmbeddingsApiDeps {
   invalidateHashes: (schemaName: string, hashFields: string[]) => Promise<void>;
   embed: (input: string, provider: string, model: string) => Promise<number[]>;
   onConfigChanged?: (schemaName: string) => Promise<void> | void;
+  storageAvailable?: () => boolean;
   generic?: GenericSourceApiDeps;
   reconcileStorageSource?: (
     sourceId: string,
@@ -362,6 +365,11 @@ export class EmbeddingsApi {
       ...providerReadinessWarnings(
         config.providers[config.defaultProvider] ?? Object.values(config.providers)[0],
       ),
+      ...storagePeerWarnings({
+        moduleEnabled: config.enabled,
+        storageAvailable: this.deps.storageAvailable?.(),
+      }),
+      ...storageQueueWarnings(queue.storage),
     ];
     if (schemaName) {
       const configs = await this.deps.configs.findMany({ schemaName, enabled: true });

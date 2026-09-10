@@ -30,6 +30,8 @@ Presigned create (`POST /storage/upload`, `POST /files/upload`) stores a placeho
 Completion verifies the provider object with a `stat`/`head` request, records size, etag/checksum, and `contentVersion`, then emits `ready` (or `update` when replacing existing bytes). Placeholder objects are never treated as ready.
 Deletes emit `storage:delete:File` (single file) or `storage:deleteMany:File` plus `storage:delete:Folder` / `storage:delete:Container` cleanup signals. Event payloads include file IDs and safe metadata only — never presigned URLs.
 
+Embeddings Storage sources ignore `pending` uploads, including legacy presigned clients that never call complete. Missing `uploadStatus` on older File documents is treated as ready. Complete the upload before expecting extraction.
+
 ## Requirements ⚡
 
 - [Database](../database) module

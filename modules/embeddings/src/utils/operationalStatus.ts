@@ -214,6 +214,43 @@ export function emptyQueueCounts(): QueueJobCounts {
   };
 }
 
+export function storagePeerWarnings(args: {
+  moduleEnabled: boolean;
+  storageAvailable?: boolean;
+}): string[] {
+  if (!args.moduleEnabled || args.storageAvailable !== false) return [];
+  return ['Storage module is unavailable; conduit-storage extraction is idle'];
+}
+
+export function storageQueueWarnings(counts?: QueueJobCounts): string[] {
+  if (!counts || counts.failed < 1) return [];
+  return [
+    `Storage extraction queue has ${counts.failed} failed jobs. Inspect document statuses and reconcile the source after fixing MIME, size, or provider errors.`,
+  ];
+}
+
+export function sourceExtractionWarnings(args: {
+  kind: string;
+  failedCount: number;
+  extractionQueue?: QueueJobCounts;
+  storageAvailable?: boolean;
+}): string[] {
+  if (args.kind !== 'conduit-storage') return [];
+  const warnings: string[] = [];
+  if (args.storageAvailable === false) {
+    warnings.push(
+      'Storage module is unavailable; extraction is idle until Storage is serving',
+    );
+  }
+  if (args.failedCount > 0) {
+    warnings.push(
+      `${args.failedCount} documents failed extraction. Reconcile after fixing MIME, size, or provider errors. Extracted text is not retained.`,
+    );
+  }
+  warnings.push(...storageQueueWarnings(args.extractionQueue));
+  return warnings;
+}
+
 export function isEmbeddingsReady(args: {
   moduleEnabled: boolean;
   warnings: string[];

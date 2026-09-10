@@ -556,6 +556,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       },
       getQueueStatus: () => this.queueController.getQueueStatus(),
       enqueueBackfill: job => this.queueController.addBackfillControllerJob(job),
+      storageAvailable: () => Boolean(this.grpcSdk.storage),
       reconcileStorageSource: (sourceId, caller) =>
         this.ensureStoragePipeline().reconcileSource(sourceId, caller),
       embed: (input, provider, model) =>
@@ -643,6 +644,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
           this.ensureStoragePipeline()
             .reconcileSource(sourceId, { callerModule: 'embeddings' })
             .then(() => undefined),
+        storageAvailable: () => Boolean(this.grpcSdk.storage),
         getStorageQueue: async () =>
           (await this.queueController.getQueueStatus()).storage,
       },

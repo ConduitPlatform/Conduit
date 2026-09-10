@@ -37,8 +37,14 @@ describe('provider secret redaction', () => {
       /\[REDACTED\]/,
     );
     assert.doesNotMatch(
-      redactSecretText('Embedding failed Bearer sk-secret apiKey=sk-secret'),
-      /sk-secret/,
+      redactSecretText(
+        'GetFileBytes failed storageFileId=file-1 sourceUrl=https://cdn.example/file?sig=abc token=sekrit apiKey=sk-secret',
+      ),
+      /file-1|cdn\.example|sk-secret|sekrit|sig=abc/,
+    );
+    assert.match(
+      redactSecretText('GetFileBytes failed storageFileId=file-1'),
+      /storageFileId:\[REDACTED\]/,
     );
   });
 

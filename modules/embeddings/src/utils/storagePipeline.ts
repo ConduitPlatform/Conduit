@@ -26,6 +26,7 @@ import { extractCsvText, extractJsonText, extractUtf8Text } from './textExtract.
 import { extractPdfText } from './pdfExtract.js';
 import { chunkExtractedText } from './storageChunker.js';
 import { storageExtractionLimits } from './storageLimits.js';
+import { incrementEmbeddingMetric } from './embeddingMetrics.js';
 import { sanitizeErrorMessage } from './redactConfig.js';
 
 export interface StorageFileRecord {
@@ -298,6 +299,7 @@ export class StorageExtractionPipeline {
     const file = await this.deps.getFile(fileId);
     if (!file || !isFileBytesReady(file) || !fileMatchesSelectors(file, selectors)) {
       await this.markDocument(source, fileId, 'skipped', file ?? undefined);
+      incrementEmbeddingMetric('storageSkipped');
       return;
     }
     const existing = await this.deps.documents.findOne({
@@ -332,6 +334,7 @@ export class StorageExtractionPipeline {
       );
       if (!chunks.length) {
         await this.markDocument(source, fileId, 'skipped', file);
+        incrementEmbeddingMetric('storageSkipped');
         return;
       }
       await this.deps.api.syncDocument(
@@ -364,6 +367,7 @@ export class StorageExtractionPipeline {
           storageFileId: fileId,
         });
       }
+      incrementEmbeddingMetric('storageExtracted');
     } catch (err) {
       await this.markDocument(source, fileId, 'failed', file, sanitizeErrorMessage(err));
       throw err;

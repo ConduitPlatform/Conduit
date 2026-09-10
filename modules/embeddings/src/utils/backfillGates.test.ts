@@ -235,6 +235,9 @@ describe('embedding metric increments do not accept labels', () => {
       incrementEmbeddingMetric('backfill', 3);
       incrementEmbeddingMetric('malformedEvents');
       incrementEmbeddingMetric('malformedJobs');
+      incrementEmbeddingMetric('storageExtracted');
+      incrementEmbeddingMetric('storageSkipped');
+      incrementEmbeddingMetric('storageFailed');
       incrementEmbeddingMetric('generated', 0);
     } finally {
       ConduitGrpcSdk.Metrics = previous;
@@ -249,6 +252,9 @@ describe('embedding metric increments do not accept labels', () => {
         EMBEDDING_METRICS.backfill,
         EMBEDDING_METRICS.malformedEvents,
         EMBEDDING_METRICS.malformedJobs,
+        EMBEDDING_METRICS.storageExtracted,
+        EMBEDDING_METRICS.storageSkipped,
+        EMBEDDING_METRICS.storageFailed,
       ],
     );
     assert.equal(

@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import type { Config } from '../config/index.js';
 import type {
   EmbeddingDocumentRecord,
@@ -8,6 +9,7 @@ import type {
 } from '../api/genericSourceApi.js';
 import { FILE_LIFECYCLE_EVENTS } from './storageEventNames.js';
 import { StorageExtractionPipeline, type StorageFileRecord } from './storagePipeline.js';
+import { EMBEDDING_METRICS } from './embeddingMetrics.js';
 
 const config = {
   enabled: true,
@@ -275,6 +277,50 @@ describe('storage extraction pipeline', () => {
       reason: 'update',
     });
     assert.equal(harness.syncs.length, 1);
+  });
+
+  it('increments extracted and skipped counters without file identifiers', async () => {
+    const seen: Array<{ name: string; labels?: unknown }> = [];
+    const previous = ConduitGrpcSdk.Metrics;
+    ConduitGrpcSdk.Metrics = {
+      increment(name: string, _amount?: number, labels?: unknown) {
+        seen.push({ name, labels });
+      },
+    } as never;
+    try {
+      const harness = createHarness();
+      harness.files.push({
+        _id: 'file-1',
+        container: 'docs',
+        folder: 'inbox/',
+        mimeType: 'text/plain',
+        contentVersion: 'v1',
+        ...({ body: 'hello' } as object),
+      } as StorageFileRecord);
+      await harness.pipeline.processJob({
+        kind: 'ingest',
+        sourceId: 'src-storage',
+        fileId: 'file-1',
+        reason: 'ready',
+      });
+      await harness.pipeline.processJob({
+        kind: 'ingest',
+        sourceId: 'src-storage',
+        fileId: 'file-bin',
+        reason: 'ready',
+      });
+      assert.deepEqual(
+        seen.map(item => item.name),
+        [EMBEDDING_METRICS.storageExtracted, EMBEDDING_METRICS.storageSkipped],
+      );
+      assert.equal(
+        seen.every(item => item.labels === undefined),
+        true,
+      );
+      assert.equal(JSON.stringify(seen).includes('file-'), false);
+    } finally {
+      ConduitGrpcSdk.Metrics = previous;
+    }
   });
 
   it('replaces on contentVersion change and skips disabled ingest', async () => {

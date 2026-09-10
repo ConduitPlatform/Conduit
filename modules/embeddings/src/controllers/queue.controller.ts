@@ -527,6 +527,7 @@ export class QueueController {
       return;
     }
     incrementEmbeddingMetric('failed');
+    incrementEmbeddingMetric('storageFailed');
   }
 
   private handleGenerationFailure(job: WorkerJob | undefined, error: unknown) {

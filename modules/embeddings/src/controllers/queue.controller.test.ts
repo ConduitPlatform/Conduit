@@ -327,4 +327,39 @@ describe('embedding queue status and backfill jobs', () => {
       metrics.restore();
     }
   });
+
+  it('increments storage extraction failed metrics without job payload labels', async () => {
+    FakeWorker.instances = [];
+    const metrics = withMetrics();
+    try {
+      const { controller } = createController();
+      await controller.ensureStorageWorker(async () => undefined, 1);
+      const worker = FakeWorker.instances[0];
+      const job = {
+        data: {
+          kind: 'ingest',
+          sourceId: 'src1',
+          fileId: 'file-secret',
+          reason: 'ready',
+        },
+        attemptsMade: 5,
+        opts: { attempts: 5 },
+      };
+      worker.handlers.failed?.(
+        job,
+        new Error('extract timeout storageFileId=file-secret'),
+      );
+      assert.deepEqual(
+        metrics.seen.map(item => item.name),
+        [EMBEDDING_METRICS.failed, EMBEDDING_METRICS.storageFailed],
+      );
+      assert.equal(
+        metrics.seen.every(item => item.labels === undefined),
+        true,
+      );
+      assert.equal(JSON.stringify(metrics.seen).includes('file-secret'), false);
+    } finally {
+      metrics.restore();
+    }
+  });
 });

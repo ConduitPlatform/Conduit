@@ -10,6 +10,9 @@ import {
   isEmbeddingsReady,
   providerReadinessWarnings,
   SearchGateError,
+  sourceExtractionWarnings,
+  storagePeerWarnings,
+  storageQueueWarnings,
 } from './operationalStatus.js';
 import { mapBackfillRun, mapEmbeddingConfig, parseSearchHits } from './protoMappers.js';
 
@@ -196,6 +199,54 @@ describe('embeddings operational warnings and search gates', () => {
         err.code === status.FAILED_PRECONDITION &&
         /not queryable/.test(err.message),
     );
+  });
+});
+
+describe('storage extraction status warnings', () => {
+  it('warns on idle Storage peers and failed extraction queues without leaking references', () => {
+    assert.deepEqual(
+      storagePeerWarnings({ moduleEnabled: true, storageAvailable: false }),
+      ['Storage module is unavailable; conduit-storage extraction is idle'],
+    );
+    assert.deepEqual(
+      storagePeerWarnings({ moduleEnabled: true, storageAvailable: true }),
+      [],
+    );
+    const queueWarnings = storageQueueWarnings({
+      waiting: 1,
+      active: 0,
+      completed: 0,
+      failed: 2,
+      delayed: 0,
+      paused: 0,
+    });
+    assert.equal(
+      queueWarnings.some(warning => /failed jobs/.test(warning)),
+      true,
+    );
+    assert.equal(queueWarnings.join(' ').includes('file-'), false);
+    const sourceWarnings = sourceExtractionWarnings({
+      kind: 'conduit-storage',
+      failedCount: 3,
+      storageAvailable: false,
+      extractionQueue: {
+        waiting: 0,
+        active: 0,
+        completed: 0,
+        failed: 1,
+        delayed: 0,
+        paused: 0,
+      },
+    });
+    assert.equal(
+      sourceWarnings.some(warning => /3 documents failed extraction/.test(warning)),
+      true,
+    );
+    assert.equal(
+      sourceWarnings.some(warning => /Extracted text is not retained/.test(warning)),
+      true,
+    );
+    assert.deepEqual(sourceExtractionWarnings({ kind: 'external', failedCount: 4 }), []);
   });
 });
 

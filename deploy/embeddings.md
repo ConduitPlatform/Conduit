@@ -78,8 +78,9 @@ pod with module convict `enabled` still false.
 3. Roll back the embeddings image and/or chart to the previous **published**
    version, if any.
 4. Rollback **retains** vector fields, indexes, `EmbeddingConfig` documents,
-   `BackfillRun` records, and Redis/BullMQ queue state. Data and index
-   removal is a separate explicit operator action.
+   `BackfillRun` records, `EmbeddingSource` / `EmbeddingDocument` / chunk
+   indexes, and Redis/BullMQ queue state (including `embeddings-storage-queue`).
+   Data and index removal is a separate explicit operator action.
 
 ## Residual validation
 
@@ -89,3 +90,77 @@ pgvector, Redis queue behavior, a live provider, or a published embeddings
 image. Repeat capability and index readiness checks in the target
 environment before activation. The remaining release prerequisite is
 publishing the first compatible embeddings image tag.
+
+## Environment and config
+
+Process environment (compose/Helm):
+
+| Variable | Required | Default | Notes |
+|---|---|---|---|
+| `NODE_ENV` | production | image-set `production` | Non-empty `GRPC_KEY` is required when this is `production`. |
+| `GRPC_KEY` | production | none | Shared module signing secret. Never put it in module convict settings. |
+| `CONDUIT_SERVER` | yes | compose `conduit:${CORE_GRPC_PORT:-55152}` | Core gRPC address. |
+| `SERVICE_URL` | yes | `conduit-embeddings:${EMBEDDINGS_GRPC_PORT:-55165}` | Advertised gRPC address. |
+| `GRPC_PORT` / `EMBEDDINGS_GRPC_PORT` | no | `55165` | Listen port. |
+| `METRICS_PORT` | no | `9192` | Prometheus scrape. |
+
+Core convict (Admin GET/PATCH embeddings config). Positive integers are rejected at `preConfig` (`0`, negatives, and non-integers fail). `chunkOverlapBytes` may be `0`.
+
+| Path | Default | Role |
+|---|---|---|
+| `enabled` | `false` | Workers, Storage subscriptions, and search. |
+| `queue.concurrency` | `2` | Schema-field generation workers. |
+| `queue.attempts` | `3` | Generation retries with exponential backoff. |
+| `queue.maxBatchSize` | `500` | Max jobs from one enqueue or backfill page. |
+| `queue.drainTimeoutMs` | `900000` | Backfill drain deadline. |
+| `security.trustedIngestModules` | `database`, `core`, `storage`, `embeddings` | Modules allowed to call `syncDocument` / `deleteDocument`. Source CRUD stays `database`/`core` or platform admin. |
+| `security.maxIngestBatchSize` | `100` | Chunks per document sync. |
+| `security.maxChunksPerDocument` | `256` | Persisted chunks per document; also caps Storage chunking. |
+| `security.maxChunkTextBytes` / `maxEmbedInputBytes` | `32768` | Transient chunk text / embed payload. |
+| `security.maxMetadataBytes` | `4096` | Persisted metadata JSON. |
+| `security.maxReferenceBytes` | `1024` | `storageFileId` / `connectorReference`. |
+| `storageExtraction.maxFileBytes` | `8388608` | Storage gRPC read cap; enforced before allocation. |
+| `storageExtraction.maxExtractedBytes` | `2097152` | Extracted UTF-8 cap. |
+| `storageExtraction.maxPdfPages` | `50` | PDF page cap. |
+| `storageExtraction.extractTimeoutMs` | `15000` | Per-file extraction timeout. |
+| `storageExtraction.maxChunksPerFile` | `256` | Capped by `maxChunksPerDocument`. |
+| `storageExtraction.chunkOverlapBytes` | `256` | Adjacent chunk overlap. |
+| `storageExtraction.queueConcurrency` | `1` | `embeddings-storage-queue` workers. |
+| `storageExtraction.queueAttempts` | `5` | Extraction retries with exponential backoff. |
+
+Existing schema-field `EmbeddingConfig` documents are unchanged by generic sources. Source `kind`, `partitionSubject`, and vector profile are immutable after create.
+
+## Generic sources, connectors, and Storage extraction
+
+Schema-field embeddings and generic sources coexist. There is no global Storage index: create an enabled `kind=conduit-storage` source with `selectors.container` (optional `folderPrefix`, optional MIME allowlist). MIME allowlist is a subset of `text/plain`, `text/markdown`, `application/json`, `text/csv`, `application/pdf`.
+
+Admin/MCP (never client): `GET|POST /embeddings/sources`, `GET|PATCH|DELETE /embeddings/sources/:id`, disable/revoke, `GET /embeddings/sources/:id/status`, `POST /embeddings/sources/:id/reconcile`, trusted `POST /embeddings/sources/:id/documents`. Client search stays `POST /embeddings/search` with query text only.
+
+**Trusted boundary:** `syncDocument` / `deleteDocument` require `security.trustedIngestModules` (or platform admin). Source management is platform admin or `database`/`core`. Embeddings itself is a trusted ingest caller for Storage extraction. Client routes never expose configs, backfills, status, or sources. Presigned URLs and `sourceUrl` are never fetched; bytes come only from authenticated Storage gRPC `GetFileBytes`.
+
+**No-text retention:** extracted and submitted chunk text is embedded then discarded. Persisted records keep vectors, `contentHash`, `storageFileId`, and allowlisted metadata. `text` / `content` fields are forbidden on chunk schemas.
+
+**Unsupported:** Office (doc/docx/xls/ppt and OLE), archives, encrypted PDFs, OCR/images, and MIME mismatches are skipped or failed on the automatic Storage path. Connectors that need those formats must extract text themselves and call trusted `syncDocument` on an `external` source.
+
+**PDF / bundle:** `pdfjs-dist` (legacy build) runs in a worker thread. It is an extra embeddings bundle dependency (~4–8MB) listed in `service-bundle.config.json`. Storage is a watched optional peer, not an await peer; extraction idles if Storage is down.
+
+## Lifecycle, reconcile, retry, and failure
+
+1. Direct Storage create/update marks `uploadStatus=ready` and emits `storage:ready:File` / `storage:update:File`. Presigned create stays `pending` until `CompleteFileUpload` / `POST /storage/upload/:id/complete` (client) or admin/gRPC complete. Pending files are ignored. Missing `uploadStatus` is treated as ready for files that predate the lifecycle field.
+2. Matching ready files enqueue `embeddings-storage-queue` with job identity `sourceId + fileId + contentVersion`. Deletes, `deleteMany` (max 500 ids), folder, and container events enqueue delete jobs even if the source is later revoked.
+3. The worker reads bounded bytes, sniffs MIME, extracts, chunks, calls `syncDocument`, then drops text. `contentVersion` skips unchanged indexed files.
+4. Missed events: `POST /embeddings/sources/:id/reconcile` pages matching files, enqueues ingest, and deletes stale documents. The source must be `ready`.
+5. Retry: extraction uses `storageExtraction.queueAttempts` (default 5) with exponential backoff. Terminal failures increment `failed_embeddings_total` and `storage_extraction_failed_total`, mark the document `failed` with a sanitized error (no secrets, URLs, or file references in logs), and stay until reconcile or a new ready/update event. Unsupported MIME is `skipped`, not retried.
+6. Watch `GET /embeddings/status` (`storageQueue`) and `GET /embeddings/sources/:id/status` (queued/extracting/indexed/skipped/failed counts). Failed queue counts and Storage-down warnings are included. Disable the source to stop ingest; revoke/purge to drop relations and data.
+
+## Compatibility and migration
+
+- **Legacy presigned uploads:** clients that never called complete leave `uploadStatus=pending` (or a placeholder object). Embeddings does not index those files and does not fetch the presigned URL. Complete the upload, or reconcile after completion. Pre-lifecycle File documents without `uploadStatus` are treated as ready.
+- **Existing schema configs:** schema-field `EmbeddingConfig`, vector extensions, and backfills are unchanged. Generic sources use hidden `_EmbeddingChunk_*` indexes, not schema target fields.
+- **Rollback** retains `EmbeddingSource` / `EmbeddingDocument` / chunk indexes and Redis `embeddings-storage-queue` state in addition to schema-field vectors, indexes, configs, and backfill records.
+
+## Metrics, logging, and status
+
+Prometheus (`9192`): `generated_embeddings_total`, `failed_embeddings_total`, `skipped_embeddings_total`, `retried_embeddings_total`, `embedding_backfill_jobs_total`, `malformed_embedding_events_total`, `malformed_embedding_jobs_total`, `storage_extracted_total`, `storage_skipped_total`, `storage_extraction_failed_total`. Counters have no payload labels.
+
+Logs and persisted extraction errors run through secret/reference redaction (`apiKey`, bearer tokens, URLs, `storageFileId` / `sourceUrl` / `connectorReference`). Do not expect file paths or presigned URLs in Loki.

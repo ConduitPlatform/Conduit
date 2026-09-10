@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { parseJsonObject } from './protoMappers.js';
+import { sanitizeErrorMessage } from './redactConfig.js';
 import {
   EMBEDDING_DOCUMENT_SCHEMA,
   EMBEDDING_SOURCE_KINDS,
@@ -340,7 +341,8 @@ export function classifyIngestError(err: unknown): IngestItemStatus {
 }
 
 export function ingestErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : 'Chunk ingest failed';
+  const message = sanitizeErrorMessage(err);
+  return message || 'Chunk ingest failed';
 }
 
 export function sourceSearchFilter(args: {

@@ -9,6 +9,7 @@ import {
   assertXorTextOrVector,
   hashChunkContent,
   HIDDEN_CHUNK_RESULT_FIELDS,
+  ingestErrorMessage,
   ingestLimits,
   parseBoundedObject,
   sanitizeSourceSearchDocument,
@@ -174,6 +175,15 @@ describe('generic ingest validation', () => {
           adminOperator: true,
         }),
       (err: unknown) => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+    );
+  });
+
+  it('redacts secrets and references from ingest error text', () => {
+    assert.doesNotMatch(
+      ingestErrorMessage(
+        new Error('provider timeout apiKey=sk-secret storageFileId=file-1'),
+      ),
+      /sk-secret|file-1/,
     );
   });
 });

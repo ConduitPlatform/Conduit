@@ -61,6 +61,8 @@ function createGeneric(overrides?: {
   vectorSearch?: GenericSourceApiDeps['vectorSearch'];
   can?: GenericSourceApiDeps['can'];
   createdIndexQueryable?: boolean;
+  storageAvailable?: () => boolean;
+  getStorageQueue?: GenericSourceApiDeps['getStorageQueue'];
 }) {
   const sources: EmbeddingSourceRecord[] = [];
   const documents: EmbeddingDocumentRecord[] = [];
@@ -223,6 +225,8 @@ function createGeneric(overrides?: {
     deleteAllRelations: async query => {
       deletedRelations.push(query);
     },
+    storageAvailable: overrides?.storageAvailable,
+    getStorageQueue: overrides?.getStorageQueue,
   };
   return {
     api: new GenericSourceApi(deps),
@@ -629,5 +633,51 @@ describe('generic embedding source API', () => {
       { sourceId: source.id, text: 'hello', userId: 'owner', adminOperator: true },
       { platformAdmin: true },
     );
+  });
+
+  it('warns on Storage extraction failures without leaking file references', async () => {
+    const { api, documents } = createGeneric({
+      storageAvailable: () => false,
+      getStorageQueue: async () => ({
+        waiting: 0,
+        active: 0,
+        completed: 0,
+        failed: 2,
+        delayed: 0,
+        paused: 0,
+      }),
+    });
+    const created = await api.upsertSource(
+      {
+        label: 'Files',
+        kind: 'conduit-storage',
+        partitionSubject: 'Team:tenant-a',
+        selectors: JSON.stringify({ container: 'docs' }),
+      },
+      { platformAdmin: true },
+    );
+    documents.push({
+      _id: 'doc-failed',
+      sourceId: created.source.id,
+      externalDocumentId: 'file-secret',
+      storageFileId: 'file-secret',
+      partitionSubject: 'Team:tenant-a',
+      status: 'failed',
+    });
+    const statusResult = await api.getSourceStatus(created.source.id, {
+      platformAdmin: true,
+    });
+    assert.equal(statusResult.failedCount, 1);
+    assert.equal(
+      statusResult.warnings.some(warning =>
+        /Storage module is unavailable/.test(warning),
+      ),
+      true,
+    );
+    assert.equal(
+      statusResult.warnings.some(warning => /failed extraction/.test(warning)),
+      true,
+    );
+    assert.equal(JSON.stringify(statusResult.warnings).includes('file-secret'), false);
   });
 });
