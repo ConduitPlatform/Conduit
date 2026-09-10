@@ -97,4 +97,128 @@ describe('FileHandlers.fileAccessCheck', () => {
       { subject: 'User:user-b', actions: ['read'], resource: 'File:file-2' },
     ]);
   });
+
+  it('treats an empty userId as absent and still checks the explicit scope', async () => {
+    stubModels();
+    const checked: Array<Record<string, unknown>> = [];
+    const handlers = new FileHandlers(
+      {
+        databaseProvider: {},
+        authorization: {
+          can: async (input: Record<string, unknown>) => {
+            checked.push(input);
+            return { allow: input.subject === 'Team:tenant-a' };
+          },
+        },
+      } as never,
+      {} as never,
+    );
+    ConfigController.getInstance().config = { authorization: { enabled: true } };
+    await handlers.fileAccessCheck(
+      'read',
+      {
+        context: { user: { _id: '' }, callerModule: 'embeddings' },
+        queryParams: { scope: 'Team:tenant-a' },
+      },
+      { _id: 'file-3' } as never,
+    );
+    await assert.rejects(
+      () =>
+        handlers.fileAccessCheck(
+          'read',
+          {
+            context: { user: { _id: '   ' }, callerModule: 'embeddings' },
+            queryParams: { scope: 'Team:tenant-b' },
+          },
+          { _id: 'file-3' } as never,
+        ),
+      (err: unknown) => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+    );
+    assert.deepEqual(checked, [
+      { subject: 'Team:tenant-a', actions: ['read'], resource: 'File:file-3' },
+      { subject: 'Team:tenant-b', actions: ['read'], resource: 'File:file-3' },
+    ]);
+  });
+
+  it('keeps ordinary user and no-subject admin paths unchanged', async () => {
+    stubModels();
+    const checked: Array<Record<string, unknown>> = [];
+    const handlers = new FileHandlers(
+      {
+        databaseProvider: {},
+        authorization: {
+          can: async (input: Record<string, unknown>) => {
+            checked.push(input);
+            return { allow: input.subject === 'User:owner' };
+          },
+        },
+      } as never,
+      {} as never,
+    );
+    ConfigController.getInstance().config = { authorization: { enabled: true } };
+    await handlers.fileAccessCheck(
+      'read',
+      {
+        context: { user: { _id: 'owner' } },
+        queryParams: { scope: 'Team:tenant-a' },
+      },
+      { _id: 'file-4' } as never,
+    );
+    await assert.rejects(
+      () =>
+        handlers.fileAccessCheck('read', { context: {}, queryParams: {} }, {
+          _id: 'file-4',
+        } as never),
+      (err: unknown) =>
+        err instanceof GrpcError &&
+        err.code === status.PERMISSION_DENIED &&
+        /not public/.test(err.message),
+    );
+    assert.deepEqual(checked, [
+      { subject: 'User:owner', actions: ['read'], resource: 'File:file-4' },
+    ]);
+  });
+
+  it('does not let router or client metadata forge a scope-only grant', async () => {
+    stubModels();
+    const checked: Array<Record<string, unknown>> = [];
+    const handlers = new FileHandlers(
+      {
+        databaseProvider: {},
+        authorization: {
+          can: async (input: Record<string, unknown>) => {
+            checked.push(input);
+            return { allow: true };
+          },
+        },
+      } as never,
+      {} as never,
+    );
+    ConfigController.getInstance().config = { authorization: { enabled: true } };
+    await assert.rejects(
+      () =>
+        handlers.fileAccessCheck(
+          'read',
+          {
+            context: { callerModule: 'router' },
+            queryParams: { scope: 'Team:tenant-a' },
+          },
+          { _id: 'file-5' } as never,
+        ),
+      (err: unknown) => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+    );
+    await assert.rejects(
+      () =>
+        handlers.fileAccessCheck(
+          'read',
+          {
+            context: { callerModule: 'client' },
+            queryParams: { scope: 'User:user-a' },
+          },
+          { _id: 'file-5' } as never,
+        ),
+      (err: unknown) => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+    );
+    assert.deepEqual(checked, []);
+  });
 });

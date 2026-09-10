@@ -28,6 +28,10 @@ import {
   storeNewFile,
   validateName,
 } from '../utils/index.js';
+import {
+  isUntrustedScopeOnlyCaller,
+  nonEmptyAuthzString,
+} from '../utils/storageGrpcRequest.js';
 
 export class FileHandlers {
   private readonly database: DatabaseProvider;
@@ -58,7 +62,12 @@ export class FileHandlers {
     file?: File,
   ) {
     const scope = requestScope(request);
-    if (!request.context.user && scope && file && action !== 'create') {
+    const userId = nonEmptyAuthzString(request.context?.user?._id);
+    const callerModule = nonEmptyAuthzString(request.context?.callerModule);
+    if (!userId && scope && file && action !== 'create') {
+      if (isUntrustedScopeOnlyCaller(callerModule)) {
+        throw new GrpcError(status.PERMISSION_DENIED, 'You do not have access to file');
+      }
       const allowed = await this.grpcSdk.authorization?.can({
         subject: scope,
         actions: [action],
@@ -69,13 +78,13 @@ export class FileHandlers {
       }
       return;
     }
-    if (!request.context.user) {
+    if (!userId) {
       throw new GrpcError(status.PERMISSION_DENIED, 'File access is not public');
     }
     if (ConfigController.getInstance().config.authorization.enabled) {
       if (action === 'create' && request.queryParams.scope) {
         const allowed = await this.grpcSdk.authorization?.can({
-          subject: `User:${request.context.user._id}`,
+          subject: `User:${userId}`,
           actions: ['read'],
           resource: request.params.scope,
         });
@@ -88,7 +97,7 @@ export class FileHandlers {
       }
       if (['read', 'edit', 'delete'].includes(action)) {
         const allowed = await this.grpcSdk.authorization?.can({
-          subject: `User:${request.context.user._id}`,
+          subject: `User:${userId}`,
           actions: [action],
           resource: `File:${file!._id}`,
         });

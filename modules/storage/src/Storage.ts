@@ -45,13 +45,13 @@ import { createStorageProvider } from './providers/index.js';
 import { getAwsAccountId } from './utils/index.js';
 import {
   ConfigController,
-  createParsedRouterRequest,
   ManagedModule,
   sanitizeDocumentsForExport,
   type ExportableResource,
   type ExportResult,
   type ImportResult,
 } from '@conduitplatform/module-tools';
+import { buildStorageGrpcRequest } from './utils/storageGrpcRequest.js';
 import { StorageParamAdapter } from './adapter/StorageParamAdapter.js';
 import { FileResource } from './authz/index.js';
 import { AdminFileHandlers } from './admin/adminFile.js';
@@ -341,21 +341,10 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = createParsedRouterRequest(
-      call.request,
-      undefined,
-      { scope: call.request.scope },
-      undefined,
-      undefined,
-      undefined,
-      { user: { _id: call.request.userId } },
-    );
-    let result;
-    if (call.request.scope || call.request.userId) {
-      result = await this._fileHandlers.getFile(request);
-    } else {
-      result = await this._adminFileHandlers.getFile(request);
-    }
+    const { request, useClientHandlers } = buildStorageGrpcRequest(call);
+    const result = useClientHandlers
+      ? await this._fileHandlers.getFile(request)
+      : await this._adminFileHandlers.getFile(request);
     const response = this.storageParamAdapter.getFileResponse(result);
     callback(null, response);
   }
@@ -369,21 +358,10 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = createParsedRouterRequest(
-      call.request,
-      undefined,
-      { scope: call.request.scope },
-      undefined,
-      undefined,
-      undefined,
-      { user: { _id: call.request.userId } },
-    );
-    let result;
-    if (call.request.scope || call.request.userId) {
-      result = await this._fileHandlers.getFileData(request);
-    } else {
-      result = await this._adminFileHandlers.getFileData(request);
-    }
+    const { request, useClientHandlers } = buildStorageGrpcRequest(call);
+    const result = useClientHandlers
+      ? await this._fileHandlers.getFileData(request)
+      : await this._adminFileHandlers.getFileData(request);
     callback(null, result as GetFileDataResponse);
   }
 
@@ -396,19 +374,10 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = createParsedRouterRequest(
-      call.request,
-      undefined,
-      { scope: call.request.scope },
-      undefined,
-      undefined,
-      undefined,
-      { user: { _id: call.request.userId } },
-    );
-    const result =
-      call.request.scope || call.request.userId
-        ? await this._fileHandlers.getFileBytes(request)
-        : await this._adminFileHandlers.getFileBytes(request);
+    const { request, useClientHandlers } = buildStorageGrpcRequest(call);
+    const result = useClientHandlers
+      ? await this._fileHandlers.getFileBytes(request)
+      : await this._adminFileHandlers.getFileBytes(request);
     callback(null, result as GetFileBytesResponse);
   }
 
@@ -421,21 +390,12 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = createParsedRouterRequest(
-      call.request,
-      undefined,
-      { scope: call.request.scope, download: call.request.download },
-      undefined,
-      undefined,
-      undefined,
-      { user: { _id: call.request.userId } },
-    );
-    let result;
-    if (call.request.scope || call.request.userId) {
-      result = await this._fileHandlers.getFileUrl(request);
-    } else {
-      result = await this._adminFileHandlers.getFileUrl(request);
-    }
+    const { request, useClientHandlers } = buildStorageGrpcRequest(call, {
+      download: call.request.download,
+    });
+    const result = useClientHandlers
+      ? await this._fileHandlers.getFileUrl(request)
+      : await this._adminFileHandlers.getFileUrl(request);
     callback(null, { url: (result as Indexable).result as string });
   }
 
@@ -448,21 +408,10 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = createParsedRouterRequest(
-      call.request,
-      undefined,
-      { scope: call.request.scope },
-      undefined,
-      undefined,
-      undefined,
-      { user: { _id: call.request.userId } },
-    );
-    let result;
-    if (call.request.scope || call.request.userId) {
-      result = await this._fileHandlers.createFile(request);
-    } else {
-      result = await this._adminFileHandlers.createFile(request);
-    }
+    const { request, useClientHandlers } = buildStorageGrpcRequest(call);
+    const result = useClientHandlers
+      ? await this._fileHandlers.createFile(request)
+      : await this._adminFileHandlers.createFile(request);
     const response = this.storageParamAdapter.getFileResponse(result);
     callback(null, response);
   }
@@ -476,21 +425,10 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = createParsedRouterRequest(
-      call.request,
-      undefined,
-      { scope: call.request.scope },
-      undefined,
-      undefined,
-      undefined,
-      { user: { _id: call.request.userId } },
-    );
-    let result;
-    if (call.request.scope || call.request.userId) {
-      result = await this._fileHandlers.updateFile(request);
-    } else {
-      result = await this._adminFileHandlers.updateFile(request);
-    }
+    const { request, useClientHandlers } = buildStorageGrpcRequest(call);
+    const result = useClientHandlers
+      ? await this._fileHandlers.updateFile(request)
+      : await this._adminFileHandlers.updateFile(request);
     const response = this.storageParamAdapter.getFileResponse(result);
     callback(null, response);
   }
@@ -504,21 +442,10 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = createParsedRouterRequest(
-      call.request,
-      undefined,
-      { scope: call.request.scope },
-      undefined,
-      undefined,
-      undefined,
-      { user: { _id: call.request.userId } },
-    );
-    let result;
-    if (call.request.scope || call.request.userId) {
-      result = await this._fileHandlers.deleteFile(request);
-    } else {
-      result = await this._adminFileHandlers.deleteFile(request);
-    }
+    const { request, useClientHandlers } = buildStorageGrpcRequest(call);
+    const result = useClientHandlers
+      ? await this._fileHandlers.deleteFile(request)
+      : await this._adminFileHandlers.deleteFile(request);
     callback(null, result as DeleteFileResponse);
   }
 
@@ -531,21 +458,10 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = createParsedRouterRequest(
-      call.request,
-      undefined,
-      { scope: call.request.scope },
-      undefined,
-      undefined,
-      undefined,
-      { user: { _id: call.request.userId } },
-    );
-    let result;
-    if (call.request.scope || call.request.userId) {
-      result = await this._fileHandlers.createFileUploadUrl(request);
-    } else {
-      result = await this._adminFileHandlers.createFileUploadUrl(request);
-    }
+    const { request, useClientHandlers } = buildStorageGrpcRequest(call);
+    const result = useClientHandlers
+      ? await this._fileHandlers.createFileUploadUrl(request)
+      : await this._adminFileHandlers.createFileUploadUrl(request);
     const response = this.storageParamAdapter.getFileByUrlResponse(result);
     callback(null, response);
   }
@@ -559,21 +475,10 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = createParsedRouterRequest(
-      call.request,
-      undefined,
-      { scope: call.request.scope },
-      undefined,
-      undefined,
-      undefined,
-      { user: { _id: call.request.userId } },
-    );
-    let result;
-    if (call.request.scope || call.request.userId) {
-      result = await this._fileHandlers.updateFileUploadUrl(request);
-    } else {
-      result = await this._adminFileHandlers.updateFileUploadUrl(request);
-    }
+    const { request, useClientHandlers } = buildStorageGrpcRequest(call);
+    const result = useClientHandlers
+      ? await this._fileHandlers.updateFileUploadUrl(request)
+      : await this._adminFileHandlers.updateFileUploadUrl(request);
     const response = this.storageParamAdapter.getFileByUrlResponse(result);
     callback(null, response);
   }
@@ -587,21 +492,10 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = createParsedRouterRequest(
-      call.request,
-      undefined,
-      { scope: call.request.scope },
-      undefined,
-      undefined,
-      undefined,
-      { user: { _id: call.request.userId } },
-    );
-    let result;
-    if (call.request.scope || call.request.userId) {
-      result = await this._fileHandlers.completeFileUpload(request);
-    } else {
-      result = await this._adminFileHandlers.completeFileUpload(request);
-    }
+    const { request, useClientHandlers } = buildStorageGrpcRequest(call);
+    const result = useClientHandlers
+      ? await this._fileHandlers.completeFileUpload(request)
+      : await this._adminFileHandlers.completeFileUpload(request);
     const response = this.storageParamAdapter.getFileResponse(result);
     callback(null, response);
   }
