@@ -80,4 +80,35 @@ describe('storage authorization usability', () => {
         /Authorization is unavailable/.test(err.message),
     );
   });
+
+  it('retries a stale Storage availability miss then fails closed if still down', async () => {
+    let storageChecks = 0;
+    const recovered = await resolveStorageAuthorizationState({
+      storageAvailable: false,
+      authorizationAvailable: true,
+      probeStorageAvailable: async () => {
+        storageChecks += 1;
+        return storageChecks >= 3;
+      },
+      probeAuthorizationAvailable: async () => true,
+      getStorageConfig: async () => ({ authorization: { enabled: true } }),
+      retry: { attempts: 4, delayMs: 0 },
+    });
+    assert.deepEqual(recovered, { usable: true });
+    assert.equal(storageChecks, 3);
+
+    let downChecks = 0;
+    const stillDown = await resolveStorageAuthorizationState({
+      storageAvailable: true,
+      probeStorageAvailable: async () => {
+        downChecks += 1;
+        return false;
+      },
+      probeAuthorizationAvailable: async () => true,
+      getStorageConfig: async () => ({ authorization: { enabled: true } }),
+      retry: { attempts: 3, delayMs: 0 },
+    });
+    assert.deepEqual(stillDown, { usable: false, reason: 'storage_unavailable' });
+    assert.equal(downChecks, 3);
+  });
 });

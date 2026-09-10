@@ -28,6 +28,13 @@ describe('embedding schema and source policies', () => {
     assert.equal(isDeniedEmbeddingSchema({ name: 'EmbeddingDocument' }), true);
     assert.equal(
       isDeniedEmbeddingSchema({
+        name: '_ec_abc123',
+        ownerModule: 'cms-app',
+      }),
+      true,
+    );
+    assert.equal(
+      isDeniedEmbeddingSchema({
         name: '_EmbeddingChunk_abc123',
         ownerModule: 'cms-app',
       }),

@@ -19,8 +19,21 @@ import {
 
 export const EMBEDDING_SOURCE_SCHEMA = 'EmbeddingSource';
 export const EMBEDDING_DOCUMENT_SCHEMA = 'EmbeddingDocument';
-export const EMBEDDING_CHUNK_SCHEMA_PREFIX = '_EmbeddingChunk_';
+export const EMBEDDING_CHUNK_SCHEMA_PREFIX = '_ec_';
+export const LEGACY_EMBEDDING_CHUNK_SCHEMA_PREFIX = '_EmbeddingChunk_';
+export const CHUNK_SCHEMA_HASH_LENGTH = 20;
+export const POSTGRES_NAMEDATALEN = 63;
 export const CHUNK_VECTOR_FIELD = 'embedding';
+
+const CHUNK_POSTGRES_SUFFIXES = [
+  '_pkey',
+  '_documentId_chunkKey',
+  '_partitionSubject_sourceId',
+  '_sourceId_documentId',
+  '_mimeType_status',
+  '_embedding_vector',
+  '_embedding_vector_v2',
+] as const;
 
 export const EMBEDDING_SOURCE_KINDS = ['conduit-storage', 'external'] as const;
 export type EmbeddingSourceKind = (typeof EMBEDDING_SOURCE_KINDS)[number];
@@ -221,11 +234,54 @@ export function modelFingerprint(profile: VectorProfile): string {
 }
 
 export function chunkSchemaNameForProfile(profile: VectorProfile): string {
-  return `${EMBEDDING_CHUNK_SCHEMA_PREFIX}${modelFingerprint(profile)}`;
+  return `${EMBEDDING_CHUNK_SCHEMA_PREFIX}${modelFingerprint(profile).slice(
+    0,
+    CHUNK_SCHEMA_HASH_LENGTH,
+  )}`;
+}
+
+export function legacyChunkSchemaNameForProfile(profile: VectorProfile): string {
+  return `${LEGACY_EMBEDDING_CHUNK_SCHEMA_PREFIX}${modelFingerprint(profile)}`;
 }
 
 export function isEmbeddingChunkSchema(name: string): boolean {
-  return name.startsWith(EMBEDDING_CHUNK_SCHEMA_PREFIX);
+  return (
+    name.startsWith(EMBEDDING_CHUNK_SCHEMA_PREFIX) ||
+    name.startsWith(LEGACY_EMBEDDING_CHUNK_SCHEMA_PREFIX)
+  );
+}
+
+export function resolveChunkSchemaName(
+  profile: VectorProfile,
+  existingSchemaName?: string,
+): string {
+  if (existingSchemaName && isEmbeddingChunkSchema(existingSchemaName)) {
+    return existingSchemaName;
+  }
+  return chunkSchemaNameForProfile(profile);
+}
+
+export function conduitPhysicalCollectionName(schemaName: string): string {
+  return schemaName.startsWith('_') ? `cnd${schemaName}` : `cnd_${schemaName}`;
+}
+
+export function sequelizeUnderscore(name: string): string {
+  return name.replace(/([A-Z])/g, '_$1').toLowerCase();
+}
+
+export function postgresIdentifier(name: string): string {
+  return Buffer.from(name.toLowerCase(), 'utf8')
+    .subarray(0, POSTGRES_NAMEDATALEN)
+    .toString('utf8');
+}
+
+export function postgresQuotedIdentifier(name: string): string {
+  return Buffer.from(name, 'utf8').subarray(0, POSTGRES_NAMEDATALEN).toString('utf8');
+}
+
+export function chunkSchemaPostgresRelations(schemaName: string): string[] {
+  const table = conduitPhysicalCollectionName(schemaName);
+  return [table, ...CHUNK_POSTGRES_SUFFIXES.map(suffix => `${table}${suffix}`)];
 }
 
 export function chunkVectorIndexDefinition(
@@ -318,15 +374,18 @@ export function assertChunkSchemaContract(schema: ConduitSchema): void {
   assertNoCredentialFields(schema.fields, `Chunk schema '${schema.name}'`);
 }
 
-export function buildChunkBackingSchema(profileInput: {
-  provider?: string;
-  modelName?: string;
-  dimensions?: number;
-  similarity?: string;
-}): ConduitSchema {
+export function buildChunkBackingSchema(
+  profileInput: {
+    provider?: string;
+    modelName?: string;
+    dimensions?: number;
+    similarity?: string;
+  },
+  existingSchemaName?: string,
+): ConduitSchema {
   const profile = assertVectorProfile(profileInput);
   const schema = new ConduitSchema(
-    chunkSchemaNameForProfile(profile),
+    resolveChunkSchemaName(profile, existingSchemaName),
     chunkBackingFields(profile),
     hiddenChunkModelOptions(profile),
   );
@@ -353,10 +412,15 @@ export async function ensureProfileChunkSchema(
     modelName?: string;
     dimensions?: number;
     similarity?: string;
+    chunkSchemaName?: string;
   },
+  existingSchemaName?: string,
 ): Promise<BackingIndexState> {
   const profile = assertVectorProfile(profileInput);
-  const schema = buildChunkBackingSchema(profile);
+  const schema = buildChunkBackingSchema(
+    profile,
+    existingSchemaName ?? profileInput.chunkSchemaName,
+  );
   await store.createSchemaFromAdapter(schema);
   await store.migrate?.(schema.name);
   const indexes = await store.getVectorIndexes(schema.name);
@@ -395,7 +459,7 @@ export async function reconcileSourceChunkSchemas(
 ): Promise<BackingIndexState[]> {
   const states: BackingIndexState[] = [];
   for (const source of sources) {
-    const state = await ensureProfileChunkSchema(store, source);
+    const state = await ensureProfileChunkSchema(store, source, source.chunkSchemaName);
     states.push(state);
     if (
       persistBackingIndex &&

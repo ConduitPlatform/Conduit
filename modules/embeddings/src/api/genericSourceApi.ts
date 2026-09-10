@@ -1019,6 +1019,7 @@ export class GenericSourceApi {
       const backing: BackingIndexState = await ensureProfileChunkSchema(
         this.deps.chunkSchemas,
         source,
+        source.chunkSchemaName,
       );
       const indexes = await this.deps.getVectorIndexes(backing.schemaName);
       const queryable = isEmbeddingVectorIndexQueryable(

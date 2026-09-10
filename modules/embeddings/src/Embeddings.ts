@@ -5,6 +5,7 @@ import {
   DatabaseProvider,
   GrpcRequest,
   GrpcResponse,
+  HealthCheckResponse_ServingStatus,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -753,10 +754,32 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
 
   private resolveStorageAuthorization() {
     return resolveStorageAuthorizationState({
-      storageAvailable: this.grpcSdk.isAvailable('storage'),
-      authorizationAvailable: this.grpcSdk.isAvailable('authorization'),
+      probeStorageAvailable: () => this.probePeerServing('storage'),
+      probeAuthorizationAvailable: () => this.probePeerServing('authorization'),
       getStorageConfig: () => this.grpcSdk.config.get('storage'),
     });
+  }
+
+  private async probePeerServing(moduleName: string): Promise<boolean> {
+    if (this.grpcSdk.isAvailable(moduleName)) return true;
+    try {
+      const health = await this.grpcSdk.getHealthClient(moduleName)?.check({});
+      if (health?.status === HealthCheckResponse_ServingStatus.SERVING) return true;
+    } catch {
+      // A peer can be SERVING before the SDK client channel is READY.
+    }
+    try {
+      await this.grpcSdk.config.getModuleUrlByName(moduleName);
+    } catch {
+      return false;
+    }
+    if (this.grpcSdk.isAvailable(moduleName)) return true;
+    try {
+      const health = await this.grpcSdk.getHealthClient(moduleName)?.check({});
+      return health?.status === HealthCheckResponse_ServingStatus.SERVING;
+    } catch {
+      return false;
+    }
   }
 
   private ensureStoragePipeline() {

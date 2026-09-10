@@ -21,6 +21,12 @@ const STORAGE_AUTHORIZATION_MESSAGES: Record<StorageAuthorizationReason, string>
     'Storage authorization is disabled; conduit-storage sources require usable Storage ReBAC. Selectors are not a tenant boundary.',
 };
 
+export const DEFAULT_PEER_PROBE_RETRY = { attempts: 5, delayMs: 200 };
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export function storageAuthorizationMessage(
   state: Extract<StorageAuthorizationState, { usable: false }>,
 ): string {
@@ -46,15 +52,42 @@ export function assertStorageAuthorizationUsable(
   );
 }
 
+export async function probeWithRetry(
+  probe: () => Promise<boolean>,
+  retry: { attempts: number; delayMs: number } = DEFAULT_PEER_PROBE_RETRY,
+): Promise<boolean> {
+  const attempts = Math.max(retry.attempts, 1);
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (await probe()) return true;
+    if (attempt + 1 < attempts && retry.delayMs > 0) {
+      await sleep(retry.delayMs);
+    }
+  }
+  return false;
+}
+
 export async function resolveStorageAuthorizationState(input: {
-  storageAvailable: boolean;
-  authorizationAvailable: boolean;
+  storageAvailable?: boolean;
+  authorizationAvailable?: boolean;
+  probeStorageAvailable?: () => Promise<boolean>;
+  probeAuthorizationAvailable?: () => Promise<boolean>;
   getStorageConfig?: () => Promise<{ authorization?: { enabled?: boolean } }>;
+  retry?: { attempts: number; delayMs: number };
 }): Promise<StorageAuthorizationState> {
-  if (!input.storageAvailable) {
+  const retry =
+    input.probeStorageAvailable || input.probeAuthorizationAvailable
+      ? (input.retry ?? DEFAULT_PEER_PROBE_RETRY)
+      : { attempts: 1, delayMs: 0 };
+  const storageAvailable = input.probeStorageAvailable
+    ? await probeWithRetry(input.probeStorageAvailable, retry)
+    : Boolean(input.storageAvailable);
+  if (!storageAvailable) {
     return { usable: false, reason: 'storage_unavailable' };
   }
-  if (!input.authorizationAvailable) {
+  const authorizationAvailable = input.probeAuthorizationAvailable
+    ? await probeWithRetry(input.probeAuthorizationAvailable, retry)
+    : Boolean(input.authorizationAvailable);
+  if (!authorizationAvailable) {
     return { usable: false, reason: 'authorization_unavailable' };
   }
   if (!input.getStorageConfig) {

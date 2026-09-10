@@ -12,16 +12,26 @@ import {
   assertNoPersistedTextFields,
   buildChunkBackingSchema,
   chunkSchemaNameForProfile,
+  chunkSchemaPostgresRelations,
   chunkVectorIndexDefinition,
+  conduitPhysicalCollectionName,
   CHUNK_FILTER_FIELDS,
+  CHUNK_SCHEMA_HASH_LENGTH,
   CHUNK_VECTOR_FIELD,
   EMBEDDING_CHUNK_SCHEMA_PREFIX,
   EMBEDDING_DOCUMENT_SCHEMA,
   EMBEDDING_SOURCE_SCHEMA,
   ensureProfileChunkSchema,
   isEmbeddingChunkSchema,
+  LEGACY_EMBEDDING_CHUNK_SCHEMA_PREFIX,
+  legacyChunkSchemaNameForProfile,
   modelFingerprint,
+  POSTGRES_NAMEDATALEN,
+  postgresIdentifier,
+  postgresQuotedIdentifier,
   reconcileSourceChunkSchemas,
+  resolveChunkSchemaName,
+  sequelizeUnderscore,
   toPersistedChunk,
   type ChunkSchemaStore,
   type VectorProfile,
@@ -115,8 +125,13 @@ describe('generic embedding source contracts', () => {
     assert.notEqual(small.name, large.name);
     assert.equal(isEmbeddingChunkSchema(small.name), true);
     assert.equal(small.name.startsWith(EMBEDDING_CHUNK_SCHEMA_PREFIX), true);
+    assert.equal(small.name.startsWith(LEGACY_EMBEDDING_CHUNK_SCHEMA_PREFIX), false);
     assert.equal(small.name.includes('-'), false);
     assert.equal(small.name.includes(' '), false);
+    assert.equal(
+      small.name.length,
+      EMBEDDING_CHUNK_SCHEMA_PREFIX.length + CHUNK_SCHEMA_HASH_LENGTH,
+    );
     assert.equal(small.modelOptions.conduit?.cms?.enabled, false);
     assert.equal(small.modelOptions.conduit?.authorization?.enabled, false);
     assert.equal(
@@ -206,6 +221,74 @@ describe('generic embedding source contracts', () => {
     assert.equal(
       store.indexes.filter(index => index.schemaName === state.schemaName).length,
       2,
+    );
+  });
+
+  it('reuses a persisted legacy chunk schema instead of renaming a live index', async () => {
+    const store = memoryStore();
+    const legacy = legacyChunkSchemaNameForProfile(smallProfile);
+    const state = await ensureProfileChunkSchema(store, smallProfile, legacy);
+    assert.equal(state.schemaName, legacy);
+    assert.equal(isEmbeddingChunkSchema(legacy), true);
+    assert.equal(resolveChunkSchemaName(smallProfile, legacy), legacy);
+    assert.equal(
+      resolveChunkSchemaName(smallProfile),
+      chunkSchemaNameForProfile(smallProfile),
+    );
+    assert.notEqual(legacy, chunkSchemaNameForProfile(smallProfile));
+  });
+
+  it('keeps PostgreSQL table, index, and constraint names unique under NAMEDATALEN', () => {
+    const compact = chunkSchemaNameForProfile(smallProfile);
+    const other = chunkSchemaNameForProfile(largeProfile);
+    const compactRelations = chunkSchemaPostgresRelations(compact);
+    const folded = compactRelations.map(postgresIdentifier);
+    const quoted = compactRelations.map(postgresQuotedIdentifier);
+    const underscored = compactRelations.map(name =>
+      postgresIdentifier(sequelizeUnderscore(name)),
+    );
+    assert.equal(new Set(folded).size, folded.length);
+    assert.equal(new Set(quoted).size, quoted.length);
+    assert.equal(new Set(underscored).size, underscored.length);
+    assert.equal(
+      folded.every(name => Buffer.byteLength(name) <= POSTGRES_NAMEDATALEN),
+      true,
+    );
+    assert.equal(
+      quoted.every(name => Buffer.byteLength(name) <= POSTGRES_NAMEDATALEN),
+      true,
+    );
+    assert.equal(
+      folded.includes(postgresIdentifier(conduitPhysicalCollectionName(other))),
+      false,
+    );
+
+    const legacyTable = conduitPhysicalCollectionName(
+      legacyChunkSchemaNameForProfile(smallProfile),
+    );
+    const legacyUnique = postgresQuotedIdentifier(
+      sequelizeUnderscore(`${legacyTable}_documentId_chunkKey`),
+    );
+    const legacyFilter = postgresQuotedIdentifier(
+      sequelizeUnderscore(`${legacyTable}_partitionSubject_sourceId`),
+    );
+    assert.equal(legacyUnique, legacyFilter);
+    assert.equal(legacyUnique.length, POSTGRES_NAMEDATALEN);
+    assert.match(legacyUnique, /^cnd__embedding_chunk_[0-9a-f]+$/);
+    assert.match(postgresIdentifier(legacyTable), /^cnd_embeddingchunk_[0-9a-f]+$/);
+
+    const smokeTable =
+      'cnd_EmbeddingChunk_7d18b7e8df76a6ba3a85f32a6e31c602b8dfae5045' +
+      'cafebabecafebabecafeba';
+    assert.equal(
+      postgresQuotedIdentifier(sequelizeUnderscore(`${smokeTable}_documentId_chunkKey`)),
+      'cnd__embedding_chunk_7d18b7e8df76a6ba3a85f32a6e31c602b8dfae5045',
+    );
+    assert.equal(
+      postgresQuotedIdentifier(
+        sequelizeUnderscore(`${smokeTable}_partitionSubject_sourceId`),
+      ),
+      postgresQuotedIdentifier(sequelizeUnderscore(`${smokeTable}_documentId_chunkKey`)),
     );
   });
 

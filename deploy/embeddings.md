@@ -156,7 +156,7 @@ Admin/MCP (never client): `GET|POST /embeddings/sources`, `GET|PATCH|DELETE /emb
 ## Compatibility and migration
 
 - **Legacy presigned uploads:** clients that never called complete leave `uploadStatus=pending` (or a placeholder object). Embeddings does not index those files and does not fetch the presigned URL. Complete the upload, or reconcile after completion. Pre-lifecycle File documents without `uploadStatus` are treated as ready.
-- **Existing schema configs:** schema-field `EmbeddingConfig`, vector extensions, and backfills are unchanged. Generic sources use hidden `_EmbeddingChunk_*` indexes, not schema target fields.
+- **Existing schema configs:** schema-field `EmbeddingConfig`, vector extensions, and backfills are unchanged. Generic sources use hidden `_ec_*` chunk schemas. A persisted `chunkSchemaName` is reused as-is so a live generic index is not renamed. Failed leftover `_EmbeddingChunk_*` DeclaredSchema rows, `cnd_EmbeddingChunk_*` tables, and truncated `cnd__embedding_chunk_*` indexes may be dropped; they never received indexed data. These are not schema-field target fields.
 - **Rollback** retains `EmbeddingSource` / `EmbeddingDocument` / chunk indexes and Redis `embeddings-storage-queue` state in addition to schema-field vectors, indexes, configs, and backfill records.
 
 ## Metrics, logging, and status
