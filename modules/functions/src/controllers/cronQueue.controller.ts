@@ -223,10 +223,10 @@ export class CronQueueController {
   }
 
   private lockDurationFromTimeouts(timeouts: Array<number | undefined>): number {
-    const maxTimeout = timeouts.reduce(
-      (max, timeout) => Math.max(max, timeout ?? DEFAULT_FUNCTION_TIMEOUT_MS),
-      DEFAULT_FUNCTION_TIMEOUT_MS,
-    );
+    let maxTimeout = DEFAULT_FUNCTION_TIMEOUT_MS;
+    for (const timeout of timeouts) {
+      maxTimeout = Math.max(maxTimeout, timeout ?? DEFAULT_FUNCTION_TIMEOUT_MS);
+    }
     return maxTimeout + LOCK_BUFFER_MS;
   }
 
