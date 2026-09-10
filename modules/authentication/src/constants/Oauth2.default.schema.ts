@@ -25,11 +25,4 @@ export const oauth2Schema = {
     format: 'Boolean',
     default: true,
   },
-  allowRegistration: {
-    doc:
-      'When disabled, this provider can only sign in existing users. ' +
-      'Request mode=both cannot override this.',
-    format: 'Boolean',
-    default: true,
-  },
 };
