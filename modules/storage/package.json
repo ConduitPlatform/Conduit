@@ -11,10 +11,18 @@
   },
   "conduit": {
     "peers": {
-      "await": ["database"],
+      "await": [
+        "database"
+      ],
       "watch": [
-        { "module": "authentication", "edge": "both" },
-        { "module": "router", "edge": "rising" }
+        {
+          "module": "authentication",
+          "edge": "both"
+        },
+        {
+          "module": "router",
+          "edge": "rising"
+        }
       ]
     }
   },
@@ -30,7 +38,7 @@
     "prepare": "npm run build",
     "build:docker": "docker build -t ghcr.io/conduitplatform/storage:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/storage:latest",
     "generateTypes": "sh build.sh",
-    "test": "tsc -p tsconfig.test.json && node --test dist-test/adapter/StorageParamAdapter.test.js dist-test/migrations/fileUriMigration.test.js dist-test/providers/aws/acl.test.js dist-test/providers/aws/stat.test.js dist-test/providers/google/folderMarkers.test.js dist-test/providers/google/deleteFolder.test.js dist-test/providers/google/publicAccess.test.js dist-test/providers/google/stat.test.js dist-test/utils/filePrivacy.test.js dist-test/utils/fileUploadState.test.js dist-test/utils/fileEvents.test.js dist-test/utils/fileLifecycle.test.js dist-test/utils/filePersistence.test.js dist-test/handlers/file.complete.test.js"
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/adapter/StorageParamAdapter.test.js dist-test/migrations/fileUriMigration.test.js dist-test/providers/aws/acl.test.js dist-test/providers/aws/stat.test.js dist-test/providers/google/folderMarkers.test.js dist-test/providers/google/deleteFolder.test.js dist-test/providers/google/publicAccess.test.js dist-test/providers/google/stat.test.js dist-test/utils/filePrivacy.test.js dist-test/utils/fileUploadState.test.js dist-test/utils/fileEvents.test.js dist-test/utils/fileLifecycle.test.js dist-test/utils/filePersistence.test.js dist-test/utils/fileBytes.test.js dist-test/handlers/file.complete.test.js"
   },
   "keywords": [],
   "author": "",

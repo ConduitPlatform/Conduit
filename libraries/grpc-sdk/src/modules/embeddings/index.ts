@@ -47,6 +47,7 @@ export interface EmbeddingsStatus {
   capabilities: VectorCapabilities;
   generationQueue: QueueCounts;
   backfillQueue: QueueCounts;
+  storageQueue?: QueueCounts;
   warnings: string[];
 }
 
@@ -141,6 +142,8 @@ export interface SyncDocumentInput {
   storageFileId?: string;
   connectorReference?: string;
   mimeType?: string;
+  container?: string;
+  folder?: string;
   chunks: IngestChunkInput[];
 }
 
@@ -271,6 +274,7 @@ export class EmbeddingsProvider extends ConduitModule<
       capabilities: mapCapabilities(res.capabilities!),
       generationQueue: res.generationQueue!,
       backfillQueue: res.backfillQueue!,
+      storageQueue: res.storageQueue,
       warnings: res.warnings,
     }));
   }
@@ -405,22 +409,28 @@ export class EmbeddingsProvider extends ConduitModule<
     source: EmbeddingSourceRecord;
     ready: boolean;
     pendingCount: number;
+    queuedCount?: number;
+    extractingCount?: number;
     indexedCount: number;
     skippedCount: number;
     failedCount: number;
     staleCount: number;
     deletedCount: number;
+    extractionQueue?: QueueCounts;
     warnings: string[];
   }> {
     return this.client!.getSourceStatus({ id }).then(res => ({
       source: mapEmbeddingSource(res.source!),
       ready: res.ready,
       pendingCount: res.pendingCount,
+      queuedCount: res.queuedCount,
+      extractingCount: res.extractingCount,
       indexedCount: res.indexedCount,
       skippedCount: res.skippedCount,
       failedCount: res.failedCount,
       staleCount: res.staleCount,
       deletedCount: res.deletedCount,
+      extractionQueue: res.extractionQueue,
       warnings: res.warnings,
     }));
   }
@@ -462,6 +472,8 @@ export class EmbeddingsProvider extends ConduitModule<
       storageFileId: input.storageFileId,
       connectorReference: input.connectorReference,
       mimeType: input.mimeType,
+      container: input.container,
+      folder: input.folder,
       chunks: input.chunks.map(chunk => ({
         chunkKey: chunk.chunkKey,
         ordinal: chunk.ordinal,
@@ -477,5 +489,13 @@ export class EmbeddingsProvider extends ConduitModule<
     externalDocumentId: string;
   }): Promise<{ documentId: string; deletedChunks: number }> {
     return this.client!.deleteDocument(input);
+  }
+
+  reconcileSource(id: string): Promise<{
+    queued: number;
+    scanned: number;
+    warnings: string[];
+  }> {
+    return this.client!.reconcileSource({ id });
   }
 }

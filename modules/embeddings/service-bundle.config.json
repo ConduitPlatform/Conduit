@@ -1,5 +1,3 @@
 {
-  "extraDependencies": [
-    "bullmq"
-  ]
+  "extraDependencies": ["bullmq", "pdfjs-dist"]
 }

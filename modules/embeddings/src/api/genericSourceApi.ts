@@ -66,6 +66,7 @@ import {
   resolveAdminOperatorContext,
 } from '../utils/schemaPolicy.js';
 import { sanitizeErrorMessage } from '../utils/redactConfig.js';
+import { parseStorageSelectors } from '../utils/storageSelectors.js';
 
 export interface EmbeddingSourceRecord {
   _id: string;
@@ -97,6 +98,8 @@ export interface EmbeddingDocumentRecord {
   storageFileId?: string;
   connectorReference?: string;
   mimeType?: string;
+  container?: string;
+  folder?: string;
   partitionSubject: string;
   status: EmbeddingDocumentState;
   createdAt?: Date | string;
@@ -211,6 +214,15 @@ export interface GenericSourceApiDeps {
     resource?: string;
     subject?: string;
   }) => Promise<unknown>;
+  onStorageSourceReady?: (sourceId: string) => Promise<void> | void;
+  getStorageQueue?: () => Promise<{
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+    delayed: number;
+    paused: number;
+  }>;
 }
 
 export interface MappedEmbeddingSource {
@@ -316,6 +328,9 @@ export class GenericSourceApi {
       'selectors',
       limits.maxMetadataBytes,
     );
+    if (kind === 'conduit-storage') {
+      parseStorageSelectors(selectors);
+    }
     const metadataAllowlist = (request.metadataAllowlist ?? []).filter(
       field => typeof field === 'string' && field.length > 0,
     );
@@ -336,6 +351,9 @@ export class GenericSourceApi {
       partitionSubject,
     );
     const { source, warnings } = await this.provisionSourceIndex(created);
+    if (source.kind === 'conduit-storage' && source.state === 'ready') {
+      await this.deps.onStorageSourceReady?.(source._id);
+    }
     return { source: mapEmbeddingSource(source), warnings };
   }
 
@@ -355,11 +373,15 @@ export class GenericSourceApi {
     const patch: Record<string, unknown> = {};
     if (request.label !== undefined) patch.label = request.label;
     if (request.selectors !== undefined) {
-      patch.selectors = parseBoundedObject(
+      const selectors = parseBoundedObject(
         request.selectors,
         'selectors',
         limits.maxMetadataBytes,
       );
+      if (existing.kind === 'conduit-storage') {
+        parseStorageSelectors(selectors);
+      }
+      patch.selectors = selectors;
     }
     if (request.metadataAllowlist) {
       patch.metadataAllowlist = request.metadataAllowlist.filter(
@@ -431,6 +453,9 @@ export class GenericSourceApi {
       source: mapEmbeddingSource(source),
       ready,
       ...counts,
+      extractionQueue: this.deps.getStorageQueue
+        ? await this.deps.getStorageQueue()
+        : undefined,
       warnings,
     };
   }
@@ -497,6 +522,8 @@ export class GenericSourceApi {
       storageFileId?: string;
       connectorReference?: string;
       mimeType?: string;
+      container?: string;
+      folder?: string;
       chunks: IngestChunkInput[];
     },
     caller: GenericSourceCaller,
@@ -588,15 +615,16 @@ export class GenericSourceApi {
         storageFileId,
         connectorReference,
         mimeType: request.mimeType,
+        container: request.container,
+        folder: request.folder,
         partitionSubject: source.partitionSubject,
         status: 'pending',
       }));
-    if (!existing) {
-      await this.createOwnedRelation(
-        documentResource(document._id),
-        source.partitionSubject,
-      );
-    } else {
+    await this.createOwnedRelation(
+      documentResource(document._id),
+      source.partitionSubject,
+    );
+    if (existing) {
       await this.deps.documents.findByIdAndUpdate(document._id, {
         contentVersion: request.contentVersion,
         etag: request.etag,
@@ -604,6 +632,8 @@ export class GenericSourceApi {
         storageFileId,
         connectorReference,
         mimeType: request.mimeType,
+        container: request.container,
+        folder: request.folder,
         status: 'pending',
       });
     }
@@ -1017,6 +1047,8 @@ export class GenericSourceApi {
     const documents = await this.deps.documents.findMany({ sourceId });
     const counts = {
       pendingCount: 0,
+      queuedCount: 0,
+      extractingCount: 0,
       indexedCount: 0,
       skippedCount: 0,
       failedCount: 0,
@@ -1027,6 +1059,12 @@ export class GenericSourceApi {
       switch (document.status) {
         case 'pending':
           counts.pendingCount += 1;
+          break;
+        case 'queued':
+          counts.queuedCount += 1;
+          break;
+        case 'extracting':
+          counts.extractingCount += 1;
           break;
         case 'indexed':
           counts.indexedCount += 1;

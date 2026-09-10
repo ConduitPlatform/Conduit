@@ -17,9 +17,15 @@ import {
 } from '../utils/backfillExecution.js';
 import { incrementEmbeddingMetric } from '../utils/embeddingMetrics.js';
 import { sanitizeErrorMessage } from '../utils/redactConfig.js';
+import {
+  parseStorageIngestJob,
+  storageIngestJobId,
+  type StorageIngestJobData,
+} from '../utils/storageJobs.js';
 
 export type { EmbeddingJobData } from '../utils/embeddingJobs.js';
 export type { BackfillControllerJobData } from '../utils/backfillExecution.js';
+export type { StorageIngestJobData } from '../utils/storageJobs.js';
 
 type RedisConnection = Redis | Cluster;
 
@@ -35,6 +41,7 @@ export interface QueueJobCounts {
 export interface EmbeddingQueueStatus {
   generation: QueueJobCounts;
   backfill: QueueJobCounts;
+  storage: QueueJobCounts;
 }
 
 type QueueJobHandle = {
@@ -97,6 +104,11 @@ export class QueueController {
   private backfillWorkerConnection?: RedisConnection;
   private backfillWorkerConcurrency?: number;
   private closingBackfillWorker = false;
+  private readonly storageQueue: QueueLike;
+  private storageWorker?: WorkerLike;
+  private storageWorkerConnection?: RedisConnection;
+  private storageWorkerConcurrency?: number;
+  private closingStorageWorker = false;
   private onBackfillJobOutcome?: (
     runId: string,
     outcome: 'processed' | 'failed',
@@ -119,6 +131,9 @@ export class QueueController {
       connection: this.queueConnection,
     });
     this.backfillQueue = new this.QueueImpl('embeddings-backfill-queue', {
+      connection: this.queueConnection,
+    });
+    this.storageQueue = new this.QueueImpl('embeddings-storage-queue', {
       connection: this.queueConnection,
     });
   }
@@ -147,6 +162,14 @@ export class QueueController {
 
   get currentBackfillConcurrency() {
     return this.backfillWorkerConcurrency;
+  }
+
+  get hasStorageWorker() {
+    return this.storageWorker !== undefined;
+  }
+
+  get currentStorageConcurrency() {
+    return this.storageWorkerConcurrency;
   }
 
   setBackfillJobOutcomeHandler(
@@ -225,33 +248,76 @@ export class QueueController {
     return worker;
   }
 
+  async ensureStorageWorker(
+    processor: (data: StorageIngestJobData) => Promise<void>,
+    concurrency: number,
+  ) {
+    if (this.storageWorker && this.storageWorkerConcurrency === concurrency) {
+      return this.storageWorker;
+    }
+    await this.closeStorageWorker();
+    this.storageWorkerConnection = this.createConnection();
+    const worker = new this.WorkerImpl(
+      'embeddings-storage-queue',
+      job => {
+        const parsed = parseStorageIngestJob(job.data);
+        if (!parsed.ok) {
+          incrementEmbeddingMetric('malformedJobs');
+          return Promise.resolve();
+        }
+        return processor(parsed.data);
+      },
+      {
+        concurrency,
+        connection: this.storageWorkerConnection,
+        removeOnComplete: { age: 3600, count: 1000 },
+        removeOnFail: { age: 7 * 24 * 3600, count: 1000 },
+      },
+    );
+    worker.on('failed', (job, error) =>
+      this.handleStorageFailure(job as WorkerJob | undefined, error),
+    );
+    worker.on('error', error => ConduitGrpcSdk.Logger.error(sanitizeErrorMessage(error)));
+    this.storageWorker = worker;
+    this.storageWorkerConcurrency = concurrency;
+    return worker;
+  }
+
   async closeWorker() {
-    await Promise.all([this.closeGenerationWorker(), this.closeBackfillWorker()]);
+    await Promise.all([
+      this.closeGenerationWorker(),
+      this.closeBackfillWorker(),
+      this.closeStorageWorker(),
+    ]);
   }
 
   async close() {
     await this.closeWorker();
     await this.embeddingQueue.close();
     await this.backfillQueue.close();
+    await this.storageQueue.close();
     await this.queueConnection.quit();
   }
 
   async getJobCounts(
-    queue: 'generation' | 'backfill' = 'generation',
+    queue: 'generation' | 'backfill' | 'storage' = 'generation',
   ): Promise<QueueJobCounts> {
     const counts =
       queue === 'backfill'
         ? await this.backfillQueue.getJobCounts()
-        : await this.embeddingQueue.getJobCounts();
+        : queue === 'storage'
+          ? await this.storageQueue.getJobCounts()
+          : await this.embeddingQueue.getJobCounts();
     return normalizeJobCounts(counts);
   }
 
   async getQueueStatus(): Promise<EmbeddingQueueStatus> {
-    const [generation, backfill] = await Promise.all([
+    const [generation, backfill, storage] = await Promise.all([
       this.getJobCounts('generation'),
       this.getJobCounts('backfill'),
+      this.getJobCounts('storage'),
     ]);
-    return { generation, backfill };
+    return { generation, backfill, storage };
   }
 
   async addEmbeddingJob(data: EmbeddingJobData, attempts: number) {
@@ -360,6 +426,50 @@ export class QueueController {
     }
   }
 
+  async addStorageJobs(data: StorageIngestJobData[], attempts: number) {
+    const unique: StorageIngestJobData[] = [];
+    const seen = new Set<string>();
+    for (const item of data) {
+      const parsed = parseStorageIngestJob(item);
+      if (!parsed.ok) {
+        incrementEmbeddingMetric('malformedJobs');
+        continue;
+      }
+      const jobId = storageIngestJobId(parsed.data);
+      if (seen.has(jobId)) continue;
+      seen.add(jobId);
+      unique.push(parsed.data);
+    }
+    if (!unique.length) return 0;
+    const enqueueable: StorageIngestJobData[] = [];
+    for (const job of unique) {
+      const decision = await resolveExistingQueueJob(
+        this.storageQueue,
+        storageIngestJobId(job),
+      );
+      if (decision === 'skip') continue;
+      enqueueable.push(job);
+    }
+    if (!enqueueable.length) return 0;
+    try {
+      await this.storageQueue.addBulk(
+        enqueueable.map(job => ({
+          name: storageIngestJobId(job),
+          data: { ...job },
+          opts: {
+            jobId: storageIngestJobId(job),
+            attempts,
+            backoff: { type: 'exponential', delay: 1000 },
+          },
+        })),
+      );
+      return enqueueable.length;
+    } catch (err) {
+      if (!isDuplicateJobError(err)) throw err;
+      return 0;
+    }
+  }
+
   private async closeGenerationWorker() {
     if (this.closingWorker || !this.worker) return;
     this.closingWorker = true;
@@ -390,6 +500,33 @@ export class QueueController {
     } finally {
       this.closingBackfillWorker = false;
     }
+  }
+
+  private async closeStorageWorker() {
+    if (this.closingStorageWorker || !this.storageWorker) return;
+    this.closingStorageWorker = true;
+    const worker = this.storageWorker;
+    const connection = this.storageWorkerConnection;
+    this.storageWorker = undefined;
+    this.storageWorkerConnection = undefined;
+    this.storageWorkerConcurrency = undefined;
+    try {
+      await worker.close();
+      await connection?.quit();
+    } finally {
+      this.closingStorageWorker = false;
+    }
+  }
+
+  private handleStorageFailure(job: WorkerJob | undefined, error: unknown) {
+    ConduitGrpcSdk.Logger.error(sanitizeErrorMessage(error));
+    const attempts = job?.opts?.attempts ?? 1;
+    const made = job?.attemptsMade ?? 1;
+    if (made < attempts) {
+      incrementEmbeddingMetric('retried');
+      return;
+    }
+    incrementEmbeddingMetric('failed');
   }
 
   private handleGenerationFailure(job: WorkerJob | undefined, error: unknown) {

@@ -91,14 +91,18 @@ class FakeWorker {
 function createController(
   queue: FakeQueue = new FakeQueue(),
   backfillQueue: FakeQueue = new FakeQueue(),
+  storageQueue: FakeQueue = new FakeQueue(),
 ) {
   return {
     queue,
     backfillQueue,
+    storageQueue,
     controller: new QueueController(fakeSdk(), {
       Queue: class {
         constructor(name: string) {
-          return name.includes('backfill') ? backfillQueue : queue;
+          if (name.includes('storage')) return storageQueue;
+          if (name.includes('backfill')) return backfillQueue;
+          return queue;
         }
       } as never,
       Worker: FakeWorker as never,
@@ -235,8 +239,37 @@ describe('embedding queue status and backfill jobs', () => {
     const status = await controller.getQueueStatus();
     assert.equal(status.generation.waiting, queue.jobs.length);
     assert.equal(status.backfill.waiting, backfillQueue.jobs.length);
+    assert.equal(status.storage.waiting, 0);
     assert.equal((await controller.getJobCounts('generation')).waiting, 1);
     assert.equal((await controller.getJobCounts('backfill')).waiting, 1);
+    assert.equal((await controller.getJobCounts('storage')).waiting, 0);
+  });
+
+  it('enqueues collision-safe storage jobs separately from generation', async () => {
+    const { controller, queue, storageQueue } = createController();
+    const queued = await controller.addStorageJobs(
+      [
+        {
+          kind: 'ingest',
+          sourceId: 'src1',
+          fileId: 'file1',
+          contentVersion: 'v1',
+          reason: 'ready',
+        },
+        {
+          kind: 'ingest',
+          sourceId: 'src1',
+          fileId: 'file1',
+          contentVersion: 'v1',
+          reason: 'ready',
+        },
+      ],
+      5,
+    );
+    assert.equal(queued, 1);
+    assert.equal(queue.jobs.length, 0);
+    assert.equal(storageQueue.jobs[0]?.opts?.jobId, 'storage-ingest:src1:file1:v1');
+    assert.equal(storageQueue.jobs[0]?.opts?.attempts, 5);
   });
 
   it('enqueues lightweight backfill controller jobs with cursor identity', async () => {

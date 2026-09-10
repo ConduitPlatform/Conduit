@@ -215,6 +215,10 @@ export class AdminHandlers {
     return this.requireGeneric().getSourceStatus(call.request.params.id, ADMIN_CALLER);
   }
 
+  async reconcileSource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return this.api.reconcileSource(call.request.params.id, ADMIN_CALLER);
+  }
+
   async disableSource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     return this.requireGeneric().disableSource(call.request.params.id, ADMIN_CALLER);
   }
@@ -349,6 +353,7 @@ export class AdminHandlers {
         capabilities: ConduitJson.Required,
         generationQueue: ConduitJson.Required,
         backfillQueue: ConduitJson.Required,
+        storageQueue: ConduitJson.Required,
         warnings: [ConduitString.Required],
       }),
       this.getStatus.bind(this),
@@ -549,6 +554,22 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('GetEmbeddingSourceStatus', TYPE.JSON),
       this.getSourceStatus.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sources/:id/reconcile',
+        action: ConduitRouteActions.POST,
+        description: descriptions.get(
+          `${ConduitRouteActions.POST}:/sources/:id/reconcile`,
+        ),
+        urlParams: { id: ConduitString.Required },
+      },
+      new ConduitRouteReturnDefinition('ReconcileEmbeddingSource', {
+        queued: ConduitNumber.Required,
+        scanned: ConduitNumber.Required,
+        warnings: [ConduitString.Required],
+      }),
+      this.reconcileSource.bind(this),
     );
     this.routingManager.route(
       {

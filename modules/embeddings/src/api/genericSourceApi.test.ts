@@ -338,6 +338,40 @@ describe('generic embedding source API', () => {
       platformAdmin: true,
     });
     assert.equal(statusResult.ready, true);
+    assert.equal(statusResult.queuedCount, 0);
+    assert.equal(statusResult.extractingCount, 0);
+  });
+
+  it('requires container selectors for conduit-storage sources', async () => {
+    const { api } = createGeneric();
+    await assert.rejects(
+      () =>
+        api.upsertSource(
+          {
+            label: 'Files',
+            kind: 'conduit-storage',
+            partitionSubject: 'Team:org',
+            selectors: JSON.stringify({ folderPrefix: 'inbox/' }),
+          },
+          { platformAdmin: true },
+        ),
+      (err: unknown) => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
+    );
+    const created = await api.upsertSource(
+      {
+        label: 'Files',
+        kind: 'conduit-storage',
+        partitionSubject: 'Team:tenant-a',
+        selectors: JSON.stringify({
+          container: 'docs',
+          folderPrefix: 'inbox/',
+          mimeTypes: ['text/plain'],
+        }),
+      },
+      { platformAdmin: true },
+    );
+    assert.equal(created.source.kind, 'conduit-storage');
+    assert.equal(created.source.partitionSubject, 'Team:tenant-a');
   });
 
   it('syncs text or vector chunks without persisting text and skips identical revisions', async () => {

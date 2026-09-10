@@ -50,10 +50,30 @@ message FileResponse {
   optional string uploadStatus = 5;
   optional int32 size = 6;
   optional string contentVersion = 7;
+  optional string container = 8;
+  optional string folder = 9;
+  optional string mimeType = 10;
 }
 
 message GetFileDataResponse {
   string data = 1;
+}
+
+message GetFileBytesRequest {
+  string id = 1;
+  optional string userId = 2;
+  optional string scope = 3;
+  optional int32 maxBytes = 4;
+}
+
+message GetFileBytesResponse {
+  bytes data = 1;
+  int32 size = 2;
+  optional string mimeType = 3;
+  optional string name = 4;
+  optional string contentVersion = 5;
+  optional string container = 6;
+  optional string folder = 7;
 }
 message DeleteFileResponse {
   bool success = 1;
@@ -100,6 +120,7 @@ message CompleteFileUploadRequest {
 service Storage {
   rpc GetFile(GetFileRequest) returns (FileResponse);
   rpc GetFileData(GetFileRequest) returns (GetFileDataResponse);
+  rpc GetFileBytes(GetFileBytesRequest) returns (GetFileBytesResponse);
   rpc GetFileUrl(GetFileUrlRequest) returns (GetFileUrlResponse);
   rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
   rpc CreateFile(CreateFileRequest) returns (FileResponse);

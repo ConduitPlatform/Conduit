@@ -121,6 +121,48 @@ const AppConfigSchema = {
       default: 100,
     },
   },
+  storageExtraction: {
+    maxFileBytes: {
+      doc: 'Maximum Storage file size accepted for automatic extraction',
+      format: 'Number',
+      default: 8 * 1024 * 1024,
+    },
+    maxExtractedBytes: {
+      doc: 'Maximum UTF-8 bytes extracted from a single Storage file',
+      format: 'Number',
+      default: 2 * 1024 * 1024,
+    },
+    maxPdfPages: {
+      doc: 'Maximum PDF pages parsed during automatic extraction',
+      format: 'Number',
+      default: 50,
+    },
+    extractTimeoutMs: {
+      doc: 'Timeout for a single Storage extraction job',
+      format: 'Number',
+      default: 15_000,
+    },
+    maxChunksPerFile: {
+      doc: 'Maximum chunks produced from one Storage file',
+      format: 'Number',
+      default: 256,
+    },
+    chunkOverlapBytes: {
+      doc: 'UTF-8 overlap copied between adjacent Storage chunks',
+      format: 'Number',
+      default: 256,
+    },
+    queueConcurrency: {
+      doc: 'Storage extraction worker concurrency',
+      format: 'Number',
+      default: 1,
+    },
+    queueAttempts: {
+      doc: 'Storage extraction retry attempts with exponential backoff',
+      format: 'Number',
+      default: 5,
+    },
+  },
 };
 
 const config = convict(AppConfigSchema);

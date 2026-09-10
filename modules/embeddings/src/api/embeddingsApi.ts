@@ -164,7 +164,11 @@ export interface EmbeddingsApiDeps {
   }) => Promise<VectorSearchResult[]>;
   configs: ConfigStore;
   backfills: BackfillStore;
-  getQueueStatus: () => Promise<{ generation: QueueJobCounts; backfill: QueueJobCounts }>;
+  getQueueStatus: () => Promise<{
+    generation: QueueJobCounts;
+    backfill: QueueJobCounts;
+    storage?: QueueJobCounts;
+  }>;
   enqueueBackfill: (job: BackfillControllerJobData) => Promise<void>;
   createVectorIndex: (
     schemaName: string,
@@ -175,6 +179,10 @@ export interface EmbeddingsApiDeps {
   embed: (input: string, provider: string, model: string) => Promise<number[]>;
   onConfigChanged?: (schemaName: string) => Promise<void> | void;
   generic?: GenericSourceApiDeps;
+  reconcileStorageSource?: (
+    sourceId: string,
+    caller: EmbeddingsApiCaller,
+  ) => Promise<{ queued: number; scanned: number; warnings: string[] }>;
 }
 
 const DEFAULT_LIST_LIMIT = 25;
@@ -338,6 +346,7 @@ export class EmbeddingsApi {
     capabilities: ReturnType<typeof mapCapabilities>;
     generationQueue: ReturnType<typeof mapQueueCounts>;
     backfillQueue: ReturnType<typeof mapQueueCounts>;
+    storageQueue: ReturnType<typeof mapQueueCounts>;
     warnings: string[];
   }> {
     const config = this.deps.currentConfig();
@@ -345,6 +354,7 @@ export class EmbeddingsApi {
     const queue = await this.deps.getQueueStatus().catch(() => ({
       generation: emptyQueueCounts(),
       backfill: emptyQueueCounts(),
+      storage: emptyQueueCounts(),
     }));
     const warnings = [
       ...(config.enabled ? [] : ['Embeddings module is disabled']),
@@ -364,6 +374,7 @@ export class EmbeddingsApi {
       capabilities: mapCapabilities(capabilities),
       generationQueue: mapQueueCounts(queue.generation),
       backfillQueue: mapQueueCounts(queue.backfill),
+      storageQueue: mapQueueCounts(queue.storage ?? emptyQueueCounts()),
       warnings,
     };
   }
@@ -629,6 +640,19 @@ export class EmbeddingsApi {
       adminOperator,
     });
     return { hits: mapSearchHits(results) };
+  }
+
+  async reconcileSource(
+    sourceId: string,
+    caller: EmbeddingsApiCaller,
+  ): Promise<{ queued: number; scanned: number; warnings: string[] }> {
+    if (!this.deps.reconcileStorageSource) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'Storage extraction reconcile is not configured',
+      );
+    }
+    return this.deps.reconcileStorageSource(sourceId, caller);
   }
 
   mapGrpcError(err: unknown): { code: number; message: string } {

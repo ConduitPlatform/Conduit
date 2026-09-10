@@ -72,6 +72,7 @@ tools through Hermes:
 - `POST /embeddings/sources/:id/disable`
 - `POST /embeddings/sources/:id/revoke`
 - `GET /embeddings/sources/:id/status`
+- `POST /embeddings/sources/:id/reconcile`
 - `POST /embeddings/sources/:id/documents`
 - `DELETE /embeddings/sources/:id/documents/:externalDocumentId`
 
@@ -82,9 +83,41 @@ the authenticated router context. Raw vectors, `userId`, `adminOperator`, and
 partition overrides are rejected. Source hits return score plus safe
 identifiers/metadata only.
 
+## Storage extraction
+
+Enabled `kind=conduit-storage` sources index only files that match their
+selectors: required `container`, optional `folderPrefix`, and an optional MIME
+allowlist subset of `text/plain`, `text/markdown`, `application/json`,
+`text/csv`, and `application/pdf`. There is no global default index.
+
+Storage lifecycle events (`storage:ready:File`, `storage:update:File`,
+`storage:delete:File`, chunked `storage:deleteMany:File`, folder/container
+cleanup) enqueue a dedicated `embeddings-storage-queue`. Pending uploads are
+ignored; a missing `uploadStatus` is treated as ready. `contentVersion` is the
+idempotency key. `POST /embeddings/sources/:id/reconcile` backfills matching
+files and deletes stale documents after missed events.
+
+Bytes are read through authenticated Storage gRPC `GetFileBytes` with
+`maxFileBytes` enforced before object allocation. Presigned URLs and
+`sourceUrl` are never fetched. Automatic extractors sniff magic bytes and
+reject archives, Office, encrypted PDFs, and MIME mismatches. PDF parsing uses
+`pdfjs-dist` (legacy build) in a worker thread with page, extracted-byte, and
+timeout guards. That dependency adds roughly 4–8MB to the embeddings bundle
+and is listed in `service-bundle.config.json`. Office and OCR stay on the
+trusted external ingest path.
+
+Extracted chunk text is embedded through `syncDocument` and discarded. Persisted
+references keep `storageFileId` plus safe locator metadata only.
+
+`storageExtraction` convict caps: `maxFileBytes` (8MiB), `maxExtractedBytes`
+(2MiB), `maxPdfPages` (50), `extractTimeoutMs` (15s), `maxChunksPerFile`
+(256), `chunkOverlapBytes` (256), `queueConcurrency` (1), `queueAttempts` (5).
+Chunk size is also bounded by `security.maxEmbedInputBytes` /
+`maxChunkTextBytes`.
+
 ## Packaging
 
-- Bake target: `embeddings` (BullMQ is an extra bundle dependency). The image
+- Bake target: `embeddings` (BullMQ and `pdfjs-dist` are extra bundle dependencies). The image
   is not published until a compatible release; do not pull
   `docker.io/conduitplatform/embeddings:latest` until that tag exists.
 - Compose: export a non-empty `GRPC_KEY`, then

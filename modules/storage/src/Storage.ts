@@ -30,6 +30,8 @@ import {
   DeleteFileResponse,
   FileByUrlResponse,
   FileResponse,
+  GetFileBytesRequest,
+  GetFileBytesResponse,
   GetFileDataResponse,
   GetFileRequest,
   GetFileUrlRequest,
@@ -67,6 +69,7 @@ export default class Storage extends ManagedModule<Config> {
     functions: {
       getFile: this.getFile.bind(this),
       getFileData: this.getFileData.bind(this),
+      getFileBytes: this.getFileBytes.bind(this),
       createFile: this.createFile.bind(this),
       updateFile: this.updateFile.bind(this),
       deleteFile: this.deleteFile.bind(this),
@@ -382,6 +385,31 @@ export default class Storage extends ManagedModule<Config> {
       result = await this._adminFileHandlers.getFileData(request);
     }
     callback(null, result as GetFileDataResponse);
+  }
+
+  async getFileBytes(
+    call: GrpcRequest<GetFileBytesRequest>,
+    callback: GrpcCallback<GetFileBytesResponse>,
+  ) {
+    if (!this._adminFileHandlers)
+      return callback({
+        code: status.INTERNAL,
+        message: 'File handlers not initiated',
+      });
+    const request = createParsedRouterRequest(
+      call.request,
+      undefined,
+      { scope: call.request.scope },
+      undefined,
+      undefined,
+      undefined,
+      { user: { _id: call.request.userId } },
+    );
+    const result =
+      call.request.scope || call.request.userId
+        ? await this._fileHandlers.getFileBytes(request)
+        : await this._adminFileHandlers.getFileBytes(request);
+    callback(null, result as GetFileBytesResponse);
   }
 
   async getFileUrl(

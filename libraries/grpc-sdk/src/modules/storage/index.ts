@@ -3,6 +3,7 @@ import {
   DeleteFileResponse,
   FileByUrlResponse,
   FileResponse,
+  GetFileBytesResponse,
   GetFileDataResponse,
   GetFileUrlResponse,
   StorageDefinition,
@@ -64,6 +65,18 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
   ): Promise<GetFileDataResponse> {
     const options = normalizeAuthzOptions(userIdOrOptions, scope);
     return this.client!.getFileData({ id, ...options });
+  }
+
+  getFileBytes(
+    id: string,
+    maxBytes?: number,
+    options?: AuthzOptions,
+  ): Promise<GetFileBytesResponse> {
+    return this.client!.getFileBytes({
+      id,
+      maxBytes,
+      ...(options ?? {}),
+    });
   }
 
   createFile(

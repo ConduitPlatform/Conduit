@@ -174,7 +174,12 @@ export const EMBEDDINGS_ADMIN_ROUTES: EmbeddingsAdminRouteContract[] = [
   contract(
     '/sources/:id/status',
     ConduitRouteActions.GET,
-    'Returns embedding source readiness and per-document status counts. Operator-only.',
+    'Returns embedding source readiness, per-document status counts, and Storage extraction queue visibility. Operator-only.',
+  ),
+  contract(
+    '/sources/:id/reconcile',
+    ConduitRouteActions.POST,
+    'Reconciles a conduit-storage source against existing matching files and missed lifecycle events. Operator-only. Enqueues distinct Storage ingest and delete jobs.',
   ),
   contract(
     '/sources/:id/documents',

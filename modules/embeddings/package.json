@@ -11,8 +11,19 @@
   },
   "conduit": {
     "peers": {
-      "await": ["database"],
-      "watch": [{ "module": "database", "edge": "rising" }]
+      "await": [
+        "database"
+      ],
+      "watch": [
+        {
+          "module": "database",
+          "edge": "rising"
+        },
+        {
+          "module": "storage",
+          "edge": "rising"
+        }
+      ]
     }
   },
   "scripts": {
@@ -36,7 +47,8 @@
     "bullmq": "^5.21.2",
     "convict": "^6.2.5",
     "ioredis": "^5.10.1",
-    "lodash-es": "^4.18.1"
+    "lodash-es": "^4.18.1",
+    "pdfjs-dist": "^6.3.289"
   },
   "devDependencies": {
     "@conduitplatform/service-bundle": "workspace:*",

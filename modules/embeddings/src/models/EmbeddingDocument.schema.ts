@@ -16,6 +16,8 @@ export const embeddingDocumentFields: ConduitModel = {
   storageFileId: { type: TYPE.String, required: false },
   connectorReference: { type: TYPE.String, required: false },
   mimeType: { type: TYPE.String, required: false },
+  container: { type: TYPE.String, required: false },
+  folder: { type: TYPE.String, required: false },
   partitionSubject: { type: TYPE.String, required: true },
   status: {
     type: TYPE.String,
@@ -33,6 +35,7 @@ export const embeddingDocumentModelOptions = {
     { fields: ['sourceId', 'externalDocumentId'], options: { unique: true } },
     { fields: ['partitionSubject', 'status'] },
     { fields: ['storageFileId'] },
+    { fields: ['sourceId', 'container', 'folder'] },
   ],
   conduit: {
     cms: { enabled: false },
@@ -57,6 +60,8 @@ export class EmbeddingDocument extends ConduitActiveSchema<EmbeddingDocument> {
   storageFileId?: string;
   connectorReference?: string;
   mimeType?: string;
+  container?: string;
+  folder?: string;
   partitionSubject: string;
   status: EmbeddingDocumentState;
   createdAt: Date;

@@ -61,6 +61,12 @@ import { EmbeddingsApi, type DeclaredSchemaInfo } from './api/embeddingsApi.js';
 import { AdminHandlers } from './admin/index.js';
 import { EmbeddingsRoutes } from './routes/index.js';
 import {
+  StorageExtractionPipeline,
+  type StorageFileRecord,
+} from './utils/storagePipeline.js';
+import { FILE_LIFECYCLE_EVENTS } from './utils/storageEventNames.js';
+import { storageExtractionLimits } from './utils/storageLimits.js';
+import {
   CancelBackfillRequest,
   DeleteEmbeddingConfigRequest,
   DeleteEmbeddingConfigResponse,
@@ -95,6 +101,8 @@ import {
   SyncDocumentResponse,
   DeleteDocumentRequest,
   DeleteDocumentResponse,
+  ReconcileSourceRequest,
+  ReconcileSourceResponse,
   EmbeddingSource as EmbeddingSourceMessage,
 } from './protoTypes/embeddings.js';
 
@@ -129,6 +137,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       purgeSource: this.purgeSource.bind(this),
       syncDocument: this.syncDocument.bind(this),
       deleteDocument: this.deleteDocument.bind(this),
+      reconcileSource: this.reconcileSource.bind(this),
     },
   };
 
@@ -139,6 +148,8 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
   private adminRouter?: AdminHandlers;
   private clientRouter?: EmbeddingsRoutes;
   private routerWatchDispose?: () => void;
+  private storagePipeline?: StorageExtractionPipeline;
+  private storageSubscriptionIds: string[] = [];
 
   constructor(peerManifestRoot?: string) {
     super('embeddings', peerManifestRoot);
@@ -153,6 +164,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     await this.reconcileGenericChunkSchemas();
     this.queueController = QueueController.getInstance(this.grpcSdk);
     this.api = this.createApi();
+    this.storagePipeline = this.createStoragePipeline();
     this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this.api);
     await this.configureRuntime();
     this.updateHealth(HealthCheckStatus.SERVING);
@@ -468,6 +480,23 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     }
   }
 
+  async reconcileSource(
+    call: GrpcRequest<ReconcileSourceRequest>,
+    callback: GrpcResponse<ReconcileSourceResponse>,
+  ) {
+    try {
+      callback(
+        null,
+        await this.ensureStoragePipeline().reconcileSource(
+          call.request.id,
+          this.caller(call),
+        ),
+      );
+    } catch (err) {
+      callback(this.api.mapGrpcError(err));
+    }
+  }
+
   private caller(call: { metadata?: { get(key: string): Array<string | Buffer> } }) {
     return { callerModule: callerModuleName(call.metadata) };
   }
@@ -527,6 +556,8 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       },
       getQueueStatus: () => this.queueController.getQueueStatus(),
       enqueueBackfill: job => this.queueController.addBackfillControllerJob(job),
+      reconcileStorageSource: (sourceId, caller) =>
+        this.ensureStoragePipeline().reconcileSource(sourceId, caller),
       embed: (input, provider, model) =>
         getProvider(provider).embed(input, this.providerConfig(provider, model)),
       onConfigChanged: async schemaName => {
@@ -608,6 +639,12 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
                 this.grpcSdk.authorization!.deleteAllRelations(query),
             }
           : {}),
+        onStorageSourceReady: sourceId =>
+          this.ensureStoragePipeline()
+            .reconcileSource(sourceId, { callerModule: 'embeddings' })
+            .then(() => undefined),
+        getStorageQueue: async () =>
+          (await this.queueController.getQueueStatus()).storage,
       },
     });
   }
@@ -631,6 +668,12 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       data => this.processBackfillJob(data),
       1,
     );
+    const extraction = storageExtractionLimits(config);
+    await this.queueController.ensureStorageWorker(
+      job => this.ensureStoragePipeline().processJob(job),
+      extraction.queueConcurrency,
+    );
+    this.subscribeStorageEvents();
     const configs = await EmbeddingConfig.getInstance().findMany({ enabled: true });
     const enabledSchemas = new Set(configs.map(item => item.schemaName));
     for (const schemaName of this.subscribedSchemas.keys()) {
@@ -667,6 +710,91 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
     [...this.subscribedSchemas.keys()].forEach(schemaName =>
       this.unsubscribeFromSchema(schemaName),
     );
+    this.unsubscribeStorageEvents();
+  }
+
+  private subscribeStorageEvents() {
+    if (this.storageSubscriptionIds.length) return;
+    for (const channel of Object.values(FILE_LIFECYCLE_EVENTS)) {
+      const id = `embeddings:${channel}`;
+      this.grpcSdk.bus?.subscribe(
+        channel,
+        message => {
+          this.ensureStoragePipeline()
+            .handleBusEvent(channel, message)
+            .catch(err => ConduitGrpcSdk.Logger.error(sanitizeErrorMessage(err)));
+        },
+        id,
+      );
+      this.storageSubscriptionIds.push(id);
+    }
+  }
+
+  private unsubscribeStorageEvents() {
+    this.storageSubscriptionIds.forEach(id => this.grpcSdk.bus?.unsubscribe(id));
+    this.storageSubscriptionIds = [];
+  }
+
+  private ensureStoragePipeline() {
+    this.storagePipeline ??= this.createStoragePipeline();
+    return this.storagePipeline;
+  }
+
+  private createStoragePipeline() {
+    const fileSelect =
+      '_id,name,container,folder,mimeType,size,uploadStatus,contentVersion';
+    return new StorageExtractionPipeline({
+      currentConfig: () => this.currentConfig(),
+      sources: {
+        findMany: query => EmbeddingSource.getInstance().findMany(query),
+        findOne: query => EmbeddingSource.getInstance().findOne(query),
+      },
+      documents: {
+        findMany: query => EmbeddingDocument.getInstance().findMany(query),
+        findOne: query => EmbeddingDocument.getInstance().findOne(query),
+        create: doc => EmbeddingDocument.getInstance().create(doc),
+        findByIdAndUpdate: (id, doc) =>
+          EmbeddingDocument.getInstance().findByIdAndUpdate(id, doc),
+      },
+      listFiles: (query, options) =>
+        this.database.findMany<StorageFileRecord>('File', query, {
+          skip: options?.skip,
+          limit: options?.limit,
+          sort: options?.sort as { [field: string]: 1 | -1 } | undefined,
+          select: fileSelect,
+        }),
+      getFile: async id => {
+        if (!this.grpcSdk.storage) return null;
+        const file = await this.grpcSdk.storage.getFile(id);
+        return {
+          _id: file.id,
+          name: file.name,
+          container: file.container,
+          folder: file.folder,
+          mimeType: file.mimeType,
+          size: file.size,
+          uploadStatus: file.uploadStatus,
+          contentVersion: file.contentVersion,
+        };
+      },
+      getFileBytes: async (id, maxBytes) => {
+        if (!this.grpcSdk.storage) {
+          throw new Error('Storage module is not available');
+        }
+        const result = await this.grpcSdk.storage.getFileBytes(id, maxBytes);
+        return {
+          data: Buffer.from(result.data),
+          mimeType: result.mimeType,
+          name: result.name,
+        };
+      },
+      enqueue: jobs =>
+        this.queueController.addStorageJobs(
+          jobs,
+          storageExtractionLimits(this.currentConfig()).queueAttempts,
+        ),
+      api: this.requireGeneric(),
+    });
   }
 
   private enqueueMutation(schemaName: string, message: string) {

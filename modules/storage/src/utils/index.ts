@@ -22,6 +22,7 @@ import {
 
 export * from './fileUploadState.js';
 export * from './fileEvents.js';
+export * from './fileBytes.js';
 export { collectAndDeleteFiles, completeFileUpload, safeStat } from './fileLifecycle.js';
 
 export async function streamToBuffer(readableStream: any): Promise<Buffer> {

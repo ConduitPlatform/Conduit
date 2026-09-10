@@ -14,6 +14,9 @@ export class StorageParamAdapter {
       uploadStatus: file.uploadStatus,
       size: file.size,
       contentVersion: file.contentVersion,
+      container: file.container,
+      folder: file.folder,
+      mimeType: file.mimeType,
     };
   }
 

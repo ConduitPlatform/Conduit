@@ -16,6 +16,8 @@ import {
   _updateFileUploadUrl,
   applyCdnHost,
   completeFileUpload,
+  objectPathForFile,
+  readBoundedFileBytes,
   deepPathHandler,
   emitFileDelete,
   isFileBytesReady,
@@ -294,6 +296,26 @@ export class AdminFileHandlers {
         (e as Error).message ?? 'Something went wrong!',
       );
     }
+  }
+
+  async getFileBytes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (!isString(call.request.params.id)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'The provided id is invalid');
+    }
+    const file = await File.getInstance().findOne({ _id: call.request.params.id });
+    if (isNil(file)) {
+      throw new GrpcError(status.NOT_FOUND, 'File does not exist');
+    }
+    const maxBytes =
+      typeof call.request.params.maxBytes === 'number' && call.request.params.maxBytes > 0
+        ? call.request.params.maxBytes
+        : 8 * 1024 * 1024;
+    return readBoundedFileBytes({
+      file,
+      maxBytes,
+      readObject: () =>
+        this.storageProvider.container(file.container).get(objectPathForFile(file)),
+    });
   }
 
   private async findOrCreateContainer(

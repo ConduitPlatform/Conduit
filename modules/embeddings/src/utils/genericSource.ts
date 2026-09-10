@@ -35,6 +35,8 @@ export type EmbeddingSourceState = (typeof EMBEDDING_SOURCE_STATES)[number];
 
 export const EMBEDDING_DOCUMENT_STATES = [
   'pending',
+  'queued',
+  'extracting',
   'indexed',
   'skipped',
   'failed',

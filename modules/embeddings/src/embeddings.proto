@@ -89,6 +89,7 @@ message GetStatusResponse {
   QueueCounts generationQueue = 4;
   QueueCounts backfillQueue = 5;
   repeated string warnings = 6;
+  optional QueueCounts storageQueue = 7;
 }
 
 message BackfillRun {
@@ -263,6 +264,20 @@ message SourceStatusResponse {
   int32 staleCount = 7;
   int32 deletedCount = 8;
   repeated string warnings = 9;
+  optional int32 queuedCount = 10;
+  optional int32 extractingCount = 11;
+  optional QueueCounts extractionQueue = 12;
+}
+
+message ReconcileSourceRequest {
+  string id = 1;
+  optional int32 batchSize = 2;
+}
+
+message ReconcileSourceResponse {
+  int32 queued = 1;
+  int32 scanned = 2;
+  repeated string warnings = 3;
 }
 
 message IngestChunk {
@@ -283,6 +298,8 @@ message SyncDocumentRequest {
   optional string connectorReference = 7;
   optional string mimeType = 8;
   repeated IngestChunk chunks = 9;
+  optional string container = 10;
+  optional string folder = 11;
 }
 
 message IngestChunkResult {
@@ -332,4 +349,5 @@ service EmbeddingsProvider {
   rpc purgeSource(SourceMutationRequest) returns (PurgeSourceResponse);
   rpc syncDocument(SyncDocumentRequest) returns (SyncDocumentResponse);
   rpc deleteDocument(DeleteDocumentRequest) returns (DeleteDocumentResponse);
+  rpc reconcileSource(ReconcileSourceRequest) returns (ReconcileSourceResponse);
 }

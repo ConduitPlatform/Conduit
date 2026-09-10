@@ -62,11 +62,17 @@ describe('StorageParamAdapter.getFileResponse', () => {
       uploadStatus: 'ready',
       size: 21,
       contentVersion: 'v2',
+      container: 'docs',
+      folder: 'inbox/',
+      mimeType: 'text/plain',
     });
     assert.equal(response.id, 'file-9');
     assert.equal(response.url, '');
     assert.equal(response.uploadStatus, 'ready');
     assert.equal(response.size, 21);
     assert.equal(response.contentVersion, 'v2');
+    assert.equal(response.container, 'docs');
+    assert.equal(response.folder, 'inbox/');
+    assert.equal(response.mimeType, 'text/plain');
   });
 });
