@@ -18,7 +18,11 @@ import {
 import { status } from '@grpc/grpc-js';
 import { isEmpty, isNil } from 'lodash-es';
 import { _StorageContainer, _StorageFolder, File } from '../models/index.js';
-import { normalizeFolderPath, sanitizeFilesForResponse } from '../utils/index.js';
+import {
+  normalizeFolderPath,
+  sanitizeFilesForResponse,
+  collectAndDeleteFiles,
+} from '../utils/index.js';
 import { AdminFileHandlers } from './adminFile.js';
 
 export class AdminRoutes {
@@ -136,10 +140,19 @@ export class AdminRoutes {
         name: folder.name,
         container: folder.container,
       });
-      await File.getInstance().deleteMany({
-        folder: folder.name,
-        container: folder.container,
-      });
+      await collectAndDeleteFiles(
+        {
+          folder: folder.name,
+          container: folder.container,
+        },
+        this.grpcSdk,
+        {
+          type: 'folder',
+          id: folder._id,
+          name: folder.name,
+          container: folder.container,
+        },
+      );
     }
     return 'OK';
   }
@@ -174,9 +187,17 @@ export class AdminRoutes {
         await _StorageContainer.getInstance().deleteOne({
           _id: id,
         });
-        await File.getInstance().deleteMany({
-          container: container.name,
-        });
+        await collectAndDeleteFiles(
+          {
+            container: container.name,
+          },
+          this.grpcSdk,
+          {
+            type: 'container',
+            id: container._id,
+            name: container.name,
+          },
+        );
         await _StorageFolder.getInstance().deleteMany({
           container: container.name,
         });
@@ -305,6 +326,18 @@ export class AdminRoutes {
         url: ConduitString.Required,
       }),
       this.fileHandlers.updateFileUploadUrl.bind(this.fileHandlers),
+    );
+    this.routingManager.route(
+      {
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+        action: ConduitRouteActions.POST,
+        path: '/files/:id/complete',
+        description: `Confirms a presigned upload after bytes have been written to the provider.`,
+      },
+      new ConduitRouteReturnDefinition('CompleteFileUpload', File.name),
+      this.fileHandlers.completeFileUpload.bind(this.fileHandlers),
     );
     this.routingManager.route(
       {

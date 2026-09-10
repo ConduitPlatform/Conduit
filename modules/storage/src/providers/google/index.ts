@@ -1,4 +1,9 @@
-import { IStorageProvider, StorageConfig, UrlOptions } from '../../interfaces/index.js';
+import {
+  IStorageProvider,
+  ObjectStat,
+  StorageConfig,
+  UrlOptions,
+} from '../../interfaces/index.js';
 import { Bucket, Storage } from '@google-cloud/storage';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry.js';
@@ -21,6 +26,29 @@ export function folderMarkerKeys(name: string): string[] {
 
 export function folderObjectPrefix(name: string): string {
   return name.endsWith('/') ? name : `${name}/`;
+}
+
+export function mapGcsMetadataToStat(metadata: {
+  size?: string | number;
+  etag?: string;
+  contentType?: string;
+  updated?: string;
+  md5Hash?: string;
+}): ObjectStat {
+  const size =
+    typeof metadata.size === 'number'
+      ? metadata.size
+      : metadata.size != null
+        ? Number(metadata.size)
+        : 0;
+  return {
+    exists: true,
+    size: Number.isFinite(size) ? size : 0,
+    etag: metadata.etag,
+    contentType: metadata.contentType,
+    lastModified: metadata.updated ? new Date(metadata.updated) : undefined,
+    checksum: metadata.md5Hash,
+  };
 }
 
 export function isDirectChildKey(prefix: string, key: string): boolean {
@@ -309,6 +337,23 @@ export class GoogleCloudStorage implements IStorageProvider {
 
     const [fileExists] = await this.bucket().file(fileName).exists();
     return fileExists;
+  }
+
+  async stat(fileName: string): Promise<ObjectStat | Error> {
+    const [bucketExists] = await this.bucket().exists();
+    if (!bucketExists) return { exists: false };
+
+    try {
+      const [metadata] = await this.bucket().file(fileName).getMetadata();
+      return mapGcsMetadataToStat(metadata);
+    } catch (error) {
+      const code = (error as { code?: number | string; status?: number }).code;
+      const statusCode = (error as { status?: number }).status;
+      if (code === 404 || code === '404' || statusCode === 404) {
+        return { exists: false };
+      }
+      throw error;
+    }
   }
 
   async getSignedUrl(fileName: string, options?: UrlOptions): Promise<string | Error> {

@@ -12,6 +12,17 @@ import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { randomUUID } from 'node:crypto';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
+import { emitFileReady, emitFileUpdate } from './fileEvents.js';
+import { safeStat } from './fileLifecycle.js';
+import {
+  applyObjectStatToFile,
+  FILE_UPLOAD_STATUS,
+  PENDING_UPLOAD_PLACEHOLDER,
+} from './fileUploadState.js';
+
+export * from './fileUploadState.js';
+export * from './fileEvents.js';
+export { collectAndDeleteFiles, completeFileUpload, safeStat } from './fileLifecycle.js';
 
 export async function streamToBuffer(readableStream: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -163,6 +174,7 @@ export async function resolvePublicFileAccessUrl(
 export async function storeNewFile(
   storageProvider: IStorageProvider,
   params: IFileParams,
+  grpcSdk?: ConduitGrpcSdk,
 ): Promise<File> {
   const { name, alias, data, container, folder, mimeType, isPublic } = params;
   // Validate file privacy against container settings
@@ -171,17 +183,29 @@ export async function storeNewFile(
   const size = buffer.byteLength;
   const fileName = getStorageFileKey(folder, name);
   await storageProvider.container(container).store(fileName, buffer, isPublic);
+  const objectStat = await safeStat(storageProvider, container, fileName);
+  const readyFields = objectStat
+    ? applyObjectStatToFile({ mimeType }, objectStat)
+    : {
+        uploadStatus: FILE_UPLOAD_STATUS.ready,
+        size,
+        contentVersion: `size:${size}`,
+      };
 
   ConduitGrpcSdk.Metrics?.increment('files_total');
-  ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
+  ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', readyFields.size ?? size);
   const file = await File.getInstance().create({
     name,
     alias,
-    mimeType,
+    mimeType: readyFields.mimeType ?? mimeType,
     folder: folder,
     container: container,
-    size,
+    size: readyFields.size ?? size,
     isPublic,
+    uploadStatus: FILE_UPLOAD_STATUS.ready,
+    etag: readyFields.etag,
+    checksum: readyFields.checksum,
+    contentVersion: readyFields.contentVersion,
   });
   const refs = await resolveFileReferences(storageProvider, {
     container,
@@ -194,6 +218,7 @@ export async function storeNewFile(
     refs.uri || refs.url || refs.sourceUrl
       ? ((await File.getInstance().findByIdAndUpdate(file._id, refs)) as File)
       : file;
+  emitFileReady(grpcSdk, storedFile);
   return sanitizeFileForResponse(storedFile);
 }
 
@@ -207,7 +232,8 @@ export async function _createFileUploadUrl(
   const fileName = getStorageFileKey(folder, name);
   await storageProvider
     .container(container)
-    .store(fileName, Buffer.from('PENDING UPLOAD'), isPublic);
+    .store(fileName, Buffer.from(PENDING_UPLOAD_PLACEHOLDER), isPublic);
+  const placeholderStat = await safeStat(storageProvider, container, fileName);
 
   ConduitGrpcSdk.Metrics?.increment('files_total');
   ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
@@ -219,6 +245,8 @@ export async function _createFileUploadUrl(
     folder: folder,
     container: container,
     isPublic,
+    uploadStatus: FILE_UPLOAD_STATUS.pending,
+    etag: placeholderStat?.etag,
   });
   const refs = await resolveFileReferences(storageProvider, {
     container,
@@ -244,19 +272,29 @@ export async function _updateFile(
   storageProvider: IStorageProvider,
   file: File,
   params: IFileParams,
+  grpcSdk?: ConduitGrpcSdk,
 ): Promise<File> {
   const { name, alias, data, folder, container, mimeType } = params;
   await validateFilePrivacy(container, file.isPublic);
   const onlyDataUpdate =
     name === file.name && folder === file.folder && container === file.container;
-  await storageProvider
-    .container(container)
-    .store(getStorageFileKey(folder, name), data, file.isPublic);
+  const fileName = getStorageFileKey(folder, name);
+  await storageProvider.container(container).store(fileName, data, file.isPublic);
   if (!onlyDataUpdate) {
     await storageProvider
       .container(file.container)
       .delete(getStorageFileKey(file.folder, file.name));
   }
+  const objectStat = await safeStat(storageProvider, container, fileName);
+  const persistedSize = (data as Buffer).byteLength;
+  const readyFields = objectStat
+    ? applyObjectStatToFile({ mimeType }, objectStat)
+    : {
+        uploadStatus: FILE_UPLOAD_STATUS.ready,
+        size: persistedSize,
+        contentVersion: `size:${persistedSize}`,
+        mimeType,
+      };
 
   const refs = await resolveFileReferences(storageProvider, {
     container,
@@ -274,9 +312,15 @@ export async function _updateFile(
     sourceUrl: refs.sourceUrl,
     url: refs.url,
     uri: refs.uri,
-    mimeType,
+    mimeType: readyFields.mimeType ?? mimeType,
+    size: readyFields.size ?? persistedSize,
+    uploadStatus: FILE_UPLOAD_STATUS.ready,
+    etag: readyFields.etag,
+    checksum: readyFields.checksum,
+    contentVersion: readyFields.contentVersion,
   })) as File;
-  updateFileMetrics(file.size, (data as Buffer).byteLength);
+  updateFileMetrics(file.size, readyFields.size ?? persistedSize);
+  emitFileUpdate(grpcSdk, updatedFile);
   return sanitizeFileForResponse(updatedFile);
 }
 
@@ -307,13 +351,11 @@ export async function _updateFileUploadUrl(
       ...{ size: size ?? file.size },
     });
   } else {
+    const fileName = getStorageFileKey(folder, name);
     await storageProvider
       .container(container)
-      .store(
-        getStorageFileKey(folder, name),
-        Buffer.from('PENDING UPLOAD'),
-        file.isPublic,
-      );
+      .store(fileName, Buffer.from(PENDING_UPLOAD_PLACEHOLDER), file.isPublic);
+    const placeholderStat = await safeStat(storageProvider, container, fileName);
     await storageProvider
       .container(file.container)
       .delete(getStorageFileKey(file.folder, file.name));
@@ -327,6 +369,10 @@ export async function _updateFileUploadUrl(
       url: refs.url,
       uri: refs.uri,
       mimeType,
+      uploadStatus: FILE_UPLOAD_STATUS.pending,
+      etag: placeholderStat?.etag,
+      contentVersion: undefined,
+      checksum: undefined,
       ...{ size: size ?? file.size },
     });
   }
@@ -458,10 +504,12 @@ export async function sanitizeFilesForResponse(files: File[]): Promise<File[]> {
   }
 
   const containerNames = [...new Set(files.map(file => file.container))];
-  const containers = await _StorageContainer.getInstance().findMany(
-    { name: { $in: containerNames } },
-    { select: 'name isPublic', readPreference: 'primary' },
-  );
+  const containers = await _StorageContainer
+    .getInstance()
+    .findMany(
+      { name: { $in: containerNames } },
+      { select: 'name isPublic', readPreference: 'primary' },
+    );
   const containerIsPublic = new Map(
     containers.map(container => [container.name, container.isPublic ?? false]),
   );

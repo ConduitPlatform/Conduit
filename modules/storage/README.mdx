@@ -18,6 +18,18 @@ If both the container and file are public, `url` contains the direct provider/CD
 If the container is private and the file is public, `url` is left empty and Conduit signs a provider URL on demand through `uri`.
 Private files are not allowed in public containers.
 
+## Upload readiness
+
+Direct create/update persist bytes first, then mark the File `uploadStatus` as `ready` and emit `storage:ready:File` or `storage:update:File`.
+Presigned create (`POST /storage/upload`, `POST /files/upload`) stores a placeholder and leaves `uploadStatus` as `pending` until the client calls complete:
+
+- Client: `POST /storage/upload/:id/complete`
+- Admin: `POST /files/:id/complete`
+- gRPC: `CompleteFileUpload`
+
+Completion verifies the provider object with a `stat`/`head` request, records size, etag/checksum, and `contentVersion`, then emits `ready` (or `update` when replacing existing bytes). Placeholder objects are never treated as ready.
+Deletes emit `storage:delete:File` (single file) or `storage:deleteMany:File` plus `storage:delete:Folder` / `storage:delete:Container` cleanup signals. Event payloads include file IDs and safe metadata only — never presigned URLs.
+
 ## Requirements ⚡
 
 - [Database](../database) module

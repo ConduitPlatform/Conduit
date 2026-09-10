@@ -1,3 +1,5 @@
+import { ObjectStat } from './IObjectStat.js';
+
 export type UrlOptions = {
   download?: boolean;
   fileName?: string;
@@ -44,6 +46,8 @@ export interface IStorageProvider {
   delete(fileName: string): Promise<boolean | Error>;
 
   exists(fileName: string): Promise<boolean | Error>;
+
+  stat(fileName: string): Promise<ObjectStat | Error>;
 
   get(fileName: string, downloadPath?: string): Promise<Buffer | Error>;
 

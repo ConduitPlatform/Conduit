@@ -151,6 +151,23 @@ export class StorageRoutes {
           queryParams: {
             ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
           },
+          action: ConduitRouteActions.POST,
+          path: '/storage/upload/:id/complete',
+          description: `Confirms a presigned upload after bytes have been written to the provider.`,
+          middlewares: ['authMiddleware'],
+          rateLimit: STORAGE_WRITE,
+        },
+        new ConduitRouteReturnDefinition('CompleteFileUpload', File.name),
+        this.fileHandlers.completeFileUpload.bind(this.fileHandlers),
+      );
+      this._routingManager.route(
+        {
+          urlParams: {
+            id: { type: TYPE.String, required: true },
+          },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+          },
           action: ConduitRouteActions.GET,
           middlewares: ['authMiddleware'],
           path: '/storage/file/data/:id',

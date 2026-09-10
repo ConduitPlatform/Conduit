@@ -50,3 +50,23 @@ describe('StorageParamAdapter.getFileByUrlResponse', () => {
     assert.equal(response.uri, '/storage/getFileUrl/file-3');
   });
 });
+
+describe('StorageParamAdapter.getFileResponse', () => {
+  const adapter = new StorageParamAdapter();
+
+  it('includes upload status, size, and content version without inventing urls', () => {
+    const response = adapter.getFileResponse({
+      _id: 'file-9',
+      name: 'notes.txt',
+      uri: '/storage/getFileUrl/file-9',
+      uploadStatus: 'ready',
+      size: 21,
+      contentVersion: 'v2',
+    });
+    assert.equal(response.id, 'file-9');
+    assert.equal(response.url, '');
+    assert.equal(response.uploadStatus, 'ready');
+    assert.equal(response.size, 21);
+    assert.equal(response.contentVersion, 'v2');
+  });
+});

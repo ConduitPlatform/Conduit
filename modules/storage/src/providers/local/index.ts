@@ -1,4 +1,9 @@
-import { IStorageProvider, StorageConfig, UrlOptions } from '../../interfaces/index.js';
+import {
+  IStorageProvider,
+  ObjectStat,
+  StorageConfig,
+  UrlOptions,
+} from '../../interfaces/index.js';
 import {
   access,
   accessSync,
@@ -449,6 +454,27 @@ export class LocalStorage implements IStorageProvider {
         res(true);
       }
     });
+  }
+
+  async stat(fileName: string): Promise<ObjectStat | Error> {
+    let path = this._storagePath + '/' + this._activeContainer + '/';
+    if (fileName !== this._activeContainer) {
+      path += fileName;
+    }
+    const resolvedPath = resolve(path);
+    if (!existsSync(resolvedPath)) {
+      return { exists: false };
+    }
+    const stats = lstatSync(resolvedPath);
+    if (!stats.isFile()) {
+      return { exists: false };
+    }
+    return {
+      exists: true,
+      size: stats.size,
+      etag: `${stats.size}-${Math.trunc(stats.mtimeMs)}`,
+      lastModified: stats.mtime,
+    };
   }
 
   getPublicUrl(fileName: string, _containerIsPublic?: boolean): Promise<string | Error> {

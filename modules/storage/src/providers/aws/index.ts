@@ -1,4 +1,9 @@
-import { IStorageProvider, StorageConfig, UrlOptions } from '../../interfaces/index.js';
+import {
+  IStorageProvider,
+  ObjectStat,
+  StorageConfig,
+  UrlOptions,
+} from '../../interfaces/index.js';
 import {
   CreateBucketCommand,
   DeleteBucketCommand,
@@ -56,6 +61,24 @@ export function buildPutObjectInput(
       fileIsPublic: options?.fileIsPublic,
       containerIsPublic: options?.containerIsPublic,
     }),
+  };
+}
+
+export function mapHeadObjectToStat(output: {
+  ContentLength?: number;
+  ETag?: string;
+  ContentType?: string;
+  LastModified?: Date;
+  ChecksumSHA256?: string;
+  ChecksumCRC32?: string;
+}): ObjectStat {
+  return {
+    exists: true,
+    size: output.ContentLength ?? 0,
+    etag: output.ETag,
+    contentType: output.ContentType,
+    lastModified: output.LastModified,
+    checksum: output.ChecksumSHA256 ?? output.ChecksumCRC32,
   };
 }
 
@@ -280,6 +303,27 @@ export class AWSS3Storage implements IStorageProvider {
         (error as AwsError).$metadata.httpStatusCode === 404
       ) {
         return false;
+      }
+      throw error;
+    }
+  }
+
+  async stat(fileName: string): Promise<ObjectStat | Error> {
+    try {
+      const output = await this._storage.send(
+        new HeadObjectCommand({
+          Bucket: this._activeContainer,
+          Key: fileName,
+        }),
+      );
+      return mapHeadObjectToStat(output);
+    } catch (error) {
+      const statusCode = (error as AwsError).$metadata?.httpStatusCode;
+      if (statusCode === 404) {
+        return { exists: false };
+      }
+      if (statusCode === 403) {
+        return new Error('Unable to stat object');
       }
       throw error;
     }

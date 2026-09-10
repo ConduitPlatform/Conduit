@@ -275,4 +275,17 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     }
     return this.client!.updateFileByUrl({ id, ...options });
   }
+
+  completeFileUpload(id: string, userId?: string, scope?: string): Promise<FileResponse>;
+
+  completeFileUpload(id: string, options?: AuthzOptions): Promise<FileResponse>;
+
+  completeFileUpload(
+    id: string,
+    userIdOrOptions?: string | AuthzOptions,
+    scope?: string,
+  ): Promise<FileResponse> {
+    const options = normalizeAuthzOptions(userIdOrOptions, scope);
+    return this.client!.completeFileUpload({ id, ...options });
+  }
 }

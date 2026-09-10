@@ -23,6 +23,23 @@ const schema: ConduitModel = {
     type: TYPE.Number,
     required: true,
   },
+  uploadStatus: {
+    type: TYPE.String,
+    enum: ['pending', 'ready'],
+    required: false,
+  },
+  contentVersion: {
+    type: TYPE.String,
+    required: false,
+  },
+  etag: {
+    type: TYPE.String,
+    required: false,
+  },
+  checksum: {
+    type: TYPE.String,
+    required: false,
+  },
   isPublic: {
     type: TYPE.Boolean,
     default: false,
@@ -56,6 +73,10 @@ export class File extends ConduitActiveSchema<File> {
   folder!: string;
   container!: string;
   size!: number;
+  uploadStatus?: 'pending' | 'ready';
+  contentVersion?: string;
+  etag?: string;
+  checksum?: string;
   isPublic?: boolean;
   url?: string;
   uri?: string;

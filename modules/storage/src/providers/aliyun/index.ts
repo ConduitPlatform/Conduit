@@ -1,4 +1,9 @@
-import { IStorageProvider, StorageConfig, UrlOptions } from '../../interfaces/index.js';
+import {
+  IStorageProvider,
+  ObjectStat,
+  StorageConfig,
+  UrlOptions,
+} from '../../interfaces/index.js';
 import OSS from 'ali-oss';
 import fs from 'fs';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
@@ -135,6 +140,32 @@ export class AliyunStorage implements IStorageProvider {
         if (err.status === 404) return false;
         throw err;
       });
+  }
+
+  async stat(fileName: string): Promise<ObjectStat | Error> {
+    try {
+      const result = await this._ossClient.head(fileName);
+      const headers = (result.res?.headers ?? {}) as Record<string, string | undefined>;
+      const lastModified = headers['last-modified']
+        ? new Date(headers['last-modified'])
+        : undefined;
+      return {
+        exists: true,
+        size: Number(headers['content-length'] ?? 0),
+        etag: headers.etag,
+        contentType: headers['content-type'],
+        lastModified:
+          lastModified && !Number.isNaN(lastModified.getTime())
+            ? lastModified
+            : undefined,
+        checksum: headers['content-md5'],
+      };
+    } catch (error) {
+      if ((error as { status?: number }).status === 404) {
+        return { exists: false };
+      }
+      throw error;
+    }
   }
 
   async get(fileName: string, downloadPath?: string): Promise<any | Error> {

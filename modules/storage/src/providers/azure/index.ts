@@ -1,4 +1,9 @@
-import { IStorageProvider, StorageConfig, UrlOptions } from '../../interfaces/index.js';
+import {
+  IStorageProvider,
+  ObjectStat,
+  StorageConfig,
+  UrlOptions,
+} from '../../interfaces/index.js';
 import {
   BlobClient,
   BlobSASPermissions,
@@ -107,6 +112,33 @@ export class AzureStorage implements IStorageProvider {
       .getBlockBlobClient(fileName)
       .exists();
     return true;
+  }
+
+  async stat(fileName: string): Promise<ObjectStat | Error> {
+    const containerClient = this._storage.getContainerClient(this._activeContainer);
+    const containerExists = await containerClient.exists();
+    if (!containerExists) return { exists: false };
+    try {
+      const properties = await containerClient
+        .getBlockBlobClient(fileName)
+        .getProperties();
+      return {
+        exists: true,
+        size: properties.contentLength ?? 0,
+        etag: properties.etag,
+        contentType: properties.contentType,
+        lastModified: properties.lastModified,
+        checksum: properties.contentMD5
+          ? Buffer.from(properties.contentMD5).toString('hex')
+          : undefined,
+      };
+    } catch (error) {
+      const statusCode = (error as { statusCode?: number }).statusCode;
+      if (statusCode === 404) {
+        return { exists: false };
+      }
+      throw error;
+    }
   }
 
   async get(fileName: string, downloadPath?: string): Promise<Buffer | Error> {

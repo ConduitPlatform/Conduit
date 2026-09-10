@@ -16,7 +16,10 @@ import {
   _updateFile,
   _updateFileUploadUrl,
   applyCdnHost,
+  completeFileUpload,
   deepPathHandler,
+  emitFileDelete,
+  isFileBytesReady,
   normalizeFolderPath,
   resolvePublicFileAccessUrl,
   sanitizeFileForResponse,
@@ -130,15 +133,19 @@ export class FileHandlers {
     }
     const validatedName = await validateName(name, folder, usedContainer);
     try {
-      const file = await storeNewFile(this.storageProvider, {
-        name: validatedName,
-        alias,
-        data,
-        container: usedContainer,
-        folder,
-        isPublic,
-        mimeType,
-      });
+      const file = await storeNewFile(
+        this.storageProvider,
+        {
+          name: validatedName,
+          alias,
+          data,
+          container: usedContainer,
+          folder,
+          isPublic,
+          mimeType,
+        },
+        this.grpcSdk,
+      );
       await this.fileAccessAdd(file, call.request);
       return file;
     } catch (e) {
@@ -209,6 +216,24 @@ export class FileHandlers {
     }
   }
 
+  async completeFileUpload(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const found = await File.getInstance().findOne({ _id: call.request.params.id });
+    if (isNil(found)) {
+      throw new GrpcError(status.NOT_FOUND, 'File does not exist');
+    }
+    await this.fileAccessCheck('edit', call.request, found);
+    try {
+      const file = await completeFileUpload(this.storageProvider, found, this.grpcSdk);
+      return sanitizeFileForResponse(file);
+    } catch (e) {
+      if (e instanceof GrpcError) throw e;
+      throw new GrpcError(
+        status.INTERNAL,
+        (e as Error).message ?? 'Something went wrong',
+      );
+    }
+  }
+
   async updateFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, alias, data, mimeType } = call.request.params;
     const found = await File.getInstance().findOne({ _id: id });
@@ -221,14 +246,19 @@ export class FileHandlers {
       found,
     );
     try {
-      return await _updateFile(this.storageProvider, found, {
-        name,
-        alias,
-        folder,
-        container,
-        data: Buffer.from(data, 'base64'),
-        mimeType: mimeType ?? found.mimeType,
-      });
+      return await _updateFile(
+        this.storageProvider,
+        found,
+        {
+          name,
+          alias,
+          folder,
+          container,
+          data: Buffer.from(data, 'base64'),
+          mimeType: mimeType ?? found.mimeType,
+        },
+        this.grpcSdk,
+      );
     } catch (e) {
       throw new GrpcError(
         status.INTERNAL,
@@ -254,6 +284,7 @@ export class FileHandlers {
         throw new GrpcError(status.INTERNAL, 'File could not be deleted');
       }
       await File.getInstance().deleteOne({ _id: call.request.params.id });
+      emitFileDelete(this.grpcSdk, found);
       ConduitGrpcSdk.Metrics?.decrement('files_total');
       ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', found.size);
       return { success: true };
@@ -310,6 +341,9 @@ export class FileHandlers {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
       await this.fileAccessCheck('read', call.request, file);
+      if (!isFileBytesReady(file)) {
+        throw new GrpcError(status.FAILED_PRECONDITION, 'File upload is not complete');
+      }
       let data: Buffer;
       const result = await this.storageProvider
         .container(file.container)
@@ -323,6 +357,7 @@ export class FileHandlers {
       }
       return { data: data.toString('base64') };
     } catch (e) {
+      if (e instanceof GrpcError) throw e;
       throw new GrpcError(
         status.INTERNAL,
         (e as Error).message ?? 'Something went wrong!',

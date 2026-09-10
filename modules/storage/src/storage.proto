@@ -47,6 +47,9 @@ message FileResponse {
   string url = 2;
   string name = 3;
   string uri = 4;
+  optional string uploadStatus = 5;
+  optional int32 size = 6;
+  optional string contentVersion = 7;
 }
 
 message GetFileDataResponse {
@@ -88,6 +91,12 @@ message UpdateFileByUrlRequest {
   optional string alias = 9;
 }
 
+message CompleteFileUploadRequest {
+  string id = 1;
+  optional string userId = 2;
+  optional string scope = 3;
+}
+
 service Storage {
   rpc GetFile(GetFileRequest) returns (FileResponse);
   rpc GetFileData(GetFileRequest) returns (GetFileDataResponse);
@@ -97,4 +106,5 @@ service Storage {
   rpc DeleteFile(GetFileRequest) returns (DeleteFileResponse);
   rpc CreateFileByUrl(CreateFileByUrlRequest) returns (FileByUrlResponse);
   rpc UpdateFileByUrl(UpdateFileByUrlRequest) returns (FileByUrlResponse);
+  rpc CompleteFileUpload(CompleteFileUploadRequest) returns (FileResponse);
 }

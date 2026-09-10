@@ -24,6 +24,7 @@ import {
   migrateCdnConfigChanges,
 } from './migrations/cdnConfigMigration.js';
 import {
+  CompleteFileUploadRequest,
   CreateFileByUrlRequest,
   CreateFileRequest,
   DeleteFileResponse,
@@ -71,6 +72,7 @@ export default class Storage extends ManagedModule<Config> {
       deleteFile: this.deleteFile.bind(this),
       createFileByUrl: this.createFileByUrl.bind(this),
       updateFileByUrl: this.updateFileByUrl.bind(this),
+      completeFileUpload: this.completeFileUpload.bind(this),
       getFileUrl: this.getFileUrl.bind(this),
     },
   };
@@ -545,6 +547,34 @@ export default class Storage extends ManagedModule<Config> {
       result = await this._adminFileHandlers.updateFileUploadUrl(request);
     }
     const response = this.storageParamAdapter.getFileByUrlResponse(result);
+    callback(null, response);
+  }
+
+  async completeFileUpload(
+    call: GrpcRequest<CompleteFileUploadRequest>,
+    callback: GrpcCallback<FileResponse>,
+  ) {
+    if (!this._adminFileHandlers)
+      return callback({
+        code: status.INTERNAL,
+        message: 'File handlers not initiated',
+      });
+    const request = createParsedRouterRequest(
+      call.request,
+      undefined,
+      { scope: call.request.scope },
+      undefined,
+      undefined,
+      undefined,
+      { user: { _id: call.request.userId } },
+    );
+    let result;
+    if (call.request.scope || call.request.userId) {
+      result = await this._fileHandlers.completeFileUpload(request);
+    } else {
+      result = await this._adminFileHandlers.completeFileUpload(request);
+    }
+    const response = this.storageParamAdapter.getFileResponse(result);
     callback(null, response);
   }
 
