@@ -23,7 +23,14 @@ import { TokenProvider } from '../tokenProvider.js';
 import { v4 as uuid } from 'uuid';
 import { createHash } from 'crypto';
 import { TeamsHandler } from '../team.js';
-import { validateStateToken } from './utils/index.js';
+import {
+  assertOAuthRegistrationAllowed,
+  OAUTH_MODE_PARAM,
+  resolveOAuthMode,
+  type OAuthMode,
+  validateStateToken,
+} from './utils/index.js';
+import { errors } from '../../errors.js';
 import { IAuthenticationStrategy } from '../../interfaces/index.js';
 import { TokenType } from '../../constants/index.js';
 import {
@@ -91,6 +98,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
           customRedirectUri: call.request.params.redirectUri,
           anonymousUserId: anonymousUser?._id,
+          mode: resolveOAuthMode(call.request.params?.mode),
         },
       })
       .catch(err => {
@@ -144,6 +152,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
           customRedirectUri: call.request.params.redirectUri,
           anonymousUserId: anonymousUser?._id,
+          mode: resolveOAuthMode(call.request.params?.mode),
         },
       })
       .catch(err => {
@@ -204,6 +213,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       payload,
       stateToken.data.invitationToken,
       stateToken.data.anonymousUserId,
+      resolveOAuthMode(stateToken.data.mode),
     );
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
@@ -234,6 +244,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       payload,
       call.request.params.invitationToken,
       call.request.context.anonymousUser?._id,
+      resolveOAuthMode(call.request.params?.mode),
     );
     const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
@@ -249,6 +260,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     payload: Payload<T>,
     invitationToken?: string,
     anonymousUserId?: string,
+    mode: OAuthMode = 'both',
   ): Promise<User> {
     let user: User | null = null;
     if (payload.hasOwnProperty('email') && !isNil(payload.email)) {
@@ -299,6 +311,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       if (!user.isVerified) user.isVerified = true;
       user = await User.getInstance().findByIdAndUpdate(user._id, user);
     } else {
+      assertOAuthRegistrationAllowed(mode);
       if (payload.email) {
         assertEmailAllowed(payload.email);
       }
@@ -358,13 +371,14 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     routingManager.route(
       {
         path: `/init/${this.providerName}`,
-        description: `Begins ${this.capitalizeProvider()} authentication.`,
+        description: `Begins ${this.capitalizeProvider()} authentication. Optional mode: "both" (default, login and register) or "signIn" (existing users only).`,
         action: ConduitRouteActions.GET,
         queryParams: {
           scopes: [ConduitString.Optional],
           invitationToken: ConduitString.Optional,
           captchaToken: ConduitString.Optional,
           redirectUri: ConduitString.Optional,
+          mode: OAUTH_MODE_PARAM,
         },
         middlewares: initRouteMiddleware,
       },
@@ -378,12 +392,13 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       routingManager.route(
         {
           path: `/initNative/${this.providerName}`,
-          description: `Begins ${this.capitalizeProvider()} native authentication.`,
+          description: `Begins ${this.capitalizeProvider()} native authentication. Optional mode: "both" (default, login and register) or "signIn" (existing users only).`,
           action: ConduitRouteActions.GET,
           queryParams: {
             scopes: [ConduitString.Optional],
             invitationToken: ConduitString.Optional,
             captchaToken: ConduitString.Optional,
+            mode: OAUTH_MODE_PARAM,
           },
           middlewares: initRouteMiddleware,
         },
@@ -403,6 +418,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
             id_token: ConduitString.Required,
             state: ConduitString.Required,
           },
+          errors: [errors.REGISTRATION_NOT_ALLOWED],
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
           accessToken: ConduitString.Optional,
@@ -422,6 +438,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
             code: ConduitString.Required,
             state: ConduitString.Required,
           },
+          errors: [errors.REGISTRATION_NOT_ALLOWED],
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
           accessToken: ConduitString.Optional,
@@ -439,6 +456,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
             code: ConduitString.Required,
             state: ConduitString.Required,
           },
+          errors: [errors.REGISTRATION_NOT_ALLOWED],
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
           accessToken: ConduitString.Optional,

@@ -24,13 +24,14 @@ import moment from 'moment';
 import jwksRsa from 'jwks-rsa';
 import qs from 'querystring';
 
-import { validateStateToken } from '../utils/index.js';
+import { validateStateToken, resolveOAuthMode } from '../utils/index.js';
 import {
   ConduitString,
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { AuthUtils } from '../../../utils/index.js';
+import { errors } from '../../../errors.js';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { apple: AppleProviderConfig }) {
@@ -142,6 +143,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       userParams,
       stateToken.data.invitationToken,
       stateToken.data.anonymousUserId,
+      resolveOAuthMode(stateToken.data.mode),
     );
     await Token.getInstance().deleteOne(stateToken);
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
@@ -236,6 +238,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       userParams,
       stateToken.data.invitationToken,
       stateToken.data.anonymousUserId,
+      resolveOAuthMode(stateToken.data.mode),
     );
     await Token.getInstance().deleteOne(stateToken);
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
@@ -261,6 +264,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
           id_token: ConduitString.Required,
           state: ConduitString.Required,
         },
+        errors: [errors.REGISTRATION_NOT_ALLOWED],
       },
       new ConduitRouteReturnDefinition(`AppleResponse`, {
         accessToken: ConduitString.Optional,
