@@ -1,15 +1,11 @@
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import {
   normalizeChangeEvent,
-  parseResumeToken,
+  parseResumeToken as parseMongoResumeToken,
   type RawChangeEvent,
 } from './normalize.js';
 import { authorizedDocumentRoom, roomsForPublicChange } from './rooms.js';
-import {
-  isResumeTokenUnusable,
-  topologyFromHello,
-  type TopologyResult,
-} from './topology.js';
+import { isResumeTokenUnusable, type TopologyResult } from './topology.js';
 import type {
   ChangeStreamLike,
   DatabaseChangeEvent,
@@ -35,14 +31,16 @@ export type WatchFactory = (options: { resumeAfter?: unknown }) => ChangeStreamL
 export type CoordinatorOptions = {
   grpcSdk: ConduitGrpcSdk;
   watch: WatchFactory;
-  hello: () => Promise<{ setName?: string; msg?: string } | null>;
+  checkTopology: () => Promise<TopologyResult>;
   getOptedInSchemas: () => OptedInSchema[];
   subscriptions: RealtimeSubscriptionTracker;
   enabled: () => boolean;
-  engine: () => string;
+  parseResumeToken?: (token: string | null | undefined) => unknown | undefined;
+  prepare?: () => Promise<void>;
+  onResumePersisted?: (resumeToken: string) => Promise<void>;
 };
 
-export class MongoChangeStreamCoordinator {
+export class ChangeStreamCoordinator {
   private lock: LeaderLock | null = null;
   private stream: ChangeStreamLike | null = null;
   private renewTimer: NodeJS.Timeout | null = null;
@@ -77,27 +75,37 @@ export class MongoChangeStreamCoordinator {
 
   async reconcile(): Promise<void> {
     if (this.closed) return;
-    const engine = this.options.engine();
-    if (engine !== 'MongoDB' || !this.options.enabled()) {
+    if (!this.options.enabled()) {
+      await this.safePrepare();
       await this.stopStream('idle');
       await this.releaseLeader();
-      this.streamState = engine !== 'MongoDB' ? 'unsupported' : 'disabled';
+      this.streamState = 'disabled';
       return;
     }
-    this.topology = topologyFromHello(await this.options.hello().catch(() => null));
+    this.topology = await this.options.checkTopology().catch(() => ({
+      supported: false,
+      message: 'Unable to determine database topology',
+    }));
     if (!this.topology.supported) {
       await this.stopStream('idle');
       await this.releaseLeader();
       this.streamState = 'idle';
       this.lastError = this.topology.message;
-      // Hello can fail during startup before Mongo is ready. Keep retrying
-      // that case; a confirmed standalone topology will not recover.
       if (
         !this.topology.message ||
         this.topology.message.includes('Unable to determine')
       ) {
         this.scheduleRetry();
       }
+      return;
+    }
+    try {
+      await this.options.prepare?.();
+    } catch (err) {
+      this.lastError = err instanceof Error ? err.message : String(err);
+      this.streamState = 'degraded';
+      ConduitGrpcSdk.Logger.error(err as Error);
+      this.scheduleRetry();
       return;
     }
     if (this.options.getOptedInSchemas().length === 0) {
@@ -116,6 +124,14 @@ export class MongoChangeStreamCoordinator {
     await this.releaseLeader();
   }
 
+  private async safePrepare(): Promise<void> {
+    try {
+      await this.options.prepare?.();
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(err as Error);
+    }
+  }
+
   private async ensureLeader(): Promise<void> {
     if (this.lock) {
       if (!this.watching) {
@@ -129,9 +145,6 @@ export class MongoChangeStreamCoordinator {
         LOCK_TTL_MS,
       );
       if (!acquired) {
-        // Another instance holds the lock, or a crashed holder has not
-        // expired yet. Without a retry, a standalone process stays idle
-        // forever after a restart races the previous TTL.
         this.streamState = 'idle';
         this.scheduleRetry();
         return;
@@ -170,7 +183,8 @@ export class MongoChangeStreamCoordinator {
     this.streamState = 'starting';
     this.ignoreClose = false;
     try {
-      const resumeAfter = parseResumeToken(
+      const parseToken = this.options.parseResumeToken ?? parseMongoResumeToken;
+      const resumeAfter = parseToken(
         await this.options.grpcSdk.state!.getKey(RESUME_TOKEN_KEY),
       );
       if (this.watching || this.closed) return;
@@ -207,6 +221,11 @@ export class MongoChangeStreamCoordinator {
     this.lastEventAt = event.occurredAt;
     this.lastError = undefined;
     await this.options.grpcSdk.state!.setKey(RESUME_TOKEN_KEY, event.resumeToken);
+    try {
+      await this.options.onResumePersisted?.(event.resumeToken);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(err as Error);
+    }
     this.options.grpcSdk.bus?.publish(
       `database:change:${schema.name}`,
       JSON.stringify(event),

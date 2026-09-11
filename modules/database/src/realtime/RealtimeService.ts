@@ -11,18 +11,22 @@ import {
 } from '@conduitplatform/module-tools';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
 import { MongooseAdapter } from '../adapters/mongoose-adapter/index.js';
+import { SequelizeAdapter } from '../adapters/sequelize-adapter/index.js';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
 import { toOptedInSchema } from './authorize.js';
-import { MongoChangeStreamCoordinator } from './MongoChangeStreamCoordinator.js';
+import { ChangeStreamCoordinator } from './ChangeStreamCoordinator.js';
 import { registerDatabaseRealtimeSocket } from './sockets.js';
 import { buildRealtimeStatus } from './status.js';
 import { RealtimeSubscriptionTracker } from './subscriptions.js';
 import type { ChangeStreamLike, OptedInSchema, RealtimeStatus } from './types.js';
+import { topologyFromHello } from './topology.js';
+import { SqlRealtimeSupport } from './sql/SqlRealtimeSupport.js';
 
 export class RealtimeService {
   private readonly subscriptions: RealtimeSubscriptionTracker;
-  private coordinator?: MongoChangeStreamCoordinator;
+  private coordinator?: ChangeStreamCoordinator;
+  private sqlSupport?: SqlRealtimeSupport;
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
@@ -38,14 +42,28 @@ export class RealtimeService {
       void this.reconcile();
     });
     if (adapter instanceof MongooseAdapter) {
-      this.coordinator = new MongoChangeStreamCoordinator({
+      this.coordinator = new ChangeStreamCoordinator({
         grpcSdk,
         watch: options => this.openWatch(adapter, options.resumeAfter),
-        hello: () => this.hello(adapter),
+        checkTopology: () => this.checkMongoTopology(adapter),
         getOptedInSchemas: () => this.getOptedInSchemas(),
         subscriptions: this.subscriptions,
         enabled: () => this.isGloballyEnabled(),
-        engine: () => adapter.getDatabaseType(),
+      });
+    } else if (adapter instanceof SequelizeAdapter) {
+      this.sqlSupport = new SqlRealtimeSupport(adapter);
+      this.coordinator = new ChangeStreamCoordinator({
+        grpcSdk,
+        watch: options => this.sqlSupport!.openWatch(options.resumeAfter),
+        checkTopology: async () => ({ supported: true }),
+        getOptedInSchemas: () => this.getOptedInSchemas(),
+        subscriptions: this.subscriptions,
+        enabled: () => this.isGloballyEnabled(),
+        prepare: () =>
+          this.sqlSupport!.prepare(
+            this.isGloballyEnabled() ? this.getOptedInSchemas() : [],
+          ),
+        onResumePersisted: token => this.sqlSupport!.trimThrough(token),
       });
     }
   }
@@ -103,8 +121,7 @@ export class RealtimeService {
       topologySupported: this.coordinator?.getTopology().supported ?? false,
       topologyMessage: this.coordinator?.getTopology().message,
       activeSchemaCount: optedIn.length,
-      streamState:
-        this.coordinator?.getState() ?? (engine === 'MongoDB' ? 'idle' : 'unsupported'),
+      streamState: this.coordinator?.getState() ?? 'unsupported',
       lastEventAt: this.coordinator?.getLastEventAt(),
       lastError: this.coordinator?.getLastError(),
       socketsEnabled: await this.areAdminSocketsEnabled(),
@@ -137,6 +154,10 @@ export class RealtimeService {
       [],
       resumeAfter ? { resumeAfter: resumeAfter as never } : {},
     ) as unknown as ChangeStreamLike;
+  }
+
+  private async checkMongoTopology(adapter: MongooseAdapter) {
+    return topologyFromHello(await this.hello(adapter).catch(() => null));
   }
 
   private async hello(
