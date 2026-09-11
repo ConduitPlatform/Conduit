@@ -18,8 +18,7 @@ import { MongoChangeStreamCoordinator } from './MongoChangeStreamCoordinator.js'
 import { registerDatabaseRealtimeSocket } from './sockets.js';
 import { buildRealtimeStatus } from './status.js';
 import { RealtimeSubscriptionTracker } from './subscriptions.js';
-import type { OptedInSchema, RealtimeStatus } from './types.js';
-import type { ChangeStreamLike } from './types.js';
+import type { ChangeStreamLike, OptedInSchema, RealtimeStatus } from './types.js';
 
 export class RealtimeService {
   private readonly subscriptions: RealtimeSubscriptionTracker;
@@ -47,7 +46,6 @@ export class RealtimeService {
         subscriptions: this.subscriptions,
         enabled: () => this.isGloballyEnabled(),
         engine: () => adapter.getDatabaseType(),
-        socketsEnabled: () => this.areAdminSocketsEnabled(),
       });
     }
   }

@@ -9,6 +9,7 @@ describe('normalizeChangeEvent', () => {
       {
         operationType: 'insert',
         documentKey: { _id: new ObjectId('64b64c4c4c4c4c4c4c4c4c4c') },
+        fullDocument: { secret: 'nope' },
         wallTime: new Date('2026-01-01T00:00:00.000Z'),
         _id: resume,
       },
@@ -21,9 +22,7 @@ describe('normalizeChangeEvent', () => {
       documentId: '64b64c4c4c4c4c4c4c4c4c4c',
       occurredAt: '2026-01-01T00:00:00.000Z',
     });
-    expect(event?.resumeToken).toEqual(
-      parseResumeToken(event!.resumeToken) ? event!.resumeToken : event?.resumeToken,
-    );
+    expect(parseResumeToken(event!.resumeToken)).toEqual(resume);
     expect(JSON.parse(JSON.stringify(event))).not.toHaveProperty('fullDocument');
   });
 

@@ -16,12 +16,9 @@ describe('realtime authorization helpers', () => {
     });
     expect(requireSchemaName('Order')).toBe('Order');
     expect(optionalDocumentId(undefined)).toBeUndefined();
-    try {
-      requireSchemaName('');
-      throw new Error('expected throw');
-    } catch (err: any) {
-      expect(err.code).toBe(status.INVALID_ARGUMENT);
-    }
+    expect(() => requireSchemaName('')).toThrow(
+      expect.objectContaining({ code: status.INVALID_ARGUMENT }),
+    );
   });
 
   it('rejects missing schemas, disabled realtime, and CMS-read for clients', () => {
@@ -43,24 +40,15 @@ describe('realtime authorization helpers', () => {
         };
       },
     };
-    try {
-      assertSchemaAvailable(lookup, 'Missing', true);
-      throw new Error('expected throw');
-    } catch (err: any) {
-      expect(err.code).toBe(status.NOT_FOUND);
-    }
-    try {
-      assertSchemaAvailable(lookup, 'Off', false);
-      throw new Error('expected throw');
-    } catch (err: any) {
-      expect(err.code).toBe(status.FAILED_PRECONDITION);
-    }
-    try {
-      assertSchemaAvailable(lookup, 'Order', true);
-      throw new Error('expected throw');
-    } catch (err: any) {
-      expect(err.code).toBe(status.PERMISSION_DENIED);
-    }
+    expect(() => assertSchemaAvailable(lookup, 'Missing', true)).toThrow(
+      expect.objectContaining({ code: status.NOT_FOUND }),
+    );
+    expect(() => assertSchemaAvailable(lookup, 'Off', false)).toThrow(
+      expect.objectContaining({ code: status.FAILED_PRECONDITION }),
+    );
+    expect(() => assertSchemaAvailable(lookup, 'Order', true)).toThrow(
+      expect.objectContaining({ code: status.PERMISSION_DENIED }),
+    );
     const admin = assertSchemaAvailable(lookup, 'Order', false);
     expect(admin.authorizationEnabled).toBe(true);
   });
@@ -71,12 +59,11 @@ describe('realtime authorization helpers', () => {
         throw new GrpcError(status.NOT_FOUND, 'Schema Missing not defined yet');
       },
     };
-    try {
-      assertSchemaAvailable(lookup, 'Missing', false);
-      throw new Error('expected throw');
-    } catch (err: any) {
-      expect(err.code).toBe(status.NOT_FOUND);
-      expect(err.message).toBe('Schema does not exist');
-    }
+    expect(() => assertSchemaAvailable(lookup, 'Missing', false)).toThrow(
+      expect.objectContaining({
+        code: status.NOT_FOUND,
+        message: 'Schema does not exist',
+      }),
+    );
   });
 });
