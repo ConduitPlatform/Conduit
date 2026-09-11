@@ -1,0 +1,6 @@
+{
+  "extraDependencies": [
+    "bullmq",
+    "cron-parser"
+  ]
+}

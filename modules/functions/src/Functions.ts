@@ -8,6 +8,8 @@ import { AdminHandlers } from './admin/index.js';
 import * as models from './models/index.js';
 import AppConfigSchema, { Config } from './config/index.js';
 import { FunctionController } from './controllers/function.controller.js';
+import { CronQueueController } from './controllers/cronQueue.controller.js';
+import { runMigrations } from './migrations/index.js';
 import {
   ConfigController,
   ManagedModule,
@@ -37,6 +39,7 @@ export default class Functions extends ManagedModule<Config> {
     await this.awaitPeersFromManifest();
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
+    await runMigrations();
   }
 
   async onConfig() {
@@ -46,6 +49,13 @@ export default class Functions extends ManagedModule<Config> {
       this.isRunning = false;
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
       this.trustModelNoticeLoggedForActiveSession = false;
+      try {
+        await CronQueueController.getInstance(this.grpcSdk).drainCronQueue();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(
+          `Failed to drain cron queue: ${(err as Error).message}`,
+        );
+      }
     } else if (!this.trustModelNoticeLoggedForActiveSession) {
       ConduitGrpcSdk.Logger.log(
         'Functions module active: user-defined code runs with full server privileges. Only deploy code you trust.',
@@ -53,6 +63,7 @@ export default class Functions extends ManagedModule<Config> {
       this.trustModelNoticeLoggedForActiveSession = true;
     }
     if (configActive) {
+      CronQueueController.getInstance(this.grpcSdk).enableCronScheduling();
       this.registerDeclaredPeerWatches();
       this.updateHealth(HealthCheckStatus.SERVING);
     }
