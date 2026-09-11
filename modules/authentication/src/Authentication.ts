@@ -52,6 +52,7 @@ import { TokenProvider } from './handlers/tokenProvider.js';
 import {
   ConduitActiveSchema,
   ConfigController,
+  convictConfigParser,
   createParsedRouterRequest,
   ManagedModule,
   sanitizeDocumentsForExport,
@@ -59,6 +60,12 @@ import {
   type ExportResult,
   type ImportResult,
 } from '@conduitplatform/module-tools';
+import {
+  ensureAccessTokenJwtSecret,
+  isConfigMissingError,
+  type PersistedConfigRead,
+} from './utils/jwtSecret.js';
+import { reconcileSharedAccessTokenJwtSecret } from './utils/jwtSecretReconciler.js';
 import { TeamsAdmin } from './admin/team.js';
 import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
@@ -224,6 +231,9 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   async preConfig(config: Config) {
+    if (this.configInitialized) {
+      ensureAccessTokenJwtSecret(config);
+    }
     if (config.captcha?.hasOwnProperty('provider')) {
       delete (config as Config & { captcha: { provider?: string } }).captcha.provider;
     }
@@ -270,6 +280,7 @@ export default class Authentication extends ManagedModule<Config> {
 
   async onConfig() {
     const config = ConfigController.getInstance().config;
+    await this.ensureSharedAccessTokenJwtSecret(config);
     if (config.redirectUris.allowAny && process.env.NODE_ENV === 'production') {
       ConduitGrpcSdk.Logger.warn(
         `Config option redirectUris.allowAny shouldn't be used in production!`,
@@ -297,6 +308,54 @@ export default class Authentication extends ManagedModule<Config> {
         }
       }
     }
+  }
+
+  private async readPersistedAuthenticationConfig(): Promise<
+    PersistedConfigRead<Config>
+  > {
+    try {
+      const persisted = await this.grpcSdk.config.get('authentication');
+      return { ok: true, config: persisted };
+    } catch (error) {
+      if (isConfigMissingError(error)) {
+        return { ok: true, config: null };
+      }
+      return { ok: false };
+    }
+  }
+
+  /**
+   * Replicas must share one jwtSecret. Startup adopts persist or mints
+   * once under lock. Later setConfig/bus updates keep the applied secret.
+   * A failed read must not persist.
+   */
+  private async ensureSharedAccessTokenJwtSecret(config: Config) {
+    await reconcileSharedAccessTokenJwtSecret(config, {
+      configInitialized: this.configInitialized,
+      readPersisted: () => this.readPersistedAuthenticationConfig(),
+      syncConfig: next => {
+        if (this.config) {
+          this.config.load(next);
+        }
+        ConfigController.getInstance().config = next;
+      },
+      persistOverride: async next => {
+        if (!this.config) {
+          throw new Error('Authentication config schema is not initialized');
+        }
+        await this.grpcSdk.config.configure(
+          next,
+          convictConfigParser(this.config.getSchema()),
+          true,
+        );
+      },
+      withLock: (resource, ttl, fn) => {
+        if (!this.grpcSdk.state) {
+          throw new Error('State manager is not initialized');
+        }
+        return this.grpcSdk.state.withLock(resource, ttl, fn);
+      },
+    });
   }
 
   initMonitors() {

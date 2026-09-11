@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist-test",
+    "rootDir": "./src",
+    "declaration": false,
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": [
+    "src/utils/invitationHelpers.ts",
+    "src/utils/invitationHelpers.test.ts",
+    "src/utils/membershipCache.ts"
+  ],
+  "exclude": []
+}

@@ -22,13 +22,17 @@ import { ChatMessage, ChatParticipantsLog, ChatRoom, User } from '../models/inde
 import { isArray, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { sendInvitations, validateUsersInput } from '../utils/index.js';
+import {
+  getMembershipCacheKey,
+  MEMBERSHIP_CACHE_TTL_MS,
+  invalidateMembershipCache,
+} from '../utils/membershipCache.js';
 import { InvitationRoutes } from './InvitationRoutes.js';
 import * as templates from '../templates/index.js';
 import { MessageType } from '../enums/messageType.enum.js';
 
 // Redis TTL for chat message nonce deduplication.
 const CHAT_NONCE_TTL_MS = 5 * 60 * 1000;
-const MEMBERSHIP_CACHE_TTL_MS = 30 * 1000;
 
 export class ChatRoutes {
   private readonly _routingManager: RoutingManager;
@@ -222,7 +226,7 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
-      await this.invalidateMembershipCache(room._id);
+      await invalidateMembershipCache(this.grpcSdk, room._id);
       this.grpcSdk.router?.socketPush({
         event: 'join-room',
         receivers: users,
@@ -288,7 +292,7 @@ export class ChatRoutes {
             throw new GrpcError(status.INTERNAL, e.message);
           });
       }
-      await this.invalidateMembershipCache(room._id);
+      await invalidateMembershipCache(this.grpcSdk, room._id);
       this.grpcSdk.router?.socketPush({
         event: 'leave-room',
         receivers: [user._id],
@@ -930,7 +934,7 @@ export class ChatRoutes {
   }
 
   private async verifyRoomMembership(roomId: string, userId: string): Promise<boolean> {
-    const cacheKey = `chat:membership:${roomId}`;
+    const cacheKey = getMembershipCacheKey(roomId);
     if (this.grpcSdk.state) {
       const cached = await this.grpcSdk.state.getKey(cacheKey);
       if (cached) {
@@ -952,11 +956,6 @@ export class ChatRoutes {
       );
     }
     return true;
-  }
-
-  private async invalidateMembershipCache(roomId: string): Promise<void> {
-    if (!this.grpcSdk.state) return;
-    await this.grpcSdk.state.clearKey(`chat:membership:${roomId}`);
   }
 
   private scheduleReadFlush(roomId: string, userId: string): void {

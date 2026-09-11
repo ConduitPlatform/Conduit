@@ -26,6 +26,10 @@ export default {
       format: 'String',
       default: '',
     },
+    serviceAccountKeyJson: {
+      format: 'String',
+      default: '',
+    },
   },
   azure: {
     connectionString: { format: 'String', default: '' },

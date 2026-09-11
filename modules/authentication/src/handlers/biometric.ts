@@ -4,6 +4,7 @@ import {
   ConduitRouteReturnDefinition,
   GrpcError,
   ParsedRouterRequest,
+  Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 
@@ -21,6 +22,13 @@ import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
 import crypto from 'crypto';
 import { BiometricToken } from '../models/BiometricToken.schema.js';
+import {
+  BIOMETRIC_CHALLENGE_UNAVAILABLE,
+  consumeBiometricChallenge,
+  isBiometricChallengeExpired,
+  issueOrReuseBiometricLoginChallenge,
+  verifyBiometricSignature,
+} from '../utils/biometricAuth.js';
 
 export class BiometricHandlers implements IAuthenticationStrategy {
   private initialized: boolean = false;
@@ -39,6 +47,21 @@ export class BiometricHandlers implements IAuthenticationStrategy {
   }
 
   async declareRoutes(routingManager: RoutingManager) {
+    routingManager.route(
+      {
+        path: '/biometrics/challenge',
+        action: ConduitRouteActions.POST,
+        description: `Issues a one-time challenge to sign for biometric login.`,
+        bodyParams: {
+          keyId: ConduitString.Required,
+        },
+        rateLimit: ALT_STRATEGY_AUTH,
+      },
+      new ConduitRouteReturnDefinition('BiometricsChallengeResponse', {
+        challenge: ConduitString.Required,
+      }),
+      this.biometricChallenge.bind(this),
+    );
     routingManager.route(
       {
         path: '/biometrics',
@@ -92,32 +115,101 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     );
   }
 
+  async biometricChallenge(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { keyId } = call.request.params;
+    const clientId = call.request.context.clientId;
+    if (!clientId) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+    }
+    const key = await BiometricToken.getInstance().findOne(
+      { _id: keyId },
+      { readPreference: 'primary' },
+    );
+    if (!key || !key.user) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+    }
+    if (!this.grpcSdk.state) {
+      throw new GrpcError(status.UNAVAILABLE, BIOMETRIC_CHALLENGE_UNAVAILABLE);
+    }
+    const userId = typeof key.user === 'string' ? key.user : key.user._id;
+    const scopedQuery = {
+      tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
+      'data.keyId': keyId,
+      'data.clientId': clientId,
+    } as Query<Token>;
+    const challenge = await issueOrReuseBiometricLoginChallenge(keyId, clientId, {
+      usingLock: (resource, ttl, fn) => this.grpcSdk.state!.usingLock(resource, ttl, fn),
+      findNewest: async () => {
+        const existingTokens = await Token.getInstance().findMany(scopedQuery, {
+          sort: { createdAt: -1 },
+          limit: 1,
+          readPreference: 'primary',
+        });
+        return existingTokens[0] ?? null;
+      },
+      deleteScope: () => Token.getInstance().deleteMany(scopedQuery),
+      createToken: nextChallenge =>
+        Token.getInstance().create({
+          tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
+          user: userId,
+          data: {
+            clientId,
+            challenge: nextChallenge,
+            keyId,
+          },
+          token: uuid(),
+        }),
+    });
+    return {
+      challenge,
+    };
+  }
+
   async biometricLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
     const { encryptedData, keyId } = call.request.params;
+    const clientId = call.request.context.clientId;
+    if (!clientId) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+    }
     const config = ConfigController.getInstance().config;
+    const existingTokens = await Token.getInstance().findMany(
+      {
+        tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
+        'data.keyId': keyId,
+        'data.clientId': clientId,
+      } as Query<Token>,
+      { sort: { createdAt: -1 }, limit: 1, readPreference: 'primary' },
+    );
+    const existingToken = existingTokens[0];
+    if (!existingToken) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+    }
+    const tokenClientId = await consumeBiometricChallenge(existingToken, clientId, id =>
+      Token.getInstance().deleteOne({ _id: id }),
+    );
+    if (isBiometricChallengeExpired(existingToken.createdAt)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+    }
     const key = await BiometricToken.getInstance().findOne(
       { _id: keyId },
       { populate: ['user'], readPreference: 'primary' },
     );
-    if (!key) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Key not found!');
+    if (!key || !key.user) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
-    const verifier = crypto.createVerify('sha256WithRSAEncryption');
-    verifier.update(new Uint8Array(Buffer.from((key.user as User)._id)));
-    const cryptoKey = crypto.createPublicKey({
-      key: key.publicKey,
-      format: 'der',
-      type: 'spki',
-      encoding: 'base64',
-    });
-    const verificationResult = verifier.verify(cryptoKey, encryptedData, 'base64');
-    if (!verificationResult) {
+    if (
+      !verifyBiometricSignature(
+        key.publicKey,
+        existingToken.data.challenge,
+        encryptedData,
+      )
+    ) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     return TokenProvider.getInstance().provideUserTokens({
       user: key.user as User,
-      clientId: call.request.context.clientId,
+      clientId: tokenClientId,
       config,
     });
   }
@@ -168,28 +260,18 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       { readPreference: 'primary' },
     );
     if (!existingToken) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token!');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
-    if (existingToken.data.clientId !== clientId) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        "Responding client doesn't match requesting!",
-      );
-    }
-    await Token.getInstance().deleteMany({
-      tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
-      user: user._id,
-    });
-    const verifier = crypto.createVerify('sha256WithRSAEncryption');
-    verifier.update(new Uint8Array(Buffer.from(existingToken.data.challenge)));
-    const cryptoKey = crypto.createPublicKey({
-      key: existingToken.data.publicKey,
-      format: 'der',
-      type: 'spki',
-      encoding: 'base64',
-    });
-    const verificationResult = verifier.verify(cryptoKey, encryptedData, 'base64');
-    if (!verificationResult) {
+    await consumeBiometricChallenge(existingToken, clientId, id =>
+      Token.getInstance().deleteOne({ _id: id }),
+    );
+    if (
+      !verifyBiometricSignature(
+        existingToken.data.publicKey,
+        existingToken.data.challenge,
+        encryptedData,
+      )
+    ) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     const biometricToken = await BiometricToken.getInstance().create({

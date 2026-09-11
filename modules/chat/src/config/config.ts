@@ -37,5 +37,25 @@ export default {
       format: 'Boolean',
       default: false,
     },
+    redirect: {
+      login_uri: {
+        doc: 'Absolute login page URL for unauthenticated email-link clicks. The invitation hook URL is appended as redirectUri so after login the user returns to the hook authenticated. answer and invitationToken are also appended. Empty means email clicks fail until configured.',
+        format: 'String',
+        default: '',
+        optional: true,
+      },
+      accept_uri: {
+        doc: 'App destination after a successful accept. Supports {roomId} placeholder. Empty returns a JSON result instead of redirecting.',
+        format: 'String',
+        default: '',
+        optional: true,
+      },
+      decline_uri: {
+        doc: 'App destination after a successful decline. Supports {roomId} placeholder. Empty returns a JSON result instead of redirecting.',
+        format: 'String',
+        default: '',
+        optional: true,
+      },
+    },
   },
 };

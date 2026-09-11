@@ -53,6 +53,10 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
     }
   }
 
+  protected get configInitialized() {
+    return this._configInitialized;
+  }
+
   get name() {
     return this._moduleName;
   }
@@ -349,7 +353,10 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       );
 
       ConfigController.getInstance();
-      if (config) ConfigController.getInstance().config = config;
+      if (config) {
+        this.config.load(config);
+        ConfigController.getInstance().config = config;
+      }
       if (!config || config.active || !config.hasOwnProperty('active'))
         await this.onConfig();
     }
