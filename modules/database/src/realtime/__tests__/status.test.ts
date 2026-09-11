@@ -5,13 +5,31 @@ describe('buildRealtimeStatus', () => {
   it('reports unsupported, disabled, idle, live, and degraded states', () => {
     expect(
       buildRealtimeStatus({
-        engine: 'PostgreSQL',
+        engine: 'oracle',
         enabled: true,
         topologySupported: true,
         activeSchemaCount: 1,
         streamState: 'live',
       }).status,
     ).toBe('unsupported');
+    expect(
+      buildRealtimeStatus({
+        engine: 'PostgreSQL',
+        enabled: true,
+        topologySupported: true,
+        activeSchemaCount: 1,
+        streamState: 'live',
+      }).status,
+    ).toBe('live');
+    expect(
+      buildRealtimeStatus({
+        engine: 'mysql',
+        enabled: false,
+        topologySupported: true,
+        activeSchemaCount: 1,
+        streamState: 'live',
+      }).status,
+    ).toBe('disabled');
     expect(
       buildRealtimeStatus({
         engine: 'MongoDB',

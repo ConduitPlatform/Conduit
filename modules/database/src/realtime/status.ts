@@ -1,5 +1,13 @@
 import type { RealtimeStatus, RealtimeStatusCode } from './types.js';
 
+const SUPPORTED_REALTIME_ENGINES = new Set([
+  'MongoDB',
+  'PostgreSQL',
+  'mysql',
+  'mariadb',
+  'sqlite',
+]);
+
 export type RealtimeStatusInput = {
   engine: string;
   enabled: boolean;
@@ -13,12 +21,12 @@ export type RealtimeStatusInput = {
 };
 
 export function buildRealtimeStatus(input: RealtimeStatusInput): RealtimeStatus {
-  if (input.engine !== 'MongoDB') {
+  if (!SUPPORTED_REALTIME_ENGINES.has(input.engine)) {
     return {
       status: 'unsupported',
       engine: input.engine,
       activeSchemaCount: 0,
-      message: 'Live updates require MongoDB',
+      message: 'Live updates are not supported for this database engine',
     };
   }
   if (!input.enabled) {
@@ -35,7 +43,9 @@ export function buildRealtimeStatus(input: RealtimeStatusInput): RealtimeStatus 
       activeSchemaCount: input.activeSchemaCount,
       message:
         input.topologyMessage ??
-        'A replica set or sharded MongoDB deployment is required for live updates',
+        (input.engine === 'MongoDB'
+          ? 'A replica set or sharded MongoDB deployment is required for live updates'
+          : 'Database topology does not support live updates'),
     };
   }
   if (input.socketsEnabled === false) {

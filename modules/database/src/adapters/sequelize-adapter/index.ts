@@ -140,6 +140,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       this.models['_DeclaredSchema'].originalSchema.collectionName;
     for (const table of tableNames) {
       if (table === declaredSchemaTableName) continue;
+      if (table.startsWith('_cnd_')) continue;
       const tableInDeclaredSchemas = declaredSchemas.some(
         (declaredSchema: ConduitSchema) => {
           if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {

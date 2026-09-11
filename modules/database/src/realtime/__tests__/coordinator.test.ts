@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { describe, expect, it, jest } from '@jest/globals';
 import { ObjectId } from 'bson';
-import { MongoChangeStreamCoordinator } from '../MongoChangeStreamCoordinator.js';
+import { ChangeStreamCoordinator } from '../ChangeStreamCoordinator.js';
 import { RealtimeSubscriptionTracker } from '../subscriptions.js';
 import { roomsForPublicChange } from '../rooms.js';
 
@@ -70,17 +70,16 @@ function createCoordinator(overrides?: {
       can: async () => ({ allow: overrides?.allow !== false }),
     },
   };
-  const coordinator = new MongoChangeStreamCoordinator({
+  const coordinator = new ChangeStreamCoordinator({
     grpcSdk: grpcSdk as never,
     watch,
-    hello: async () => ({ setName: 'rs0' }),
+    checkTopology: async () => ({ supported: true }),
     getOptedInSchemas: () =>
       overrides?.schemas ?? [
         { name: 'Order', collectionName: 'orders', authorizationEnabled: false },
       ],
     subscriptions,
     enabled: () => true,
-    engine: () => 'MongoDB',
   });
   return {
     coordinator,
@@ -96,7 +95,7 @@ function createCoordinator(overrides?: {
   };
 }
 
-describe('MongoChangeStreamCoordinator', () => {
+describe('ChangeStreamCoordinator', () => {
   it('emits one normalized event to public rooms and ignores other collections', async () => {
     const { coordinator, stream, routerPush, adminPush, publish } = createCoordinator();
     await coordinator.reconcile();
@@ -185,6 +184,30 @@ describe('MongoChangeStreamCoordinator', () => {
     stream.emit('error', { code: 280, message: 'ChangeStreamHistoryLost' });
     await new Promise(resolve => setImmediate(resolve));
     expect(grpcSdk.state.clearKey).toHaveBeenCalled();
+    await coordinator.shutdown();
+  });
+
+  it('fans out SQL-shaped log events without document fields', async () => {
+    const { coordinator, stream, publish } = createCoordinator();
+    await coordinator.reconcile();
+    stream.emit('change', {
+      operationType: 'update',
+      ns: { coll: 'orders' },
+      documentKey: { _id: 'order-1' },
+      _id: '1842',
+      wallTime: new Date('2026-03-01T00:00:00.000Z'),
+      fullDocument: { secret: 'nope' },
+    });
+    await new Promise(resolve => setImmediate(resolve));
+    expect(publish).toHaveBeenCalledTimes(1);
+    const payload = JSON.parse(publish.mock.calls[0][1] as string);
+    expect(payload).toMatchObject({
+      operation: 'update',
+      schema: 'Order',
+      documentId: 'order-1',
+    });
+    expect(payload).not.toHaveProperty('fullDocument');
+    expect(JSON.stringify(payload)).not.toContain('nope');
     await coordinator.shutdown();
   });
 });
