@@ -23,6 +23,7 @@ import { FunctionController } from '../controllers/function.controller.js';
 import { CronQueueController } from '../controllers/cronQueue.controller.js';
 import { compileUserFunctionScript } from '../sandbox/functionSandbox.js';
 import {
+  getRepeatableCronJobId,
   normalizeCronInputs,
   parseCronJobFunctionId,
 } from '../controllers/cron.utils.js';
@@ -163,7 +164,7 @@ export class AdminHandlers {
       const functionIds = [
         ...new Set(
           repeatables
-            .map(job => parseCronJobFunctionId(job.id))
+            .map(job => parseCronJobFunctionId(getRepeatableCronJobId(job)))
             .filter((id): id is string => id !== undefined),
         ),
       ];
@@ -177,9 +178,10 @@ export class AdminHandlers {
           : [];
       const nameById = new Map(named.map(func => [func._id, func.name]));
       const jobs = repeatables.map(job => {
-        const functionId = parseCronJobFunctionId(job.id);
+        const cronJobId = getRepeatableCronJobId(job);
+        const functionId = parseCronJobFunctionId(cronJobId);
         return {
-          id: job.id ?? null,
+          id: cronJobId ?? job.id ?? null,
           key: job.key,
           name: job.name,
           pattern: job.pattern ?? null,

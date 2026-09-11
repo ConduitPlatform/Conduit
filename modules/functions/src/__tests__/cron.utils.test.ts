@@ -4,6 +4,7 @@ import {
   buildCronJobId,
   getCronPatternFromInputs,
   getCronTimezone,
+  getRepeatableCronJobId,
   normalizeCronInputs,
   parseCronJobFunctionId,
   planCronSync,
@@ -125,8 +126,8 @@ describe('cron.utils', () => {
 
       const afterApply = [
         {
-          id: first.toSchedule[0].jobId,
-          key: 'repeat:functions-cron-queue:cron-abc123',
+          // BullMQ 5: custom repeat.key is the stable id; `id` is often absent.
+          key: first.toSchedule[0].jobId,
           pattern: first.toSchedule[0].pattern,
           tz: first.toSchedule[0].timezone,
         },

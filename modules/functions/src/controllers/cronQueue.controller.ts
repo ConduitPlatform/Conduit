@@ -269,8 +269,13 @@ export class CronQueueController {
           CRON_JOB_NAME,
           { functionId: item.functionId },
           {
-            jobId: item.jobId,
-            repeat: { pattern: item.pattern, tz: item.timezone },
+            // BullMQ 5: getRepeatableJobs() no longer surfaces opts.jobId as `id`.
+            // Custom repeat.key = cron-{functionId} is the stable identity for sync/list.
+            repeat: {
+              pattern: item.pattern,
+              tz: item.timezone,
+              key: item.jobId,
+            },
             removeOnComplete: { age: 3600, count: 1000 },
             removeOnFail: { age: 24 * 3600 },
           },

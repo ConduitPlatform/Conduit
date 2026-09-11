@@ -15,6 +15,27 @@ export function parseCronJobFunctionId(jobId?: string | null): string | undefine
   return functionId.length > 0 ? functionId : undefined;
 }
 
+/** BullMQ 5 getRepeatableJobs() no longer returns `id`; use custom repeat.key = cron-{functionId}. */
+export function getRepeatableCronJobId(
+  repeatable: Pick<RepeatableJobView, 'id' | 'key'>,
+): string | undefined {
+  if (
+    typeof repeatable.id === 'string' &&
+    repeatable.id.startsWith(CRON_JOB_ID_PREFIX) &&
+    repeatable.id.length > CRON_JOB_ID_PREFIX.length
+  ) {
+    return repeatable.id;
+  }
+  if (
+    typeof repeatable.key === 'string' &&
+    repeatable.key.startsWith(CRON_JOB_ID_PREFIX) &&
+    repeatable.key.length > CRON_JOB_ID_PREFIX.length
+  ) {
+    return repeatable.key;
+  }
+  return undefined;
+}
+
 export function getCronPatternFromInputs(
   inputs?: IWebInputsInterface | null,
 ): string | undefined {
@@ -102,8 +123,12 @@ export function planCronSync(
   repeatables: RepeatableJobView[],
 ): CronSyncPlan {
   const expectedJobIds = new Set(cronFunctions.map(func => buildCronJobId(func._id)));
+  // BullMQ 5: identity is custom repeat.key (cron-{functionId}), not repeatable.id.
   const orphanKeys = repeatables
-    .filter(repeatable => !repeatable.id || !expectedJobIds.has(repeatable.id))
+    .filter(repeatable => {
+      const jobId = getRepeatableCronJobId(repeatable);
+      return !jobId || !expectedJobIds.has(jobId);
+    })
     .map(repeatable => repeatable.key);
 
   const toSchedule: CronSyncPlan['toSchedule'] = [];
@@ -125,7 +150,9 @@ export function planCronSync(
     }
 
     const jobId = buildCronJobId(func._id);
-    const existing = repeatables.find(repeatable => repeatable.id === jobId);
+    const existing = repeatables.find(
+      repeatable => getRepeatableCronJobId(repeatable) === jobId,
+    );
     if (existing && existing.pattern === pattern && existing.tz === timezone) {
       unchangedJobIds.push(jobId);
       continue;
