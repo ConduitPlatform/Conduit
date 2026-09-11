@@ -13,6 +13,9 @@ import {
   sourceExtractionWarnings,
   storagePeerWarnings,
   storageQueueWarnings,
+  configuredWorkloadWarnings,
+  countEmbeddingWorkloads,
+  isQueryableGenericSource,
 } from './operationalStatus.js';
 import { mapBackfillRun, mapEmbeddingConfig, parseSearchHits } from './protoMappers.js';
 
@@ -247,6 +250,143 @@ describe('storage extraction status warnings', () => {
       true,
     );
     assert.deepEqual(sourceExtractionWarnings({ kind: 'external', failedCount: 4 }), []);
+  });
+});
+
+describe('generic source operational readiness', () => {
+  const queryableConfig = {
+    _id: 'cfg1',
+    enabled: true,
+    schemaName: 'Article',
+    targetField: 'embedding',
+    dimensions: 3,
+    similarity: 'cosine',
+  };
+  const queryableIndex = {
+    field: 'embedding',
+    status: VectorIndexStatus.Ready,
+    queryable: true,
+    dimensions: 3,
+    similarity: 'cosine',
+  };
+  const pendingIndex = {
+    field: 'embedding',
+    status: VectorIndexStatus.Pending,
+    queryable: false,
+    dimensions: 3,
+    similarity: 'cosine',
+  };
+
+  it('uses a truth table for configured workload readiness including empty state', () => {
+    const cases: Array<{
+      name: string;
+      configs?: (typeof queryableConfig)[];
+      indexes?: (typeof queryableIndex)[];
+      sources?: Array<{ state: string; chunkIndexStatus?: string }>;
+      warning?: RegExp | null;
+    }> = [
+      { name: 'no configured workload', warning: null },
+      {
+        name: 'disabled sources only',
+        sources: [{ state: 'disabled', chunkIndexStatus: VectorIndexStatus.Ready }],
+        warning: null,
+      },
+      {
+        name: 'revoked sources only',
+        sources: [{ state: 'revoked', chunkIndexStatus: VectorIndexStatus.Ready }],
+        warning: null,
+      },
+      {
+        name: 'ready queryable source',
+        sources: [{ state: 'ready', chunkIndexStatus: VectorIndexStatus.Ready }],
+        warning: null,
+      },
+      {
+        name: 'ready source without index status',
+        sources: [{ state: 'ready' }],
+        warning: null,
+      },
+      {
+        name: 'ready unqueryable source',
+        sources: [{ state: 'ready', chunkIndexStatus: VectorIndexStatus.Pending }],
+        warning: /ready generic source/,
+      },
+      {
+        name: 'pending source',
+        sources: [{ state: 'pending' }],
+        warning: /pending/,
+      },
+      {
+        name: 'failed source',
+        sources: [{ state: 'failed' }],
+        warning: /failed/,
+      },
+      {
+        name: 'queryable schema config',
+        configs: [queryableConfig],
+        indexes: [queryableIndex],
+        warning: null,
+      },
+      {
+        name: 'unqueryable schema config',
+        configs: [queryableConfig],
+        indexes: [pendingIndex],
+        warning: /not queryable/,
+      },
+      {
+        name: 'unqueryable config with queryable source',
+        configs: [queryableConfig],
+        indexes: [pendingIndex],
+        sources: [{ state: 'ready', chunkIndexStatus: VectorIndexStatus.Ready }],
+        warning: null,
+      },
+    ];
+    for (const item of cases) {
+      const warnings = configuredWorkloadWarnings({
+        enabledConfigs: item.configs ?? [],
+        indexesForConfig: () => item.indexes ?? [],
+        sources: item.sources ?? [],
+      });
+      if (item.warning) {
+        assert.equal(
+          warnings.some(warning => item.warning!.test(warning)),
+          true,
+          item.name,
+        );
+      } else {
+        assert.deepEqual(warnings, [], item.name);
+      }
+    }
+  });
+
+  it('counts source states without treating disabled or revoked as queryable', () => {
+    const counts = countEmbeddingWorkloads({
+      configs: [{ enabled: true }, { enabled: false }],
+      sources: [
+        { state: 'ready', chunkIndexStatus: VectorIndexStatus.Ready },
+        { state: 'ready', chunkIndexStatus: VectorIndexStatus.Pending },
+        { state: 'pending' },
+        { state: 'failed' },
+        { state: 'disabled', chunkIndexStatus: VectorIndexStatus.Ready },
+        { state: 'revoked', chunkIndexStatus: VectorIndexStatus.Ready },
+      ],
+    });
+    assert.equal(counts.configCount, 2);
+    assert.equal(counts.enabledConfigCount, 1);
+    assert.equal(counts.sourceCount, 6);
+    assert.equal(counts.readySourceCount, 2);
+    assert.equal(counts.queryableSourceCount, 1);
+    assert.equal(counts.pendingSourceCount, 1);
+    assert.equal(counts.failedSourceCount, 1);
+    assert.equal(counts.disabledSourceCount, 1);
+    assert.equal(counts.revokedSourceCount, 1);
+    assert.equal(
+      isQueryableGenericSource({
+        state: 'disabled',
+        chunkIndexStatus: VectorIndexStatus.Ready,
+      }),
+      false,
+    );
   });
 });
 

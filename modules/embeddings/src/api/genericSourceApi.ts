@@ -227,7 +227,7 @@ export interface GenericSourceApiDeps {
   cancelStorageJobs?: (sourceId: string) => Promise<number>;
   storageAvailable?: () => boolean;
   getStorageAuthorization?: () => Promise<StorageAuthorizationState>;
-  getStorageQueue?: () => Promise<{
+  getStorageQueue?: (sourceId?: string) => Promise<{
     waiting: number;
     active: number;
     completed: number;
@@ -466,7 +466,7 @@ export class GenericSourceApi {
     const source = await this.requireSource(id);
     const counts = await this.documentStatusCounts(source._id);
     const extractionQueue = this.deps.getStorageQueue
-      ? await this.deps.getStorageQueue()
+      ? await this.deps.getStorageQueue(source._id)
       : undefined;
     const storageAuthorization =
       source.kind === 'conduit-storage'

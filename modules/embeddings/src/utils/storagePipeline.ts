@@ -88,6 +88,10 @@ export interface StoragePipelineDeps {
   canReadFile?: (fileId: string, subject: string) => Promise<boolean>;
   getStorageAuthorization?: () => Promise<StorageAuthorizationState>;
   enqueue: (jobs: StorageIngestJobData[]) => Promise<number>;
+  recoverStorageJobs?: (
+    sourceId: string,
+    planned: StorageIngestJobData[],
+  ) => Promise<{ recovered: number; discarded: number }>;
   api: GenericSourceApi;
 }
 
@@ -193,8 +197,27 @@ export class StorageExtractionPipeline {
         });
       }
     }
-    const queued = await this.deps.enqueue(dedupeStorageIngestJobs(jobs));
-    return { queued, scanned, warnings: [] };
+    const unique = dedupeStorageIngestJobs(jobs);
+    const recovery = await this.deps.recoverStorageJobs?.(source._id, unique);
+    const queued = await this.deps.enqueue(unique);
+    const warnings: string[] = [];
+    if (recovery?.recovered) {
+      warnings.push(
+        `Recovered ${recovery.recovered} retryable failed extraction job(s) for this source`,
+      );
+    }
+    if (recovery?.discarded) {
+      warnings.push(
+        `Discarded ${recovery.discarded} obsolete failed extraction job(s) for this source`,
+      );
+    }
+    return {
+      queued,
+      scanned,
+      warnings,
+      recovered: recovery?.recovered ?? 0,
+      discarded: recovery?.discarded ?? 0,
+    };
   }
 
   async processJob(job: StorageIngestJobData): Promise<void> {

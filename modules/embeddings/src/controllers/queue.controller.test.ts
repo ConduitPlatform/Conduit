@@ -449,4 +449,125 @@ describe('embedding queue status and backfill jobs', () => {
       metrics.restore();
     }
   });
+
+  it('remediates only failed jobs for one source and leaves current unresolved failures', async () => {
+    const metrics = withMetrics();
+    try {
+      const { controller, storageQueue } = createController();
+      const planned = {
+        kind: 'ingest' as const,
+        sourceId: 'src-a',
+        fileId: 'file-1',
+        contentVersion: 'v2',
+        reason: 'reconcile' as const,
+      };
+      const stale = {
+        kind: 'ingest' as const,
+        sourceId: 'src-a',
+        fileId: 'file-1',
+        contentVersion: 'v1',
+        reason: 'ready' as const,
+      };
+      const currentFailed = {
+        kind: 'ingest' as const,
+        sourceId: 'src-a',
+        fileId: 'file-1',
+        contentVersion: 'v2',
+        reason: 'update' as const,
+      };
+      const unresolved = {
+        kind: 'ingest' as const,
+        sourceId: 'src-a',
+        fileId: 'file-2',
+        contentVersion: 'v9',
+        reason: 'ready' as const,
+      };
+      const otherSource = {
+        kind: 'ingest' as const,
+        sourceId: 'src-b',
+        fileId: 'file-1',
+        contentVersion: 'v1',
+        reason: 'ready' as const,
+      };
+      const completedSameFile = {
+        kind: 'ingest' as const,
+        sourceId: 'src-a',
+        fileId: 'file-1',
+        contentVersion: 'v0',
+        reason: 'ready' as const,
+      };
+      for (const job of [
+        stale,
+        currentFailed,
+        unresolved,
+        otherSource,
+        completedSameFile,
+      ]) {
+        const jobId = storageIngestJobId(job);
+        await storageQueue.add(jobId, job, { jobId });
+      }
+      storageQueue.markState(storageIngestJobId(stale), 'failed');
+      storageQueue.markState(storageIngestJobId(currentFailed), 'failed');
+      storageQueue.markState(storageIngestJobId(unresolved), 'failed');
+      storageQueue.markState(storageIngestJobId(otherSource), 'failed');
+      storageQueue.markState(storageIngestJobId(completedSameFile), 'completed');
+
+      const remediations = await controller.recoverStorageJobsForReconcile('src-a', [
+        planned,
+      ]);
+      assert.equal(remediations.recovered, 1);
+      assert.equal(remediations.discarded, 1);
+      assert.equal(
+        storageQueue.jobs.some(job => job.opts?.jobId === storageIngestJobId(stale)),
+        false,
+      );
+      assert.equal(
+        storageQueue.jobs.some(
+          job => job.opts?.jobId === storageIngestJobId(currentFailed),
+        ),
+        false,
+      );
+      assert.equal(
+        storageQueue.jobs.some(job => job.opts?.jobId === storageIngestJobId(unresolved)),
+        true,
+      );
+      assert.equal(
+        storageQueue.jobs.some(
+          job => job.opts?.jobId === storageIngestJobId(otherSource),
+        ),
+        true,
+      );
+      assert.equal(
+        storageQueue.jobs.some(
+          job => job.opts?.jobId === storageIngestJobId(completedSameFile),
+        ),
+        true,
+      );
+
+      assert.equal(await controller.addStorageJobs([planned], 3), 1);
+      const sourceA = await controller.getStorageQueueCounts('src-a');
+      const sourceB = await controller.getStorageQueueCounts('src-b');
+      assert.equal(sourceA.failed, 1);
+      assert.equal(sourceA.waiting, 1);
+      assert.equal(sourceA.completed, 1);
+      assert.equal(sourceB.failed, 1);
+      assert.equal(sourceB.waiting, 0);
+
+      assert.equal(await controller.clearObsoleteStorageFailures('src-a', 'file-1'), 0);
+      assert.equal((await controller.getStorageQueueCounts('src-a')).failed, 1);
+      assert.equal((await controller.getStorageQueueCounts('src-b')).failed, 1);
+      assert.equal(
+        metrics.seen.some(item => item.name === EMBEDDING_METRICS.storageRecovered),
+        true,
+      );
+      assert.equal(
+        metrics.seen.some(item => item.name === EMBEDDING_METRICS.storageDiscarded),
+        true,
+      );
+      assert.equal(JSON.stringify(metrics.seen).includes('file-1'), false);
+      assert.equal(JSON.stringify(metrics.seen).includes('src-a'), false);
+    } finally {
+      metrics.restore();
+    }
+  });
 });

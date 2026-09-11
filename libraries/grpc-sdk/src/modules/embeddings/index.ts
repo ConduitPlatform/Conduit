@@ -49,6 +49,15 @@ export interface EmbeddingsStatus {
   backfillQueue: QueueCounts;
   storageQueue?: QueueCounts;
   warnings: string[];
+  configCount?: number;
+  enabledConfigCount?: number;
+  sourceCount?: number;
+  readySourceCount?: number;
+  pendingSourceCount?: number;
+  failedSourceCount?: number;
+  disabledSourceCount?: number;
+  revokedSourceCount?: number;
+  queryableSourceCount?: number;
 }
 
 export interface BackfillRunRecord {
@@ -276,6 +285,15 @@ export class EmbeddingsProvider extends ConduitModule<
       backfillQueue: res.backfillQueue!,
       storageQueue: res.storageQueue,
       warnings: res.warnings,
+      configCount: res.configCount,
+      enabledConfigCount: res.enabledConfigCount,
+      sourceCount: res.sourceCount,
+      readySourceCount: res.readySourceCount,
+      pendingSourceCount: res.pendingSourceCount,
+      failedSourceCount: res.failedSourceCount,
+      disabledSourceCount: res.disabledSourceCount,
+      revokedSourceCount: res.revokedSourceCount,
+      queryableSourceCount: res.queryableSourceCount,
     }));
   }
 
@@ -505,6 +523,8 @@ export class EmbeddingsProvider extends ConduitModule<
     queued: number;
     scanned: number;
     warnings: string[];
+    recovered?: number;
+    discarded?: number;
   }> {
     return this.client!.reconcileSource({ id });
   }

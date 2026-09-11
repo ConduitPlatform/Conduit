@@ -122,6 +122,20 @@ export function parseStorageIngestJob(value: unknown): ParsedStorageIngestJob {
   return { ok: true, data };
 }
 
+export function storageJobDocumentKey(data: StorageIngestJobData): string | undefined {
+  if (data.fileId) return `${data.sourceId}:file:${data.fileId}`;
+  if (data.fileIds?.length) {
+    return `${data.sourceId}:files:${data.fileIds.toSorted().join(',')}`;
+  }
+  if (data.kind === 'deleteFolder' && data.container && data.folder) {
+    return `${data.sourceId}:folder:${data.container}:${data.folder}`;
+  }
+  if (data.kind === 'deleteContainer' && data.container) {
+    return `${data.sourceId}:container:${data.container}`;
+  }
+  return undefined;
+}
+
 export function dedupeStorageIngestJobs(
   jobs: StorageIngestJobData[],
 ): StorageIngestJobData[] {

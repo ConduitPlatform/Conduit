@@ -116,6 +116,7 @@ function createApi(overrides?: {
     backfill: QueueJobCounts;
     storage?: QueueJobCounts;
   };
+  listEmbeddingSources?: EmbeddingsApiDeps['listEmbeddingSources'];
 }) {
   const configs = [...(overrides?.configs ?? [])];
   const runs = [...(overrides?.runs ?? [])];
@@ -246,6 +247,7 @@ function createApi(overrides?: {
     embed:
       overrides?.embed ??
       (async () => Array.from({ length: 3 }, (_, index) => index + 0.1)),
+    listEmbeddingSources: overrides?.listEmbeddingSources,
   };
   return {
     api: new EmbeddingsApi(deps),
@@ -1492,5 +1494,62 @@ describe('typed embeddings API handlers', () => {
       (err: unknown) =>
         err instanceof GrpcError && err.code === status.FAILED_PRECONDITION,
     );
+  });
+
+  it('treats a ready queryable generic source as overall index readiness', async () => {
+    const pendingIndex = {
+      field: 'embedding',
+      name: 'embedding_vector',
+      queryable: false,
+      status: VectorIndexStatus.Pending,
+      dimensions: 3,
+      similarity: VectorSimilarity.Cosine,
+    };
+    const emptyQueue = {
+      generation: emptyCounts(),
+      backfill: emptyCounts(),
+      storage: emptyCounts(),
+    };
+    const idle = await createApi({
+      queue: emptyQueue,
+    }).api.getStatus();
+    assert.equal(idle.ready, true);
+    assert.equal(idle.configCount, 0);
+    assert.equal(idle.sourceCount, 0);
+    assert.equal(idle.queryableSourceCount, 0);
+
+    const sourceReady = await createApi({
+      configs: [enabledConfig],
+      indexes: [pendingIndex],
+      queue: emptyQueue,
+      listEmbeddingSources: async () => [
+        { state: 'ready', chunkIndexStatus: VectorIndexStatus.Ready },
+        { state: 'disabled', chunkIndexStatus: VectorIndexStatus.Ready },
+        { state: 'revoked' },
+      ],
+    }).api.getStatus();
+    assert.equal(sourceReady.ready, true);
+    assert.equal(sourceReady.enabledConfigCount, 1);
+    assert.equal(sourceReady.sourceCount, 3);
+    assert.equal(sourceReady.readySourceCount, 1);
+    assert.equal(sourceReady.queryableSourceCount, 1);
+    assert.equal(sourceReady.disabledSourceCount, 1);
+    assert.equal(sourceReady.revokedSourceCount, 1);
+    assert.equal(
+      sourceReady.warnings.some(warning => /not queryable/.test(warning)),
+      false,
+    );
+
+    const disabledOnly = await createApi({
+      queue: emptyQueue,
+      listEmbeddingSources: async () => [
+        { state: 'disabled' },
+        { state: 'revoked', chunkIndexStatus: VectorIndexStatus.Ready },
+      ],
+    }).api.getStatus();
+    assert.equal(disabledOnly.ready, true);
+    assert.equal(disabledOnly.queryableSourceCount, 0);
+    assert.equal(disabledOnly.disabledSourceCount, 1);
+    assert.equal(disabledOnly.revokedSourceCount, 1);
   });
 });

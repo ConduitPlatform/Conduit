@@ -5,6 +5,7 @@ import {
   dedupeStorageIngestJobs,
   parseStorageIngestJob,
   storageIngestJobId,
+  storageJobDocumentKey,
   type StorageIngestJobData,
 } from './storageJobs.js';
 
@@ -70,6 +71,29 @@ describe('storage ingest jobs', () => {
       unicodeIngest,
     );
     assert.doesNotMatch(uuidIngest, /^Article__/);
+  });
+
+  it('keys failed jobs by source and document without using the content version', () => {
+    assert.equal(
+      storageJobDocumentKey(ingest({ fileId: FILE_UUID, contentVersion: 'v1' })),
+      storageJobDocumentKey(ingest({ fileId: FILE_UUID, contentVersion: 'v2' })),
+    );
+    assert.notEqual(
+      storageJobDocumentKey(ingest({ fileId: FILE_UUID })),
+      storageJobDocumentKey({
+        kind: 'ingest',
+        sourceId: 'src2',
+        fileId: FILE_UUID,
+      }),
+    );
+    assert.equal(
+      storageJobDocumentKey({
+        kind: 'delete',
+        sourceId: 'src1',
+        fileId: FILE_UUID,
+      }),
+      `src1:file:${FILE_UUID}`,
+    );
   });
 
   it('dedupes duplicate events and keeps distinct versions, deletes, and file sets', () => {

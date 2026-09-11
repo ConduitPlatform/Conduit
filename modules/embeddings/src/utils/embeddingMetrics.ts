@@ -11,6 +11,8 @@ export const EMBEDDING_METRICS = {
   storageExtracted: 'storage_extracted_total',
   storageSkipped: 'storage_skipped_total',
   storageFailed: 'storage_extraction_failed_total',
+  storageRecovered: 'storage_extraction_recovered_total',
+  storageDiscarded: 'storage_extraction_discarded_total',
 } as const;
 
 export type EmbeddingMetric = keyof typeof EMBEDDING_METRICS;

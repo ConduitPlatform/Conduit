@@ -90,6 +90,15 @@ message GetStatusResponse {
   QueueCounts backfillQueue = 5;
   repeated string warnings = 6;
   optional QueueCounts storageQueue = 7;
+  optional int32 configCount = 8;
+  optional int32 enabledConfigCount = 9;
+  optional int32 sourceCount = 10;
+  optional int32 readySourceCount = 11;
+  optional int32 pendingSourceCount = 12;
+  optional int32 failedSourceCount = 13;
+  optional int32 disabledSourceCount = 14;
+  optional int32 revokedSourceCount = 15;
+  optional int32 queryableSourceCount = 16;
 }
 
 message BackfillRun {
@@ -278,6 +287,8 @@ message ReconcileSourceResponse {
   int32 queued = 1;
   int32 scanned = 2;
   repeated string warnings = 3;
+  optional int32 recovered = 4;
+  optional int32 discarded = 5;
 }
 
 message IngestChunk {

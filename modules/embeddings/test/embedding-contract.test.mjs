@@ -115,6 +115,14 @@ test('grpc-sdk embeddings client maps typed proto messages instead of JSON-strin
     protoSource,
     /message GetStatusResponse \{\n  bool enabled = 1;\n  bool ready = 2;\n  VectorCapabilities capabilities = 3;/,
   );
+  assert.match(protoSource, /optional int32 configCount = 8;/);
+  assert.match(protoSource, /optional int32 queryableSourceCount = 16;/);
+  assert.match(
+    protoSource,
+    /message ReconcileSourceResponse \{[\s\S]*optional int32 recovered = 4;[\s\S]*optional int32 discarded = 5;/,
+  );
+  assert.match(sdkSource, /sourceCount\?: number;/);
+  assert.match(sdkSource, /queryableSourceCount\?: number;/);
   assert.match(
     sdkSource,
     /export interface EmbeddingConfigRecord \{\n  id: string;[\s\S]*model: string;[\s\S]*dimensions: number;/,

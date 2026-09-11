@@ -1,4 +1,8 @@
-import { GrpcError, VectorCapabilities } from '@conduitplatform/grpc-sdk';
+import {
+  GrpcError,
+  VectorCapabilities,
+  VectorIndexStatus,
+} from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
   assertBackfillExecutable,
@@ -256,4 +260,129 @@ export function isEmbeddingsReady(args: {
   warnings: string[];
 }): boolean {
   return args.moduleEnabled && args.warnings.length === 0;
+}
+
+export interface EmbeddingSourceWorkload {
+  state: string;
+  chunkIndexStatus?: string;
+}
+
+export interface EmbeddingWorkloadCounts {
+  configCount: number;
+  enabledConfigCount: number;
+  sourceCount: number;
+  readySourceCount: number;
+  pendingSourceCount: number;
+  failedSourceCount: number;
+  disabledSourceCount: number;
+  revokedSourceCount: number;
+  queryableSourceCount: number;
+}
+
+export function emptyWorkloadCounts(): EmbeddingWorkloadCounts {
+  return {
+    configCount: 0,
+    enabledConfigCount: 0,
+    sourceCount: 0,
+    readySourceCount: 0,
+    pendingSourceCount: 0,
+    failedSourceCount: 0,
+    disabledSourceCount: 0,
+    revokedSourceCount: 0,
+    queryableSourceCount: 0,
+  };
+}
+
+export function isQueryableGenericSource(source: EmbeddingSourceWorkload): boolean {
+  if (source.state !== 'ready') return false;
+  const indexStatus = source.chunkIndexStatus;
+  if (!indexStatus) return true;
+  return indexStatus === VectorIndexStatus.Ready || indexStatus === 'ready';
+}
+
+export function countEmbeddingWorkloads(args: {
+  configs: ReadonlyArray<{ enabled?: boolean }>;
+  sources: readonly EmbeddingSourceWorkload[];
+}): EmbeddingWorkloadCounts {
+  const counts = emptyWorkloadCounts();
+  counts.configCount = args.configs.length;
+  for (const config of args.configs) {
+    if (config.enabled !== false) counts.enabledConfigCount += 1;
+  }
+  counts.sourceCount = args.sources.length;
+  for (const source of args.sources) {
+    switch (source.state) {
+      case 'ready':
+        counts.readySourceCount += 1;
+        if (isQueryableGenericSource(source)) counts.queryableSourceCount += 1;
+        break;
+      case 'pending':
+        counts.pendingSourceCount += 1;
+        break;
+      case 'failed':
+        counts.failedSourceCount += 1;
+        break;
+      case 'disabled':
+        counts.disabledSourceCount += 1;
+        break;
+      case 'revoked':
+        counts.revokedSourceCount += 1;
+        break;
+      default:
+        break;
+    }
+  }
+  return counts;
+}
+
+export function configuredWorkloadWarnings(args: {
+  enabledConfigs: readonly BackfillConfigGate[];
+  indexesForConfig: (config: BackfillConfigGate) => readonly VectorIndexGate[];
+  sources: readonly EmbeddingSourceWorkload[];
+}): string[] {
+  const queryableConfigs = args.enabledConfigs.filter(config => {
+    const targetField = config.targetField;
+    if (!targetField) return false;
+    const contract = embeddingIndexContractFromConfig(config);
+    const index = findTargetVectorIndex(
+      args.indexesForConfig(config),
+      targetField,
+      contract,
+    );
+    return Boolean(contract && isEmbeddingVectorIndexQueryable(index));
+  });
+  const queryableSources = args.sources.filter(isQueryableGenericSource);
+  if (queryableConfigs.length > 0 || queryableSources.length > 0) return [];
+
+  const pendingSources = args.sources.filter(source => source.state === 'pending').length;
+  const failedSources = args.sources.filter(source => source.state === 'failed').length;
+  const readyUnqueryable = args.sources.filter(
+    source => source.state === 'ready' && !isQueryableGenericSource(source),
+  ).length;
+  const hasConfiguredWorkload =
+    args.enabledConfigs.length > 0 ||
+    pendingSources > 0 ||
+    failedSources > 0 ||
+    readyUnqueryable > 0;
+  if (!hasConfiguredWorkload) return [];
+
+  const warnings: string[] = [];
+  for (const config of args.enabledConfigs) {
+    warnings.push(...indexReadinessWarnings([config], args.indexesForConfig(config)));
+  }
+  if (readyUnqueryable > 0) {
+    warnings.push(
+      `${readyUnqueryable} ready generic source(s) do not have a queryable chunk index`,
+    );
+  }
+  if (!warnings.length && pendingSources > 0) {
+    warnings.push(`${pendingSources} generic source(s) are pending`);
+  }
+  if (!warnings.length && failedSources > 0) {
+    warnings.push(`${failedSources} generic source(s) failed`);
+  }
+  if (!warnings.length) {
+    warnings.push('No queryable embedding config or generic source');
+  }
+  return warnings;
 }

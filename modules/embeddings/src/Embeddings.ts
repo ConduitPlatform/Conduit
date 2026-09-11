@@ -570,6 +570,13 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
       getQueueStatus: () => this.queueController.getQueueStatus(),
       enqueueBackfill: job => this.queueController.addBackfillControllerJob(job),
       storageAvailable: () => Boolean(this.grpcSdk.storage),
+      listEmbeddingSources: async () => {
+        const sources = await EmbeddingSource.getInstance().findMany({});
+        return sources.map(source => ({
+          state: source.state,
+          chunkIndexStatus: source.chunkIndexStatus,
+        }));
+      },
       reconcileStorageSource: (sourceId, caller) =>
         this.ensureStoragePipeline().reconcileSource(sourceId, caller),
       embed: (input, provider, model) =>
@@ -661,8 +668,7 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
           this.queueController.cancelStorageJobsForSource(sourceId),
         storageAvailable: () => Boolean(this.grpcSdk.storage),
         getStorageAuthorization: () => this.resolveStorageAuthorization(),
-        getStorageQueue: async () =>
-          (await this.queueController.getQueueStatus()).storage,
+        getStorageQueue: sourceId => this.queueController.getStorageQueueCounts(sourceId),
       },
     });
   }
@@ -852,6 +858,8 @@ export default class EmbeddingsModule extends ManagedModule<Config> {
           jobs,
           storageExtractionLimits(this.currentConfig()).queueAttempts,
         ),
+      recoverStorageJobs: (sourceId, planned) =>
+        this.queueController.recoverStorageJobsForReconcile(sourceId, planned),
       api: this.requireGeneric(),
     });
   }

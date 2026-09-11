@@ -22,6 +22,7 @@ import {
   dedupeStorageIngestJobs,
   parseStorageIngestJob,
   storageIngestJobId,
+  storageJobDocumentKey,
   type StorageIngestJobData,
 } from '../utils/storageJobs.js';
 
@@ -49,8 +50,18 @@ export interface EmbeddingQueueStatus {
 type QueueJobHandle = {
   getState: () => Promise<string>;
   remove: () => Promise<unknown>;
-  data?: { sourceId?: string };
+  data?: Record<string, unknown>;
 };
+
+const STORAGE_QUEUE_JOB_TYPES = [
+  'waiting',
+  'wait',
+  'active',
+  'delayed',
+  'paused',
+  'failed',
+  'completed',
+];
 
 type QueueLike = {
   add: (
@@ -263,13 +274,19 @@ export class QueueController {
     this.storageWorkerConnection = this.createConnection();
     const worker = new this.WorkerImpl(
       'embeddings-storage-queue',
-      job => {
+      async job => {
         const parsed = parseStorageIngestJob(job.data);
         if (!parsed.ok) {
           incrementEmbeddingMetric('malformedJobs');
-          return Promise.resolve();
+          return;
         }
-        return processor(parsed.data);
+        await processor(parsed.data);
+        if (parsed.data.fileId) {
+          await this.clearObsoleteStorageFailures(
+            parsed.data.sourceId,
+            parsed.data.fileId,
+          );
+        }
       },
       {
         concurrency,
@@ -442,10 +459,7 @@ export class QueueController {
     if (!unique.length) return 0;
     const enqueueable: StorageIngestJobData[] = [];
     for (const job of unique) {
-      const decision = await resolveExistingQueueJob(
-        this.storageQueue,
-        storageIngestJobId(job),
-      );
+      const decision = await resolveExistingStorageJob(this.storageQueue, job);
       if (decision === 'skip') continue;
       enqueueable.push(job);
     }
@@ -481,7 +495,7 @@ export class QueueController {
       return 0;
     }
     const jobId = storageIngestJobId(parsed.data);
-    const decision = await resolveExistingQueueJob(this.storageQueue, jobId);
+    const decision = await resolveExistingStorageJob(this.storageQueue, parsed.data);
     if (decision === 'skip') return 0;
     try {
       await this.storageQueue.add(
@@ -496,8 +510,98 @@ export class QueueController {
       return 1;
     } catch (err) {
       if (!isDuplicateJobError(err)) throw err;
-      return 0;
+      const retry = await resolveExistingStorageJob(this.storageQueue, parsed.data);
+      if (retry === 'skip') return 0;
+      try {
+        await this.storageQueue.add(
+          jobId,
+          { ...parsed.data },
+          {
+            jobId,
+            attempts,
+            backoff: { type: 'exponential', delay: 1000 },
+          },
+        );
+        return 1;
+      } catch (retryErr) {
+        if (!isDuplicateJobError(retryErr)) throw retryErr;
+        return 0;
+      }
     }
+  }
+
+  async getStorageQueueCounts(sourceId?: string): Promise<QueueJobCounts> {
+    if (!sourceId) return this.getJobCounts('storage');
+    const counts: QueueJobCounts = {
+      waiting: 0,
+      active: 0,
+      completed: 0,
+      failed: 0,
+      delayed: 0,
+      paused: 0,
+    };
+    for (const job of await listStorageQueueJobs(this.storageQueue)) {
+      const parsed = parseStorageIngestJob(job.data);
+      if (!parsed.ok || parsed.data.sourceId !== sourceId) continue;
+      const state = normalizeStorageJobState(await job.getState());
+      if (state in counts) counts[state as keyof QueueJobCounts] += 1;
+    }
+    return counts;
+  }
+
+  async recoverStorageJobsForReconcile(
+    sourceId: string,
+    planned: StorageIngestJobData[],
+  ): Promise<{ recovered: number; discarded: number }> {
+    const unique = dedupeStorageIngestJobs(planned);
+    const plannedIds = new Set(unique.map(job => storageIngestJobId(job)));
+    const plannedDocuments = new Set(
+      unique
+        .map(job => storageJobDocumentKey(job))
+        .filter((key): key is string => Boolean(key)),
+    );
+    let recovered = 0;
+    let discarded = 0;
+    for (const job of await listStorageQueueJobs(this.storageQueue)) {
+      const parsed = parseStorageIngestJob(job.data);
+      if (!parsed.ok || parsed.data.sourceId !== sourceId) continue;
+      const state = normalizeStorageJobState(await job.getState());
+      if (state !== 'failed') continue;
+      const identity = storageIngestJobId(parsed.data);
+      const documentKey = storageJobDocumentKey(parsed.data);
+      const retryable = plannedIds.has(identity);
+      const obsolete =
+        !retryable && Boolean(documentKey && plannedDocuments.has(documentKey));
+      if (!retryable && !obsolete) continue;
+      try {
+        await job.remove();
+      } catch {
+        continue;
+      }
+      if (retryable) recovered += 1;
+      else discarded += 1;
+    }
+    recordStorageJobRemediation(recovered, discarded);
+    return { recovered, discarded };
+  }
+
+  async clearObsoleteStorageFailures(sourceId: string, fileId: string): Promise<number> {
+    let discarded = 0;
+    for (const job of await listStorageQueueJobs(this.storageQueue)) {
+      const parsed = parseStorageIngestJob(job.data);
+      if (!parsed.ok || parsed.data.sourceId !== sourceId) continue;
+      if (parsed.data.fileId !== fileId) continue;
+      const state = normalizeStorageJobState(await job.getState());
+      if (state !== 'failed') continue;
+      try {
+        await job.remove();
+      } catch {
+        continue;
+      }
+      discarded += 1;
+    }
+    if (discarded) recordStorageJobRemediation(0, discarded);
+    return discarded;
   }
 
   async cancelStorageJobsForSource(sourceId: string): Promise<number> {
@@ -621,4 +725,57 @@ async function resolveExistingQueueJob(
     return 'skip';
   }
   return 'enqueue';
+}
+
+function normalizeStorageJobState(state: string): string {
+  return state === 'wait' ? 'waiting' : state;
+}
+
+async function listStorageQueueJobs(queue: QueueLike): Promise<QueueJobHandle[]> {
+  return (await queue.getJobs?.(STORAGE_QUEUE_JOB_TYPES)) ?? [];
+}
+
+async function resolveExistingStorageJob(
+  queue: QueueLike,
+  data: StorageIngestJobData,
+): Promise<'enqueue' | 'skip'> {
+  const jobId = storageIngestJobId(data);
+  const matches: QueueJobHandle[] = [];
+  if (queue.getJob) {
+    const existing = await queue.getJob(jobId);
+    if (existing) matches.push(existing);
+  }
+  for (const job of await listStorageQueueJobs(queue)) {
+    const parsed = parseStorageIngestJob(job.data);
+    if (!parsed.ok || storageIngestJobId(parsed.data) !== jobId) continue;
+    matches.push(job);
+  }
+  let inFlight = false;
+  const removable: QueueJobHandle[] = [];
+  for (const existing of matches) {
+    const state = normalizeStorageJobState(await existing.getState());
+    if (isInFlightQueueJobState(state)) {
+      inFlight = true;
+      continue;
+    }
+    if (shouldReplaceRetainedQueueJob(state)) removable.push(existing);
+  }
+  if (inFlight) return 'skip';
+  for (const existing of removable) {
+    try {
+      await existing.remove();
+    } catch {
+      // Duplicate handles or an already-removed retained job must not block enqueue.
+    }
+  }
+  return 'enqueue';
+}
+
+function recordStorageJobRemediation(recovered: number, discarded: number) {
+  incrementEmbeddingMetric('storageRecovered', recovered);
+  incrementEmbeddingMetric('storageDiscarded', discarded);
+  if (!recovered && !discarded) return;
+  ConduitGrpcSdk.Logger?.info(
+    `Storage extraction reconcile recovered ${recovered} and discarded ${discarded} failed jobs`,
+  );
 }

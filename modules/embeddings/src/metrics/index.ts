@@ -71,4 +71,18 @@ export default {
       help: 'Tracks Storage extraction jobs that exhausted retries',
     },
   },
+  storageRecovered: {
+    type: MetricType.Counter,
+    config: {
+      name: 'storage_extraction_recovered_total',
+      help: 'Tracks failed Storage jobs recovered for retry during source reconcile',
+    },
+  },
+  storageDiscarded: {
+    type: MetricType.Counter,
+    config: {
+      name: 'storage_extraction_discarded_total',
+      help: 'Tracks obsolete failed Storage jobs discarded after a newer version succeeded',
+    },
+  },
 };

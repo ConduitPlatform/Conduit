@@ -61,6 +61,8 @@ import {
   assertConfigActivation,
   assertSearchExecutable,
   capabilityWarnings,
+  configuredWorkloadWarnings,
+  countEmbeddingWorkloads,
   emptyQueueCounts,
   indexReadinessWarnings,
   isEmbeddingsReady,
@@ -69,6 +71,8 @@ import {
   grpcErrorFromSearchGate,
   storagePeerWarnings,
   storageQueueWarnings,
+  type EmbeddingSourceWorkload,
+  type EmbeddingWorkloadCounts,
 } from '../utils/operationalStatus.js';
 import {
   mapBackfillRun,
@@ -183,10 +187,17 @@ export interface EmbeddingsApiDeps {
   onConfigChanged?: (schemaName: string) => Promise<void> | void;
   storageAvailable?: () => boolean;
   generic?: GenericSourceApiDeps;
+  listEmbeddingSources?: () => Promise<EmbeddingSourceWorkload[]>;
   reconcileStorageSource?: (
     sourceId: string,
     caller: EmbeddingsApiCaller,
-  ) => Promise<{ queued: number; scanned: number; warnings: string[] }>;
+  ) => Promise<{
+    queued: number;
+    scanned: number;
+    warnings: string[];
+    recovered?: number;
+    discarded?: number;
+  }>;
 }
 
 const DEFAULT_LIST_LIMIT = 25;
@@ -344,15 +355,17 @@ export class EmbeddingsApi {
     };
   }
 
-  async getStatus(schemaName?: string): Promise<{
-    enabled: boolean;
-    ready: boolean;
-    capabilities: ReturnType<typeof mapCapabilities>;
-    generationQueue: ReturnType<typeof mapQueueCounts>;
-    backfillQueue: ReturnType<typeof mapQueueCounts>;
-    storageQueue: ReturnType<typeof mapQueueCounts>;
-    warnings: string[];
-  }> {
+  async getStatus(schemaName?: string): Promise<
+    {
+      enabled: boolean;
+      ready: boolean;
+      capabilities: ReturnType<typeof mapCapabilities>;
+      generationQueue: ReturnType<typeof mapQueueCounts>;
+      backfillQueue: ReturnType<typeof mapQueueCounts>;
+      storageQueue: ReturnType<typeof mapQueueCounts>;
+      warnings: string[];
+    } & EmbeddingWorkloadCounts
+  > {
     const config = this.deps.currentConfig();
     const capabilities = await this.deps.getVectorCapabilities(schemaName);
     const queue = await this.deps.getQueueStatus().catch(() => ({
@@ -360,6 +373,14 @@ export class EmbeddingsApi {
       backfill: emptyQueueCounts(),
       storage: emptyQueueCounts(),
     }));
+    const [allConfigs, sources] = await Promise.all([
+      this.deps.configs.findMany({}),
+      this.deps.listEmbeddingSources?.() ?? Promise.resolve([]),
+    ]);
+    const workload = countEmbeddingWorkloads({
+      configs: allConfigs,
+      sources,
+    });
     const warnings = [
       ...(config.enabled ? [] : ['Embeddings module is disabled']),
       ...capabilityWarnings(capabilities),
@@ -373,9 +394,27 @@ export class EmbeddingsApi {
       ...storageQueueWarnings(queue.storage),
     ];
     if (schemaName) {
-      const configs = await this.deps.configs.findMany({ schemaName, enabled: true });
+      const configs = allConfigs.filter(
+        item => item.schemaName === schemaName && item.enabled !== false,
+      );
       const indexes = await this.deps.getVectorIndexes(schemaName);
       warnings.push(...indexReadinessWarnings(configs, indexes));
+    } else {
+      const enabledConfigs = allConfigs.filter(item => item.enabled !== false);
+      const indexesBySchema = new Map<
+        string,
+        Awaited<ReturnType<typeof this.deps.getVectorIndexes>>
+      >();
+      for (const schema of new Set(enabledConfigs.map(item => item.schemaName))) {
+        indexesBySchema.set(schema, await this.deps.getVectorIndexes(schema));
+      }
+      warnings.push(
+        ...configuredWorkloadWarnings({
+          enabledConfigs,
+          indexesForConfig: item => indexesBySchema.get(item.schemaName ?? '') ?? [],
+          sources,
+        }),
+      );
     }
     return {
       enabled: config.enabled,
@@ -385,6 +424,7 @@ export class EmbeddingsApi {
       backfillQueue: mapQueueCounts(queue.backfill),
       storageQueue: mapQueueCounts(queue.storage ?? emptyQueueCounts()),
       warnings,
+      ...workload,
     };
   }
 
@@ -654,7 +694,13 @@ export class EmbeddingsApi {
   async reconcileSource(
     sourceId: string,
     caller: EmbeddingsApiCaller,
-  ): Promise<{ queued: number; scanned: number; warnings: string[] }> {
+  ): Promise<{
+    queued: number;
+    scanned: number;
+    warnings: string[];
+    recovered?: number;
+    discarded?: number;
+  }> {
     assertCanManageSources(caller);
     if (!this.deps.reconcileStorageSource) {
       throw new GrpcError(

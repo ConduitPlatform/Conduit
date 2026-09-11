@@ -106,7 +106,7 @@ export const EMBEDDINGS_ADMIN_ROUTES: EmbeddingsAdminRouteContract[] = [
   contract(
     '/status',
     ConduitRouteActions.GET,
-    'Returns embeddings module readiness, provider/index warnings, generation/backfill/storage queue counts, and Storage extraction visibility. Operator-only.',
+    'Returns embeddings module readiness, provider/index warnings, generation/backfill/storage queue counts, generic source totals, and Storage extraction visibility. Operator-only.',
   ),
   contract(
     '/backfills',
