@@ -22,15 +22,17 @@ import type { RealtimeSubscriptionTracker } from './subscriptions.js';
 
 type SocketMode = 'client' | 'admin';
 
+type RealtimeSocketOptions = {
+  mode: SocketMode;
+  grpcSdk: ConduitGrpcSdk;
+  schemaLookup: SchemaLookup;
+  subscriptions: RealtimeSubscriptionTracker;
+  isGloballyEnabled: () => boolean;
+};
+
 export function registerDatabaseRealtimeSocket(
   routingManager: RoutingManager,
-  options: {
-    mode: SocketMode;
-    grpcSdk: ConduitGrpcSdk;
-    schemaLookup: SchemaLookup;
-    subscriptions: RealtimeSubscriptionTracker;
-    isGloballyEnabled: () => boolean;
-  },
+  options: RealtimeSocketOptions,
 ) {
   const handlers = createSocketHandlers(options);
   routingManager.socket(
@@ -59,13 +61,7 @@ export function registerDatabaseRealtimeSocket(
   );
 }
 
-function createSocketHandlers(options: {
-  mode: SocketMode;
-  grpcSdk: ConduitGrpcSdk;
-  schemaLookup: SchemaLookup;
-  subscriptions: RealtimeSubscriptionTracker;
-  isGloballyEnabled: () => boolean;
-}) {
+function createSocketHandlers(options: RealtimeSocketOptions) {
   return {
     connect: async (): Promise<UnparsedSocketResponse> => {
       return { event: 'connected', data: { ok: true } };
@@ -87,13 +83,7 @@ function createSocketHandlers(options: {
 
 async function resolveSubscription(
   call: ParsedSocketRequest,
-  options: {
-    mode: SocketMode;
-    grpcSdk: ConduitGrpcSdk;
-    schemaLookup: SchemaLookup;
-    subscriptions: RealtimeSubscriptionTracker;
-    isGloballyEnabled: () => boolean;
-  },
+  options: RealtimeSocketOptions,
   action: 'join' | 'leave',
 ): Promise<string[]> {
   if (!options.isGloballyEnabled()) {

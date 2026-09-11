@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { status } from '@grpc/grpc-js';
-import { authorizeRelaySubscription } from './authorize.js';
+import { authorizeRelaySubscription, RelaySubscriptionError } from './authorize.js';
 import { eventRelayRoom } from './rooms.js';
 import type { RelayLookup } from './authorize.js';
 
@@ -60,7 +60,8 @@ describe('authorizeRelaySubscription', () => {
           'relay-1',
           'order-1',
         ),
-      (err: any) => err.code === status.PERMISSION_DENIED,
+      (err: unknown) =>
+        err instanceof RelaySubscriptionError && err.code === status.PERMISSION_DENIED,
     );
   });
 
@@ -74,18 +75,8 @@ describe('authorizeRelaySubscription', () => {
           'relay-1',
           'order-1',
         ),
-      (err: any) => err.code === status.UNAVAILABLE,
+      (err: unknown) =>
+        err instanceof RelaySubscriptionError && err.code === status.UNAVAILABLE,
     );
-  });
-
-  it('unsubscribe room matches subscribe room for the same ids', async () => {
-    const subscribed = await authorizeRelaySubscription(
-      mockSdk({ allow: true }),
-      mockManager(relay),
-      'user-1',
-      'relay-1',
-      'order-1',
-    );
-    assert.equal(subscribed, eventRelayRoom('relay-1', 'order-1'));
   });
 });

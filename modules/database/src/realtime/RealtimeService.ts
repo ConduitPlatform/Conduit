@@ -19,8 +19,7 @@ import { ChangeStreamCoordinator } from './ChangeStreamCoordinator.js';
 import { registerDatabaseRealtimeSocket } from './sockets.js';
 import { buildRealtimeStatus } from './status.js';
 import { RealtimeSubscriptionTracker } from './subscriptions.js';
-import type { OptedInSchema, RealtimeStatus } from './types.js';
-import type { ChangeStreamLike } from './types.js';
+import type { ChangeStreamLike, OptedInSchema, RealtimeStatus } from './types.js';
 import { topologyFromHello } from './topology.js';
 import { SqlRealtimeSupport } from './sql/SqlRealtimeSupport.js';
 
@@ -50,7 +49,6 @@ export class RealtimeService {
         getOptedInSchemas: () => this.getOptedInSchemas(),
         subscriptions: this.subscriptions,
         enabled: () => this.isGloballyEnabled(),
-        socketsEnabled: () => this.areAdminSocketsEnabled(),
       });
     } else if (adapter instanceof SequelizeAdapter) {
       this.sqlSupport = new SqlRealtimeSupport(adapter);
@@ -61,7 +59,6 @@ export class RealtimeService {
         getOptedInSchemas: () => this.getOptedInSchemas(),
         subscriptions: this.subscriptions,
         enabled: () => this.isGloballyEnabled(),
-        socketsEnabled: () => this.areAdminSocketsEnabled(),
         prepare: () =>
           this.sqlSupport!.prepare(
             this.isGloballyEnabled() ? this.getOptedInSchemas() : [],

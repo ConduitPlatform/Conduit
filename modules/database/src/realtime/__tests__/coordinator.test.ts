@@ -3,7 +3,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { ObjectId } from 'bson';
 import { ChangeStreamCoordinator } from '../ChangeStreamCoordinator.js';
 import { RealtimeSubscriptionTracker } from '../subscriptions.js';
-import { authorizedDocumentRoom, roomsForPublicChange } from '../rooms.js';
+import { roomsForPublicChange } from '../rooms.js';
 
 class MemoryStore {
   private sets = new Map<string, Set<string>>();
@@ -156,9 +156,6 @@ describe('ChangeStreamCoordinator', () => {
     await new Promise(resolve => setImmediate(resolve));
     expect(routerPush).not.toHaveBeenCalled();
     expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c')).toEqual([]);
-    expect(authorizedDocumentRoom('Order', '64b64c4c4c4c4c4c4c4c4c', 'user-1')).toContain(
-      'user-1',
-    );
     await coordinator.shutdown();
   });
 

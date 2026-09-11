@@ -35,13 +35,6 @@ export type SchemaLookup = {
     | undefined;
 };
 
-export type ResolvedSubscription = {
-  schema: string;
-  documentId?: string;
-  authorizationEnabled: boolean;
-  rooms: string[];
-};
-
 export function parseSubscribeRequest(params: unknown[]): SubscribeRequest {
   const raw = params[0];
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
@@ -93,10 +86,7 @@ export function assertSchemaAvailable(
   lookup: SchemaLookup,
   schemaName: string,
   requireCmsRead: boolean,
-): {
-  authorizationEnabled: boolean;
-  realtimeEnabled: boolean;
-} {
+): { authorizationEnabled: boolean } {
   let schema: ReturnType<SchemaLookup['getSchema']>;
   try {
     schema = lookup.getSchema(schemaName);
@@ -124,7 +114,6 @@ export function assertSchemaAvailable(
   }
   return {
     authorizationEnabled: conduit.authorization?.enabled === true,
-    realtimeEnabled: true,
   };
 }
 

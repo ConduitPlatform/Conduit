@@ -94,7 +94,7 @@ export class EventRelayManager {
 
   private onBusMessage(channel: string, message: string): void {
     const relays = this.relaysByChannel.get(channel);
-    if (!relays || relays.length === 0) {
+    if (!relays?.length) {
       return;
     }
 
@@ -128,7 +128,7 @@ export class EventRelayManager {
           ConduitGrpcSdk.Metrics?.increment('event_relays_failed_total');
           ConduitGrpcSdk.Logger.error(
             `Event relay ${emission.relayId} emit failed on ${channel}: ${
-              (err as Error).message
+              err instanceof Error ? err.message : String(err)
             }`,
           );
         },
