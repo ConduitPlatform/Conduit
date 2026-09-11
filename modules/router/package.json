@@ -23,6 +23,7 @@
     "prebuild:bundle": "pnpm --filter @conduitplatform/service-bundle run build",
     "build:bundle": "rimraf bundle && node ../../libraries/service-bundle/dist/cli.js generate-manifest && tsup && node ../../libraries/service-bundle/dist/cli.js copy-assets && node ../../libraries/service-bundle/dist/cli.js generate-lockfile",
     "generateTypes": "sh build.sh",
+    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/event-relays/*.test.js",
     "build:docker": "docker build -t ghcr.io/conduitplatform/router:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/router:latest"
   },
   "license": "ISC",
