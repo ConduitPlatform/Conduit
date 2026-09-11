@@ -684,6 +684,63 @@ export class SchemaAdmin {
     return this.database.getDatabaseType();
   }
 
+  async getVectorCapabilities(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    return this.database.getVectorCapabilities(call.request.params.schemaName);
+  }
+
+  async createVectorIndex(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, index } = call.request.params;
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ _id: id });
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    return this.database.createVectorIndex(requestedSchema.name, index);
+  }
+
+  async getVectorIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const id = call.request.params.id;
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ _id: id });
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    return { indexes: await this.database.getVectorIndexes(requestedSchema.name) };
+  }
+
+  async deleteVectorIndex(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, indexName } = call.request.params;
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ _id: id });
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    return this.database.deleteVectorIndex(requestedSchema.name, indexName);
+  }
+
+  async vectorSearch(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { schemaName } = call.request.params;
+    const results = await this.database.vectorSearch({
+      schemaName,
+      field: call.request.params.field,
+      vector: call.request.params.vector,
+      indexName: call.request.params.indexName,
+      filter: call.request.params.filter,
+      limit: call.request.params.limit,
+      numCandidates: call.request.params.numCandidates,
+      select: call.request.params.select,
+      userId: call.request.context.user?._id,
+      scope: call.request.params.scope,
+      adminOperator: true,
+    });
+    return { results };
+  }
+
   async createIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, indexes } = call.request.params;
     const requestedSchema = await this.database

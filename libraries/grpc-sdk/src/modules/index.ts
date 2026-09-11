@@ -2,6 +2,7 @@ export * from './storage/index.js';
 export * from './router/index.js';
 export * from './email/index.js';
 export * from './database/index.js';
+export * from './embeddings/index.js';
 export * from './config/index.js';
 export * from './core/index.js';
 export * from './admin/index.js';

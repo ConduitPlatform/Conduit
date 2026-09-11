@@ -61,6 +61,52 @@ export class ParserUtils {
   }
 
   /**
+   * True for TYPE.Vector / 'Vector'. Never treat this as a named schema/reference.
+   */
+  static isVectorTypeName(value: unknown): boolean {
+    return value === TYPE.Vector || value === 'Vector';
+  }
+
+  /**
+   * Check if a field is a Vector type (shorthand or object form).
+   */
+  static isVectorType(field: unknown): boolean {
+    return ParserUtils.isVectorTypeName(ParserUtils.getBaseType(field));
+  }
+
+  /**
+   * Positive integer dimensions from a Vector field (or a raw dimensions value).
+   */
+  static getVectorDimensions(fieldOrDimensions: unknown): number | undefined {
+    let value: unknown = fieldOrDimensions;
+    if (
+      typeof fieldOrDimensions === 'object' &&
+      fieldOrDimensions !== null &&
+      'dimensions' in fieldOrDimensions
+    ) {
+      value = (fieldOrDimensions as { dimensions?: unknown }).dimensions;
+    }
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+      return value;
+    }
+    return undefined;
+  }
+
+  /**
+   * OpenAPI/Swagger: constrain a numeric array to the Vector field's dimensions.
+   */
+  static applyVectorOpenApiConstraints(
+    schema: Record<string, unknown>,
+    sourceField?: unknown,
+  ): void {
+    if (schema.type !== 'array') return;
+    const dimensions = ParserUtils.getVectorDimensions(sourceField);
+    if (dimensions === undefined) return;
+    schema.minItems = dimensions;
+    schema.maxItems = dimensions;
+  }
+
+  /**
    * Get the model name for a Relation field
    */
   static getRelationModel(field: any): string | null {

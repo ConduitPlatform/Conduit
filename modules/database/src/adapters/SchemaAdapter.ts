@@ -218,6 +218,33 @@ export abstract class SchemaAdapter<T> {
     }
   }
 
+  async lookupAuthorizedCandidateIds(
+    operation: string,
+    candidateIds: Array<string | { toString(): string }>,
+    userId?: string,
+    scope?: string,
+  ): Promise<string[]> {
+    const ids = candidateIds.map(id => String(id)).filter(Boolean);
+    if (!ids.length) return [];
+    if (!this.authzEnabled || (isNil(userId) && isNil(scope))) {
+      return ids;
+    }
+    const view = await this.permissionCheck(operation, userId, scope);
+    if (!view) return ids;
+    const query =
+      this.adapter.getDatabaseType() === 'MongoDB'
+        ? { _id: { $in: ids } }
+        : { _id: { [Op.in]: ids } };
+    const docs = await this.runAuthorizedViewQuery(operation, userId, scope, view, v =>
+      v.findMany(query, {
+        select: '_id',
+        userId: undefined,
+        scope: undefined,
+      }),
+    );
+    return (docs ?? []).map((doc: { _id?: unknown }) => String(doc._id));
+  }
+
   async getPaginatedAuthorizedQuery(
     operation: string,
     query: Indexable,

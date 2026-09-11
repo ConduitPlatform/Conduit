@@ -15,6 +15,7 @@ STANDALONE_SERVICES=(
   "modules/storage:@conduitplatform/storage"
   "modules/chat:@conduitplatform/chat"
 )
+# embeddings is not part of standalone v1; it ships as a separate opt-in image.
 
 TMP="$(mktemp -d)"
 trap 'cleanup_all' EXIT

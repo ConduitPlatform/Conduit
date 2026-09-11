@@ -1,0 +1,137 @@
+name: Embeddings offline tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'modules/embeddings/**'
+      - 'modules/database/**'
+      - 'libraries/hermes/**'
+      - 'libraries/grpc-sdk/**'
+      - 'libraries/module-tools/**'
+      - 'packages/core/**'
+      - 'docker/**'
+      - 'deploy/**'
+      - 'scripts/resolve-docker-targets.mjs'
+      - '.github/workflows/embeddings-test.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'modules/embeddings/**'
+      - 'modules/database/**'
+      - 'libraries/hermes/**'
+      - 'libraries/grpc-sdk/**'
+      - 'libraries/module-tools/**'
+      - 'packages/core/**'
+      - 'docker/**'
+      - 'deploy/**'
+      - 'scripts/resolve-docker-targets.mjs'
+      - '.github/workflows/embeddings-test.yml'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    name: Embeddings unit and contract tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.5.0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '29.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build embeddings, database, hermes, grpc-sdk, module-tools, and Core tsc
+        run: >
+          pnpm exec turbo run build
+          --filter=@conduitplatform/embeddings...
+          --filter=@conduitplatform/database...
+          --filter=@conduitplatform/hermes...
+          --filter=@conduitplatform/grpc-sdk...
+          --filter=@conduitplatform/module-tools...
+          --filter=@conduitplatform/core
+
+      # Core `build:bundle` still aliases @conduitplatform/node-2fa to its
+      # TypeScript source because the library's CommonJS dist breaks ESM
+      # bundling. That pre-existing packaging issue is out of this embeddings
+      # offline gate; this job only typechecks Core (`tsc`), it does not run
+      # authentication/Core service-bundle verification.
+
+      - name: Run embeddings offline tests
+        run: pnpm --filter @conduitplatform/embeddings test
+
+      - name: Run database vector and mutation offline tests
+        run: pnpm --filter @conduitplatform/database test --testPathIgnorePatterns=integration
+
+      - name: Run hermes vector offline tests
+        run: pnpm --filter @conduitplatform/hermes test
+
+  deploy-contracts:
+    runs-on: ubuntu-24.04
+    name: Compose render and target discovery
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Render compose with embeddings profile
+        working-directory: docker
+        env:
+          GRPC_KEY: ci-nonempty-grpc-key
+        run: |
+          docker compose --profile mongodb --profile embeddings config --services > /tmp/compose-embeddings-services.txt
+          grep -qx 'embeddings' /tmp/compose-embeddings-services.txt
+          docker compose --profile mongodb --profile embeddings config > /tmp/compose-embeddings.yml
+          grep -q 'ci-nonempty-grpc-key' /tmp/compose-embeddings.yml
+          grep -q '55165' /tmp/compose-embeddings.yml
+
+      - name: Render compose without embeddings profile
+        working-directory: docker
+        run: |
+          docker compose --profile mongodb config --services > /tmp/compose-default-services.txt
+          if grep -qx 'embeddings' /tmp/compose-default-services.txt; then
+            echo 'embeddings service must stay profile-gated' >&2
+            exit 1
+          fi
+
+      - name: Discover docker targets for embeddings-only changes
+        env:
+          CHANGED_FILES: modules/embeddings/src/index.ts
+        run: |
+          env -u GITHUB_OUTPUT node scripts/resolve-docker-targets.mjs > /tmp/targets.json
+          node -e '
+            const fs = require("fs");
+            const data = JSON.parse(fs.readFileSync("/tmp/targets.json", "utf8"));
+            const matrix = JSON.parse(data.matrix);
+            const targets = matrix.include.map((row) => row.target);
+            if (!targets.includes("embeddings")) {
+              throw new Error("expected embeddings target, got " + targets.join(","));
+            }
+            if (targets.includes("conduit-standalone")) {
+              throw new Error("embeddings-only changes must not select standalone: " + targets.join(","));
+            }
+          '
+
+      - name: Run deployment contract tests
+        run: node --test modules/embeddings/test/deployment-contract.test.mjs

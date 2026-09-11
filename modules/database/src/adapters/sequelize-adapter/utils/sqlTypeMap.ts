@@ -12,4 +12,5 @@ export const sqlDataTypeMap = new Map<SQLDataType, string>([
   [SQLDataType.TIME, 'Date'],
   [SQLDataType.DATETIME, 'Date'],
   [SQLDataType.TIMESTAMP, 'Date'],
+  [SQLDataType.VECTOR, 'Vector'],
 ]);
