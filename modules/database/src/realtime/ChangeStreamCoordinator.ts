@@ -35,7 +35,6 @@ export type CoordinatorOptions = {
   getOptedInSchemas: () => OptedInSchema[];
   subscriptions: RealtimeSubscriptionTracker;
   enabled: () => boolean;
-  socketsEnabled?: () => Promise<boolean>;
   parseResumeToken?: (token: string | null | undefined) => unknown | undefined;
   prepare?: () => Promise<void>;
   onResumePersisted?: (resumeToken: string) => Promise<void>;
@@ -186,10 +185,10 @@ export class ChangeStreamCoordinator {
     try {
       const parseToken = this.options.parseResumeToken ?? parseMongoResumeToken;
       const resumeAfter = parseToken(
-        (await this.options.grpcSdk.state!.getKey(RESUME_TOKEN_KEY)) ?? undefined,
+        await this.options.grpcSdk.state!.getKey(RESUME_TOKEN_KEY),
       );
       if (this.watching || this.closed) return;
-      const stream = this.options.watch({ resumeAfter: resumeAfter ?? undefined });
+      const stream = this.options.watch({ resumeAfter });
       this.stream = stream;
       this.watching = true;
       this.streamState = 'live';
@@ -363,6 +362,3 @@ export class ChangeStreamCoordinator {
     }
   }
 }
-
-/** @deprecated Use ChangeStreamCoordinator */
-export { ChangeStreamCoordinator as MongoChangeStreamCoordinator };

@@ -6,8 +6,6 @@ const MYSQL_IDENT_LIMIT = 64;
 const POSTGRES_IDENT_LIMIT = 63;
 const SQLITE_IDENT_LIMIT = 128;
 
-export type QuoteIdent = (name: string) => string;
-
 export function quoteIdent(dialect: SqlDialect, name: string): string {
   if (dialect === 'mysql' || dialect === 'mariadb') {
     return `\`${name.replace(/`/g, '``')}\``;

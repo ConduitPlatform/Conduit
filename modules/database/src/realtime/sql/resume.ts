@@ -1,4 +1,3 @@
-import { EJSON } from 'bson';
 import { parseResumeToken } from '../normalize.js';
 
 export function parseSqlResumeId(token: string | null | undefined): string | undefined {
@@ -6,19 +5,15 @@ export function parseSqlResumeId(token: string | null | undefined): string | und
   if (/^\d+$/.test(token)) {
     return token;
   }
-  try {
-    const parsed = parseResumeToken(token) ?? EJSON.parse(token);
-    if (typeof parsed === 'number' && Number.isInteger(parsed) && parsed >= 0) {
-      return String(parsed);
-    }
-    if (typeof parsed === 'bigint' && parsed >= 0n) {
-      return parsed.toString();
-    }
-    if (typeof parsed === 'string' && /^\d+$/.test(parsed)) {
-      return parsed;
-    }
-  } catch {
-    return undefined;
+  const parsed = parseResumeToken(token);
+  if (typeof parsed === 'number' && Number.isInteger(parsed) && parsed >= 0) {
+    return String(parsed);
+  }
+  if (typeof parsed === 'bigint' && parsed >= 0n) {
+    return parsed.toString();
+  }
+  if (typeof parsed === 'string' && /^\d+$/.test(parsed)) {
+    return parsed;
   }
   return undefined;
 }

@@ -9,9 +9,6 @@ import { quoteIdent } from './identifiers.js';
 import { createCaptureFunctionSql, createChangeLogTableSql } from './ddl.js';
 import type { ChangeLogRow } from './mapEvent.js';
 
-export { createChangeLogTableSql, createCaptureFunctionSql } from './ddl.js';
-export type { ChangeLogRow } from './mapEvent.js';
-
 export async function ensureChangeLog(sequelize: Sequelize): Promise<void> {
   const dialect = assertSqlDialect(sequelize.getDialect());
   await sequelize.query(createChangeLogTableSql(dialect));
@@ -43,12 +40,7 @@ export async function fetchChangeLogBatch(
     collection_name: String(row.collection_name),
     document_id: String(row.document_id),
     operation: String(row.operation),
-    occurred_at:
-      row.occurred_at instanceof Date
-        ? row.occurred_at
-        : typeof row.occurred_at === 'string' || typeof row.occurred_at === 'number'
-          ? row.occurred_at
-          : new Date().toISOString(),
+    occurred_at: occurredAtValue(row.occurred_at),
   }));
 }
 
@@ -101,6 +93,13 @@ function trimSql(dialect: SqlDialect, table: string): string {
       return _exhaustive;
     }
   }
+}
+
+function occurredAtValue(value: unknown): Date | string | number {
+  if (value instanceof Date || typeof value === 'string' || typeof value === 'number') {
+    return value;
+  }
+  return new Date().toISOString();
 }
 
 function affectedRows(metadata: unknown): number {
