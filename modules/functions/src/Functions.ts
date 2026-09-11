@@ -39,7 +39,7 @@ export default class Functions extends ManagedModule<Config> {
     await this.awaitPeersFromManifest();
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
-    await runMigrations(this.grpcSdk);
+    await runMigrations();
   }
 
   async onConfig() {
