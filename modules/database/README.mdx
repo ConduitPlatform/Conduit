@@ -47,6 +47,23 @@ since the latter need to go through parsers that are otherwise unnecessary for M
 
 When using MongoDB with a replica set (e.g., MongoDB Atlas), the database module supports configuring read preference, write concern, and read concern through the admin panel at `PATCH /config/database`.
 
+Live document updates also require a replica set or sharded cluster. Local Compose files initialize a single-node replica set so change streams can be exercised.
+
+### Live updates
+
+Enable `realtime.enabled` in database module config, then opt a schema in with `modelOptions.conduit.realtime.enabled`. Clients connect to the `/database/` Socket.IO namespace (path `/realtime`) and emit:
+
+```
+subscribe({ schema: 'Order', documentId?: string })
+unsubscribe({ schema: 'Order', documentId?: string })
+```
+
+Events arrive as `change` with `{ version, operation, schema, documentId, occurredAt, resumeToken }` and contain no document fields. Consumers should refetch through their authorized REST or custom-endpoint path.
+
+Client subscribers must authenticate. Schemas with document-level authorization reject schema-wide subscriptions and require a document ID plus a `read` check. Admin consumers use `POST /realtime/ticket` for a 30-second handshake token; session JWTs and masterkeys must not be sent from browser code.
+
+Admin sockets must be enabled (`admin.transports.sockets`) and the Admin socket port (`ADMIN_SOCKET_PORT`, default 3031) reachable from the UI.
+
 ### Configuration Options
 
 |      Setting      | Values                                                                    | Default   | Description                                              |
@@ -54,6 +71,7 @@ When using MongoDB with a replica set (e.g., MongoDB Atlas), the database module
 | `readPreference`  | `primary`, `primaryPreferred`, `secondary`, `secondaryPreferred`, `nearest` | `primary` | Controls which replica set members receive read queries  |
 | `writeConcern`    | `1`, `majority`                                                           |    `1`    | How many members must acknowledge a write                |
 | `readConcern`     | `local`, `available`, `majority`, `linearizable`, `snapshot`              |  `local`  | Consistency level for read operations                    |
+| `realtime.enabled` | `true`, `false`                                                          |  `false`  | Enable MongoDB change-stream live updates for opted-in schemas |
 
 ### Recommended Production Settings
 
