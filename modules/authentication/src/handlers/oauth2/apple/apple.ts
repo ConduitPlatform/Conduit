@@ -26,6 +26,7 @@ import {
   validateStateToken,
   resolveAppleOAuthClient,
   validateAppleClients,
+  resolveOAuthMode,
 } from '../utils/index.js';
 import {
   ConduitJson,
@@ -37,6 +38,7 @@ import { OAUTH_CALLBACK } from '../../../constants/index.js';
 import { AuthUtils } from '../../../utils/index.js';
 import { verifyAppleIdentityToken } from '../../../utils/appleIdentityToken.js';
 import { resolveAppleSigningKey } from '../../../utils/appleSigningKey.js';
+import { errors } from '../../../errors.js';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   private readonly jwksClient = jwksRsa({
@@ -162,6 +164,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       userParams,
       stateToken.data.invitationToken,
       stateToken.data.anonymousUserId,
+      resolveOAuthMode(stateToken.data.mode),
     );
     await Token.getInstance().deleteOne(stateToken);
 
@@ -234,6 +237,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       userParams,
       stateToken.data.invitationToken,
       stateToken.data.anonymousUserId,
+      resolveOAuthMode(stateToken.data.mode),
     );
     await Token.getInstance().deleteOne(stateToken);
 
@@ -259,6 +263,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
           state: ConduitString.Required,
           user: ConduitJson.Optional,
         },
+        errors: [errors.REGISTRATION_NOT_ALLOWED],
         rateLimit: OAUTH_CALLBACK,
       },
       new ConduitRouteReturnDefinition(`AppleResponse`, {
