@@ -25,7 +25,8 @@
     "prepublish": "npm run build",
     "prebuild": "npm run protoc",
     "build": "rimraf dist && tsup",
-    "protoc": "sh build.sh"
+    "protoc": "sh build.sh",
+    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/utilities/EventBus.test.js"
   },
   "license": "MIT",
   "dependencies": {

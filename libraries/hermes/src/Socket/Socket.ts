@@ -16,6 +16,10 @@ import {
 import ObjectHash from 'object-hash';
 import { ConduitError, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { buildSocketMiddlewareParams } from './buildSocketMiddlewareParams.js';
+import { resolveEngineNamespacePath } from './resolveEngineNamespacePath.js';
+
+const EMIT_TIMEOUT_MS = 250;
+const SEND_BUFFER_HIGH_WATER_MARK = 512 * 1024;
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;
@@ -78,6 +82,22 @@ export class SocketController extends ConduitRouter {
         `Socket connection error, context: ${err?.context ?? 'N/A'}`,
       );
     });
+
+    this.io.engine.use((req: any, res: any, next: any) => {
+      req.path = resolveEngineNamespacePath(req);
+      let index = 0;
+      const run = (err?: Error) => {
+        if (err) {
+          return next(err);
+        }
+        const middleware = this.globalMiddlewares[index++];
+        if (!middleware) {
+          return next();
+        }
+        middleware(req, res, run);
+      };
+      run();
+    });
   }
 
   registerGlobalMiddleware(
@@ -107,12 +127,6 @@ export class SocketController extends ConduitRouter {
     this._registeredNamespaces.set(namespace, conduitSocket);
 
     const self = this;
-    this.globalMiddlewares.forEach(middleware => {
-      self.io.engine.use((req: any, res: any, next: any) => {
-        req.path = namespace;
-        middleware(req, res, next);
-      });
-    });
     this.io.of(namespace).use((socket, next) => {
       const context = buildSocketMiddlewareParams(socket);
       self
@@ -129,11 +143,24 @@ export class SocketController extends ConduitRouter {
 
     this.io.of(namespace).on('connect', socket => {
       if (socket.recovered) {
-        ConduitGrpcSdk.Logger.info(
+        ConduitGrpcSdk.Logger.debug(
           `Socket recovered: ${socket.id} to namespace: ${namespace}`,
         );
+        const recovered = conduitSocket.executeRecovered({
+          event: 'recovered',
+          socketId: socket.id,
+          context: socket.data,
+        });
+        if (recovered) {
+          recovered
+            .then(res => this.handleResponse(res, socket, namespace))
+            .catch(e => {
+              ConduitGrpcSdk.Logger.error(e);
+              socket.emit('conduit_error', e);
+            });
+        }
       } else {
-        ConduitGrpcSdk.Logger.info(
+        ConduitGrpcSdk.Logger.debug(
           `Socket connected: ${socket.id} to namespace: ${namespace}`,
         );
         conduitSocket
@@ -150,7 +177,7 @@ export class SocketController extends ConduitRouter {
       }
 
       socket.onAny((event, ...args) => {
-        ConduitGrpcSdk.Logger.info(`Socket event: ${event} from socket: ${socket.id}`);
+        ConduitGrpcSdk.Logger.debug(`Socket event: ${event} from socket: ${socket.id}`);
         conduitSocket
           .executeRequest({
             event,
@@ -166,7 +193,7 @@ export class SocketController extends ConduitRouter {
       });
 
       socket.on('disconnect', () => {
-        ConduitGrpcSdk.Logger.info(
+        ConduitGrpcSdk.Logger.debug(
           `Socket disconnected: ${socket.id} from namespace: ${namespace}`,
         );
         conduitSocket
@@ -184,82 +211,177 @@ export class SocketController extends ConduitRouter {
     });
   }
 
-  async handleSocketPush(push: SocketPush) {
+  async handleSocketPush(push: SocketPush): Promise<boolean> {
     const localOnly = push.localOnly === true;
     if (push.event === 'join-room') {
-      if (push.rooms.length === 0) return;
+      if (push.rooms.length === 0) return false;
       const filteredSockets = await this.findAndFilterSockets(
         push.receivers,
         push.namespace,
         localOnly,
       );
       for (const socket of filteredSockets) {
-        ConduitGrpcSdk.Logger.info(
+        ConduitGrpcSdk.Logger.debug(
           `Socket ${socket.id} joining rooms: ${push.rooms.join(', ')} in namespace: ${
             push.namespace
           }`,
         );
         socket.join(push.rooms);
       }
+      return true;
     } else if (push.event === 'leave-room') {
       if (push.rooms && push.rooms.length !== 0) {
-        const filteredSockets = await this.findAndFilterSockets(
-          push.receivers,
-          push.namespace,
-          localOnly,
-        );
+        const filteredSockets = await this.socketsForRoomPush(push, localOnly);
         for (const socket of filteredSockets) {
           for (const room of push.rooms) {
-            ConduitGrpcSdk.Logger.info(
+            ConduitGrpcSdk.Logger.debug(
               `Socket ${socket.id} leaving room: ${room} in namespace: ${push.namespace}`,
             );
             socket.leave(room);
           }
         }
       }
+      return true;
     } else if (isInstanceOfEventResponse(push)) {
       if (
         (isNil(push.receivers) || push.receivers.length === 0) &&
         push.rooms.length === 0
       ) {
-        ConduitGrpcSdk.Logger.info(
-          `Emitting event: ${push.event} to all sockets in namespace: ${push.namespace}`,
+        return false;
+      }
+      if (push.rooms.length !== 0) {
+        const emitted = await this.emitEventToRooms(push, localOnly);
+        if (!emitted) {
+          return false;
+        }
+      }
+      if (push.receivers.length !== 0) {
+        const filteredSockets = await this.findAndFilterSockets(
+          push.receivers,
+          push.namespace,
+          localOnly,
         );
-        const nsp = this.io.of(push.namespace);
-        if (localOnly) {
-          nsp.local.emit(push.event, push.data);
-        } else {
-          nsp.emit(push.event, push.data);
-        }
-      } else {
-        if (push.rooms.length !== 0) {
-          ConduitGrpcSdk.Logger.info(
-            `Emitting event: ${push.event} to rooms: ${push.rooms.join(
-              ', ',
-            )} in namespace: ${push.namespace}`,
-          );
-          const target = this.io.of(push.namespace).to(push.rooms);
-          if (localOnly) {
-            target.local.emit(push.event, push.data);
-          } else {
-            target.emit(push.event, push.data);
+        for (const socket of filteredSockets) {
+          if (push.boundedEmit && this.isSocketBackpressured(socket)) {
+            ConduitGrpcSdk.Metrics?.increment('event_relays_emit_dropped_total');
+            socket.disconnect(true);
+            continue;
           }
-        }
-        if (push.receivers.length !== 0) {
-          const filteredSockets = await this.findAndFilterSockets(
-            push.receivers,
-            push.namespace,
-            localOnly,
+          ConduitGrpcSdk.Logger.debug(
+            `Emitting event: ${push.event} to socket: ${socket.id} in namespace: ${push.namespace}`,
           );
-          for (const socket of filteredSockets) {
-            ConduitGrpcSdk.Logger.info(
-              `Emitting event: ${push.event} to socket: ${socket.id} in namespace: ${push.namespace}`,
-            );
-            socket.emit(push.event, push.data);
+          socket.emit(push.event, push.data);
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
+  async getLocalRoomUserIds(namespace: string, room: string): Promise<string[]> {
+    const sockets = await this.io.of(namespace).in(room).local.fetchSockets();
+    const userIds = new Set<string>();
+    for (const socket of sockets) {
+      const userId = socket.data?.user?._id;
+      if (typeof userId === 'string' && userId.length > 0) {
+        userIds.add(userId);
+      }
+    }
+    return [...userIds];
+  }
+
+  async getLocalRoomsWithPrefix(namespace: string, prefix: string): Promise<string[]> {
+    const adapter = this.io.of(namespace).adapter as { rooms?: Map<string, unknown> };
+    const rooms = adapter.rooms;
+    if (!rooms) {
+      return [];
+    }
+    return [...rooms.keys()].filter(room => room.startsWith(prefix));
+  }
+
+  private async emitEventToRooms(push: SocketPush, localOnly: boolean): Promise<boolean> {
+    const nsp = this.io.of(push.namespace);
+    if (push.skipEmptyRooms || push.boundedEmit) {
+      let memberCount = 0;
+      for (const room of push.rooms) {
+        const sockets = localOnly
+          ? await nsp.in(room).local.fetchSockets()
+          : await nsp.in(room).fetchSockets();
+        memberCount += sockets.length;
+        if (push.boundedEmit) {
+          for (const socket of sockets) {
+            if (this.isSocketBackpressured(socket)) {
+              ConduitGrpcSdk.Metrics?.increment('event_relays_emit_dropped_total');
+              socket.disconnect(true);
+            }
           }
         }
       }
+      if (memberCount === 0) {
+        return false;
+      }
     }
+
+    ConduitGrpcSdk.Logger.debug(
+      `Emitting event: ${push.event} to rooms: ${push.rooms.join(
+        ', ',
+      )} in namespace: ${push.namespace}`,
+    );
+    const target = nsp.to(push.rooms);
+    if (localOnly) {
+      if (push.boundedEmit) {
+        await Promise.race([
+          new Promise<void>(resolve => {
+            target.local.emit(push.event, push.data, () => resolve());
+          }),
+          new Promise<void>(resolve => setTimeout(resolve, EMIT_TIMEOUT_MS)),
+        ]);
+      } else {
+        target.local.emit(push.event, push.data);
+      }
+    } else if (push.boundedEmit) {
+      await Promise.race([
+        new Promise<void>(resolve => {
+          target.emit(push.event, push.data, () => resolve());
+        }),
+        new Promise<void>(resolve => setTimeout(resolve, EMIT_TIMEOUT_MS)),
+      ]);
+    } else {
+      target.emit(push.event, push.data);
+    }
+    return true;
+  }
+
+  private isSocketBackpressured(socket: RemoteSocket<any, any> | Socket): boolean {
+    const conn = (socket as Socket).conn ?? (socket as RemoteSocket<any, any>).conn;
+    const transport = conn?.transport as { writableLength?: number } | undefined;
+    const buffered =
+      typeof transport?.writableLength === 'number' ? transport.writableLength : 0;
+    return buffered > SEND_BUFFER_HIGH_WATER_MARK;
+  }
+
+  private async socketsForRoomPush(
+    push: SocketPush,
+    localOnly: boolean,
+  ): Promise<RemoteSocket<any, any>[]> {
+    if (push.receivers.length > 0) {
+      return this.findAndFilterSockets(push.receivers, push.namespace, localOnly);
+    }
+    const nsp = this.io.of(push.namespace);
+    const seen = new Set<string>();
+    const sockets: RemoteSocket<any, any>[] = [];
+    for (const room of push.rooms) {
+      const inRoom = localOnly
+        ? await nsp.in(room).local.fetchSockets()
+        : await nsp.in(room).fetchSockets();
+      for (const socket of inRoom) {
+        if (!seen.has(socket.id)) {
+          seen.add(socket.id);
+          sockets.push(socket);
+        }
+      }
+    }
+    return sockets;
   }
 
   private async handleResponse(
@@ -269,7 +391,7 @@ export class SocketController extends ConduitRouter {
   ) {
     if (res.event === 'join-room') {
       if (res.rooms && res.rooms.length !== 0) {
-        ConduitGrpcSdk.Logger.info(
+        ConduitGrpcSdk.Logger.debug(
           `Socket ${socket.id} joining rooms: ${res.rooms.join(
             ', ',
           )} in namespace: ${namespace}`,
@@ -279,7 +401,7 @@ export class SocketController extends ConduitRouter {
     } else if (res.event === 'leave-room') {
       if (res.rooms && res.rooms.length !== 0) {
         for (const room of res.rooms) {
-          ConduitGrpcSdk.Logger.info(
+          ConduitGrpcSdk.Logger.debug(
             `Socket ${socket.id} leaving room: ${room} in namespace: ${namespace}`,
           );
           socket.leave(room);
@@ -290,13 +412,13 @@ export class SocketController extends ConduitRouter {
         (!res.receivers || res.receivers.length === 0) &&
         (!res.rooms || res.rooms.length === 0)
       ) {
-        ConduitGrpcSdk.Logger.info(
+        ConduitGrpcSdk.Logger.debug(
           `Emitting event: ${res.event} to all sockets in namespace: ${namespace}`,
         );
         socket.emit(res.event, JSON.parse(res.data));
       } else {
         if (res.rooms && res.rooms.length !== 0) {
-          ConduitGrpcSdk.Logger.info(
+          ConduitGrpcSdk.Logger.debug(
             `Emitting event: ${res.event} to rooms: ${res.rooms.join(
               ', ',
             )} in namespace: ${namespace}`,
@@ -309,7 +431,7 @@ export class SocketController extends ConduitRouter {
             namespace,
           );
           for (const socket of filteredSockets) {
-            ConduitGrpcSdk.Logger.info(
+            ConduitGrpcSdk.Logger.debug(
               `Emitting event: ${res.event} to socket: ${socket.id} in namespace: ${namespace}`,
             );
             socket.emit(res.event, JSON.parse(res.data));

@@ -10,6 +10,7 @@ import { EventRelay } from '../models/index.js';
 import { EventRelayManager } from '../event-relays/EventRelayManager.js';
 import { EventRelayInput, validateEventRelayInput } from '../event-relays/validation.js';
 import { EventRelayValidationError } from '../event-relays/validationError.js';
+import { renderMessageTemplate } from '../event-relays/template.js';
 import { buildSearchQuery, parsePagination } from '../event-relays/search.js';
 
 export class EventRelayAdmin {
@@ -52,6 +53,22 @@ export class EventRelayAdmin {
     return relay;
   }
 
+  async previewEventRelay(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { messageTemplate, samplePayload } = call.request.params as {
+      messageTemplate: unknown;
+      samplePayload: unknown;
+    };
+    try {
+      const rendered = renderMessageTemplate(messageTemplate, samplePayload);
+      return { rendered };
+    } catch (err) {
+      if (err instanceof EventRelayValidationError) {
+        throw new GrpcError(status.INVALID_ARGUMENT, err.message);
+      }
+      throw err;
+    }
+  }
+
   async patchEventRelay(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const existing = await EventRelay.getInstance().findOne({
       _id: call.request.params.id,
@@ -89,7 +106,18 @@ export class EventRelayAdmin {
       ...input,
       messageTemplate: input.messageTemplate as EventRelay['messageTemplate'],
     });
-    await this.manager.notifyChanged();
+    const evictRelayIds: string[] = [];
+    if (!input.active) {
+      evictRelayIds.push(existing._id);
+    } else if (
+      input.permission !== existing.permission ||
+      input.resourceType !== existing.resourceType
+    ) {
+      evictRelayIds.push(existing._id);
+    }
+    await this.manager.notifyChanged({
+      evictRelayIds: evictRelayIds.length ? evictRelayIds : undefined,
+    });
     return updated!;
   }
 
@@ -101,7 +129,7 @@ export class EventRelayAdmin {
       throw new GrpcError(status.NOT_FOUND, 'Event relay not found');
     }
     await EventRelay.getInstance().deleteOne({ _id: existing._id });
-    await this.manager.notifyChanged();
+    await this.manager.notifyChanged({ evictRelayIds: [existing._id] });
     return { message: 'Event relay deleted' };
   }
 }

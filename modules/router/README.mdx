@@ -108,6 +108,31 @@ socket.emit('unsubscribe', relayId, resourceId);
 - The outbound event name is the relay `socketEvent`.
 - Placeholders in `messageTemplate` use `{{payload.path}}` against the bus JSON payload.
 
+**Subscribe-only.** Clients cannot publish on `/events/`; modules publish to the Redis bus and relays forward matching messages to subscribed rooms.
+
+**Authentication and Authorization** are required (`authMiddleware` on subscribe). Authorization is re-checked on a short TTL during delivery; revoked access triggers `leave-room`.
+
+**Rooms** are server-assigned: `er:<relayId>:<sha256(resourceId)>`. Conduit has no tenant model and **team ids are not part of room names** — isolation is ReBAC on `User` × `permission` × `resourceType:resourceId`.
+
+**HA / `localOnly`:** every Router replica subscribes to the bus and emits with `localOnly`, so clients spread across replicas still receive one copy without sticky sessions for delivery. Engine.IO **polling** transport still benefits from sticky sessions or WebSocket-only clients.
+
+**EventBus self-publish:** the bus ignores this process’s own publishes (signature filter). A relay on a channel the Router publishes will not deliver to local clients for those self-originated messages (typical for module-originated events).
+
+**Dual delivery warning:** Database `/database/` `change` events and a relay on overlapping bus channels (for example `database:change:*` or CRUD `database:update:*`) can duplicate notifications. CRUD bus payloads include **full documents** — prefer change-stream style payloads when both paths are enabled.
+
+Use preview to validate templates: `POST /router/event-relays/preview` with `messageTemplate` and `samplePayload` (same renderer as runtime).
+
+```javascript
+const socket = io(`${SOCKET_BASE_URL}/events/`, {
+  path: '/realtime',
+  auth: { token: accessToken },
+});
+
+socket.on('connect', () => {
+  socket.emit('subscribe', relayId, resourceId);
+});
+```
+
 ### Admin API
 
 | Method | Path | Description |
@@ -115,5 +140,6 @@ socket.emit('unsubscribe', relayId, resourceId);
 | `GET` | `/router/event-relays` | Paginated list (`skip`, `limit`, `search`) |
 | `GET` | `/router/event-relays/:id` | Single relay |
 | `POST` | `/router/event-relays` | Create |
-| `PATCH` | `/router/event-relays/:id` | Update |
+| `POST` | `/router/event-relays/preview` | Render template against sample JSON |
+| `PATCH` | `/router/event-relays/:id` | Update (deactivating evicts rooms) |
 | `DELETE` | `/router/event-relays/:id` | Delete |

@@ -66,6 +66,11 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private adminRouter: AdminHandlers;
   private readonly _routes: string[];
   private readonly _globalMiddlewares: string[];
+  private readonly _socketGlobalMiddlewareHandlers: ((
+    req: ConduitRequest,
+    res: Response,
+    next: NextFunction,
+  ) => void)[];
   private _grpcRoutes: {
     [field: string]: RouteT[];
   } = {};
@@ -76,12 +81,14 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private _haInitialized = false;
   private eventRelayManager: EventRelayManager;
   private eventsSocket?: ConduitSocket;
+  private socketsPreviouslyStopped = false;
 
   constructor(peerManifestRoot?: string) {
     super('router', peerManifestRoot);
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     this._routes = [];
     this._globalMiddlewares = [];
+    this._socketGlobalMiddlewareHandlers = [];
   }
 
   async onServerStart() {
@@ -112,6 +119,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     this.eventRelayManager = new EventRelayManager(
       this.grpcSdk,
       createEventRelayPusher(data => this._internalRouter.socketPush(data)),
+      {
+        getLocalRoomUserIds: (room: string) =>
+          this._internalRouter.getLocalRoomUserIds('/events/', room),
+        getLocalRoomsWithPrefix: (prefix: string) =>
+          this._internalRouter.getLocalRoomsWithPrefix('/events/', prefix),
+      },
     );
     this.adminRouter = new AdminHandlers(
       this.grpcServer,
@@ -148,16 +161,23 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     }
     if (config.transports.sockets) {
       this._internalRouter.initSockets();
-      this.registerEventsNamespace();
       await this.eventRelayManager.start();
       atLeastOne = true;
     } else {
       await this.eventRelayManager?.stop();
       this._internalRouter.stopSockets();
+      this.socketsPreviouslyStopped = true;
     }
 
     if (atLeastOne) {
       this._security.setupMiddlewares();
+    }
+    if (config.transports.sockets) {
+      if (this.socketsPreviouslyStopped) {
+        this.rebindSocketGlobalMiddlewares();
+        this.socketsPreviouslyStopped = false;
+      }
+      this.registerEventsNamespace();
     }
     if (!this._sdkRoutes.some(r => r.path === '/ready')) {
       this.registerRoute(adminRoutes.getReadyRoute());
@@ -339,7 +359,16 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     socketMiddleware: boolean = false,
   ) {
     this._globalMiddlewares.push(name);
+    if (socketMiddleware) {
+      this._socketGlobalMiddlewareHandlers.push(middleware);
+    }
     this._internalRouter.registerMiddleware(middleware, socketMiddleware);
+  }
+
+  private rebindSocketGlobalMiddlewares() {
+    for (const middleware of this._socketGlobalMiddlewareHandlers) {
+      this._internalRouter.registerSocketGlobalMiddleware(middleware);
+    }
   }
 
   getRegisteredRoutes() {

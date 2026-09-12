@@ -19,6 +19,8 @@
     "src/event-relays/search.ts",
     "src/event-relays/channels.ts",
     "src/event-relays/authorize.ts",
+    "src/event-relays/compile.ts",
+    "src/event-relays/rebacCache.ts",
     "src/event-relays/*.test.ts"
   ]
 }
