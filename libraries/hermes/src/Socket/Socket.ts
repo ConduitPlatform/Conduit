@@ -82,10 +82,10 @@ export class SocketController extends ConduitRouter {
       );
     });
 
-    this.io.engine.use((req: any, res: any, next: any) => {
+    this.io.engine.use((req: any, res: any, next: NextFunction) => {
       req.path = resolveEngineNamespacePath(req);
       let index = 0;
-      const run = (err?: Error) => {
+      const run: NextFunction = err => {
         if (err) {
           return next(err);
         }
@@ -142,7 +142,7 @@ export class SocketController extends ConduitRouter {
 
     this.io.of(namespace).on('connect', socket => {
       if (socket.recovered) {
-        ConduitGrpcSdk.Logger.debug(
+        ConduitGrpcSdk.Logger.info(
           `Socket recovered: ${socket.id} to namespace: ${namespace}`,
         );
         const recovered = conduitSocket.executeRecovered({
@@ -159,7 +159,7 @@ export class SocketController extends ConduitRouter {
             });
         }
       } else {
-        ConduitGrpcSdk.Logger.debug(
+        ConduitGrpcSdk.Logger.info(
           `Socket connected: ${socket.id} to namespace: ${namespace}`,
         );
         conduitSocket
@@ -176,7 +176,7 @@ export class SocketController extends ConduitRouter {
       }
 
       socket.onAny((event, ...args) => {
-        ConduitGrpcSdk.Logger.debug(`Socket event: ${event} from socket: ${socket.id}`);
+        ConduitGrpcSdk.Logger.info(`Socket event: ${event} from socket: ${socket.id}`);
         conduitSocket
           .executeRequest({
             event,
@@ -192,7 +192,7 @@ export class SocketController extends ConduitRouter {
       });
 
       socket.on('disconnect', () => {
-        ConduitGrpcSdk.Logger.debug(
+        ConduitGrpcSdk.Logger.info(
           `Socket disconnected: ${socket.id} from namespace: ${namespace}`,
         );
         conduitSocket
@@ -220,7 +220,7 @@ export class SocketController extends ConduitRouter {
         localOnly,
       );
       for (const socket of filteredSockets) {
-        ConduitGrpcSdk.Logger.debug(
+        ConduitGrpcSdk.Logger.info(
           `Socket ${socket.id} joining rooms: ${push.rooms.join(', ')} in namespace: ${
             push.namespace
           }`,
@@ -233,7 +233,7 @@ export class SocketController extends ConduitRouter {
         const filteredSockets = await this.socketsForRoomPush(push, localOnly);
         for (const socket of filteredSockets) {
           for (const room of push.rooms) {
-            ConduitGrpcSdk.Logger.debug(
+            ConduitGrpcSdk.Logger.info(
               `Socket ${socket.id} leaving room: ${room} in namespace: ${push.namespace}`,
             );
             socket.leave(room);
@@ -276,7 +276,7 @@ export class SocketController extends ConduitRouter {
             local.disconnect(true);
             continue;
           }
-          ConduitGrpcSdk.Logger.debug(
+          ConduitGrpcSdk.Logger.info(
             `Emitting event: ${push.event} to socket: ${remote.id} in namespace: ${push.namespace}`,
           );
           remote.emit(push.event, push.data);
@@ -310,9 +310,7 @@ export class SocketController extends ConduitRouter {
 
   private async emitEventToRooms(push: SocketPush, localOnly: boolean): Promise<boolean> {
     const nsp = this.io.of(push.namespace);
-    const localSockets = localOnly
-      ? this.localSocketsInRooms(nsp, push.rooms)
-      : [];
+    const localSockets = localOnly ? this.localSocketsInRooms(nsp, push.rooms) : [];
     if (push.skipEmptyRooms || push.boundedEmit) {
       if (localOnly && localSockets.length === 0) {
         return false;
@@ -327,7 +325,7 @@ export class SocketController extends ConduitRouter {
       }
     }
 
-    ConduitGrpcSdk.Logger.debug(
+    ConduitGrpcSdk.Logger.info(
       `Emitting event: ${push.event} to rooms: ${push.rooms.join(
         ', ',
       )} in namespace: ${push.namespace}`,
@@ -341,7 +339,10 @@ export class SocketController extends ConduitRouter {
     return true;
   }
 
-  private localSocketsInRooms(nsp: ReturnType<IOServer['of']>, rooms: string[]): Socket[] {
+  private localSocketsInRooms(
+    nsp: ReturnType<IOServer['of']>,
+    rooms: string[],
+  ): Socket[] {
     const sockets: Socket[] = [];
     for (const socket of nsp.sockets.values()) {
       if (rooms.some(room => socket.rooms.has(room))) {
@@ -389,7 +390,7 @@ export class SocketController extends ConduitRouter {
   ) {
     if (res.event === 'join-room') {
       if (res.rooms && res.rooms.length !== 0) {
-        ConduitGrpcSdk.Logger.debug(
+        ConduitGrpcSdk.Logger.info(
           `Socket ${socket.id} joining rooms: ${res.rooms.join(
             ', ',
           )} in namespace: ${namespace}`,
@@ -399,7 +400,7 @@ export class SocketController extends ConduitRouter {
     } else if (res.event === 'leave-room') {
       if (res.rooms && res.rooms.length !== 0) {
         for (const room of res.rooms) {
-          ConduitGrpcSdk.Logger.debug(
+          ConduitGrpcSdk.Logger.info(
             `Socket ${socket.id} leaving room: ${room} in namespace: ${namespace}`,
           );
           socket.leave(room);
@@ -410,13 +411,13 @@ export class SocketController extends ConduitRouter {
         (!res.receivers || res.receivers.length === 0) &&
         (!res.rooms || res.rooms.length === 0)
       ) {
-        ConduitGrpcSdk.Logger.debug(
+        ConduitGrpcSdk.Logger.info(
           `Emitting event: ${res.event} to all sockets in namespace: ${namespace}`,
         );
         socket.emit(res.event, JSON.parse(res.data));
       } else {
         if (res.rooms && res.rooms.length !== 0) {
-          ConduitGrpcSdk.Logger.debug(
+          ConduitGrpcSdk.Logger.info(
             `Emitting event: ${res.event} to rooms: ${res.rooms.join(
               ', ',
             )} in namespace: ${namespace}`,
@@ -429,7 +430,7 @@ export class SocketController extends ConduitRouter {
             namespace,
           );
           for (const socket of filteredSockets) {
-            ConduitGrpcSdk.Logger.debug(
+            ConduitGrpcSdk.Logger.info(
               `Emitting event: ${res.event} to socket: ${socket.id} in namespace: ${namespace}`,
             );
             socket.emit(res.event, JSON.parse(res.data));
