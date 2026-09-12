@@ -67,6 +67,7 @@ export async function reauthorizeRecoveredSubscriptions(
         mapped.code === status.NOT_FOUND
       ) {
         removeSubscription(request.socketId, userId, sub.relayId, sub.resourceId);
+        removeRelaySubscriptionFromContext(request.context, sub.relayId, sub.resourceId);
         leaveRooms.push(room);
         ConduitGrpcSdk.Metrics?.increment('event_relay_subscriptions_denied_total');
         continue;
