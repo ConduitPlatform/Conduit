@@ -1,4 +1,4 @@
-import { NextFunction } from 'express';
+import { NextFunction, Response } from 'express';
 import { status } from '@grpc/grpc-js';
 import {
   ConduitGrpcSdk,
