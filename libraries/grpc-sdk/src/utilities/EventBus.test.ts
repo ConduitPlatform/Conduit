@@ -7,6 +7,7 @@ type Listener = (channel: string, message: string) => void;
 class FakeRedis {
   handlers: Record<string, Listener[]> = {};
   subscribed = new Set<string>();
+  failNext = new Set<string>();
 
   on(event: string, listener: Listener) {
     this.handlers[event] = this.handlers[event] ?? [];
@@ -14,6 +15,11 @@ class FakeRedis {
   }
 
   subscribe(channel: string, cb?: (err?: Error | null) => void) {
+    if (this.failNext.has(channel)) {
+      this.failNext.delete(channel);
+      cb?.(new Error('subscribe failed'));
+      return;
+    }
     this.subscribed.add(channel);
     cb?.(null);
   }
@@ -90,5 +96,26 @@ describe('EventBus', () => {
     sub.emitMessage('chan', 'x');
     assert.equal(first, 0);
     assert.equal(second, 1);
+  });
+
+  it('subscribeAck rejects when Redis subscribe fails', async () => {
+    const { bus, sub } = createBus();
+    sub.failNext.add('chan');
+    await assert.rejects(
+      () =>
+        bus.subscribeAck(
+          'chan',
+          () => {},
+          'relay-a',
+        ),
+      /subscribe failed/,
+    );
+    sub.failNext.delete('chan');
+    let count = 0;
+    await bus.subscribeAck('chan', () => {
+      count += 1;
+    }, 'relay-a');
+    sub.emitMessage('chan', 'x');
+    assert.equal(count, 1);
   });
 });

@@ -12,6 +12,7 @@ import { EventRelayInput, validateEventRelayInput } from '../event-relays/valida
 import { EventRelayValidationError } from '../event-relays/validationError.js';
 import { renderMessageTemplate } from '../event-relays/template.js';
 import { buildSearchQuery, parsePagination } from '../event-relays/search.js';
+import { assertJsonPayloadSize } from '../event-relays/process.js';
 
 export class EventRelayAdmin {
   constructor(private readonly manager: EventRelayManager) {}
@@ -59,6 +60,7 @@ export class EventRelayAdmin {
       samplePayload: unknown;
     };
     try {
+      assertJsonPayloadSize(samplePayload);
       const rendered = renderMessageTemplate(messageTemplate, samplePayload);
       return { rendered };
     } catch (err) {

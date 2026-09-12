@@ -18,7 +18,6 @@ import { ConduitError, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { buildSocketMiddlewareParams } from './buildSocketMiddlewareParams.js';
 import { resolveEngineNamespacePath } from './resolveEngineNamespacePath.js';
 
-const EMIT_TIMEOUT_MS = 250;
 const SEND_BUFFER_HIGH_WATER_MARK = 512 * 1024;
 
 export class SocketController extends ConduitRouter {
@@ -256,21 +255,31 @@ export class SocketController extends ConduitRouter {
         }
       }
       if (push.receivers.length !== 0) {
+        const nsp = this.io.of(push.namespace);
         const filteredSockets = await this.findAndFilterSockets(
           push.receivers,
           push.namespace,
           localOnly,
         );
-        for (const socket of filteredSockets) {
-          if (push.boundedEmit && this.isSocketBackpressured(socket)) {
+        if (push.skipEmptyRooms && filteredSockets.length === 0) {
+          return false;
+        }
+        for (const remote of filteredSockets) {
+          const local = localOnly ? nsp.sockets.get(remote.id) : undefined;
+          if (
+            push.boundedEmit &&
+            localOnly &&
+            local &&
+            this.isLocalSocketBackpressured(local)
+          ) {
             ConduitGrpcSdk.Metrics?.increment('event_relays_emit_dropped_total');
-            socket.disconnect(true);
+            local.disconnect(true);
             continue;
           }
           ConduitGrpcSdk.Logger.debug(
-            `Emitting event: ${push.event} to socket: ${socket.id} in namespace: ${push.namespace}`,
+            `Emitting event: ${push.event} to socket: ${remote.id} in namespace: ${push.namespace}`,
           );
-          socket.emit(push.event, push.data);
+          remote.emit(push.event, push.data);
         }
       }
       return true;
@@ -301,24 +310,20 @@ export class SocketController extends ConduitRouter {
 
   private async emitEventToRooms(push: SocketPush, localOnly: boolean): Promise<boolean> {
     const nsp = this.io.of(push.namespace);
+    const localSockets = localOnly
+      ? this.localSocketsInRooms(nsp, push.rooms)
+      : [];
     if (push.skipEmptyRooms || push.boundedEmit) {
-      let memberCount = 0;
-      for (const room of push.rooms) {
-        const sockets = localOnly
-          ? await nsp.in(room).local.fetchSockets()
-          : await nsp.in(room).fetchSockets();
-        memberCount += sockets.length;
-        if (push.boundedEmit) {
-          for (const socket of sockets) {
-            if (this.isSocketBackpressured(socket)) {
-              ConduitGrpcSdk.Metrics?.increment('event_relays_emit_dropped_total');
-              socket.disconnect(true);
-            }
+      if (localOnly && localSockets.length === 0) {
+        return false;
+      }
+      if (push.boundedEmit && localOnly) {
+        for (const socket of localSockets) {
+          if (this.isLocalSocketBackpressured(socket)) {
+            ConduitGrpcSdk.Metrics?.increment('event_relays_emit_dropped_total');
+            socket.disconnect(true);
           }
         }
-      }
-      if (memberCount === 0) {
-        return false;
       }
     }
 
@@ -329,32 +334,25 @@ export class SocketController extends ConduitRouter {
     );
     const target = nsp.to(push.rooms);
     if (localOnly) {
-      if (push.boundedEmit) {
-        await Promise.race([
-          new Promise<void>(resolve => {
-            target.local.emit(push.event, push.data, () => resolve());
-          }),
-          new Promise<void>(resolve => setTimeout(resolve, EMIT_TIMEOUT_MS)),
-        ]);
-      } else {
-        target.local.emit(push.event, push.data);
-      }
-    } else if (push.boundedEmit) {
-      await Promise.race([
-        new Promise<void>(resolve => {
-          target.emit(push.event, push.data, () => resolve());
-        }),
-        new Promise<void>(resolve => setTimeout(resolve, EMIT_TIMEOUT_MS)),
-      ]);
+      target.local.emit(push.event, push.data);
     } else {
       target.emit(push.event, push.data);
     }
     return true;
   }
 
-  private isSocketBackpressured(socket: RemoteSocket<any, any> | Socket): boolean {
-    const conn = (socket as Socket).conn ?? (socket as RemoteSocket<any, any>).conn;
-    const transport = conn?.transport as { writableLength?: number } | undefined;
+  private localSocketsInRooms(nsp: ReturnType<IOServer['of']>, rooms: string[]): Socket[] {
+    const sockets: Socket[] = [];
+    for (const socket of nsp.sockets.values()) {
+      if (rooms.some(room => socket.rooms.has(room))) {
+        sockets.push(socket);
+      }
+    }
+    return sockets;
+  }
+
+  private isLocalSocketBackpressured(socket: Socket): boolean {
+    const transport = socket.conn?.transport as { writableLength?: number } | undefined;
     const buffered =
       typeof transport?.writableLength === 'number' ? transport.writableLength : 0;
     return buffered > SEND_BUFFER_HIGH_WATER_MARK;

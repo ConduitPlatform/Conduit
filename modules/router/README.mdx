@@ -92,12 +92,12 @@ import { io } from 'socket.io-client';
 
 const socket = io(`${SOCKET_BASE_URL}/events/`, {
   path: '/realtime',
-  extraHeaders: {
-    authorization: `Bearer ${accessToken}`,
-  },
+  auth: { token: accessToken },
 });
 
-socket.emit('subscribe', relayId, resourceId);
+socket.on('connect', () => {
+  socket.emit('subscribe', relayId, resourceId);
+});
 socket.on('order-updated', payload => {
   // payload is the rendered JSON template
 });
@@ -120,18 +120,7 @@ socket.emit('unsubscribe', relayId, resourceId);
 
 **Dual delivery warning:** Database `/database/` `change` events and a relay on overlapping bus channels (for example `database:change:*` or CRUD `database:update:*`) can duplicate notifications. CRUD bus payloads include **full documents** — prefer change-stream style payloads when both paths are enabled.
 
-Use preview to validate templates: `POST /router/event-relays/preview` with `messageTemplate` and `samplePayload` (same renderer as runtime).
-
-```javascript
-const socket = io(`${SOCKET_BASE_URL}/events/`, {
-  path: '/realtime',
-  auth: { token: accessToken },
-});
-
-socket.on('connect', () => {
-  socket.emit('subscribe', relayId, resourceId);
-});
-```
+Use preview to validate templates: `POST /router/event-relays/preview` with `messageTemplate` and `samplePayload` (same renderer as runtime; sample JSON is capped at 256 KiB like inbound bus payloads).
 
 ### Admin API
 

@@ -82,6 +82,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private eventRelayManager: EventRelayManager;
   private eventsSocket?: ConduitSocket;
   private socketsPreviouslyStopped = false;
+  private securityMiddlewareInitialized = false;
 
   constructor(peerManifestRoot?: string) {
     super('router', peerManifestRoot);
@@ -146,6 +147,10 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   async onConfig() {
     const config = ConfigController.getInstance().config;
+    const shouldRebindSocketGlobals =
+      config.transports.sockets &&
+      this.socketsPreviouslyStopped &&
+      this.securityMiddlewareInitialized;
     let atLeastOne = false;
     if (config.transports.graphql) {
       this._internalRouter.initGraphQL();
@@ -169,14 +174,15 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       this.socketsPreviouslyStopped = true;
     }
 
-    if (atLeastOne) {
+    if (atLeastOne && !this.securityMiddlewareInitialized) {
       this._security.setupMiddlewares();
+      this.securityMiddlewareInitialized = true;
     }
     if (config.transports.sockets) {
-      if (this.socketsPreviouslyStopped) {
+      if (shouldRebindSocketGlobals) {
         this.rebindSocketGlobalMiddlewares();
-        this.socketsPreviouslyStopped = false;
       }
+      this.socketsPreviouslyStopped = false;
       this.registerEventsNamespace();
     }
     if (!this._sdkRoutes.some(r => r.path === '/ready')) {

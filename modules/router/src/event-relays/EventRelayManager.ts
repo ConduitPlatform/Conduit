@@ -10,8 +10,9 @@ import { groupRelaysByChannel, planChannelSubscriptions } from './channels.js';
 import { parseBusPayload } from './process.js';
 import { EventRelayPusher } from './push.js';
 import { compileRelay, CompiledRelay } from './compile.js';
-import { RelayRebacCache } from './rebacCache.js';
+import { checkRebacBatch, RelayRebacCache } from './rebacCache.js';
 import { eventRelayRoomPrefix } from './rooms.js';
+import { removeSubscriptionsForRelay } from './subscriptions.js';
 
 export type { EventRelayPusher } from './push.js';
 export { createEventRelayPusher } from './push.js';
@@ -19,6 +20,10 @@ export { createEventRelayPusher } from './push.js';
 export type EventRelaySocketAccess = {
   getLocalRoomUserIds: (room: string) => Promise<string[]>;
   getLocalRoomsWithPrefix: (prefix: string) => Promise<string[]>;
+};
+
+type RefreshPayload = {
+  evictRelayIds?: string[];
 };
 
 export class EventRelayManager {
@@ -41,8 +46,8 @@ export class EventRelayManager {
     if (!this.started) {
       this.grpcSdk.bus?.subscribe(
         EVENT_RELAY_REFRESH_CHANNEL,
-        () => {
-          void this.reconcile();
+        message => {
+          void this.onRefreshMessage(message);
         },
         'router-event-relays-refresh',
       );
@@ -83,20 +88,42 @@ export class EventRelayManager {
     if (this.started) {
       await this.reconcile();
     }
-    this.grpcSdk.bus?.publish(EVENT_RELAY_REFRESH_CHANNEL, '');
+    const payload: RefreshPayload = {
+      evictRelayIds: options?.evictRelayIds ?? [],
+    };
+    this.grpcSdk.bus?.publish(EVENT_RELAY_REFRESH_CHANNEL, JSON.stringify(payload));
   }
 
   async evictRelayRooms(relayId: string): Promise<void> {
     const prefix = eventRelayRoomPrefix(relayId);
     const rooms = await this.sockets.getLocalRoomsWithPrefix(prefix);
     if (rooms.length === 0) {
+      removeSubscriptionsForRelay(relayId);
       return;
     }
     await this.push('leave-room', undefined, rooms);
+    removeSubscriptionsForRelay(relayId);
   }
 
   getActiveRelay(id: string): EventRelay | undefined {
     return this.relaysById.get(id);
+  }
+
+  private async onRefreshMessage(raw: string): Promise<void> {
+    let payload: RefreshPayload = {};
+    if (raw.trim()) {
+      try {
+        payload = JSON.parse(raw) as RefreshPayload;
+      } catch {
+        payload = {};
+      }
+    }
+    if (payload.evictRelayIds?.length) {
+      for (const relayId of payload.evictRelayIds) {
+        await this.evictRelayRooms(relayId);
+      }
+    }
+    await this.reconcile();
   }
 
   async reconcile(): Promise<void> {
@@ -148,12 +175,20 @@ export class EventRelayManager {
     }
 
     for (const channel of toSubscribe) {
-      this.grpcSdk.bus?.subscribe(
-        channel,
-        message => this.onBusMessage(channel, message),
-        `${EVENT_RELAY_SUBSCRIBER_PREFIX}${channel}`,
-      );
-      this.subscribedChannels.add(channel);
+      try {
+        await this.grpcSdk.bus?.subscribeAck(
+          channel,
+          message => this.onBusMessage(channel, message),
+          `${EVENT_RELAY_SUBSCRIBER_PREFIX}${channel}`,
+        );
+        this.subscribedChannels.add(channel);
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(
+          `Event relay failed to subscribe to bus channel ${channel}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
     }
 
     ConduitGrpcSdk.Metrics?.set('event_relays_active_total', this.relaysById.size);
@@ -220,18 +255,21 @@ export class EventRelayManager {
       return;
     }
 
+    const decisions = await checkRebacBatch(
+      this.rebacCache,
+      this.grpcSdk,
+      userIds,
+      relay.permission,
+      relay.resourceType,
+      resourceId,
+    );
+
     const allowedUsers: string[] = [];
     for (const userId of userIds) {
-      const allowed = await this.rebacCache.can(
-        this.grpcSdk,
-        userId,
-        relay.permission,
-        relay.resourceType,
-        resourceId,
-      );
-      if (allowed) {
+      const decision = decisions.get(userId) ?? 'unavailable';
+      if (decision === 'allow') {
         allowedUsers.push(userId);
-      } else {
+      } else if (decision === 'deny') {
         await this.push('leave-room', undefined, [room], [userId]);
         ConduitGrpcSdk.Metrics?.increment('event_relay_subscriptions_denied_total');
       }
@@ -242,7 +280,7 @@ export class EventRelayManager {
     }
 
     try {
-      const emitted = await this.push(relay.socketEvent, data, [room]);
+      const emitted = await this.push(relay.socketEvent, data, [], allowedUsers);
       if (emitted) {
         ConduitGrpcSdk.Metrics?.increment('event_relays_emitted_total');
       } else {

@@ -49,6 +49,21 @@ export function parseBusPayload(
   }
 }
 
+export function assertJsonPayloadSize(
+  payload: unknown,
+  maxBytes: number = MAX_INBOUND_BUS_BYTES,
+): void {
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(payload);
+  } catch {
+    throw new EventRelayValidationError('Sample payload must be valid JSON');
+  }
+  if (Buffer.byteLength(serialized, 'utf8') > maxBytes) {
+    throw new EventRelayValidationError(`Sample payload exceeds ${maxBytes} bytes`);
+  }
+}
+
 export function buildRelayEmissions(
   relays: RelayProcessInput[],
   payload: unknown,

@@ -1,16 +1,30 @@
 /**
- * True only for Engine.IO handshake requests (polling/WebSocket upgrade),
- * not for arbitrary HTTP routes under /realtime.
+ * True only for the initial Engine.IO handshake (polling/WebSocket upgrade),
+ * not for arbitrary HTTP routes or established sessions (`sid` present).
  */
 export function isSocketHandshake(req: { url?: string; originalUrl?: string }): boolean {
   const raw = req.url ?? req.originalUrl ?? '';
   if (!raw) {
     return false;
   }
-  const query = raw.includes('?') ? raw.slice(raw.indexOf('?') + 1) : '';
+  const queryIndex = raw.indexOf('?');
+  const pathname = queryIndex === -1 ? raw : raw.slice(0, queryIndex);
+  if (pathname.includes('ticket')) {
+    return false;
+  }
+  const query = queryIndex === -1 ? '' : raw.slice(queryIndex + 1);
   if (!query) {
     return false;
   }
   const params = new URLSearchParams(query);
-  return params.has('EIO') && params.has('transport');
+  if (!params.has('EIO') || !params.has('transport')) {
+    return false;
+  }
+  if (params.has('sid')) {
+    return false;
+  }
+  if (pathname !== '/' && !pathname.endsWith('/')) {
+    return false;
+  }
+  return true;
 }

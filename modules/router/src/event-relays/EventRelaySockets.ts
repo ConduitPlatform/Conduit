@@ -3,20 +3,20 @@ import { ConduitGrpcSdk, GrpcError, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitSocket, ConduitSocketEvent } from '@conduitplatform/hermes';
 import {
   EVENTS_NAMESPACE,
-  MAX_ROOMS_PER_SOCKET,
   MAX_SUBSCRIBE_PER_MINUTE,
 } from './constants.js';
 import { EventRelayManager } from './EventRelayManager.js';
 import { eventRelayRoom } from './rooms.js';
 import { validateResourceId } from './validation.js';
 import { authorizeRelaySubscription, toSubscriptionError } from './authorize.js';
+import {
+  clearSocketSubscriptionTracking,
+  removeSubscription,
+  subscriptionsForUser,
+  trackSubscription,
+  _clearEventRelaySubscriptionStateForTests,
+} from './subscriptions.js';
 
-type RelaySubscription = {
-  relayId: string;
-  resourceId: string;
-};
-
-const subscriptionsBySocket = new Map<string, RelaySubscription[]>();
 const subscribeTimestamps = new Map<string, number[]>();
 
 export function createEventsSocket(
@@ -33,7 +33,7 @@ export function createEventsSocket(
   events.set('disconnect', {
     name: 'disconnect',
     handler: async request => {
-      subscriptionsBySocket.delete(request.socketId);
+      clearSocketSubscriptionTracking(request.socketId);
       subscribeTimestamps.delete(request.socketId);
       return { event: 'leave-room', rooms: [] };
     },
@@ -45,14 +45,24 @@ export function createEventsSocket(
     handler: async request => {
       assertSubscribeRateLimit(request.socketId);
       const userId = request.context?.user?._id as string | undefined;
+      if (!userId) {
+        throw new GrpcError(status.UNAUTHENTICATED, 'Authentication required');
+      }
       const [relayId, resourceId] = request.params ?? [];
       const room = await authorizeOrThrow(grpcSdk, manager, userId, relayId, resourceId);
-      trackSubscription(
-        request.socketId,
-        String(relayId),
-        validateResourceId(resourceId),
-        room,
-      );
+      try {
+        trackSubscription(
+          request.socketId,
+          userId,
+          String(relayId),
+          validateResourceId(resourceId),
+        );
+      } catch (err) {
+        throw new GrpcError(
+          status.RESOURCE_EXHAUSTED,
+          err instanceof Error ? err.message : 'Subscription limit exceeded',
+        );
+      }
       return { event: 'join-room', rooms: [room] };
     },
   });
@@ -61,13 +71,14 @@ export function createEventsSocket(
     name: 'unsubscribe',
     params: [TYPE.String, TYPE.String],
     handler: async request => {
+      const userId = request.context?.user?._id as string | undefined;
       const [relayId, resourceId] = request.params ?? [];
       if (typeof relayId !== 'string' || relayId.trim() === '') {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Relay ID is required');
       }
       try {
         const validatedResourceId = validateResourceId(resourceId);
-        removeSubscription(request.socketId, relayId, validatedResourceId);
+        removeSubscription(request.socketId, userId, relayId, validatedResourceId);
         return {
           event: 'leave-room',
           rooms: [eventRelayRoom(relayId, validatedResourceId)],
@@ -97,7 +108,10 @@ async function reauthorizeRecoveredSubscriptions(
   request: { socketId: string; context?: { user?: { _id?: string } } },
 ) {
   const userId = request.context?.user?._id as string | undefined;
-  const subs = subscriptionsBySocket.get(request.socketId) ?? [];
+  if (!userId) {
+    return { event: 'leave-room' as const, rooms: [] };
+  }
+  const subs = subscriptionsForUser(userId);
   const keepRooms: string[] = [];
   for (const sub of subs) {
     try {
@@ -112,7 +126,9 @@ async function reauthorizeRecoveredSubscriptions(
         },
       );
       keepRooms.push(room);
+      trackSubscription(request.socketId, userId, sub.relayId, sub.resourceId);
     } catch {
+      removeSubscription(request.socketId, userId, sub.relayId, sub.resourceId);
       ConduitGrpcSdk.Metrics?.increment('event_relay_subscriptions_denied_total');
     }
   }
@@ -136,38 +152,6 @@ function assertSubscribeRateLimit(socketId: string): void {
   }
   timestamps.push(now);
   subscribeTimestamps.set(socketId, timestamps);
-}
-
-function trackSubscription(
-  socketId: string,
-  relayId: string,
-  resourceId: string,
-  room: string,
-): void {
-  const subs = subscriptionsBySocket.get(socketId) ?? [];
-  const withoutDuplicate = subs.filter(
-    sub => !(sub.relayId === relayId && sub.resourceId === resourceId),
-  );
-  withoutDuplicate.push({ relayId, resourceId });
-  if (withoutDuplicate.length > MAX_ROOMS_PER_SOCKET) {
-    throw new GrpcError(
-      status.RESOURCE_EXHAUSTED,
-      `Cannot subscribe to more than ${MAX_ROOMS_PER_SOCKET} relay rooms`,
-    );
-  }
-  subscriptionsBySocket.set(socketId, withoutDuplicate);
-  void room;
-}
-
-function removeSubscription(socketId: string, relayId: string, resourceId: string): void {
-  const subs = subscriptionsBySocket.get(socketId);
-  if (!subs) {
-    return;
-  }
-  subscriptionsBySocket.set(
-    socketId,
-    subs.filter(sub => !(sub.relayId === relayId && sub.resourceId === resourceId)),
-  );
 }
 
 async function authorizeOrThrow(
@@ -202,6 +186,6 @@ export { authorizeRelaySubscription } from './authorize.js';
 
 /** @internal test helper */
 export function _clearEventRelaySocketStateForTests(): void {
-  subscriptionsBySocket.clear();
+  _clearEventRelaySubscriptionStateForTests();
   subscribeTimestamps.clear();
 }

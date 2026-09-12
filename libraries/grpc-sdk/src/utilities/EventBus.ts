@@ -14,6 +14,7 @@ export class EventBus {
   private _subscriberChannels: Map<string, string>;
   /** channels with a successful Redis SUBSCRIBE */
   private _redisSubscribedChannels: Set<string>;
+  private _subscribeInFlight = new Map<string, Promise<void>>();
   private _signature: string;
   private _anonymousSubscriberSeq = 0;
   private _shuttingDown = false;
@@ -31,12 +32,9 @@ export class EventBus {
     this._clientSubscriber.on('message', (channel: string, message: string) => {
       this.dispatch(channel, message);
     });
-    const shutdown = () => {
+    process.on('exit', () => {
       this.quit();
-    };
-    process.on('exit', shutdown);
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
+    });
   }
 
   quit(): void {
@@ -67,6 +65,20 @@ export class EventBus {
     callback: (message: string) => void,
     subscriberId?: string,
   ): void {
+    void this.subscribeAck(channelName, callback, subscriberId).catch(err => {
+      getLogger().error(
+        `EventBus subscribe failed for ${channelName}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    });
+  }
+
+  async subscribeAck(
+    channelName: string,
+    callback: (message: string) => void,
+    subscriberId?: string,
+  ): Promise<void> {
     if (this._shuttingDown) {
       return;
     }
@@ -89,27 +101,48 @@ export class EventBus {
       return;
     }
 
-    this._clientSubscriber.subscribe(channelName, err => {
-      if (err) {
-        getLogger().error(
-          `EventBus failed to subscribe to ${channelName}: ${err.message}`,
-        );
-        const pending = this._channelCallbacks.get(channelName);
-        if (pending) {
-          for (const subId of pending.keys()) {
-            this._subscriberChannels.delete(subId);
+    let inFlight = this._subscribeInFlight.get(channelName);
+    if (!inFlight) {
+      inFlight = new Promise<void>((resolve, reject) => {
+        this._clientSubscriber.subscribe(channelName, err => {
+          if (err) {
+            reject(err);
+            return;
           }
-          this._channelCallbacks.delete(channelName);
-        }
-        return;
+          this._redisSubscribedChannels.add(channelName);
+          resolve();
+        });
+      }).finally(() => {
+        this._subscribeInFlight.delete(channelName);
+      });
+      this._subscribeInFlight.set(channelName, inFlight);
+    }
+
+    try {
+      await inFlight;
+    } catch (err) {
+      if (!this._redisSubscribedChannels.has(channelName)) {
+        this.removeChannelCallbacks(channelName);
       }
-      this._redisSubscribedChannels.add(channelName);
-    });
+      this.unsubscribe(id);
+      throw err;
+    }
   }
 
   publish(channelName: string, message: string) {
     message = message + `CND_Signature:${this._signature}`;
     this._clientPublisher.publish(channelName, message);
+  }
+
+  private removeChannelCallbacks(channelName: string): void {
+    const callbacks = this._channelCallbacks.get(channelName);
+    if (!callbacks) {
+      return;
+    }
+    for (const subId of callbacks.keys()) {
+      this._subscriberChannels.delete(subId);
+    }
+    this._channelCallbacks.delete(channelName);
   }
 
   private dispatch(channel: string, message: string): void {
