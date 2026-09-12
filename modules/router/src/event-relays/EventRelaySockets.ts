@@ -9,10 +9,10 @@ import { EventRelayManager } from './EventRelayManager.js';
 import { eventRelayRoom } from './rooms.js';
 import { validateResourceId } from './validation.js';
 import { authorizeRelaySubscription, toSubscriptionError } from './authorize.js';
+import { reauthorizeRecoveredSubscriptions } from './recovery.js';
 import {
-  clearSocketSubscriptionTracking,
+  releaseSocketSubscriptions,
   removeSubscription,
-  subscriptionsForUser,
   trackSubscription,
   _clearEventRelaySubscriptionStateForTests,
 } from './subscriptions.js';
@@ -33,7 +33,8 @@ export function createEventsSocket(
   events.set('disconnect', {
     name: 'disconnect',
     handler: async request => {
-      clearSocketSubscriptionTracking(request.socketId);
+      const userId = request.context?.user?._id as string | undefined;
+      releaseSocketSubscriptions(request.socketId, userId);
       subscribeTimestamps.delete(request.socketId);
       return { event: 'leave-room', rooms: [] };
     },
@@ -100,45 +101,6 @@ export function createEventsSocket(
     },
     events,
   );
-}
-
-async function reauthorizeRecoveredSubscriptions(
-  grpcSdk: ConduitGrpcSdk,
-  manager: EventRelayManager,
-  request: { socketId: string; context?: { user?: { _id?: string } } },
-) {
-  const userId = request.context?.user?._id as string | undefined;
-  if (!userId) {
-    return { event: 'leave-room' as const, rooms: [] };
-  }
-  const subs = subscriptionsForUser(userId);
-  const keepRooms: string[] = [];
-  for (const sub of subs) {
-    try {
-      const room = await authorizeRelaySubscription(
-        grpcSdk,
-        manager,
-        userId,
-        sub.relayId,
-        sub.resourceId,
-        () => {
-          ConduitGrpcSdk.Metrics?.increment('event_relay_subscriptions_denied_total');
-        },
-      );
-      keepRooms.push(room);
-      trackSubscription(request.socketId, userId, sub.relayId, sub.resourceId);
-    } catch {
-      removeSubscription(request.socketId, userId, sub.relayId, sub.resourceId);
-      ConduitGrpcSdk.Metrics?.increment('event_relay_subscriptions_denied_total');
-    }
-  }
-  const leaveRooms = subs
-    .map(sub => eventRelayRoom(sub.relayId, sub.resourceId))
-    .filter(room => !keepRooms.includes(room));
-  if (leaveRooms.length > 0) {
-    return { event: 'leave-room' as const, rooms: leaveRooms };
-  }
-  return { event: 'join-room' as const, rooms: [] };
 }
 
 function assertSubscribeRateLimit(socketId: string): void {

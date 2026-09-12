@@ -280,7 +280,7 @@ export class EventRelayManager {
     }
 
     try {
-      const emitted = await this.push(relay.socketEvent, data, [], allowedUsers);
+      const emitted = await this.push(relay.socketEvent, data, [room], allowedUsers);
       if (emitted) {
         ConduitGrpcSdk.Metrics?.increment('event_relays_emitted_total');
       } else {

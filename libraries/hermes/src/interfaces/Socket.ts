@@ -10,6 +10,7 @@ export interface ConduitSocketParameters {
   socketId: string;
   params?: UntypedArray;
   context?: Indexable;
+  recoveredRooms?: string[];
 }
 
 export type ConduitSocketParamTypes = (TYPE | ConduitSocketParamTypes)[];

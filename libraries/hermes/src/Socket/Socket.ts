@@ -18,7 +18,7 @@ import { ConduitError, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { buildSocketMiddlewareParams } from './buildSocketMiddlewareParams.js';
 import { resolveEngineNamespacePath } from './resolveEngineNamespacePath.js';
 
-const SEND_BUFFER_HIGH_WATER_MARK = 512 * 1024;
+const WRITE_BUFFER_PACKET_HIGH_WATER = 64;
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;
@@ -142,13 +142,11 @@ export class SocketController extends ConduitRouter {
 
     this.io.of(namespace).on('connect', socket => {
       if (socket.recovered) {
-        ConduitGrpcSdk.Logger.info(
-          `Socket recovered: ${socket.id} to namespace: ${namespace}`,
-        );
         const recovered = conduitSocket.executeRecovered({
           event: 'recovered',
           socketId: socket.id,
           context: socket.data,
+          recoveredRooms: [...socket.rooms].filter(room => room.startsWith('er:')),
         });
         if (recovered) {
           recovered
@@ -159,9 +157,6 @@ export class SocketController extends ConduitRouter {
             });
         }
       } else {
-        ConduitGrpcSdk.Logger.info(
-          `Socket connected: ${socket.id} to namespace: ${namespace}`,
-        );
         conduitSocket
           .executeRequest({
             event: 'connect',
@@ -176,7 +171,6 @@ export class SocketController extends ConduitRouter {
       }
 
       socket.onAny((event, ...args) => {
-        ConduitGrpcSdk.Logger.info(`Socket event: ${event} from socket: ${socket.id}`);
         conduitSocket
           .executeRequest({
             event,
@@ -192,9 +186,6 @@ export class SocketController extends ConduitRouter {
       });
 
       socket.on('disconnect', () => {
-        ConduitGrpcSdk.Logger.info(
-          `Socket disconnected: ${socket.id} from namespace: ${namespace}`,
-        );
         conduitSocket
           .executeRequest({
             event: 'disconnect',
@@ -220,11 +211,6 @@ export class SocketController extends ConduitRouter {
         localOnly,
       );
       for (const socket of filteredSockets) {
-        ConduitGrpcSdk.Logger.info(
-          `Socket ${socket.id} joining rooms: ${push.rooms.join(', ')} in namespace: ${
-            push.namespace
-          }`,
-        );
         socket.join(push.rooms);
       }
       return true;
@@ -233,9 +219,6 @@ export class SocketController extends ConduitRouter {
         const filteredSockets = await this.socketsForRoomPush(push, localOnly);
         for (const socket of filteredSockets) {
           for (const room of push.rooms) {
-            ConduitGrpcSdk.Logger.info(
-              `Socket ${socket.id} leaving room: ${room} in namespace: ${push.namespace}`,
-            );
             socket.leave(room);
           }
         }
@@ -248,18 +231,13 @@ export class SocketController extends ConduitRouter {
       ) {
         return false;
       }
-      if (push.rooms.length !== 0) {
-        const emitted = await this.emitEventToRooms(push, localOnly);
-        if (!emitted) {
-          return false;
-        }
-      }
       if (push.receivers.length !== 0) {
         const nsp = this.io.of(push.namespace);
         const filteredSockets = await this.findAndFilterSockets(
           push.receivers,
           push.namespace,
           localOnly,
+          push.rooms,
         );
         if (push.skipEmptyRooms && filteredSockets.length === 0) {
           return false;
@@ -276,10 +254,14 @@ export class SocketController extends ConduitRouter {
             local.disconnect(true);
             continue;
           }
-          ConduitGrpcSdk.Logger.info(
-            `Emitting event: ${push.event} to socket: ${remote.id} in namespace: ${push.namespace}`,
-          );
           remote.emit(push.event, push.data);
+        }
+        return true;
+      }
+      if (push.rooms.length !== 0) {
+        const emitted = await this.emitEventToRooms(push, localOnly);
+        if (!emitted) {
+          return false;
         }
       }
       return true;
@@ -325,11 +307,6 @@ export class SocketController extends ConduitRouter {
       }
     }
 
-    ConduitGrpcSdk.Logger.info(
-      `Emitting event: ${push.event} to rooms: ${push.rooms.join(
-        ', ',
-      )} in namespace: ${push.namespace}`,
-    );
     const target = nsp.to(push.rooms);
     if (localOnly) {
       target.local.emit(push.event, push.data);
@@ -353,10 +330,15 @@ export class SocketController extends ConduitRouter {
   }
 
   private isLocalSocketBackpressured(socket: Socket): boolean {
-    const transport = socket.conn?.transport as { writableLength?: number } | undefined;
-    const buffered =
-      typeof transport?.writableLength === 'number' ? transport.writableLength : 0;
-    return buffered > SEND_BUFFER_HIGH_WATER_MARK;
+    const conn = socket.conn as unknown as {
+      writeBuffer?: unknown[];
+      transport?: { writable?: boolean };
+    };
+    if (conn.transport?.writable === false) {
+      return true;
+    }
+    const pending = conn.writeBuffer?.length ?? 0;
+    return pending > WRITE_BUFFER_PACKET_HIGH_WATER;
   }
 
   private async socketsForRoomPush(
@@ -390,19 +372,11 @@ export class SocketController extends ConduitRouter {
   ) {
     if (res.event === 'join-room') {
       if (res.rooms && res.rooms.length !== 0) {
-        ConduitGrpcSdk.Logger.info(
-          `Socket ${socket.id} joining rooms: ${res.rooms.join(
-            ', ',
-          )} in namespace: ${namespace}`,
-        );
         socket.join(res.rooms);
       }
     } else if (res.event === 'leave-room') {
       if (res.rooms && res.rooms.length !== 0) {
         for (const room of res.rooms) {
-          ConduitGrpcSdk.Logger.info(
-            `Socket ${socket.id} leaving room: ${room} in namespace: ${namespace}`,
-          );
           socket.leave(room);
         }
       }
@@ -411,17 +385,9 @@ export class SocketController extends ConduitRouter {
         (!res.receivers || res.receivers.length === 0) &&
         (!res.rooms || res.rooms.length === 0)
       ) {
-        ConduitGrpcSdk.Logger.info(
-          `Emitting event: ${res.event} to all sockets in namespace: ${namespace}`,
-        );
         socket.emit(res.event, JSON.parse(res.data));
       } else {
         if (res.rooms && res.rooms.length !== 0) {
-          ConduitGrpcSdk.Logger.info(
-            `Emitting event: ${res.event} to rooms: ${res.rooms.join(
-              ', ',
-            )} in namespace: ${namespace}`,
-          );
           this.io.of(namespace).to(res.rooms).emit(res.event, JSON.parse(res.data));
         }
         if (res.receivers && res.receivers.length !== 0) {
@@ -430,9 +396,6 @@ export class SocketController extends ConduitRouter {
             namespace,
           );
           for (const socket of filteredSockets) {
-            ConduitGrpcSdk.Logger.info(
-              `Emitting event: ${res.event} to socket: ${socket.id} in namespace: ${namespace}`,
-            );
             socket.emit(res.event, JSON.parse(res.data));
           }
         }
@@ -444,14 +407,23 @@ export class SocketController extends ConduitRouter {
     userIds: string[],
     namespace: string,
     localOnly: boolean = false,
+    rooms: string[] = [],
   ): Promise<RemoteSocket<any, any>[]> {
     const nsp = this.io.of(namespace);
     const sockets = localOnly ? await nsp.local.fetchSockets() : await nsp.fetchSockets();
     const userIdSet = new Set(userIds);
+    const roomSet = rooms.length > 0 ? new Set(rooms) : null;
     return sockets.filter(socket => {
-      if (socket.data && socket.data.user) {
-        return userIdSet.has(socket.data.user._id);
+      if (!socket.data?.user) {
+        return false;
       }
+      if (!userIdSet.has(socket.data.user._id)) {
+        return false;
+      }
+      if (roomSet) {
+        return [...roomSet].some(room => socket.rooms.has(room));
+      }
+      return true;
     });
   }
 

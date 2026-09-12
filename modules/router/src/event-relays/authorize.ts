@@ -62,7 +62,6 @@ export async function authorizeRelaySubscription(
   }
 
   if (!grpcSdk.authorization || !grpcSdk.isAvailable('authorization')) {
-    onDenied?.();
     throw new RelaySubscriptionError(status.UNAVAILABLE, 'Authorization is unavailable');
   }
 
@@ -75,7 +74,6 @@ export async function authorizeRelaySubscription(
     });
     allowed = decision.allow;
   } catch {
-    onDenied?.();
     throw new RelaySubscriptionError(status.UNAVAILABLE, 'Authorization check failed');
   }
 
