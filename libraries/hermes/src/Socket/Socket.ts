@@ -17,8 +17,10 @@ import ObjectHash from 'object-hash';
 import { ConduitError, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { buildSocketMiddlewareParams } from './buildSocketMiddlewareParams.js';
 import { resolveEngineNamespacePath } from './resolveEngineNamespacePath.js';
-
-const WRITE_BUFFER_PACKET_HIGH_WATER = 64;
+import {
+  filterRemoteSocketsByUserAndRooms,
+  isEngineSocketBackpressured,
+} from './socketPushUtils.js';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;
@@ -330,15 +332,9 @@ export class SocketController extends ConduitRouter {
   }
 
   private isLocalSocketBackpressured(socket: Socket): boolean {
-    const conn = socket.conn as unknown as {
-      writeBuffer?: unknown[];
-      transport?: { writable?: boolean };
-    };
-    if (conn.transport?.writable === false) {
-      return true;
-    }
-    const pending = conn.writeBuffer?.length ?? 0;
-    return pending > WRITE_BUFFER_PACKET_HIGH_WATER;
+    return isEngineSocketBackpressured(
+      socket.conn as unknown as { writeBuffer?: unknown[] },
+    );
   }
 
   private async socketsForRoomPush(
@@ -411,20 +407,15 @@ export class SocketController extends ConduitRouter {
   ): Promise<RemoteSocket<any, any>[]> {
     const nsp = this.io.of(namespace);
     const sockets = localOnly ? await nsp.local.fetchSockets() : await nsp.fetchSockets();
-    const userIdSet = new Set(userIds);
-    const roomSet = rooms.length > 0 ? new Set(rooms) : null;
-    return sockets.filter(socket => {
-      if (!socket.data?.user) {
-        return false;
-      }
-      if (!userIdSet.has(socket.data.user._id)) {
-        return false;
-      }
-      if (roomSet) {
-        return [...roomSet].some(room => socket.rooms.has(room));
-      }
-      return true;
-    });
+    return filterRemoteSocketsByUserAndRooms(
+      sockets.map(socket => ({
+        id: socket.id,
+        data: socket.data,
+        rooms: socket.rooms,
+      })),
+      userIds,
+      rooms,
+    ).map(filtered => sockets.find(s => s.id === filtered.id)!);
   }
 
   protected _refreshRouter(): void {

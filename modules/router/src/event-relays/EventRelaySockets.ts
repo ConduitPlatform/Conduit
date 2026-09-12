@@ -16,6 +16,10 @@ import {
   trackSubscription,
   _clearEventRelaySubscriptionStateForTests,
 } from './subscriptions.js';
+import {
+  persistRelaySubscriptionOnContext,
+  removeRelaySubscriptionFromContext,
+} from './relaySocketData.js';
 
 const subscribeTimestamps = new Map<string, number[]>();
 
@@ -50,14 +54,16 @@ export function createEventsSocket(
         throw new GrpcError(status.UNAUTHENTICATED, 'Authentication required');
       }
       const [relayId, resourceId] = request.params ?? [];
+      const validatedResourceId = validateResourceId(resourceId);
       const room = await authorizeOrThrow(grpcSdk, manager, userId, relayId, resourceId);
       try {
         trackSubscription(
           request.socketId,
           userId,
           String(relayId),
-          validateResourceId(resourceId),
+          validatedResourceId,
         );
+        persistRelaySubscriptionOnContext(request.context, String(relayId), validatedResourceId);
       } catch (err) {
         throw new GrpcError(
           status.RESOURCE_EXHAUSTED,
@@ -80,6 +86,7 @@ export function createEventsSocket(
       try {
         const validatedResourceId = validateResourceId(resourceId);
         removeSubscription(request.socketId, userId, relayId, validatedResourceId);
+        removeRelaySubscriptionFromContext(request.context, relayId, validatedResourceId);
         return {
           event: 'leave-room',
           rooms: [eventRelayRoom(relayId, validatedResourceId)],

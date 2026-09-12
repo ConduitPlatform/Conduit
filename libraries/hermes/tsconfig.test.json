@@ -7,5 +7,11 @@
     "sourceMap": false,
     "types": ["node"]
   },
-  "include": ["src/Socket/isSocketHandshake.ts", "src/Socket/isSocketHandshake.test.ts"]
+  "include": [
+    "src/Socket/isSocketHandshake.ts",
+    "src/Socket/isSocketHandshake.test.ts",
+    "src/Socket/socketPushUtils.ts",
+    "src/Socket/socketPushUtils.test.ts"
+  ],
+  "exclude": []
 }

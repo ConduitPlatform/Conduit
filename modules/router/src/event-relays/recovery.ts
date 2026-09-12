@@ -12,6 +12,7 @@ import {
   subscriptionsForRecoveredRooms,
   trackSubscription,
 } from './subscriptions.js';
+import { relaySubscriptionsFromContext, persistRelaySubscriptionOnContext, removeRelaySubscriptionFromContext } from './relaySocketData.js';
 
 type RelayAuthorizationSdk = Parameters<typeof authorizeRelaySubscription>[0];
 
@@ -20,7 +21,7 @@ export async function reauthorizeRecoveredSubscriptions(
   manager: RelayLookup,
   request: {
     socketId: string;
-    context?: { user?: { _id?: string } };
+    context?: { user?: { _id?: string } } & Record<string, unknown>;
     recoveredRooms?: string[];
   },
 ): Promise<
@@ -32,7 +33,10 @@ export async function reauthorizeRecoveredSubscriptions(
   }
 
   const recoveredRooms = request.recoveredRooms ?? [];
-  const subs = subscriptionsForRecoveredRooms(userId, recoveredRooms);
+  const subs = subscriptionsForRecoveredRooms(
+    recoveredRooms,
+    relaySubscriptionsFromContext(request.context),
+  );
   const leaveRooms: string[] = [];
 
   for (const sub of subs) {
@@ -49,11 +53,13 @@ export async function reauthorizeRecoveredSubscriptions(
         },
       );
       trackSubscription(request.socketId, userId, sub.relayId, sub.resourceId);
+      persistRelaySubscriptionOnContext(request.context, sub.relayId, sub.resourceId);
     } catch (err) {
       const mapped =
         err instanceof RelaySubscriptionError ? err : toSubscriptionError(err);
       if (mapped.code === status.UNAVAILABLE) {
         trackSubscription(request.socketId, userId, sub.relayId, sub.resourceId);
+        persistRelaySubscriptionOnContext(request.context, sub.relayId, sub.resourceId);
         continue;
       }
       if (

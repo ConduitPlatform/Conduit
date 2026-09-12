@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   releaseSocketSubscriptions,
   removeSubscriptionsForRelay,
+  subscriptionsForRecoveredRooms,
   subscriptionsForUser,
   trackSubscription,
   _clearEventRelaySubscriptionStateForTests,
@@ -61,7 +62,10 @@ describe('recovery re-authorization', () => {
 
     const result = await reauthorizeRecoveredSubscriptions(grpcSdk, manager, {
       socketId: 'new-socket',
-      context: { user: { _id: 'user-1' } },
+      context: {
+        user: { _id: 'user-1' },
+        eventRelaySubs: [{ relayId: 'relay-1', resourceId: 'order-1' }],
+      },
       recoveredRooms: [room],
     });
 
@@ -89,7 +93,10 @@ describe('recovery re-authorization', () => {
 
     const result = await reauthorizeRecoveredSubscriptions(grpcSdk, manager, {
       socketId: 'new-socket',
-      context: { user: { _id: 'user-1' } },
+      context: {
+        user: { _id: 'user-1' },
+        eventRelaySubs: [{ relayId: 'relay-1', resourceId: 'order-1' }],
+      },
       recoveredRooms: [room],
     });
 
@@ -124,11 +131,56 @@ describe('recovery re-authorization', () => {
     const otherRoom = eventRelayRoom('relay-2', 'order-2');
     await reauthorizeRecoveredSubscriptions(grpcSdk, manager, {
       socketId: 'new-socket',
-      context: { user: { _id: 'user-1' } },
+      context: {
+        user: { _id: 'user-1' },
+        eventRelaySubs: [{ relayId: 'relay-2', resourceId: 'order-2' }],
+      },
       recoveredRooms: [otherRoom],
     });
 
     assert.equal(canCalls, 1);
     assert.deepEqual(subscriptionsForUser('user-1'), []);
+  });
+
+  it('re-auths the first user after a second user subscribed to the same room', async () => {
+    _clearEventRelaySubscriptionStateForTests();
+    trackSubscription('socket-a', 'user-a', 'relay-1', 'order-1');
+    trackSubscription('socket-b', 'user-b', 'relay-1', 'order-1');
+    releaseSocketSubscriptions('socket-b', 'user-b');
+
+    let checkedSubject = '';
+    const manager = {
+      getActiveRelay: (id: string) => (id === 'relay-1' ? relay : undefined),
+    } as unknown as RelayLookup;
+    const grpcSdk = {
+      isAvailable: () => true,
+      authorization: {
+        can: async (request: { subject: string }) => {
+          checkedSubject = request.subject;
+          return { allow: true };
+        },
+      },
+    };
+
+    await reauthorizeRecoveredSubscriptions(grpcSdk, manager, {
+      socketId: 'socket-a-new',
+      context: { user: { _id: 'user-a' } },
+      recoveredRooms: [room],
+    });
+
+    assert.equal(checkedSubject, 'User:user-a');
+  });
+
+  it('prefers socket.data subscriptions when the room map was pruned on disconnect', () => {
+    _clearEventRelaySubscriptionStateForTests();
+    trackSubscription('socket-a', 'user-a', 'relay-1', 'order-1');
+    releaseSocketSubscriptions('socket-a', 'user-a');
+    assert.deepEqual(subscriptionsForRecoveredRooms([room]), []);
+    assert.deepEqual(
+      subscriptionsForRecoveredRooms([room], [
+        { relayId: 'relay-1', resourceId: 'order-1' },
+      ]),
+      [{ relayId: 'relay-1', resourceId: 'order-1' }],
+    );
   });
 });

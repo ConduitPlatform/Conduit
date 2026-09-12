@@ -6,9 +6,34 @@ export type RelaySubscription = {
   resourceId: string;
 };
 
+const RECOVERY_ROOM_MAP_TTL_MS = 120_000;
+
 const subscriptionsBySocket = new Map<string, RelaySubscription[]>();
 const subscriptionsByUser = new Map<string, RelaySubscription[]>();
-const subscriptionsByRoom = new Map<string, RelaySubscription & { userId: string }>();
+const subscriptionsByRoom = new Map<string, RelaySubscription & { expiresAt: number }>();
+
+function pruneExpiredRoomEntries(now = Date.now()): void {
+  for (const [room, entry] of subscriptionsByRoom) {
+    if (entry.expiresAt <= now) {
+      subscriptionsByRoom.delete(room);
+    }
+  }
+}
+
+function touchRoomEntry(relayId: string, resourceId: string): void {
+  const room = eventRelayRoom(relayId, resourceId);
+  subscriptionsByRoom.set(room, {
+    relayId,
+    resourceId,
+    expiresAt: Date.now() + RECOVERY_ROOM_MAP_TTL_MS,
+  });
+}
+
+function pruneRoomEntryIfUnused(relayId: string, resourceId: string): void {
+  if (!isSubscriptionTrackedOnAnySocket(relayId, resourceId)) {
+    subscriptionsByRoom.delete(eventRelayRoom(relayId, resourceId));
+  }
+}
 
 export function trackSubscription(
   socketId: string,
@@ -17,7 +42,6 @@ export function trackSubscription(
   resourceId: string,
 ): void {
   const entry = { relayId, resourceId };
-  const room = eventRelayRoom(relayId, resourceId);
   const socketSubs = subscriptionsBySocket.get(socketId) ?? [];
   const withoutDup = socketSubs.filter(
     sub => !(sub.relayId === relayId && sub.resourceId === resourceId),
@@ -34,7 +58,7 @@ export function trackSubscription(
   );
   userWithoutDup.push(entry);
   subscriptionsByUser.set(userId, userWithoutDup);
-  subscriptionsByRoom.set(room, { relayId, resourceId, userId });
+  touchRoomEntry(relayId, resourceId);
 }
 
 export function removeSubscription(
@@ -66,9 +90,7 @@ export function removeSubscription(
         subscriptionsByUser.set(userId, next);
       }
     }
-    if (!isSubscriptionTrackedOnAnySocket(relayId, resourceId)) {
-      subscriptionsByRoom.delete(eventRelayRoom(relayId, resourceId));
-    }
+    pruneRoomEntryIfUnused(relayId, resourceId);
   }
 }
 
@@ -119,24 +141,39 @@ export function releaseSocketSubscriptions(socketId: string, userId?: string): v
         subscriptionsByUser.set(userId, next);
       }
     }
+    pruneRoomEntryIfUnused(sub.relayId, sub.resourceId);
   }
 }
 
 export function subscriptionsForRecoveredRooms(
-  userId: string,
   recoveredRooms: string[],
+  contextSubs: RelaySubscription[] = [],
 ): RelaySubscription[] {
-  const subs: RelaySubscription[] = [];
-  for (const room of recoveredRooms) {
-    if (!room.startsWith('er:')) {
+  pruneExpiredRoomEntries();
+  const seen = new Set<string>();
+  const result: RelaySubscription[] = [];
+  const recoveredSet = new Set(recoveredRooms.filter(room => room.startsWith('er:')));
+
+  for (const sub of contextSubs) {
+    const room = eventRelayRoom(sub.relayId, sub.resourceId);
+    if (recoveredSet.has(room) && !seen.has(room)) {
+      seen.add(room);
+      result.push(sub);
+    }
+  }
+
+  for (const room of recoveredSet) {
+    if (seen.has(room)) {
       continue;
     }
     const entry = subscriptionsByRoom.get(room);
-    if (entry?.userId === userId) {
-      subs.push({ relayId: entry.relayId, resourceId: entry.resourceId });
+    if (entry) {
+      seen.add(room);
+      result.push({ relayId: entry.relayId, resourceId: entry.resourceId });
     }
   }
-  return subs;
+
+  return result;
 }
 
 export function subscriptionsForUser(userId: string): RelaySubscription[] {
