@@ -1,7 +1,3 @@
-/**
- * True only for the initial Engine.IO handshake (polling/WebSocket upgrade),
- * not for arbitrary HTTP routes or established sessions (`sid` present).
- */
 export function isSocketHandshake(req: { url?: string; originalUrl?: string }): boolean {
   const raw = req.url ?? req.originalUrl ?? '';
   if (!raw) {

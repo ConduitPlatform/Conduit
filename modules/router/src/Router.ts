@@ -361,7 +361,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   registerGlobalMiddleware(
     name: string,
-    middleware: any,
+    middleware: (req: ConduitRequest, res: Response, next: NextFunction) => void,
     socketMiddleware: boolean = false,
   ) {
     this._globalMiddlewares.push(name);
@@ -375,6 +375,13 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     for (const middleware of this._socketGlobalMiddlewareHandlers) {
       this._internalRouter.registerSocketGlobalMiddleware(middleware);
     }
+  }
+
+  async shutdown(): Promise<void> {
+    if (this.eventRelayManager) {
+      await this.eventRelayManager.stop();
+    }
+    this.grpcSdk.bus?.quit();
   }
 
   getRegisteredRoutes() {
