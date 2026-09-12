@@ -11,6 +11,7 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
+    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/Socket/*.test.js",
     "publish": "npm publish",
     "postbuild": "copyfiles -u 1 src/*.proto src/**/*.json ./dist/"
   },
