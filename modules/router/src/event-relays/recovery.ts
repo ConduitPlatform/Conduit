@@ -73,6 +73,7 @@ export async function reauthorizeRecoveredSubscriptions(
         continue;
       }
       removeSubscription(request.socketId, userId, sub.relayId, sub.resourceId);
+      removeRelaySubscriptionFromContext(request.context, sub.relayId, sub.resourceId);
       leaveRooms.push(room);
     }
   }
