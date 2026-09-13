@@ -28,10 +28,6 @@ export class BufferReader {
     private offset = 0,
   ) {}
 
-  get remaining(): number {
-    return this.buf.length - this.offset;
-  }
-
   u8(): number {
     const value = this.buf[this.offset];
     this.offset += 1;
@@ -124,13 +120,6 @@ export class PgoutputDecoder {
         return this.update(reader);
       case 'D':
         return this.delete(reader);
-      case 'C':
-      case 'T':
-      case 'Y':
-      case 'O':
-      case 'M':
-      case 'S':
-        return undefined;
       default:
         return undefined;
     }
@@ -220,12 +209,7 @@ function readTuple(
       if (name) row[name] = null;
       continue;
     }
-    if (kind === 'u') {
-      continue;
-    }
-    if (kind !== 't') {
-      continue;
-    }
+    if (kind !== 't') continue;
     const length = reader.i32();
     const value = reader.bytes(length).toString('utf8');
     if (name) row[name] = value;

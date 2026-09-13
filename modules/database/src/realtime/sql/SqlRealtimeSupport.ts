@@ -23,7 +23,7 @@ export class SqlRealtimeSupport {
   ) {}
 
   async checkTopology(): Promise<TopologyResult> {
-    await this.dropLegacyCapture().catch(() => undefined);
+    await dropLegacyCapture(this.adapter.sequelize).catch(() => undefined);
     const dialect = this.adapter.sequelize.getDialect();
     if (dialect !== 'postgres') {
       return { supported: false, message: SQL_ENGINE_UNSUPPORTED };
@@ -41,7 +41,7 @@ export class SqlRealtimeSupport {
 
   async prepare(schemas: OptedInSchema[]): Promise<void> {
     this.schemas = schemas;
-    await this.dropLegacyCapture();
+    await dropLegacyCapture(this.adapter.sequelize);
     if (this.adapter.sequelize.getDialect() !== 'postgres') {
       return;
     }
@@ -63,10 +63,6 @@ export class SqlRealtimeSupport {
       ),
       createFeed: this.createFeed,
     });
-  }
-
-  async dropLegacyCapture(): Promise<void> {
-    await dropLegacyCapture(this.adapter.sequelize);
   }
 
   private async probeLogicalReplication(): Promise<TopologyResult> {

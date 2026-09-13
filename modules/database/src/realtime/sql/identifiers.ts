@@ -13,7 +13,3 @@ export function quoteLiteral(value: string): string {
 export function mysqlQuoteIdent(name: string): string {
   return `\`${name.replace(/`/g, '``')}\``;
 }
-
-export function isReplicationSlotName(name: string): boolean {
-  return /^[a-z_][a-z0-9_]*$/.test(name);
-}

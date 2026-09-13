@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import pg from 'pg';
 import { PUBLICATION_NAME } from './constants.js';
-import { isReplicationSlotName, quoteLiteral } from './identifiers.js';
+import { quoteLiteral } from './identifiers.js';
 import {
   BufferReader,
   PgoutputDecoder,
@@ -165,7 +165,7 @@ export class PgoutputReplicationFeed implements ReplicationFeed {
       keyRow: change.keyRow,
       lsn: `${formatLsn(walStart)}:${xid}:${this.changeSeq}`,
       occurredAt,
-    } satisfies ReplicationChange);
+    });
   }
 
   private emitError(err: unknown): void {
@@ -190,8 +190,7 @@ export function createPgoutputFeed(options: {
 }
 
 function replicationSlotName(): string {
-  const name = `cnd_rt_${process.pid}_${Math.random().toString(36).slice(2, 10)}`;
-  return isReplicationSlotName(name) ? name : `cnd_rt_${process.pid}`;
+  return `cnd_rt_${process.pid}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function replicationConnection(client: pg.Client): PgReplicationConnection {

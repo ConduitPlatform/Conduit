@@ -52,9 +52,9 @@ async function dropPostgresLegacy(sequelize: Sequelize): Promise<void> {
     if (seen.has(key)) continue;
     seen.add(key);
     await sequelize.query(
-      `DROP TRIGGER IF EXISTS ${quoteIdent(String(row.trigger_name))} ON ${quoteIdent(
-        String(row.table_schema),
-      )}.${quoteIdent(String(row.table_name))}`,
+      `DROP TRIGGER IF EXISTS ${quoteIdent(row.trigger_name)} ON ${quoteIdent(
+        row.table_schema,
+      )}.${quoteIdent(row.table_name)}`,
     );
   }
   const functions = await sequelize.query(
@@ -72,9 +72,7 @@ async function dropPostgresLegacy(sequelize: Sequelize): Promise<void> {
     },
   );
   for (const row of functions as { function_name: string }[]) {
-    await sequelize.query(
-      `DROP FUNCTION IF EXISTS ${quoteIdent(String(row.function_name))}()`,
-    );
+    await sequelize.query(`DROP FUNCTION IF EXISTS ${quoteIdent(row.function_name)}()`);
   }
   await sequelize.query(`DROP TABLE IF EXISTS ${quoteIdent(LEGACY_CHANGE_LOG_TABLE)}`);
 }
@@ -113,9 +111,7 @@ async function dropSqliteLegacy(sequelize: Sequelize): Promise<void> {
     },
   );
   for (const row of triggers as { trigger_name: string }[]) {
-    await sequelize.query(
-      `DROP TRIGGER IF EXISTS ${quoteIdent(String(row.trigger_name))}`,
-    );
+    await sequelize.query(`DROP TRIGGER IF EXISTS ${quoteIdent(row.trigger_name)}`);
   }
   await sequelize.query(`DROP TABLE IF EXISTS ${quoteIdent(LEGACY_CHANGE_LOG_TABLE)}`);
 }

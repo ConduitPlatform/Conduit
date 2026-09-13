@@ -93,11 +93,7 @@ describe('SqlRealtimeSupport', () => {
           return [];
         }
         if (sql.includes('pg_publication_tables')) {
-          return sql.includes('CREATE PUBLICATION')
-            ? []
-            : queries.filter(item => item.includes('CREATE PUBLICATION')).length > 0
-              ? []
-              : [];
+          return [];
         }
         if (sql.includes('relreplident')) {
           return [{ ident: 'd', has_pk: true }];
