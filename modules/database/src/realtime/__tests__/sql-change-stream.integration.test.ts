@@ -1,14 +1,15 @@
 import { describe, expect, it } from '@jest/globals';
 import sqlite3 from 'sqlite3';
-import { Sequelize } from 'sequelize';
+import { QueryTypes, Sequelize } from 'sequelize';
 import { normalizeChangeEvent } from '../normalize.js';
 import { CHANGE_LOG_TABLE } from '../sql/constants.js';
 import { createChangeLogTableSql } from '../sql/ddl.js';
+import { quoteIdent, rowTriggerName } from '../sql/identifiers.js';
 import { toRawChangeEvent } from '../sql/mapEvent.js';
 import { desiredTriggers } from '../sql/triggerSql.js';
 import { ensureChangeLog, fetchChangeLogBatch, trimChangeLog } from '../sql/changelog.js';
 import { syncTriggers } from '../sql/triggers.js';
-import { SqlChangeStream } from '../sql/SqlChangeStream.js';
+import { SqlRealtimeSupport } from '../sql/SqlRealtimeSupport.js';
 
 function run(db: sqlite3.Database, sql: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -125,6 +126,73 @@ describe('SQLite change-log contract', () => {
     }
   });
 
+  it('retargets leftover #1602 _id triggers onto the physical PK', async () => {
+    const sequelize = new Sequelize({
+      dialect: 'sqlite',
+      storage: ':memory:',
+      logging: false,
+    });
+    try {
+      await sequelize.query(`CREATE TABLE "orders" (sku TEXT PRIMARY KEY, secret TEXT)`);
+      await ensureChangeLog(sequelize);
+      for (const sql of leftoverSqliteIdTriggerSql('orders')) {
+        await sequelize.query(sql);
+      }
+      await expect(
+        sequelize.query(`INSERT INTO "orders" (sku, secret) VALUES ('sku-1', 'hidden')`),
+      ).rejects.toThrow();
+      await syncTriggers(sequelize, [
+        {
+          name: 'Order',
+          collectionName: 'orders',
+          authorizationEnabled: false,
+          documentIdField: 'sku',
+        },
+      ]);
+      await sequelize.query(
+        `INSERT INTO "orders" (sku, secret) VALUES ('sku-1', 'hidden')`,
+      );
+      const rows = await fetchChangeLogBatch(sequelize, '0', 200, 0);
+      expect(rows.map(row => row.document_id)).toEqual(['sku-1']);
+    } finally {
+      await sequelize.close();
+    }
+  });
+
+  it('retargets leftover _id bodies so NULL PKs skip without aborting DML', async () => {
+    const sequelize = new Sequelize({
+      dialect: 'sqlite',
+      storage: ':memory:',
+      logging: false,
+    });
+    try {
+      await sequelize.query(`CREATE TABLE "orders" (_id TEXT, secret TEXT)`);
+      await ensureChangeLog(sequelize);
+      for (const sql of leftoverSqliteIdTriggerSql('orders')) {
+        await sequelize.query(sql);
+      }
+      await expect(
+        sequelize.query(`INSERT INTO "orders" (_id, secret) VALUES (NULL, 'ok')`),
+      ).rejects.toThrow();
+      await syncTriggers(sequelize, [
+        {
+          name: 'Order',
+          collectionName: 'orders',
+          authorizationEnabled: false,
+          documentIdField: '_id',
+        },
+      ]);
+      await sequelize.query(`INSERT INTO "orders" (_id, secret) VALUES (NULL, 'ok')`);
+      const orders = await sequelize.query(`SELECT secret FROM "orders"`, {
+        type: QueryTypes.SELECT,
+      });
+      expect(orders).toEqual([{ secret: 'ok' }]);
+      expect(await fetchChangeLogBatch(sequelize, '0', 200, 0)).toEqual([]);
+    } finally {
+      await sequelize.close();
+    }
+  });
+
   it('drops triggers on opt-out without breaking DML', async () => {
     const sequelize = new Sequelize({
       dialect: 'sqlite',
@@ -185,13 +253,17 @@ describe('SQLite change-log contract', () => {
     }
   });
 
-  it('trims acked ids and starts SqlChangeStream from the enable watermark', async () => {
+  it('trims acked ids and starts SqlChangeStream from the prepare watermark', async () => {
     const sequelize = new Sequelize({
       dialect: 'sqlite',
       storage: ':memory:',
       logging: false,
     });
     try {
+      const support = new SqlRealtimeSupport({
+        sequelize,
+        connectionUri: 'sqlite://',
+      } as never);
       await ensureChangeLog(sequelize);
       await sequelize.query(
         `INSERT INTO "${CHANGE_LOG_TABLE}" (collection_name, document_id, operation, occurred_at)
@@ -201,18 +273,19 @@ describe('SQLite change-log contract', () => {
       expect(await fetchChangeLogBatch(sequelize, '0', 200, 0)).toEqual([]);
       await sequelize.query(
         `INSERT INTO "${CHANGE_LOG_TABLE}" (collection_name, document_id, operation, occurred_at)
+         VALUES ('orders', 'old-after-trim', 'insert', datetime('now'))`,
+      );
+      await support.prepare([], { ensureLog: true });
+      await sequelize.query(
+        `INSERT INTO "${CHANGE_LOG_TABLE}" (collection_name, document_id, operation, occurred_at)
          VALUES ('orders', 'new', 'insert', datetime('now'))`,
       );
       const received: unknown[] = [];
-      const stream = new SqlChangeStream({
-        sequelize,
-        connectionUri: 'sqlite::memory:',
-        defaultCursor: '1',
-      });
+      const stream = support.openWatch();
       stream.on('change', change => {
         received.push(change);
       });
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await waitUntil(() => received.length >= 1);
       expect(received).toHaveLength(1);
       expect(received[0]).toMatchObject({
         operationType: 'insert',
@@ -224,3 +297,34 @@ describe('SQLite change-log contract', () => {
     }
   });
 });
+
+function leftoverSqliteIdTriggerSql(collectionName: string): string[] {
+  const table = quoteIdent('sqlite', collectionName);
+  const logTable = quoteIdent('sqlite', CHANGE_LOG_TABLE);
+  return (
+    [
+      ['i', 'INSERT', 'insert', 'NEW'],
+      ['u', 'UPDATE', 'update', 'NEW'],
+      ['d', 'DELETE', 'delete', 'OLD'],
+    ] as const
+  ).map(([opKey, timing, operation, row]) => {
+    const quotedTrigger = quoteIdent(
+      'sqlite',
+      rowTriggerName(collectionName, opKey, 'sqlite'),
+    );
+    return `CREATE TRIGGER ${quotedTrigger} AFTER ${timing} ON ${table}
+BEGIN
+  INSERT INTO ${logTable} (collection_name, document_id, operation, occurred_at)
+  VALUES ('${collectionName}', ${row}."_id", '${operation}', datetime('now'));
+END`;
+  });
+}
+
+async function waitUntil(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (predicate()) return;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  throw new Error('timed out waiting for condition');
+}

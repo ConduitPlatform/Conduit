@@ -16,6 +16,7 @@ export { desiredTriggers };
 export type ExistingTrigger = {
   triggerName: string;
   tableName: string;
+  definition?: string;
 };
 
 export async function listExistingTriggers(
@@ -26,32 +27,40 @@ export async function listExistingTriggers(
   switch (dialect) {
     case 'postgres': {
       const rows = await sequelize.query(
-        `SELECT trigger_name AS trigger_name, event_object_table AS table_name
+        `SELECT trigger_name AS trigger_name, event_object_table AS table_name,
+                action_statement AS definition
          FROM information_schema.triggers
          WHERE trigger_name LIKE :prefix`,
         { type: QueryTypes.SELECT, replacements: { prefix } },
       );
-      return uniqueTriggers(rows as { trigger_name: string; table_name: string }[]);
+      return uniqueTriggers(
+        rows as { trigger_name: string; table_name: string; definition?: string }[],
+      );
     }
     case 'mysql':
     case 'mariadb': {
       const rows = await sequelize.query(
-        `SELECT trigger_name AS trigger_name, event_object_table AS table_name
+        `SELECT trigger_name AS trigger_name, event_object_table AS table_name,
+                action_statement AS definition
          FROM information_schema.triggers
          WHERE trigger_schema = DATABASE()
          AND trigger_name LIKE :prefix`,
         { type: QueryTypes.SELECT, replacements: { prefix } },
       );
-      return uniqueTriggers(rows as { trigger_name: string; table_name: string }[]);
+      return uniqueTriggers(
+        rows as { trigger_name: string; table_name: string; definition?: string }[],
+      );
     }
     case 'sqlite': {
       const rows = await sequelize.query(
-        `SELECT name AS trigger_name, tbl_name AS table_name
+        `SELECT name AS trigger_name, tbl_name AS table_name, sql AS definition
          FROM sqlite_master
          WHERE type = 'trigger' AND name LIKE :prefix`,
         { type: QueryTypes.SELECT, replacements: { prefix } },
       );
-      return uniqueTriggers(rows as { trigger_name: string; table_name: string }[]);
+      return uniqueTriggers(
+        rows as { trigger_name: string; table_name: string; definition?: string }[],
+      );
     }
     default: {
       const _exhaustive: never = dialect;
@@ -61,7 +70,7 @@ export async function listExistingTriggers(
 }
 
 function uniqueTriggers(
-  rows: { trigger_name: string; table_name: string }[],
+  rows: { trigger_name: string; table_name: string; definition?: string }[],
 ): ExistingTrigger[] {
   const seen = new Set<string>();
   const result: ExistingTrigger[] = [];
@@ -69,9 +78,26 @@ function uniqueTriggers(
     const triggerName = String(row.trigger_name);
     if (seen.has(triggerName)) continue;
     seen.add(triggerName);
-    result.push({ triggerName, tableName: String(row.table_name) });
+    result.push({
+      triggerName,
+      tableName: String(row.table_name),
+      definition: row.definition == null ? undefined : String(row.definition),
+    });
   }
   return result;
+}
+
+function triggerMatches(
+  dialect: SqlDialect,
+  trigger: DesiredTrigger,
+  definition: string | undefined,
+): boolean {
+  if (!definition) return false;
+  if (trigger.functionName) {
+    return definition.includes(trigger.functionName);
+  }
+  const pk = quoteIdent(dialect, trigger.pkColumn);
+  return definition.includes(pk) && /IS NOT NULL/i.test(definition);
 }
 
 export async function syncTriggers(
@@ -88,11 +114,12 @@ export async function syncTriggers(
     }
   }
   const existing = await listExistingTriggers(sequelize);
-  const existingNames = new Set(existing.map(trigger => trigger.triggerName));
+  const existingByName = new Map(
+    existing.map(trigger => [trigger.triggerName, trigger] as const),
+  );
   for (const current of existing) {
     if (desired.has(current.triggerName)) continue;
-    const dropSql = dropExistingSql(dialect, current);
-    await sequelize.query(dropSql);
+    await sequelize.query(dropExistingSql(dialect, current));
     const leftover = desiredTriggers(dialect, current.tableName, PK_COLUMN).find(
       trigger => trigger.triggerName === current.triggerName,
     );
@@ -104,8 +131,12 @@ export async function syncTriggers(
     if (trigger.functionSql) {
       await sequelize.query(trigger.functionSql);
     }
-    if (existingNames.has(trigger.triggerName)) {
+    const current = existingByName.get(trigger.triggerName);
+    if (current && triggerMatches(dialect, trigger, current.definition)) {
       continue;
+    }
+    if (current) {
+      await sequelize.query(dropExistingSql(dialect, current));
     }
     await sequelize.query(trigger.sql);
   }
