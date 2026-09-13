@@ -66,6 +66,7 @@ export class MongoChangeStreamCoordinator {
   private retryAttempt = 0;
   private watching = false;
   private opening = false;
+  private acquiring = false;
   private ignoreClose = false;
   private lockGeneration = 0;
   private changeQueue: Promise<void> = Promise.resolve();
@@ -151,7 +152,15 @@ export class MongoChangeStreamCoordinator {
       }
       return;
     }
+    if (this.acquiring) return;
+    this.acquiring = true;
     try {
+      if (this.lock) {
+        if (!this.watching) {
+          await this.openStream();
+        }
+        return;
+      }
       const acquired = await this.options.grpcSdk.state!.tryAcquireLock(
         LEADER_LOCK,
         LOCK_TTL_MS,
@@ -159,6 +168,17 @@ export class MongoChangeStreamCoordinator {
       if (!acquired) {
         this.streamState = 'idle';
         this.scheduleRetry();
+        return;
+      }
+      if (this.lock) {
+        try {
+          await this.options.grpcSdk.state!.releaseLock(acquired);
+        } catch {
+          // lock may already have expired
+        }
+        if (!this.watching) {
+          await this.openStream();
+        }
         return;
       }
       try {
@@ -181,6 +201,8 @@ export class MongoChangeStreamCoordinator {
       this.lastError = err instanceof Error ? err.message : String(err);
       this.streamState = 'degraded';
       this.scheduleRetry();
+    } finally {
+      this.acquiring = false;
     }
   }
 
