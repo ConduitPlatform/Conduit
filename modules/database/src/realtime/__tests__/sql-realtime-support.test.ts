@@ -47,14 +47,13 @@ describe('SqlRealtimeSupport', () => {
     expect(result.message).toMatch(/wal_level=logical/);
   });
 
-  it('fails topology when a temporary pgoutput slot cannot be created', async () => {
+  it('does not create a probe replication slot during topology checks', async () => {
     const connect = jest
       .spyOn(pg.Client.prototype, 'connect')
       .mockResolvedValue(undefined);
     const query = jest
       .spyOn(pg.Client.prototype, 'query')
-      .mockRejectedValue(new Error('permission denied to create replication slot'));
-    const end = jest.spyOn(pg.Client.prototype, 'end').mockResolvedValue(undefined);
+      .mockRejectedValue(new Error('all replication slots are in use'));
     try {
       const support = new SqlRealtimeSupport({
         sequelize: {
@@ -63,8 +62,8 @@ describe('SqlRealtimeSupport', () => {
             if (sql.includes('pg_settings')) {
               return [
                 { name: 'wal_level', setting: 'logical' },
-                { name: 'max_replication_slots', setting: '10' },
-                { name: 'max_wal_senders', setting: '10' },
+                { name: 'max_replication_slots', setting: '1' },
+                { name: 'max_wal_senders', setting: '1' },
               ];
             }
             return [];
@@ -73,14 +72,30 @@ describe('SqlRealtimeSupport', () => {
         connectionUri: 'postgres://localhost/db',
       } as never);
       const result = await support.checkTopology();
-      expect(result.supported).toBe(false);
-      expect(result.message).toMatch(/logical replication/i);
-      expect(result.message).toMatch(/permission denied/i);
+      expect(result).toEqual({ supported: true });
+      expect(connect).not.toHaveBeenCalled();
+      expect(query).not.toHaveBeenCalled();
     } finally {
       connect.mockRestore();
       query.mockRestore();
-      end.mockRestore();
     }
+  });
+
+  it('fails topology when replication slots or wal senders are zero', async () => {
+    const support = new SqlRealtimeSupport({
+      sequelize: {
+        getDialect: () => 'postgres',
+        query: async () => [
+          { name: 'wal_level', setting: 'logical' },
+          { name: 'max_replication_slots', setting: '0' },
+          { name: 'max_wal_senders', setting: '10' },
+        ],
+      },
+      connectionUri: 'postgres://localhost/db',
+    } as never);
+    const result = await support.checkTopology();
+    expect(result.supported).toBe(false);
+    expect(result.message).toMatch(/max_replication_slots/);
   });
 
   it('syncs publication tables and replica identity without changelog DDL', async () => {
@@ -138,7 +153,7 @@ describe('SqlChangeStream', () => {
     stream.on('change', change => {
       received.push(change);
     });
-    await waitUntil(() => feed.started);
+    await stream.ready;
     feed.push({
       tag: 'insert',
       table: 'orders',
@@ -168,7 +183,7 @@ describe('SqlChangeStream', () => {
     });
     const received: unknown[] = [];
     stream.on('change', change => received.push(change));
-    await waitUntil(() => feed.started);
+    await stream.ready;
     feed.push({
       tag: 'insert',
       table: 'orders',
@@ -177,6 +192,20 @@ describe('SqlChangeStream', () => {
       occurredAt: new Date(),
     });
     expect(received).toEqual([]);
+    await stream.close();
+  });
+
+  it('emits error when the replication feed cannot create a slot', async () => {
+    const stream = new SqlChangeStream({
+      connectionUri: 'postgres://localhost/db',
+      createFeed: () => new FailingFeed('all replication slots are in use'),
+    });
+    const err = await new Promise<unknown>(resolve => {
+      stream.on('error', resolve);
+    });
+    await stream.ready;
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toMatch(/slots are in use/);
     await stream.close();
   });
 });
@@ -252,11 +281,18 @@ class FakeFeed implements ReplicationFeed {
   }
 }
 
-async function waitUntil(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (predicate()) return;
-    await new Promise(resolve => setTimeout(resolve, 10));
+class FailingFeed implements ReplicationFeed {
+  constructor(private readonly message: string) {}
+
+  on(): void {
+    return;
   }
-  throw new Error('timed out waiting for condition');
+
+  async start(): Promise<void> {
+    throw new Error(this.message);
+  }
+
+  async stop(): Promise<void> {
+    return;
+  }
 }

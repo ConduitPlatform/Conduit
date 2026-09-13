@@ -49,11 +49,18 @@ function createCoordinator(overrides?: {
   leaderLock?: string;
   resumeTokenKey?: string;
   adminPush?: () => Promise<void>;
+  watchReady?: Promise<void>;
 }) {
-  const stream = new EventEmitter() as EventEmitter & { close: () => Promise<void> };
+  const stream = new EventEmitter() as EventEmitter & {
+    close: () => Promise<void>;
+    ready?: Promise<void>;
+  };
   stream.close = async () => {
     stream.emit('close');
   };
+  if (overrides?.watchReady) {
+    stream.ready = overrides.watchReady;
+  }
   const state = new Map<string, string>();
   const lock = {
     extend: jest.fn(async () => lock),
@@ -374,4 +381,50 @@ describe('ChangeStreamCoordinator', () => {
     expect(grpcSdk.state.setKey).not.toHaveBeenCalled();
     await coordinator.shutdown();
   });
+
+  it('stays starting until the watch is ready', async () => {
+    let resolveReady: () => void = () => undefined;
+    const watchReady = new Promise<void>(resolve => {
+      resolveReady = resolve;
+    });
+    const { coordinator } = createCoordinator({
+      persistResume: false,
+      watchReady,
+    });
+    const reconcile = coordinator.reconcile();
+    await waitFor(() => coordinator.getState() === 'starting');
+    expect(coordinator.getState()).toBe('starting');
+    resolveReady();
+    await reconcile;
+    expect(coordinator.getState()).toBe('live');
+    await coordinator.shutdown();
+  });
+
+  it('retries as degraded when the watch errors before it is live', async () => {
+    let resolveReady: () => void = () => undefined;
+    const watchReady = new Promise<void>(resolve => {
+      resolveReady = resolve;
+    });
+    const { coordinator, stream } = createCoordinator({
+      persistResume: false,
+      watchReady,
+    });
+    const reconcile = coordinator.reconcile();
+    await waitFor(() => coordinator.getState() === 'starting');
+    stream.emit('error', new Error('all replication slots are in use'));
+    resolveReady();
+    await reconcile;
+    await waitFor(() => coordinator.getState() === 'degraded');
+    expect(coordinator.getState()).toBe('degraded');
+    await coordinator.shutdown();
+  });
 });
+
+async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (predicate()) return;
+    await new Promise(resolve => setImmediate(resolve));
+  }
+  throw new Error('timed out waiting for condition');
+}

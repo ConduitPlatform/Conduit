@@ -17,6 +17,7 @@ export type SqlChangeStreamOptions = {
 };
 
 export class SqlChangeStream implements ChangeStreamLike {
+  readonly ready: Promise<void>;
   private readonly emitter = new EventEmitter();
   private readonly feed: ReplicationFeed;
   private readonly idFieldByTable: Record<string, string>;
@@ -31,11 +32,7 @@ export class SqlChangeStream implements ChangeStreamLike {
     });
     this.feed.on('change', change => this.onChange(change));
     this.feed.on('error', err => this.emitError(err));
-    queueMicrotask(() => {
-      if (!this.closed) {
-        void this.start();
-      }
-    });
+    this.ready = this.start();
   }
 
   on(

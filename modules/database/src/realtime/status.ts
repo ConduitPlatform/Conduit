@@ -1,4 +1,5 @@
 import type { RealtimeStatus, RealtimeStatusCode } from './types.js';
+import { LOGICAL_REPLICATION_UNAVAILABLE } from './sql/constants.js';
 
 const SUPPORTED_REALTIME_ENGINES = new Set(['MongoDB', 'PostgreSQL']);
 
@@ -39,7 +40,7 @@ export function buildRealtimeStatus(input: RealtimeStatusInput): RealtimeStatus 
         input.topologyMessage ??
         (input.engine === 'MongoDB'
           ? 'A replica set or sharded MongoDB deployment is required for live updates'
-          : 'PostgreSQL live updates require logical replication (wal_level=logical, a pgoutput publication, and a replication slot). Leader restart or slot drop skips missed events; clients refetch.'),
+          : LOGICAL_REPLICATION_UNAVAILABLE),
     };
   }
   if (input.socketsEnabled === false) {

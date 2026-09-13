@@ -214,8 +214,6 @@ export class ChangeStreamCoordinator {
       const stream = this.options.watch({ resumeAfter });
       this.stream = stream;
       this.watching = true;
-      this.streamState = 'live';
-      this.retryAttempt = 0;
       stream.on('change', (change: unknown) => {
         this.enqueueChange(change as RawChangeEvent);
       });
@@ -228,6 +226,12 @@ export class ChangeStreamCoordinator {
           this.scheduleRetry();
         }
       });
+      if (stream.ready) {
+        await stream.ready;
+      }
+      if (this.closed || !this.watching) return;
+      this.streamState = 'live';
+      this.retryAttempt = 0;
     } catch (err) {
       this.watching = false;
       await this.handleStreamError(err);

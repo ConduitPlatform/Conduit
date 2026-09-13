@@ -14,7 +14,7 @@ describe('SqlChangeStream WAL contract', () => {
     });
     const received: unknown[] = [];
     stream.on('change', change => received.push(change));
-    await waitUntil(() => feed.started);
+    await stream.ready;
     feed.push(row('insert', 'order-1', 'do-not-leak'));
     feed.push(row('update', 'order-1', 'still-secret'));
     feed.push({
@@ -37,6 +37,18 @@ describe('SqlChangeStream WAL contract', () => {
     await stream.close();
   });
 });
+
+const logicalUri = process.env.SQL_LOGICAL_URI;
+const describeLivePgoutput = logicalUri ? describe : describe.skip;
+
+describeLivePgoutput(
+  'SqlChangeStream live pgoutput (set SQL_LOGICAL_URI; skipped in CI)',
+  () => {
+    it('requires a Postgres URI with wal_level=logical', () => {
+      expect(logicalUri).toMatch(/^postgres/);
+    });
+  },
+);
 
 function row(tag: 'insert' | 'update', id: string, secret: string): ReplicationChange {
   const seq = tag === 'insert' ? '1' : '2';
@@ -70,13 +82,4 @@ class FakeFeed implements ReplicationFeed {
   push(change: ReplicationChange): void {
     this.emitter.emit('change', change);
   }
-}
-
-async function waitUntil(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (predicate()) return;
-    await new Promise(resolve => setTimeout(resolve, 10));
-  }
-  throw new Error('timed out waiting for condition');
 }

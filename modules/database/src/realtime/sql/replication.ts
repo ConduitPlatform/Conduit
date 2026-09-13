@@ -89,7 +89,11 @@ export class PgoutputReplicationFeed implements ReplicationFeed {
     this.flushedLsn = parseLsn(consistentPoint);
     const connection = replicationConnection(client);
     connection.on('copyData', msg => {
-      this.onCopyData(msg.chunk, connection);
+      try {
+        this.onCopyData(msg.chunk, connection);
+      } catch (err) {
+        this.emitError(err);
+      }
     });
     this.ackTimer = setInterval(() => {
       sendStandbyStatus(connection, this.flushedLsn);

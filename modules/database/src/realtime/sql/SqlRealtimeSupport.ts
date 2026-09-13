@@ -4,7 +4,6 @@ import type { ChangeStreamLike, OptedInSchema } from '../types.js';
 import type { TopologyResult } from '../topology.js';
 import {
   DEFAULT_ID_FIELD,
-  LOGICAL_REPLICATION_UNAVAILABLE,
   PUBLICATION_NAME,
   SQL_ENGINE_UNSUPPORTED,
   sqlSchemaName,
@@ -12,7 +11,7 @@ import {
 import { dropLegacyCapture } from './leftover.js';
 import { syncPublication } from './publication.js';
 import { SqlChangeStream } from './SqlChangeStream.js';
-import { createReplicationClient, type ReplicationFeedFactory } from './replication.js';
+import type { ReplicationFeedFactory } from './replication.js';
 
 export class SqlRealtimeSupport {
   private schemas: OptedInSchema[] = [];
@@ -92,26 +91,10 @@ export class SqlRealtimeSupport {
           'PostgreSQL live updates need max_replication_slots and max_wal_senders greater than 0.',
       };
     }
-    const client = createReplicationClient(this.adapter.connectionUri);
-    const slotName = `cnd_rt_p_${process.pid}_${Math.random().toString(36).slice(2, 8)}`;
-    try {
-      await client.connect();
-      await client.query(
-        `CREATE_REPLICATION_SLOT ${slotName} TEMPORARY LOGICAL pgoutput`,
-      );
-      return { supported: true };
-    } catch (err) {
-      return {
-        supported: false,
-        message: `${LOGICAL_REPLICATION_UNAVAILABLE} ${errorMessage(err)}`,
-      };
-    } finally {
-      try {
-        await client.end();
-      } catch {
-        // ignore
-      }
-    }
+    // Settings only: do not CREATE_REPLICATION_SLOT here. Every pod reconciles;
+    // a probe slot would compete with the leader's live temp slot and fail-close
+    // the feed. Slot create belongs in PgoutputReplicationFeed.start() (degraded + retry).
+    return { supported: true };
   }
 }
 

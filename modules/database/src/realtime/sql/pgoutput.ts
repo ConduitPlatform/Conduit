@@ -28,31 +28,46 @@ export class BufferReader {
     private offset = 0,
   ) {}
 
+  remaining(): number {
+    return this.buf.length - this.offset;
+  }
+
+  need(n: number): void {
+    if (n < 0 || this.remaining() < n) {
+      throw new Error(`pgoutput buffer underflow: need ${n}, have ${this.remaining()}`);
+    }
+  }
+
   u8(): number {
+    this.need(1);
     const value = this.buf[this.offset];
     this.offset += 1;
     return value;
   }
 
   i16(): number {
+    this.need(2);
     const value = this.buf.readInt16BE(this.offset);
     this.offset += 2;
     return value;
   }
 
   i32(): number {
+    this.need(4);
     const value = this.buf.readInt32BE(this.offset);
     this.offset += 4;
     return value;
   }
 
   i64(): bigint {
+    this.need(8);
     const value = this.buf.readBigInt64BE(this.offset);
     this.offset += 8;
     return value;
   }
 
   u64(): bigint {
+    this.need(8);
     const value = this.buf.readBigUInt64BE(this.offset);
     this.offset += 8;
     return value;
@@ -63,12 +78,16 @@ export class BufferReader {
     while (this.offset < this.buf.length && this.buf[this.offset] !== 0) {
       this.offset += 1;
     }
+    if (this.offset >= this.buf.length) {
+      throw new Error('pgoutput buffer underflow: unterminated cstring');
+    }
     const value = this.buf.subarray(start, this.offset).toString('utf8');
     this.offset += 1;
     return value;
   }
 
   bytes(length: number): Buffer {
+    this.need(length);
     const value = this.buf.subarray(this.offset, this.offset + length);
     this.offset += length;
     return value;
@@ -204,15 +223,39 @@ function readTuple(
   const row: Record<string, string | null> = {};
   for (let i = 0; i < count; i++) {
     const name = columns[i];
-    const kind = reader.char();
-    if (kind === 'n') {
-      if (name) row[name] = null;
-      continue;
+    const value = readTupleColumn(reader);
+    if (name && value.set) {
+      row[name] = value.value;
     }
-    if (kind !== 't') continue;
-    const length = reader.i32();
-    const value = reader.bytes(length).toString('utf8');
-    if (name) row[name] = value;
   }
   return row;
+}
+
+function readTupleColumn(reader: BufferReader): {
+  set: boolean;
+  value: string | null;
+} {
+  const kind = reader.char();
+  if (kind !== 'n' && kind !== 'u' && kind !== 't' && kind !== 'b') {
+    throw new Error(`Unsupported pgoutput tuple kind '${kind}'`);
+  }
+  switch (kind) {
+    case 'n':
+      return { set: true, value: null };
+    case 'u':
+      return { set: false, value: null };
+    case 't': {
+      const length = reader.i32();
+      return { set: true, value: reader.bytes(length).toString('utf8') };
+    }
+    case 'b': {
+      const length = reader.i32();
+      reader.bytes(length);
+      return { set: false, value: null };
+    }
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
 }

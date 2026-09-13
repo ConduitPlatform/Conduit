@@ -79,6 +79,33 @@ describe('pgoutput decoder', () => {
   it('round-trips LSN formatting', () => {
     expect(formatLsn(parseLsn('0/16B3748'))).toBe('0/016B3748');
   });
+
+  it('consumes unchanged TOAST and binary columns without desyncing later text ids', () => {
+    const decoder = new PgoutputDecoder();
+    expect(
+      decoder.decodeMessage(
+        encodeRelation(42, 'public', 'orders', ['blob', 'toast', '_id']),
+      ),
+    ).toBeUndefined();
+    const insert = decoder.decodeMessage(
+      encodeInsertKinds(42, [
+        { kind: 'b', bytes: Buffer.from([1, 2, 3, 4]) },
+        { kind: 'u' },
+        { kind: 't', value: 'order-1' },
+      ]),
+    );
+    expect(insert).toMatchObject({
+      tag: 'insert',
+      newRow: { _id: 'order-1' },
+    });
+    expect(insert && 'newRow' in insert ? insert.newRow : {}).not.toHaveProperty('blob');
+    expect(insert && 'newRow' in insert ? insert.newRow : {}).not.toHaveProperty('toast');
+  });
+
+  it('throws on a short buffer instead of reading past the end', () => {
+    const decoder = new PgoutputDecoder();
+    expect(() => decoder.decodeMessage(Buffer.from('B'))).toThrow(/underflow/);
+  });
 });
 
 describe('WAL event mapping', () => {
@@ -138,6 +165,15 @@ function encodeInsert(oid: number, values: (string | null)[]): Buffer {
   ]);
 }
 
+function encodeInsertKinds(oid: number, values: TupleColumn[]): Buffer {
+  return Buffer.concat([
+    Buffer.from('I'),
+    i32(oid),
+    Buffer.from('N'),
+    encodeTypedTuple(values),
+  ]);
+}
+
 function encodeUpdate(
   oid: number,
   key: (string | null)[],
@@ -167,14 +203,42 @@ function encodeBegin(finalLsn: bigint, micros: bigint, xid: number): Buffer {
 }
 
 function encodeTuple(values: (string | null)[]): Buffer {
+  return encodeTypedTuple(
+    values.map(value =>
+      value == null ? { kind: 'n' as const } : { kind: 't' as const, value },
+    ),
+  );
+}
+
+type TupleColumn =
+  | { kind: 'n' }
+  | { kind: 'u' }
+  | { kind: 't'; value: string }
+  | { kind: 'b'; bytes: Buffer };
+
+function encodeTypedTuple(values: TupleColumn[]): Buffer {
   const parts = [i16(values.length)];
   for (const value of values) {
-    if (value == null) {
-      parts.push(Buffer.from('n'));
-      continue;
+    switch (value.kind) {
+      case 'n':
+        parts.push(Buffer.from('n'));
+        break;
+      case 'u':
+        parts.push(Buffer.from('u'));
+        break;
+      case 't': {
+        const bytes = Buffer.from(value.value, 'utf8');
+        parts.push(Buffer.from('t'), i32(bytes.length), bytes);
+        break;
+      }
+      case 'b':
+        parts.push(Buffer.from('b'), i32(value.bytes.length), value.bytes);
+        break;
+      default: {
+        const _exhaustive: never = value;
+        return _exhaustive;
+      }
     }
-    const bytes = Buffer.from(value, 'utf8');
-    parts.push(Buffer.from('t'), i32(bytes.length), bytes);
   }
   return Buffer.concat(parts);
 }
