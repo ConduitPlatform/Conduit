@@ -91,10 +91,13 @@ export class ConduitSocket {
   executeRecovered(
     request: ConduitSocketParameters,
   ): ConduitSocketHandlerResponse | null {
-    if (!this._input.onRecovered) {
-      return null;
+    if (this._input.onRecovered) {
+      return this._input.onRecovered(request);
     }
-    return this._input.onRecovered(request);
+    if (this._events.has('recovered')) {
+      return this._events.get('recovered')!.handler(request);
+    }
+    return null;
   }
 }
 

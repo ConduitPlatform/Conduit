@@ -23,6 +23,7 @@ import { SchemaController } from '../controllers/cms/schema.controller.js';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller.js';
 import { CustomEndpoints, DeclaredSchema, PendingSchemas } from '../models/index.js';
 import { ConduitOptions, SchemaFieldsRequired } from '../interfaces/index.js';
+import type { RealtimeService } from '../realtime/index.js';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
@@ -36,6 +37,7 @@ export class AdminHandlers {
     private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
     private readonly schemaController: SchemaController,
     private readonly customEndpointController: CustomEndpointController,
+    private readonly realtimeService: RealtimeService,
   ) {
     this.schemaAdmin = new SchemaAdmin(
       this.grpcSdk,
@@ -686,6 +688,7 @@ export class AdminHandlers {
       new ConduitRouteReturnDefinition('getDatabaseType', 'String'),
       this.schemaAdmin.getDatabaseType.bind(this.schemaAdmin),
     );
+    this.realtimeService.registerAdmin(this.routingManager);
     this.routingManager.registerRoutes();
   }
 }
