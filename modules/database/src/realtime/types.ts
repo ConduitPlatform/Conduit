@@ -28,10 +28,13 @@ export type RealtimeStatus = {
   message?: string;
 };
 
+export type RebacDecision = 'allow' | 'deny' | 'unavailable';
+
 export type OptedInSchema = {
   name: string;
   collectionName: string;
   authorizationEnabled: boolean;
+  cmsReadEnabled: boolean;
 };
 
 export type SubscribeRequest = {

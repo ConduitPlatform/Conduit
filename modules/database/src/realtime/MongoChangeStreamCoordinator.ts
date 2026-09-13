@@ -66,7 +66,9 @@ export class MongoChangeStreamCoordinator {
   private retryAttempt = 0;
   private watching = false;
   private opening = false;
+  private acquiring = false;
   private ignoreClose = false;
+  private lockGeneration = 0;
   private changeQueue: Promise<void> = Promise.resolve();
   private watchedCollectionsKey = '';
   private readonly rebacCache = new RealtimeRebacCache();
@@ -150,7 +152,15 @@ export class MongoChangeStreamCoordinator {
       }
       return;
     }
+    if (this.acquiring) return;
+    this.acquiring = true;
     try {
+      if (this.lock) {
+        if (!this.watching) {
+          await this.openStream();
+        }
+        return;
+      }
       const acquired = await this.options.grpcSdk.state!.tryAcquireLock(
         LEADER_LOCK,
         LOCK_TTL_MS,
@@ -160,13 +170,39 @@ export class MongoChangeStreamCoordinator {
         this.scheduleRetry();
         return;
       }
-      this.lock = acquired;
+      if (this.lock) {
+        try {
+          await this.options.grpcSdk.state!.releaseLock(acquired);
+        } catch {
+          // lock may already have expired
+        }
+        if (!this.watching) {
+          await this.openStream();
+        }
+        return;
+      }
+      try {
+        this.lock = await acquired.extend(LOCK_TTL_MS);
+      } catch {
+        try {
+          await this.options.grpcSdk.state!.releaseLock(acquired);
+        } catch {
+          // lock may already have expired
+        }
+        this.lock = null;
+        this.streamState = 'idle';
+        this.scheduleRetry();
+        return;
+      }
+      this.bumpLockGeneration();
       this.startRenewal();
       await this.openStream();
     } catch (err) {
       this.lastError = err instanceof Error ? err.message : String(err);
       this.streamState = 'degraded';
       this.scheduleRetry();
+    } finally {
+      this.acquiring = false;
     }
   }
 
@@ -179,40 +215,59 @@ export class MongoChangeStreamCoordinator {
 
   private async renewLock() {
     if (!this.lock) return;
+    const generation = this.lockGeneration;
     try {
       this.lock = await this.lock.extend(LOCK_TTL_MS);
     } catch {
-      this.lock = null;
-      await this.stopStream('idle');
+      if (this.lockGeneration !== generation) return;
+      await this.fenceLock('idle');
       this.scheduleRetry();
     }
   }
 
   private async openStream() {
-    if (this.watching || this.closed || this.opening) return;
+    if (this.watching || this.closed || this.opening || !this.lock) return;
     this.opening = true;
     this.streamState = 'starting';
     this.ignoreClose = false;
+    const generation = this.lockGeneration;
     try {
       const resumeAfter = parseResumeToken(
         await this.options.grpcSdk.state!.getKey(RESUME_TOKEN_KEY),
       );
-      if (this.watching || this.closed) return;
+      if (
+        this.watching ||
+        this.closed ||
+        !this.lock ||
+        generation !== this.lockGeneration
+      ) {
+        return;
+      }
       const collections = this.collectionNames();
       const pipeline = buildWatchPipeline(collections);
       this.watchedCollectionsKey = optedInCollectionsKey(collections);
       const stream = this.options.watch({ resumeAfter, pipeline });
+      if (generation !== this.lockGeneration || this.closed) {
+        try {
+          await stream.close();
+        } catch {
+          // already closed
+        }
+        return;
+      }
       this.stream = stream;
       this.watching = true;
       this.streamState = 'live';
       this.retryAttempt = 0;
       stream.on('change', (change: unknown) => {
-        this.enqueueChange(change as RawChangeEvent);
+        this.enqueueChange(change as RawChangeEvent, generation);
       });
       stream.on('error', (err: unknown) => {
+        if (generation !== this.lockGeneration) return;
         void this.handleStreamError(err);
       });
       stream.on('close', () => {
+        if (generation !== this.lockGeneration) return;
         this.watching = false;
         if (!this.closed && !this.ignoreClose && this.lock) {
           this.scheduleRetry();
@@ -226,12 +281,13 @@ export class MongoChangeStreamCoordinator {
     }
   }
 
-  private enqueueChange(change: RawChangeEvent) {
+  private enqueueChange(change: RawChangeEvent, generation: number) {
     this.changeQueue = this.changeQueue.then(async () => {
-      if (this.closed || !this.watching) return;
+      if (this.closed || !this.watching || generation !== this.lockGeneration) return;
       try {
-        await this.handleChange(change);
+        await this.handleChange(change, generation);
       } catch (err) {
+        if (generation !== this.lockGeneration) return;
         this.lastError = err instanceof Error ? err.message : String(err);
         ConduitGrpcSdk.Logger.error(err as Error);
         this.watching = false;
@@ -241,12 +297,13 @@ export class MongoChangeStreamCoordinator {
     });
   }
 
-  private async handleChange(change: RawChangeEvent) {
+  private async handleChange(change: RawChangeEvent, generation: number) {
+    if (generation !== this.lockGeneration) return;
     const token = serializeResumeToken(change._id);
     const schema = this.resolveSchema(change.ns?.coll);
     const event = schema ? normalizeChangeEvent(change, schema.name) : null;
     if (!event || !schema) {
-      if (token) {
+      if (token && generation === this.lockGeneration) {
         await this.persistResumeToken(token);
       }
       if (change.operationType && WATCH_RESTART_OPERATIONS.has(change.operationType)) {
@@ -283,6 +340,9 @@ export class MongoChangeStreamCoordinator {
   ) {
     const adminRooms = roomsForPublicChange(schema.name, event.documentId);
     await this.safePush('admin', adminRooms, payload);
+    if (!schema.cmsReadEnabled) {
+      return;
+    }
     if (!schema.authorizationEnabled) {
       await this.safePush('router', adminRooms, payload);
       return;
@@ -381,14 +441,25 @@ export class MongoChangeStreamCoordinator {
   }
 
   private async releaseLeader() {
+    await this.fenceLock(this.streamState);
+  }
+
+  private async fenceLock(nextState: RealtimeStatusCode) {
+    this.bumpLockGeneration();
     this.clearRenewTimer();
-    if (!this.lock) return;
+    const lock = this.lock;
+    this.lock = null;
+    await this.stopStream(nextState);
+    if (!lock) return;
     try {
-      await this.options.grpcSdk.state!.releaseLock(this.lock);
+      await this.options.grpcSdk.state!.releaseLock(lock);
     } catch {
       // lock may already have expired
     }
-    this.lock = null;
+  }
+
+  private bumpLockGeneration() {
+    this.lockGeneration += 1;
   }
 
   private clearTimers() {

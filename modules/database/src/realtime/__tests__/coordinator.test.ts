@@ -7,6 +7,7 @@ import { roomsForPublicChange } from '../rooms.js';
 
 class MemoryStore {
   private sets = new Map<string, Set<string>>();
+  readonly ttls = new Map<string, number>();
   async sadd(key: string, ...members: string[]) {
     const set = this.sets.get(key) ?? new Set<string>();
     members.forEach(member => set.add(member));
@@ -26,15 +27,29 @@ class MemoryStore {
     return this.sets.get(key)?.size ?? 0;
   }
   async del(...keys: string[]) {
-    keys.forEach(key => this.sets.delete(key));
+    keys.forEach(key => {
+      this.sets.delete(key);
+      this.ttls.delete(key);
+    });
     return keys.length;
+  }
+  async expire(key: string, seconds: number) {
+    this.ttls.set(key, seconds);
+  }
+  async persist(key: string) {
+    this.ttls.delete(key);
   }
 }
 
 function createCoordinator(overrides?: {
   allow?: boolean;
   authorizationAvailable?: boolean;
-  schemas?: { name: string; collectionName: string; authorizationEnabled: boolean }[];
+  schemas?: {
+    name: string;
+    collectionName: string;
+    authorizationEnabled: boolean;
+    cmsReadEnabled?: boolean;
+  }[];
   getKeyDelayMs?: number;
 }) {
   const stream = new EventEmitter() as EventEmitter & { close: () => Promise<void> };
@@ -84,9 +99,14 @@ function createCoordinator(overrides?: {
     watch,
     hello: async () => ({ setName: 'rs0' }),
     getOptedInSchemas: () =>
-      overrides?.schemas ?? [
-        { name: 'Order', collectionName: 'orders', authorizationEnabled: false },
-      ],
+      (
+        overrides?.schemas ?? [
+          { name: 'Order', collectionName: 'orders', authorizationEnabled: false },
+        ]
+      ).map(schema => ({
+        cmsReadEnabled: true,
+        ...schema,
+      })),
     subscriptions,
     enabled: () => true,
     engine: () => 'MongoDB',
@@ -358,7 +378,7 @@ describe('MongoChangeStreamCoordinator', () => {
     jest.useRealTimers();
   });
 
-  it.each(['drop', 'rename', 'invalidate'] as const)(
+  it.each(['drop', 'rename', 'invalidate', 'dropDatabase'] as const)(
     'reopens the watch on %s',
     async operationType => {
       jest.useFakeTimers();
@@ -414,6 +434,69 @@ describe('MongoChangeStreamCoordinator', () => {
     await coordinator.waitForIdle();
     expect(routerPush).not.toHaveBeenCalled();
     expect(removeUser).not.toHaveBeenCalled();
+    expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual([
+      'user-1',
+    ]);
+    await coordinator.shutdown();
+  });
+
+  it('does not open a watch when the lock cannot be extended after acquire', async () => {
+    const { coordinator, watch, lock } = createCoordinator();
+    lock.extend.mockRejectedValueOnce(new Error('extend failed'));
+    await coordinator.reconcile();
+    expect(watch).not.toHaveBeenCalled();
+    expect(coordinator.getState()).toBe('idle');
+    await coordinator.shutdown();
+  });
+
+  it('ignores draining watch events after lock renew failure', async () => {
+    jest.useFakeTimers();
+    const { coordinator, stream, lock, adminPush, state } = createCoordinator();
+    lock.extend.mockResolvedValueOnce(lock).mockRejectedValueOnce(new Error('lost lock'));
+    await coordinator.reconcile();
+    expect(coordinator.getState()).toBe('live');
+    await jest.advanceTimersByTimeAsync(5_000);
+    expect(coordinator.getState()).toBe('idle');
+    stream.emit(
+      'change',
+      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', { _data: 'stale' }),
+    );
+    await coordinator.waitForIdle();
+    expect(adminPush).not.toHaveBeenCalled();
+    expect(state.get('realtime:resumeToken')).toBeUndefined();
+    await coordinator.shutdown();
+    jest.useRealTimers();
+  });
+
+  it('does not emit to clients when CMS read is denied and keeps membership', async () => {
+    const can = jest.fn(async () => ({ allow: true }));
+    const { coordinator, stream, routerPush, adminPush, subscriptions, grpcSdk } =
+      createCoordinator({
+        schemas: [
+          {
+            name: 'Order',
+            collectionName: 'orders',
+            authorizationEnabled: true,
+            cmsReadEnabled: false,
+          },
+        ],
+      });
+    grpcSdk.authorization = { can };
+    await subscriptions.addAuthorizedDocument(
+      'sock-1',
+      'Order',
+      '64b64c4c4c4c4c4c4c4c4c4c',
+      'user-1',
+    );
+    await coordinator.reconcile();
+    stream.emit(
+      'change',
+      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', { _data: 'token' }),
+    );
+    await coordinator.waitForIdle();
+    expect(adminPush).toHaveBeenCalledTimes(1);
+    expect(routerPush).not.toHaveBeenCalled();
+    expect(can).not.toHaveBeenCalled();
     expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual([
       'user-1',
     ]);

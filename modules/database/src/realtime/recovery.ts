@@ -1,5 +1,5 @@
 import type { Indexable, ParsedSocketRequest } from '@conduitplatform/grpc-sdk';
-import type { AuthorizationSdk } from './authorize.js';
+import { readDocumentDecision, type AuthorizationSdk } from './authorize.js';
 import { authorizedDocumentRoom, parseAuthorizedDocumentRoom } from './rooms.js';
 import type { RealtimeSubscriptionTracker } from './subscriptions.js';
 
@@ -93,12 +93,6 @@ export async function restoreAuthorizedSubscriptions(options: {
   contextSubs: AuthorizedSub[];
   subscriptions: RealtimeSubscriptionTracker;
   grpcSdk: AuthorizationSdk;
-  canRead: (
-    grpcSdk: AuthorizationSdk,
-    schema: string,
-    documentId: string,
-    userId: string,
-  ) => Promise<boolean>;
 }): Promise<{ leaveRooms: string[] }> {
   const seen = new Set<string>();
   const subs: AuthorizedSub[] = [];
@@ -119,14 +113,14 @@ export async function restoreAuthorizedSubscriptions(options: {
 
   const leaveRooms: string[] = [];
   for (const sub of subs) {
-    const allowed = await options.canRead(
+    const decision = await readDocumentDecision(
       options.grpcSdk,
       sub.schema,
       sub.documentId,
       sub.userId,
     );
     const room = authorizedDocumentRoom(sub.schema, sub.documentId, sub.userId);
-    if (!allowed) {
+    if (decision === 'deny') {
       await options.subscriptions.removeAuthorizedDocument(
         options.socketId,
         sub.schema,
