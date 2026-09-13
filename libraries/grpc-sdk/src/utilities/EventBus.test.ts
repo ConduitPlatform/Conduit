@@ -24,11 +24,15 @@ class FakeRedis {
     cb?.(null);
   }
 
-  unsubscribe(_channel: string, cb?: () => void) {
+  unsubscribe(channel: string, cb?: () => void) {
+    void channel;
     cb?.();
   }
 
-  publish(_channel: string, _message: string) {}
+  publish(channel: string, message: string) {
+    void channel;
+    void message;
+  }
 
   quit() {}
 
@@ -102,19 +106,18 @@ describe('EventBus', () => {
     const { bus, sub } = createBus();
     sub.failNext.add('chan');
     await assert.rejects(
-      () =>
-        bus.subscribeAck(
-          'chan',
-          () => {},
-          'relay-a',
-        ),
+      () => bus.subscribeAck('chan', () => {}, 'relay-a'),
       /subscribe failed/,
     );
     sub.failNext.delete('chan');
     let count = 0;
-    await bus.subscribeAck('chan', () => {
-      count += 1;
-    }, 'relay-a');
+    await bus.subscribeAck(
+      'chan',
+      () => {
+        count += 1;
+      },
+      'relay-a',
+    );
     sub.emitMessage('chan', 'x');
     assert.equal(count, 1);
   });
