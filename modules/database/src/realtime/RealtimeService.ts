@@ -41,7 +41,7 @@ export class RealtimeService {
     if (adapter instanceof MongooseAdapter) {
       this.coordinator = new MongoChangeStreamCoordinator({
         grpcSdk,
-        watch: options => this.openWatch(adapter, options),
+        watch: pipeline => this.openWatch(adapter, pipeline),
         hello: () => this.hello(adapter),
         getOptedInSchemas: () => this.getOptedInSchemas(),
         subscriptions: this.subscriptions,
@@ -131,13 +131,13 @@ export class RealtimeService {
 
   private openWatch(
     adapter: MongooseAdapter,
-    options: { pipeline: WatchPipeline },
+    pipeline: WatchPipeline,
   ): ChangeStreamLike {
     const db = adapter.mongoose.connection.db;
     if (!db) {
       throw new Error('MongoDB connection is not ready');
     }
-    return db.watch(options.pipeline) as unknown as ChangeStreamLike;
+    return db.watch(pipeline) as unknown as ChangeStreamLike;
   }
 
   private async hello(

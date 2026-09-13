@@ -28,7 +28,7 @@ type LeaderLock = NonNullable<
   Awaited<ReturnType<NonNullable<ConduitGrpcSdk['state']>['tryAcquireLock']>>
 >;
 
-export type WatchFactory = (options: { pipeline: WatchPipeline }) => ChangeStreamLike;
+export type WatchFactory = (pipeline: WatchPipeline) => ChangeStreamLike;
 
 export type CoordinatorOptions = {
   grpcSdk: ConduitGrpcSdk;
@@ -222,7 +222,7 @@ export class MongoChangeStreamCoordinator {
       const collections = this.collectionNames();
       const pipeline = buildWatchPipeline(collections);
       this.watchedCollectionsKey = optedInCollectionsKey(collections);
-      const stream = this.options.watch({ pipeline });
+      const stream = this.options.watch(pipeline);
       if (generation !== this.lockGeneration || this.closed) {
         try {
           await stream.close();

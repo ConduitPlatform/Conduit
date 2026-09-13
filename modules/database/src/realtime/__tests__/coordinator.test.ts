@@ -110,13 +110,20 @@ function createCoordinator(overrides?: {
   };
 }
 
-function insertChange(collection: string, id: string, token: unknown) {
+function insertChange(collection: string, id: string) {
   return {
     operationType: 'insert',
     ns: { coll: collection },
     documentKey: { _id: new ObjectId(id) },
-    _id: token,
   };
+}
+
+function expectWatchFromNow(
+  watch: { mock: { calls: unknown[][] } },
+  callIndex = 0,
+) {
+  expect(watch.mock.calls[callIndex]).toHaveLength(1);
+  expect(watch.mock.calls[callIndex][0]).not.toHaveProperty('resumeAfter');
 }
 
 describe('MongoChangeStreamCoordinator', () => {
@@ -127,13 +134,12 @@ describe('MongoChangeStreamCoordinator', () => {
   it('emits one normalized event to public rooms and ignores other collections', async () => {
     const { coordinator, stream, routerPush, adminPush, publish } = createCoordinator();
     await coordinator.reconcile();
-    const resume = { _data: 'token' };
     stream.emit('change', {
-      ...insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', resume),
+      ...insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'),
       fullDocument: { secret: 'nope' },
       wallTime: new Date('2026-01-02T00:00:00.000Z'),
     });
-    stream.emit('change', insertChange('other', '64b64c4c4c4c4c4c4c4c4c4d', resume));
+    stream.emit('change', insertChange('other', '64b64c4c4c4c4c4c4c4c4c4d'));
     await coordinator.waitForIdle();
     expect(publish).toHaveBeenCalledTimes(1);
     expect(publish.mock.calls[0][0]).toBe('database:change:Order');
@@ -173,14 +179,8 @@ describe('MongoChangeStreamCoordinator', () => {
       }
     });
     await coordinator.reconcile();
-    stream.emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', { _data: 'token-a' }),
-    );
-    stream.emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4d', { _data: 'token-b' }),
-    );
+    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
+    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4d'));
     await Promise.resolve();
     await new Promise(resolve => setImmediate(resolve));
     expect(adminPush).toHaveBeenCalledTimes(1);
@@ -194,8 +194,8 @@ describe('MongoChangeStreamCoordinator', () => {
     const { coordinator, watch } = createCoordinator();
     await coordinator.reconcile();
     expect(watch).toHaveBeenCalledTimes(1);
-    const pipeline = (watch.mock.calls[0][0] as { pipeline: Record<string, unknown>[] })
-      .pipeline;
+    const pipeline = watch.mock.calls[0][0] as Record<string, unknown>[];
+    expectWatchFromNow(watch);
     expect(pipeline[0]).toEqual(
       expect.objectContaining({
         $match: expect.objectContaining({
@@ -214,7 +214,6 @@ describe('MongoChangeStreamCoordinator', () => {
         fullDocumentBeforeChange: 0,
       },
     });
-    expect(watch.mock.calls[0][0]).not.toHaveProperty('resumeAfter');
     await coordinator.shutdown();
   });
 
@@ -232,15 +231,14 @@ describe('MongoChangeStreamCoordinator', () => {
     });
     await coordinator.reconcile();
     expect(watch).toHaveBeenCalledTimes(2);
-    const pipeline = (watch.mock.calls[1][0] as { pipeline: Record<string, unknown>[] })
-      .pipeline;
+    const pipeline = watch.mock.calls[1][0] as Record<string, unknown>[];
     const match = pipeline[0] as {
       $match: { $or: Array<{ 'ns.coll'?: { $in: string[] } }> };
     };
     expect(match.$match.$or[0]['ns.coll']?.$in).toEqual(
       expect.arrayContaining(['orders', 'items']),
     );
-    expect(watch.mock.calls[1][0]).not.toHaveProperty('resumeAfter');
+    expectWatchFromNow(watch, 1);
     await coordinator.shutdown();
   });
 
@@ -256,10 +254,7 @@ describe('MongoChangeStreamCoordinator', () => {
       'user-1',
     );
     await coordinator.reconcile();
-    stream.emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', { _data: 'token' }),
-    );
+    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
     await coordinator.waitForIdle();
     expect(routerPush).not.toHaveBeenCalled();
     expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual(
@@ -304,28 +299,16 @@ describe('MongoChangeStreamCoordinator', () => {
       .mockRejectedValueOnce(new Error('push failed'))
       .mockResolvedValue(undefined);
     await coordinator.reconcile();
-    streams[0].emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4b', { _data: 'token-good' }),
-    );
+    streams[0].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4b'));
     await coordinator.waitForIdle();
-    streams[0].emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', { _data: 'token-a' }),
-    );
-    streams[0].emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4d', { _data: 'token-b' }),
-    );
+    streams[0].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
+    streams[0].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4d'));
     await coordinator.waitForIdle();
     expect(adminPush).toHaveBeenCalledTimes(2);
     await jest.advanceTimersByTimeAsync(1_000);
     expect(watch).toHaveBeenCalledTimes(2);
-    expect(watch.mock.calls[1][0]).not.toHaveProperty('resumeAfter');
-    streams[1].emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', { _data: 'token-a' }),
-    );
+    expectWatchFromNow(watch, 1);
+    streams[1].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
     await coordinator.waitForIdle();
     expect(adminPush).toHaveBeenCalledTimes(3);
     await coordinator.shutdown();
@@ -350,12 +333,11 @@ describe('MongoChangeStreamCoordinator', () => {
       streams[0].emit('change', {
         operationType,
         ns: { coll: 'orders' },
-        _id: { _data: `${operationType}-token` },
       });
       await coordinator.waitForIdle();
       await jest.advanceTimersByTimeAsync(1_000);
       expect(watch).toHaveBeenCalledTimes(2);
-      expect(watch.mock.calls[1][0]).not.toHaveProperty('resumeAfter');
+      expectWatchFromNow(watch, 1);
       await coordinator.shutdown();
       jest.useRealTimers();
     },
@@ -377,10 +359,7 @@ describe('MongoChangeStreamCoordinator', () => {
       'user-1',
     ]);
     await coordinator.reconcile();
-    stream.emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', { _data: 'token' }),
-    );
+    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
     await coordinator.waitForIdle();
     expect(routerPush).not.toHaveBeenCalled();
     expect(removeUser).not.toHaveBeenCalled();
@@ -407,10 +386,7 @@ describe('MongoChangeStreamCoordinator', () => {
     expect(coordinator.getState()).toBe('live');
     await jest.advanceTimersByTimeAsync(5_000);
     expect(coordinator.getState()).toBe('idle');
-    stream.emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', { _data: 'stale' }),
-    );
+    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
     await coordinator.waitForIdle();
     expect(adminPush).not.toHaveBeenCalled();
     await coordinator.shutdown();
@@ -438,10 +414,7 @@ describe('MongoChangeStreamCoordinator', () => {
       'user-1',
     );
     await coordinator.reconcile();
-    stream.emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', { _data: 'token' }),
-    );
+    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
     await coordinator.waitForIdle();
     expect(adminPush).toHaveBeenCalledTimes(1);
     expect(routerPush).not.toHaveBeenCalled();

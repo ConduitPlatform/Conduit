@@ -12,8 +12,6 @@ export type RawChangeEvent = {
   ns?: { coll?: string };
   documentKey?: { _id?: unknown };
   wallTime?: Date;
-  clusterTime?: { toString?: () => string };
-  _id?: unknown;
 };
 
 export function normalizeChangeEvent(
