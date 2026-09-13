@@ -4,10 +4,10 @@ import { ConduitGrpcSdk, type FindManyOptions } from '@conduitplatform/grpc-sdk'
 import { Admin, AdminApiToken } from '../../models/index.js';
 import { verifyToken, comparePasswords } from '../utils/auth.js';
 import { isDev } from '../utils/middleware.js';
-import { ConduitRequest, isSocketHandshake } from '@conduitplatform/hermes';
+import { ConduitRequest } from '@conduitplatform/hermes';
 import { gql } from 'graphql-tag';
 import { ConfigController } from '@conduitplatform/module-tools';
-import { isRealtimeTicket } from '../realtime/ticket.js';
+import { realtimeTicketForbiddenOnHttp } from '../realtime/ticket.js';
 
 const excludedRestRoutes = ['/ready', '/live', '/login', '/config/modules'];
 const excludedGqlOperations = [
@@ -114,7 +114,7 @@ async function handleJwtToken(
   }
 
   const { id } = decoded;
-  if (isRealtimeTicket(decoded) && !isSocketHandshake(req)) {
+  if (realtimeTicketForbiddenOnHttp(decoded, req)) {
     res.status(401).json({ error: 'Realtime ticket cannot be used for HTTP requests' });
     return;
   }

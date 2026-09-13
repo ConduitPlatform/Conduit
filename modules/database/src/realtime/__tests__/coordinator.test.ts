@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { describe, expect, it, jest } from '@jest/globals';
+import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { EJSON, ObjectId } from 'bson';
 import { MongoChangeStreamCoordinator } from '../MongoChangeStreamCoordinator.js';
 import { RealtimeSubscriptionTracker } from '../subscriptions.js';
@@ -11,9 +11,13 @@ class MemoryStore {
     const set = this.sets.get(key) ?? new Set<string>();
     members.forEach(member => set.add(member));
     this.sets.set(key, set);
+    return members.length;
   }
   async srem(key: string, ...members: string[]) {
-    members.forEach(member => this.sets.get(key)?.delete(member));
+    const set = this.sets.get(key);
+    if (!set) return 0;
+    members.forEach(member => set.delete(member));
+    return members.length;
   }
   async smembers(key: string) {
     return [...(this.sets.get(key) ?? new Set())];
@@ -23,11 +27,13 @@ class MemoryStore {
   }
   async del(...keys: string[]) {
     keys.forEach(key => this.sets.delete(key));
+    return keys.length;
   }
 }
 
 function createCoordinator(overrides?: {
   allow?: boolean;
+  authorizationAvailable?: boolean;
   schemas?: { name: string; collectionName: string; authorizationEnabled: boolean }[];
   getKeyDelayMs?: number;
 }) {
@@ -65,10 +71,13 @@ function createCoordinator(overrides?: {
     bus: { publish },
     router: { socketPush: routerPush },
     admin: { socketPush: adminPush },
-    isAvailable: () => true,
-    authorization: {
-      can: async () => ({ allow: overrides?.allow !== false }),
-    },
+    isAvailable: () => overrides?.authorizationAvailable !== false,
+    authorization:
+      overrides?.authorizationAvailable === false
+        ? null
+        : {
+            can: async () => ({ allow: overrides?.allow !== false }),
+          },
   };
   const coordinator = new MongoChangeStreamCoordinator({
     grpcSdk: grpcSdk as never,
@@ -106,6 +115,10 @@ function insertChange(collection: string, id: string, token: unknown) {
 }
 
 describe('MongoChangeStreamCoordinator', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('emits one normalized event to public rooms and ignores other collections', async () => {
     const { coordinator, stream, routerPush, adminPush, publish, state } =
       createCoordinator();
@@ -253,7 +266,9 @@ describe('MongoChangeStreamCoordinator', () => {
     );
     await coordinator.waitForIdle();
     expect(routerPush).not.toHaveBeenCalled();
-    expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c')).toEqual([]);
+    expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual(
+      [],
+    );
     await coordinator.shutdown();
   });
 
@@ -296,6 +311,112 @@ describe('MongoChangeStreamCoordinator', () => {
     await new Promise(resolve => setImmediate(resolve));
     expect(grpcSdk.state.clearKey).not.toHaveBeenCalled();
     expect(state.get('realtime:resumeToken')).toBe(EJSON.stringify(token));
+    await coordinator.shutdown();
+  });
+
+  it('does not persist a later token when emit fails and reopens from the last good token', async () => {
+    jest.useFakeTimers();
+    const streams: Array<EventEmitter & { close: () => Promise<void> }> = [];
+    const { coordinator, adminPush, state, watch } = createCoordinator();
+    watch.mockImplementation(() => {
+      const next = new EventEmitter() as EventEmitter & { close: () => Promise<void> };
+      next.close = async () => {
+        next.emit('close');
+      };
+      streams.push(next);
+      return next as never;
+    });
+    adminPush
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('push failed'))
+      .mockResolvedValue(undefined);
+    await coordinator.reconcile();
+    const tokenGood = { _data: 'token-good' };
+    const tokenA = { _data: 'token-a' };
+    const tokenB = { _data: 'token-b' };
+    streams[0].emit(
+      'change',
+      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4b', tokenGood),
+    );
+    await coordinator.waitForIdle();
+    expect(state.get('realtime:resumeToken')).toBe(EJSON.stringify(tokenGood));
+    streams[0].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', tokenA));
+    streams[0].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4d', tokenB));
+    await coordinator.waitForIdle();
+    expect(state.get('realtime:resumeToken')).toBe(EJSON.stringify(tokenGood));
+    expect(adminPush).toHaveBeenCalledTimes(2);
+    await jest.advanceTimersByTimeAsync(1_000);
+    expect(watch).toHaveBeenCalledTimes(2);
+    expect((watch.mock.calls[1][0] as { resumeAfter?: unknown }).resumeAfter).toEqual(
+      tokenGood,
+    );
+    streams[1].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', tokenA));
+    await coordinator.waitForIdle();
+    expect(state.get('realtime:resumeToken')).toBe(EJSON.stringify(tokenA));
+    expect(adminPush).toHaveBeenCalledTimes(3);
+    await coordinator.shutdown();
+    jest.useRealTimers();
+  });
+
+  it.each(['drop', 'rename', 'invalidate'] as const)(
+    'reopens the watch on %s',
+    async operationType => {
+      jest.useFakeTimers();
+      const streams: Array<EventEmitter & { close: () => Promise<void> }> = [];
+      const { coordinator, watch, state } = createCoordinator();
+      watch.mockImplementation(() => {
+        const next = new EventEmitter() as EventEmitter & { close: () => Promise<void> };
+        next.close = async () => {
+          next.emit('close');
+        };
+        streams.push(next);
+        return next as never;
+      });
+      await coordinator.reconcile();
+      const token = { _data: `${operationType}-token` };
+      streams[0].emit('change', {
+        operationType,
+        ns: { coll: 'orders' },
+        _id: token,
+      });
+      await coordinator.waitForIdle();
+      expect(state.get('realtime:resumeToken')).toBe(EJSON.stringify(token));
+      await jest.advanceTimersByTimeAsync(1_000);
+      expect(watch).toHaveBeenCalledTimes(2);
+      expect((watch.mock.calls[1][0] as { resumeAfter?: unknown }).resumeAfter).toEqual(
+        token,
+      );
+      await coordinator.shutdown();
+      jest.useRealTimers();
+    },
+  );
+
+  it('does not remove users when authorization is unavailable', async () => {
+    const { coordinator, stream, routerPush, subscriptions } = createCoordinator({
+      authorizationAvailable: false,
+      schemas: [{ name: 'Order', collectionName: 'orders', authorizationEnabled: true }],
+    });
+    const removeUser = jest.spyOn(subscriptions, 'removeUser');
+    await subscriptions.addAuthorizedDocument(
+      'sock-1',
+      'Order',
+      '64b64c4c4c4c4c4c4c4c4c4c',
+      'user-1',
+    );
+    expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual([
+      'user-1',
+    ]);
+    await coordinator.reconcile();
+    stream.emit(
+      'change',
+      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', { _data: 'token' }),
+    );
+    await coordinator.waitForIdle();
+    expect(routerPush).not.toHaveBeenCalled();
+    expect(removeUser).not.toHaveBeenCalled();
+    expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual([
+      'user-1',
+    ]);
     await coordinator.shutdown();
   });
 });

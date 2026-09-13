@@ -1,3 +1,5 @@
+import { isSocketHandshake } from '@conduitplatform/hermes';
+
 export const ADMIN_REALTIME_AUDIENCE = 'admin-realtime';
 export const ADMIN_REALTIME_TICKET_TTL_SECONDS = 30;
 
@@ -23,4 +25,11 @@ export function isRealtimeTicket(
     return audience.includes(ADMIN_REALTIME_AUDIENCE);
   }
   return audience === ADMIN_REALTIME_AUDIENCE;
+}
+
+export function realtimeTicketForbiddenOnHttp(
+  decoded: RealtimeTicketClaims | null | undefined,
+  req: { url?: string; originalUrl?: string },
+): boolean {
+  return isRealtimeTicket(decoded) && !isSocketHandshake(req);
 }

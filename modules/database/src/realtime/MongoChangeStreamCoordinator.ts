@@ -227,12 +227,18 @@ export class MongoChangeStreamCoordinator {
   }
 
   private enqueueChange(change: RawChangeEvent) {
-    this.changeQueue = this.changeQueue
-      .then(() => this.handleChange(change))
-      .catch(err => {
+    this.changeQueue = this.changeQueue.then(async () => {
+      if (this.closed || !this.watching) return;
+      try {
+        await this.handleChange(change);
+      } catch (err) {
         this.lastError = err instanceof Error ? err.message : String(err);
         ConduitGrpcSdk.Logger.error(err as Error);
-      });
+        this.watching = false;
+        await this.stopStream('degraded');
+        this.scheduleRetry();
+      }
+    });
   }
 
   private async handleChange(change: RawChangeEvent) {
@@ -294,15 +300,18 @@ export class MongoChangeStreamCoordinator {
     );
     const allowedRooms: string[] = [];
     for (const userId of userIds) {
-      if (decisions.get(userId) !== 'allow') {
+      const decision = decisions.get(userId) ?? 'unavailable';
+      if (decision === 'allow') {
+        allowedRooms.push(authorizedDocumentRoom(schema.name, event.documentId, userId));
+        continue;
+      }
+      if (decision === 'deny') {
         await this.options.subscriptions.removeUser(
           schema.name,
           event.documentId,
           userId,
         );
-        continue;
       }
-      allowedRooms.push(authorizedDocumentRoom(schema.name, event.documentId, userId));
     }
     if (allowedRooms.length > 0) {
       await this.safePush('router', allowedRooms, payload);
