@@ -50,6 +50,26 @@ describe('buildRealtimeStatus', () => {
     ).toMatch(/replica set/i);
     expect(
       buildRealtimeStatus({
+        engine: 'PostgreSQL',
+        enabled: true,
+        topologySupported: false,
+        topologyMessage:
+          'PostgreSQL live updates need a session-mode connection that can LISTEN (not a transaction-mode pooler)',
+        activeSchemaCount: 1,
+        streamState: 'idle',
+      }).message,
+    ).toMatch(/LISTEN/);
+    expect(
+      buildRealtimeStatus({
+        engine: 'PostgreSQL',
+        enabled: true,
+        topologySupported: false,
+        activeSchemaCount: 1,
+        streamState: 'idle',
+      }).message,
+    ).toMatch(/internal change queue/i);
+    expect(
+      buildRealtimeStatus({
         engine: 'MongoDB',
         enabled: true,
         topologySupported: true,

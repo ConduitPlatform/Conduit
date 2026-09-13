@@ -6,31 +6,22 @@ export function parseSqlResumeId(token: string | null | undefined): string | und
     return token;
   }
   const parsed = parseResumeToken(token);
-  if (typeof parsed === 'number' && Number.isInteger(parsed) && parsed >= 0) {
-    return String(parsed);
-  }
-  if (typeof parsed === 'bigint' && parsed >= 0n) {
-    return parsed.toString();
-  }
-  if (typeof parsed === 'string' && /^\d+$/.test(parsed)) {
-    return parsed;
-  }
-  return undefined;
+  return decimalId(parsed);
 }
 
 export function sqlCursorFromResumeAfter(resumeAfter: unknown): string | undefined {
-  if (
-    typeof resumeAfter === 'number' &&
-    Number.isInteger(resumeAfter) &&
-    resumeAfter >= 0
-  ) {
-    return String(resumeAfter);
+  return decimalId(resumeAfter);
+}
+
+function decimalId(value: unknown): string | undefined {
+  if (typeof value === 'bigint' && value >= 0n) {
+    return value.toString();
   }
-  if (typeof resumeAfter === 'bigint' && resumeAfter >= 0n) {
-    return resumeAfter.toString();
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    return value;
   }
-  if (typeof resumeAfter === 'string' && /^\d+$/.test(resumeAfter)) {
-    return resumeAfter;
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) {
+    return String(value);
   }
   return undefined;
 }

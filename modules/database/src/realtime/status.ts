@@ -45,7 +45,7 @@ export function buildRealtimeStatus(input: RealtimeStatusInput): RealtimeStatus 
         input.topologyMessage ??
         (input.engine === 'MongoDB'
           ? 'A replica set or sharded MongoDB deployment is required for live updates'
-          : 'Database topology does not support live updates'),
+          : 'SQL live updates use an internal change queue (triggers), not native CDC. Database topology does not support live updates'),
     };
   }
   if (input.socketsEnabled === false) {

@@ -1,5 +1,4 @@
 import {
-  CHANGE_LOG_FUNCTION,
   CHANGE_LOG_TABLE,
   NOTIFY_CHANNEL,
   PK_COLUMN,
@@ -25,7 +24,7 @@ export function createChangeLogTableSql(dialect: SqlDialect): string {
         collection_name VARCHAR(255) NOT NULL,
         document_id VARCHAR(255) NOT NULL,
         operation VARCHAR(16) NOT NULL,
-        occurred_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        occurred_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
       )`;
     case 'sqlite':
       return `CREATE TABLE IF NOT EXISTS ${table} (
@@ -42,11 +41,15 @@ export function createChangeLogTableSql(dialect: SqlDialect): string {
   }
 }
 
-export function createCaptureFunctionSql(): string {
+export function createCaptureFunctionSql(
+  pkColumn: string = PK_COLUMN,
+  functionName: string,
+): string {
   const table = quoteIdent('postgres', CHANGE_LOG_TABLE);
-  const pk = quoteIdent('postgres', PK_COLUMN);
+  const pk = quoteIdent('postgres', pkColumn);
+  const fn = quoteIdent('postgres', functionName);
   const channel = NOTIFY_CHANNEL.replace(/'/g, "''");
-  return `CREATE OR REPLACE FUNCTION ${CHANGE_LOG_FUNCTION}() RETURNS trigger AS $$
+  return `CREATE OR REPLACE FUNCTION ${fn}() RETURNS trigger AS $$
 DECLARE
   doc_id text;
   op text;
@@ -76,4 +79,8 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql`;
+}
+
+export function dropCaptureFunctionSql(functionName: string): string {
+  return `DROP FUNCTION IF EXISTS ${quoteIdent('postgres', functionName)}()`;
 }

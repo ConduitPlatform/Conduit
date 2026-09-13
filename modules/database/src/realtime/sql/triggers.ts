@@ -2,6 +2,7 @@ import { QueryTypes, Sequelize } from 'sequelize';
 import type { OptedInSchema } from '../types.js';
 import {
   CHANGE_LOG_TABLE,
+  PK_COLUMN,
   TRIGGER_NAME_PREFIX,
   type SqlDialect,
   assertSqlDialect,
@@ -81,18 +82,31 @@ export async function syncTriggers(
   const desired = new Map<string, DesiredTrigger>();
   for (const schema of schemas) {
     if (schema.collectionName === CHANGE_LOG_TABLE) continue;
-    for (const trigger of desiredTriggers(dialect, schema.collectionName)) {
+    const pkColumn = schema.documentIdField ?? PK_COLUMN;
+    for (const trigger of desiredTriggers(dialect, schema.collectionName, pkColumn)) {
       desired.set(trigger.triggerName, trigger);
     }
   }
   const existing = await listExistingTriggers(sequelize);
+  const existingNames = new Set(existing.map(trigger => trigger.triggerName));
   for (const current of existing) {
     if (desired.has(current.triggerName)) continue;
     const dropSql = dropExistingSql(dialect, current);
     await sequelize.query(dropSql);
+    const leftover = desiredTriggers(dialect, current.tableName, PK_COLUMN).find(
+      trigger => trigger.triggerName === current.triggerName,
+    );
+    if (leftover?.dropFunctionSql) {
+      await sequelize.query(leftover.dropFunctionSql);
+    }
   }
   for (const trigger of desired.values()) {
-    await sequelize.query(trigger.dropSql);
+    if (trigger.functionSql) {
+      await sequelize.query(trigger.functionSql);
+    }
+    if (existingNames.has(trigger.triggerName)) {
+      continue;
+    }
     await sequelize.query(trigger.sql);
   }
 }

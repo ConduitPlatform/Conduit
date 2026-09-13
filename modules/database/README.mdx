@@ -47,7 +47,7 @@ since the latter need to go through parsers that are otherwise unnecessary for M
 
 When using MongoDB with a replica set (e.g., MongoDB Atlas), the database module supports configuring read preference, write concern, and read concern through the admin panel at `PATCH /config/database`.
 
-Live document updates on MongoDB also require a replica set or sharded cluster. Local Compose files initialize a single-node replica set so change streams can be exercised. SQL engines do not need a replica set.
+Live document updates on MongoDB also require a replica set or sharded cluster. Local Compose files initialize a single-node replica set so change streams can be exercised. SQL live updates do not use a replica set; they use an internal trigger-backed change queue (not native WAL/binlog CDC).
 
 ### Live updates
 
@@ -60,7 +60,11 @@ unsubscribe({ schema: 'Order', documentId?: string })
 
 Events arrive as `change` with `{ version, operation, schema, documentId, occurredAt, resumeToken }` and contain no document fields. Consumers should refetch through their authorized REST or custom-endpoint path.
 
-MongoDB uses native change streams. PostgreSQL, MySQL, MariaDB, and SQLite capture the same metadata through table triggers and an internal `_cnd_DatabaseChange` log (not a CMS schema). PostgreSQL wakes the listener with `NOTIFY`; the other SQL dialects poll. The database role needs permission to `CREATE TRIGGER` (and on PostgreSQL, to create a function). SQL live updates do not require a replica set.
+MongoDB uses native change streams. PostgreSQL, MySQL, MariaDB, and SQLite capture the same metadata through table triggers and an internal `_cnd_DatabaseChange` log (not a CMS schema). That log is a **queue**, not native CDC: each opted-in write does an extra insert (and the leader later deletes acked rows). `TRUNCATE`, `COPY`, and table-rewrite DDL are not captured. Delivery is at-least-once; duplicates are possible.
+
+PostgreSQL wakes the listener with `LISTEN`/`NOTIFY` on a dedicated session connection. A transaction-mode pooler (PgBouncer default, many serverless poolers) cannot keep `LISTEN` and will surface as unsupported/degraded — use a direct/session URI. MySQL, MariaDB, and SQLite poll. The database role needs permission to `CREATE TABLE` / `CREATE TRIGGER` (PostgreSQL also needs `CREATE FUNCTION`, `LISTEN`, and `pg_notify`). MySQL with binary logging often needs `log_bin_trust_function_creators`. Triggers use the schema’s physical primary key (`idField`), not a virtual `_id`.
+
+SQL live updates do not require a replica set. They are not equivalent to Mongo change streams.
 
 Client subscribers must authenticate. Schemas with document-level authorization reject schema-wide subscriptions and require a document ID plus a `read` check. Admin consumers use `POST /realtime/ticket` for a 30-second handshake token; session JWTs and masterkeys must not be sent from browser code.
 

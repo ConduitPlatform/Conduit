@@ -1,3 +1,4 @@
+import { EJSON } from 'bson';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import {
   normalizeChangeEvent,
@@ -13,7 +14,7 @@ import type {
   RealtimeStatusCode,
 } from './types.js';
 import type { RealtimeSubscriptionTracker } from './subscriptions.js';
-import { canReadDocument, type AuthorizationSdk } from './authorize.js';
+import { documentReadDecision, type AuthorizationSdk } from './authorize.js';
 
 const LEADER_LOCK = 'realtime:change-stream:leader';
 const RESUME_TOKEN_KEY = 'realtime:resumeToken';
@@ -38,6 +39,8 @@ export type CoordinatorOptions = {
   parseResumeToken?: (token: string | null | undefined) => unknown | undefined;
   prepare?: () => Promise<void>;
   onResumePersisted?: (resumeToken: string) => Promise<void>;
+  leaderLock?: string;
+  resumeTokenKey?: string;
 };
 
 export class ChangeStreamCoordinator {
@@ -54,6 +57,7 @@ export class ChangeStreamCoordinator {
   private watching = false;
   private opening = false;
   private ignoreClose = false;
+  private changeQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: CoordinatorOptions) {}
 
@@ -71,6 +75,10 @@ export class ChangeStreamCoordinator {
 
   getTopology(): TopologyResult {
     return this.topology;
+  }
+
+  async waitForIdle(): Promise<void> {
+    await this.changeQueue;
   }
 
   async reconcile(): Promise<void> {
@@ -120,8 +128,17 @@ export class ChangeStreamCoordinator {
   async shutdown(): Promise<void> {
     this.closed = true;
     this.clearTimers();
+    await this.changeQueue;
     await this.stopStream('idle');
     await this.releaseLeader();
+  }
+
+  private get leaderLockName(): string {
+    return this.options.leaderLock ?? LEADER_LOCK;
+  }
+
+  private get resumeTokenName(): string {
+    return this.options.resumeTokenKey ?? RESUME_TOKEN_KEY;
   }
 
   private async safePrepare(): Promise<void> {
@@ -141,7 +158,7 @@ export class ChangeStreamCoordinator {
     }
     try {
       const acquired = await this.options.grpcSdk.state!.tryAcquireLock(
-        LEADER_LOCK,
+        this.leaderLockName,
         LOCK_TTL_MS,
       );
       if (!acquired) {
@@ -185,7 +202,7 @@ export class ChangeStreamCoordinator {
     try {
       const parseToken = this.options.parseResumeToken ?? parseMongoResumeToken;
       const resumeAfter = parseToken(
-        await this.options.grpcSdk.state!.getKey(RESUME_TOKEN_KEY),
+        await this.options.grpcSdk.state!.getKey(this.resumeTokenName),
       );
       if (this.watching || this.closed) return;
       const stream = this.options.watch({ resumeAfter });
@@ -194,7 +211,7 @@ export class ChangeStreamCoordinator {
       this.streamState = 'live';
       this.retryAttempt = 0;
       stream.on('change', (change: unknown) => {
-        void this.handleChange(change as RawChangeEvent);
+        this.enqueueChange(change as RawChangeEvent);
       });
       stream.on('error', (err: unknown) => {
         void this.handleStreamError(err);
@@ -213,31 +230,60 @@ export class ChangeStreamCoordinator {
     }
   }
 
+  private enqueueChange(change: RawChangeEvent) {
+    this.changeQueue = this.changeQueue.then(async () => {
+      if (this.closed || !this.watching) return;
+      try {
+        await this.handleChange(change);
+      } catch (err) {
+        this.lastError = err instanceof Error ? err.message : String(err);
+        ConduitGrpcSdk.Logger.error(err as Error);
+        this.watching = false;
+        await this.stopStream('degraded');
+        this.scheduleRetry();
+      }
+    });
+  }
+
   private async handleChange(change: RawChangeEvent) {
+    const token = resumeTokenOf(change);
     const schema = this.resolveSchema(change.ns?.coll);
-    if (!schema) return;
-    const event = normalizeChangeEvent(change, schema.name);
-    if (!event) return;
+    const event = schema ? normalizeChangeEvent(change, schema.name) : null;
+    if (!event || !schema) {
+      if (token) {
+        await this.persistResumeToken(token);
+      }
+      return;
+    }
     this.lastEventAt = event.occurredAt;
     this.lastError = undefined;
-    await this.options.grpcSdk.state!.setKey(RESUME_TOKEN_KEY, event.resumeToken);
+    await this.emitChange(schema, event);
+    await this.persistResumeToken(event.resumeToken);
+  }
+
+  private async persistResumeToken(token: string) {
+    await this.options.grpcSdk.state!.setKey(this.resumeTokenName, token);
     try {
-      await this.options.onResumePersisted?.(event.resumeToken);
+      await this.options.onResumePersisted?.(token);
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
     }
-    this.options.grpcSdk.bus?.publish(
-      `database:change:${schema.name}`,
-      JSON.stringify(event),
-    );
+  }
+
+  private async emitChange(schema: OptedInSchema, event: DatabaseChangeEvent) {
+    const payload = JSON.stringify(event);
+    this.options.grpcSdk.bus?.publish(`database:change:${schema.name}`, payload);
     ConduitGrpcSdk.Metrics?.increment('database_realtime_events_total', 1, {
       operation: event.operation,
     });
-    await this.pushEvent(schema, event);
+    await this.pushEvent(schema, event, payload);
   }
 
-  private async pushEvent(schema: OptedInSchema, event: DatabaseChangeEvent) {
-    const payload = JSON.stringify(event);
+  private async pushEvent(
+    schema: OptedInSchema,
+    event: DatabaseChangeEvent,
+    payload: string,
+  ) {
     const adminRooms = roomsForPublicChange(schema.name, event.documentId);
     await this.safePush('admin', adminRooms, payload);
     if (!schema.authorizationEnabled) {
@@ -250,21 +296,23 @@ export class ChangeStreamCoordinator {
     );
     const allowedRooms: string[] = [];
     for (const userId of userIds) {
-      const allowed = await canReadDocument(
+      const decision = await documentReadDecision(
         this.options.grpcSdk as unknown as AuthorizationSdk,
         schema.name,
         event.documentId,
         userId,
       );
-      if (!allowed) {
+      if (decision === 'allow') {
+        allowedRooms.push(authorizedDocumentRoom(schema.name, event.documentId, userId));
+        continue;
+      }
+      if (decision === 'deny') {
         await this.options.subscriptions.removeUser(
           schema.name,
           event.documentId,
           userId,
         );
-        continue;
       }
-      allowedRooms.push(authorizedDocumentRoom(schema.name, event.documentId, userId));
     }
     if (allowedRooms.length > 0) {
       await this.safePush('router', allowedRooms, payload);
@@ -279,16 +327,12 @@ export class ChangeStreamCoordinator {
     const client =
       target === 'admin' ? this.options.grpcSdk.admin : this.options.grpcSdk.router;
     if (!client?.socketPush) return;
-    try {
-      await client.socketPush({
-        event: 'change',
-        data,
-        rooms,
-        receivers: [],
-      });
-    } catch (err) {
-      ConduitGrpcSdk.Logger.error(err as Error);
-    }
+    await client.socketPush({
+      event: 'change',
+      data,
+      rooms,
+      receivers: [],
+    });
   }
 
   private resolveSchema(collectionName?: string): OptedInSchema | undefined {
@@ -305,7 +349,7 @@ export class ChangeStreamCoordinator {
     ConduitGrpcSdk.Metrics?.increment('database_realtime_stream_errors_total');
     ConduitGrpcSdk.Logger.error(err as Error);
     if (isResumeTokenUnusable(err)) {
-      await this.options.grpcSdk.state!.clearKey(RESUME_TOKEN_KEY);
+      await this.options.grpcSdk.state!.clearKey(this.resumeTokenName);
     }
     await this.stopStream('degraded');
     this.scheduleRetry();
@@ -361,4 +405,11 @@ export class ChangeStreamCoordinator {
       this.renewTimer = null;
     }
   }
+}
+
+function resumeTokenOf(change: RawChangeEvent): string | undefined {
+  if (change._id === undefined || change._id === null) {
+    return undefined;
+  }
+  return EJSON.stringify(change._id);
 }
