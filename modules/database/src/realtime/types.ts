@@ -33,6 +33,7 @@ export type OptedInSchema = {
   name: string;
   collectionName: string;
   authorizationEnabled: boolean;
+  documentIdField?: string;
 };
 
 export type SubscribeRequest = {

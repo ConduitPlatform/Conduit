@@ -22,6 +22,8 @@ import { RealtimeSubscriptionTracker } from './subscriptions.js';
 import type { ChangeStreamLike, OptedInSchema, RealtimeStatus } from './types.js';
 import { topologyFromHello } from './topology.js';
 import { SqlRealtimeSupport } from './sql/SqlRealtimeSupport.js';
+import { parseSqlResumeId } from './sql/resume.js';
+import { SQL_LEADER_LOCK, SQL_RESUME_TOKEN_KEY } from './sql/constants.js';
 
 export class RealtimeService {
   private readonly subscriptions: RealtimeSubscriptionTracker;
@@ -55,13 +57,17 @@ export class RealtimeService {
       this.coordinator = new ChangeStreamCoordinator({
         grpcSdk,
         watch: options => this.sqlSupport!.openWatch(options.resumeAfter),
-        checkTopology: async () => ({ supported: true }),
+        checkTopology: () => this.sqlSupport!.checkTopology(),
         getOptedInSchemas: () => this.getOptedInSchemas(),
         subscriptions: this.subscriptions,
         enabled: () => this.isGloballyEnabled(),
+        parseResumeToken: parseSqlResumeId,
+        leaderLock: SQL_LEADER_LOCK,
+        resumeTokenKey: SQL_RESUME_TOKEN_KEY,
         prepare: () =>
           this.sqlSupport!.prepare(
             this.isGloballyEnabled() ? this.getOptedInSchemas() : [],
+            { ensureLog: this.isGloballyEnabled() },
           ),
         onResumePersisted: token => this.sqlSupport!.trimThrough(token),
       });
@@ -138,11 +144,20 @@ export class RealtimeService {
       const optedIn = toOptedInSchema({
         name: schema.name,
         collectionName: schema.collectionName,
+        documentIdField: this.documentIdField(schema.name),
         modelOptions: schema.modelOptions,
       });
       if (optedIn) schemas.push(optedIn);
     }
     return schemas;
+  }
+
+  private documentIdField(schemaName: string): string | undefined {
+    const model = this.adapter.models[schemaName];
+    if (model && 'idField' in model && typeof model.idField === 'string') {
+      return model.idField;
+    }
+    return undefined;
   }
 
   private openWatch(adapter: MongooseAdapter, resumeAfter?: unknown): ChangeStreamLike {

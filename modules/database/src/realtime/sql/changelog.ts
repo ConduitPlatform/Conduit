@@ -1,40 +1,45 @@
 import { QueryTypes, Sequelize } from 'sequelize';
 import {
   CHANGE_LOG_BATCH_SIZE,
+  CHANGE_LOG_LAG_MS,
   CHANGE_LOG_TABLE,
   type SqlDialect,
   assertSqlDialect,
 } from './constants.js';
 import { quoteIdent } from './identifiers.js';
-import { createCaptureFunctionSql, createChangeLogTableSql } from './ddl.js';
+import { createChangeLogTableSql } from './ddl.js';
 import type { ChangeLogRow } from './mapEvent.js';
+
+export function changeLogLagMs(dialect: SqlDialect): number {
+  return dialect === 'sqlite' ? 0 : CHANGE_LOG_LAG_MS;
+}
+
+export function fetchChangeLogSql(dialect: SqlDialect, lagMs: number): string {
+  const table = quoteIdent(dialect, CHANGE_LOG_TABLE);
+  return `SELECT id, collection_name, document_id, operation, occurred_at
+     FROM ${table}
+     WHERE id > :resumeId${lagPredicate(dialect, lagMs)}
+     ORDER BY id ASC
+     LIMIT :limit`;
+}
 
 export async function ensureChangeLog(sequelize: Sequelize): Promise<void> {
   const dialect = assertSqlDialect(sequelize.getDialect());
   await sequelize.query(createChangeLogTableSql(dialect));
-  if (dialect === 'postgres') {
-    await sequelize.query(createCaptureFunctionSql());
-  }
 }
 
 export async function fetchChangeLogBatch(
   sequelize: Sequelize,
   resumeId: string,
   limit: number = CHANGE_LOG_BATCH_SIZE,
+  lagMs?: number,
 ): Promise<ChangeLogRow[]> {
   const dialect = assertSqlDialect(sequelize.getDialect());
-  const table = quoteIdent(dialect, CHANGE_LOG_TABLE);
-  const rows = await sequelize.query(
-    `SELECT id, collection_name, document_id, operation, occurred_at
-     FROM ${table}
-     WHERE id > :resumeId
-     ORDER BY id ASC
-     LIMIT :limit`,
-    {
-      type: QueryTypes.SELECT,
-      replacements: { resumeId, limit },
-    },
-  );
+  const resolvedLag = lagMs ?? changeLogLagMs(dialect);
+  const rows = await sequelize.query(fetchChangeLogSql(dialect, resolvedLag), {
+    type: QueryTypes.SELECT,
+    replacements: fetchReplacements(dialect, resumeId, limit, resolvedLag),
+  });
   return (rows as Record<string, unknown>[]).map(row => ({
     id: String(row.id),
     collection_name: String(row.collection_name),
@@ -74,6 +79,53 @@ export async function trimChangeLog(
     const affected = affectedRows(metadata);
     if (affected === 0) {
       return;
+    }
+  }
+}
+
+function lagPredicate(dialect: SqlDialect, lagMs: number): string {
+  if (lagMs <= 0) {
+    return '';
+  }
+  switch (dialect) {
+    case 'postgres':
+      return ' AND occurred_at <= NOW() - make_interval(secs => :lagSeconds)';
+    case 'mysql':
+    case 'mariadb':
+      return ' AND occurred_at <= DATE_SUB(NOW(6), INTERVAL :lagMicrosecond MICROSECOND)';
+    case 'sqlite':
+      return ` AND occurred_at <= datetime('now', :lagModifier)`;
+    default: {
+      const _exhaustive: never = dialect;
+      return _exhaustive;
+    }
+  }
+}
+
+function fetchReplacements(
+  dialect: SqlDialect,
+  resumeId: string,
+  limit: number,
+  lagMs: number,
+): Record<string, string | number> {
+  const replacements: Record<string, string | number> = { resumeId, limit };
+  if (lagMs <= 0) {
+    return replacements;
+  }
+  switch (dialect) {
+    case 'postgres':
+      replacements.lagSeconds = lagMs / 1000;
+      return replacements;
+    case 'mysql':
+    case 'mariadb':
+      replacements.lagMicrosecond = lagMs * 1000;
+      return replacements;
+    case 'sqlite':
+      replacements.lagModifier = `-${lagMs / 1000} seconds`;
+      return replacements;
+    default: {
+      const _exhaustive: never = dialect;
+      return _exhaustive;
     }
   }
 }

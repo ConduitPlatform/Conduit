@@ -1,9 +1,11 @@
 import { EventEmitter } from 'node:events';
 import { describe, expect, it, jest } from '@jest/globals';
-import { ObjectId } from 'bson';
+import { EJSON, ObjectId } from 'bson';
 import { ChangeStreamCoordinator } from '../ChangeStreamCoordinator.js';
 import { RealtimeSubscriptionTracker } from '../subscriptions.js';
 import { roomsForPublicChange } from '../rooms.js';
+import { parseSqlResumeId } from '../sql/resume.js';
+import { SQL_LEADER_LOCK, SQL_RESUME_TOKEN_KEY } from '../sql/constants.js';
 
 class MemoryStore {
   private sets = new Map<string, Set<string>>();
@@ -11,9 +13,13 @@ class MemoryStore {
     const set = this.sets.get(key) ?? new Set<string>();
     members.forEach(member => set.add(member));
     this.sets.set(key, set);
+    return members.length;
   }
   async srem(key: string, ...members: string[]) {
-    members.forEach(member => this.sets.get(key)?.delete(member));
+    const set = this.sets.get(key);
+    if (!set) return 0;
+    members.forEach(member => set.delete(member));
+    return members.length;
   }
   async smembers(key: string) {
     return [...(this.sets.get(key) ?? new Set())];
@@ -23,13 +29,26 @@ class MemoryStore {
   }
   async del(...keys: string[]) {
     keys.forEach(key => this.sets.delete(key));
+    return keys.length;
   }
 }
 
 function createCoordinator(overrides?: {
   allow?: boolean;
-  schemas?: { name: string; collectionName: string; authorizationEnabled: boolean }[];
+  authorizationAvailable?: boolean;
+  canThrows?: boolean;
+  schemas?: {
+    name: string;
+    collectionName: string;
+    authorizationEnabled: boolean;
+    documentIdField?: string;
+  }[];
   getKeyDelayMs?: number;
+  onResumePersisted?: (token: string) => Promise<void>;
+  parseResumeToken?: (token: string | null | undefined) => unknown | undefined;
+  leaderLock?: string;
+  resumeTokenKey?: string;
+  adminPush?: () => Promise<void>;
 }) {
   const stream = new EventEmitter() as EventEmitter & { close: () => Promise<void> };
   stream.close = async () => {
@@ -41,7 +60,7 @@ function createCoordinator(overrides?: {
     release: jest.fn(async () => undefined),
   };
   const routerPush = jest.fn(async () => undefined);
-  const adminPush = jest.fn(async () => undefined);
+  const adminPush = jest.fn(overrides?.adminPush ?? (async () => undefined));
   const publish = jest.fn();
   const watch = jest.fn(() => stream as never);
   const subscriptions = new RealtimeSubscriptionTracker(new MemoryStore());
@@ -65,9 +84,14 @@ function createCoordinator(overrides?: {
     bus: { publish },
     router: { socketPush: routerPush },
     admin: { socketPush: adminPush },
-    isAvailable: () => true,
+    isAvailable: () => overrides?.authorizationAvailable !== false,
     authorization: {
-      can: async () => ({ allow: overrides?.allow !== false }),
+      can: async () => {
+        if (overrides?.canThrows) {
+          throw new Error('authorization unavailable');
+        }
+        return { allow: overrides?.allow !== false };
+      },
     },
   };
   const coordinator = new ChangeStreamCoordinator({
@@ -80,6 +104,10 @@ function createCoordinator(overrides?: {
       ],
     subscriptions,
     enabled: () => true,
+    onResumePersisted: overrides?.onResumePersisted,
+    parseResumeToken: overrides?.parseResumeToken,
+    leaderLock: overrides?.leaderLock,
+    resumeTokenKey: overrides?.resumeTokenKey,
   });
   return {
     coordinator,
@@ -114,7 +142,7 @@ describe('ChangeStreamCoordinator', () => {
       documentKey: { _id: new ObjectId('64b64c4c4c4c4c4c4c4c4c4d') },
       _id: resume,
     });
-    await new Promise(resolve => setImmediate(resolve));
+    await coordinator.waitForIdle();
     expect(publish).toHaveBeenCalledTimes(1);
     expect(publish.mock.calls[0][0]).toBe('database:change:Order');
     const payload = JSON.parse(publish.mock.calls[0][1] as string);
@@ -132,6 +160,86 @@ describe('ChangeStreamCoordinator', () => {
     expect(adminPush).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'change', rooms: expectedRooms }),
     );
+    await coordinator.shutdown();
+  });
+
+  it('persists skipped collection tokens after the opted-in emit', async () => {
+    const order: string[] = [];
+    const { coordinator, stream, grpcSdk } = createCoordinator({
+      onResumePersisted: async () => {
+        order.push('trim');
+      },
+    });
+    grpcSdk.state.setKey.mockImplementation(async (key: string, value: string) => {
+      order.push(`setKey:${value}`);
+    });
+    await coordinator.reconcile();
+    stream.emit('change', {
+      operationType: 'insert',
+      ns: { coll: 'orders' },
+      documentKey: { _id: new ObjectId('64b64c4c4c4c4c4c4c4c4c4c') },
+      _id: { _data: 'token-a' },
+      wallTime: new Date('2026-01-02T00:00:00.000Z'),
+    });
+    stream.emit('change', {
+      operationType: 'insert',
+      ns: { coll: 'other' },
+      documentKey: { _id: new ObjectId('64b64c4c4c4c4c4c4c4c4c4d') },
+      _id: { _data: 'token-b' },
+    });
+    await coordinator.waitForIdle();
+    expect(order).toEqual([
+      `setKey:${EJSON.stringify({ _data: 'token-a' })}`,
+      'trim',
+      `setKey:${EJSON.stringify({ _data: 'token-b' })}`,
+      'trim',
+    ]);
+    await coordinator.shutdown();
+  });
+
+  it('persists resume and trims only after a successful emit', async () => {
+    const order: string[] = [];
+    const { coordinator, stream, grpcSdk, publish } = createCoordinator({
+      onResumePersisted: async () => {
+        order.push('trim');
+      },
+    });
+    publish.mockImplementation(() => {
+      order.push('publish');
+    });
+    grpcSdk.state.setKey.mockImplementation(async () => {
+      order.push('setKey');
+    });
+    await coordinator.reconcile();
+    stream.emit('change', {
+      operationType: 'update',
+      ns: { coll: 'orders' },
+      documentKey: { _id: 'order-1' },
+      _id: '1842',
+      wallTime: new Date('2026-03-01T00:00:00.000Z'),
+    });
+    await coordinator.waitForIdle();
+    expect(order).toEqual(['publish', 'setKey', 'trim']);
+    await coordinator.shutdown();
+  });
+
+  it('does not persist a later token when emit fails', async () => {
+    const { coordinator, stream, grpcSdk, adminPush } = createCoordinator({
+      adminPush: async () => {
+        throw new Error('socket down');
+      },
+    });
+    await coordinator.reconcile();
+    stream.emit('change', {
+      operationType: 'insert',
+      ns: { coll: 'orders' },
+      documentKey: { _id: 'order-1' },
+      _id: '10',
+      wallTime: new Date('2026-03-01T00:00:00.000Z'),
+    });
+    await coordinator.waitForIdle();
+    expect(grpcSdk.state.setKey).not.toHaveBeenCalled();
+    expect(coordinator.getState()).toBe('degraded');
     await coordinator.shutdown();
   });
 
@@ -153,9 +261,34 @@ describe('ChangeStreamCoordinator', () => {
       documentKey: { _id: new ObjectId('64b64c4c4c4c4c4c4c4c4c4c') },
       _id: { _data: 'token' },
     });
-    await new Promise(resolve => setImmediate(resolve));
+    await coordinator.waitForIdle();
     expect(routerPush).not.toHaveBeenCalled();
     expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c')).toEqual([]);
+    await coordinator.shutdown();
+  });
+
+  it('does not remove users when authorization is unavailable', async () => {
+    const { coordinator, stream, routerPush, subscriptions, grpcSdk } = createCoordinator(
+      {
+        authorizationAvailable: false,
+        schemas: [
+          { name: 'Order', collectionName: 'orders', authorizationEnabled: true },
+        ],
+      },
+    );
+    expect(grpcSdk.isAvailable('authorization')).toBe(false);
+    await subscriptions.addAuthorizedDocument('sock-1', 'Order', 'doc-1', 'user-1');
+    expect(await subscriptions.listUsers('Order', 'doc-1')).toEqual(['user-1']);
+    await coordinator.reconcile();
+    stream.emit('change', {
+      operationType: 'update',
+      ns: { coll: 'orders' },
+      documentKey: { _id: 'doc-1' },
+      _id: { _data: 'token' },
+    });
+    await coordinator.waitForIdle();
+    expect(routerPush).not.toHaveBeenCalled();
+    expect(await subscriptions.listUsers('Order', 'doc-1')).toEqual(['user-1']);
     await coordinator.shutdown();
   });
 
@@ -198,7 +331,7 @@ describe('ChangeStreamCoordinator', () => {
       wallTime: new Date('2026-03-01T00:00:00.000Z'),
       fullDocument: { secret: 'nope' },
     });
-    await new Promise(resolve => setImmediate(resolve));
+    await coordinator.waitForIdle();
     expect(publish).toHaveBeenCalledTimes(1);
     const payload = JSON.parse(publish.mock.calls[0][1] as string);
     expect(payload).toMatchObject({
@@ -208,6 +341,18 @@ describe('ChangeStreamCoordinator', () => {
     });
     expect(payload).not.toHaveProperty('fullDocument');
     expect(JSON.stringify(payload)).not.toContain('nope');
+    await coordinator.shutdown();
+  });
+
+  it('ignores leftover Mongo tokens on the SQL resume key', async () => {
+    const { coordinator, watch, state } = createCoordinator({
+      parseResumeToken: parseSqlResumeId,
+      leaderLock: SQL_LEADER_LOCK,
+      resumeTokenKey: SQL_RESUME_TOKEN_KEY,
+    });
+    state.set(SQL_RESUME_TOKEN_KEY, EJSON.stringify({ _data: 'mongo' }));
+    await coordinator.reconcile();
+    expect(watch).toHaveBeenCalledWith({ resumeAfter: undefined });
     await coordinator.shutdown();
   });
 });

@@ -61,25 +61,37 @@ export function optionalDocumentId(value: unknown): string | undefined {
   return value;
 }
 
+export type DocumentReadDecision = 'allow' | 'deny' | 'unavailable';
+
+export async function documentReadDecision(
+  grpcSdk: AuthorizationSdk,
+  schema: string,
+  documentId: string,
+  userId: string,
+): Promise<DocumentReadDecision> {
+  const auth = grpcSdk.authorization;
+  if (!auth || !grpcSdk.isAvailable('authorization')) {
+    return 'unavailable';
+  }
+  try {
+    const decision = await auth.can({
+      subject: `User:${userId}`,
+      actions: ['read'],
+      resource: `${schema}:${documentId}`,
+    });
+    return decision.allow === true ? 'allow' : 'deny';
+  } catch {
+    return 'unavailable';
+  }
+}
+
 export async function canReadDocument(
   grpcSdk: AuthorizationSdk,
   schema: string,
   documentId: string,
   userId: string,
 ): Promise<boolean> {
-  if (!grpcSdk.authorization || !grpcSdk.isAvailable('authorization')) {
-    return false;
-  }
-  try {
-    const decision = await grpcSdk.authorization.can({
-      subject: `User:${userId}`,
-      actions: ['read'],
-      resource: `${schema}:${documentId}`,
-    });
-    return decision.allow === true;
-  } catch {
-    return false;
-  }
+  return (await documentReadDecision(grpcSdk, schema, documentId, userId)) === 'allow';
 }
 
 export function assertSchemaAvailable(
@@ -120,6 +132,7 @@ export function assertSchemaAvailable(
 export function toOptedInSchema(schema: {
   name: string;
   collectionName: string;
+  documentIdField?: string;
   modelOptions?: {
     conduit?: {
       realtime?: { enabled?: boolean };
@@ -132,5 +145,6 @@ export function toOptedInSchema(schema: {
     name: schema.name,
     collectionName: schema.collectionName,
     authorizationEnabled: schema.modelOptions.conduit.authorization?.enabled === true,
+    documentIdField: schema.documentIdField,
   };
 }

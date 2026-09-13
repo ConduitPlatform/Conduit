@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { SqlDialect } from './constants.js';
-import { TRIGGER_NAME_PREFIX } from './constants.js';
+import { CAPTURE_FUNCTION_PREFIX, TRIGGER_NAME_PREFIX } from './constants.js';
 
 const MYSQL_IDENT_LIMIT = 64;
 const POSTGRES_IDENT_LIMIT = 63;
@@ -37,6 +37,13 @@ export function triggerBaseName(collectionName: string, dialect: SqlDialect): st
   return fitIdentifier(
     `${TRIGGER_NAME_PREFIX}${collectionName}`,
     identifierLimit(dialect),
+  );
+}
+
+export function captureFunctionName(collectionName: string): string {
+  return fitIdentifier(
+    `${CAPTURE_FUNCTION_PREFIX}${collectionName}`,
+    identifierLimit('postgres'),
   );
 }
 

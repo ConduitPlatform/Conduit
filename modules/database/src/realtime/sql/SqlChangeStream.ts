@@ -10,7 +10,7 @@ import {
   assertSqlDialect,
   type SqlDialect,
 } from './constants.js';
-import { fetchChangeLogBatch, maxChangeLogId } from './changelog.js';
+import { changeLogLagMs, fetchChangeLogBatch } from './changelog.js';
 import { toRawChangeEvent } from './mapEvent.js';
 import { sqlCursorFromResumeAfter } from './resume.js';
 
@@ -18,6 +18,7 @@ export type SqlChangeStreamOptions = {
   sequelize: Sequelize;
   connectionUri: string;
   resumeAfter?: unknown;
+  defaultCursor?: string;
 };
 
 export class SqlChangeStream implements ChangeStreamLike {
@@ -25,18 +26,21 @@ export class SqlChangeStream implements ChangeStreamLike {
   private readonly sequelize: Sequelize;
   private readonly connectionUri: string;
   private readonly dialect: SqlDialect;
+  private readonly lagMs: number;
   private cursor: string | undefined;
   private listenClient: pg.Client | null = null;
   private pollTimer: NodeJS.Timeout | null = null;
   private closed = false;
   private draining = false;
+  private drainRequested = false;
   private started = false;
 
   constructor(options: SqlChangeStreamOptions) {
     this.sequelize = options.sequelize;
     this.connectionUri = options.connectionUri;
     this.dialect = assertSqlDialect(options.sequelize.getDialect());
-    this.cursor = sqlCursorFromResumeAfter(options.resumeAfter);
+    this.lagMs = changeLogLagMs(this.dialect);
+    this.cursor = sqlCursorFromResumeAfter(options.resumeAfter) ?? options.defaultCursor;
     queueMicrotask(() => {
       if (!this.closed) {
         void this.start();
@@ -80,19 +84,19 @@ export class SqlChangeStream implements ChangeStreamLike {
     this.started = true;
     try {
       if (this.cursor === undefined) {
-        this.cursor = await maxChangeLogId(this.sequelize);
+        this.cursor = '0';
       }
       if (this.dialect === 'postgres') {
         await this.startPostgresListen();
         this.pollTimer = setInterval(() => {
-          void this.drain();
+          this.requestDrain();
         }, POSTGRES_FALLBACK_POLL_MS);
       } else {
         this.pollTimer = setInterval(() => {
-          void this.drain();
+          this.requestDrain();
         }, SQL_POLL_INTERVAL_MS);
       }
-      await this.drain();
+      this.requestDrain();
     } catch (err) {
       this.emitError(err);
     }
@@ -102,7 +106,7 @@ export class SqlChangeStream implements ChangeStreamLike {
     const client = new pg.Client({ connectionString: this.connectionUri });
     this.listenClient = client;
     client.on('notification', () => {
-      void this.drain();
+      this.requestDrain();
     });
     client.on('error', (err: Error) => {
       this.emitError(err);
@@ -111,27 +115,39 @@ export class SqlChangeStream implements ChangeStreamLike {
     await client.query(`LISTEN ${NOTIFY_CHANNEL}`);
   }
 
+  private requestDrain(): void {
+    this.drainRequested = true;
+    void this.drain();
+  }
+
   private async drain(): Promise<void> {
     if (this.draining || this.closed) return;
     this.draining = true;
     try {
-      while (!this.closed) {
-        const rows = await fetchChangeLogBatch(
-          this.sequelize,
-          this.cursor ?? '0',
-          CHANGE_LOG_BATCH_SIZE,
-        );
-        if (rows.length === 0) break;
-        for (const row of rows) {
-          if (this.closed) return;
-          this.emitter.emit('change', toRawChangeEvent(row));
-          this.cursor = row.id;
+      while (this.drainRequested && !this.closed) {
+        this.drainRequested = false;
+        while (!this.closed) {
+          const rows = await fetchChangeLogBatch(
+            this.sequelize,
+            this.cursor ?? '0',
+            CHANGE_LOG_BATCH_SIZE,
+            this.lagMs,
+          );
+          if (rows.length === 0) break;
+          for (const row of rows) {
+            if (this.closed) return;
+            this.emitter.emit('change', toRawChangeEvent(row));
+            this.cursor = row.id;
+          }
         }
       }
     } catch (err) {
       this.emitError(err);
     } finally {
       this.draining = false;
+      if (this.drainRequested && !this.closed) {
+        void this.drain();
+      }
     }
   }
 
