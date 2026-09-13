@@ -1053,4 +1053,8 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
     }
   }
+
+  async shutdown(): Promise<void> {
+    await this.realtimeService?.shutdown();
+  }
 }

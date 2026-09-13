@@ -19,6 +19,7 @@ import { registerDatabaseRealtimeSocket } from './sockets.js';
 import { buildRealtimeStatus } from './status.js';
 import { RealtimeSubscriptionTracker } from './subscriptions.js';
 import type { ChangeStreamLike, OptedInSchema, RealtimeStatus } from './types.js';
+import type { WatchPipeline } from './watchPipeline.js';
 
 export class RealtimeService {
   private readonly subscriptions: RealtimeSubscriptionTracker;
@@ -40,7 +41,7 @@ export class RealtimeService {
     if (adapter instanceof MongooseAdapter) {
       this.coordinator = new MongoChangeStreamCoordinator({
         grpcSdk,
-        watch: options => this.openWatch(adapter, options.resumeAfter),
+        watch: options => this.openWatch(adapter, options),
         hello: () => this.hello(adapter),
         getOptedInSchemas: () => this.getOptedInSchemas(),
         subscriptions: this.subscriptions,
@@ -128,14 +129,17 @@ export class RealtimeService {
     return schemas;
   }
 
-  private openWatch(adapter: MongooseAdapter, resumeAfter?: unknown): ChangeStreamLike {
+  private openWatch(
+    adapter: MongooseAdapter,
+    options: { resumeAfter?: unknown; pipeline: WatchPipeline },
+  ): ChangeStreamLike {
     const db = adapter.mongoose.connection.db;
     if (!db) {
       throw new Error('MongoDB connection is not ready');
     }
     return db.watch(
-      [],
-      resumeAfter ? { resumeAfter: resumeAfter as never } : {},
+      options.pipeline,
+      options.resumeAfter ? { resumeAfter: options.resumeAfter as never } : {},
     ) as unknown as ChangeStreamLike;
   }
 

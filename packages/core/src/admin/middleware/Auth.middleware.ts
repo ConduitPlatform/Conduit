@@ -4,10 +4,9 @@ import { ConduitGrpcSdk, type FindManyOptions } from '@conduitplatform/grpc-sdk'
 import { Admin, AdminApiToken } from '../../models/index.js';
 import { verifyToken, comparePasswords } from '../utils/auth.js';
 import { isDev } from '../utils/middleware.js';
-import { ConduitRequest } from '@conduitplatform/hermes';
+import { ConduitRequest, isSocketHandshake } from '@conduitplatform/hermes';
 import { gql } from 'graphql-tag';
 import { ConfigController } from '@conduitplatform/module-tools';
-import { isSocketHandshake } from '../realtime/handshake.js';
 import { isRealtimeTicket } from '../realtime/ticket.js';
 
 const excludedRestRoutes = ['/ready', '/live', '/login', '/config/modules'];

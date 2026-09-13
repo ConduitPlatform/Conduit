@@ -152,11 +152,15 @@ export class SocketController extends ConduitRouter {
 
     this.io.of(namespace).on('connect', socket => {
       if (socket.recovered) {
+        const recoveredRooms = [...socket.rooms].filter(
+          room => room.startsWith('er:') || room.startsWith('database:'),
+        );
         const recovered = conduitSocket.executeRecovered({
           event: 'recovered',
           socketId: socket.id,
           context: socket.data,
-          recoveredRooms: [...socket.rooms].filter(room => room.startsWith('er:')),
+          params: recoveredRooms,
+          recoveredRooms,
         });
         if (recovered) {
           recovered
@@ -195,12 +199,13 @@ export class SocketController extends ConduitRouter {
           });
       });
 
-      socket.on('disconnect', () => {
+      socket.on('disconnect', (reason: string) => {
         conduitSocket
           .executeRequest({
             event: 'disconnect',
             socketId: socket.id,
             context: socket.data,
+            params: [reason],
           })
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
