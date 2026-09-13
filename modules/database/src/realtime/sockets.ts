@@ -1,6 +1,7 @@
 import {
   ConduitGrpcSdk,
   ConduitRouteReturnDefinition,
+  type Indexable,
   ParsedSocketRequest,
   TYPE,
   UnparsedSocketResponse,
@@ -19,6 +20,14 @@ import {
 } from './authorize.js';
 import { authorizedDocumentRoom, documentRoom, schemaRoom } from './rooms.js';
 import type { RealtimeSubscriptionTracker } from './subscriptions.js';
+import {
+  authorizedSubsFromContext,
+  isRecoverableDisconnect,
+  persistAuthorizedSubOnContext,
+  recoveredRoomsFromRequest,
+  removeAuthorizedSubFromContext,
+  restoreAuthorizedSubscriptions,
+} from './recovery.js';
 
 type SocketMode = 'client' | 'admin';
 
@@ -43,6 +52,7 @@ export function registerDatabaseRealtimeSocket(
     {
       connect: { handler: handlers.connect },
       disconnect: { handler: handlers.disconnect },
+      recovered: { handler: handlers.recovered },
       subscribe: {
         params: [TYPE.JSON],
         handler: handlers.subscribe,
@@ -61,14 +71,31 @@ export function registerDatabaseRealtimeSocket(
   );
 }
 
-function createSocketHandlers(options: RealtimeSocketOptions) {
+export function createSocketHandlers(options: RealtimeSocketOptions) {
   return {
     connect: async (): Promise<UnparsedSocketResponse> => {
       return { event: 'connected', data: { ok: true } };
     },
     disconnect: async (call: ParsedSocketRequest): Promise<UnparsedSocketResponse> => {
-      await options.subscriptions.disconnect(call.request.socketId);
+      const reason = call.request.params?.[0];
+      if (!isRecoverableDisconnect(reason)) {
+        await options.subscriptions.disconnect(call.request.socketId);
+      }
       return { event: 'disconnected', data: { ok: true } };
+    },
+    recovered: async (call: ParsedSocketRequest): Promise<UnparsedSocketResponse> => {
+      const { leaveRooms } = await restoreAuthorizedSubscriptions({
+        socketId: call.request.socketId,
+        rooms: recoveredRoomsFromRequest(call),
+        contextSubs: authorizedSubsFromContext(call.request.context as Indexable),
+        subscriptions: options.subscriptions,
+        grpcSdk: options.grpcSdk as unknown as AuthorizationSdk,
+        canRead: canReadDocument,
+      });
+      if (leaveRooms.length > 0) {
+        return { event: 'leave-room', rooms: leaveRooms };
+      }
+      return { event: 'join-room', rooms: [] };
     },
     subscribe: async (call: ParsedSocketRequest): Promise<UnparsedSocketResponse> => {
       const rooms = await resolveSubscription(call, options, 'join');
@@ -140,9 +167,21 @@ async function resolveSubscription(
         documentId,
         userId,
       );
+      persistAuthorizedSubOnContext(
+        call.request.context as Indexable,
+        schemaName,
+        documentId,
+        userId,
+      );
     } else {
       await options.subscriptions.removeAuthorizedDocument(
         call.request.socketId,
+        schemaName,
+        documentId,
+        userId,
+      );
+      removeAuthorizedSubFromContext(
+        call.request.context as Indexable,
         schemaName,
         documentId,
         userId,

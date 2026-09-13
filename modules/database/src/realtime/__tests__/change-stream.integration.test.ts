@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import { MongoClient, ObjectId } from 'mongodb';
 import { normalizeChangeEvent, type RawChangeEvent } from '../normalize.js';
+import { buildWatchPipeline } from '../watchPipeline.js';
 
 const replicaSetUri = process.env.DB_CONN_URI;
 const integrationEnabled = Boolean(replicaSetUri?.includes('replicaSet'));
@@ -14,7 +15,7 @@ describeIntegration('MongoDB change stream contract', () => {
     const db = client.db(dbName);
     try {
       const collection = db.collection('orders');
-      const stream = db.watch([]);
+      const stream = db.watch(buildWatchPipeline(['orders']));
       const change = await new Promise<RawChangeEvent>((resolve, reject) => {
         const timer = setTimeout(
           () => reject(new Error('timed out waiting for change')),

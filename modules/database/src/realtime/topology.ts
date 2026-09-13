@@ -1,6 +1,4 @@
-const CHANGE_STREAM_ERROR_CODES = new Set([
-  136, // CappedPositionLost
-  237, // CursorKilled
+const UNUSABLE_RESUME_TOKEN_CODES = new Set([
   280, // ChangeStreamHistoryLost
   286, // ChangeStreamFatalError
 ]);
@@ -33,11 +31,14 @@ export function topologyFromHello(
 
 export function isResumeTokenUnusable(error: unknown): boolean {
   const code = extractErrorCode(error);
-  if (code !== undefined && CHANGE_STREAM_ERROR_CODES.has(code)) {
+  if (code === 237 || code === 136) {
+    return false;
+  }
+  if (code !== undefined && UNUSABLE_RESUME_TOKEN_CODES.has(code)) {
     return true;
   }
   const message = error instanceof Error ? error.message : String(error ?? '');
-  return /resume token|ChangeStreamHistoryLost|cannot resume/i.test(message);
+  return /ChangeStreamHistoryLost/i.test(message);
 }
 
 function extractErrorCode(error: unknown): number | undefined {

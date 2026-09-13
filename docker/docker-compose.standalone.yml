@@ -78,6 +78,8 @@ services:
       MONGO_INITDB_DATABASE: 'conduit'
       MONGO_INITDB_ROOT_USERNAME: '${DB_USER:-conduit}'
       MONGO_INITDB_ROOT_PASSWORD: '${DB_PASS:-pass}'
+    # Existing volumes created before rs0 will not elect a replica set.
+    # Remove the mongo volume (or start with an empty data dir) if hello stays standalone.
     entrypoint:
       - bash
       - -c

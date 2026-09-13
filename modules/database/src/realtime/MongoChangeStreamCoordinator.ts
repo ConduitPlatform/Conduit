@@ -2,6 +2,7 @@ import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import {
   normalizeChangeEvent,
   parseResumeToken,
+  serializeResumeToken,
   type RawChangeEvent,
 } from './normalize.js';
 import { authorizedDocumentRoom, roomsForPublicChange } from './rooms.js';
@@ -17,7 +18,14 @@ import type {
   RealtimeStatusCode,
 } from './types.js';
 import type { RealtimeSubscriptionTracker } from './subscriptions.js';
-import { canReadDocument, type AuthorizationSdk } from './authorize.js';
+import { type AuthorizationSdk } from './authorize.js';
+import { checkRebacBatch, RealtimeRebacCache } from './rebacCache.js';
+import {
+  buildWatchPipeline,
+  optedInCollectionsKey,
+  WATCH_RESTART_OPERATIONS,
+  type WatchPipeline,
+} from './watchPipeline.js';
 
 const LEADER_LOCK = 'realtime:change-stream:leader';
 const RESUME_TOKEN_KEY = 'realtime:resumeToken';
@@ -30,7 +38,10 @@ type LeaderLock = NonNullable<
   Awaited<ReturnType<NonNullable<ConduitGrpcSdk['state']>['tryAcquireLock']>>
 >;
 
-export type WatchFactory = (options: { resumeAfter?: unknown }) => ChangeStreamLike;
+export type WatchFactory = (options: {
+  resumeAfter?: unknown;
+  pipeline: WatchPipeline;
+}) => ChangeStreamLike;
 
 export type CoordinatorOptions = {
   grpcSdk: ConduitGrpcSdk;
@@ -56,6 +67,9 @@ export class MongoChangeStreamCoordinator {
   private watching = false;
   private opening = false;
   private ignoreClose = false;
+  private changeQueue: Promise<void> = Promise.resolve();
+  private watchedCollectionsKey = '';
+  private readonly rebacCache = new RealtimeRebacCache();
 
   constructor(private readonly options: CoordinatorOptions) {}
 
@@ -75,6 +89,10 @@ export class MongoChangeStreamCoordinator {
     return this.topology;
   }
 
+  async waitForIdle(): Promise<void> {
+    await this.changeQueue;
+  }
+
   async reconcile(): Promise<void> {
     if (this.closed) return;
     const engine = this.options.engine();
@@ -90,8 +108,6 @@ export class MongoChangeStreamCoordinator {
       await this.releaseLeader();
       this.streamState = 'idle';
       this.lastError = this.topology.message;
-      // Hello can fail during startup before Mongo is ready. Keep retrying
-      // that case; a confirmed standalone topology will not recover.
       if (
         !this.topology.message ||
         this.topology.message.includes('Unable to determine')
@@ -100,11 +116,16 @@ export class MongoChangeStreamCoordinator {
       }
       return;
     }
-    if (this.options.getOptedInSchemas().length === 0) {
+    const collections = this.collectionNames();
+    if (collections.length === 0) {
       await this.stopStream('idle');
       await this.releaseLeader();
       this.streamState = 'idle';
       return;
+    }
+    const nextKey = optedInCollectionsKey(collections);
+    if (this.watching && nextKey !== this.watchedCollectionsKey) {
+      await this.stopStream('starting');
     }
     await this.ensureLeader();
   }
@@ -112,8 +133,14 @@ export class MongoChangeStreamCoordinator {
   async shutdown(): Promise<void> {
     this.closed = true;
     this.clearTimers();
+    await this.changeQueue;
     await this.stopStream('idle');
     await this.releaseLeader();
+    this.rebacCache.clear();
+  }
+
+  private collectionNames(): string[] {
+    return this.options.getOptedInSchemas().map(schema => schema.collectionName);
   }
 
   private async ensureLeader(): Promise<void> {
@@ -129,9 +156,6 @@ export class MongoChangeStreamCoordinator {
         LOCK_TTL_MS,
       );
       if (!acquired) {
-        // Another instance holds the lock, or a crashed holder has not
-        // expired yet. Without a retry, a standalone process stays idle
-        // forever after a restart races the previous TTL.
         this.streamState = 'idle';
         this.scheduleRetry();
         return;
@@ -174,13 +198,16 @@ export class MongoChangeStreamCoordinator {
         await this.options.grpcSdk.state!.getKey(RESUME_TOKEN_KEY),
       );
       if (this.watching || this.closed) return;
-      const stream = this.options.watch({ resumeAfter });
+      const collections = this.collectionNames();
+      const pipeline = buildWatchPipeline(collections);
+      this.watchedCollectionsKey = optedInCollectionsKey(collections);
+      const stream = this.options.watch({ resumeAfter, pipeline });
       this.stream = stream;
       this.watching = true;
       this.streamState = 'live';
       this.retryAttempt = 0;
       stream.on('change', (change: unknown) => {
-        void this.handleChange(change as RawChangeEvent);
+        this.enqueueChange(change as RawChangeEvent);
       });
       stream.on('error', (err: unknown) => {
         void this.handleStreamError(err);
@@ -199,26 +226,61 @@ export class MongoChangeStreamCoordinator {
     }
   }
 
+  private enqueueChange(change: RawChangeEvent) {
+    this.changeQueue = this.changeQueue.then(async () => {
+      if (this.closed || !this.watching) return;
+      try {
+        await this.handleChange(change);
+      } catch (err) {
+        this.lastError = err instanceof Error ? err.message : String(err);
+        ConduitGrpcSdk.Logger.error(err as Error);
+        this.watching = false;
+        await this.stopStream('degraded');
+        this.scheduleRetry();
+      }
+    });
+  }
+
   private async handleChange(change: RawChangeEvent) {
+    const token = serializeResumeToken(change._id);
     const schema = this.resolveSchema(change.ns?.coll);
-    if (!schema) return;
-    const event = normalizeChangeEvent(change, schema.name);
-    if (!event) return;
+    const event = schema ? normalizeChangeEvent(change, schema.name) : null;
+    if (!event || !schema) {
+      if (token) {
+        await this.persistResumeToken(token);
+      }
+      if (change.operationType && WATCH_RESTART_OPERATIONS.has(change.operationType)) {
+        await this.stopStream('starting');
+        this.scheduleRetry();
+      }
+      return;
+    }
     this.lastEventAt = event.occurredAt;
     this.lastError = undefined;
-    await this.options.grpcSdk.state!.setKey(RESUME_TOKEN_KEY, event.resumeToken);
-    this.options.grpcSdk.bus?.publish(
-      `database:change:${schema.name}`,
-      JSON.stringify(event),
-    );
+    await this.emitChange(schema, event);
+    if (token) {
+      await this.persistResumeToken(token);
+    }
+  }
+
+  private async persistResumeToken(token: string) {
+    await this.options.grpcSdk.state!.setKey(RESUME_TOKEN_KEY, token);
+  }
+
+  private async emitChange(schema: OptedInSchema, event: DatabaseChangeEvent) {
+    const payload = JSON.stringify(event);
+    this.options.grpcSdk.bus?.publish(`database:change:${schema.name}`, payload);
     ConduitGrpcSdk.Metrics?.increment('database_realtime_events_total', 1, {
       operation: event.operation,
     });
-    await this.pushEvent(schema, event);
+    await this.pushEvent(schema, event, payload);
   }
 
-  private async pushEvent(schema: OptedInSchema, event: DatabaseChangeEvent) {
-    const payload = JSON.stringify(event);
+  private async pushEvent(
+    schema: OptedInSchema,
+    event: DatabaseChangeEvent,
+    payload: string,
+  ) {
     const adminRooms = roomsForPublicChange(schema.name, event.documentId);
     await this.safePush('admin', adminRooms, payload);
     if (!schema.authorizationEnabled) {
@@ -229,23 +291,27 @@ export class MongoChangeStreamCoordinator {
       schema.name,
       event.documentId,
     );
+    const decisions = await checkRebacBatch(
+      this.rebacCache,
+      this.options.grpcSdk as unknown as AuthorizationSdk,
+      userIds,
+      schema.name,
+      event.documentId,
+    );
     const allowedRooms: string[] = [];
     for (const userId of userIds) {
-      const allowed = await canReadDocument(
-        this.options.grpcSdk as unknown as AuthorizationSdk,
-        schema.name,
-        event.documentId,
-        userId,
-      );
-      if (!allowed) {
+      const decision = decisions.get(userId) ?? 'unavailable';
+      if (decision === 'allow') {
+        allowedRooms.push(authorizedDocumentRoom(schema.name, event.documentId, userId));
+        continue;
+      }
+      if (decision === 'deny') {
         await this.options.subscriptions.removeUser(
           schema.name,
           event.documentId,
           userId,
         );
-        continue;
       }
-      allowedRooms.push(authorizedDocumentRoom(schema.name, event.documentId, userId));
     }
     if (allowedRooms.length > 0) {
       await this.safePush('router', allowedRooms, payload);
@@ -260,16 +326,12 @@ export class MongoChangeStreamCoordinator {
     const client =
       target === 'admin' ? this.options.grpcSdk.admin : this.options.grpcSdk.router;
     if (!client?.socketPush) return;
-    try {
-      await client.socketPush({
-        event: 'change',
-        data,
-        rooms,
-        receivers: [],
-      });
-    } catch (err) {
-      ConduitGrpcSdk.Logger.error(err as Error);
-    }
+    await client.socketPush({
+      event: 'change',
+      data,
+      rooms,
+      receivers: [],
+    });
   }
 
   private resolveSchema(collectionName?: string): OptedInSchema | undefined {
@@ -308,6 +370,7 @@ export class MongoChangeStreamCoordinator {
     this.watching = false;
     this.streamState = nextState;
     this.ignoreClose = true;
+    this.watchedCollectionsKey = '';
     if (stream) {
       try {
         await stream.close();

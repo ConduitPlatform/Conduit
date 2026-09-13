@@ -10,7 +10,10 @@ describe('topology helpers', () => {
 
   it('detects unusable resume tokens', () => {
     expect(isResumeTokenUnusable({ code: 280 })).toBe(true);
-    expect(isResumeTokenUnusable(new Error('cannot resume'))).toBe(true);
+    expect(isResumeTokenUnusable({ code: 237 })).toBe(false);
+    expect(isResumeTokenUnusable({ code: 136 })).toBe(false);
+    expect(isResumeTokenUnusable(new Error('ChangeStreamHistoryLost'))).toBe(true);
+    expect(isResumeTokenUnusable(new Error('cannot resume'))).toBe(false);
     expect(isResumeTokenUnusable(new Error('socket hang up'))).toBe(false);
   });
 });

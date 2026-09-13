@@ -7,10 +7,5 @@
     "sourceMap": false,
     "types": ["node"]
   },
-  "include": [
-    "src/admin/realtime/ticket.ts",
-    "src/admin/realtime/namespace.ts",
-    "src/admin/realtime/*.test.ts"
-  ],
-  "exclude": ["node_modules", "dist", "bundle"]
+  "include": ["src/utilities/EventBus.ts", "src/utilities/EventBus.test.ts"]
 }

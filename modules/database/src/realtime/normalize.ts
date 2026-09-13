@@ -42,8 +42,16 @@ export function normalizeChangeEvent(
       ? change.wallTime
       : occurredAt
     ).toISOString(),
-    resumeToken: EJSON.stringify(change._id),
   };
+}
+
+export function serializeResumeToken(id: unknown): string | null {
+  if (id === undefined || id === null) return null;
+  try {
+    return EJSON.stringify(id);
+  } catch {
+    return null;
+  }
 }
 
 export function parseResumeToken(token: string | null | undefined): unknown | undefined {

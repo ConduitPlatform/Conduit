@@ -15,7 +15,6 @@ export type DatabaseChangeEvent = {
   schema: string;
   documentId: string;
   occurredAt: string;
-  resumeToken: string;
 };
 
 export type RealtimeStatusCode =
