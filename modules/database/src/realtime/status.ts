@@ -1,12 +1,6 @@
 import type { RealtimeStatus, RealtimeStatusCode } from './types.js';
 
-const SUPPORTED_REALTIME_ENGINES = new Set([
-  'MongoDB',
-  'PostgreSQL',
-  'mysql',
-  'mariadb',
-  'sqlite',
-]);
+const SUPPORTED_REALTIME_ENGINES = new Set(['MongoDB', 'PostgreSQL']);
 
 export type RealtimeStatusInput = {
   engine: string;
@@ -45,7 +39,7 @@ export function buildRealtimeStatus(input: RealtimeStatusInput): RealtimeStatus 
         input.topologyMessage ??
         (input.engine === 'MongoDB'
           ? 'A replica set or sharded MongoDB deployment is required for live updates'
-          : 'SQL live updates use an internal change queue (triggers), not native CDC. Database topology does not support live updates'),
+          : 'PostgreSQL live updates require logical replication (wal_level=logical, a pgoutput publication, and a replication slot). Leader restart or slot drop skips missed events; clients refetch.'),
     };
   }
   if (input.socketsEnabled === false) {

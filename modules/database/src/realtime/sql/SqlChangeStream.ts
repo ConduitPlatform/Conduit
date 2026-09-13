@@ -1,46 +1,36 @@
 import { EventEmitter } from 'node:events';
-import pg from 'pg';
-import type { Sequelize } from 'sequelize';
 import type { ChangeStreamLike } from '../types.js';
+import { DEFAULT_ID_FIELD, PUBLICATION_NAME } from './constants.js';
+import { documentIdFromChange, toRawChangeEvent } from './mapEvent.js';
 import {
-  CHANGE_LOG_BATCH_SIZE,
-  NOTIFY_CHANNEL,
-  POSTGRES_FALLBACK_POLL_MS,
-  SQL_POLL_INTERVAL_MS,
-  assertSqlDialect,
-  type SqlDialect,
-} from './constants.js';
-import { changeLogLagMs, fetchChangeLogBatch } from './changelog.js';
-import { toRawChangeEvent } from './mapEvent.js';
-import { sqlCursorFromResumeAfter } from './resume.js';
+  createPgoutputFeed,
+  type ReplicationChange,
+  type ReplicationFeed,
+  type ReplicationFeedFactory,
+} from './replication.js';
 
 export type SqlChangeStreamOptions = {
-  sequelize: Sequelize;
   connectionUri: string;
-  resumeAfter?: unknown;
-  defaultCursor?: string;
+  publicationName?: string;
+  idFieldByTable?: Record<string, string>;
+  createFeed?: ReplicationFeedFactory;
 };
 
 export class SqlChangeStream implements ChangeStreamLike {
   private readonly emitter = new EventEmitter();
-  private readonly sequelize: Sequelize;
-  private readonly connectionUri: string;
-  private readonly dialect: SqlDialect;
-  private readonly lagMs: number;
-  private cursor: string | undefined;
-  private listenClient: pg.Client | null = null;
-  private pollTimer: NodeJS.Timeout | null = null;
+  private readonly feed: ReplicationFeed;
+  private readonly idFieldByTable: Record<string, string>;
   private closed = false;
-  private draining = false;
-  private drainRequested = false;
   private started = false;
 
   constructor(options: SqlChangeStreamOptions) {
-    this.sequelize = options.sequelize;
-    this.connectionUri = options.connectionUri;
-    this.dialect = assertSqlDialect(options.sequelize.getDialect());
-    this.lagMs = changeLogLagMs(this.dialect);
-    this.cursor = sqlCursorFromResumeAfter(options.resumeAfter) ?? options.defaultCursor;
+    this.idFieldByTable = options.idFieldByTable ?? {};
+    this.feed = (options.createFeed ?? createPgoutputFeed)({
+      connectionUri: options.connectionUri,
+      publicationName: options.publicationName ?? PUBLICATION_NAME,
+    });
+    this.feed.on('change', change => this.onChange(change));
+    this.feed.on('error', err => this.emitError(err));
     queueMicrotask(() => {
       if (!this.closed) {
         void this.start();
@@ -58,23 +48,10 @@ export class SqlChangeStream implements ChangeStreamLike {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer);
-      this.pollTimer = null;
-    }
-    const client = this.listenClient;
-    this.listenClient = null;
-    if (client) {
-      try {
-        await client.query(`UNLISTEN ${NOTIFY_CHANNEL}`);
-      } catch {
-        // ignore
-      }
-      try {
-        await client.end();
-      } catch {
-        // ignore
-      }
+    try {
+      await this.feed.stop();
+    } catch {
+      // already closed
     }
     this.emitter.emit('close');
   }
@@ -83,72 +60,27 @@ export class SqlChangeStream implements ChangeStreamLike {
     if (this.closed || this.started) return;
     this.started = true;
     try {
-      if (this.cursor === undefined) {
-        this.cursor = '0';
-      }
-      if (this.dialect === 'postgres') {
-        await this.startPostgresListen();
-        this.pollTimer = setInterval(() => {
-          this.requestDrain();
-        }, POSTGRES_FALLBACK_POLL_MS);
-      } else {
-        this.pollTimer = setInterval(() => {
-          this.requestDrain();
-        }, SQL_POLL_INTERVAL_MS);
-      }
-      this.requestDrain();
+      await this.feed.start();
     } catch (err) {
       this.emitError(err);
     }
   }
 
-  private async startPostgresListen(): Promise<void> {
-    const client = new pg.Client({ connectionString: this.connectionUri });
-    this.listenClient = client;
-    client.on('notification', () => {
-      this.requestDrain();
-    });
-    client.on('error', (err: Error) => {
-      this.emitError(err);
-    });
-    await client.connect();
-    await client.query(`LISTEN ${NOTIFY_CHANNEL}`);
-  }
-
-  private requestDrain(): void {
-    this.drainRequested = true;
-    void this.drain();
-  }
-
-  private async drain(): Promise<void> {
-    if (this.draining || this.closed) return;
-    this.draining = true;
-    try {
-      while (this.drainRequested && !this.closed) {
-        this.drainRequested = false;
-        while (!this.closed) {
-          const rows = await fetchChangeLogBatch(
-            this.sequelize,
-            this.cursor ?? '0',
-            CHANGE_LOG_BATCH_SIZE,
-            this.lagMs,
-          );
-          if (rows.length === 0) break;
-          for (const row of rows) {
-            if (this.closed) return;
-            this.emitter.emit('change', toRawChangeEvent(row));
-            this.cursor = row.id;
-          }
-        }
-      }
-    } catch (err) {
-      this.emitError(err);
-    } finally {
-      this.draining = false;
-      if (this.drainRequested && !this.closed) {
-        void this.drain();
-      }
-    }
+  private onChange(change: ReplicationChange): void {
+    if (this.closed) return;
+    const idField = this.idFieldByTable[change.table] ?? DEFAULT_ID_FIELD;
+    const documentId = documentIdFromChange(change, idField);
+    if (!documentId) return;
+    this.emitter.emit(
+      'change',
+      toRawChangeEvent({
+        operation: change.tag,
+        table: change.table,
+        documentId,
+        lsn: change.lsn,
+        occurredAt: change.occurredAt,
+      }),
+    );
   }
 
   private emitError(err: unknown): void {

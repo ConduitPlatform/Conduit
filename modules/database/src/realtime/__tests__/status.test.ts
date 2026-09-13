@@ -24,12 +24,24 @@ describe('buildRealtimeStatus', () => {
     expect(
       buildRealtimeStatus({
         engine: 'mysql',
-        enabled: false,
+        enabled: true,
+        topologySupported: true,
+        activeSchemaCount: 1,
+        streamState: 'live',
+      }),
+    ).toMatchObject({
+      status: 'unsupported',
+      message: 'Live updates are not supported for this database engine',
+    });
+    expect(
+      buildRealtimeStatus({
+        engine: 'sqlite',
+        enabled: true,
         topologySupported: true,
         activeSchemaCount: 1,
         streamState: 'live',
       }).status,
-    ).toBe('disabled');
+    ).toBe('unsupported');
     expect(
       buildRealtimeStatus({
         engine: 'MongoDB',
@@ -54,11 +66,11 @@ describe('buildRealtimeStatus', () => {
         enabled: true,
         topologySupported: false,
         topologyMessage:
-          'PostgreSQL live updates need a session-mode connection that can LISTEN (not a transaction-mode pooler)',
+          'PostgreSQL live updates require wal_level=logical (managed Postgres: enable logical replication / rds.logical_replication).',
         activeSchemaCount: 1,
         streamState: 'idle',
       }).message,
-    ).toMatch(/LISTEN/);
+    ).toMatch(/wal_level=logical/);
     expect(
       buildRealtimeStatus({
         engine: 'PostgreSQL',
@@ -67,7 +79,16 @@ describe('buildRealtimeStatus', () => {
         activeSchemaCount: 1,
         streamState: 'idle',
       }).message,
-    ).toMatch(/internal change queue/i);
+    ).toMatch(/logical replication/i);
+    expect(
+      buildRealtimeStatus({
+        engine: 'PostgreSQL',
+        enabled: true,
+        topologySupported: false,
+        activeSchemaCount: 1,
+        streamState: 'idle',
+      }).message,
+    ).not.toMatch(/change queue|LISTEN|trigger/i);
     expect(
       buildRealtimeStatus({
         engine: 'MongoDB',

@@ -4,8 +4,7 @@ import { EJSON, ObjectId } from 'bson';
 import { ChangeStreamCoordinator } from '../ChangeStreamCoordinator.js';
 import { RealtimeSubscriptionTracker } from '../subscriptions.js';
 import { roomsForPublicChange } from '../rooms.js';
-import { parseSqlResumeId } from '../sql/resume.js';
-import { SQL_LEADER_LOCK, SQL_RESUME_TOKEN_KEY } from '../sql/constants.js';
+import { SQL_LEADER_LOCK } from '../sql/constants.js';
 
 class MemoryStore {
   private sets = new Map<string, Set<string>>();
@@ -46,6 +45,7 @@ function createCoordinator(overrides?: {
   getKeyDelayMs?: number;
   onResumePersisted?: (token: string) => Promise<void>;
   parseResumeToken?: (token: string | null | undefined) => unknown | undefined;
+  persistResume?: boolean;
   leaderLock?: string;
   resumeTokenKey?: string;
   adminPush?: () => Promise<void>;
@@ -106,6 +106,7 @@ function createCoordinator(overrides?: {
     enabled: () => true,
     onResumePersisted: overrides?.onResumePersisted,
     parseResumeToken: overrides?.parseResumeToken,
+    persistResume: overrides?.persistResume,
     leaderLock: overrides?.leaderLock,
     resumeTokenKey: overrides?.resumeTokenKey,
   });
@@ -320,14 +321,14 @@ describe('ChangeStreamCoordinator', () => {
     await coordinator.shutdown();
   });
 
-  it('fans out SQL-shaped log events without document fields', async () => {
-    const { coordinator, stream, publish } = createCoordinator();
+  it('fans out SQL-shaped WAL events without document fields', async () => {
+    const { coordinator, stream, publish } = createCoordinator({ persistResume: false });
     await coordinator.reconcile();
     stream.emit('change', {
       operationType: 'update',
       ns: { coll: 'orders' },
       documentKey: { _id: 'order-1' },
-      _id: '1842',
+      _id: '0/16B3748:12:1',
       wallTime: new Date('2026-03-01T00:00:00.000Z'),
       fullDocument: { secret: 'nope' },
     });
@@ -344,15 +345,33 @@ describe('ChangeStreamCoordinator', () => {
     await coordinator.shutdown();
   });
 
-  it('ignores leftover Mongo tokens on the SQL resume key', async () => {
-    const { coordinator, watch, state } = createCoordinator({
-      parseResumeToken: parseSqlResumeId,
+  it('opens a SQL watch without resume catch-up', async () => {
+    const { coordinator, watch, grpcSdk } = createCoordinator({
+      persistResume: false,
       leaderLock: SQL_LEADER_LOCK,
-      resumeTokenKey: SQL_RESUME_TOKEN_KEY,
     });
-    state.set(SQL_RESUME_TOKEN_KEY, EJSON.stringify({ _data: 'mongo' }));
     await coordinator.reconcile();
     expect(watch).toHaveBeenCalledWith({ resumeAfter: undefined });
+    expect(grpcSdk.state.tryAcquireLock).toHaveBeenCalledWith(
+      SQL_LEADER_LOCK,
+      expect.any(Number),
+    );
+    expect(grpcSdk.state.getKey).not.toHaveBeenCalled();
+    await coordinator.shutdown();
+  });
+
+  it('does not persist resume tokens when persistResume is false', async () => {
+    const { coordinator, stream, grpcSdk } = createCoordinator({ persistResume: false });
+    await coordinator.reconcile();
+    stream.emit('change', {
+      operationType: 'insert',
+      ns: { coll: 'orders' },
+      documentKey: { _id: 'order-1' },
+      _id: '0/1:1:1',
+      wallTime: new Date('2026-03-01T00:00:00.000Z'),
+    });
+    await coordinator.waitForIdle();
+    expect(grpcSdk.state.setKey).not.toHaveBeenCalled();
     await coordinator.shutdown();
   });
 });

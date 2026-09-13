@@ -39,6 +39,7 @@ export type CoordinatorOptions = {
   parseResumeToken?: (token: string | null | undefined) => unknown | undefined;
   prepare?: () => Promise<void>;
   onResumePersisted?: (resumeToken: string) => Promise<void>;
+  persistResume?: boolean;
   leaderLock?: string;
   resumeTokenKey?: string;
 };
@@ -141,6 +142,10 @@ export class ChangeStreamCoordinator {
     return this.options.resumeTokenKey ?? RESUME_TOKEN_KEY;
   }
 
+  private get persistResume(): boolean {
+    return this.options.persistResume !== false;
+  }
+
   private async safePrepare(): Promise<void> {
     try {
       await this.options.prepare?.();
@@ -200,10 +205,11 @@ export class ChangeStreamCoordinator {
     this.streamState = 'starting';
     this.ignoreClose = false;
     try {
-      const parseToken = this.options.parseResumeToken ?? parseMongoResumeToken;
-      const resumeAfter = parseToken(
-        await this.options.grpcSdk.state!.getKey(this.resumeTokenName),
-      );
+      const resumeAfter = this.persistResume
+        ? (this.options.parseResumeToken ?? parseMongoResumeToken)(
+            await this.options.grpcSdk.state!.getKey(this.resumeTokenName),
+          )
+        : undefined;
       if (this.watching || this.closed) return;
       const stream = this.options.watch({ resumeAfter });
       this.stream = stream;
@@ -250,7 +256,7 @@ export class ChangeStreamCoordinator {
     const schema = this.resolveSchema(change.ns?.coll);
     const event = schema ? normalizeChangeEvent(change, schema.name) : null;
     if (!event || !schema) {
-      if (token) {
+      if (this.persistResume && token) {
         await this.persistResumeToken(token);
       }
       return;
@@ -258,7 +264,9 @@ export class ChangeStreamCoordinator {
     this.lastEventAt = event.occurredAt;
     this.lastError = undefined;
     await this.emitChange(schema, event);
-    await this.persistResumeToken(event.resumeToken);
+    if (this.persistResume) {
+      await this.persistResumeToken(event.resumeToken);
+    }
   }
 
   private async persistResumeToken(token: string) {
@@ -348,7 +356,7 @@ export class ChangeStreamCoordinator {
     this.streamState = 'degraded';
     ConduitGrpcSdk.Metrics?.increment('database_realtime_stream_errors_total');
     ConduitGrpcSdk.Logger.error(err as Error);
-    if (isResumeTokenUnusable(err)) {
+    if (this.persistResume && isResumeTokenUnusable(err)) {
       await this.options.grpcSdk.state!.clearKey(this.resumeTokenName);
     }
     await this.stopStream('degraded');

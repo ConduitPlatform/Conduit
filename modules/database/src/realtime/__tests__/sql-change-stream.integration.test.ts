@@ -1,323 +1,75 @@
+import { EventEmitter } from 'node:events';
 import { describe, expect, it } from '@jest/globals';
-import sqlite3 from 'sqlite3';
-import { QueryTypes, Sequelize } from 'sequelize';
 import { normalizeChangeEvent } from '../normalize.js';
-import { CHANGE_LOG_TABLE } from '../sql/constants.js';
-import { createChangeLogTableSql } from '../sql/ddl.js';
-import { quoteIdent, rowTriggerName } from '../sql/identifiers.js';
-import { toRawChangeEvent } from '../sql/mapEvent.js';
-import { desiredTriggers } from '../sql/triggerSql.js';
-import { ensureChangeLog, fetchChangeLogBatch, trimChangeLog } from '../sql/changelog.js';
-import { syncTriggers } from '../sql/triggers.js';
-import { SqlRealtimeSupport } from '../sql/SqlRealtimeSupport.js';
+import { SqlChangeStream } from '../sql/SqlChangeStream.js';
+import type { ReplicationChange, ReplicationFeed } from '../sql/replication.js';
 
-function run(db: sqlite3.Database, sql: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    db.exec(sql, err => {
-      if (err) reject(err);
-      else resolve();
+describe('SqlChangeStream WAL contract', () => {
+  it('captures insert/update/delete without document fields', async () => {
+    const feed = new FakeFeed();
+    const stream = new SqlChangeStream({
+      connectionUri: 'postgres://localhost/db',
+      idFieldByTable: { orders: '_id' },
+      createFeed: () => feed,
     });
-  });
-}
-
-function all<T>(db: sqlite3.Database, sql: string): Promise<T[]> {
-  return new Promise((resolve, reject) => {
-    db.all(sql, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows as T[]);
+    const received: unknown[] = [];
+    stream.on('change', change => received.push(change));
+    await waitUntil(() => feed.started);
+    feed.push(row('insert', 'order-1', 'do-not-leak'));
+    feed.push(row('update', 'order-1', 'still-secret'));
+    feed.push({
+      tag: 'delete',
+      table: 'orders',
+      keyRow: { _id: 'order-1' },
+      lsn: '0/3:1:3',
+      occurredAt: new Date('2026-03-01T00:00:03.000Z'),
     });
-  });
-}
-
-describe('SQLite change-log contract', () => {
-  it('captures insert/update/delete including raw SQL without document fields', async () => {
-    const db = new sqlite3.Database(':memory:');
-    try {
-      await run(db, `CREATE TABLE "orders" (_id TEXT PRIMARY KEY, secret TEXT)`);
-      await run(db, createChangeLogTableSql('sqlite'));
-      for (const trigger of desiredTriggers('sqlite', 'orders')) {
-        await run(db, trigger.sql);
-      }
-      await run(
-        db,
-        `INSERT INTO "orders" (_id, secret) VALUES ('order-1', 'do-not-leak')`,
-      );
-      await run(db, `UPDATE "orders" SET secret = 'still-secret' WHERE _id = 'order-1'`);
-      await run(db, `DELETE FROM "orders" WHERE _id = 'order-1'`);
-      const rows = await all<{
-        id: number;
-        collection_name: string;
-        document_id: string;
-        operation: string;
-        occurred_at: string;
-      }>(
-        db,
-        `SELECT id, collection_name, document_id, operation, occurred_at FROM "${CHANGE_LOG_TABLE}" ORDER BY id ASC`,
-      );
-      expect(rows.map(row => row.operation)).toEqual(['insert', 'update', 'delete']);
-      const events = rows.map(row =>
-        normalizeChangeEvent(
-          toRawChangeEvent({
-            id: String(row.id),
-            collection_name: row.collection_name,
-            document_id: row.document_id,
-            operation: row.operation,
-            occurred_at: row.occurred_at,
-          }),
-          'Order',
-        ),
-      );
-      expect(events.map(event => event?.operation)).toEqual([
-        'insert',
-        'update',
-        'delete',
-      ]);
-      for (const event of events) {
-        expect(event).toMatchObject({ schema: 'Order', documentId: 'order-1' });
-        expect(event).not.toHaveProperty('fullDocument');
-        expect(JSON.stringify(event)).not.toContain('do-not-leak');
-        expect(JSON.stringify(event)).not.toContain('still-secret');
-      }
-    } finally {
-      await new Promise<void>(resolve => {
-        db.close(() => resolve());
-      });
+    const events = (received as Parameters<typeof normalizeChangeEvent>[0][]).map(
+      change => normalizeChangeEvent(change, 'Order'),
+    );
+    expect(events.map(event => event?.operation)).toEqual(['insert', 'update', 'delete']);
+    for (const event of events) {
+      expect(event).toMatchObject({ schema: 'Order', documentId: 'order-1' });
+      expect(event).not.toHaveProperty('fullDocument');
+      expect(JSON.stringify(event)).not.toContain('do-not-leak');
+      expect(JSON.stringify(event)).not.toContain('still-secret');
     }
-  });
-
-  it('uses the physical primary key for custom-PK tables', async () => {
-    const db = new sqlite3.Database(':memory:');
-    try {
-      await run(db, `CREATE TABLE "orders" (sku TEXT PRIMARY KEY, secret TEXT)`);
-      await run(db, createChangeLogTableSql('sqlite'));
-      for (const trigger of desiredTriggers('sqlite', 'orders', 'sku')) {
-        await run(db, trigger.sql);
-      }
-      await run(db, `INSERT INTO "orders" (sku, secret) VALUES ('sku-1', 'hidden')`);
-      const rows = await all<{ document_id: string }>(
-        db,
-        `SELECT document_id FROM "${CHANGE_LOG_TABLE}"`,
-      );
-      expect(rows).toEqual([{ document_id: 'sku-1' }]);
-    } finally {
-      await new Promise<void>(resolve => {
-        db.close(() => resolve());
-      });
-    }
-  });
-
-  it('skips NULL document ids without aborting the user write', async () => {
-    const db = new sqlite3.Database(':memory:');
-    try {
-      await run(db, `CREATE TABLE "orders" (_id TEXT, secret TEXT)`);
-      await run(db, createChangeLogTableSql('sqlite'));
-      for (const trigger of desiredTriggers('sqlite', 'orders')) {
-        await run(db, trigger.sql);
-      }
-      await run(db, `INSERT INTO "orders" (_id, secret) VALUES (NULL, 'ok')`);
-      const orders = await all<{ secret: string }>(db, `SELECT secret FROM "orders"`);
-      const log = await all<{ id: number }>(db, `SELECT id FROM "${CHANGE_LOG_TABLE}"`);
-      expect(orders).toEqual([{ secret: 'ok' }]);
-      expect(log).toEqual([]);
-    } finally {
-      await new Promise<void>(resolve => {
-        db.close(() => resolve());
-      });
-    }
-  });
-
-  it('retargets leftover #1602 _id triggers onto the physical PK', async () => {
-    const sequelize = new Sequelize({
-      dialect: 'sqlite',
-      storage: ':memory:',
-      logging: false,
-    });
-    try {
-      await sequelize.query(`CREATE TABLE "orders" (sku TEXT PRIMARY KEY, secret TEXT)`);
-      await ensureChangeLog(sequelize);
-      for (const sql of leftoverSqliteIdTriggerSql('orders')) {
-        await sequelize.query(sql);
-      }
-      await expect(
-        sequelize.query(`INSERT INTO "orders" (sku, secret) VALUES ('sku-1', 'hidden')`),
-      ).rejects.toThrow();
-      await syncTriggers(sequelize, [
-        {
-          name: 'Order',
-          collectionName: 'orders',
-          authorizationEnabled: false,
-          documentIdField: 'sku',
-        },
-      ]);
-      await sequelize.query(
-        `INSERT INTO "orders" (sku, secret) VALUES ('sku-1', 'hidden')`,
-      );
-      const rows = await fetchChangeLogBatch(sequelize, '0', 200, 0);
-      expect(rows.map(row => row.document_id)).toEqual(['sku-1']);
-    } finally {
-      await sequelize.close();
-    }
-  });
-
-  it('retargets leftover _id bodies so NULL PKs skip without aborting DML', async () => {
-    const sequelize = new Sequelize({
-      dialect: 'sqlite',
-      storage: ':memory:',
-      logging: false,
-    });
-    try {
-      await sequelize.query(`CREATE TABLE "orders" (_id TEXT, secret TEXT)`);
-      await ensureChangeLog(sequelize);
-      for (const sql of leftoverSqliteIdTriggerSql('orders')) {
-        await sequelize.query(sql);
-      }
-      await expect(
-        sequelize.query(`INSERT INTO "orders" (_id, secret) VALUES (NULL, 'ok')`),
-      ).rejects.toThrow();
-      await syncTriggers(sequelize, [
-        {
-          name: 'Order',
-          collectionName: 'orders',
-          authorizationEnabled: false,
-          documentIdField: '_id',
-        },
-      ]);
-      await sequelize.query(`INSERT INTO "orders" (_id, secret) VALUES (NULL, 'ok')`);
-      const orders = await sequelize.query(`SELECT secret FROM "orders"`, {
-        type: QueryTypes.SELECT,
-      });
-      expect(orders).toEqual([{ secret: 'ok' }]);
-      expect(await fetchChangeLogBatch(sequelize, '0', 200, 0)).toEqual([]);
-    } finally {
-      await sequelize.close();
-    }
-  });
-
-  it('drops triggers on opt-out without breaking DML', async () => {
-    const sequelize = new Sequelize({
-      dialect: 'sqlite',
-      storage: ':memory:',
-      logging: false,
-    });
-    try {
-      await sequelize.query(`CREATE TABLE "orders" (_id TEXT PRIMARY KEY, secret TEXT)`);
-      await ensureChangeLog(sequelize);
-      await syncTriggers(sequelize, [
-        {
-          name: 'Order',
-          collectionName: 'orders',
-          authorizationEnabled: false,
-          documentIdField: '_id',
-        },
-      ]);
-      await sequelize.query(`INSERT INTO "orders" (_id, secret) VALUES ('order-1', 'x')`);
-      expect((await fetchChangeLogBatch(sequelize, '0', 200, 0)).length).toBe(1);
-      await syncTriggers(sequelize, []);
-      await sequelize.query(`INSERT INTO "orders" (_id, secret) VALUES ('order-2', 'y')`);
-      expect((await fetchChangeLogBatch(sequelize, '0', 200, 0)).length).toBe(1);
-    } finally {
-      await sequelize.close();
-    }
-  });
-
-  it('leaves an existing same-name trigger in place on reconcile', async () => {
-    const sequelize = new Sequelize({
-      dialect: 'sqlite',
-      storage: ':memory:',
-      logging: false,
-    });
-    try {
-      await sequelize.query(`CREATE TABLE "orders" (_id TEXT PRIMARY KEY, secret TEXT)`);
-      await ensureChangeLog(sequelize);
-      const schemas = [
-        {
-          name: 'Order',
-          collectionName: 'orders',
-          authorizationEnabled: false,
-          documentIdField: '_id',
-        },
-      ];
-      await syncTriggers(sequelize, schemas);
-      const before = await sequelize.query(
-        `SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'cnd_rt_%' ORDER BY name`,
-        { raw: true },
-      );
-      await syncTriggers(sequelize, schemas);
-      const after = await sequelize.query(
-        `SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'cnd_rt_%' ORDER BY name`,
-        { raw: true },
-      );
-      expect(after).toEqual(before);
-    } finally {
-      await sequelize.close();
-    }
-  });
-
-  it('trims acked ids and starts SqlChangeStream from the prepare watermark', async () => {
-    const sequelize = new Sequelize({
-      dialect: 'sqlite',
-      storage: ':memory:',
-      logging: false,
-    });
-    try {
-      const support = new SqlRealtimeSupport({
-        sequelize,
-        connectionUri: 'sqlite://',
-      } as never);
-      await ensureChangeLog(sequelize);
-      await sequelize.query(
-        `INSERT INTO "${CHANGE_LOG_TABLE}" (collection_name, document_id, operation, occurred_at)
-         VALUES ('orders', 'old', 'insert', datetime('now'))`,
-      );
-      await trimChangeLog(sequelize, '1');
-      expect(await fetchChangeLogBatch(sequelize, '0', 200, 0)).toEqual([]);
-      await sequelize.query(
-        `INSERT INTO "${CHANGE_LOG_TABLE}" (collection_name, document_id, operation, occurred_at)
-         VALUES ('orders', 'old-after-trim', 'insert', datetime('now'))`,
-      );
-      await support.prepare([], { ensureLog: true });
-      await sequelize.query(
-        `INSERT INTO "${CHANGE_LOG_TABLE}" (collection_name, document_id, operation, occurred_at)
-         VALUES ('orders', 'new', 'insert', datetime('now'))`,
-      );
-      const received: unknown[] = [];
-      const stream = support.openWatch();
-      stream.on('change', change => {
-        received.push(change);
-      });
-      await waitUntil(() => received.length >= 1);
-      expect(received).toHaveLength(1);
-      expect(received[0]).toMatchObject({
-        operationType: 'insert',
-        documentKey: { _id: 'new' },
-      });
-      await stream.close();
-    } finally {
-      await sequelize.close();
-    }
+    await stream.close();
   });
 });
 
-function leftoverSqliteIdTriggerSql(collectionName: string): string[] {
-  const table = quoteIdent('sqlite', collectionName);
-  const logTable = quoteIdent('sqlite', CHANGE_LOG_TABLE);
-  return (
-    [
-      ['i', 'INSERT', 'insert', 'NEW'],
-      ['u', 'UPDATE', 'update', 'NEW'],
-      ['d', 'DELETE', 'delete', 'OLD'],
-    ] as const
-  ).map(([opKey, timing, operation, row]) => {
-    const quotedTrigger = quoteIdent(
-      'sqlite',
-      rowTriggerName(collectionName, opKey, 'sqlite'),
-    );
-    return `CREATE TRIGGER ${quotedTrigger} AFTER ${timing} ON ${table}
-BEGIN
-  INSERT INTO ${logTable} (collection_name, document_id, operation, occurred_at)
-  VALUES ('${collectionName}', ${row}."_id", '${operation}', datetime('now'));
-END`;
-  });
+function row(tag: 'insert' | 'update', id: string, secret: string): ReplicationChange {
+  const seq = tag === 'insert' ? '1' : '2';
+  return {
+    tag,
+    table: 'orders',
+    newRow: { _id: id, secret },
+    lsn: `0/${seq}:1:${seq}`,
+    occurredAt: new Date(`2026-03-01T00:00:0${seq}.000Z`),
+  };
+}
+
+class FakeFeed implements ReplicationFeed {
+  readonly emitter = new EventEmitter();
+  started = false;
+
+  on(event: 'change', listener: (change: ReplicationChange) => void): void;
+  on(event: 'error', listener: (err: Error) => void): void;
+  on(event: string, listener: (...args: never[]) => void): void {
+    this.emitter.on(event, listener);
+  }
+
+  async start(): Promise<void> {
+    this.started = true;
+  }
+
+  async stop(): Promise<void> {
+    return;
+  }
+
+  push(change: ReplicationChange): void {
+    this.emitter.emit('change', change);
+  }
 }
 
 async function waitUntil(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
