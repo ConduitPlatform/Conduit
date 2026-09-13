@@ -136,9 +136,9 @@ describe('MongoChangeStreamCoordinator', () => {
     expect(adminPush).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'change', rooms: expectedRooms }),
     );
-    expect(JSON.parse((adminPush.mock.calls[0][0] as { data: string }).data)).not.toHaveProperty(
-      'resumeToken',
-    );
+    expect(
+      JSON.parse((adminPush.mock.calls[0][0] as { data: string }).data),
+    ).not.toHaveProperty('resumeToken');
     expect(state.get('realtime:resumeToken')).toBe(EJSON.stringify(resume));
     await coordinator.shutdown();
   });
@@ -170,14 +170,8 @@ describe('MongoChangeStreamCoordinator', () => {
     await coordinator.reconcile();
     const tokenA = { _data: 'token-a' };
     const tokenB = { _data: 'token-b' };
-    stream.emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', tokenA),
-    );
-    stream.emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4d', tokenB),
-    );
+    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', tokenA));
+    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4d', tokenB));
     await Promise.resolve();
     await new Promise(resolve => setImmediate(resolve));
     expect(state.get('realtime:resumeToken')).toBeUndefined();
@@ -295,10 +289,7 @@ describe('MongoChangeStreamCoordinator', () => {
     const { coordinator, stream, grpcSdk, state } = createCoordinator();
     await coordinator.reconcile();
     const token = { _data: 'keep-me' };
-    stream.emit(
-      'change',
-      insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', token),
-    );
+    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c', token));
     await coordinator.waitForIdle();
     expect(state.get('realtime:resumeToken')).toBe(EJSON.stringify(token));
     stream.emit('error', { code: 237, message: 'CursorKilled' });

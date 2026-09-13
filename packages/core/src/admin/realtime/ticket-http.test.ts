@@ -12,7 +12,10 @@ describe('realtime ticket HTTP guard', () => {
       isSocketHandshake({ url: '/realtime/ticket?EIO=4&transport=polling' }),
       false,
     );
-    assert.equal(isRealtimeTicket(ticket) && !isSocketHandshake({ url: '/realtime/ticket' }), true);
+    assert.equal(
+      isRealtimeTicket(ticket) && !isSocketHandshake({ url: '/realtime/ticket' }),
+      true,
+    );
   });
 
   it('allows a ticket on Engine.IO handshake polling without sid', () => {

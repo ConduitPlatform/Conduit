@@ -1,6 +1,10 @@
 import { describe, expect, it } from '@jest/globals';
 import { ObjectId } from 'bson';
-import { normalizeChangeEvent, parseResumeToken, serializeResumeToken } from '../normalize.js';
+import {
+  normalizeChangeEvent,
+  parseResumeToken,
+  serializeResumeToken,
+} from '../normalize.js';
 
 describe('normalizeChangeEvent', () => {
   it('normalizes insert/update/replace/delete into metadata-only events', () => {

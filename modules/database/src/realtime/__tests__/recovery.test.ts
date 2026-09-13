@@ -1,10 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import { canReadDocument } from '../authorize.js';
 import { authorizedDocumentRoom } from '../rooms.js';
-import {
-  isRecoverableDisconnect,
-  restoreAuthorizedSubscriptions,
-} from '../recovery.js';
+import { isRecoverableDisconnect, restoreAuthorizedSubscriptions } from '../recovery.js';
 import { createSocketHandlers } from '../sockets.js';
 import { RealtimeSubscriptionTracker } from '../subscriptions.js';
 

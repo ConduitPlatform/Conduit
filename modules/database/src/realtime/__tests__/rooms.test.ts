@@ -22,7 +22,9 @@ describe('realtime rooms', () => {
     expect(authorizedDocumentRoom('Order', 'abc', 'u1')).not.toBe(
       authorizedDocumentRoom('Order', 'abc', 'u2'),
     );
-    expect(parseAuthorizedDocumentRoom(authorizedDocumentRoom('Order', 'abc', 'user-1'))).toEqual({
+    expect(
+      parseAuthorizedDocumentRoom(authorizedDocumentRoom('Order', 'abc', 'user-1')),
+    ).toEqual({
       schema: 'Order',
       documentId: 'abc',
       userId: 'user-1',
