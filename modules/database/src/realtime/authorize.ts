@@ -1,6 +1,6 @@
 import { status } from '@grpc/grpc-js';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
-import type { OptedInSchema, SubscribeRequest } from './types.js';
+import type { OptedInSchema, RebacDecision, SubscribeRequest } from './types.js';
 
 export class RealtimeSubscriptionError extends GrpcError {
   constructor(code: number, message: string) {
@@ -61,14 +61,14 @@ export function optionalDocumentId(value: unknown): string | undefined {
   return value;
 }
 
-export async function canReadDocument(
+export async function readDocumentDecision(
   grpcSdk: AuthorizationSdk,
   schema: string,
   documentId: string,
   userId: string,
-): Promise<boolean> {
+): Promise<RebacDecision> {
   if (!grpcSdk.authorization || !grpcSdk.isAvailable('authorization')) {
-    return false;
+    return 'unavailable';
   }
   try {
     const decision = await grpcSdk.authorization.can({
@@ -76,10 +76,19 @@ export async function canReadDocument(
       actions: ['read'],
       resource: `${schema}:${documentId}`,
     });
-    return decision.allow === true;
+    return decision.allow === true ? 'allow' : 'deny';
   } catch {
-    return false;
+    return 'unavailable';
   }
+}
+
+export async function canReadDocument(
+  grpcSdk: AuthorizationSdk,
+  schema: string,
+  documentId: string,
+  userId: string,
+): Promise<boolean> {
+  return (await readDocumentDecision(grpcSdk, schema, documentId, userId)) === 'allow';
 }
 
 export function assertSchemaAvailable(
@@ -123,6 +132,7 @@ export function toOptedInSchema(schema: {
   modelOptions?: {
     conduit?: {
       realtime?: { enabled?: boolean };
+      cms?: { crudOperations?: { read?: { enabled?: boolean } } };
       authorization?: { enabled?: boolean };
     };
   };
@@ -132,5 +142,7 @@ export function toOptedInSchema(schema: {
     name: schema.name,
     collectionName: schema.collectionName,
     authorizationEnabled: schema.modelOptions.conduit.authorization?.enabled === true,
+    cmsReadEnabled:
+      schema.modelOptions.conduit.cms?.crudOperations?.read?.enabled === true,
   };
 }

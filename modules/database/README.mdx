@@ -64,7 +64,7 @@ Events arrive as `change` with `{ version, operation, schema, documentId, occurr
 
 The leader also publishes `database:change:${schema}` on the Redis bus. **Do not also relay `database:change:*` on `/events/` if the same client is on `/database/`** — that duplicates notifications. Keep the bus for other modules; just do not dual-subscribe.
 
-Client subscribers must authenticate. Schemas with document-level authorization reject schema-wide subscriptions and require a document ID plus a `read` check. Client sockets also require CMS `crudOperations.read.enabled`. Admin consumers use `POST /realtime/ticket` for a 30-second handshake token; that token cannot mint another ticket or call REST/GraphQL. Session JWTs and masterkeys must not be sent from browser code.
+Client subscribers must authenticate. Schemas with document-level authorization reject schema-wide subscriptions and require a document ID plus a `read` check. Client sockets also require CMS `crudOperations.read.enabled` (checked again at emit: deny skips client delivery and keeps membership; authorization UNAVAILABLE keeps membership without emitting). Admin consumers use `POST /realtime/ticket` for a 30-second handshake token; that token cannot mint another ticket or call REST/GraphQL. Session JWTs and masterkeys must not be sent from browser code.
 
 Admin sockets must be enabled (`admin.transports.sockets`) and the Admin socket port (`ADMIN_SOCKET_PORT`, default 3031) reachable from the UI.
 

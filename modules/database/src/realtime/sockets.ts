@@ -78,7 +78,9 @@ export function createSocketHandlers(options: RealtimeSocketOptions) {
     },
     disconnect: async (call: ParsedSocketRequest): Promise<UnparsedSocketResponse> => {
       const reason = call.request.params?.[0];
-      if (!isRecoverableDisconnect(reason)) {
+      if (isRecoverableDisconnect(reason)) {
+        await options.subscriptions.armRecoverableTtl(call.request.socketId);
+      } else {
         await options.subscriptions.disconnect(call.request.socketId);
       }
       return { event: 'disconnected', data: { ok: true } };
@@ -90,7 +92,6 @@ export function createSocketHandlers(options: RealtimeSocketOptions) {
         contextSubs: authorizedSubsFromContext(call.request.context as Indexable),
         subscriptions: options.subscriptions,
         grpcSdk: options.grpcSdk as unknown as AuthorizationSdk,
-        canRead: canReadDocument,
       });
       if (leaveRooms.length > 0) {
         return { event: 'leave-room', rooms: leaveRooms };

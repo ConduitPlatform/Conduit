@@ -1,6 +1,5 @@
+import type { RebacDecision } from './types.js';
 import type { AuthorizationSdk } from './authorize.js';
-
-export type RebacDecision = 'allow' | 'deny' | 'unavailable';
 
 const DEFAULT_TTL_MS = 12_000;
 const DEFAULT_MAX_ENTRIES = 10_000;
