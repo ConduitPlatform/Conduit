@@ -15,6 +15,12 @@ export const MAX_RESOURCE_ID_LENGTH = 128;
 export const MAX_RESOURCE_ID_PATH_LENGTH = 128;
 export const MAX_PERMISSION_LENGTH = 64;
 
+export const MAX_INBOUND_BUS_BYTES = 256 * 1024;
+export const RECONCILE_INTERVAL_MS = 30_000;
+export const MAX_SUBSCRIBE_PER_MINUTE = 30;
+export const MAX_ROOMS_PER_SOCKET = 32;
+export const RELAY_REBAC_TTL_MS = 12_000;
+
 export const FORBIDDEN_PATH_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
 
 export const RESERVED_SOCKET_EVENTS = new Set([

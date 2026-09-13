@@ -4,7 +4,8 @@ export type EventRelayPusher = (
   event: string,
   data: unknown,
   rooms: string[],
-) => Promise<void>;
+  receivers?: string[],
+) => Promise<boolean>;
 
 export type SocketPushFn = (data: {
   event: string;
@@ -13,16 +14,20 @@ export type SocketPushFn = (data: {
   rooms: string[];
   namespace: string;
   localOnly?: boolean;
-}) => Promise<void>;
+  skipEmptyRooms?: boolean;
+  boundedEmit?: boolean;
+}) => Promise<boolean>;
 
 export function createEventRelayPusher(socketPush: SocketPushFn): EventRelayPusher {
-  return (event, data, rooms) =>
+  return async (event, data, rooms, receivers = []) =>
     socketPush({
       event,
       data,
-      receivers: [],
+      receivers,
       rooms,
       namespace: EVENTS_NAMESPACE,
       localOnly: true,
+      skipEmptyRooms: event !== 'leave-room',
+      boundedEmit: event !== 'leave-room',
     });
 }
