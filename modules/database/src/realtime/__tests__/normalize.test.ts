@@ -1,21 +1,17 @@
 import { describe, expect, it } from '@jest/globals';
 import { ObjectId } from 'bson';
-import {
-  normalizeChangeEvent,
-  parseResumeToken,
-  serializeResumeToken,
-} from '../normalize.js';
+import { normalizeChangeEvent } from '../normalize.js';
 
 describe('normalizeChangeEvent', () => {
   it('normalizes insert/update/replace/delete into metadata-only events', () => {
-    const resume = { _data: 'token-1' };
+    const streamId = { _data: 'token-1' };
     const event = normalizeChangeEvent(
       {
         operationType: 'insert',
         documentKey: { _id: new ObjectId('64b64c4c4c4c4c4c4c4c4c4c') },
         fullDocument: { secret: 'nope' },
         wallTime: new Date('2026-01-01T00:00:00.000Z'),
-        _id: resume,
+        _id: streamId,
       },
       'Order',
     );
@@ -26,7 +22,6 @@ describe('normalizeChangeEvent', () => {
       documentId: '64b64c4c4c4c4c4c4c4c4c4c',
       occurredAt: '2026-01-01T00:00:00.000Z',
     });
-    expect(parseResumeToken(serializeResumeToken(resume))).toEqual(resume);
     expect(event).not.toHaveProperty('resumeToken');
     expect(JSON.parse(JSON.stringify(event))).not.toHaveProperty('fullDocument');
   });

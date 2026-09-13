@@ -1,16 +1,7 @@
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import {
-  normalizeChangeEvent,
-  parseResumeToken,
-  serializeResumeToken,
-  type RawChangeEvent,
-} from './normalize.js';
+import { normalizeChangeEvent, type RawChangeEvent } from './normalize.js';
 import { authorizedDocumentRoom, roomsForPublicChange } from './rooms.js';
-import {
-  isResumeTokenUnusable,
-  topologyFromHello,
-  type TopologyResult,
-} from './topology.js';
+import { topologyFromHello, type TopologyResult } from './topology.js';
 import type {
   ChangeStreamLike,
   DatabaseChangeEvent,
@@ -28,7 +19,6 @@ import {
 } from './watchPipeline.js';
 
 const LEADER_LOCK = 'realtime:change-stream:leader';
-const RESUME_TOKEN_KEY = 'realtime:resumeToken';
 const LOCK_TTL_MS = 15_000;
 const LOCK_RENEW_MS = 5_000;
 const RETRY_BASE_MS = 1_000;
@@ -38,10 +28,7 @@ type LeaderLock = NonNullable<
   Awaited<ReturnType<NonNullable<ConduitGrpcSdk['state']>['tryAcquireLock']>>
 >;
 
-export type WatchFactory = (options: {
-  resumeAfter?: unknown;
-  pipeline: WatchPipeline;
-}) => ChangeStreamLike;
+export type WatchFactory = (options: { pipeline: WatchPipeline }) => ChangeStreamLike;
 
 export type CoordinatorOptions = {
   grpcSdk: ConduitGrpcSdk;
@@ -232,21 +219,10 @@ export class MongoChangeStreamCoordinator {
     this.ignoreClose = false;
     const generation = this.lockGeneration;
     try {
-      const resumeAfter = parseResumeToken(
-        await this.options.grpcSdk.state!.getKey(RESUME_TOKEN_KEY),
-      );
-      if (
-        this.watching ||
-        this.closed ||
-        !this.lock ||
-        generation !== this.lockGeneration
-      ) {
-        return;
-      }
       const collections = this.collectionNames();
       const pipeline = buildWatchPipeline(collections);
       this.watchedCollectionsKey = optedInCollectionsKey(collections);
-      const stream = this.options.watch({ resumeAfter, pipeline });
+      const stream = this.options.watch({ pipeline });
       if (generation !== this.lockGeneration || this.closed) {
         try {
           await stream.close();
@@ -299,13 +275,9 @@ export class MongoChangeStreamCoordinator {
 
   private async handleChange(change: RawChangeEvent, generation: number) {
     if (generation !== this.lockGeneration) return;
-    const token = serializeResumeToken(change._id);
     const schema = this.resolveSchema(change.ns?.coll);
     const event = schema ? normalizeChangeEvent(change, schema.name) : null;
     if (!event || !schema) {
-      if (token && generation === this.lockGeneration) {
-        await this.persistResumeToken(token);
-      }
       if (change.operationType && WATCH_RESTART_OPERATIONS.has(change.operationType)) {
         await this.stopStream('starting');
         this.scheduleRetry();
@@ -315,13 +287,6 @@ export class MongoChangeStreamCoordinator {
     this.lastEventAt = event.occurredAt;
     this.lastError = undefined;
     await this.emitChange(schema, event);
-    if (token) {
-      await this.persistResumeToken(token);
-    }
-  }
-
-  private async persistResumeToken(token: string) {
-    await this.options.grpcSdk.state!.setKey(RESUME_TOKEN_KEY, token);
   }
 
   private async emitChange(schema: OptedInSchema, event: DatabaseChangeEvent) {
@@ -407,9 +372,6 @@ export class MongoChangeStreamCoordinator {
     this.streamState = 'degraded';
     ConduitGrpcSdk.Metrics?.increment('database_realtime_stream_errors_total');
     ConduitGrpcSdk.Logger.error(err as Error);
-    if (isResumeTokenUnusable(err)) {
-      await this.options.grpcSdk.state!.clearKey(RESUME_TOKEN_KEY);
-    }
     await this.stopStream('degraded');
     this.scheduleRetry();
   }

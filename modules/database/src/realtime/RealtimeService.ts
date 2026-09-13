@@ -131,16 +131,13 @@ export class RealtimeService {
 
   private openWatch(
     adapter: MongooseAdapter,
-    options: { resumeAfter?: unknown; pipeline: WatchPipeline },
+    options: { pipeline: WatchPipeline },
   ): ChangeStreamLike {
     const db = adapter.mongoose.connection.db;
     if (!db) {
       throw new Error('MongoDB connection is not ready');
     }
-    return db.watch(
-      options.pipeline,
-      options.resumeAfter ? { resumeAfter: options.resumeAfter as never } : {},
-    ) as unknown as ChangeStreamLike;
+    return db.watch(options.pipeline) as unknown as ChangeStreamLike;
   }
 
   private async hello(
