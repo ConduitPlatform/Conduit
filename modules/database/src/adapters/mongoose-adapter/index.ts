@@ -32,17 +32,16 @@ import {
 } from '../utils/index.js';
 import {
   assertUniqueIndexPrivilege,
+  declaredIndexMap,
   ensureIndexName,
-  isCompatibleIndexType,
   isIndexAlreadyExistsError,
-  isMongoIndexType,
   mapCompatibleToMongo,
   mergeDeclaredIndexes,
   mongoAllowsIndexType,
+  normalizeIndexTypes,
   persistDeclaredSchemaIndexes,
   removeDeclaredIndexes,
   removeIndexFromSchemaFields,
-  resolveIndexName,
   toMutableIndexes,
   validateIndexFields,
 } from '../utils/indexes.js';
@@ -669,7 +668,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     const collection = this.mongoose.model(schemaName).collection;
     for (const index of prepared) {
       const spec: Record<string, MongoIndexType> = {};
-      const types = Array.isArray(index.types) ? index.types : undefined;
+      const types = normalizeIndexTypes(index.types, index.fields.length);
       for (let i = 0; i < index.fields.length; i++) {
         spec[index.fields[i]] = types
           ? mapCompatibleToMongo(types[i])
@@ -735,15 +734,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const collection = this.mongoose.model(schemaName).collection;
     const result = await collection.indexes();
-    const declared = this.models[schemaName].originalSchema.modelOptions.indexes ?? [];
-    const declaredByName = new Map(
-      declared.map((index: ModelOptionsIndexes) => [resolveIndexName(index), index]),
+    const declaredByName = declaredIndexMap(
+      this.models[schemaName].originalSchema.modelOptions.indexes,
     );
     return result.map(index => {
       const options: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(index)) {
-        if (key === 'key' || key === 'options') continue;
-        if (key === 'v') continue;
+        if (key === 'key' || key === 'options' || key === 'v') continue;
         options[key] = value;
       }
       const fields: string[] = [];
@@ -752,18 +749,20 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         fields.push(field);
         types.push(type as MongoIndexType);
       }
-      const name = (options.name as string | undefined) ?? index.name;
+      const name = typeof options.name === 'string' ? options.name : index.name;
       const declaredIndex = name ? declaredByName.get(name) : undefined;
-      return {
+      const live: ModelOptionsIndexes = {
         name,
         fields,
-        types: declaredIndex?.types ?? types,
-        options: {
-          ...declaredIndex?.options,
-          ...options,
-          name,
-        },
-      } as ModelOptionsIndexes;
+        types,
+        options: { ...options, name },
+      };
+      if (!declaredIndex) return live;
+      return {
+        ...live,
+        types: declaredIndex.types ?? live.types,
+        options: { ...declaredIndex.options, ...live.options, name },
+      };
     });
   }
 
@@ -1091,7 +1090,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         });
       }
       if (types) {
-        const typeList = Array.isArray(types) ? types : index.fields.map(() => types);
+        const typeList = normalizeIndexTypes(types, index.fields.length) ?? [];
         if (Array.isArray(types) && typeList.length !== index.fields.length) {
           throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid index types format');
         }
@@ -1103,11 +1102,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
             );
           }
         }
-        index.types = typeList.map(type =>
-          isCompatibleIndexType(type) || isMongoIndexType(type)
-            ? mapCompatibleToMongo(type)
-            : type,
-        ) as MongoIndexType[];
+        index.types = typeList.map(mapCompatibleToMongo);
       }
       prepared.push(index);
     }

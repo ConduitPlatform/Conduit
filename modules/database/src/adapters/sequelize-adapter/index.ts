@@ -6,7 +6,6 @@ import {
   GrpcError,
   Indexable,
   ModelOptionsIndexes,
-  PostgresIndexOptions,
   PostgresIndexType,
   RawSQLQuery,
   UntypedArray,
@@ -53,14 +52,16 @@ import {
 } from '../utils/index.js';
 import {
   assertUniqueIndexPrivilege,
+  declaredIndexMap,
   ensureIndexName,
   inferSqlIndexType,
   isIndexAlreadyExistsError,
+  isPostgresIndexType,
   mergeDeclaredIndexes,
+  normalizeIndexTypes,
   persistDeclaredSchemaIndexes,
   removeDeclaredIndexes,
   removeIndexFromSchemaFields,
-  resolveIndexName,
   sqlDialectAllowsIndexType,
   sqlIndexFields,
   toMutableIndexes,
@@ -437,9 +438,8 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     const queryInterface = this.sequelize.getQueryInterface();
     const result = (await queryInterface.showIndex(collectionName)) as UntypedArray;
     const dialect = this.sequelize.getDialect();
-    const declared = this.models[schemaName].originalSchema.modelOptions.indexes ?? [];
-    const declaredByName = new Map(
-      declared.map((index: ModelOptionsIndexes) => [resolveIndexName(index), index]),
+    const declaredByName = declaredIndexMap(
+      this.models[schemaName].originalSchema.modelOptions.indexes,
     );
     return result.map(row => {
       const fields = (row.fields ?? []).map((field: unknown) =>
@@ -447,29 +447,18 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       );
       const name = row.name as string;
       const declaredIndex = declaredByName.get(name);
-      const options: Record<string, unknown> = {
-        name,
-        unique: !!row.unique,
-        ...(declaredIndex?.options ?? {}),
-      };
-      for (const [key, value] of Object.entries(row)) {
-        if (
-          key === 'options' ||
-          key === 'types' ||
-          key === 'fields' ||
-          key === 'definition' ||
-          key === 'indkey'
-        ) {
-          continue;
-        }
-        if (options[key] === undefined) options[key] = value;
-      }
-      return {
+      const live: ModelOptionsIndexes = {
         name,
         fields,
-        types: declaredIndex?.types ?? inferSqlIndexType(row, dialect),
-        options,
-      } as ModelOptionsIndexes;
+        types: inferSqlIndexType(row, dialect),
+        options: { name, unique: !!row.unique },
+      };
+      if (!declaredIndex) return live;
+      return {
+        ...live,
+        types: declaredIndex.types ?? live.types,
+        options: { ...declaredIndex.options, ...live.options, name },
+      };
     });
   }
 
@@ -755,7 +744,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       const index = ensureIndexName(raw);
       validateIndexFields(schema, index);
       if (index.types) {
-        const types = Array.isArray(index.types) ? index.types : [index.types];
+        const types = normalizeIndexTypes(index.types, index.fields.length) ?? [];
         if (types.some(type => !sqlDialectAllowsIndexType(dialect, type))) {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
@@ -763,21 +752,14 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
           );
         }
         const first = types[0];
-        if (
-          typeof first === 'string' &&
-          Object.values(PostgresIndexType).includes(first as PostgresIndexType) &&
-          types.length === 1
-        ) {
-          index.options = {
-            ...(index.options ?? {}),
-            using: first as PostgresIndexType,
-          } as PostgresIndexOptions;
-        } else {
-          index.options = {
-            ...(index.options ?? {}),
-            using: PostgresIndexType.BTREE,
-          } as PostgresIndexOptions;
-        }
+        const using =
+          types.length === 1 && isPostgresIndexType(first)
+            ? first
+            : PostgresIndexType.BTREE;
+        index.options = {
+          ...(index.options ?? {}),
+          using,
+        };
       }
       if (index.options) {
         if (!checkIfPostgresOptions(index.options)) {
