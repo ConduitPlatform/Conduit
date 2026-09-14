@@ -47,4 +47,5 @@ export type ChangeStreamLike = {
     listener: (...args: unknown[]) => void,
   ): void;
   close(): Promise<void> | void;
+  ready?: Promise<void>;
 };

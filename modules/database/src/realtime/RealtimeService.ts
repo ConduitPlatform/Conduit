@@ -22,8 +22,7 @@ import { RealtimeSubscriptionTracker } from './subscriptions.js';
 import type { ChangeStreamLike, OptedInSchema, RealtimeStatus } from './types.js';
 import { topologyFromHello } from './topology.js';
 import { SqlRealtimeSupport } from './sql/SqlRealtimeSupport.js';
-import { parseSqlResumeId } from './sql/resume.js';
-import { SQL_LEADER_LOCK, SQL_RESUME_TOKEN_KEY } from './sql/constants.js';
+import { SQL_LEADER_LOCK } from './sql/constants.js';
 
 export class RealtimeService {
   private readonly subscriptions: RealtimeSubscriptionTracker;
@@ -56,20 +55,17 @@ export class RealtimeService {
       this.sqlSupport = new SqlRealtimeSupport(adapter);
       this.coordinator = new ChangeStreamCoordinator({
         grpcSdk,
-        watch: options => this.sqlSupport!.openWatch(options.resumeAfter),
+        watch: () => this.sqlSupport!.openWatch(),
         checkTopology: () => this.sqlSupport!.checkTopology(),
         getOptedInSchemas: () => this.getOptedInSchemas(),
         subscriptions: this.subscriptions,
         enabled: () => this.isGloballyEnabled(),
-        parseResumeToken: parseSqlResumeId,
+        persistResume: false,
         leaderLock: SQL_LEADER_LOCK,
-        resumeTokenKey: SQL_RESUME_TOKEN_KEY,
         prepare: () =>
           this.sqlSupport!.prepare(
             this.isGloballyEnabled() ? this.getOptedInSchemas() : [],
-            { ensureLog: this.isGloballyEnabled() },
           ),
-        onResumePersisted: token => this.sqlSupport!.trimThrough(token),
       });
     }
   }

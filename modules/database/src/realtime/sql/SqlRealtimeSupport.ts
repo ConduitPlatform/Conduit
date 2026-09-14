@@ -1,21 +1,32 @@
-import pg from 'pg';
+import { QueryTypes } from 'sequelize';
 import type { SequelizeAdapter } from '../../adapters/sequelize-adapter/index.js';
-import type { OptedInSchema } from '../types.js';
-import type { ChangeStreamLike } from '../types.js';
+import type { ChangeStreamLike, OptedInSchema } from '../types.js';
 import type { TopologyResult } from '../topology.js';
-import { NOTIFY_CHANNEL, assertSqlDialect } from './constants.js';
-import { ensureChangeLog, maxChangeLogId, trimChangeLog } from './changelog.js';
-import { parseSqlResumeId } from './resume.js';
+import {
+  DEFAULT_ID_FIELD,
+  PUBLICATION_NAME,
+  SQL_ENGINE_UNSUPPORTED,
+  sqlSchemaName,
+} from './constants.js';
+import { dropLegacyCapture } from './leftover.js';
+import { syncPublication } from './publication.js';
 import { SqlChangeStream } from './SqlChangeStream.js';
-import { syncTriggers } from './triggers.js';
+import type { ReplicationFeedFactory } from './replication.js';
 
 export class SqlRealtimeSupport {
-  private watchFromId = '0';
+  private schemas: OptedInSchema[] = [];
 
-  constructor(private readonly adapter: SequelizeAdapter) {}
+  constructor(
+    private readonly adapter: SequelizeAdapter,
+    private readonly createFeed?: ReplicationFeedFactory,
+  ) {}
 
   async checkTopology(): Promise<TopologyResult> {
-    const dialect = assertSqlDialect(this.adapter.sequelize.getDialect());
+    await dropLegacyCapture(this.adapter.sequelize).catch(() => undefined);
+    const dialect = this.adapter.sequelize.getDialect();
+    if (dialect !== 'postgres') {
+      return { supported: false, message: SQL_ENGINE_UNSUPPORTED };
+    }
     try {
       await this.adapter.sequelize.query('SELECT 1');
     } catch (err) {
@@ -24,56 +35,66 @@ export class SqlRealtimeSupport {
         message: `SQL live updates cannot reach the database: ${errorMessage(err)}`,
       };
     }
-    if (dialect !== 'postgres') {
-      return { supported: true };
-    }
-    const client = new pg.Client({ connectionString: this.adapter.connectionUri });
-    try {
-      await client.connect();
-      await client.query(`LISTEN ${NOTIFY_CHANNEL}`);
-      await client.query(`UNLISTEN ${NOTIFY_CHANNEL}`);
-      return { supported: true };
-    } catch (err) {
-      return {
-        supported: false,
-        message:
-          'PostgreSQL live updates need a session-mode connection that can LISTEN (not a transaction-mode pooler): ' +
-          errorMessage(err),
-      };
-    } finally {
-      try {
-        await client.end();
-      } catch {
-        // ignore
-      }
-    }
+    return this.probeLogicalReplication();
   }
 
-  async prepare(
-    schemas: OptedInSchema[],
-    options?: { ensureLog?: boolean },
-  ): Promise<void> {
-    const ensureLog = options?.ensureLog !== false;
-    if (ensureLog) {
-      await ensureChangeLog(this.adapter.sequelize);
-      this.watchFromId = await maxChangeLogId(this.adapter.sequelize);
+  async prepare(schemas: OptedInSchema[]): Promise<void> {
+    this.schemas = schemas;
+    await dropLegacyCapture(this.adapter.sequelize);
+    if (this.adapter.sequelize.getDialect() !== 'postgres') {
+      return;
     }
-    await syncTriggers(this.adapter.sequelize, schemas);
-  }
-
-  openWatch(resumeAfter?: unknown): ChangeStreamLike {
-    return new SqlChangeStream({
-      sequelize: this.adapter.sequelize,
-      connectionUri: this.adapter.connectionUri,
-      resumeAfter,
-      defaultCursor: this.watchFromId,
+    await syncPublication(this.adapter.sequelize, schemas, {
+      schemaName: sqlSchemaName(),
+      publicationName: PUBLICATION_NAME,
     });
   }
 
-  async trimThrough(resumeToken: string): Promise<void> {
-    const id = parseSqlResumeId(resumeToken);
-    if (!id) return;
-    await trimChangeLog(this.adapter.sequelize, id);
+  openWatch(): ChangeStreamLike {
+    return new SqlChangeStream({
+      connectionUri: this.adapter.connectionUri,
+      publicationName: PUBLICATION_NAME,
+      idFieldByTable: Object.fromEntries(
+        this.schemas.map(schema => [
+          schema.collectionName,
+          schema.documentIdField ?? DEFAULT_ID_FIELD,
+        ]),
+      ),
+      createFeed: this.createFeed,
+    });
+  }
+
+  private async probeLogicalReplication(): Promise<TopologyResult> {
+    const settings = await this.adapter.sequelize.query(
+      `SELECT name, setting
+       FROM pg_settings
+       WHERE name IN ('wal_level', 'max_replication_slots', 'max_wal_senders')`,
+      { type: QueryTypes.SELECT },
+    );
+    const map = new Map(
+      (settings as { name: string; setting: string }[]).map(row => [
+        String(row.name),
+        String(row.setting),
+      ]),
+    );
+    if (map.get('wal_level') !== 'logical') {
+      return {
+        supported: false,
+        message:
+          'PostgreSQL live updates require wal_level=logical (managed Postgres: enable logical replication / rds.logical_replication).',
+      };
+    }
+    if (map.get('max_replication_slots') === '0' || map.get('max_wal_senders') === '0') {
+      return {
+        supported: false,
+        message:
+          'PostgreSQL live updates need max_replication_slots and max_wal_senders greater than 0.',
+      };
+    }
+    // Settings only: do not CREATE_REPLICATION_SLOT here. Every pod reconciles;
+    // a probe slot would compete with the leader's live temp slot and fail-close
+    // the feed. Slot create belongs in PgoutputReplicationFeed.start() (degraded + retry).
+    return { supported: true };
   }
 }
 
