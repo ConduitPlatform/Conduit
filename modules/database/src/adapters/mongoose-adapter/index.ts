@@ -12,6 +12,22 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter.js';
 import { validateFieldChanges, validateFieldConstraints } from '../utils/index.js';
+import {
+  assertUniqueIndexPrivilege,
+  ensureIndexName,
+  isCompatibleIndexType,
+  isIndexAlreadyExistsError,
+  isMongoIndexType,
+  mapCompatibleToMongo,
+  mergeDeclaredIndexes,
+  mongoAllowsIndexType,
+  persistDeclaredSchemaIndexes,
+  removeDeclaredIndexes,
+  removeIndexFromSchemaFields,
+  resolveIndexName,
+  toMutableIndexes,
+  validateIndexFields,
+} from '../utils/indexes.js';
 import pluralize from '../../utils/pluralize.js';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils.js';
 import { status } from '@grpc/grpc-js';
@@ -622,22 +638,40 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     schemaName: string,
     indexes: readonly ModelOptionsIndexes[],
     callerModule: string,
+    options?: { privileged?: boolean },
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    this.checkIndexes(schemaName, indexes, callerModule);
+    const prepared = this.checkIndexes(
+      schemaName,
+      indexes,
+      callerModule,
+      options?.privileged,
+    );
     const collection = this.mongoose.model(schemaName).collection;
-    for (const index of indexes) {
-      const indexSpecs = [];
+    for (const index of prepared) {
+      const spec: Record<string, MongoIndexType> = {};
+      const types = Array.isArray(index.types) ? index.types : undefined;
       for (let i = 0; i < index.fields.length; i++) {
-        const spec: any = {};
-        spec[index.fields[i]] = index.types ? index.types[i] : 1;
-        indexSpecs.push(spec);
+        spec[index.fields[i]] = types
+          ? mapCompatibleToMongo(types[i])
+          : MongoIndexType.Ascending;
       }
-      await collection.createIndex(indexSpecs, index.options).catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      try {
+        await collection.createIndex(spec, index.options);
+      } catch (e) {
+        if (isIndexAlreadyExistsError(e)) continue;
+        throw new GrpcError(status.INTERNAL, (e as Error).message);
+      }
     }
+    const original = this.models[schemaName].originalSchema;
+    const merged = mergeDeclaredIndexes(original.modelOptions.indexes, prepared);
+    await persistDeclaredSchemaIndexes({
+      declaredSchemaModel: this.models['_DeclaredSchema'],
+      schemaName,
+      originalSchema: original,
+      indexes: merged,
+    });
     return 'Indexes created!';
   }
 
@@ -683,29 +717,36 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const collection = this.mongoose.model(schemaName).collection;
     const result = await collection.indexes();
-    result.filter(index => {
-      index.options = {};
-      for (const indexEntry of Object.entries(index)) {
-        if (indexEntry[0] === 'key' || indexEntry[0] === 'options') {
-          continue;
-        }
-        if (indexEntry[0] === 'v') {
-          delete index.v;
-          continue;
-        }
-        index.options[indexEntry[0]] = indexEntry[1];
-        delete index[indexEntry[0]];
+    const declared = this.models[schemaName].originalSchema.modelOptions.indexes ?? [];
+    const declaredByName = new Map(
+      declared.map((index: ModelOptionsIndexes) => [resolveIndexName(index), index]),
+    );
+    return result.map(index => {
+      const options: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(index)) {
+        if (key === 'key' || key === 'options') continue;
+        if (key === 'v') continue;
+        options[key] = value;
       }
-      index.fields = [];
-      index.types = [];
-      for (const keyEntry of Object.entries(index.key)) {
-        index.fields.push(keyEntry[0]);
-        index.types.push(keyEntry[1]);
-        //@ts-expect-error
-        delete index.key;
+      const fields: string[] = [];
+      const types: MongoIndexType[] = [];
+      for (const [field, type] of Object.entries(index.key ?? {})) {
+        fields.push(field);
+        types.push(type as MongoIndexType);
       }
+      const name = (options.name as string | undefined) ?? index.name;
+      const declaredIndex = name ? declaredByName.get(name) : undefined;
+      return {
+        name,
+        fields,
+        types: declaredIndex?.types ?? types,
+        options: {
+          ...declaredIndex?.options,
+          ...options,
+          name,
+        },
+      } as ModelOptionsIndexes;
     });
-    return result as unknown as ModelOptionsIndexes[];
   }
 
   async deleteIndexes(schemaName: string, indexNames: string[]): Promise<string> {
@@ -713,10 +754,23 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const collection = this.mongoose.model(schemaName).collection;
     for (const name of indexNames) {
-      collection.dropIndex(name).catch(() => {
+      try {
+        await collection.dropIndex(name);
+      } catch {
         throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
-      });
+      }
     }
+    const original = this.models[schemaName].originalSchema;
+    for (const name of indexNames) {
+      removeIndexFromSchemaFields(original, name);
+    }
+    const remaining = removeDeclaredIndexes(original.modelOptions.indexes, indexNames);
+    await persistDeclaredSchemaIndexes({
+      declaredSchemaModel: this.models['_DeclaredSchema'],
+      schemaName,
+      originalSchema: original,
+      indexes: remaining,
+    });
     return 'Indexes deleted';
   }
 
@@ -854,35 +908,50 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     schemaName: string,
     indexes: readonly ModelOptionsIndexes[],
     callerModule: string,
-  ) {
-    for (const index of indexes) {
+    privileged?: boolean,
+  ): ModelOptionsIndexes[] {
+    const schema = this.models[schemaName].originalSchema;
+    const prepared: ModelOptionsIndexes[] = [];
+    for (const raw of toMutableIndexes(indexes)) {
+      const index = ensureIndexName(raw);
+      validateIndexFields(schema, index);
       const options = index.options;
       const types = index.types;
-      if (!options && !types) continue;
       if (options) {
         if (!checkIfMongoOptions(options)) {
-          throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
-        }
-        if (
-          Object.keys(options).includes('unique') &&
-          this.models[schemaName].originalSchema.ownerModule !== callerModule
-        ) {
           throw new GrpcError(
-            status.PERMISSION_DENIED,
-            'Not authorized to create unique index',
+            status.INVALID_ARGUMENT,
+            'Invalid index options for mongoDB',
           );
         }
+        assertUniqueIndexPrivilege({
+          unique: options.unique === true,
+          schemaOwner: schema.ownerModule,
+          callerModule,
+          privileged,
+        });
       }
       if (types) {
-        if (!Array.isArray(types) || types.length !== index.fields.length) {
-          throw new GrpcError(status.INTERNAL, 'Invalid index types format');
+        const typeList = Array.isArray(types) ? types : index.fields.map(() => types);
+        if (Array.isArray(types) && typeList.length !== index.fields.length) {
+          throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid index types format');
         }
-        for (const type of types) {
-          if (!Object.values(MongoIndexType).includes(type)) {
-            throw new GrpcError(status.INTERNAL, 'Invalid index type for mongoDB');
+        for (const type of typeList) {
+          if (!mongoAllowsIndexType(type)) {
+            throw new GrpcError(
+              status.INVALID_ARGUMENT,
+              'Invalid index type for mongoDB',
+            );
           }
         }
+        index.types = typeList.map(type =>
+          isCompatibleIndexType(type) || isMongoIndexType(type)
+            ? mapCompatibleToMongo(type)
+            : type,
+        ) as MongoIndexType[];
       }
+      prepared.push(index);
     }
+    return prepared;
   }
 }
