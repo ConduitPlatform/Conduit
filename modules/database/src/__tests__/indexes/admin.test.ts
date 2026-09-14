@@ -1,13 +1,18 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { status } from '@grpc/grpc-js';
-import { ConduitGrpcSdk, ParsedRouterRequest } from '@conduitplatform/grpc-sdk';
-import { SchemaAdmin } from '../schema.admin.js';
+import {
+  CompatibleIndexType,
+  ConduitGrpcSdk,
+  ParsedRouterRequest,
+} from '@conduitplatform/grpc-sdk';
+import { SchemaAdmin } from '../../admin/schema.admin.js';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
 import { SchemaController } from '../../controllers/cms/schema.controller.js';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller.js';
 import { ADMIN_INDEX_CALLER } from '../../adapters/utils/indexes.js';
+import { validateSchemaInput } from '../../utils/utilities.js';
 
 function makeCall(params: Record<string, unknown>): ParsedRouterRequest {
   return { request: { params } } as unknown as ParsedRouterRequest;
@@ -49,8 +54,8 @@ function setup() {
   return { admin, createIndexes, getIndexes, findMany, countDocuments, findOne };
 }
 
-describe('SchemaAdmin indexes T35–T42', () => {
-  it('T37 Admin createIndexes is privileged', async () => {
+describe('SchemaAdmin indexes', () => {
+  it('creates indexes as a privileged Admin caller', async () => {
     const { admin, createIndexes } = setup();
     await admin.createIndexes(
       makeCall({
@@ -66,7 +71,7 @@ describe('SchemaAdmin indexes T35–T42', () => {
     );
   });
 
-  it('T39 exportIndexes is paginated (skip/limit, no unbounded findMany)', async () => {
+  it('exports indexes with skip/limit pagination', async () => {
     const { admin, findMany, countDocuments, getIndexes } = setup();
     const result = (await admin.exportIndexes(makeCall({ skip: 10, limit: 5 }))) as {
       indexes: unknown[];
@@ -82,7 +87,7 @@ describe('SchemaAdmin indexes T35–T42', () => {
     expect(result.indexes.every(index => 'schemaName' in (index as object))).toBe(true);
   });
 
-  it('T40 importIndexes skips same-name indexes', async () => {
+  it('skips same-name indexes on import', async () => {
     const { admin, createIndexes, getIndexes } = setup();
     getIndexes.mockResolvedValue([{ name: 'keep_me', fields: ['email'] }]);
     await admin.importIndexes(
@@ -95,10 +100,10 @@ describe('SchemaAdmin indexes T35–T42', () => {
     );
     expect(createIndexes).toHaveBeenCalledTimes(1);
     const created = createIndexes.mock.calls[0][1] as { name?: string }[];
-    expect(created.map(i => i.name)).toEqual(['new_name']);
+    expect(created.map(index => index.name)).toEqual(['new_name']);
   });
 
-  it('T41 import unique is not Admin-privileged (respects owner)', async () => {
+  it('imports unique indexes without Admin privilege so owner rules apply', async () => {
     const { admin, createIndexes } = setup();
     await admin.importIndexes(
       makeCall({
@@ -120,10 +125,39 @@ describe('SchemaAdmin indexes T35–T42', () => {
     );
   });
 
-  it('T42 import/export are Admin handlers and reject empty import', async () => {
+  it('rejects an empty import payload', async () => {
     const { admin } = setup();
     await expect(admin.importIndexes(makeCall({ indexes: [] }))).rejects.toMatchObject({
       code: status.INVALID_ARGUMENT,
     });
+  });
+});
+
+describe('validateModelOptions indexes', () => {
+  it('accepts modelOptions.indexes and conduit.readPreference together', () => {
+    expect(() =>
+      validateSchemaInput(
+        'User',
+        { email: 'String' },
+        {
+          timestamps: true,
+          indexes: [{ fields: ['email'], types: [CompatibleIndexType.Ascending] }],
+          conduit: { readPreference: 'secondaryPreferred' },
+        },
+      ),
+    ).not.toThrow();
+  });
+
+  it('still rejects unknown conduit keys and unknown model option keys', () => {
+    expect(() =>
+      validateSchemaInput('User', { email: 'String' }, { unknown: true } as Parameters<
+        typeof validateSchemaInput
+      >[2]),
+    ).toThrow(/indexes/);
+    expect(() =>
+      validateSchemaInput('User', { email: 'String' }, {
+        conduit: { notARealKey: true },
+      } as Parameters<typeof validateSchemaInput>[2]),
+    ).toThrow(/readPreference/);
   });
 });

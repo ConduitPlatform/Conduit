@@ -12,7 +12,7 @@ import { ConduitDatabaseSchema } from '../../interfaces/index.js';
 
 export const ADMIN_INDEX_CALLER = 'database';
 
-export const MONGO_INDEX_TYPE_VALUES: ReadonlyArray<MongoIndexType> = [
+const MONGO_INDEX_TYPE_VALUES: ReadonlySet<unknown> = new Set([
   MongoIndexType.Ascending,
   MongoIndexType.Descending,
   MongoIndexType.GeoSpatial2d,
@@ -20,9 +20,11 @@ export const MONGO_INDEX_TYPE_VALUES: ReadonlyArray<MongoIndexType> = [
   MongoIndexType.GeoHaystack,
   MongoIndexType.Hashed,
   MongoIndexType.Text,
-];
+]);
 
 const SQL_IDENTIFIER_MAX_LEN = 63;
+
+export type SqlIndexField = string | { name: string; order: 'ASC' | 'DESC' };
 
 export function isCompatibleIndexType(value: unknown): value is CompatibleIndexType {
   return (
@@ -31,7 +33,7 @@ export function isCompatibleIndexType(value: unknown): value is CompatibleIndexT
 }
 
 export function isMongoIndexType(value: unknown): value is MongoIndexType {
-  return (MONGO_INDEX_TYPE_VALUES as readonly unknown[]).includes(value);
+  return MONGO_INDEX_TYPE_VALUES.has(value);
 }
 
 export function isPostgresIndexType(value: unknown): value is PostgresIndexType {
@@ -54,17 +56,14 @@ export function normalizeIndexTypes(
   fieldCount: number,
 ): unknown[] | undefined {
   if (types === undefined) return undefined;
-  if (Array.isArray(types)) {
-    return [...types];
-  }
+  if (Array.isArray(types)) return [...types];
   return Array.from({ length: fieldCount }, () => types);
 }
 
 function typeToken(type: unknown): string {
-  if (type === undefined || type === CompatibleIndexType.Ascending) return 'asc';
-  if (type === CompatibleIndexType.Descending) return 'desc';
-  if (type === MongoIndexType.Ascending || type === 1) return 'asc';
-  if (type === MongoIndexType.Descending || type === -1) return 'desc';
+  if (isPortableDirection(type) || type === undefined) {
+    return mapCompatibleToSqlOrder(type).toLowerCase();
+  }
   if (typeof type === 'string') return type.toLowerCase().replace(/[^a-z0-9]+/g, '');
   return String(type);
 }
@@ -89,14 +88,8 @@ export function generateIndexName(
 
 export function ensureIndexName(index: ModelOptionsIndexes): ModelOptionsIndexes {
   const existing = resolveIndexName(index);
-  if (existing) {
-    return {
-      ...index,
-      name: existing,
-      options: { ...index.options, name: existing },
-    };
-  }
-  const name = generateIndexName(index.fields, index.types, isUniqueIndex(index));
+  const name =
+    existing ?? generateIndexName(index.fields, index.types, isUniqueIndex(index));
   return {
     ...index,
     name,
@@ -105,8 +98,14 @@ export function ensureIndexName(index: ModelOptionsIndexes): ModelOptionsIndexes
 }
 
 export function mapCompatibleToMongo(type: unknown): MongoIndexType {
-  if (type === CompatibleIndexType.Descending) return MongoIndexType.Descending;
-  if (type === CompatibleIndexType.Ascending || type === undefined) {
+  if (type === CompatibleIndexType.Descending || type === MongoIndexType.Descending) {
+    return MongoIndexType.Descending;
+  }
+  if (
+    type === undefined ||
+    type === CompatibleIndexType.Ascending ||
+    type === MongoIndexType.Ascending
+  ) {
     return MongoIndexType.Ascending;
   }
   if (isMongoIndexType(type)) return type;
@@ -134,8 +133,7 @@ export function sqlDialectAllowsIndexType(dialect: string, type: unknown): boole
   if (type === PostgresIndexType.HASH) {
     return dialect === 'postgres' || dialect === 'mysql' || dialect === 'mariadb';
   }
-  if (isPostgresIndexType(type)) return dialect === 'postgres';
-  return false;
+  return isPostgresIndexType(type) && dialect === 'postgres';
 }
 
 export function mongoAllowsIndexType(type: unknown): boolean {
@@ -146,17 +144,11 @@ export function mergeDeclaredIndexes(
   existing: readonly ModelOptionsIndexes[] | undefined,
   incoming: readonly ModelOptionsIndexes[],
 ): ModelOptionsIndexes[] {
-  const merged = new Map<string, ModelOptionsIndexes>();
-  for (const index of existing ?? []) {
-    const named = ensureIndexName(index);
-    merged.set(resolveIndexName(named)!, named);
-  }
+  const merged = declaredIndexMap(existing);
   for (const index of incoming) {
     const named = ensureIndexName(index);
-    const name = resolveIndexName(named)!;
-    if (!merged.has(name)) {
-      merged.set(name, named);
-    }
+    const name = resolveIndexName(named);
+    if (name && !merged.has(name)) merged.set(name, named);
   }
   return [...merged.values()];
 }
@@ -222,23 +214,18 @@ export function assertUniqueIndexPrivilege(args: {
   privileged?: boolean;
 }) {
   if (!args.unique) return;
-  if (args.privileged) return;
-  if (args.schemaOwner === args.callerModule) return;
+  if (args.privileged || args.schemaOwner === args.callerModule) return;
   throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to create unique index');
 }
 
 export function isIndexAlreadyExistsError(error: unknown): boolean {
   const err = error as { message?: string; code?: number | string; name?: string };
   const message = (err.message ?? '').toLowerCase();
-  if (
+  return (
     message.includes('already exists') ||
     message.includes('already exist') ||
     message.includes('duplicate key name') ||
-    message.includes('index already exists')
-  ) {
-    return true;
-  }
-  return (
+    message.includes('index already exists') ||
     err.code === 85 ||
     err.code === '42P07' ||
     err.name === 'SequelizeUniqueConstraintError'
@@ -271,12 +258,21 @@ export async function persistDeclaredSchemaIndexes(args: {
 export function collectExistingIndexNames(
   indexes: readonly ModelOptionsIndexes[],
 ): Set<string> {
-  const names = new Set<string>();
-  for (const index of indexes) {
-    const name = resolveIndexName(index);
-    if (name) names.add(name);
+  return new Set(
+    indexes.map(resolveIndexName).filter((name): name is string => Boolean(name)),
+  );
+}
+
+export function declaredIndexMap(
+  indexes: readonly ModelOptionsIndexes[] | undefined,
+): Map<string, ModelOptionsIndexes> {
+  const map = new Map<string, ModelOptionsIndexes>();
+  for (const index of indexes ?? []) {
+    const named = ensureIndexName(index);
+    const name = resolveIndexName(named);
+    if (name) map.set(name, named);
   }
-  return names;
+  return map;
 }
 
 export function toMutableIndexes(
@@ -285,16 +281,13 @@ export function toMutableIndexes(
   return indexes.map(index => ({
     ...index,
     fields: [...index.fields],
-    types: Array.isArray(index.types) ? [...index.types] : index.types,
     options: index.options ? { ...index.options } : index.options,
   }));
 }
 
-export function sqlIndexFields(
-  index: ModelOptionsIndexes,
-): Array<string | { name: string; order: 'ASC' | 'DESC' }> {
+export function sqlIndexFields(index: ModelOptionsIndexes): SqlIndexField[] {
   const types = normalizeIndexTypes(index.types, index.fields.length);
-  if (!types || !types.some(isCompatibleIndexType)) {
+  if (!types || !types.some(isPortableDirection)) {
     return [...index.fields];
   }
   return index.fields.map((field, i) => ({
@@ -307,22 +300,15 @@ export function inferSqlIndexType(
   row: { type?: string; definition?: string },
   dialect: string,
 ): PostgresIndexType | undefined {
-  if (typeof row.type === 'string' && row.type.length > 0) {
-    const upper = row.type.toUpperCase();
-    if (isPostgresIndexType(upper)) return upper;
+  if (typeof row.type === 'string' && isPostgresIndexType(row.type.toUpperCase())) {
+    return row.type.toUpperCase() as PostgresIndexType;
   }
   if (typeof row.definition === 'string') {
     const match = /USING\s+(\w+)/i.exec(row.definition);
-    if (match && isPostgresIndexType(match[1].toUpperCase())) {
-      return match[1].toUpperCase() as PostgresIndexType;
-    }
+    const using = match?.[1]?.toUpperCase();
+    if (using && isPostgresIndexType(using)) return using;
   }
-  if (
-    dialect === 'postgres' ||
-    dialect === 'mysql' ||
-    dialect === 'mariadb' ||
-    dialect === 'sqlite'
-  ) {
+  if (['postgres', 'mysql', 'mariadb', 'sqlite'].includes(dialect)) {
     return PostgresIndexType.BTREE;
   }
   return undefined;

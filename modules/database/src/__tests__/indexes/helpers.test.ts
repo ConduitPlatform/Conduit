@@ -23,10 +23,10 @@ import {
   sqlDialectAllowsIndexType,
   sqlIndexFields,
   validateIndexFields,
-} from '../indexes.js';
+} from '../../adapters/utils/indexes.js';
 
-describe('index helpers T1–T16', () => {
-  it('T1 CompatibleIndexType uses portable string values, not Mongo 1/-1', () => {
+describe('index helpers', () => {
+  it('keeps CompatibleIndexType as portable strings, not Mongo 1/-1', () => {
     expect(CompatibleIndexType.Ascending).toBe('Ascending');
     expect(CompatibleIndexType.Descending).toBe('Descending');
     expect(CompatibleIndexType.Ascending).not.toBe(MongoIndexType.Ascending);
@@ -35,12 +35,25 @@ describe('index helpers T1–T16', () => {
     expect(isMongoIndexType('Ascending')).toBe(false);
   });
 
-  it('T4 generates a name when missing', () => {
+  it('generates a deterministic name when one is missing', () => {
     const name = generateIndexName(['email'], [CompatibleIndexType.Ascending], false);
-    expect(name).toMatch(/^cnd_idx_email_asc$/);
+    expect(name).toBe('cnd_idx_email_asc');
+    const unique = generateIndexName(
+      ['room', 'createdAt'],
+      [CompatibleIndexType.Ascending, CompatibleIndexType.Descending],
+      true,
+    );
+    expect(unique).toBe(
+      generateIndexName(
+        ['room', 'createdAt'],
+        [CompatibleIndexType.Ascending, CompatibleIndexType.Descending],
+        true,
+      ),
+    );
+    expect(unique).toMatch(/^cnd_uidx_/);
   });
 
-  it('T5 keeps a provided name', () => {
+  it('keeps a provided name on the index and options', () => {
     const named = ensureIndexName({
       fields: ['email'],
       name: 'custom_email_idx',
@@ -49,41 +62,34 @@ describe('index helpers T1–T16', () => {
     expect(named.options?.name).toBe('custom_email_idx');
   });
 
-  it('T6 is deterministic for the same input', () => {
-    const a = generateIndexName(
-      ['room', 'createdAt'],
-      [CompatibleIndexType.Ascending, CompatibleIndexType.Descending],
-      true,
-    );
-    const b = generateIndexName(
-      ['room', 'createdAt'],
-      [CompatibleIndexType.Ascending, CompatibleIndexType.Descending],
-      true,
-    );
-    expect(a).toBe(b);
-    expect(a).toMatch(/^cnd_uidx_/);
-  });
-
-  it('T7 maps Compatible to Mongo 1/-1', () => {
+  it('maps Compatible and Mongo directions to engine types', () => {
     expect(mapCompatibleToMongo(CompatibleIndexType.Ascending)).toBe(1);
     expect(mapCompatibleToMongo(CompatibleIndexType.Descending)).toBe(-1);
     expect(mapCompatibleToMongo(undefined)).toBe(1);
-  });
-
-  it('T8 maps Compatible to SQL BTREE ASC/DESC field order', () => {
     expect(mapCompatibleToSqlOrder(CompatibleIndexType.Ascending)).toBe('ASC');
     expect(mapCompatibleToSqlOrder(CompatibleIndexType.Descending)).toBe('DESC');
-    const fields = sqlIndexFields({
-      fields: ['createdAt', 'room'],
-      types: [CompatibleIndexType.Descending, CompatibleIndexType.Ascending],
-    });
-    expect(fields).toEqual([
+    expect(sqlIndexFields({ fields: ['createdAt', 'room'] })).toEqual([
+      'createdAt',
+      'room',
+    ]);
+    expect(
+      sqlIndexFields({
+        fields: ['createdAt', 'room'],
+        types: [CompatibleIndexType.Descending, CompatibleIndexType.Ascending],
+      }),
+    ).toEqual([
       { name: 'createdAt', order: 'DESC' },
       { name: 'room', order: 'ASC' },
     ]);
+    expect(
+      sqlIndexFields({
+        fields: ['createdAt'],
+        types: [MongoIndexType.Descending],
+      }),
+    ).toEqual([{ name: 'createdAt', order: 'DESC' }]);
   });
 
-  it('T9 preserves the unique option on generated names', () => {
+  it('preserves unique when generating a name', () => {
     const unique = ensureIndexName({
       fields: ['email'],
       types: [CompatibleIndexType.Ascending],
@@ -93,7 +99,7 @@ describe('index helpers T1–T16', () => {
     expect(resolveIndexName(unique)).toMatch(/uidx/);
   });
 
-  it('T10 persist helper merges incoming indexes by name and skips duplicates', () => {
+  it('merges declared indexes by name without overwriting the first', () => {
     const merged = mergeDeclaredIndexes(
       [{ fields: ['a'], name: 'idx_a' }],
       [
@@ -101,33 +107,35 @@ describe('index helpers T1–T16', () => {
         { fields: ['b'], name: 'idx_b' },
       ],
     );
-    expect(merged.map(i => i.name)).toEqual(['idx_a', 'idx_b']);
+    expect(merged.map(index => index.name)).toEqual(['idx_a', 'idx_b']);
     expect(merged[0].options?.unique).toBeUndefined();
   });
 
-  it('T11 persist helper removes indexes by name', () => {
-    const remaining = removeDeclaredIndexes(
-      [
-        { fields: ['a'], name: 'idx_a' },
-        { fields: ['b'], name: 'idx_b' },
-      ],
-      ['idx_a'],
-    );
-    expect(remaining).toEqual([{ fields: ['b'], name: 'idx_b' }]);
+  it('removes declared indexes and field-level index metadata by name', () => {
+    expect(
+      removeDeclaredIndexes(
+        [
+          { fields: ['a'], name: 'idx_a' },
+          { fields: ['b'], name: 'idx_b' },
+        ],
+        ['idx_a'],
+      ),
+    ).toEqual([{ fields: ['b'], name: 'idx_b' }]);
+    expect(
+      removeIndexFromSchemaFields({ fields: { a: { index: { name: 'x' } } } }, 'x'),
+    ).toBe(true);
   });
 
-  it('T12 validateIndexFields rejects unknown fields', () => {
+  it('rejects unknown index fields', () => {
     expect(() =>
       validateIndexFields(
         { compiledFields: { email: 'String' }, fields: {} },
-        {
-          fields: ['missing'],
-        },
+        { fields: ['missing'] },
       ),
     ).toThrow(/Invalid fields/);
   });
 
-  it('T13 unique is denied for a non-owner, non-admin caller', () => {
+  it('enforces unique-index privilege for owner, Admin, and import', () => {
     expect(() =>
       assertUniqueIndexPrivilege({
         unique: true,
@@ -136,9 +144,6 @@ describe('index helpers T1–T16', () => {
         privileged: false,
       }),
     ).toThrow(expect.objectContaining({ code: status.PERMISSION_DENIED }));
-  });
-
-  it('T14 unique is allowed for the schema owner', () => {
     expect(() =>
       assertUniqueIndexPrivilege({
         unique: true,
@@ -147,9 +152,6 @@ describe('index helpers T1–T16', () => {
         privileged: false,
       }),
     ).not.toThrow();
-  });
-
-  it('T15 unique is allowed for privileged Admin', () => {
     expect(() =>
       assertUniqueIndexPrivilege({
         unique: true,
@@ -158,9 +160,6 @@ describe('index helpers T1–T16', () => {
         privileged: true,
       }),
     ).not.toThrow();
-  });
-
-  it('T16 import unique respects owner privilege (not Admin-privileged)', () => {
     expect(() =>
       assertUniqueIndexPrivilege({
         unique: true,
@@ -178,12 +177,9 @@ describe('index helpers T1–T16', () => {
       ),
     ).toBe(true);
     expect(isIndexAlreadyExistsError(new Error('index already exists'))).toBe(true);
-    expect(
-      removeIndexFromSchemaFields({ fields: { a: { index: { name: 'x' } } } }, 'x'),
-    ).toBe(true);
   });
 
-  it('T25 dialect checks use real switches, not `mysql || mariadb`', () => {
+  it('allows dialect-native types and rejects foreign leftovers', () => {
     expect(sqlDialectAllowsIndexType('mysql', CompatibleIndexType.Ascending)).toBe(true);
     expect(sqlDialectAllowsIndexType('mariadb', CompatibleIndexType.Descending)).toBe(
       true,
