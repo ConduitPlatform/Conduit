@@ -158,10 +158,12 @@ const ALLOWED_CONDUIT_READ_PREFERENCES = [
 function validateModelOptions(modelOptions: ConduitSchemaOptions) {
   if (!isPlainObject(modelOptions)) throw new Error('Model options must be an object');
   Object.keys(modelOptions).forEach(key => {
-    if (key !== 'conduit' && key !== 'timestamps')
-      throw new Error("Only 'conduit' and 'timestamps' options allowed");
+    if (key !== 'conduit' && key !== 'timestamps' && key !== 'indexes')
+      throw new Error("Only 'conduit', 'timestamps', and 'indexes' options allowed");
     else if (key === 'timestamps' && !isBoolean(modelOptions.timestamps))
       throw new Error("Option 'timestamps' must be of type Boolean");
+    else if (key === 'indexes' && !isArray(modelOptions.indexes))
+      throw new Error("Option 'indexes' must be of type Array");
     else if (key === 'conduit') {
       if (!isObject(modelOptions.conduit))
         throw new Error("Option 'conduit' must be of type Object");
