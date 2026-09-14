@@ -755,7 +755,7 @@ importers:
         version: 4.0.1
       nodemailer:
         specifier: '>=9.0.1'
-        version: 9.0.6
+        version: 9.1.1
       nodemailer-mailgun-transport:
         specifier: ^2.1.5
         version: 2.1.5(handlebars@4.7.9)(lodash@4.18.1)(underscore@1.13.8)
@@ -6764,8 +6764,8 @@ packages:
   nodemailer-mandrill-transport@1.2.0:
     resolution: {integrity: sha512-Dli7B8D0Q2EkLi01ajSS4zaSfB1Vpv0s5539Dgjr6/XmQaXX7zVtzUvicWg38brgmFAaQ3HyXNFK6lWsF5I27A==}
 
-  nodemailer@9.0.6:
-    resolution: {integrity: sha512-IQUGFdhdGwI9+AWX+FpUt4DLmvFaOjTMEoneTIWX/RXxuy1TdenPwWrvFMSfLkPKl+HQEXWuSAxEMMbPYXtBmg==}
+  nodemailer@9.1.1:
+    resolution: {integrity: sha512-izw9mVKFix6YSnC9eLgV6g1opl9DUlRio9ZNcq+Wu9Ujn2UwF+8Nl0B8nz22kEC+CTZCvinkxwJ0DeFbb6NwcQ==}
     engines: {node: '>=6.0.0'}
 
   noms@0.0.0:
@@ -14926,7 +14926,7 @@ snapshots:
       extend: 3.0.2
       mandrill-api: 1.0.45
 
-  nodemailer@9.0.6: {}
+  nodemailer@9.1.1: {}
 
   noms@0.0.0:
     dependencies:
@@ -15762,7 +15762,7 @@ snapshots:
   smtp-server@3.19.10:
     dependencies:
       ipv6-normalize: 1.0.1
-      nodemailer: 9.0.6
+      nodemailer: 9.1.1
       punycode.js: 2.3.1
 
   snappy@7.4.1:
