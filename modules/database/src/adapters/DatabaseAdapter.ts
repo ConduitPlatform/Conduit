@@ -204,8 +204,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract createIndexes(
     schemaName: string,
-    indexes: ModelOptionsIndexes[],
+    indexes: readonly ModelOptionsIndexes[],
     callerModule: string,
+    options?: { privileged?: boolean },
   ): Promise<string>;
 
   abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
