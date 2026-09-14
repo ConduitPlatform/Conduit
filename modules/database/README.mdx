@@ -60,7 +60,7 @@ subscribe({ schema: 'Order', documentId?: string })
 unsubscribe({ schema: 'Order', documentId?: string })
 ```
 
-Events arrive as `change` with `{ version, operation, schema, documentId, occurredAt }` and contain no document fields and no resume token. This is **live-tail, not backfill**. After a full reconnect, subscribe again and refetch over authorized REST.
+Events arrive as `change` with `{ version, operation, schema, documentId, occurredAt }` and contain no document fields and no resume token. This is **live-tail, not backfill**: the change stream starts at the end of the oplog. A leader restart or cursor drop does not replay missed events; clients subscribe again and refetch over authorized REST.
 
 The leader also publishes `database:change:${schema}` on the Redis bus. **Do not also relay `database:change:*` on `/events/` if the same client is on `/database/`** — that duplicates notifications. Keep the bus for other modules; just do not dual-subscribe.
 
