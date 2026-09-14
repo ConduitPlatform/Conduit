@@ -52,8 +52,7 @@ export enum CompatibleIndexType {
 
 export type IndexType = MongoIndexType | PostgresIndexType | CompatibleIndexType;
 
-export type ModelOptionsIndexTypes =
-  MongoIndexType[] | PostgresIndexType | CompatibleIndexType | CompatibleIndexType[];
+export type ModelOptionsIndexTypes = IndexType | readonly IndexType[];
 
 export type Array = any[];
 

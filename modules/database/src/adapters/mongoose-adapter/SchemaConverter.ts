@@ -11,9 +11,9 @@ import { cloneDeep, isArray, isNil, isObject } from 'lodash-es';
 import { checkIfMongoOptions } from './utils.js';
 import {
   isCompatibleIndexType,
-  isMongoIndexType,
   mapCompatibleToMongo,
   mongoAllowsIndexType,
+  normalizeIndexTypes,
 } from '../utils/indexes.js';
 
 import * as deepdash from 'deepdash-es/standalone';
@@ -139,12 +139,11 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
 
 function convertModelOptionsIndexes(copy: ConduitSchema) {
   if (!copy.modelOptions.indexes?.length) return copy;
-  const mutIndexes = copy.modelOptions.indexes as ModelOptionsIndexes[];
-  for (const index of [...mutIndexes]) {
+  const remaining: ModelOptionsIndexes[] = [];
+  for (const index of copy.modelOptions.indexes) {
+    let mappedTypes: MongoIndexType[] | undefined;
     if (index.types) {
-      const types = isArray(index.types)
-        ? index.types
-        : index.fields.map(() => index.types);
+      const types = normalizeIndexTypes(index.types, index.fields.length) ?? [];
       if (
         types.some(type => !mongoAllowsIndexType(type)) ||
         (isArray(index.types) && index.fields.length !== index.types.length)
@@ -152,41 +151,31 @@ function convertModelOptionsIndexes(copy: ConduitSchema) {
         ConduitGrpcSdk.Logger.warn(
           `Invalid index type for MongoDB found in '${copy.name}', ignoring index`,
         );
-        mutIndexes.splice(mutIndexes.indexOf(index), 1);
         continue;
       }
-      index.types = types.map(type =>
-        isCompatibleIndexType(type) || isMongoIndexType(type)
-          ? mapCompatibleToMongo(type)
-          : (type as MongoIndexType),
-      ) as MongoIndexType[];
+      mappedTypes = types.map(mapCompatibleToMongo);
+      index.types = mappedTypes;
     }
-    // compound indexes are maintained in modelOptions in order to be created after schema creation
-    // single field index => add it to specified schema field
-    if (index.fields.length !== 1) continue;
+    // compound indexes stay on modelOptions and are created after schema creation
+    if (index.fields.length !== 1) {
+      remaining.push(index);
+      continue;
+    }
     const modelField = copy.fields[index.fields[0]] as ConduitModelField;
     if (!modelField) {
       throw new Error(`Field ${index.fields[0]} in index definition doesn't exist`);
     }
-    if (index.types) {
-      modelField.index = {
-        type: (index.types as MongoIndexType[])[0],
-      };
+    if (index.options && !checkIfMongoOptions(index.options)) {
+      ConduitGrpcSdk.Logger.warn(
+        `Invalid index options for MongoDB found in '${copy.name}', ignoring index`,
+      );
+      continue;
     }
-    if (index.options) {
-      if (!checkIfMongoOptions(index.options)) {
-        ConduitGrpcSdk.Logger.warn(
-          `Invalid index options for MongoDB found in '${copy.name}', ignoring index`,
-        );
-        mutIndexes.splice(mutIndexes.indexOf(index), 1);
-        continue;
-      }
-      if (!modelField.index) modelField.index = {};
-      for (const [option, optionValue] of Object.entries(index.options)) {
-        modelField.index![option as keyof SchemaFieldIndex] = optionValue;
-      }
-    }
-    mutIndexes.splice(mutIndexes.indexOf(index), 1);
+    modelField.index = {
+      ...(mappedTypes ? { type: mappedTypes[0] } : {}),
+      ...index.options,
+    };
   }
+  copy.modelOptions.indexes = remaining;
   return copy;
 }

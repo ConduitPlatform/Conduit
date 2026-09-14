@@ -693,12 +693,7 @@ export class SchemaAdmin {
 
   async createIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, indexes } = call.request.params;
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({ _id: id });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
-    }
+    const requestedSchema = await this.findDeclaredSchemaById(id);
     return await this.database.createIndexes(
       requestedSchema.name,
       indexes,
@@ -708,25 +703,14 @@ export class SchemaAdmin {
   }
 
   async getIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const id = call.request.params.id;
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({ _id: id });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
-    }
+    const requestedSchema = await this.findDeclaredSchemaById(call.request.params.id);
     const indexes = await this.database.getIndexes(requestedSchema.name);
     return { indexes };
   }
 
   async deleteIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, indexNames } = call.request.params;
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({ _id: id });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
-    }
+    const requestedSchema = await this.findDeclaredSchemaById(id);
     if (isNil(indexNames) || indexNames.length === 0) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -810,6 +794,16 @@ export class SchemaAdmin {
       });
     }
     return 'Indexes imported successfully';
+  }
+
+  private async findDeclaredSchemaById(id: string) {
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ _id: id });
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    return requestedSchema;
   }
 
   async checkRequestedSchema(id: string) {
