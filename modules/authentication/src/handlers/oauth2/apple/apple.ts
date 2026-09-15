@@ -19,13 +19,14 @@ import axios from 'axios';
 import { AppleUser } from './apple.user.js';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { TokenProvider } from '../../tokenProvider.js';
-import { Token } from '../../../models/index.js';
+import { Token, User } from '../../../models/index.js';
 import { status } from '@grpc/grpc-js';
 import jwksRsa from 'jwks-rsa';
 import {
   validateStateToken,
   resolveAppleOAuthClient,
   validateAppleClients,
+  redirectOnRegistrationNotAllowed,
   resolveOAuthMode,
 } from '../utils/index.js';
 import {
@@ -160,17 +161,22 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       email: payload.email,
       data: { ...userData, ...payload.email_verified },
     };
-    const user = await this.createOrUpdateUser(
-      userParams,
-      stateToken.data.invitationToken,
-      stateToken.data.anonymousUserId,
-      resolveOAuthMode(stateToken.data.mode),
-    );
-    await Token.getInstance().deleteOne(stateToken);
-
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       providerClient.redirect_uri;
+    let user: User;
+    try {
+      user = await this.createOrUpdateUser(
+        userParams,
+        stateToken.data.invitationToken,
+        stateToken.data.anonymousUserId,
+        resolveOAuthMode(stateToken.data.mode),
+      );
+    } catch (err) {
+      await Token.getInstance().deleteOne(stateToken);
+      return redirectOnRegistrationNotAllowed(err, redirectUri);
+    }
+    await Token.getInstance().deleteOne(stateToken);
     const conduitClientId = stateToken.data.clientId;
 
     return TokenProvider.getInstance()!.provideUserTokens(
