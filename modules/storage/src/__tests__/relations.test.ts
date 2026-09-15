@@ -9,6 +9,9 @@ import {
   createFolderOwnerRelations,
   createOwnerRelation,
   forEachDocumentPage,
+  hasManagedRelations,
+  healUnmanagedContainer,
+  healUnmanagedFolder,
   updateFileRelations,
 } from '../authz/relations.js';
 
@@ -53,9 +56,10 @@ function stubLookups(args: {
   })) as unknown as typeof _StorageFolder.getInstance;
 }
 
-function fakeSdk() {
+function fakeSdk(args?: { managed?: string[]; findRelationError?: Error }) {
   const created: Array<{ subject: string; relation: string; resource: string }> = [];
   const deleted: Array<{ subject: string; relation: string; resource: string }> = [];
+  const managed = new Set(args?.managed ?? []);
   const grpcSdk = {
     authorization: {
       createRelation: async (relation: {
@@ -71,6 +75,15 @@ function fakeSdk() {
         resource: string;
       }) => {
         deleted.push(relation);
+      },
+      findRelation: async ({ resource }: { resource: string }) => {
+        if (args?.findRelationError) {
+          throw args.findRelationError;
+        }
+        const relations = managed.has(resource)
+          ? [{ subject: 'User:owner', relation: 'owner', resource }]
+          : [];
+        return { relations, count: relations.length };
       },
     },
   } as unknown as ConduitGrpcSdk;
@@ -149,7 +162,7 @@ describe('file relation tree', () => {
     ]);
   });
 
-  it('attaches only the folder owner for a nested file without scope', async () => {
+  it('also stamps the creating user on a nested file without scope', async () => {
     enableAuthz();
     stubLookups({
       folders: [{ _id: 'dir1', name: 'cnd_u1/', container: 'conduit' }],
@@ -160,6 +173,40 @@ describe('file relation tree', () => {
       { _id: 'f1', container: 'conduit', folder: 'cnd_u1/' } as never,
       { userId: 'u1' },
     );
+    assert.deepEqual(created, [
+      { subject: 'Folder:dir1', relation: 'owner', resource: 'File:f1' },
+      { subject: 'User:u1', relation: 'owner', resource: 'File:f1' },
+    ]);
+  });
+
+  it('stamps scope instead of User when both are provided', async () => {
+    enableAuthz();
+    stubLookups({
+      folders: [{ _id: 'dir1', name: 'docs/', container: 'conduit' }],
+    });
+    const { grpcSdk, created } = fakeSdk();
+    await createFileRelations(
+      grpcSdk,
+      { _id: 'f1', container: 'conduit', folder: 'docs/' } as never,
+      { scope: 'Team:t1', userId: 'u1' },
+    );
+    assert.deepEqual(created, [
+      { subject: 'Folder:dir1', relation: 'owner', resource: 'File:f1' },
+      { subject: 'Team:t1', relation: 'owner', resource: 'File:f1' },
+    ]);
+  });
+
+  it('does not invent a user on admin creates without userId or scope', async () => {
+    enableAuthz();
+    stubLookups({
+      folders: [{ _id: 'dir1', name: 'docs/', container: 'conduit' }],
+    });
+    const { grpcSdk, created } = fakeSdk();
+    await createFileRelations(grpcSdk, {
+      _id: 'f1',
+      container: 'conduit',
+      folder: 'docs/',
+    } as never);
     assert.deepEqual(created, [
       { subject: 'Folder:dir1', relation: 'owner', resource: 'File:f1' },
     ]);
@@ -250,6 +297,134 @@ describe('move owners', () => {
     ]);
     assert.deepEqual(created, [
       { subject: 'Folder:dir-new', relation: 'owner', resource: 'File:f1' },
+    ]);
+  });
+
+  it('adds the new structural owner when the old folder row is missing', async () => {
+    enableAuthz();
+    stubLookups({
+      folders: [{ _id: 'dir-new', name: 'docs/', container: 'conduit' }],
+    });
+    const { grpcSdk, created, deleted } = fakeSdk();
+    await updateFileRelations(
+      grpcSdk,
+      { _id: 'f1', container: 'conduit', folder: 'gone/' },
+      { _id: 'f1', container: 'conduit', folder: 'docs/' },
+    );
+    assert.deepEqual(deleted, []);
+    assert.deepEqual(created, [
+      { subject: 'Folder:dir-new', relation: 'owner', resource: 'File:f1' },
+    ]);
+  });
+
+  it('ignores a missing old structural relation and still adds the new owner', async () => {
+    enableAuthz();
+    stubLookups({
+      folders: [
+        { _id: 'dir-old', name: 'old/', container: 'conduit' },
+        { _id: 'dir-new', name: 'docs/', container: 'conduit' },
+      ],
+    });
+    const { grpcSdk, created, deleted } = fakeSdk();
+    grpcSdk.authorization!.deleteRelation = async relation => {
+      deleted.push(relation);
+      throw new Error('No relations found');
+    };
+    await updateFileRelations(
+      grpcSdk,
+      { _id: 'f1', container: 'conduit', folder: 'old/' },
+      { _id: 'f1', container: 'conduit', folder: 'docs/' },
+    );
+    assert.equal(deleted.length, 1);
+    assert.deepEqual(created, [
+      { subject: 'Folder:dir-new', relation: 'owner', resource: 'File:f1' },
+    ]);
+  });
+
+  it('does not rewire relations when authz is disabled', async () => {
+    disableAuthz();
+    stubLookups({
+      folders: [
+        { _id: 'dir-old', name: 'old/', container: 'conduit' },
+        { _id: 'dir-new', name: 'docs/', container: 'conduit' },
+      ],
+    });
+    const { grpcSdk, created, deleted } = fakeSdk();
+    await updateFileRelations(
+      grpcSdk,
+      { _id: 'f1', container: 'conduit', folder: 'old/' },
+      { _id: 'f1', container: 'conduit', folder: 'docs/' },
+    );
+    assert.deepEqual(deleted, []);
+    assert.deepEqual(created, []);
+  });
+
+  it('adds a scope owner on update without removing an existing user owner', async () => {
+    enableAuthz();
+    stubLookups({
+      folders: [{ _id: 'dir1', name: 'docs/', container: 'conduit' }],
+    });
+    const { grpcSdk, created, deleted } = fakeSdk();
+    await updateFileRelations(
+      grpcSdk,
+      { _id: 'f1', container: 'conduit', folder: 'docs/' },
+      { _id: 'f1', container: 'conduit', folder: 'docs/' },
+      { scope: 'Team:t1' },
+    );
+    assert.deepEqual(deleted, []);
+    assert.deepEqual(created, [
+      { subject: 'Team:t1', relation: 'owner', resource: 'File:f1' },
+    ]);
+  });
+});
+
+describe('managed relation probe', () => {
+  it('treats owner/editor/reader rows as managed and empty as unmanaged', async () => {
+    enableAuthz();
+    const { grpcSdk } = fakeSdk({ managed: ['Folder:1'] });
+    assert.equal(await hasManagedRelations(grpcSdk, 'Folder:1'), true);
+    assert.equal(await hasManagedRelations(grpcSdk, 'Folder:2'), false);
+  });
+
+  it('fails closed when findRelation throws', async () => {
+    enableAuthz();
+    const { grpcSdk } = fakeSdk({ findRelationError: new Error('down') });
+    await assert.rejects(() => hasManagedRelations(grpcSdk, 'Folder:1'), /down/);
+  });
+
+  it('does not heal a managed container or the default container', async () => {
+    enableAuthz();
+    const { grpcSdk, created } = fakeSdk({ managed: ['Container:c2'] });
+    await healUnmanagedContainer(
+      grpcSdk,
+      { _id: 'c1', name: 'conduit' } as never,
+      'User:alice',
+    );
+    await healUnmanagedContainer(
+      grpcSdk,
+      { _id: 'c2', name: 'photos' } as never,
+      'User:alice',
+    );
+    assert.deepEqual(created, []);
+  });
+
+  it('heals an unowned named container and first folder like a new first folder', async () => {
+    enableAuthz();
+    const { grpcSdk, created } = fakeSdk();
+    await healUnmanagedContainer(
+      grpcSdk,
+      { _id: 'c2', name: 'photos' } as never,
+      'User:alice',
+    );
+    await healUnmanagedFolder(grpcSdk, { _id: 'docs' } as never, {
+      isFirst: true,
+      containerId: 'c2',
+      scope: 'User:alice',
+    });
+    assert.deepEqual(created, [
+      { subject: 'User:alice', relation: 'owner', resource: 'Container:c2' },
+      { subject: 'Container:c2', relation: 'owner', resource: 'Folder:docs' },
+      { subject: 'User:alice', relation: 'owner', resource: 'Folder:docs' },
     ]);
   });
 });

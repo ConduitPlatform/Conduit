@@ -4,7 +4,12 @@ import { isNil } from 'lodash-es';
 import { IStorageProvider } from '../interfaces/index.js';
 import { _StorageContainer, _StorageFolder } from '../models/index.js';
 import { getNestedPaths } from '../utils/index.js';
-import { createFolderOwnerRelations } from './relations.js';
+import {
+  createFolderOwnerRelations,
+  hasManagedRelations,
+  healUnmanagedContainer,
+  healUnmanagedFolder,
+} from './relations.js';
 import {
   isAuthzEnabled,
   parsePersonalFolderOwner,
@@ -12,6 +17,7 @@ import {
 } from './helpers.js';
 
 export async function assertNoPersonalFolderSquat(
+  grpcSdk: ConduitGrpcSdk,
   folder: string,
   userId: string,
   container: string,
@@ -25,6 +31,15 @@ export async function assertNoPersonalFolderSquat(
     .getInstance()
     .findOne({ name: personalRoot, container });
   if (isNil(existing)) {
+    throw new GrpcError(
+      status.PERMISSION_DENIED,
+      'You are not allowed to create this folder',
+    );
+  }
+  if (!isAuthzEnabled()) {
+    return;
+  }
+  if (!(await hasManagedRelations(grpcSdk, `Folder:${existing._id}`))) {
     throw new GrpcError(
       status.PERMISSION_DENIED,
       'You are not allowed to create this folder',
@@ -62,7 +77,7 @@ export async function assertFolderEditAccess(
   const folderDoc = await _StorageFolder
     .getInstance()
     .findOne({ name: folder, container });
-  if (folderDoc) {
+  if (folderDoc && (await hasManagedRelations(grpcSdk, `Folder:${folderDoc._id}`))) {
     await assertCanEditFolder(grpcSdk, subject, folderDoc);
     return;
   }
@@ -72,7 +87,10 @@ export async function assertFolderEditAccess(
     const parent = await _StorageFolder
       .getInstance()
       .findOne({ name: nestedPaths[i], container });
-    if (parent) {
+    if (!parent) {
+      continue;
+    }
+    if (await hasManagedRelations(grpcSdk, `Folder:${parent._id}`)) {
       await assertCanEditFolder(grpcSdk, subject, parent);
       return;
     }
@@ -94,6 +112,7 @@ export async function findOrCreateFolders(
   if (!containerDoc) {
     throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
   }
+  await healUnmanagedContainer(grpcSdk, containerDoc, options?.scope);
 
   const createdFolders: _StorageFolder[] = [];
   const nestedPaths = getNestedPaths(folderPath);
@@ -123,8 +142,16 @@ export async function findOrCreateFolders(
         parentFolderId: previousFolder?._id,
         scope: options?.scope,
       });
-    } else if (isLast) {
-      options?.lastExistsHandler?.();
+    } else {
+      await healUnmanagedFolder(grpcSdk, folder, {
+        isFirst: i === 0,
+        containerId: containerDoc._id,
+        parentFolderId: previousFolder?._id,
+        scope: options?.scope,
+      });
+      if (isLast) {
+        options?.lastExistsHandler?.();
+      }
     }
     previousFolder = folder;
   }

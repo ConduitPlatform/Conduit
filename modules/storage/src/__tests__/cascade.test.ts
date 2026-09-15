@@ -104,6 +104,71 @@ describe('deleteFolderTree', () => {
       container: 'conduit',
     });
   });
+
+  it('succeeds when deleteAllRelations reports no relations found', async () => {
+    ConfigController.getInstance().config = {
+      authorization: { enabled: true },
+      defaultContainer: 'conduit',
+    };
+    _StorageFolder.getInstance = (() => ({
+      findMany: async () => [{ _id: 'dir1' }],
+      deleteMany: async () => undefined,
+    })) as unknown as typeof _StorageFolder.getInstance;
+    File.getInstance = (() => ({
+      findMany: async () => [{ _id: 'file1' }],
+      deleteMany: async () => undefined,
+    })) as unknown as typeof File.getInstance;
+
+    const grpcSdk = {
+      authorization: {
+        deleteAllRelations: async () => {
+          throw new Error('No relations found');
+        },
+      },
+    } as unknown as ConduitGrpcSdk;
+    const storage = {
+      container: () => ({
+        deleteFolder: async () => true,
+      }),
+    };
+
+    await deleteFolderTree(
+      grpcSdk,
+      storage as never,
+      { _id: 'dir1', name: 'docs/', container: 'conduit' } as never,
+    );
+  });
+});
+
+describe('authz disabled cascade', () => {
+  it('does not call deleteAllRelations when authorization is off', async () => {
+    ConfigController.getInstance().config = {
+      authorization: { enabled: false },
+      defaultContainer: 'conduit',
+    };
+    let relationDeletes = 0;
+    _StorageFolder.getInstance = (() => ({
+      findMany: async () => [{ _id: 'dir1' }],
+      deleteMany: async () => undefined,
+    })) as unknown as typeof _StorageFolder.getInstance;
+    File.getInstance = (() => ({
+      findMany: async () => [{ _id: 'file1' }],
+      deleteMany: async () => undefined,
+    })) as unknown as typeof File.getInstance;
+    const grpcSdk = {
+      authorization: {
+        deleteAllRelations: async () => {
+          relationDeletes += 1;
+        },
+      },
+    } as unknown as ConduitGrpcSdk;
+    await deleteFolderTree(
+      grpcSdk,
+      { container: () => ({ deleteFolder: async () => true }) } as never,
+      { _id: 'dir1', name: 'docs/', container: 'conduit' } as never,
+    );
+    assert.equal(relationDeletes, 0);
+  });
 });
 
 describe('deleteContainerTree', () => {

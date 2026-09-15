@@ -197,7 +197,9 @@ export class AdminFileHandlers {
 
   async getFileUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     try {
-      const found = await File.getInstance().findOne({ _id: resolveFileId(call.request) });
+      const found = await File.getInstance().findOne({
+        _id: resolveFileId(call.request),
+      });
       if (isNil(found)) {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
@@ -269,9 +271,6 @@ export class AdminFileHandlers {
     isPublic?: boolean,
     scope?: string,
   ): Promise<void> {
-    if (folder === '/') {
-      return;
-    }
     await findOrCreateFolders(this.grpcSdk, this.storageProvider, folder, container, {
       isPublic,
       scope,
@@ -313,7 +312,7 @@ export class AdminFileHandlers {
       await this.findOrCreateContainer(newContainer);
     }
     const newFolder = isNil(folder) ? file.folder : normalizeFolderPath(folder);
-    if (newFolder !== file.folder && newFolder !== '/') {
+    if (newFolder !== file.folder) {
       await this.ensureAdminFolder(
         newFolder,
         newContainer,
