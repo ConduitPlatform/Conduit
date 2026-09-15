@@ -32,15 +32,16 @@ import {
 } from '../utils/index.js';
 import {
   assertUniqueIndexPrivilege,
-  declaredIndexMap,
+  bindDeclaredIndexesToLive,
   ensureIndexName,
+  findLiveIndex,
   isIndexAlreadyExistsError,
+  isIndexKeySpecsConflictError,
+  liveIndexFromMongo,
   mapCompatibleToMongo,
-  mergeDeclaredIndexes,
   mongoAllowsIndexType,
   normalizeIndexTypes,
-  persistDeclaredSchemaIndexes,
-  removeDeclaredIndexes,
+  overlayDeclaredOnLive,
   removeIndexFromSchemaFields,
   toMutableIndexes,
   validateIndexFields,
@@ -659,14 +660,20 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    const prepared = this.checkIndexes(
-      schemaName,
-      indexes,
-      callerModule,
-      options?.privileged,
+    const live = await this.listLiveIndexes(schemaName);
+    const prepared = bindDeclaredIndexesToLive(
+      this.checkIndexes(schemaName, indexes, callerModule, options?.privileged),
+      live,
     );
     const collection = this.mongoose.model(schemaName).collection;
+    const applied: ModelOptionsIndexes[] = [];
+    let failure: unknown;
     for (const index of prepared) {
+      const existing = findLiveIndex(live, index);
+      if (existing) {
+        applied.push(index);
+        continue;
+      }
       const spec: Record<string, MongoIndexType> = {};
       const types = normalizeIndexTypes(index.types, index.fields.length);
       for (let i = 0; i < index.fields.length; i++) {
@@ -676,20 +683,46 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       }
       try {
         await collection.createIndex(spec, index.options);
+        applied.push(index);
+        live.push(index);
       } catch (e) {
-        if (isIndexAlreadyExistsError(e)) continue;
-        throw new GrpcError(status.INTERNAL, (e as Error).message);
+        if (isIndexAlreadyExistsError(e)) {
+          applied.push(index);
+          continue;
+        }
+        if (isIndexKeySpecsConflictError(e)) {
+          const relisted = await this.listLiveIndexes(schemaName);
+          const match = findLiveIndex(relisted, index);
+          if (match) {
+            applied.push(bindDeclaredIndexesToLive([index], relisted)[0]);
+            live.splice(0, live.length, ...relisted);
+            continue;
+          }
+        }
+        failure = e;
+        break;
       }
     }
-    const original = this.models[schemaName].originalSchema;
-    const merged = mergeDeclaredIndexes(original.modelOptions.indexes, prepared);
-    await persistDeclaredSchemaIndexes({
-      declaredSchemaModel: this.models['_DeclaredSchema'],
-      schemaName,
-      originalSchema: original,
-      indexes: merged,
-    });
+    if (!failure || applied.length > 0) {
+      await this.persistIndexesAndPublish({
+        schemaName,
+        originalSchema: this.models[schemaName].originalSchema,
+        applied,
+      });
+    }
+    if (failure) {
+      throw new GrpcError(status.INTERNAL, (failure as Error).message);
+    }
     return 'Indexes created!';
+  }
+
+  private async listLiveIndexes(schemaName: string): Promise<ModelOptionsIndexes[]> {
+    try {
+      const result = await this.mongoose.model(schemaName).collection.indexes();
+      return result.map(liveIndexFromMongo);
+    } catch {
+      return [];
+    }
   }
 
   private async createMongooseFieldIndexes(schemaName: string): Promise<void> {
@@ -700,6 +733,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     const declaredIndexes = model.model.schema.indexes();
     if (!declaredIndexes.length) return;
 
+    const live = await this.listLiveIndexes(schemaName);
     const collection = this.mongoose.model(schemaName).collection;
     for (const [keys, rawOptions] of declaredIndexes) {
       const indexKeys = keys as IndexSpecification;
@@ -708,9 +742,20 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       const options = this.sanitizeMongooseIndexOptions(
         rawOptions as Record<string, unknown>,
       );
-      await collection.createIndex(indexKeys, options).catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      const declared = {
+        fields: Object.keys((indexKeys as Record<string, unknown>) ?? {}),
+        options: {
+          unique: options?.unique === true,
+          name: typeof options?.name === 'string' ? options.name : undefined,
+        },
+      };
+      if (findLiveIndex(live, declared)) continue;
+      try {
+        await collection.createIndex(indexKeys, options);
+      } catch (e) {
+        if (isIndexAlreadyExistsError(e) || isIndexKeySpecsConflictError(e)) continue;
+        throw new GrpcError(status.INTERNAL, (e as Error).message);
+      }
     }
   }
 
@@ -734,9 +779,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const collection = this.mongoose.model(schemaName).collection;
     const result = await collection.indexes();
-    const declaredByName = declaredIndexMap(
-      this.models[schemaName].originalSchema.modelOptions.indexes,
-    );
+    const declared = this.models[schemaName].originalSchema.modelOptions.indexes;
     return result.map(index => {
       const options: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(index)) {
@@ -750,19 +793,15 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         types.push(type as MongoIndexType);
       }
       const name = typeof options.name === 'string' ? options.name : index.name;
-      const declaredIndex = name ? declaredByName.get(name) : undefined;
-      const live: ModelOptionsIndexes = {
-        name,
-        fields,
-        types,
-        options: { ...options, name },
-      };
-      if (!declaredIndex) return live;
-      return {
-        ...live,
-        types: declaredIndex.types ?? live.types,
-        options: { ...declaredIndex.options, ...live.options, name },
-      };
+      return overlayDeclaredOnLive(
+        {
+          name,
+          fields,
+          types,
+          options: { ...options, name },
+        },
+        declared,
+      );
     });
   }
 
@@ -770,24 +809,31 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const collection = this.mongoose.model(schemaName).collection;
+    const dropped: string[] = [];
+    let failure: unknown;
     for (const name of indexNames) {
       try {
         await collection.dropIndex(name);
-      } catch {
-        throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
+        dropped.push(name);
+      } catch (e) {
+        failure = e;
+        break;
       }
     }
     const original = this.models[schemaName].originalSchema;
-    for (const name of indexNames) {
+    for (const name of dropped) {
       removeIndexFromSchemaFields(original, name);
     }
-    const remaining = removeDeclaredIndexes(original.modelOptions.indexes, indexNames);
-    await persistDeclaredSchemaIndexes({
-      declaredSchemaModel: this.models['_DeclaredSchema'],
-      schemaName,
-      originalSchema: original,
-      indexes: remaining,
-    });
+    if (!failure || dropped.length > 0) {
+      await this.persistIndexesAndPublish({
+        schemaName,
+        originalSchema: original,
+        droppedNames: dropped,
+      });
+    }
+    if (failure) {
+      throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
+    }
     return 'Indexes deleted';
   }
 
@@ -1047,6 +1093,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       schema,
       this,
     );
+    if (!isInstanceSync && schema.modelOptions.indexes?.length) {
+      const live = await this.listLiveIndexes(schema.name);
+      schema.modelOptions.indexes = bindDeclaredIndexesToLive(
+        schema.modelOptions.indexes,
+        live,
+      );
+    }
     if (saveToDb) {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
