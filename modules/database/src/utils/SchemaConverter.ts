@@ -38,6 +38,9 @@ export namespace SchemaConverter {
     authorization?: {
       enabled?: boolean;
     };
+    realtime?: {
+      enabled?: boolean;
+    };
     permissions?: {
       extendable?: boolean;
       canCreate?: boolean;
@@ -129,6 +132,9 @@ export namespace SchemaConverter {
         existing?.authorization?.enabled ??
         defaults.conduit!.authorization?.enabled ??
         false,
+    };
+    modelOptions.conduit.realtime = {
+      enabled: opts.realtime?.enabled ?? existing?.realtime?.enabled ?? false,
     };
     modelOptions.conduit.permissions = {
       extendable:

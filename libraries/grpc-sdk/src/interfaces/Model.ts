@@ -71,9 +71,7 @@ export interface ConduitArrayValidation {
 }
 
 export type ConduitValidationRules =
-  | ConduitStringValidation
-  | ConduitNumberValidation
-  | ConduitArrayValidation;
+  ConduitStringValidation | ConduitNumberValidation | ConduitArrayValidation;
 
 type BaseConduitModelField = {
   type?: TYPE | TYPE[] | ConduitModel | ArrayConduitModel[];
@@ -188,6 +186,9 @@ export interface ConduitSchemaOptions {
       canDelete: boolean;
     };
     authorization?: {
+      enabled: boolean;
+    };
+    realtime?: {
       enabled: boolean;
     };
     /** Mongoose read preference for this schema (ignored by SQL); per-query wins. */
