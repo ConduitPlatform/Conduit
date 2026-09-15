@@ -65,13 +65,27 @@ function stubModels(args: {
 function handlers(authz: {
   can?: (input: { actions: string[]; resource: string }) => Promise<{ allow: boolean }>;
   deleteAllRelations?: () => Promise<void>;
+  findRelation?: (input: { resource: string }) => Promise<{
+    relations: Array<{ relation: string }>;
+    count: number;
+  }>;
+  managed?: string[];
 }) {
+  const managed = new Set(authz.managed ?? []);
   const grpcSdk = {
     databaseProvider: {},
     authorization: {
       can: authz.can ?? (async () => ({ allow: true })),
       deleteAllRelations: authz.deleteAllRelations ?? (async () => undefined),
       createRelation: async () => undefined,
+      findRelation:
+        authz.findRelation ??
+        (async ({ resource }: { resource: string }) => {
+          const relations = managed.has(resource)
+            ? [{ relation: 'owner', resource }]
+            : [];
+          return { relations, count: relations.length };
+        }),
     },
   } as unknown as ConduitGrpcSdk;
   const storage = {
@@ -258,6 +272,146 @@ describe('scope and team', () => {
         error instanceof GrpcError &&
         error.code === status.PERMISSION_DENIED &&
         error.message === 'You are not allowed to create files in this scope',
+    );
+  });
+});
+
+describe('container create access', () => {
+  it('skips can(edit) on an unmanaged named container', async () => {
+    ConfigController.getInstance().config = {
+      authorization: { enabled: true },
+      defaultContainer: 'conduit',
+    };
+    stubModels({ containers: [{ _id: 'c2', name: 'photos' }] });
+    let canCalls = 0;
+    const fileHandlers = handlers({
+      can: async () => {
+        canCalls += 1;
+        return { allow: false };
+      },
+    });
+    await fileHandlers.fileAccessCheck(
+      'create',
+      request({
+        params: {},
+        context: { user: { _id: 'u1' } },
+      }).request,
+      undefined,
+      'photos',
+    );
+    assert.equal(canCalls, 0);
+  });
+
+  it('fails closed when findRelation throws for a named container', async () => {
+    ConfigController.getInstance().config = {
+      authorization: { enabled: true },
+      defaultContainer: 'conduit',
+    };
+    stubModels({ containers: [{ _id: 'c2', name: 'photos' }] });
+    const fileHandlers = handlers({
+      findRelation: async () => {
+        throw new Error('authorization down');
+      },
+    });
+    await assert.rejects(
+      () =>
+        fileHandlers.fileAccessCheck(
+          'create',
+          request({
+            params: {},
+            context: { user: { _id: 'u1' } },
+          }).request,
+          undefined,
+          'photos',
+        ),
+      (error: unknown) =>
+        error instanceof Error && error.message === 'authorization down',
+    );
+  });
+
+  it('keeps can(edit) on a managed named container', async () => {
+    ConfigController.getInstance().config = {
+      authorization: { enabled: true },
+      defaultContainer: 'conduit',
+    };
+    stubModels({ containers: [{ _id: 'c2', name: 'photos' }] });
+    const fileHandlers = handlers({
+      managed: ['Container:c2'],
+      can: async () => ({ allow: false }),
+    });
+    await assert.rejects(
+      () =>
+        fileHandlers.fileAccessCheck(
+          'create',
+          request({
+            params: {},
+            context: { user: { _id: 'u1' } },
+          }).request,
+          undefined,
+          'photos',
+        ),
+      (error: unknown) =>
+        error instanceof GrpcError &&
+        error.code === status.PERMISSION_DENIED &&
+        error.message === 'You are not allowed to create files in this container',
+    );
+  });
+});
+
+describe('old files are not backfilled', () => {
+  it('denies client edit/delete of a private file with no File relations', async () => {
+    ConfigController.getInstance().config = {
+      authorization: { enabled: true },
+      defaultContainer: 'conduit',
+    };
+    stubModels({
+      files: [
+        {
+          _id: 'legacy',
+          isPublic: false,
+          name: 'old.txt',
+          container: 'conduit',
+          folder: 'docs/',
+        },
+      ],
+    });
+    const fileHandlers = handlers({
+      can: async () => ({ allow: false }),
+    });
+    await assert.rejects(
+      () =>
+        fileHandlers.fileAccessCheck(
+          'edit',
+          request({ context: { user: { _id: 'u1' } } }).request,
+          { _id: 'legacy' } as never,
+        ),
+      (error: unknown) =>
+        error instanceof GrpcError && error.code === status.PERMISSION_DENIED,
+    );
+    await assert.rejects(
+      () =>
+        fileHandlers.fileAccessCheck(
+          'delete',
+          request({ context: { user: { _id: 'u1' } } }).request,
+          { _id: 'legacy' } as never,
+        ),
+      (error: unknown) =>
+        error instanceof GrpcError && error.code === status.PERMISSION_DENIED,
+    );
+  });
+
+  it('allows in-place edit when the file already has a User owner', async () => {
+    ConfigController.getInstance().config = {
+      authorization: { enabled: true },
+      defaultContainer: 'conduit',
+    };
+    const fileHandlers = handlers({
+      can: async input => ({ allow: input.resource === 'File:owned' }),
+    });
+    await fileHandlers.fileAccessCheck(
+      'edit',
+      request({ context: { user: { _id: 'u1' } } }).request,
+      { _id: 'owned' } as never,
     );
   });
 });

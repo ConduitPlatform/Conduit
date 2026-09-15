@@ -39,6 +39,7 @@ import {
 import {
   createFileRelations,
   deleteAllRelationsSafe,
+  hasManagedRelations,
   updateFileRelations,
 } from '../authz/relations.js';
 
@@ -101,16 +102,18 @@ export class FileHandlers {
         if (!containerDoc) {
           throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
         }
-        const allowed = await this.grpcSdk.authorization?.can({
-          subject: scope ?? `User:${userId}`,
-          actions: ['edit'],
-          resource: `Container:${containerDoc._id}`,
-        });
-        if (!allowed || !allowed.allow) {
-          throw new GrpcError(
-            status.PERMISSION_DENIED,
-            'You are not allowed to create files in this container',
-          );
+        if (await hasManagedRelations(this.grpcSdk, `Container:${containerDoc._id}`)) {
+          const allowed = await this.grpcSdk.authorization?.can({
+            subject: scope ?? `User:${userId}`,
+            actions: ['edit'],
+            resource: `Container:${containerDoc._id}`,
+          });
+          if (!allowed || !allowed.allow) {
+            throw new GrpcError(
+              status.PERMISSION_DENIED,
+              'You are not allowed to create files in this container',
+            );
+          }
         }
       }
       return;
@@ -369,17 +372,16 @@ export class FileHandlers {
     folder: string,
     isPublic?: boolean,
   ) {
-    if (folder === '/') {
-      return;
-    }
-    const userId = resolveUserId(call.request);
-    if (!userId) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'File access is not public');
-    }
-    await assertNoPersonalFolderSquat(folder, userId, container);
     const subject = actorSubject(call.request);
-    if (subject) {
-      await assertFolderEditAccess(this.grpcSdk, container, folder, subject);
+    if (folder !== '/') {
+      const userId = resolveUserId(call.request);
+      if (!userId) {
+        throw new GrpcError(status.PERMISSION_DENIED, 'File access is not public');
+      }
+      await assertNoPersonalFolderSquat(this.grpcSdk, folder, userId, container);
+      if (subject) {
+        await assertFolderEditAccess(this.grpcSdk, container, folder, subject);
+      }
     }
     await findOrCreateFolders(this.grpcSdk, this.storageProvider, folder, container, {
       isPublic,
@@ -396,7 +398,7 @@ export class FileHandlers {
       await this.fileAccessCheck('create', call.request, undefined, newContainer);
     }
     const newFolder = isNil(folder) ? file.folder : normalizeFolderPath(folder);
-    if (newFolder !== file.folder && newFolder !== '/') {
+    if (newFolder !== file.folder) {
       await this.prepareClientFolder(call, newContainer, newFolder, file.isPublic);
     }
     const isDataUpdate =

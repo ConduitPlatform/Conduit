@@ -9,6 +9,8 @@ import {
   RELATION_PAGE_SIZE,
 } from './helpers.js';
 
+const MANAGED_RELATIONS = new Set(['owner', 'editor', 'reader']);
+
 export async function createOwnerRelation(
   grpcSdk: ConduitGrpcSdk,
   subject: string | undefined,
@@ -22,6 +24,50 @@ export async function createOwnerRelation(
     relation: 'owner',
     resource,
   });
+}
+
+export async function hasManagedRelations(
+  grpcSdk: ConduitGrpcSdk,
+  resource: string,
+): Promise<boolean> {
+  if (!isAuthzEnabled()) {
+    return false;
+  }
+  const result = await grpcSdk.authorization!.findRelation({
+    resource,
+    skip: 0,
+    limit: 10,
+  });
+  const relations = result?.relations ?? [];
+  if (relations.some(relation => MANAGED_RELATIONS.has(relation.relation))) {
+    return true;
+  }
+  return (result?.count ?? 0) > 0 && relations.length === 0;
+}
+
+export async function healUnmanagedOwner(
+  grpcSdk: ConduitGrpcSdk,
+  subject: string | undefined,
+  resource: string,
+): Promise<void> {
+  if (!isAuthzEnabled() || !isUsableSubject(subject)) {
+    return;
+  }
+  if (await hasManagedRelations(grpcSdk, resource)) {
+    return;
+  }
+  await createOwnerRelation(grpcSdk, subject, resource);
+}
+
+export async function healUnmanagedContainer(
+  grpcSdk: ConduitGrpcSdk,
+  container: Pick<_StorageContainer, '_id' | 'name'>,
+  subject?: string,
+): Promise<void> {
+  if (isDefaultContainer(container.name)) {
+    return;
+  }
+  await healUnmanagedOwner(grpcSdk, subject, `Container:${container._id}`);
 }
 
 export async function deleteOwnerRelation(
@@ -82,13 +128,12 @@ export async function createFileRelations(
   }
   const structuralOwner = await resolveStructuralOwner(file);
   await createOwnerRelation(grpcSdk, structuralOwner, `File:${file._id}`);
-  if (isUsableSubject(options?.scope)) {
-    await createOwnerRelation(grpcSdk, options.scope, `File:${file._id}`);
-    return;
-  }
-  if (file.folder === '/' && options?.userId) {
-    await createOwnerRelation(grpcSdk, `User:${options.userId}`, `File:${file._id}`);
-  }
+  const actor = isUsableSubject(options?.scope)
+    ? options.scope
+    : options?.userId
+      ? `User:${options.userId}`
+      : undefined;
+  await createOwnerRelation(grpcSdk, actor, `File:${file._id}`);
 }
 
 export async function updateFileRelations(
@@ -103,10 +148,19 @@ export async function updateFileRelations(
   const samePlace =
     previous.container === updated.container && previous.folder === updated.folder;
   if (!samePlace) {
-    const oldOwner = await resolveStructuralOwner(previous);
+    let oldOwner: string | undefined;
+    try {
+      oldOwner = await resolveStructuralOwner(previous);
+    } catch (error) {
+      if (!(error instanceof GrpcError && error.code === status.NOT_FOUND)) {
+        throw error;
+      }
+    }
     const newOwner = await resolveStructuralOwner(updated);
-    if (oldOwner !== newOwner) {
+    if (oldOwner && oldOwner !== newOwner) {
       await deleteOwnerRelation(grpcSdk, oldOwner, `File:${updated._id}`);
+    }
+    if (!oldOwner || oldOwner !== newOwner) {
       await createOwnerRelation(grpcSdk, newOwner, `File:${updated._id}`);
     }
   }
@@ -138,6 +192,28 @@ export async function createFolderOwnerRelations(
     throw new GrpcError(status.INTERNAL, 'Parent folder is required for nested folders');
   }
   await createOwnerRelation(grpcSdk, `Folder:${options.parentFolderId}`, resource);
+}
+
+export async function healUnmanagedFolder(
+  grpcSdk: ConduitGrpcSdk,
+  folder: _StorageFolder,
+  options: {
+    isFirst: boolean;
+    containerId: string;
+    parentFolderId?: string;
+    scope?: string;
+  },
+): Promise<void> {
+  if (!isAuthzEnabled()) {
+    return;
+  }
+  if (await hasManagedRelations(grpcSdk, `Folder:${folder._id}`)) {
+    return;
+  }
+  await createFolderOwnerRelations(grpcSdk, folder, options);
+  if (!options.isFirst && isUsableSubject(options.scope)) {
+    await createOwnerRelation(grpcSdk, options.scope, `Folder:${folder._id}`);
+  }
 }
 
 export async function createContainerOwnerRelation(
