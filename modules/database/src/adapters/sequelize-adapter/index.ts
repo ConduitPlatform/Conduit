@@ -10,6 +10,10 @@ import {
   PostgresIndexType,
   RawSQLQuery,
   UntypedArray,
+  VectorCapabilities,
+  VectorIndexDefinition,
+  VectorSearchInput,
+  VectorSearchResult,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
@@ -29,6 +33,24 @@ import {
 import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter.js';
 import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter.js';
 import { isEqual, isNil } from 'lodash-es';
+import {
+  assertVectorSearchAccess,
+  bindVectorIndexToField,
+  completeVectorSearch,
+  declaredVectorIndexes,
+  fromPostgresVectorIndex,
+  mergeVectorIndexes,
+  pgVectorOperator,
+  planPostgresVectorIndexCreate,
+  planPostgresVectorSearch,
+  postgresIndexMethodSql,
+  postgresVectorCapabilities,
+  parsePostgresVectorIndexDef,
+  resolveVectorFieldFromSchema,
+  sqlFallbackVectorCapabilities,
+  assertPostgresVectorIndexDropTarget,
+  type PostgresCatalogIndex,
+} from '../utils/index.js';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -282,6 +304,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
     }
+    await this.applyDeclaredVectorIndexes(schema.name, isInstanceSync);
     return this.models[schema.name];
   }
 
@@ -422,6 +445,152 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     return 'Indexes deleted';
   }
 
+  async getVectorCapabilities(schemaName?: string): Promise<VectorCapabilities> {
+    if (this.sequelize.getDialect() !== 'postgres') {
+      return sqlFallbackVectorCapabilities(this.sequelize.getDialect());
+    }
+    try {
+      await this.sequelize.query("SELECT 'vector'::regtype");
+      return postgresVectorCapabilities({ pgvectorAvailable: true });
+    } catch (err) {
+      return postgresVectorCapabilities({
+        pgvectorAvailable: false,
+        error: (err as Error).message,
+        schemaName,
+      });
+    }
+  }
+
+  async createVectorIndex(
+    schemaName: string,
+    index: VectorIndexDefinition,
+  ): Promise<string> {
+    this.ensurePostgresVectorSupport(schemaName);
+    const schema = this.models[schemaName].originalSchema;
+    const field = (schema.compiledFields?.[index.field] ??
+      schema.fields?.[index.field]) as unknown;
+    const tableName = this.getPhysicalTableName(schemaName);
+    const bound = bindVectorIndexToField({
+      provider: 'postgres',
+      index,
+      field,
+      physicalTableName: tableName,
+    });
+    const existing = await this.findPostgresCatalogIndex(bound.name!);
+    const method = postgresIndexMethodSql(bound.method);
+    const operator = pgVectorOperator(bound.similarity);
+    const withOptions =
+      method === 'ivfflat'
+        ? this.renderWithOptions({ lists: bound.options?.ivfflat?.lists })
+        : this.renderWithOptions({
+            m: bound.options?.hnsw?.m,
+            ef_construction: bound.options?.hnsw?.efConstruction,
+          });
+    const plan = planPostgresVectorIndexCreate({
+      indexName: bound.name!,
+      tableName,
+      field: bound.field,
+      method,
+      operator,
+      withOptions,
+      existing,
+      quoteIdentifier: identifier => this.quoteIdentifier(identifier),
+    });
+    if (plan.action === 'reuse') return 'Vector index created!';
+    await this.sequelize.query(plan.sql);
+    return 'Vector index created!';
+  }
+
+  async getVectorIndexes(schemaName: string): Promise<VectorIndexDefinition[]> {
+    this.ensurePostgresVectorSupport(schemaName);
+    const tableName = this.getPhysicalTableName(schemaName);
+    const rows = await this.listPostgresCatalogIndexes(tableName);
+    const schema = this.models[schemaName]?.originalSchema;
+    const schemaFields = (schema?.compiledFields ?? schema?.fields) as
+      Record<string, unknown> | undefined;
+    const declared = declaredVectorIndexes(schema ?? {});
+    return rows
+      .filter(row => /USING (hnsw|ivfflat)/i.test(row.indexdef))
+      .map(row => {
+        const parsed = parsePostgresVectorIndexDef(row.indexdef);
+        const field = resolveVectorFieldFromSchema(schemaFields, parsed.field);
+        const matchingDeclared = declared.find(
+          item => item.name === row.indexname || item.field === parsed.field,
+        );
+        return fromPostgresVectorIndex(
+          row.indexname,
+          row.indexdef,
+          field,
+          matchingDeclared,
+        );
+      });
+  }
+
+  async deleteVectorIndex(schemaName: string, indexName: string): Promise<string> {
+    this.ensurePostgresVectorSupport(schemaName);
+    const tableName = this.getPhysicalTableName(schemaName);
+    const existing = await this.findPostgresCatalogIndex(indexName);
+    assertPostgresVectorIndexDropTarget({
+      indexName,
+      tableName,
+      existing,
+    });
+    await this.sequelize.query(`DROP INDEX ${this.quoteIdentifier(indexName)}`);
+    return 'Vector index deleted';
+  }
+
+  async vectorSearch(request: VectorSearchInput): Promise<VectorSearchResult[]> {
+    this.ensurePostgresVectorSupport(request.schemaName);
+    const schema = this.models[request.schemaName];
+    const schemaFields = (schema.originalSchema.compiledFields ??
+      schema.originalSchema.fields) as Record<string, unknown>;
+    const field = resolveVectorFieldFromSchema(schemaFields, request.field);
+    if (!field) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Requested field is not a vector');
+    }
+    if (request.vector.length !== field.dimensions) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `Vector dimensions mismatch: expected ${field.dimensions}`,
+      );
+    }
+    assertVectorSearchAccess({
+      authzEnabled: !!schema.authzEnabled,
+      userId: request.userId,
+      scope: request.scope,
+      adminOperator: request.adminOperator,
+    });
+    const liveIndexes = await this.getVectorIndexes(request.schemaName);
+    const planned = planPostgresVectorSearch({
+      request,
+      indexes: mergeVectorIndexes(
+        declaredVectorIndexes(schema.originalSchema),
+        liveIndexes,
+      ),
+      schemaFields,
+      tableName: this.getPhysicalTableName(request.schemaName),
+      similarity: field.similarity,
+      renderer: {
+        quoteIdentifier: identifier => this.quoteIdentifier(identifier),
+        escape: value => this.sequelize.escape(value as string | number),
+      },
+    });
+    return completeVectorSearch({
+      emptyResult: planned.emptyResult,
+      limit: planned.limits.limit,
+      authzEnabled: !!schema.authzEnabled,
+      adminOperator: request.adminOperator,
+      provider: 'postgres',
+      metric: field.similarity,
+      fetchCandidates: async () => {
+        const rows = await this.sequelize.query(planned.sql);
+        return (rows[0] as Indexable[]) ?? [];
+      },
+      lookupAuthorizedIds: ids =>
+        schema.lookupAuthorizedCandidateIds('read', ids, request.userId, request.scope),
+    });
+  }
+
   async execRawQuery(schemaName: string, rawQuery: RawSQLQuery) {
     return await this.sequelize
       .query(rawQuery.query, rawQuery.options)
@@ -463,6 +632,61 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   }
 
   protected abstract hasLegacyCollections(): Promise<boolean>;
+
+  private ensurePostgresVectorSupport(schemaName: string) {
+    if (this.sequelize.getDialect() !== 'postgres') {
+      throw new GrpcError(
+        status.UNIMPLEMENTED,
+        `${this.sequelize.getDialect()} does not support vector search`,
+      );
+    }
+    if (!this.models[schemaName]) {
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    }
+  }
+
+  private async listPostgresCatalogIndexes(
+    tableName?: string,
+  ): Promise<PostgresCatalogIndex[]> {
+    const tableFilter = tableName
+      ? ` AND tablename = ${this.sequelize.escape(tableName)}`
+      : '';
+    const rows = await this.sequelize.query(
+      `SELECT indexname, tablename, indexdef FROM pg_indexes WHERE schemaname = current_schema()${tableFilter}`,
+    );
+    return ((rows[0] as PostgresCatalogIndex[]) ?? []).map(row => ({
+      indexname: row.indexname,
+      tablename: row.tablename,
+      indexdef: row.indexdef,
+    }));
+  }
+
+  private async findPostgresCatalogIndex(
+    indexName: string,
+  ): Promise<PostgresCatalogIndex | undefined> {
+    const rows = await this.sequelize.query(
+      `SELECT indexname, tablename, indexdef FROM pg_indexes WHERE schemaname = current_schema() AND indexname = ${this.sequelize.escape(
+        indexName,
+      )}`,
+    );
+    return ((rows[0] as PostgresCatalogIndex[]) ?? [])[0];
+  }
+
+  private getPhysicalTableName(schemaName: string) {
+    return this.models[schemaName].originalSchema.collectionName || `cnd_${schemaName}`;
+  }
+
+  private quoteIdentifier(identifier: string) {
+    return `"${identifier.replace(/"/g, '""')}"`;
+  }
+
+  private renderWithOptions(options: Record<string, number | undefined>) {
+    const entries = Object.entries(options).filter((entry): entry is [string, number] =>
+      Number.isFinite(entry[1]),
+    );
+    if (!entries.length) return '';
+    return ` WITH (${entries.map(([key, value]) => `${key} = ${value}`).join(', ')})`;
+  }
 
   private checkAndConvertIndexes(
     schemaName: string,

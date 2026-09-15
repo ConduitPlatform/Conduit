@@ -39,5 +39,8 @@ scrape_configs:
           module: 'Communications'
         targets: ['conduit-communications:9096']
       - labels:
+          module: 'Embeddings'
+        targets: ['conduit-embeddings:9192']
+      - labels:
           module: 'Storage'
         targets: ['conduit-storage:9190']

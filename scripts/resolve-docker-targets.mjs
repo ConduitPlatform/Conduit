@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { appendFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const SHARED_BUILD_PATHS = [
   'Dockerfile',
@@ -99,6 +101,19 @@ const IMAGE_TARGETS = [
     ],
   },
   {
+    target: 'embeddings',
+    image: 'embeddings',
+    name: 'Build embeddings',
+    buildingService: 'modules/embeddings',
+    isBundle: true,
+    paths: [
+      'modules/embeddings/**',
+      ...SERVICE_BUNDLE_PATHS,
+      ...LIBRARY_BUILD_PATHS,
+      ...SHARED_BUILD_PATHS,
+    ],
+  },
+  {
     target: 'functions',
     image: 'functions',
     name: 'Build functions',
@@ -157,6 +172,9 @@ const IMAGE_TARGETS = [
       ...SERVICE_BUNDLE_PATHS,
       ...SHARED_BUILD_PATHS,
     ],
+    // Embeddings is intentionally omitted from standalone v1. Keep other
+    // module path matches so chat/storage/etc. still rebuild standalone.
+    excludePaths: ['modules/embeddings/**'],
   },
 ];
 
@@ -178,6 +196,13 @@ function matchesAnyPath(file, patterns) {
   return patterns.some((pattern) => globMatch(file, pattern));
 }
 
+function matchesTarget(file, entry) {
+  if (Array.isArray(entry.excludePaths) && matchesAnyPath(file, entry.excludePaths)) {
+    return false;
+  }
+  return matchesAnyPath(file, entry.paths);
+}
+
 function parseChangedFiles() {
   const raw = process.env.CHANGED_FILES ?? '';
   if (!raw.trim()) {
@@ -193,46 +218,72 @@ function shouldBuildAll() {
   return process.env.FORCE_ALL === 'true';
 }
 
-function resolveTargets() {
-  if (shouldBuildAll()) {
+function resolveTargets({ changedFiles, forceAll } = {}) {
+  if (forceAll ?? shouldBuildAll()) {
     return IMAGE_TARGETS;
   }
 
-  const changed = parseChangedFiles();
+  const changed = changedFiles ?? parseChangedFiles();
   if (changed.length === 0) {
     return IMAGE_TARGETS;
   }
 
-  const selected = IMAGE_TARGETS.filter((entry) =>
-    changed.some((file) => matchesAnyPath(file, entry.paths)),
+  return IMAGE_TARGETS.filter((entry) =>
+    changed.some((file) => matchesTarget(file, entry)),
   );
-
-  return selected;
 }
 
 function writeOutput(matrix, channel) {
   const payload = JSON.stringify({ include: matrix });
+  const result = {
+    matrix: payload,
+    channel,
+    has_targets: matrix.length > 0,
+  };
+  console.log(JSON.stringify(result, null, 2));
   const outputFile = process.env.GITHUB_OUTPUT;
-  if (outputFile) {
-    appendFileSync(outputFile, `matrix=${payload}\n`, 'utf8');
-    appendFileSync(outputFile, `channel=${channel}\n`, 'utf8');
-    appendFileSync(outputFile, `has_targets=${matrix.length > 0}\n`, 'utf8');
-  } else {
-    console.log(JSON.stringify({ matrix: payload, channel, has_targets: matrix.length > 0 }, null, 2));
+  if (!outputFile) {
+    return;
+  }
+  appendFileSync(outputFile, `matrix=${payload}\n`, 'utf8');
+  appendFileSync(outputFile, `channel=${channel}\n`, 'utf8');
+  appendFileSync(outputFile, `has_targets=${matrix.length > 0}\n`, 'utf8');
+}
+
+function isMainModule() {
+  const entry = process.argv[1];
+  if (!entry) {
+    return false;
+  }
+  try {
+    return import.meta.url === pathToFileURL(resolve(entry)).href;
+  } catch {
+    return false;
   }
 }
 
-const channel =
-  process.env.GITHUB_EVENT_NAME === 'release' ? 'release' : 'dev';
+if (isMainModule()) {
+  const channel =
+    process.env.GITHUB_EVENT_NAME === 'release' ? 'release' : 'dev';
 
-const matrix = resolveTargets().map(
-  ({ target, image, name, buildingService, isBundle }) => ({
-    target,
-    image,
-    name,
-    building_service: buildingService,
-    is_bundle: isBundle === true,
-  }),
-);
+  const matrix = resolveTargets().map(
+    ({ target, image, name, buildingService, isBundle }) => ({
+      target,
+      image,
+      name,
+      building_service: buildingService,
+      is_bundle: isBundle === true,
+    }),
+  );
 
-writeOutput(matrix, channel);
+  writeOutput(matrix, channel);
+}
+
+export {
+  IMAGE_TARGETS,
+  globMatch,
+  matchesAnyPath,
+  matchesTarget,
+  parseChangedFiles,
+  resolveTargets,
+};

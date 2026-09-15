@@ -6,12 +6,16 @@ import {
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
+  VectorIndexDefinition,
+  VectorSimilarity,
+  defaultVectorIndexMethod,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin/index.js';
 import { SchemaAdmin } from './admin/schema.admin.js';
 import { CustomEndpointsAdmin } from './admin/customEndpoints/customEndpoints.admin.js';
 import { DatabaseRoutes } from './routes/index.js';
 import * as models from './models/index.js';
+import { DATABASE_SYSTEM_SCHEMAS } from './models/systemSchemas.js';
 import {
   ColumnExistenceRequest,
   ColumnExistenceResponse,
@@ -31,6 +35,14 @@ import {
   Schema as SchemaDto,
   UpdateManyRequest,
   UpdateRequest,
+  DeleteVectorIndexRequest,
+  VectorCapabilitiesRequest,
+  VectorCapabilitiesResponse,
+  VectorIndex,
+  VectorIndexListRequest,
+  VectorIndexListResponse,
+  VectorIndexRequest,
+  VectorSearchRequest,
 } from './protoTypes/database.js';
 import {
   CreateSchemaExtensionRequest,
@@ -42,7 +54,13 @@ import { MongooseAdapter } from './adapters/mongoose-adapter/index.js';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema.js';
 import { ConduitDatabaseSchema, IView, Schema } from './interfaces/index.js';
-import { canCreate, canDelete, canModify } from './permissions/index.js';
+import {
+  canCreate,
+  canDelete,
+  canModify,
+  vectorIndexDeleteMutationData,
+  vectorIndexMutationData,
+} from './permissions/index.js';
 import { runMigrations } from './migrations/index.js';
 import { SchemaController } from './controllers/cms/schema.controller.js';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller.js';
@@ -61,6 +79,19 @@ import {
   type ImportResult,
 } from '@conduitplatform/module-tools';
 import { QueueController } from './controllers/queue.controller.js';
+import {
+  buildMutationEventChunks,
+  collectBoundedMutationIds,
+  mutationEventChannel,
+  shouldPublishMutationEvent,
+  grpcStatusFromError,
+  callerModuleName,
+  resolveAdminOperatorContext,
+  assertVectorSearchAccess,
+  assertEmbeddingsJobCaller,
+  assertEmbeddingsJobRead,
+  assertEmbeddingsJobWrite,
+} from './adapters/utils/index.js';
 import AppConfigSchema, { Config } from './config/index.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
@@ -97,6 +128,11 @@ export default class DatabaseModule extends ManagedModule<Config> {
       migrate: this.migrate.bind(this),
       getDatabaseType: this.getDatabaseType.bind(this),
       generateId: this.generateId.bind(this),
+      getVectorCapabilities: this.getVectorCapabilities.bind(this),
+      createVectorIndex: this.createVectorIndex.bind(this),
+      getVectorIndexes: this.getVectorIndexes.bind(this),
+      deleteVectorIndex: this.deleteVectorIndex.bind(this),
+      vectorSearch: this.vectorSearch.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -131,10 +167,11 @@ export default class DatabaseModule extends ManagedModule<Config> {
     const isReplica = this.grpcSdk.isAvailable('database');
     await this._activeAdapter.registerSystemSchema(models.DeclaredSchema, isReplica);
     await this._activeAdapter.registerSystemSchema(models.MigratedSchemas, isReplica);
-    let modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      if (['_DeclaredSchema', 'MigratedSchemas'].includes(model.name)) return [];
-      return this._activeAdapter.registerSystemSchema(model, isReplica);
-    });
+    let modelPromises = DATABASE_SYSTEM_SCHEMAS.filter(
+      model =>
+        model.name !== models.DeclaredSchema.name &&
+        model.name !== models.MigratedSchemas.name,
+    ).map(model => this._activeAdapter.registerSystemSchema(model, isReplica));
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
@@ -142,7 +179,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
     if (!isReplica) {
       await runMigrations(this._activeAdapter);
     }
-    modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
+    modelPromises = DATABASE_SYSTEM_SCHEMAS.map(model => {
       return this._activeAdapter.registerSystemSchema(model, isReplica).then(() => {
         if (this._activeAdapter.getDatabaseType() !== 'MongoDB' && !isReplica) {
           return this._activeAdapter.syncSchema(model.name);
@@ -490,6 +527,15 @@ export default class DatabaseModule extends ManagedModule<Config> {
   ) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      if (call.request.embeddingsJob) {
+        assertEmbeddingsJobCaller(callerModuleName(call.metadata));
+        assertEmbeddingsJobRead({
+          query: call.request.query,
+          select: call.request.select,
+          allowedFields: call.request.embeddingsAllowedFields,
+          schema: schemaAdapter.model.originalSchema as ConduitDatabaseSchema,
+        });
+      }
       const doc = await schemaAdapter.model.findOne(call.request.query, {
         select: call.request.select,
         populate: call.request.populate,
@@ -499,10 +545,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcStatusFromError(err));
     }
   }
 
@@ -561,7 +604,10 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       const docString = JSON.stringify(doc);
 
-      this.grpcSdk.bus?.publish(`${this.name}:create:${schemaName}`, docString);
+      this.grpcSdk.bus?.publish(
+        mutationEventChannel(this.name, 'create', schemaName),
+        docString,
+      );
 
       callback(null, { result: docString });
     } catch (err) {
@@ -593,7 +639,10 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       const docsString = JSON.stringify(docs);
 
-      this.grpcSdk.bus?.publish(`${this.name}:createMany:${schemaName}`, docsString);
+      this.grpcSdk.bus?.publish(
+        mutationEventChannel(this.name, 'createMany', schemaName),
+        docsString,
+      );
 
       callback(null, { result: docsString });
     } catch (err) {
@@ -608,13 +657,19 @@ export default class DatabaseModule extends ManagedModule<Config> {
     call: GrpcRequest<UpdateRequest>,
     callback: GrpcResponse<QueryResponse>,
   ) {
-    const moduleName = call.metadata!.get('module-name')![0] as string;
+    const moduleName = callerModuleName(call.metadata);
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (
+      if (call.request.embeddingsJob) {
+        assertEmbeddingsJobCaller(moduleName);
+        assertEmbeddingsJobWrite({
+          document: call.request.query,
+          schema: schemaAdapter.model.originalSchema as ConduitDatabaseSchema,
+        });
+      } else if (
         !(await canModify(
-          moduleName,
+          moduleName ?? '',
           schemaAdapter.model,
           JSON.parse(call.request.query),
         ))
@@ -636,14 +691,16 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
+      if (shouldPublishMutationEvent(call.request.suppressEvent)) {
+        this.grpcSdk.bus?.publish(
+          mutationEventChannel(this.name, 'update', schemaName),
+          resultString,
+        );
+      }
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcStatusFromError(err));
     }
   }
 
@@ -673,7 +730,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
+      if (shouldPublishMutationEvent(call.request.suppressEvent)) {
+        this.grpcSdk.bus?.publish(
+          mutationEventChannel(this.name, 'update', schemaName),
+          resultString,
+        );
+      }
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -710,7 +772,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
+      if (shouldPublishMutationEvent(call.request.suppressEvent)) {
+        this.grpcSdk.bus?.publish(
+          mutationEventChannel(this.name, 'update', schemaName),
+          resultString,
+        );
+      }
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -753,7 +820,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:updateMany:${schemaName}`, resultString);
+      if (shouldPublishMutationEvent(call.request.suppressEvent)) {
+        this.grpcSdk.bus?.publish(
+          mutationEventChannel(this.name, 'update', schemaName),
+          resultString,
+        );
+      }
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -785,6 +857,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
         });
       }
 
+      const ids = shouldPublishMutationEvent(call.request.suppressEvent)
+        ? await this.collectMutationIds(schemaAdapter.model, call.request.filterQuery, {
+            userId: call.request.userId,
+            scope: call.request.scope,
+          })
+        : [];
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
@@ -796,14 +874,18 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:updateMany:${schemaName}`, resultString);
+      if (shouldPublishMutationEvent(call.request.suppressEvent)) {
+        for (const payload of buildMutationEventChunks(ids)) {
+          this.grpcSdk.bus?.publish(
+            mutationEventChannel(this.name, 'updateMany', schemaName),
+            payload,
+          );
+        }
+      }
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcStatusFromError(err));
     }
   }
 
@@ -828,7 +910,10 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:delete:${schemaName}`, resultString);
+      this.grpcSdk.bus?.publish(
+        mutationEventChannel(this.name, 'delete', schemaName),
+        resultString,
+      );
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -860,7 +945,10 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${this.name}:delete:${schemaName}`, resultString);
+      this.grpcSdk.bus?.publish(
+        mutationEventChannel(this.name, 'delete', schemaName),
+        resultString,
+      );
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -943,6 +1031,147 @@ export default class DatabaseModule extends ManagedModule<Config> {
     callback(null, { result: exist });
   }
 
+  async getVectorCapabilities(
+    call: GrpcRequest<VectorCapabilitiesRequest>,
+    callback: GrpcResponse<VectorCapabilitiesResponse>,
+  ) {
+    try {
+      const result = await this._activeAdapter.getVectorCapabilities(
+        call.request.schemaName,
+      );
+      callback(null, result);
+    } catch (err) {
+      callback({ code: status.INTERNAL, message: (err as Error).message });
+    }
+  }
+
+  async createVectorIndex(
+    call: GrpcRequest<VectorIndexRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    try {
+      if (!call.request.index) {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Vector index definition is required',
+        });
+      }
+      const moduleName = call.metadata!.get('module-name')![0] as string;
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const index = this.parseVectorIndex(call.request.index);
+      if (
+        !(await canModify(
+          moduleName,
+          schemaAdapter.model,
+          vectorIndexMutationData(index.field),
+        ))
+      ) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to create vector indexes for ${call.request.schemaName}!`,
+        });
+      }
+      const result = await this._activeAdapter.createVectorIndex(
+        call.request.schemaName,
+        index,
+      );
+      callback(null, { result: JSON.stringify(result) });
+    } catch (err) {
+      callback(grpcStatusFromError(err));
+    }
+  }
+
+  async getVectorIndexes(
+    call: GrpcRequest<VectorIndexListRequest>,
+    callback: GrpcResponse<VectorIndexListResponse>,
+  ) {
+    try {
+      const indexes = await this._activeAdapter.getVectorIndexes(call.request.schemaName);
+      callback(null, {
+        indexes: indexes.map(index => ({
+          field: index.field,
+          dimensions: index.dimensions,
+          similarity: index.similarity,
+          name: index.name,
+          method: defaultVectorIndexMethod(index.method),
+          filterFields: [...(index.filterFields ?? [])],
+          options: index.options ? JSON.stringify(index.options) : undefined,
+          status: index.status,
+          queryable: index.queryable,
+        })),
+      });
+    } catch (err) {
+      callback(grpcStatusFromError(err));
+    }
+  }
+
+  async deleteVectorIndex(
+    call: GrpcRequest<DeleteVectorIndexRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    try {
+      const moduleName = call.metadata!.get('module-name')![0] as string;
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const liveIndexes = await this._activeAdapter.getVectorIndexes(
+        call.request.schemaName,
+      );
+      if (
+        !(await canModify(
+          moduleName,
+          schemaAdapter.model,
+          vectorIndexDeleteMutationData(liveIndexes, call.request.indexName),
+        ))
+      ) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to delete vector indexes for ${call.request.schemaName}!`,
+        });
+      }
+      const result = await this._activeAdapter.deleteVectorIndex(
+        call.request.schemaName,
+        call.request.indexName,
+      );
+      callback(null, { result: JSON.stringify(result) });
+    } catch (err) {
+      callback(grpcStatusFromError(err));
+    }
+  }
+
+  async vectorSearch(
+    call: GrpcRequest<VectorSearchRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const adminOperator = resolveAdminOperatorContext({
+        requested: call.request.adminOperator,
+        callerModule: callerModuleName(call.metadata),
+      });
+      assertVectorSearchAccess({
+        authzEnabled: !!schemaAdapter.model.authzEnabled,
+        userId: call.request.userId,
+        scope: call.request.scope,
+        adminOperator,
+      });
+      const result = await this._activeAdapter.vectorSearch({
+        schemaName: call.request.schemaName,
+        field: call.request.field,
+        vector: call.request.vector,
+        indexName: call.request.indexName,
+        filter: call.request.filter ? JSON.parse(call.request.filter) : undefined,
+        limit: call.request.limit,
+        numCandidates: call.request.numCandidates,
+        select: call.request.select,
+        userId: call.request.userId,
+        scope: call.request.scope,
+        adminOperator,
+      });
+      callback(null, { result: JSON.stringify(result) });
+    } catch (err) {
+      callback(grpcStatusFromError(err));
+    }
+  }
+
   async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<Empty>) {
     if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
       const schemaName = call.request.schemaName;
@@ -975,6 +1204,18 @@ export default class DatabaseModule extends ManagedModule<Config> {
   ) {
     const result = this._activeAdapter.generateId();
     callback(null, { result });
+  }
+
+  private parseVectorIndex(index: VectorIndex): VectorIndexDefinition {
+    return {
+      field: index.field,
+      dimensions: index.dimensions,
+      similarity: index.similarity as VectorSimilarity,
+      name: index.name,
+      method: defaultVectorIndexMethod(index.method),
+      filterFields: index.filterFields,
+      options: index.options ? JSON.parse(index.options) : undefined,
+    };
   }
 
   private registerInstanceSyncEvents() {
@@ -1045,5 +1286,23 @@ export default class DatabaseModule extends ManagedModule<Config> {
         boundFunctionRef,
       );
     }
+  }
+
+  private async collectMutationIds(
+    model: MongooseSchema | SequelizeSchema,
+    filterQuery: string,
+    options: { userId?: string; scope?: string },
+  ): Promise<string[]> {
+    return collectBoundedMutationIds({
+      findPage: (skip, limit) =>
+        model.findMany(filterQuery, {
+          select: '_id',
+          skip,
+          limit,
+          sort: { _id: 1 },
+          userId: options.userId,
+          scope: options.scope,
+        }),
+    });
   }
 }

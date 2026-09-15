@@ -11,9 +11,14 @@
 #    Otherwise, simply update the env values with any available port.
 # 3. Specify at least '--profile mongodb' or '--profile postgres'
 #    If you're going to use PostgreSQL, swap out 'DB_CONN_URI' in the '.env' file
+# 4. Embeddings is opt-in and disabled by default. Enabling the profile requires
+#    exporting a non-empty GRPC_KEY (production images refuse to start without it).
+#    The embeddings image tag is not published until a compatible release exists.
 #
 # Examples:
 # docker compose --profile mongodb up
+# export GRPC_KEY='replace-with-a-non-empty-key'
+# docker compose --profile mongodb --profile embeddings up
 # ----------------------------------------------------------------------------------------------
 
 version: '3.9'
@@ -223,6 +228,32 @@ services:
       default:
         aliases:
           - conduit-communications
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  embeddings:
+    container_name: 'conduit-embeddings'
+    image: 'docker.io/conduitplatform/embeddings:${IMAGE_TAG}'
+    restart: unless-stopped
+    profiles: ['embeddings']
+    depends_on:
+      - core
+      - database
+      - prometheus
+      - loki
+    ports:
+      - '${EMBEDDINGS_GRPC_PORT:-55165}:${EMBEDDINGS_GRPC_PORT:-55165}'
+    environment:
+      CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
+      SERVICE_URL: 'conduit-embeddings:${EMBEDDINGS_GRPC_PORT:-55165}'
+      GRPC_PORT: '${EMBEDDINGS_GRPC_PORT:-55165}'
+      METRICS_PORT: '9192'
+      LOKI_URL: 'http://conduit-loki:3100'
+      GRPC_KEY: '${GRPC_KEY}'
+    networks:
+      default:
+        aliases:
+          - conduit-embeddings
     extra_hosts:
       - host.docker.internal:host-gateway
 

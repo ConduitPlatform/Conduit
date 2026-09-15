@@ -28,6 +28,8 @@ RUN pnpm install --frozen-lockfile --ignore-scripts && \
 
 # Compile first, then bundle. Router/authentication turbo branches must not skip
 # build:bundle or COPY --from=conduit-base .../bundle fails in image CI.
+# Standalone v1 (empty BUILDING_SERVICE) bundles core + database/router/authentication/
+# authorization/communications/storage/chat only. Embeddings is a separate image.
 RUN pnpm --filter @conduitplatform/service-bundle run build && \
     if [ -z "$BUILDING_SERVICE" ] ; then npx turbo run build ; \
     elif [ "$BUILDING_SERVICE" = "conduit" ] ; then npx turbo run build --filter=@conduitplatform/core --filter=@conduitplatform/hermes \

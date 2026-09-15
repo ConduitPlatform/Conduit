@@ -14,6 +14,13 @@ import { Query } from '../../types/db.js';
 import type { FindOneOptions, FindManyOptions } from './types.js';
 export type { FindOneOptions, FindManyOptions } from './types.js';
 import { AuthzOptions, PopulateAuthzOptions } from '../../types/options.js';
+import type {
+  VectorCapabilities,
+  VectorIndexDefinition,
+  VectorSearchInput,
+  VectorSearchResult,
+} from '../../interfaces/Model.js';
+import { defaultVectorIndexMethod } from '../../interfaces/Model.js';
 
 export type CountDocumentsOptions = AuthzOptions & { readPreference?: string };
 
@@ -187,8 +194,11 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       id,
       query: this.processQuery(document),
-      ...o,
+      userId: o.userId,
+      scope: o.scope,
       populate: populateArray,
+      suppressEvent: o.suppressEvent,
+      embeddingsJob: o.embeddingsJob,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -206,8 +216,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       id,
       query: this.processQuery(document),
-      ...o,
+      userId: o.userId,
+      scope: o.scope,
       populate: populateArray,
+      suppressEvent: o.suppressEvent,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -225,8 +237,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
-      ...o,
+      userId: o.userId,
+      scope: o.scope,
       populate: populateArray,
+      suppressEvent: o.suppressEvent,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -244,8 +258,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
-      ...o,
+      userId: o.userId,
+      scope: o.scope,
       populate: populateArray,
+      suppressEvent: o.suppressEvent,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -263,8 +279,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
-      ...o,
+      userId: o.userId,
+      scope: o.scope,
       populate: populateArray,
+      suppressEvent: o.suppressEvent,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -317,6 +335,72 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     return this.client!.rawQuery({ schemaName, query: processed }).then(res => {
       return JSON.parse(res.result);
     });
+  }
+
+  getVectorCapabilities(schemaName?: string): Promise<VectorCapabilities> {
+    return this.client!.getVectorCapabilities({ schemaName }).then(res => ({
+      supported: res.supported,
+      storage: res.storage,
+      indexing: res.indexing,
+      search: res.search,
+      provider: res.provider as VectorCapabilities['provider'],
+      reason: res.reason,
+    }));
+  }
+
+  createVectorIndex(schemaName: string, index: VectorIndexDefinition): Promise<string> {
+    return this.client!.createVectorIndex({
+      schemaName,
+      index: {
+        field: index.field,
+        dimensions: index.dimensions,
+        similarity: index.similarity,
+        name: index.name,
+        method: defaultVectorIndexMethod(index.method),
+        filterFields: [...(index.filterFields ?? [])],
+        options: index.options ? JSON.stringify(index.options) : undefined,
+      },
+    }).then(res => JSON.parse(res.result));
+  }
+
+  getVectorIndexes(schemaName: string): Promise<VectorIndexDefinition[]> {
+    return this.client!.getVectorIndexes({ schemaName }).then(res =>
+      res.indexes.map(index => ({
+        field: index.field,
+        dimensions: index.dimensions,
+        similarity: index.similarity as VectorIndexDefinition['similarity'],
+        name: index.name,
+        method: defaultVectorIndexMethod(index.method),
+        filterFields: index.filterFields,
+        options: index.options ? JSON.parse(index.options) : undefined,
+        status: index.status as VectorIndexDefinition['status'],
+        queryable: index.queryable,
+      })),
+    );
+  }
+
+  deleteVectorIndex(schemaName: string, indexName: string): Promise<string> {
+    return this.client!.deleteVectorIndex({ schemaName, indexName }).then(res =>
+      JSON.parse(res.result),
+    );
+  }
+
+  vectorSearch<T = Indexable>(
+    request: VectorSearchInput,
+  ): Promise<VectorSearchResult<T>[]> {
+    return this.client!.vectorSearch({
+      schemaName: request.schemaName,
+      field: request.field,
+      vector: request.vector,
+      indexName: request.indexName,
+      filter: request.filter ? JSON.stringify(request.filter) : undefined,
+      limit: request.limit,
+      numCandidates: request.numCandidates,
+      select: request.select,
+      userId: request.userId,
+      scope: request.scope,
+      adminOperator: request.adminOperator,
+    }).then(res => JSON.parse(res.result));
   }
 
   createView(

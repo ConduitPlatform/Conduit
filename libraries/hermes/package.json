@@ -11,6 +11,7 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
+    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/classes/vectorParser.test.js dist-test/Rest/vectorOpenApi.test.js dist-test/GraphQl/vectorGraphQl.test.js dist-test/MCP/vectorMcp.test.js",
     "publish": "npm publish",
     "postbuild": "copyfiles -u 1 src/*.proto src/**/*.json ./dist/"
   },

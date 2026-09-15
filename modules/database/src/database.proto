@@ -45,6 +45,9 @@ message FindOneRequest {
   optional string userId = 5;
   optional string scope = 6;
   optional string readPreference = 7;
+  // When true, Database verifies the caller is embeddings and restricts the read.
+  optional bool embeddingsJob = 8;
+  repeated string embeddingsAllowedFields = 9;
 }
 
 message FindRequest {
@@ -123,6 +126,10 @@ message UpdateRequest {
   repeated string populate = 4;
   optional string userId = 5;
   optional string scope = 6;
+  // When true, skip bus publication. Existing callers omit this and keep publishing.
+  optional bool suppressEvent = 7;
+  // When true, Database verifies the caller is embeddings and restricts the write.
+  optional bool embeddingsJob = 8;
 }
 
 message UpdateManyRequest {
@@ -132,6 +139,8 @@ message UpdateManyRequest {
   repeated string populate = 4;
   optional string userId = 5;
   optional string scope = 6;
+  // When true, skip bus publication. Existing callers omit this and keep publishing.
+  optional bool suppressEvent = 7;
 }
 
 message DropCollectionRequest {
@@ -154,6 +163,64 @@ message ColumnExistenceResponse {
 
 message GetDatabaseTypeResponse {
   string result = 1;
+}
+
+message VectorCapabilitiesRequest {
+  optional string schemaName = 1;
+}
+
+message VectorCapabilitiesResponse {
+  bool supported = 1;
+  bool storage = 2;
+  bool indexing = 3;
+  bool search = 4;
+  string provider = 5;
+  optional string reason = 6;
+}
+
+message VectorIndex {
+  string field = 1;
+  int32 dimensions = 2;
+  string similarity = 3;
+  optional string name = 4;
+  optional string method = 5;
+  repeated string filterFields = 6;
+  optional string options = 7;
+  optional string status = 8;
+  optional bool queryable = 9;
+}
+
+message VectorIndexRequest {
+  string schemaName = 1;
+  VectorIndex index = 2;
+}
+
+message VectorIndexListRequest {
+  string schemaName = 1;
+}
+
+message VectorIndexListResponse {
+  repeated VectorIndex indexes = 1;
+}
+
+message DeleteVectorIndexRequest {
+  string schemaName = 1;
+  string indexName = 2;
+}
+
+message VectorSearchRequest {
+  string schemaName = 1;
+  string field = 2;
+  repeated double vector = 3;
+  optional string indexName = 4;
+  optional string filter = 5;
+  optional int32 limit = 6;
+  optional int32 numCandidates = 7;
+  optional string select = 8;
+  optional string userId = 9;
+  optional string scope = 10;
+  // Honored only when the verified caller is a platform operator module.
+  optional bool adminOperator = 11;
 }
 
 service DatabaseProvider {
@@ -182,4 +249,9 @@ service DatabaseProvider {
   rpc createView(CreateViewRequest) returns (google.protobuf.Empty);
   rpc deleteView(DeleteViewRequest) returns (google.protobuf.Empty);
   rpc columnExistence(ColumnExistenceRequest) returns (ColumnExistenceResponse);
+  rpc getVectorCapabilities(VectorCapabilitiesRequest) returns (VectorCapabilitiesResponse);
+  rpc createVectorIndex(VectorIndexRequest) returns (QueryResponse);
+  rpc getVectorIndexes(VectorIndexListRequest) returns (VectorIndexListResponse);
+  rpc deleteVectorIndex(DeleteVectorIndexRequest) returns (QueryResponse);
+  rpc vectorSearch(VectorSearchRequest) returns (QueryResponse);
 }

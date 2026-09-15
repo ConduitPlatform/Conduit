@@ -8,9 +8,15 @@ import {
   RawMongoQuery,
   RawSQLQuery,
   TYPE,
+  VectorCapabilities,
+  VectorIndexDefinition,
+  VectorSearchInput,
+  VectorSearchResult,
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import type { Config } from '../config/index.js';
+import { unsupportedVectorCapabilities } from './utils/vectorCapabilities.js';
+import { declaredVectorIndexes } from './utils/vectorSearchQuery.js';
 import {
   _ConduitSchema,
   ConduitDatabaseSchema,
@@ -21,7 +27,7 @@ import { stitchSchema, validateExtensionFields } from './utils/extensions.js';
 import { status } from '@grpc/grpc-js';
 import { isEqual, isNil } from 'lodash-es';
 import ObjectHash from 'object-hash';
-import * as systemModels from '../models/index.js';
+import { DATABASE_SYSTEM_SCHEMA_NAME_SET } from '../models/systemSchemas.js';
 
 export abstract class DatabaseAdapter<T extends Schema> {
   registeredSchemas: Map<string, ConduitDatabaseSchema>;
@@ -296,6 +302,56 @@ export abstract class DatabaseAdapter<T extends Schema> {
     rawQuery: RawMongoQuery | RawSQLQuery,
   ): Promise<any>;
 
+  getVectorCapabilities(schemaName?: string): Promise<VectorCapabilities> {
+    void schemaName;
+    return Promise.resolve(unsupportedVectorCapabilities(this.getDatabaseType()));
+  }
+
+  createVectorIndex(schemaName: string, index: VectorIndexDefinition): Promise<string> {
+    void schemaName;
+    void index;
+    throw new GrpcError(
+      status.UNIMPLEMENTED,
+      `${this.getDatabaseType()} does not support vector indexes`,
+    );
+  }
+
+  getVectorIndexes(schemaName: string): Promise<VectorIndexDefinition[]> {
+    void schemaName;
+    return Promise.resolve([]);
+  }
+
+  deleteVectorIndex(schemaName: string, indexName: string): Promise<string> {
+    void schemaName;
+    void indexName;
+    throw new GrpcError(
+      status.UNIMPLEMENTED,
+      `${this.getDatabaseType()} does not support vector indexes`,
+    );
+  }
+
+  protected async applyDeclaredVectorIndexes(
+    schemaName: string,
+    isInstanceSync: boolean,
+  ): Promise<void> {
+    if (isInstanceSync) return;
+    const declared = declaredVectorIndexes(this.models[schemaName]?.originalSchema ?? {});
+    if (!declared.length) return;
+    const capabilities = await this.getVectorCapabilities(schemaName);
+    if (!capabilities.indexing) return;
+    for (const index of declared) {
+      await this.createVectorIndex(schemaName, index);
+    }
+  }
+
+  vectorSearch(request: VectorSearchInput): Promise<VectorSearchResult[]> {
+    void request;
+    throw new GrpcError(
+      status.UNIMPLEMENTED,
+      `${this.getDatabaseType()} does not support vector search`,
+    );
+  }
+
   abstract syncSchema(name: string): Promise<void>;
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
@@ -405,14 +461,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
       { readPreference: 'primary' },
     );
     models = models
-      // do not recover system schemas as they have already been
-      .filter((model: _ConduitSchema) => {
-        let isSystemModel = false;
-        Object.values(systemModels).forEach((systemModel: ConduitSchema) => {
-          systemModel.name === model.name && (isSystemModel = true);
-        });
-        return !isSystemModel;
-      })
+      // do not recover system schemas; they are already registered
+      .filter((model: _ConduitSchema) => !DATABASE_SYSTEM_SCHEMA_NAME_SET.has(model.name))
       .map((model: _ConduitSchema) => {
         const schema = new ConduitSchema(
           model.name,
