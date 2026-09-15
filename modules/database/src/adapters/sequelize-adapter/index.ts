@@ -6,7 +6,6 @@ import {
   GrpcError,
   Indexable,
   ModelOptionsIndexes,
-  PostgresIndexOptions,
   PostgresIndexType,
   RawSQLQuery,
   UntypedArray,
@@ -29,6 +28,25 @@ import {
 import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter.js';
 import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter.js';
 import { isEqual, isNil } from 'lodash-es';
+import {
+  assertUniqueIndexPrivilege,
+  bindDeclaredIndexesToLive,
+  ensureIndexName,
+  findLiveIndex,
+  inferSqlIndexType,
+  isIndexAlreadyExistsError,
+  isIndexKeySpecsConflictError,
+  isPostgresIndexType,
+  liveIndexFromSql,
+  liveNameConflictAllowsReuse,
+  overlayDeclaredOnLive,
+  normalizeIndexTypes,
+  removeIndexFromSchemaFields,
+  sqlDialectAllowsIndexType,
+  sqlIndexFields,
+  toMutableIndexes,
+  validateIndexFields,
+} from '../utils/indexes.js';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -245,14 +263,26 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       this.sequelize.models,
     );
     const dialect = this.sequelize.getDialect();
+    const live = isInstanceSync
+      ? []
+      : await this.listLiveIndexesForCollection(this.getCollectionName(schema));
+    if (!isInstanceSync && schema.modelOptions.indexes?.length) {
+      schema.modelOptions.indexes = bindDeclaredIndexesToLive(
+        schema.modelOptions.indexes,
+        live,
+      );
+      compiledSchema.modelOptions.indexes = schema.modelOptions.indexes;
+    }
     const [newSchema, objectPaths, extractedRelations] =
       dialect === 'postgres'
         ? pgSchemaConverter(compiledSchema)
-        : sqlSchemaConverter(compiledSchema);
-    this.registeredSchemas.set(
-      schema.name,
-      Object.freeze(JSON.parse(JSON.stringify(schema))),
-    );
+        : sqlSchemaConverter(compiledSchema, dialect as 'mysql' | 'mariadb' | 'sqlite');
+    if (!isInstanceSync && newSchema.modelOptions.indexes?.length) {
+      newSchema.modelOptions.indexes = bindDeclaredIndexesToLive(
+        newSchema.modelOptions.indexes,
+        live,
+      );
+    }
     const relatedSchemas = await resolveRelatedSchemas(
       schema,
       extractedRelations,
@@ -268,19 +298,23 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       objectPaths,
     );
 
-    const noSync =
-      this.models[schema.name].originalSchema.modelOptions.conduit!.noSync ||
-      isInstanceSync;
-    // do not sync extracted schemas
-    if (isNil(noSync) || !noSync) {
-      await this.models[schema.name].sync();
-    } else {
-      this.models[schema.name].synced = true;
-    }
-    // do not store extracted schemas to db
-    if (saveToDb && !isInstanceSync) {
-      await this.compareAndStoreMigratedSchema(schema);
-      await this.saveSchemaToDatabase(schema);
+    try {
+      const noSync =
+        this.models[schema.name].originalSchema.modelOptions.conduit!.noSync ||
+        isInstanceSync;
+      // do not sync extracted schemas
+      if (isNil(noSync) || !noSync) {
+        await this.models[schema.name].sync();
+      } else {
+        this.models[schema.name].synced = true;
+      }
+      // do not store extracted schemas to db
+      if (saveToDb && !isInstanceSync) {
+        await this.compareAndStoreMigratedSchema(schema);
+        await this.saveSchemaToDatabase(schema);
+      }
+    } finally {
+      this.snapshotRegisteredSchema(schema);
     }
     return this.models[schema.name];
   }
@@ -356,68 +390,139 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
 
   async createIndexes(
     schemaName: string,
-    indexes: ModelOptionsIndexes[],
+    indexes: readonly ModelOptionsIndexes[],
     callerModule: string,
+    options?: { privileged?: boolean },
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    indexes = this.checkAndConvertIndexes(schemaName, indexes, callerModule);
+    const collectionName = this.models[schemaName].originalSchema.collectionName;
+    const live = await this.listLiveIndexesForCollection(collectionName);
+    const prepared = bindDeclaredIndexesToLive(
+      this.checkAndConvertIndexes(schemaName, indexes, callerModule, options?.privileged),
+      live,
+    );
     const queryInterface = this.sequelize.getQueryInterface();
-    for (const index of indexes) {
-      await queryInterface
-        .addIndex('cnd_' + schemaName, [...index.fields], index.options)
-        .catch(() => {
-          throw new GrpcError(status.INTERNAL, 'Unsuccessful index creation');
+    const applied: ModelOptionsIndexes[] = [];
+    let failure: unknown;
+    for (const index of prepared) {
+      const existing = findLiveIndex(live, index);
+      if (existing) {
+        applied.push(index);
+        continue;
+      }
+      try {
+        await queryInterface.addIndex(collectionName, {
+          fields: sqlIndexFields(index),
+          ...index.options,
         });
+        applied.push(index);
+        live.push(index);
+      } catch (e) {
+        if (isIndexAlreadyExistsError(e)) {
+          const relisted = await this.listLiveIndexesForCollection(collectionName);
+          if (liveNameConflictAllowsReuse(index, relisted)) {
+            applied.push(index);
+            live.splice(0, live.length, ...relisted);
+            continue;
+          }
+          failure = e;
+          break;
+        }
+        if (isIndexKeySpecsConflictError(e)) {
+          const relisted = await this.listLiveIndexesForCollection(collectionName);
+          const match = findLiveIndex(relisted, index);
+          if (match) {
+            applied.push(bindDeclaredIndexesToLive([index], relisted)[0]);
+            live.splice(0, live.length, ...relisted);
+            continue;
+          }
+        }
+        failure = e;
+        break;
+      }
     }
-    await this.models[schemaName].sync();
+    if (!failure || applied.length > 0) {
+      await this.persistIndexesAndPublish({
+        schemaName,
+        originalSchema: this.models[schemaName].originalSchema,
+        applied,
+      });
+    }
+    if (failure) {
+      throw new GrpcError(status.INTERNAL, 'Unsuccessful index creation');
+    }
     return 'Indexes created!';
+  }
+
+  private async listLiveIndexesForCollection(
+    collectionName: string,
+  ): Promise<ModelOptionsIndexes[]> {
+    try {
+      const result = (await this.sequelize
+        .getQueryInterface()
+        .showIndex(collectionName)) as UntypedArray;
+      return result.map(liveIndexFromSql);
+    } catch {
+      return [];
+    }
   }
 
   async getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const collectionName = this.models[schemaName].originalSchema.collectionName;
     const queryInterface = this.sequelize.getQueryInterface();
-    const result = (await queryInterface.showIndex('cnd_' + schemaName)) as UntypedArray;
-    result.filter(index => {
-      const fieldNames = [];
-      for (const field of index.fields) {
-        fieldNames.push(field.attribute);
-      }
-      index.fields = fieldNames;
-      // extract index type from index definition
-      let tmp = index.definition.split('USING ');
-      tmp = tmp[1].split(' ');
-      index.types = tmp[0];
-      delete index.definition;
-      index.options = {};
-      for (const indexEntry of Object.entries(index)) {
-        if (
-          indexEntry[0] === 'options' ||
-          indexEntry[0] === 'types' ||
-          indexEntry[0] === 'fields'
-        ) {
-          continue;
-        }
-        if (indexEntry[0] === 'indkey') {
-          delete index.indkey;
-          continue;
-        }
-        index.options[indexEntry[0]] = indexEntry[1];
-        delete index[indexEntry[0]];
-      }
+    const result = (await queryInterface.showIndex(collectionName)) as UntypedArray;
+    const dialect = this.sequelize.getDialect();
+    const declared = this.models[schemaName].originalSchema.modelOptions.indexes;
+    return result.map(row => {
+      const fields = (row.fields ?? []).map((field: unknown) =>
+        typeof field === 'string' ? field : (field as { attribute?: string }).attribute,
+      );
+      const name = row.name as string;
+      return overlayDeclaredOnLive(
+        {
+          name,
+          fields,
+          types: inferSqlIndexType(row, dialect),
+          options: { name, unique: !!row.unique },
+          ...(row.primary ? { primary: true } : {}),
+        },
+        declared,
+      );
     });
-    return result;
   }
 
   async deleteIndexes(schemaName: string, indexNames: string[]): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const collectionName = this.models[schemaName].originalSchema.collectionName;
     const queryInterface = this.sequelize.getQueryInterface();
+    const dropped: string[] = [];
+    let failure: unknown;
     for (const name of indexNames) {
-      queryInterface.removeIndex('cnd_' + schemaName, name).catch(() => {
-        throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
+      try {
+        await queryInterface.removeIndex(collectionName, name);
+        dropped.push(name);
+      } catch (e) {
+        failure = e;
+        break;
+      }
+    }
+    const original = this.models[schemaName].originalSchema;
+    for (const name of dropped) {
+      removeIndexFromSchemaFields(original, name);
+    }
+    if (!failure || dropped.length > 0) {
+      await this.persistIndexesAndPublish({
+        schemaName,
+        originalSchema: original,
+        droppedNames: dropped,
       });
+    }
+    if (failure) {
+      throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
     }
     return 'Indexes deleted';
   }
@@ -466,42 +571,50 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
 
   private checkAndConvertIndexes(
     schemaName: string,
-    indexes: ModelOptionsIndexes[],
+    indexes: readonly ModelOptionsIndexes[],
     callerModule: string,
-  ) {
-    for (const index of indexes) {
-      if (!index.types && !index.options) continue;
+    privileged?: boolean,
+  ): ModelOptionsIndexes[] {
+    const schema = this.models[schemaName].originalSchema;
+    const dialect = this.sequelize.getDialect();
+    const prepared: ModelOptionsIndexes[] = [];
+    for (const raw of toMutableIndexes(indexes)) {
+      const index = ensureIndexName(raw);
+      validateIndexFields(schema, index);
       if (index.types) {
-        if (
-          Array.isArray(index.types) ||
-          !Object.values(PostgresIndexType).includes(index.types)
-        ) {
+        const types = normalizeIndexTypes(index.types, index.fields.length) ?? [];
+        if (types.some(type => !sqlDialectAllowsIndexType(dialect, type))) {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
-            'Invalid index type for PostgreSQL',
+            `Invalid index type for ${dialect}`,
           );
         }
-        (index.options as PostgresIndexOptions).using = index.types;
-        delete index.types;
+        const first = types[0];
+        const using =
+          types.length === 1 && isPostgresIndexType(first)
+            ? first
+            : PostgresIndexType.BTREE;
+        index.options = {
+          ...(index.options ?? {}),
+          using,
+        };
       }
       if (index.options) {
         if (!checkIfPostgresOptions(index.options)) {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
-            'Invalid index options for PostgreSQL',
+            `Invalid index options for ${dialect}`,
           );
         }
-        if (
-          Object.keys(index.options).includes('unique') &&
-          this.models[schemaName].originalSchema.ownerModule !== callerModule
-        ) {
-          throw new GrpcError(
-            status.PERMISSION_DENIED,
-            'Not authorized to create unique index',
-          );
-        }
+        assertUniqueIndexPrivilege({
+          unique: index.options.unique === true,
+          schemaOwner: schema.ownerModule,
+          callerModule,
+          privileged,
+        });
       }
+      prepared.push(index);
     }
-    return indexes;
+    return prepared;
   }
 }

@@ -37,13 +37,13 @@ export function pgSchemaConverter(jsonSchema: ConduitSchema): [
     delete copy.fields['_id'];
   }
   if (copy.modelOptions.indexes) {
-    copy = convertModelOptionsIndexes(copy);
+    copy = convertModelOptionsIndexes(copy, 'postgres');
   }
   const objectPaths: any = {};
   convertObjectToDotNotation(jsonSchema.fields, copy.fields, objectPaths);
   const secondaryCopy = cloneDeep(copy.fields);
   const extractedRelations = extractRelations(secondaryCopy, copy.fields);
-  copy = convertSchemaFieldIndexes(copy);
+  copy = convertSchemaFieldIndexes(copy, 'postgres');
   iterDeep(secondaryCopy, copy.fields);
   return [copy, objectPaths, extractedRelations];
 }

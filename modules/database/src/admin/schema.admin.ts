@@ -3,6 +3,7 @@ import {
   ConduitSchema,
   GrpcError,
   Indexable,
+  ModelOptionsIndexes,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -23,6 +24,12 @@ import {
 import { SchemaConverter } from '../utils/SchemaConverter.js';
 import { parseSortParam } from '../handlers/utils.js';
 import escapeStringRegexp from 'escape-string-regexp';
+import {
+  ADMIN_INDEX_CALLER,
+  collectExistingIndexNames,
+  ensureIndexName,
+  resolveIndexName,
+} from '../adapters/utils/indexes.js';
 
 type ExportedCmsSchema = Pick<
   ConduitDatabaseSchema,
@@ -686,34 +693,24 @@ export class SchemaAdmin {
 
   async createIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, indexes } = call.request.params;
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({ _id: id });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
-    }
-    return await this.database.createIndexes(requestedSchema.name, indexes, 'database');
+    const requestedSchema = await this.findDeclaredSchemaById(id);
+    return await this.database.createIndexes(
+      requestedSchema.name,
+      indexes,
+      ADMIN_INDEX_CALLER,
+      { privileged: true },
+    );
   }
 
   async getIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const id = call.request.params.id;
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({ _id: id });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
-    }
-    return this.database.getIndexes(requestedSchema.name);
+    const requestedSchema = await this.findDeclaredSchemaById(call.request.params.id);
+    const indexes = await this.database.getIndexes(requestedSchema.name);
+    return { indexes };
   }
 
   async deleteIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, indexNames } = call.request.params;
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({ _id: id });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
-    }
+    const requestedSchema = await this.findDeclaredSchemaById(id);
     if (isNil(indexNames) || indexNames.length === 0) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -721,6 +718,92 @@ export class SchemaAdmin {
       );
     }
     return this.database.deleteIndexes(requestedSchema.name, indexNames);
+  }
+
+  async exportIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const skip = call.request.params.skip ?? 0;
+    const limit = call.request.params.limit ?? 25;
+    const query: Indexable = {
+      name: { $nin: this.database.systemSchemas },
+      $or: [
+        { parentSchema: { $exists: false } },
+        { parentSchema: { $eq: null } },
+        { parentSchema: { $eq: '' } },
+      ],
+    };
+    const schemaAdapter = this.database.getSchemaModel('_DeclaredSchema');
+    const [schemas, count] = await Promise.all([
+      schemaAdapter.model.findMany(query, {
+        skip,
+        limit,
+        select: 'name',
+        sort: { name: 1 },
+      }),
+      schemaAdapter.model.countDocuments(query),
+    ]);
+    const indexes: Array<ModelOptionsIndexes & { schemaName: string }> = [];
+    for (const schema of schemas) {
+      if (!this.database.models[schema.name]) continue;
+      const schemaIndexes = await this.database.getIndexes(schema.name);
+      if (isNil(schemaIndexes) || isEmpty(schemaIndexes)) continue;
+      indexes.push(
+        ...schemaIndexes.map(index => ({ ...index, schemaName: schema.name })),
+      );
+    }
+    return { indexes, count };
+  }
+
+  async importIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { indexes } = call.request.params as {
+      indexes: Array<ModelOptionsIndexes & { schemaName: string }>;
+    };
+    if (!Array.isArray(indexes) || indexes.length === 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'indexes must be a non-empty array');
+    }
+    const bySchema = new Map<string, ModelOptionsIndexes[]>();
+    for (const entry of indexes) {
+      const { schemaName, ...rest } = entry;
+      if (!schemaName) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Each imported index needs schemaName',
+        );
+      }
+      const bucket = bySchema.get(schemaName) ?? [];
+      bucket.push(rest);
+      bySchema.set(schemaName, bucket);
+    }
+    for (const [schemaName, schemaIndexes] of bySchema) {
+      if (!this.database.models[schemaName]) {
+        throw new GrpcError(
+          status.NOT_FOUND,
+          `Requested schema not found: ${schemaName}`,
+        );
+      }
+      const existing = await this.database.getIndexes(schemaName);
+      const existingNames = collectExistingIndexNames(existing);
+      const toCreate = schemaIndexes
+        .map(index => ensureIndexName(index))
+        .filter(index => {
+          const name = resolveIndexName(index);
+          return !name || !existingNames.has(name);
+        });
+      if (toCreate.length === 0) continue;
+      await this.database.createIndexes(schemaName, toCreate, ADMIN_INDEX_CALLER, {
+        privileged: false,
+      });
+    }
+    return 'Indexes imported successfully';
+  }
+
+  private async findDeclaredSchemaById(id: string) {
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ _id: id });
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    return requestedSchema;
   }
 
   async checkRequestedSchema(id: string) {

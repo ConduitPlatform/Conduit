@@ -1,5 +1,6 @@
 import { Schema } from 'mongoose';
 import {
+  ConduitGrpcSdk,
   ConduitModelField,
   ConduitSchema,
   ModelOptionsIndexes,
@@ -8,6 +9,12 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isArray, isNil, isObject } from 'lodash-es';
 import { checkIfMongoOptions } from './utils.js';
+import {
+  isCompatibleIndexType,
+  mapCompatibleToMongo,
+  mongoAllowsIndexType,
+  normalizeIndexTypes,
+} from '../utils/indexes.js';
 
 import * as deepdash from 'deepdash-es/standalone';
 
@@ -103,12 +110,23 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
     if (!index) continue;
     const type = index.type;
     const options = index.options;
-    if (type && !Object.values(MongoIndexType).includes(type)) {
-      throw new Error('Incorrect index type for MongoDB');
+    if (type && !mongoAllowsIndexType(type)) {
+      ConduitGrpcSdk.Logger.warn(
+        `Invalid index type for MongoDB found in '${copy.name}', ignoring index`,
+      );
+      delete (field[1] as ConduitModelField).index;
+      continue;
+    }
+    if (type && isCompatibleIndexType(type)) {
+      index.type = mapCompatibleToMongo(type);
     }
     if (options) {
       if (!checkIfMongoOptions(options)) {
-        throw new Error('Incorrect index options for MongoDB');
+        ConduitGrpcSdk.Logger.warn(
+          `Invalid index options for MongoDB found in '${copy.name}', ignoring index`,
+        );
+        delete (field[1] as ConduitModelField).index;
+        continue;
       }
       for (const [option, optionValue] of Object.entries(options)) {
         index[option as keyof SchemaFieldIndex] = optionValue;
@@ -121,37 +139,43 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
 
 function convertModelOptionsIndexes(copy: ConduitSchema) {
   if (!copy.modelOptions.indexes?.length) return copy;
-  const mutIndexes = copy.modelOptions.indexes as ModelOptionsIndexes[];
-  for (const index of mutIndexes) {
-    // compound indexes are maintained in modelOptions in order to be created after schema creation
-    // single field index => add it to specified schema field
-    if (index.fields.length !== 1) continue;
+  const remaining: ModelOptionsIndexes[] = [];
+  for (const index of copy.modelOptions.indexes) {
+    let mappedTypes: MongoIndexType[] | undefined;
+    if (index.types) {
+      const types = normalizeIndexTypes(index.types, index.fields.length) ?? [];
+      if (
+        types.some(type => !mongoAllowsIndexType(type)) ||
+        (isArray(index.types) && index.fields.length !== index.types.length)
+      ) {
+        ConduitGrpcSdk.Logger.warn(
+          `Invalid index type for MongoDB found in '${copy.name}', ignoring index`,
+        );
+        continue;
+      }
+      mappedTypes = types.map(mapCompatibleToMongo);
+      index.types = mappedTypes;
+    }
+    // compound indexes stay on modelOptions and are created after schema creation
+    if (index.fields.length !== 1) {
+      remaining.push(index);
+      continue;
+    }
     const modelField = copy.fields[index.fields[0]] as ConduitModelField;
     if (!modelField) {
-      throw new Error(`Field ${modelField} in index definition doesn't exist`);
+      throw new Error(`Field ${index.fields[0]} in index definition doesn't exist`);
     }
-    if (index.types) {
-      if (
-        !isArray(index.types) ||
-        !Object.values(MongoIndexType).includes(index.types[0]) ||
-        index.fields.length !== index.types.length
-      ) {
-        throw new Error('Invalid index type for MongoDB');
-      }
-      const type = index.types[0] as MongoIndexType;
-      modelField.index = {
-        type: type,
-      };
+    if (index.options && !checkIfMongoOptions(index.options)) {
+      ConduitGrpcSdk.Logger.warn(
+        `Invalid index options for MongoDB found in '${copy.name}', ignoring index`,
+      );
+      continue;
     }
-    if (index.options) {
-      if (!checkIfMongoOptions(index.options)) {
-        throw new Error('Incorrect index options for MongoDB');
-      }
-      for (const [option, optionValue] of Object.entries(index.options)) {
-        modelField.index![option as keyof SchemaFieldIndex] = optionValue;
-      }
-    }
-    mutIndexes.splice(mutIndexes.indexOf(index), 1);
+    modelField.index = {
+      ...(mappedTypes ? { type: mappedTypes[0] } : {}),
+      ...index.options,
+    };
   }
+  copy.modelOptions.indexes = remaining;
   return copy;
 }

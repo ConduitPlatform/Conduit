@@ -41,6 +41,19 @@ export enum PostgresIndexType {
   BRIN = 'BRIN',
 }
 
+/**
+ * Portable ascending/descending indexes that exist on MongoDB and every SQL dialect.
+ * Map to Mongo 1/-1 and SQL BTREE ASC/DESC. Optional uniqueness lives on index options.
+ */
+export enum CompatibleIndexType {
+  Ascending = 'Ascending',
+  Descending = 'Descending',
+}
+
+export type IndexType = MongoIndexType | PostgresIndexType | CompatibleIndexType;
+
+export type ModelOptionsIndexTypes = IndexType | readonly IndexType[];
+
 export type Array = any[];
 
 export interface ConduitStringValidation {
@@ -71,9 +84,7 @@ export interface ConduitArrayValidation {
 }
 
 export type ConduitValidationRules =
-  | ConduitStringValidation
-  | ConduitNumberValidation
-  | ConduitArrayValidation;
+  ConduitStringValidation | ConduitNumberValidation | ConduitArrayValidation;
 
 type BaseConduitModelField = {
   type?: TYPE | TYPE[] | ConduitModel | ArrayConduitModel[];
@@ -198,7 +209,7 @@ export interface ConduitSchemaOptions {
 }
 
 export interface SchemaFieldIndex {
-  type?: MongoIndexType | PostgresIndexType;
+  type?: IndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
 
   [field: string]: any;
@@ -206,8 +217,10 @@ export interface SchemaFieldIndex {
 
 export interface ModelOptionsIndexes {
   fields: string[] | readonly string[];
-  types?: MongoIndexType[] | PostgresIndexType;
+  types?: ModelOptionsIndexTypes;
   options?: MongoIndexOptions | PostgresIndexOptions;
+  /** Optional. Generated deterministically when omitted. */
+  name?: string;
 
   [field: string]: any;
 }
