@@ -48,7 +48,158 @@ export function resolveIndexName(index: ModelOptionsIndexes): string | undefined
 }
 
 export function isUniqueIndex(index: ModelOptionsIndexes): boolean {
-  return index.options?.unique === true;
+  return index.options?.unique === true || index.unique === true;
+}
+
+export type IndexIdentity = { fields: string[]; unique: boolean };
+
+export function indexFieldNames(
+  index: Pick<ModelOptionsIndexes, 'fields'> | { fields?: readonly unknown[] },
+): string[] {
+  return (index.fields ?? [])
+    .map(field => {
+      if (typeof field === 'string') return field;
+      if (field && typeof field === 'object') {
+        const obj = field as { name?: string; attribute?: string };
+        if (typeof obj.name === 'string' && obj.name.length > 0) return obj.name;
+        if (typeof obj.attribute === 'string' && obj.attribute.length > 0) {
+          return obj.attribute;
+        }
+      }
+      return '';
+    })
+    .filter(name => name.length > 0);
+}
+
+export function indexIdentity(index: ModelOptionsIndexes): IndexIdentity {
+  return {
+    fields: indexFieldNames(index),
+    unique: isUniqueIndex(index),
+  };
+}
+
+export function indexIdentitiesEqual(a: IndexIdentity, b: IndexIdentity): boolean {
+  return (
+    a.unique === b.unique &&
+    a.fields.length === b.fields.length &&
+    a.fields.every((field, i) => field === b.fields[i])
+  );
+}
+
+export function indexIdentityKey(identity: IndexIdentity): string {
+  return `${identity.unique ? 'u' : 'n'}:${identity.fields.join('\0')}`;
+}
+
+export function isSkippedLiveIndex(index: ModelOptionsIndexes): boolean {
+  if (index.primary === true) return true;
+  const name = resolveIndexName(index);
+  return name === '_id_' || name === 'PRIMARY';
+}
+
+export function findLiveIndex(
+  live: readonly ModelOptionsIndexes[],
+  declared: ModelOptionsIndexes,
+): ModelOptionsIndexes | undefined {
+  const wanted = indexIdentity(declared);
+  return live.find(
+    row => !isSkippedLiveIndex(row) && indexIdentitiesEqual(indexIdentity(row), wanted),
+  );
+}
+
+export function bindDeclaredIndexesToLive<T extends ModelOptionsIndexes>(
+  declared: readonly T[],
+  live: readonly ModelOptionsIndexes[],
+): T[] {
+  return declared.map(index => {
+    const match = findLiveIndex(live, index);
+    if (match) {
+      const name = resolveIndexName(match);
+      if (name) {
+        return {
+          ...index,
+          name,
+          options: { ...index.options, name },
+        };
+      }
+    }
+    const fields = indexFieldNames(index);
+    const stringFields = Array.isArray(index.fields)
+      ? index.fields.every(field => typeof field === 'string')
+      : false;
+    if (stringFields && fields.length === index.fields.length) {
+      return ensureIndexName(index) as T;
+    }
+    return index;
+  });
+}
+
+export function keepDeclaredIndexExtras(
+  incomingBound: readonly ModelOptionsIndexes[],
+  existingDb: readonly ModelOptionsIndexes[] | undefined,
+): ModelOptionsIndexes[] {
+  const incoming = incomingBound.map(index => {
+    const name = resolveIndexName(index);
+    return name
+      ? { ...index, name, options: { ...index.options, name } }
+      : ensureIndexName(index);
+  });
+  const incomingNames = new Set(
+    incoming.map(resolveIndexName).filter((name): name is string => Boolean(name)),
+  );
+  const incomingIdentities = new Set(
+    incoming.map(index => indexIdentityKey(indexIdentity(index))),
+  );
+  const extras: ModelOptionsIndexes[] = [];
+  for (const index of existingDb ?? []) {
+    const name = resolveIndexName(index);
+    if (name && incomingNames.has(name)) continue;
+    if (incomingIdentities.has(indexIdentityKey(indexIdentity(index)))) continue;
+    extras.push(ensureIndexName(index));
+  }
+  return [...incoming, ...extras];
+}
+
+export function overlayDeclaredOnLive(
+  live: ModelOptionsIndexes,
+  declared: readonly ModelOptionsIndexes[] | undefined,
+): ModelOptionsIndexes {
+  if (!declared?.length) return live;
+  const name = resolveIndexName(live);
+  const byName = name ? declaredIndexMap(declared).get(name) : undefined;
+  const match = byName ?? findLiveIndex(declared, live);
+  if (!match) return live;
+  const liveName = name ?? resolveIndexName(match);
+  return {
+    ...live,
+    types: match.types ?? live.types,
+    options: { ...match.options, ...live.options, name: liveName },
+  };
+}
+
+export function liveIndexFromMongo(index: {
+  key?: Record<string, unknown>;
+  name?: string;
+  unique?: boolean;
+}): ModelOptionsIndexes {
+  return {
+    name: index.name,
+    fields: Object.keys(index.key ?? {}),
+    options: { name: index.name, unique: !!index.unique },
+  };
+}
+
+export function liveIndexFromSql(row: {
+  name?: string;
+  unique?: boolean;
+  primary?: boolean;
+  fields?: Array<string | { attribute?: string; name?: string }>;
+}): ModelOptionsIndexes {
+  return {
+    name: row.name,
+    fields: indexFieldNames({ fields: row.fields ?? [] }),
+    options: { name: row.name, unique: !!row.unique },
+    ...(row.primary ? { primary: true } : {}),
+  };
 }
 
 export function normalizeIndexTypes(
@@ -218,23 +369,72 @@ export function assertUniqueIndexPrivilege(args: {
   throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to create unique index');
 }
 
+type ErrorPart = { code?: number | string; message?: string; name?: string };
+
+function walkError(error: unknown): ErrorPart[] {
+  const parts: ErrorPart[] = [];
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  while (current && typeof current === 'object' && !seen.has(current)) {
+    seen.add(current);
+    const err = current as ErrorPart & {
+      original?: unknown;
+      parent?: unknown;
+      cause?: unknown;
+    };
+    parts.push({ code: err.code, message: err.message, name: err.name });
+    current = err.original ?? err.parent ?? err.cause;
+  }
+  return parts;
+}
+
+const UNIQUE_OR_OPTIONS_CONFLICT_CODES = new Set<number | string>([
+  85,
+  '85',
+  86,
+  '86',
+  11000,
+  '11000',
+  23505,
+  '23505',
+  1062,
+  '1062',
+]);
+
+export function isIndexKeySpecsConflictError(error: unknown): boolean {
+  return walkError(error).some(part => part.code === 86 || part.code === '86');
+}
+
 export function isIndexAlreadyExistsError(error: unknown): boolean {
-  const err = error as { message?: string; code?: number | string; name?: string };
-  const message = (err.message ?? '').toLowerCase();
-  return (
-    message.includes('already exists') ||
-    message.includes('already exist') ||
-    message.includes('duplicate key name') ||
-    message.includes('index already exists') ||
-    err.code === 85 ||
-    err.code === '42P07' ||
-    err.name === 'SequelizeUniqueConstraintError'
-  );
+  const parts = walkError(error);
+  if (parts.some(part => part.name === 'SequelizeUniqueConstraintError')) {
+    return false;
+  }
+  if (
+    parts.some(
+      part => part.code !== undefined && UNIQUE_OR_OPTIONS_CONFLICT_CODES.has(part.code),
+    )
+  ) {
+    return false;
+  }
+  for (const part of parts) {
+    if (part.code === '42P07' || part.code === 1061 || part.code === '1061') {
+      return true;
+    }
+    const message = part.message ?? '';
+    if (/index .+ already exists/i.test(message)) return true;
+    if (/duplicate key name/i.test(message)) return true;
+    if (/relation .+ already exists/i.test(message)) return true;
+  }
+  return false;
 }
 
 export async function persistDeclaredSchemaIndexes(args: {
   declaredSchemaModel: {
-    findOne: (query: Record<string, unknown>) => Promise<{ _id: string } | null>;
+    findOne: (query: Record<string, unknown>) => Promise<{
+      _id: string;
+      modelOptions?: { indexes?: ModelOptionsIndexes[] };
+    } | null>;
     findByIdAndUpdate: (id: string, update: Record<string, unknown>) => Promise<unknown>;
   };
   schemaName: string;
@@ -243,16 +443,24 @@ export async function persistDeclaredSchemaIndexes(args: {
     fields?: Record<string, unknown>;
     compiledFields?: Record<string, unknown>;
   };
-  indexes: ModelOptionsIndexes[];
-}): Promise<void> {
-  args.originalSchema.modelOptions.indexes = args.indexes;
+  applied?: ModelOptionsIndexes[];
+  droppedNames?: string[];
+}): Promise<boolean> {
   const found = await args.declaredSchemaModel.findOne({ name: args.schemaName });
-  if (!found) return;
+  const memoryIndexes = (args.originalSchema.modelOptions.indexes ??
+    []) as ModelOptionsIndexes[];
+  const dbIndexes = found?.modelOptions?.indexes ?? memoryIndexes;
+  const next = args.droppedNames
+    ? removeDeclaredIndexes(dbIndexes, args.droppedNames)
+    : mergeDeclaredIndexes(dbIndexes, args.applied ?? []);
+  args.originalSchema.modelOptions.indexes = next;
+  if (!found) return false;
   await args.declaredSchemaModel.findByIdAndUpdate(found._id, {
     modelOptions: args.originalSchema.modelOptions,
     fields: args.originalSchema.fields,
     compiledFields: args.originalSchema.compiledFields,
   });
+  return true;
 }
 
 export function collectExistingIndexNames(
