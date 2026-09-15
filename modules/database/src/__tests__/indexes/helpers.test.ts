@@ -16,6 +16,7 @@ import {
   isIndexAlreadyExistsError,
   isMongoIndexType,
   keepDeclaredIndexExtras,
+  liveNameConflictAllowsReuse,
   mapCompatibleToMongo,
   mapCompatibleToSqlOrder,
   mergeDeclaredIndexes,
@@ -310,10 +311,14 @@ describe('index helpers', () => {
   });
 
   it('persists applied indexes against a re-read declared schema list', async () => {
-    const findOne = async () => ({
-      _id: 'declared-1',
-      modelOptions: { indexes: [{ fields: ['keep'], name: 'keep_me' }] },
-    });
+    let findOneOptions: unknown;
+    const findOne = async (_query: Record<string, unknown>, options?: unknown) => {
+      findOneOptions = options;
+      return {
+        _id: 'declared-1',
+        modelOptions: { indexes: [{ fields: ['keep'], name: 'keep_me' }] },
+      };
+    };
     const findByIdAndUpdate = async () => ({});
     const originalSchema = {
       modelOptions: { indexes: [] as { fields: string[]; name?: string }[] },
@@ -325,10 +330,49 @@ describe('index helpers', () => {
       applied: [{ fields: ['email'], name: 'cnd_idx_email_asc' }],
     });
     expect(persisted).toBe(true);
+    expect(findOneOptions).toEqual({ readPreference: 'primary' });
     expect(originalSchema.modelOptions.indexes.map(index => index.name)).toEqual([
       'keep_me',
       'cnd_idx_email_asc',
     ]);
+  });
+
+  it('reuses a live name-conflict only when identity matches', () => {
+    const live = [
+      {
+        name: 'user_idx',
+        fields: ['email'],
+        options: { name: 'user_idx', unique: false },
+      },
+    ];
+    expect(
+      liveNameConflictAllowsReuse(
+        { name: 'user_idx', fields: ['email'], options: { name: 'user_idx' } },
+        live,
+      ),
+    ).toBe(true);
+    expect(
+      liveNameConflictAllowsReuse(
+        { name: 'user_idx', fields: ['username'], options: { name: 'user_idx' } },
+        live,
+      ),
+    ).toBe(false);
+    expect(
+      liveNameConflictAllowsReuse(
+        {
+          name: 'user_idx',
+          fields: ['email'],
+          options: { name: 'user_idx', unique: true },
+        },
+        live,
+      ),
+    ).toBe(false);
+    expect(
+      liveNameConflictAllowsReuse(
+        { name: 'user_idx', fields: ['email'], options: { name: 'user_idx' } },
+        [],
+      ),
+    ).toBe(false);
   });
 
   it('allows dialect-native types and rejects foreign leftovers', () => {

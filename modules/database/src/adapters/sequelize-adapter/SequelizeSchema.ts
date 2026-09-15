@@ -339,6 +339,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       scope?: string;
       select?: string;
       populate?: string[];
+      readPreference?: string;
     },
   ) {
     const filter = await this.getAuthorizedQuery(

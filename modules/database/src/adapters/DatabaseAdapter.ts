@@ -605,6 +605,13 @@ export abstract class DatabaseAdapter<T extends Schema> {
     instanceSync: boolean,
   ): Promise<Schema>;
 
+  protected snapshotRegisteredSchema(schema: ConduitSchema) {
+    this.registeredSchemas.set(
+      schema.name,
+      Object.freeze(JSON.parse(JSON.stringify(schema))),
+    );
+  }
+
   protected async persistIndexesAndPublish(args: {
     schemaName: string;
     originalSchema: ConduitDatabaseSchema;

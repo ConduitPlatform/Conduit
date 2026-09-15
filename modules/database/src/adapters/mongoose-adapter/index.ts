@@ -38,6 +38,7 @@ import {
   isIndexAlreadyExistsError,
   isIndexKeySpecsConflictError,
   liveIndexFromMongo,
+  liveNameConflictAllowsReuse,
   mapCompatibleToMongo,
   mongoAllowsIndexType,
   normalizeIndexTypes,
@@ -687,8 +688,14 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         live.push(index);
       } catch (e) {
         if (isIndexAlreadyExistsError(e)) {
-          applied.push(index);
-          continue;
+          const relisted = await this.listLiveIndexes(schemaName);
+          if (liveNameConflictAllowsReuse(index, relisted)) {
+            applied.push(index);
+            live.splice(0, live.length, ...relisted);
+            continue;
+          }
+          failure = e;
+          break;
         }
         if (isIndexKeySpecsConflictError(e)) {
           const relisted = await this.listLiveIndexes(schemaName);
@@ -1082,10 +1089,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     const newSchema = schemaConverter(compiledSchema);
     const indexes = newSchema.modelOptions.indexes;
     delete newSchema.modelOptions.indexes;
-    this.registeredSchemas.set(
-      schema.name,
-      Object.freeze(JSON.parse(JSON.stringify(schema))),
-    );
     this.models[schema.name] = new MongooseSchema(
       this.grpcSdk,
       this.mongoose,
@@ -1093,23 +1096,27 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       schema,
       this,
     );
-    if (!isInstanceSync && schema.modelOptions.indexes?.length) {
-      const live = await this.listLiveIndexes(schema.name);
-      schema.modelOptions.indexes = bindDeclaredIndexesToLive(
-        schema.modelOptions.indexes,
-        live,
-      );
-    }
-    if (saveToDb) {
-      await this.compareAndStoreMigratedSchema(schema);
-      await this.saveSchemaToDatabase(schema);
-    }
+    try {
+      if (!isInstanceSync && schema.modelOptions.indexes?.length) {
+        const live = await this.listLiveIndexes(schema.name);
+        schema.modelOptions.indexes = bindDeclaredIndexesToLive(
+          schema.modelOptions.indexes,
+          live,
+        );
+      }
+      if (saveToDb) {
+        await this.compareAndStoreMigratedSchema(schema);
+        await this.saveSchemaToDatabase(schema);
+      }
 
-    if (indexes && !isInstanceSync) {
-      await this.createIndexes(schema.name, indexes, schema.ownerModule);
-    }
-    if (!isInstanceSync) {
-      await this.createMongooseFieldIndexes(schema.name);
+      if (indexes && !isInstanceSync) {
+        await this.createIndexes(schema.name, indexes, schema.ownerModule);
+      }
+      if (!isInstanceSync) {
+        await this.createMongooseFieldIndexes(schema.name);
+      }
+    } finally {
+      this.snapshotRegisteredSchema(schema);
     }
     await this.applyDeclaredVectorIndexes(schema.name, isInstanceSync);
     return this.models[schema.name];

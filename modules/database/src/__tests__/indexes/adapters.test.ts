@@ -143,6 +143,7 @@ describe('mongoose adapter indexes', () => {
       'chat',
     );
     expect(created.findByIdAndUpdate).toHaveBeenCalledTimes(1);
+    expect(created.findOne.mock.calls[0][1]).toEqual({ readPreference: 'primary' });
     const update = created.findByIdAndUpdate.mock.calls[0][1] as {
       modelOptions: { indexes: { name?: string }[] };
     };
@@ -294,6 +295,21 @@ describe('mongoose adapter indexes', () => {
       'chat',
     );
     expect(publish).toHaveBeenCalledWith('database:create:schema', expect.any(String));
+  });
+
+  it('throws on a name-already-exists error when the live name indexes different fields', async () => {
+    const { adapter, createIndex, indexes, findByIdAndUpdate } = makeMongooseAdapter();
+    createIndex.mockRejectedValue({ message: 'index user_idx already exists' });
+    indexes
+      .mockResolvedValueOnce([{ v: 2, key: { _id: 1 }, name: '_id_' }])
+      .mockResolvedValueOnce([
+        { v: 2, key: { _id: 1 }, name: '_id_' },
+        { v: 2, key: { room: 1 }, name: 'user_idx', unique: false },
+      ]);
+    await expect(
+      adapter.createIndexes('User', [{ fields: ['email'], name: 'user_idx' }], 'chat'),
+    ).rejects.toMatchObject({ code: status.INTERNAL });
+    expect(findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
   it('rebinds to the live name on Mongo 86 instead of persisting a generated name', async () => {
@@ -452,8 +468,16 @@ describe('sequelize adapter indexes', () => {
     expect(update.modelOptions.indexes[0].name).toBe('room_createdAt');
   });
 
-  it('skips and persists on 42P07 name conflicts', async () => {
-    const { adapter, addIndex, findByIdAndUpdate, publish } = makeSequelizeAdapter();
+  it('skips and persists on 42P07 when the live name has the same identity', async () => {
+    const { adapter, addIndex, showIndex, findByIdAndUpdate, publish } =
+      makeSequelizeAdapter();
+    showIndex.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        name: 'cnd_idx_email_asc',
+        unique: false,
+        fields: [{ attribute: 'email', order: 'ASC' }],
+      },
+    ]);
     addIndex.mockRejectedValue({
       original: { code: '42P07', message: 'relation "cnd_idx_email_asc" already exists' },
     });
@@ -465,6 +489,61 @@ describe('sequelize adapter indexes', () => {
       ),
     ).resolves.toBe('Indexes created!');
     expect(findByIdAndUpdate).toHaveBeenCalled();
+    expect(publish).toHaveBeenCalled();
+  });
+
+  it('throws on 42P07 when the live name indexes different fields', async () => {
+    const { adapter, addIndex, showIndex, findByIdAndUpdate } = makeSequelizeAdapter();
+    showIndex.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        name: 'user_idx',
+        unique: false,
+        fields: [{ attribute: 'room' }],
+      },
+    ]);
+    addIndex.mockRejectedValue({
+      original: { code: '42P07', message: 'relation "user_idx" already exists' },
+    });
+    await expect(
+      adapter.createIndexes(
+        'User',
+        [{ fields: ['email'], name: 'user_idx' }],
+        'database',
+      ),
+    ).rejects.toMatchObject({ code: status.INTERNAL });
+    expect(findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('persists the applied prefix when a later 42P07 name has different fields', async () => {
+    const { adapter, addIndex, showIndex, findByIdAndUpdate, publish } =
+      makeSequelizeAdapter();
+    showIndex.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        name: 'user_idx',
+        unique: false,
+        fields: [{ attribute: 'username' }],
+      },
+    ]);
+    addIndex.mockResolvedValueOnce(undefined).mockRejectedValueOnce({
+      original: { code: '42P07', message: 'relation "user_idx" already exists' },
+    });
+    await expect(
+      adapter.createIndexes(
+        'User',
+        [
+          { fields: ['email'], types: [CompatibleIndexType.Ascending] },
+          { fields: ['room'], name: 'user_idx' },
+        ],
+        'database',
+      ),
+    ).rejects.toMatchObject({ code: status.INTERNAL });
+    expect(findByIdAndUpdate).toHaveBeenCalledTimes(1);
+    const update = findByIdAndUpdate.mock.calls[0][1] as {
+      modelOptions: { indexes: { name?: string }[] };
+    };
+    expect(update.modelOptions.indexes.map(index => index.name)).toEqual([
+      'cnd_idx_email_asc',
+    ]);
     expect(publish).toHaveBeenCalled();
   });
 

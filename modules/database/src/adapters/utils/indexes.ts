@@ -106,6 +106,24 @@ export function findLiveIndex(
   );
 }
 
+export function findIndexByName(
+  indexes: readonly ModelOptionsIndexes[],
+  name: string,
+): ModelOptionsIndexes | undefined {
+  return indexes.find(index => resolveIndexName(index) === name);
+}
+
+export function liveNameConflictAllowsReuse(
+  declared: ModelOptionsIndexes,
+  live: readonly ModelOptionsIndexes[],
+): boolean {
+  const name = resolveIndexName(declared);
+  if (!name) return false;
+  const row = findIndexByName(live, name);
+  if (!row) return false;
+  return indexIdentitiesEqual(indexIdentity(row), indexIdentity(declared));
+}
+
 export function bindDeclaredIndexesToLive<T extends ModelOptionsIndexes>(
   declared: readonly T[],
   live: readonly ModelOptionsIndexes[],
@@ -431,7 +449,10 @@ export function isIndexAlreadyExistsError(error: unknown): boolean {
 
 export async function persistDeclaredSchemaIndexes(args: {
   declaredSchemaModel: {
-    findOne: (query: Record<string, unknown>) => Promise<{
+    findOne: (
+      query: Record<string, unknown>,
+      options?: { readPreference?: string },
+    ) => Promise<{
       _id: string;
       modelOptions?: { indexes?: ModelOptionsIndexes[] };
     } | null>;
@@ -446,7 +467,10 @@ export async function persistDeclaredSchemaIndexes(args: {
   applied?: ModelOptionsIndexes[];
   droppedNames?: string[];
 }): Promise<boolean> {
-  const found = await args.declaredSchemaModel.findOne({ name: args.schemaName });
+  const found = await args.declaredSchemaModel.findOne(
+    { name: args.schemaName },
+    { readPreference: 'primary' },
+  );
   const memoryIndexes = (args.originalSchema.modelOptions.indexes ??
     []) as ModelOptionsIndexes[];
   const dbIndexes = found?.modelOptions?.indexes ?? memoryIndexes;
