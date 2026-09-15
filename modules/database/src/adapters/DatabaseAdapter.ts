@@ -18,6 +18,10 @@ import {
   Schema,
 } from '../interfaces/index.js';
 import { stitchSchema, validateExtensionFields } from './utils/extensions.js';
+import {
+  keepDeclaredIndexExtras,
+  persistDeclaredSchemaIndexes,
+} from './utils/indexes.js';
 import { status } from '@grpc/grpc-js';
 import { isEqual, isNil } from 'lodash-es';
 import ObjectHash from 'object-hash';
@@ -551,6 +555,24 @@ export abstract class DatabaseAdapter<T extends Schema> {
     instanceSync: boolean,
   ): Promise<Schema>;
 
+  protected async persistIndexesAndPublish(args: {
+    schemaName: string;
+    originalSchema: ConduitDatabaseSchema;
+    applied?: ModelOptionsIndexes[];
+    droppedNames?: string[];
+  }): Promise<boolean> {
+    if (!this.models['_DeclaredSchema']) return false;
+    const persisted = await persistDeclaredSchemaIndexes({
+      declaredSchemaModel: this.models['_DeclaredSchema'],
+      schemaName: args.schemaName,
+      originalSchema: args.originalSchema,
+      applied: args.applied,
+      droppedNames: args.droppedNames,
+    });
+    if (persisted) this.publishSchema(args.originalSchema);
+    return persisted;
+  }
+
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
     const model = await this.models['_DeclaredSchema'].findOne(
@@ -558,6 +580,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
       { readPreference: 'primary' },
     );
     if (model) {
+      schema.modelOptions.indexes = keepDeclaredIndexExtras(
+        schema.modelOptions.indexes ?? [],
+        model.modelOptions?.indexes,
+      );
       await this.models['_DeclaredSchema'].findByIdAndUpdate(model._id, {
         name: schema.name,
         fields: schema.fields,
