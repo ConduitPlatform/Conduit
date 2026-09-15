@@ -63,7 +63,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
       {
         path: '/google',
         action: ConduitRouteActions.POST,
-        description: `Login/register with Google by providing a token from the client. Optional mode: "both" (default, login and register) or "signIn" (existing users only).`,
+        description: `Login/register with Google by providing a token from the client. Optional mode: "both" (default, login and register) or "signIn" (existing users only; invitation tokens still register).`,
         bodyParams: {
           id_token: ConduitString.Required,
           access_token: ConduitString.Required,

@@ -81,7 +81,7 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
       {
         path: '/facebook',
         action: ConduitRouteActions.POST,
-        description: `Login/register with Facebook by providing a token from the client. Optional mode: "both" (default, login and register) or "signIn" (existing users only).`,
+        description: `Login/register with Facebook by providing a token from the client. Optional mode: "both" (default, login and register) or "signIn" (existing users only; invitation tokens still register).`,
         bodyParams: {
           access_token: ConduitString.Required,
           invitationToken: ConduitString.Optional,

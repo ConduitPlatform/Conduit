@@ -26,6 +26,7 @@ import { TeamsHandler } from '../team.js';
 import {
   assertOAuthRegistrationAllowed,
   OAUTH_MODE_PARAM,
+  redirectOnRegistrationNotAllowed,
   resolveOAuthMode,
   type OAuthMode,
   validateStateToken,
@@ -209,17 +210,22 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     });
 
     await Token.getInstance().deleteOne(stateToken);
-    const user = await this.createOrUpdateUser(
-      payload,
-      stateToken.data.invitationToken,
-      stateToken.data.anonymousUserId,
-      resolveOAuthMode(stateToken.data.mode),
-    );
-    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       this.settings.finalRedirect;
+    let user: User;
+    try {
+      user = await this.createOrUpdateUser(
+        payload,
+        stateToken.data.invitationToken,
+        stateToken.data.anonymousUserId,
+        resolveOAuthMode(stateToken.data.mode),
+      );
+    } catch (err) {
+      return redirectOnRegistrationNotAllowed(err, redirectUri);
+    }
+    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
+
     return TokenProvider.getInstance().provideUserTokens(
       {
         user,
@@ -311,7 +317,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       if (!user.isVerified) user.isVerified = true;
       user = await User.getInstance().findByIdAndUpdate(user._id, user);
     } else {
-      assertOAuthRegistrationAllowed(mode);
+      assertOAuthRegistrationAllowed(mode, invitationToken);
       if (payload.email) {
         assertEmailAllowed(payload.email);
       }
@@ -371,7 +377,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     routingManager.route(
       {
         path: `/init/${this.providerName}`,
-        description: `Begins ${this.capitalizeProvider()} authentication. Optional mode: "both" (default, login and register) or "signIn" (existing users only).`,
+        description: `Begins ${this.capitalizeProvider()} authentication. Optional mode: "both" (default, login and register) or "signIn" (existing users only; invitation tokens still register).`,
         action: ConduitRouteActions.GET,
         queryParams: {
           scopes: [ConduitString.Optional],
@@ -392,7 +398,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       routingManager.route(
         {
           path: `/initNative/${this.providerName}`,
-          description: `Begins ${this.capitalizeProvider()} native authentication. Optional mode: "both" (default, login and register) or "signIn" (existing users only).`,
+          description: `Begins ${this.capitalizeProvider()} native authentication. Optional mode: "both" (default, login and register) or "signIn" (existing users only; invitation tokens still register).`,
           action: ConduitRouteActions.GET,
           queryParams: {
             scopes: [ConduitString.Optional],
