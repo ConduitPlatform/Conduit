@@ -9,6 +9,8 @@
   "include": [
     "src/utils/emailRestrictions.ts",
     "src/utils/emailRestrictions.test.ts",
+    "src/handlers/oauth2/utils/oauthMode.ts",
+    "src/handlers/oauth2/utils/oauthMode.test.ts",
     "src/errors.ts",
     "src/data/disposable-email-domains.json"
   ],
