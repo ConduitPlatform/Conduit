@@ -19,13 +19,15 @@ import axios from 'axios';
 import { AppleUser } from './apple.user.js';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { TokenProvider } from '../../tokenProvider.js';
-import { Token } from '../../../models/index.js';
+import { Token, User } from '../../../models/index.js';
 import { status } from '@grpc/grpc-js';
 import jwksRsa from 'jwks-rsa';
 import {
   validateStateToken,
   resolveAppleOAuthClient,
   validateAppleClients,
+  redirectOnRegistrationNotAllowed,
+  resolveOAuthMode,
 } from '../utils/index.js';
 import {
   ConduitJson,
@@ -37,6 +39,7 @@ import { OAUTH_CALLBACK } from '../../../constants/index.js';
 import { AuthUtils } from '../../../utils/index.js';
 import { verifyAppleIdentityToken } from '../../../utils/appleIdentityToken.js';
 import { resolveAppleSigningKey } from '../../../utils/appleSigningKey.js';
+import { errors } from '../../../errors.js';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   private readonly jwksClient = jwksRsa({
@@ -158,16 +161,22 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       email: payload.email,
       data: { ...userData, ...payload.email_verified },
     };
-    const user = await this.createOrUpdateUser(
-      userParams,
-      stateToken.data.invitationToken,
-      stateToken.data.anonymousUserId,
-    );
-    await Token.getInstance().deleteOne(stateToken);
-
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       providerClient.redirect_uri;
+    let user: User;
+    try {
+      user = await this.createOrUpdateUser(
+        userParams,
+        stateToken.data.invitationToken,
+        stateToken.data.anonymousUserId,
+        resolveOAuthMode(stateToken.data.mode),
+      );
+    } catch (err) {
+      await Token.getInstance().deleteOne(stateToken);
+      return redirectOnRegistrationNotAllowed(err, redirectUri);
+    }
+    await Token.getInstance().deleteOne(stateToken);
     const conduitClientId = stateToken.data.clientId;
 
     return TokenProvider.getInstance()!.provideUserTokens(
@@ -234,6 +243,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       userParams,
       stateToken.data.invitationToken,
       stateToken.data.anonymousUserId,
+      resolveOAuthMode(stateToken.data.mode),
     );
     await Token.getInstance().deleteOne(stateToken);
 
@@ -259,6 +269,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
           state: ConduitString.Required,
           user: ConduitJson.Optional,
         },
+        errors: [errors.REGISTRATION_NOT_ALLOWED],
         rateLimit: OAUTH_CALLBACK,
       },
       new ConduitRouteReturnDefinition(`AppleResponse`, {
