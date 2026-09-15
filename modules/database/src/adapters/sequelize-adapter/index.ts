@@ -60,6 +60,7 @@ import {
   isIndexKeySpecsConflictError,
   isPostgresIndexType,
   liveIndexFromSql,
+  liveNameConflictAllowsReuse,
   overlayDeclaredOnLive,
   normalizeIndexTypes,
   removeIndexFromSchemaFields,
@@ -304,10 +305,6 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         live,
       );
     }
-    this.registeredSchemas.set(
-      schema.name,
-      Object.freeze(JSON.parse(JSON.stringify(schema))),
-    );
     const relatedSchemas = await resolveRelatedSchemas(
       schema,
       extractedRelations,
@@ -323,19 +320,23 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       objectPaths,
     );
 
-    const noSync =
-      this.models[schema.name].originalSchema.modelOptions.conduit!.noSync ||
-      isInstanceSync;
-    // do not sync extracted schemas
-    if (isNil(noSync) || !noSync) {
-      await this.models[schema.name].sync();
-    } else {
-      this.models[schema.name].synced = true;
-    }
-    // do not store extracted schemas to db
-    if (saveToDb && !isInstanceSync) {
-      await this.compareAndStoreMigratedSchema(schema);
-      await this.saveSchemaToDatabase(schema);
+    try {
+      const noSync =
+        this.models[schema.name].originalSchema.modelOptions.conduit!.noSync ||
+        isInstanceSync;
+      // do not sync extracted schemas
+      if (isNil(noSync) || !noSync) {
+        await this.models[schema.name].sync();
+      } else {
+        this.models[schema.name].synced = true;
+      }
+      // do not store extracted schemas to db
+      if (saveToDb && !isInstanceSync) {
+        await this.compareAndStoreMigratedSchema(schema);
+        await this.saveSchemaToDatabase(schema);
+      }
+    } finally {
+      this.snapshotRegisteredSchema(schema);
     }
     await this.applyDeclaredVectorIndexes(schema.name, isInstanceSync);
     return this.models[schema.name];
@@ -442,8 +443,14 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         live.push(index);
       } catch (e) {
         if (isIndexAlreadyExistsError(e)) {
-          applied.push(index);
-          continue;
+          const relisted = await this.listLiveIndexesForCollection(collectionName);
+          if (liveNameConflictAllowsReuse(index, relisted)) {
+            applied.push(index);
+            live.splice(0, live.length, ...relisted);
+            continue;
+          }
+          failure = e;
+          break;
         }
         if (isIndexKeySpecsConflictError(e)) {
           const relisted = await this.listLiveIndexesForCollection(collectionName);
