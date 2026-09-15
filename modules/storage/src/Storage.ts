@@ -50,7 +50,8 @@ import {
   type ImportResult,
 } from '@conduitplatform/module-tools';
 import { StorageParamAdapter } from './adapter/StorageParamAdapter.js';
-import { FileResource } from './authz/index.js';
+import { ContainerResource, FileResource, FolderResource } from './authz/index.js';
+import { ensureDefaultContainer } from './authz/bootstrap.js';
 import { AdminFileHandlers } from './admin/adminFile.js';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -248,9 +249,11 @@ export default class Storage extends ManagedModule<Config> {
         this._storageAuthzResourceDispose?.();
         this._storageAuthzResourceDispose = this.grpcSdk.oncePeerUp(
           'authorization',
-          () => {
+          async () => {
             this._storageAuthzResourceDispose = null;
-            this.grpcSdk.authorization!.defineResource(FileResource);
+            await this.grpcSdk.authorization!.defineResource(ContainerResource);
+            await this.grpcSdk.authorization!.defineResource(FolderResource);
+            await this.grpcSdk.authorization!.defineResource(FileResource);
           },
         );
       } else {
@@ -269,6 +272,7 @@ export default class Storage extends ManagedModule<Config> {
       });
       this._fileHandlers.updateProvider(this.storageProvider);
       this._adminFileHandlers.updateProvider(this.storageProvider);
+      await ensureDefaultContainer(this.storageProvider);
       // Run the public container migration once after provider is configured
       if (!this.publicContainerMigrationRan && provider !== 'local') {
         this.publicContainerMigrationRan = true;
