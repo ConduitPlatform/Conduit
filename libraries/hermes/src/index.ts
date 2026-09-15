@@ -235,6 +235,12 @@ export class ConduitRoutingController {
     }
   }
 
+  registerSocketGlobalMiddleware(
+    middleware: (req: ConduitRequest, res: Response, next: NextFunction) => void,
+  ) {
+    this._socketRouter?.registerGlobalMiddleware(middleware);
+  }
+
   registerRouteMiddleware(middleware: ConduitMiddleware, moduleUrl: string) {
     this._restRouter?.registerMiddleware(middleware, moduleUrl);
     this._graphQLRouter?.registerMiddleware(middleware, moduleUrl);
@@ -322,7 +328,20 @@ export class ConduitRoutingController {
   }
 
   async socketPush(data: SocketPush) {
-    await this._socketRouter?.handleSocketPush(data);
+    return (await this._socketRouter?.handleSocketPush(data)) ?? false;
+  }
+
+  getLocalRoomUserIds(namespace: string, room: string): Promise<string[]> {
+    return (
+      this._socketRouter?.getLocalRoomUserIds(namespace, room) ?? Promise.resolve([])
+    );
+  }
+
+  getLocalRoomsWithPrefix(namespace: string, prefix: string): Promise<string[]> {
+    return (
+      this._socketRouter?.getLocalRoomsWithPrefix(namespace, prefix) ??
+      Promise.resolve([])
+    );
   }
 
   /** True if any enabled transport would change this route (new or definition changed). */
@@ -451,6 +470,8 @@ export class ConduitRoutingController {
   }
 }
 
+export { isSocketHandshake } from './Socket/isSocketHandshake.js';
+export { resolveEngineNamespacePath } from './Socket/resolveEngineNamespacePath.js';
 export * from './interfaces/index.js';
 export * from './types/index.js';
 export * from './classes/index.js';
