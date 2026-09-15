@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-* **storage:** complete filesystem-shaped ReBAC for Container, Folder, and File behind `authorization.enabled` ([#1173](https://github.com/ConduitPlatform/Conduit/issues/1173)). Leftover unowned folders/containers are unmanaged until the first write heals them; old files are not backfilled. There is no reconstruct job and no second filesystem flag. Provision named containers via Admin. Products that share prefixes (for example fyllo) should keep authorization off until they have per-user folder roots and per-file grants or privileged fetch.
+* **storage:** complete filesystem-shaped ReBAC for Container, Folder, and File behind `authorization.enabled` ([#1173](https://github.com/ConduitPlatform/Conduit/issues/1173)). Leftover unowned folders/containers are unmanaged until the first write heals them; old files are not backfilled. There is no reconstruct job and no second filesystem flag. Provision named containers via Admin. Admin writes without `scope` make a folder container-owned (Client 403 on the default container); pass a scope if Client users should keep writing. Products that share prefixes (for example fyllo) should keep authorization off until they have per-user folder roots and per-file grants or privileged fetch.
 
 ## [0.17.0-alpha.6](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.5...v0.17.0-alpha.6) (2026-07-26)
 
