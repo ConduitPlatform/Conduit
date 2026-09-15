@@ -21,15 +21,18 @@ When `authorization.enabled` is true, Storage registers `Container`, `Folder`, a
 - A folder owns nested folders and files.
 - Client file creates also stamp `scope ?? User:<id>` on the File so the creator can `can(File)` even if the folder has no owners yet.
 - The default container is never owned. It is created on both the database and the storage provider if missing.
-- An optional `scope` (for example `Team:<id>`) is attached as an extra owner when provided. Admin folder create without scope only attaches the container as the first-folder owner.
+- An optional `scope` (for example `Team:<id>`) is attached as an extra owner when provided. Admin folder create without scope only attaches the container as the first-folder owner. Scope is optional and is not rejected when missing.
 
 **Upgrade / leftover data:** there is no reconstruct-indexes job and old files are not backfilled. A leftover folder or non-default container with no owner/editor/reader relations is **unmanaged**: folder/container `can(edit)` is skipped, and the first successful write heals it by attaching the current subject (plus Container/parent links). After that, normal `can(edit)` applies. Old private files without a File relation stay Client-inaccessible; Admin can still read/update/delete them.
+
+If Admin writes into a leftover (or new) folder **without** `scope`, the folder becomes container-owned. On the default container that means Client users will get `403` on later writes. That is expected. To keep the folder Client-writable, Admin must pass a `scope`, or let a Client user write first so they become the owner.
 
 Folder delete removes nested folders/files and all of their relations. Container delete pages those cleanups and also clears `Container` relations. File moves always try to drop the old structural Folder/Container owner (ignore missing) and add the new one.
 
 ## Provisioning notes
 
 - Provision named containers via **Admin**. Client APIs will not create them.
+- For shared leftover folders that Client users should keep writing to, Admin should pass a `scope` (for example `Team:<id>`). Omitting scope is valid for Admin-only trees; it is not an error.
 - Do **not** enable `authorization.enabled` until the product has a folder ownership model **and** either per-file grants or a privileged fetch path.
 - Shared prefixes (`docs/`, team drops, fyllo-style common roots) become first-writer-wins on the first Client write after enable, then exclusive to that subject unless relations are granted.
 - Fyllo-like apps that share prefixes should keep `authorization.enabled: false` until they do that separate product work. This module does not migrate those apps.
