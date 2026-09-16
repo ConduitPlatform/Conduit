@@ -232,10 +232,10 @@ export async function resolveRelatedSchemas(
       const rel = Array.isArray(extractedRelations[relation])
         ? (extractedRelations[relation] as UntypedArray)[0]
         : extractedRelations[relation];
-      if (
-        (!models[rel.model] || !models[rel.model].synced) &&
-        schema.name !== rel.model
-      ) {
+      // Wait until the related adapter exists, not until it has synced.
+      // Same-module cycles construct in parallel under Promise.all; waiting
+      // for .synced deadlocks because neither side can sync until this returns.
+      if (!models[rel.model] && schema.name !== rel.model) {
         if (!pendingModels.includes(rel.model)) {
           pendingModels.push(rel.model);
         }
@@ -255,19 +255,18 @@ export async function resolveRelatedSchemas(
     while (pendingModels.length > 0) {
       await ConduitGrpcSdk.Sleep(500);
       pendingModels = pendingModels.filter(model => {
-        if (!models[model] || !models[model].synced) {
+        if (!models[model]) {
           return true;
-        } else {
-          for (const schema in relatedSchemas) {
-            const simple = Array.isArray(relatedSchemas[schema])
-              ? (relatedSchemas[schema] as SequelizeSchema[])[0]
-              : relatedSchemas[schema];
-            // @ts-ignore
-            if (simple === model) {
-              relatedSchemas[schema] = Array.isArray(relatedSchemas[schema])
-                ? [models[model]]
-                : models[model];
-            }
+        }
+        for (const schemaName in relatedSchemas) {
+          const simple = Array.isArray(relatedSchemas[schemaName])
+            ? (relatedSchemas[schemaName] as SequelizeSchema[])[0]
+            : relatedSchemas[schemaName];
+          // @ts-ignore
+          if (simple === model) {
+            relatedSchemas[schemaName] = Array.isArray(relatedSchemas[schemaName])
+              ? [models[model]]
+              : models[model];
           }
         }
       });

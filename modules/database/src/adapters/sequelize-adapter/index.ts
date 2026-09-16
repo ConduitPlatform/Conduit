@@ -311,11 +311,9 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         collectionName,
       );
     }
-    const relatedSchemas = await resolveRelatedSchemas(
-      schema,
-      extractedRelations,
-      this.models,
-    );
+    const relatedSchemas: {
+      [key: string]: SequelizeSchema | SequelizeSchema[];
+    } = {};
     this.models[schema.name] = new SequelizeSchema(
       this.grpcSdk,
       this.sequelize,
@@ -325,6 +323,11 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       relatedSchemas,
       objectPaths,
     );
+    Object.assign(
+      relatedSchemas,
+      await resolveRelatedSchemas(schema, extractedRelations, this.models),
+    );
+    this.models[schema.name].bindExtractedRelations();
 
     try {
       const noSync =
