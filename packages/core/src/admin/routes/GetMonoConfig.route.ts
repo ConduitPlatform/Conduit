@@ -3,7 +3,7 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitJson } from '@conduitplatform/module-tools';
+import { ConduitJson, redactSensitiveConfig } from '@conduitplatform/module-tools';
 import { ConduitRoute } from '@conduitplatform/hermes';
 import { ServiceRegistry } from '../../service-discovery/ServiceRegistry.js';
 
@@ -27,7 +27,11 @@ export function getMonoConfigRoute(grpcSdk: ConduitGrpcSdk) {
       ].sort();
       for (const moduleName of sortedModules) {
         const moduleConfig = await grpcSdk.state!.getKey(`moduleConfigs.${moduleName}`);
-        if (moduleConfig) monoConfig.modules[moduleName] = JSON.parse(moduleConfig);
+        if (moduleConfig) {
+          monoConfig.modules[moduleName] = redactSensitiveConfig(
+            JSON.parse(moduleConfig),
+          );
+        }
       }
       return { config: monoConfig };
     },

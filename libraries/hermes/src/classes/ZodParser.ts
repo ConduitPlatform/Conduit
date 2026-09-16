@@ -165,7 +165,17 @@ export class ZodParser {
     );
   }
 
-  private getZodType(conduitType: TYPE): z.ZodTypeAny {
+  private vectorZodType(sourceField?: unknown): z.ZodTypeAny {
+    const item = this.useCoercion ? z.coerce.number().finite() : z.number().finite();
+    let arrayType = z.array(item);
+    const dimensions = ParserUtils.getVectorDimensions(sourceField);
+    if (dimensions !== undefined) {
+      arrayType = arrayType.length(dimensions);
+    }
+    return arrayType;
+  }
+
+  private getZodType(conduitType: TYPE, sourceField?: unknown): z.ZodTypeAny {
     switch (conduitType) {
       case TYPE.String:
         return z.string();
@@ -181,6 +191,8 @@ export class ZodParser {
         return this.conduitJsonZodType();
       case TYPE.Relation:
         return z.string();
+      case TYPE.Vector:
+        return this.vectorZodType(sourceField);
       default:
         return z.any();
     }
@@ -194,7 +206,7 @@ export class ZodParser {
 
     if (typeof fields === 'string') {
       const t = fields as TYPE;
-      let zodType = this.getZodType(t);
+      let zodType = this.getZodType(t, fields);
       if (t === TYPE.JSON) {
         zodType = this.finalizeJsonRouteParam(zodType, true);
       }
@@ -218,7 +230,7 @@ export class ZodParser {
 
     if (typeof field === 'string') {
       const t = field as TYPE;
-      let zodType = this.getZodType(t);
+      let zodType = this.getZodType(t, field);
       if (t === TYPE.JSON) {
         zodType = this.finalizeJsonRouteParam(zodType, !isRequired);
       } else if (!isRequired) {
@@ -252,13 +264,13 @@ export class ZodParser {
     let itemType: z.ZodTypeAny;
 
     if (typeof firstItem === 'string') {
-      itemType = this.getZodType(firstItem as TYPE);
+      itemType = this.getZodType(firstItem as TYPE, firstItem);
     } else if (typeof firstItem === 'object' && firstItem !== null) {
       if (firstItem.type) {
         if (firstItem.type === TYPE.Relation) {
           itemType = z.string();
         } else if (typeof firstItem.type === 'string') {
-          itemType = this.getZodType(firstItem.type as TYPE);
+          itemType = this.getZodType(firstItem.type as TYPE, firstItem);
         } else {
           const nestedResult = this.extractTypesInternal(
             fieldName,
@@ -316,7 +328,7 @@ export class ZodParser {
         zodType = z.string();
       } else if (typeof field.type === 'string') {
         const t = field.type as TYPE;
-        zodType = this.getZodType(t);
+        zodType = this.getZodType(t, field);
         if (t === TYPE.JSON) {
           zodType = this.finalizeJsonRouteParam(zodType, !isRequired);
         }

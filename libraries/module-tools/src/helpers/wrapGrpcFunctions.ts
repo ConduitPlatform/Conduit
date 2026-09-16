@@ -1,6 +1,6 @@
 import { createVerifier } from 'fast-jwt';
 import { status } from '@grpc/grpc-js';
-import { ConduitGrpcSdk, GrpcCallback } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, GrpcCallback, GrpcError } from '@conduitplatform/grpc-sdk';
 
 interface JWT {
   moduleName: string;
@@ -43,11 +43,19 @@ export function wrapGrpcFunctions(
       try {
         invoked = functions[name](call, callback);
       } catch (error) {
-        return throwError(callback, (error as Error).message);
+        return throwError(
+          callback,
+          (error as Error).message,
+          error instanceof GrpcError ? error.code : status.INTERNAL,
+        );
       }
       if (typeof invoked?.then === 'function') {
         invoked.then().catch((error: Error) => {
-          return throwError(callback, error.message);
+          return throwError(
+            callback,
+            error.message,
+            error instanceof GrpcError ? error.code : status.INTERNAL,
+          );
         });
       }
     };

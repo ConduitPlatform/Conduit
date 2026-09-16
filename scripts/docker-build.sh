@@ -13,6 +13,7 @@ case "$TARGET" in
   chat) BUILDING_SERVICE="modules/chat" ;;
   communications) BUILDING_SERVICE="modules/communications" ;;
   database) BUILDING_SERVICE="modules/database" ;;
+  embeddings) BUILDING_SERVICE="modules/embeddings" ;;
   functions) BUILDING_SERVICE="modules/functions" ;;
   router) BUILDING_SERVICE="modules/router" ;;
   storage) BUILDING_SERVICE="modules/storage" ;;
@@ -21,7 +22,7 @@ case "$TARGET" in
   all) ;;
   *)
     echo "Unknown target: $TARGET" >&2
-    echo "Usage: $0 [conduit|authentication|authorization|chat|communications|database|functions|router|storage|conduit-standalone|all]" >&2
+    echo "Usage: $0 [conduit|authentication|authorization|chat|communications|database|embeddings|functions|router|storage|conduit-standalone|all]" >&2
     exit 1
     ;;
 esac
@@ -41,7 +42,7 @@ fi
 
 if [ "$TARGET" = "all" ]; then
   docker buildx bake --file docker-bake.hcl all --set "*.platform=linux/amd64,linux/arm64"
-elif [ "$TARGET" = "conduit" ] || [ "$TARGET" = "chat" ] || [ "$TARGET" = "functions" ] || [ "$TARGET" = "storage" ] || [ "$TARGET" = "authentication" ] || [ "$TARGET" = "authorization" ] || [ "$TARGET" = "communications" ] || [ "$TARGET" = "database" ] || [ "$TARGET" = "router" ] || [ "$TARGET" = "conduit-standalone" ]; then
+elif [ "$TARGET" = "conduit" ] || [ "$TARGET" = "chat" ] || [ "$TARGET" = "functions" ] || [ "$TARGET" = "storage" ] || [ "$TARGET" = "authentication" ] || [ "$TARGET" = "authorization" ] || [ "$TARGET" = "communications" ] || [ "$TARGET" = "database" ] || [ "$TARGET" = "embeddings" ] || [ "$TARGET" = "router" ] || [ "$TARGET" = "conduit-standalone" ]; then
   # Bundle-based targets: bake HCL wires conduit-base-bundle-* (BUILD_BUNDLE=1).
   docker buildx bake --file docker-bake.hcl "$TARGET" \
     --set "*.platform=linux/amd64,linux/arm64"

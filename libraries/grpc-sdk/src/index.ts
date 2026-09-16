@@ -7,6 +7,7 @@ import {
   Config,
   Core,
   DatabaseProvider,
+  EmbeddingsProvider,
   Email,
   PushNotifications,
   Router,
@@ -66,6 +67,7 @@ class ConduitGrpcSdk {
   private readonly _availableModules: any = {
     router: Router,
     database: DatabaseProvider,
+    embeddings: EmbeddingsProvider,
     storage: Storage,
     email: Email,
     pushNotifications: PushNotifications,
@@ -158,12 +160,10 @@ class ConduitGrpcSdk {
   }
 
   private _redisDetails?:
-    | RedisOptions
-    | { nodes: { host: string; port: number }[]; options: ClusterOptions };
+    RedisOptions | { nodes: { host: string; port: number }[]; options: ClusterOptions };
 
   get redisDetails():
-    | RedisOptions
-    | { nodes: { host: string; port: number }[]; options: ClusterOptions } {
+    RedisOptions | { nodes: { host: string; port: number }[]; options: ClusterOptions } {
     if (this._redisDetails) {
       return this._redisDetails;
     } else {
@@ -221,6 +221,15 @@ class ConduitGrpcSdk {
 
   get databaseProvider(): DatabaseProvider | null {
     return this.database;
+  }
+
+  get embeddings(): EmbeddingsProvider | null {
+    if (this._modules['embeddings']) {
+      return this._modules['embeddings'] as EmbeddingsProvider;
+    } else {
+      ConduitGrpcSdk.Logger.warn('Embeddings provider not up yet!');
+      return null;
+    }
   }
 
   get storage(): Storage | null {
@@ -812,5 +821,41 @@ export * from './classes/index.js';
 export * from './modules/index.js';
 export * from './constants/index.js';
 export * from './types/index.js';
-export * from './protoUtils/index.js';
+export * from './protoUtils/authentication.js';
+export * from './protoUtils/authorization.js';
+export * from './protoUtils/chat.js';
+export * from './protoUtils/communications.js';
+export * from './protoUtils/core.js';
+export * from './protoUtils/database.js';
+export * from './protoUtils/grpc_health_check.js';
+export * from './protoUtils/module.js';
+export * from './protoUtils/router.js';
+export * from './protoUtils/storage.js';
+// Embeddings proto VectorCapabilities/QueueCounts collide with the public SDK types.
+export {
+  BackfillMutationResponse,
+  BackfillRun,
+  CancelBackfillRequest,
+  DeleteEmbeddingConfigRequest,
+  DeleteEmbeddingConfigResponse,
+  EmbeddingConfig,
+  EmbeddingsProviderDefinition,
+  GetBackfillRequest,
+  GetCapabilitiesRequest,
+  GetCapabilitiesResponse,
+  GetConfigsRequest,
+  GetConfigsResponse,
+  GetStatusRequest,
+  GetStatusResponse,
+  ListBackfillsRequest,
+  ListBackfillsResponse,
+  ResumeBackfillRequest,
+  SemanticSearchHit,
+  SemanticSearchRequest,
+  SemanticSearchResponse,
+  StartBackfillRequest,
+  StartBackfillResponse,
+  UpsertConfigRequest,
+  UpsertConfigResponse,
+} from './protoUtils/embeddings.js';
 export * from '@grpc/grpc-js';

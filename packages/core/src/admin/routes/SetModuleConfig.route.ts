@@ -9,6 +9,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 // Removed ConduitCommons import - now using configManager directly
 import { ConduitRoute } from '@conduitplatform/hermes';
+import { redactSensitiveConfig } from '@conduitplatform/module-tools';
 import convict from 'convict';
 
 type SetConfig = (config: { newConfig: string }) => Promise<{ updatedConfig: string }>;
@@ -66,7 +67,7 @@ export function setModuleConfigRoute(
           updatedConfig = JSON.parse(updatedConfig.updatedConfig);
       }
       await configManager.set(moduleName, updatedConfig);
-      return { config: updatedConfig };
+      return { config: redactSensitiveConfig(updatedConfig, configSchema) };
     },
   );
 }
