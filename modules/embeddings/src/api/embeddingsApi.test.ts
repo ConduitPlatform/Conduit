@@ -721,6 +721,30 @@ describe('typed embeddings API handlers', () => {
     assert.equal(mapped.code, status.FAILED_PRECONDITION);
   });
 
+  it('fails semantic search closed when the module is disabled', async () => {
+    let searched = false;
+    const { api } = createApi({
+      configs: [enabledConfig],
+      config: { ...moduleConfig, enabled: false },
+      vectorSearch: async () => {
+        searched = true;
+        return [];
+      },
+    });
+    await assert.rejects(
+      () =>
+        api.semanticSearch(
+          { schemaName: 'Article', text: 'hello', userId: 'user-1' },
+          { callerModule: 'database' },
+        ),
+      (err: unknown) =>
+        err instanceof SearchGateError &&
+        err.reason === 'module_disabled' &&
+        api.mapGrpcError(err).code === status.FAILED_PRECONDITION,
+    );
+    assert.equal(searched, false);
+  });
+
   it('caps client semantic-search limit below admin and gRPC callers', async () => {
     const seen: number[] = [];
     const { api } = createApi({

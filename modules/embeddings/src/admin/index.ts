@@ -15,7 +15,12 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { EmbeddingsApi } from '../api/embeddingsApi.js';
-import { CONFIG_BODY, EMBEDDINGS_ADMIN_ROUTES } from './routes.js';
+import {
+  BACKFILL_BODY,
+  CONFIG_BODY,
+  EMBEDDINGS_ADMIN_ROUTES,
+  SEARCH_BODY,
+} from './routes.js';
 
 const ADMIN_CALLER = { platformAdmin: true as const };
 
@@ -258,13 +263,7 @@ export class AdminHandlers {
         path: '/backfills',
         action: ConduitRouteActions.POST,
         description: descriptions.get(`${ConduitRouteActions.POST}:/backfills`),
-        bodyParams: {
-          schemaName: ConduitString.Required,
-          batchSize: ConduitNumber.Optional,
-          configId: ConduitString.Optional,
-          onlyMissing: ConduitBoolean.Optional,
-          filter: ConduitJson.Optional,
-        },
+        bodyParams: BACKFILL_BODY,
       },
       new ConduitRouteReturnDefinition('StartEmbeddingBackfill', {
         queued: ConduitNumber.Required,
@@ -316,13 +315,7 @@ export class AdminHandlers {
         path: '/search',
         action: ConduitRouteActions.POST,
         description: descriptions.get(`${ConduitRouteActions.POST}:/search`),
-        bodyParams: {
-          schemaName: ConduitString.Required,
-          text: ConduitString.Required,
-          targetField: ConduitString.Optional,
-          filter: ConduitJson.Optional,
-          limit: ConduitNumber.Optional,
-        },
+        bodyParams: SEARCH_BODY,
       },
       new ConduitRouteReturnDefinition('AdminSemanticSearch', {
         hits: [ConduitJson.Required],

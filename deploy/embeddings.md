@@ -5,7 +5,7 @@ standalone v1. No embeddings image is published until a compatible release tag
 exists; do not enable the compose profile or Helm workload against `latest`
 until that tag is published. Live MongoDB Atlas, pgvector, Redis, and provider
 suites are **not** covered by CI; operators must complete the capability and
-index readiness checks below before enabling generation or search.
+index readiness checks below before enabling generation, backfill, or search.
 
 Production containers set `NODE_ENV=production` and **require a non-empty
 `GRPC_KEY`**. Two independent enablement flags exist:
@@ -14,7 +14,8 @@ Production containers set `NODE_ENV=production` and **require a non-empty
   only deploys or removes the embeddings process. It does not start workers.
 - Module convict `enabled` (Core config, default `false`) turns on embedding
   generation workers, mutation subscriptions, and search. Keep this `false`
-  until peer health and vector capabilities are confirmed.
+  until peer health and vector capabilities are confirmed. Backfill, resume,
+  and text search fail closed while convict `enabled` is false.
 
 ## Compose (opt-in)
 
@@ -44,27 +45,31 @@ pod with module convict `enabled` still false.
    disabled so operators can configure the module.
 3. Confirm `GRPC_KEY` is set and gRPC peer health is good.
 4. Call `GET /embeddings/capabilities` (or gRPC `getCapabilities`) and verify
-   Database `getVectorCapabilities`: storage, indexing, and search must be
-   true for the target backend (MongoDB Atlas Vector Search or Postgres
-   pgvector). Saving a disabled config may succeed with capability warnings;
-   activation must not.
-5. Configure the HTTPS provider (`endpoint`, `apiKey`, and model catalogue).
-   `GRPC_KEY` is supplied by the deployment (`NODE_ENV=production`), not by
-   module settings. Check `GET /embeddings/status` for provider/index warnings.
-6. Create an embedding config. The first upsert provisions the vector index
-   when Database indexing is available. The config stays disabled until the
-   index for `targetField` is queryable (`status` ready, not pending/failed).
-   If indexing is unavailable, status reports a manual lifecycle warning and
-   the operator must create the index before enabling.
-7. Enable the config only after index readiness. Start a **bounded** backfill
-   (`onlyMissing` recommended). Watch `GET /embeddings/backfills/:id` and
-   `GET /embeddings/status` queue counts. Do not scan collections in the
-   request thread; backfills are queued.
-8. Run a scoped canary semantic search (`POST /embeddings/search` as an
+   Database `getVectorCapabilities` before configuring a provider: storage,
+   indexing, and search must be true for the target backend (MongoDB Atlas
+   Vector Search or Postgres pgvector). Saving a disabled config may succeed
+   with capability warnings; activation must not.
+5. Configure the trusted HTTPS provider (`endpoint`, `apiKey`, and model
+   catalogue). `GRPC_KEY` is supplied by the deployment (`NODE_ENV=production`),
+   not by module settings. Check `GET /embeddings/status` for provider/index
+   warnings.
+6. Create an embedding config with `enabled: false`. The first upsert
+   provisions the vector index when Database indexing is available. Wait until
+   the index for `targetField` is queryable (`status` ready, not
+   pending/failed). If indexing is unavailable, status reports a manual
+   lifecycle warning and the operator must create the index before enabling.
+   Requesting `enabled: true` while convict is still false fails closed;
+   do not treat that upsert as a deferred disable.
+7. Enable workers (module convict `enabled: true` through Core config).
+   This is not `install.embeddings.enabled`. Then enable the embedding
+   config only after the index is queryable. Activation, backfill, resume,
+   and text search fail closed while convict `enabled` is false.
+8. Start a **bounded** backfill (`onlyMissing` recommended). Watch
+   `GET /embeddings/backfills/:id` and `GET /embeddings/status` queue counts.
+   Do not scan collections in the request thread; backfills are queued.
+9. Run a scoped canary semantic search (`POST /embeddings/search` as an
    operator, or client search with authenticated user/scope). Confirm
    fail-closed behavior on authorization-enabled schemas.
-9. Enable workers/search for normal traffic (module convict `enabled: true`
-   through Core config). This is not `install.embeddings.enabled`.
 
 ## Rollback
 

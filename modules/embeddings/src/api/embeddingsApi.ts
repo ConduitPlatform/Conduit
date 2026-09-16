@@ -537,6 +537,10 @@ export class EmbeddingsApi {
     if (typeof request.text !== 'string' || request.text.trim().length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Search text is required');
     }
+    const moduleEnabled = this.deps.currentConfig().enabled;
+    if (!moduleEnabled) {
+      assertSearchExecutable({ moduleEnabled });
+    }
     const adminOperator = caller.platformAdmin
       ? true
       : resolveAdminOperatorContext({
@@ -565,6 +569,7 @@ export class EmbeddingsApi {
       this.deps.getVectorIndexes(request.schemaName),
     ]);
     assertSearchExecutable({
+      moduleEnabled,
       capabilities,
       config,
       indexes,
