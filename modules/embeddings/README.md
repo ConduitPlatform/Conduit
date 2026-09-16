@@ -57,13 +57,18 @@ fail before vectors are written or searched.
 ## Admin and MCP
 
 Operator-only Admin routes are registered under `/embeddings/*` and become MCP
-tools through Hermes:
+tools through Hermes auto-conversion (`?modules=embeddings`). Search and
+backfill fail closed while convict `enabled` is false.
 
 - `GET /embeddings/configs`
 - `POST /embeddings/configs`
+- `GET /embeddings/configs/:id`
+- `DELETE /embeddings/configs/:id`
 - `GET /embeddings/capabilities`
 - `GET /embeddings/status`
+- `GET /embeddings/backfills`
 - `POST /embeddings/backfills`
+- `GET /embeddings/backfills/:id`
 - `POST /embeddings/backfills/:id/cancel`
 - `POST /embeddings/backfills/:id/resume`
 - `POST /embeddings/search`

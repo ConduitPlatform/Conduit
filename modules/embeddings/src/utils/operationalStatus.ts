@@ -13,6 +13,7 @@ import { providerCatalogueIssues } from './providerConfig.js';
 import type { QueueJobCounts } from '../controllers/queue.controller.js';
 
 export const SEARCH_GATE_REASONS = [
+  'module_disabled',
   'vector_unsupported',
   'vector_search_unavailable',
   'config_not_found',
@@ -36,10 +37,17 @@ export class SearchGateError extends Error {
 }
 
 export function assertSearchExecutable(args: {
+  moduleEnabled: boolean;
   capabilities?: Pick<VectorCapabilities, 'supported' | 'search' | 'provider' | 'reason'>;
   config?: BackfillConfigGate | null;
   indexes?: readonly VectorIndexGate[];
 }): void {
+  if (!args.moduleEnabled) {
+    throw new SearchGateError(
+      'module_disabled',
+      'Embeddings module is disabled; enable it before running semantic search',
+    );
+  }
   const capabilities = args.capabilities;
   if (!capabilities?.supported) {
     throw new SearchGateError(
@@ -88,6 +96,7 @@ export function assertSearchExecutable(args: {
 
 export function grpcErrorFromSearchGate(err: SearchGateError): GrpcError {
   switch (err.reason) {
+    case 'module_disabled':
     case 'vector_unsupported':
     case 'vector_search_unavailable':
     case 'config_not_found':

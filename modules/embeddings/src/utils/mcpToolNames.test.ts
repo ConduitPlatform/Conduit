@@ -4,10 +4,12 @@ import { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
 import { ConduitNumber, ConduitString } from '@conduitplatform/module-tools';
 import { embeddingsMcpToolName, embeddingsPublicPath } from './mcpToolNames.js';
 import {
+  BACKFILL_BODY,
   CONFIG_BODY,
   EMBEDDINGS_ADMIN_ROUTES,
   EMBEDDINGS_CLIENT_FORBIDDEN_PATHS,
   EMBEDDINGS_CLIENT_SEARCH_PATH,
+  SEARCH_BODY,
 } from '../admin/routes.js';
 import { EmbeddingsRoutes } from '../routes/index.js';
 
@@ -88,5 +90,13 @@ describe('embeddings MCP tool names', () => {
     assert.equal(CONFIG_BODY.model, ConduitString.Optional);
     assert.equal(CONFIG_BODY.dimensions, ConduitNumber.Optional);
     assert.equal(CONFIG_BODY.provider, ConduitString.Optional);
+    assert.match(CONFIG_BODY.sourceFields.description, /sourceFields|concatenated/i);
+    assert.match(CONFIG_BODY.similarity.description, /cosine/);
+    assert.match(CONFIG_BODY.enabled.description, /first upsert/);
+    assert.match(BACKFILL_BODY.batchSize.description, /maxBatchSize|500/);
+    assert.match(BACKFILL_BODY.onlyMissing.description, /missing/);
+    assert.match(BACKFILL_BODY.filter.description, /\$and/);
+    assert.match(SEARCH_BODY.limit.description, /50/);
+    assert.match(SEARCH_BODY.filter.description, /vector/);
   });
 });

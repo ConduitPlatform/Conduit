@@ -57,10 +57,47 @@ describe('embeddings operational warnings and search gates', () => {
     );
   });
 
+  it('blocks semantic search when the module is disabled even if the index is queryable', () => {
+    assert.throws(
+      () =>
+        assertSearchExecutable({
+          moduleEnabled: false,
+          capabilities: {
+            supported: true,
+            search: true,
+            provider: 'mongodb',
+          },
+          config: {
+            _id: 'cfg1',
+            enabled: true,
+            targetField: 'embedding',
+            dimensions: 3,
+            similarity: 'cosine',
+          },
+          indexes: [
+            {
+              field: 'embedding',
+              status: VectorIndexStatus.Ready,
+              queryable: true,
+              dimensions: 3,
+              similarity: 'cosine',
+            },
+          ],
+        }),
+      (err: unknown) =>
+        err instanceof SearchGateError && err.reason === 'module_disabled',
+    );
+    const mapped = grpcErrorFromSearchGate(
+      new SearchGateError('module_disabled', 'Embeddings module is disabled'),
+    );
+    assert.equal(mapped.code, status.FAILED_PRECONDITION);
+  });
+
   it('blocks semantic search when the vector index is not queryable', () => {
     assert.throws(
       () =>
         assertSearchExecutable({
+          moduleEnabled: true,
           capabilities: {
             supported: true,
             search: true,
@@ -95,6 +132,7 @@ describe('embeddings operational warnings and search gates', () => {
   it('allows search when the live index method is empty or omitted', () => {
     assert.doesNotThrow(() =>
       assertSearchExecutable({
+        moduleEnabled: true,
         capabilities: {
           supported: true,
           search: true,
@@ -121,6 +159,7 @@ describe('embeddings operational warnings and search gates', () => {
     );
     assert.doesNotThrow(() =>
       assertSearchExecutable({
+        moduleEnabled: true,
         capabilities: {
           supported: true,
           search: true,
@@ -168,6 +207,7 @@ describe('embeddings operational warnings and search gates', () => {
     assert.throws(
       () =>
         assertSearchExecutable({
+          moduleEnabled: true,
           capabilities: {
             supported: true,
             search: true,
