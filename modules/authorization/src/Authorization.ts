@@ -380,11 +380,13 @@ export default class Authorization extends ManagedModule<Config> {
     return resource;
   }
 
-  protected async registerSchemas(): Promise<void> {
-    for (const model of Object.values(models)) {
+  protected registerSchemas(): Promise<unknown> {
+    const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
-      await this.database.createSchemaFromAdapter(modelInstance);
-      await this.database.migrate(modelInstance.name);
-    }
+      return this.database
+        .createSchemaFromAdapter(modelInstance)
+        .then(() => this.database.migrate(modelInstance.name));
+    });
+    return Promise.all(promises);
   }
 }
