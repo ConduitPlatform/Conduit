@@ -124,9 +124,20 @@ export function liveNameConflictAllowsReuse(
   return indexIdentitiesEqual(indexIdentity(row), indexIdentity(declared));
 }
 
+export function indexNameCollection(schema: {
+  collectionName?: string;
+  name?: string;
+}): string {
+  if (schema.collectionName && schema.collectionName.length > 0) {
+    return schema.collectionName;
+  }
+  return schema.name ?? '';
+}
+
 export function bindDeclaredIndexesToLive<T extends ModelOptionsIndexes>(
   declared: readonly T[],
   live: readonly ModelOptionsIndexes[],
+  collectionName: string,
 ): T[] {
   return declared.map(index => {
     const match = findLiveIndex(live, index);
@@ -145,7 +156,7 @@ export function bindDeclaredIndexesToLive<T extends ModelOptionsIndexes>(
       ? index.fields.every(field => typeof field === 'string')
       : false;
     if (stringFields && fields.length === index.fields.length) {
-      return ensureIndexName(index) as T;
+      return ensureIndexName(index, collectionName) as T;
     }
     return index;
   });
@@ -154,12 +165,13 @@ export function bindDeclaredIndexesToLive<T extends ModelOptionsIndexes>(
 export function keepDeclaredIndexExtras(
   incomingBound: readonly ModelOptionsIndexes[],
   existingDb: readonly ModelOptionsIndexes[] | undefined,
+  collectionName: string,
 ): ModelOptionsIndexes[] {
   const incoming = incomingBound.map(index => {
     const name = resolveIndexName(index);
     return name
       ? { ...index, name, options: { ...index.options, name } }
-      : ensureIndexName(index);
+      : ensureIndexName(index, collectionName);
   });
   const incomingNames = new Set(
     incoming.map(resolveIndexName).filter((name): name is string => Boolean(name)),
@@ -172,7 +184,7 @@ export function keepDeclaredIndexExtras(
     const name = resolveIndexName(index);
     if (name && incomingNames.has(name)) continue;
     if (incomingIdentities.has(indexIdentityKey(indexIdentity(index)))) continue;
-    extras.push(ensureIndexName(index));
+    extras.push(ensureIndexName(index, collectionName));
   }
   return [...incoming, ...extras];
 }
@@ -237,10 +249,18 @@ function typeToken(type: unknown): string {
   return String(type);
 }
 
+function sanitizeIdentifierPart(value: string): string {
+  return value
+    .replace(/[^A-Za-z0-9_]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+}
+
 export function generateIndexName(
   fields: readonly string[],
   types?: ModelOptionsIndexes['types'],
   unique = false,
+  collectionName = '',
 ): string {
   const tokens = (
     normalizeIndexTypes(types, fields.length) ?? fields.map(() => undefined)
@@ -248,17 +268,33 @@ export function generateIndexName(
     .map(typeToken)
     .join('_');
   const prefix = unique ? 'cnd_uidx' : 'cnd_idx';
-  const raw = `${prefix}_${fields.join('_')}_${tokens}`.replace(/[^A-Za-z0-9_]+/g, '_');
+  const table = sanitizeIdentifierPart(collectionName);
+  const raw = `${prefix}_${table}_${fields.join('_')}_${tokens}`.replace(
+    /[^A-Za-z0-9_]+/g,
+    '_',
+  );
   const sanitized = raw.replace(/_+/g, '_').replace(/^_|_$/g, '');
   if (sanitized.length <= SQL_IDENTIFIER_MAX_LEN) return sanitized;
-  const hash = createHash('sha1').update(sanitized).digest('hex').slice(0, 8);
-  return `${sanitized.slice(0, SQL_IDENTIFIER_MAX_LEN - 9)}_${hash}`;
+  const identityKey = `${collectionName}\0${unique}\0${fields.join('\0')}\0${tokens}`;
+  const hash = createHash('sha1').update(identityKey).digest('hex').slice(0, 8);
+  const maxTableLen = SQL_IDENTIFIER_MAX_LEN - prefix.length - hash.length - 2;
+  const tableSlice = table.slice(0, Math.max(1, maxTableLen));
+  return `${prefix}_${tableSlice}_${hash}`.slice(0, SQL_IDENTIFIER_MAX_LEN);
 }
 
-export function ensureIndexName(index: ModelOptionsIndexes): ModelOptionsIndexes {
+export function ensureIndexName(
+  index: ModelOptionsIndexes,
+  collectionName: string,
+): ModelOptionsIndexes {
   const existing = resolveIndexName(index);
   const name =
-    existing ?? generateIndexName(index.fields, index.types, isUniqueIndex(index));
+    existing ??
+    generateIndexName(
+      indexFieldNames(index),
+      index.types,
+      isUniqueIndex(index),
+      collectionName,
+    );
   return {
     ...index,
     name,
@@ -312,10 +348,11 @@ export function mongoAllowsIndexType(type: unknown): boolean {
 export function mergeDeclaredIndexes(
   existing: readonly ModelOptionsIndexes[] | undefined,
   incoming: readonly ModelOptionsIndexes[],
+  collectionName: string,
 ): ModelOptionsIndexes[] {
-  const merged = declaredIndexMap(existing);
+  const merged = declaredIndexMap(existing, collectionName);
   for (const index of incoming) {
-    const named = ensureIndexName(index);
+    const named = ensureIndexName(index, collectionName);
     const name = resolveIndexName(named);
     if (name && !merged.has(name)) merged.set(name, named);
   }
@@ -463,6 +500,8 @@ export async function persistDeclaredSchemaIndexes(args: {
     modelOptions: { indexes?: ModelOptionsIndexes[] | readonly ModelOptionsIndexes[] };
     fields?: Record<string, unknown>;
     compiledFields?: Record<string, unknown>;
+    collectionName?: string;
+    name?: string;
   };
   applied?: ModelOptionsIndexes[];
   droppedNames?: string[];
@@ -474,9 +513,10 @@ export async function persistDeclaredSchemaIndexes(args: {
   const memoryIndexes = (args.originalSchema.modelOptions.indexes ??
     []) as ModelOptionsIndexes[];
   const dbIndexes = found?.modelOptions?.indexes ?? memoryIndexes;
+  const collectionName = indexNameCollection(args.originalSchema) || args.schemaName;
   const next = args.droppedNames
     ? removeDeclaredIndexes(dbIndexes, args.droppedNames)
-    : mergeDeclaredIndexes(dbIndexes, args.applied ?? []);
+    : mergeDeclaredIndexes(dbIndexes, args.applied ?? [], collectionName);
   args.originalSchema.modelOptions.indexes = next;
   if (!found) return false;
   await args.declaredSchemaModel.findByIdAndUpdate(found._id, {
@@ -497,10 +537,11 @@ export function collectExistingIndexNames(
 
 export function declaredIndexMap(
   indexes: readonly ModelOptionsIndexes[] | undefined,
+  collectionName = '',
 ): Map<string, ModelOptionsIndexes> {
   const map = new Map<string, ModelOptionsIndexes>();
   for (const index of indexes ?? []) {
-    const named = ensureIndexName(index);
+    const named = ensureIndexName(index, collectionName);
     const name = resolveIndexName(named);
     if (name) map.set(name, named);
   }
@@ -542,6 +583,92 @@ export function inferSqlIndexType(
   }
   if (['postgres', 'mysql', 'mariadb', 'sqlite'].includes(dialect)) {
     return PostgresIndexType.BTREE;
+  }
+  return undefined;
+}
+
+export function isMongoNamespaceMissingError(error: unknown): boolean {
+  const err = error as { code?: number | string; codeName?: string; message?: string };
+  if (err?.code === 26 || err?.code === '26' || err?.codeName === 'NamespaceNotFound') {
+    return true;
+  }
+  return /ns does not exist|ns not found|namespace not found/i.test(err?.message ?? '');
+}
+
+export function isArrayLikeConduitField(field: unknown): boolean {
+  if (Array.isArray(field)) return true;
+  return Boolean(
+    field &&
+    typeof field === 'object' &&
+    Array.isArray((field as { type?: unknown }).type),
+  );
+}
+
+function isRelationElement(value: unknown): boolean {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    (value as { type?: unknown }).type === 'Relation',
+  );
+}
+
+export function isExtractedArrayRelationField(field: unknown): boolean {
+  if (Array.isArray(field)) return isRelationElement(field[0]);
+  if (field && typeof field === 'object') {
+    const type = (field as { type?: unknown }).type;
+    if (Array.isArray(type)) return isRelationElement(type[0]);
+  }
+  return false;
+}
+
+export function isMysqlJsonLikeField(field: unknown): boolean {
+  if (!field || typeof field !== 'object') return false;
+  if (Array.isArray(field)) {
+    const first = field[0];
+    if (isRelationElement(first)) return false;
+    if (typeof first === 'string') return first === 'JSON';
+    return Boolean(first && typeof first === 'object');
+  }
+  const type = (field as { type?: unknown }).type;
+  if (type === 'JSON') return true;
+  return Array.isArray(type);
+}
+
+export function isScalarRelationField(field: unknown): boolean {
+  return Boolean(
+    field &&
+    typeof field === 'object' &&
+    !Array.isArray(field) &&
+    (field as { type?: unknown }).type === 'Relation',
+  );
+}
+
+export function sqlIndexUnsupportedReason(
+  dialect: string,
+  index: Pick<ModelOptionsIndexes, 'fields'>,
+  fields: Record<string, unknown>,
+  options?: { timestamps?: boolean },
+): string | undefined {
+  const present = new Set(Object.keys(fields));
+  if (options?.timestamps) {
+    present.add('createdAt');
+    present.add('updatedAt');
+  }
+  const mysqlJson = dialect === 'mysql' || dialect === 'mariadb';
+  for (const name of indexFieldNames(index)) {
+    const field = fields[name];
+    if (isExtractedArrayRelationField(field)) {
+      return `Field '${name}' is stored as a relation join table and cannot be indexed on SQL`;
+    }
+    if (isScalarRelationField(field)) {
+      return `Field '${name}' is a relation and cannot be indexed on SQL`;
+    }
+    if (mysqlJson && isMysqlJsonLikeField(field)) {
+      return `Compatible btree indexes are not supported on MySQL JSON field '${name}'`;
+    }
+    if (field === undefined && !present.has(name)) {
+      return `Field '${name}' is stored as a relation join table and cannot be indexed on SQL`;
+    }
   }
   return undefined;
 }

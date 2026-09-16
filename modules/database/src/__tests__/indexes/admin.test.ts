@@ -87,6 +87,21 @@ describe('SchemaAdmin indexes', () => {
     expect(result.indexes.every(index => 'schemaName' in (index as object))).toBe(true);
   });
 
+  it('continues exporting when getIndexes throws for one schema', async () => {
+    const { admin, getIndexes } = setup();
+    getIndexes
+      .mockRejectedValueOnce(new Error('ns does not exist: test.cnd_adminapitokens'))
+      .mockResolvedValueOnce([{ name: 'ok', fields: ['email'] }]);
+    jest.spyOn(ConduitGrpcSdk.Logger, 'warn').mockImplementation(() => undefined);
+    const result = (await admin.exportIndexes(makeCall({}))) as {
+      indexes: Array<{ schemaName: string }>;
+      count: number;
+    };
+    expect(result.count).toBe(2);
+    expect(result.indexes).toHaveLength(1);
+    expect(result.indexes[0].schemaName).toBe('ChatRoom');
+  });
+
   it('skips same-name indexes on import', async () => {
     const { admin, createIndexes, getIndexes } = setup();
     getIndexes.mockResolvedValue([{ name: 'keep_me', fields: ['email'] }]);

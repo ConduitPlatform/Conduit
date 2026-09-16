@@ -4,6 +4,7 @@ import {
   CompatibleIndexType,
   MongoIndexType,
   PostgresIndexType,
+  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { MongooseAdapter } from '../../adapters/mongoose-adapter/index.js';
 import { SequelizeAdapter } from '../../adapters/sequelize-adapter/index.js';
@@ -261,7 +262,7 @@ describe('mongoose adapter indexes', () => {
       modelOptions: { indexes: { name?: string }[] };
     };
     expect(update.modelOptions.indexes.map(index => index.name)).toEqual([
-      'cnd_idx_email_asc',
+      'cnd_idx_cnd_User_email_asc',
     ]);
     expect(publish).toHaveBeenCalledWith('database:create:schema', expect.any(String));
   });
@@ -355,6 +356,68 @@ describe('mongoose adapter indexes', () => {
       modelOptions: { indexes: { name?: string }[] };
     };
     expect(update.modelOptions.indexes.map(index => index.name)).toEqual(['idx_b']);
+  });
+
+  it('returns empty indexes when the Mongo namespace is missing', async () => {
+    const { adapter, indexes } = makeMongooseAdapter();
+    indexes.mockRejectedValue({
+      code: 26,
+      codeName: 'NamespaceNotFound',
+      message: 'ns does not exist: test.cnd_adminapitokens',
+    });
+    await expect(adapter.getIndexes('User')).resolves.toEqual([]);
+  });
+
+  it('creates indexes when listLiveIndexes hits a missing namespace', async () => {
+    const { adapter, createIndex, indexes } = makeMongooseAdapter();
+    indexes.mockRejectedValue({
+      code: 26,
+      codeName: 'NamespaceNotFound',
+      message: 'ns does not exist: test.cnd_adminapitokens',
+    });
+    await expect(
+      adapter.createIndexes(
+        'User',
+        [{ fields: ['email'], types: [CompatibleIndexType.Ascending] }],
+        'chat',
+      ),
+    ).resolves.toBe('Indexes created!');
+    expect(createIndex).toHaveBeenCalledTimes(1);
+  });
+
+  it('rethrows non-namespace Mongo index listing errors', async () => {
+    const { adapter, indexes } = makeMongooseAdapter();
+    indexes.mockRejectedValue({ code: 13, message: 'unauthorized' });
+    await expect(adapter.getIndexes('User')).rejects.toMatchObject({
+      message: 'unauthorized',
+    });
+  });
+
+  it('creates both a single-field array index and a compound sharing the leading field', async () => {
+    const { adapter, createIndex, originalSchema } = makeMongooseAdapter();
+    originalSchema.fields.participants = [{ type: TYPE.Relation, model: 'User' }];
+    originalSchema.fields.deleted = { type: TYPE.Boolean };
+    originalSchema.compiledFields.participants = [{ type: TYPE.Relation, model: 'User' }];
+    originalSchema.compiledFields.deleted = { type: TYPE.Boolean };
+    await adapter.createIndexes(
+      'User',
+      [
+        { fields: ['participants'], types: [CompatibleIndexType.Ascending] },
+        {
+          fields: ['participants', 'deleted'],
+          types: [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+        },
+      ],
+      'chat',
+    );
+    expect(createIndex).toHaveBeenCalledTimes(2);
+    expect(createIndex.mock.calls[0][0]).toEqual({
+      participants: MongoIndexType.Ascending,
+    });
+    expect(createIndex.mock.calls[1][0]).toEqual({
+      participants: MongoIndexType.Ascending,
+      deleted: MongoIndexType.Ascending,
+    });
   });
 });
 
@@ -542,7 +605,7 @@ describe('sequelize adapter indexes', () => {
       modelOptions: { indexes: { name?: string }[] };
     };
     expect(update.modelOptions.indexes.map(index => index.name)).toEqual([
-      'cnd_idx_email_asc',
+      'cnd_idx_custom_users_email_asc',
     ]);
     expect(publish).toHaveBeenCalled();
   });
@@ -588,5 +651,57 @@ describe('sequelize adapter indexes', () => {
       CompatibleIndexType.Ascending,
       CompatibleIndexType.Ascending,
     ]);
+  });
+
+  it('rejects MySQL JSON btree indexes and allows them on postgres', async () => {
+    const mysql = makeSequelizeAdapter('mysql');
+    mysql.originalSchema.fields.inheritanceTree = { type: [TYPE.String] };
+    mysql.originalSchema.compiledFields.inheritanceTree = { type: [TYPE.String] };
+    await expect(
+      mysql.adapter.createIndexes(
+        'User',
+        [{ fields: ['inheritanceTree'], types: [CompatibleIndexType.Ascending] }],
+        'database',
+      ),
+    ).rejects.toMatchObject({
+      code: status.INVALID_ARGUMENT,
+      message: expect.stringMatching(/MySQL JSON field 'inheritanceTree'/),
+    });
+    expect(mysql.addIndex).not.toHaveBeenCalled();
+    expect(mysql.findByIdAndUpdate).not.toHaveBeenCalled();
+
+    const postgres = makeSequelizeAdapter('postgres');
+    postgres.originalSchema.fields.payload = { type: TYPE.JSON };
+    postgres.originalSchema.compiledFields.payload = { type: TYPE.JSON };
+    await expect(
+      postgres.adapter.createIndexes(
+        'User',
+        [{ fields: ['payload'], types: [CompatibleIndexType.Ascending] }],
+        'database',
+      ),
+    ).resolves.toBe('Indexes created!');
+    expect(postgres.addIndex).toHaveBeenCalled();
+  });
+
+  it('rejects SQL indexes on extracted relation fields', async () => {
+    const { adapter, addIndex, findByIdAndUpdate } = makeSequelizeAdapter('postgres');
+    adapter.models.User.originalSchema.fields.participants = [
+      { type: TYPE.Relation, model: 'User' },
+    ];
+    adapter.models.User.originalSchema.compiledFields.participants = [
+      { type: TYPE.Relation, model: 'User' },
+    ];
+    await expect(
+      adapter.createIndexes(
+        'User',
+        [{ fields: ['participants'], types: [CompatibleIndexType.Ascending] }],
+        'database',
+      ),
+    ).rejects.toMatchObject({
+      code: status.INVALID_ARGUMENT,
+      message: expect.stringMatching(/relation join table/),
+    });
+    expect(addIndex).not.toHaveBeenCalled();
+    expect(findByIdAndUpdate).not.toHaveBeenCalled();
   });
 });

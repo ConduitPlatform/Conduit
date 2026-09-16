@@ -63,10 +63,13 @@ describe('SQL index converters', () => {
   it('warns and skips Mongo-only leftovers on SQL', () => {
     const warn = ConduitGrpcSdk.Logger.warn as jest.Mock;
     const copy = convertModelOptionsIndexes(
-      schemaWithIndexes([
-        { fields: ['loc'], types: [MongoIndexType.GeoSpatial2dSphere] },
-        { fields: ['email'], types: [CompatibleIndexType.Ascending] },
-      ]),
+      schemaWithIndexes(
+        [
+          { fields: ['loc'], types: [MongoIndexType.GeoSpatial2dSphere] },
+          { fields: ['email'], types: [CompatibleIndexType.Ascending] },
+        ],
+        { email: { type: TYPE.String }, loc: { type: TYPE.JSON } },
+      ),
       'postgres',
     );
     expect(copy.modelOptions.indexes).toHaveLength(1);
@@ -132,6 +135,129 @@ describe('SQL index converters', () => {
       PostgresIndexType.GIN,
     );
   });
+
+  it('gives distinct generated names to two schemas with the same fields', () => {
+    const permission = convertModelOptionsIndexes(
+      new ConduitSchema(
+        'Permission',
+        { resource: { type: TYPE.String } },
+        { indexes: [{ fields: ['resource'], types: [CompatibleIndexType.Ascending] }] },
+      ),
+      'postgres',
+    );
+    const relationship = convertModelOptionsIndexes(
+      new ConduitSchema(
+        'Relationship',
+        { resource: { type: TYPE.String } },
+        { indexes: [{ fields: ['resource'], types: [CompatibleIndexType.Ascending] }] },
+      ),
+      'postgres',
+    );
+    expect((permission.modelOptions.indexes![0] as { name?: string }).name).toBe(
+      'cnd_idx_Permission_resource_asc',
+    );
+    expect((relationship.modelOptions.indexes![0] as { name?: string }).name).toBe(
+      'cnd_idx_Relationship_resource_asc',
+    );
+  });
+
+  it('skips MySQL JSON field-level indexes and keeps them on postgres', () => {
+    const mysql = convertSchemaFieldIndexes(
+      new ConduitSchema(
+        'ObjectIndex',
+        {
+          inheritanceTree: {
+            type: [TYPE.String],
+            index: { type: CompatibleIndexType.Ascending },
+          },
+        },
+        {},
+      ),
+      'mysql',
+    );
+    const postgres = convertSchemaFieldIndexes(
+      new ConduitSchema(
+        'ObjectIndex',
+        {
+          inheritanceTree: {
+            type: [TYPE.String],
+            index: { type: CompatibleIndexType.Ascending },
+          },
+        },
+        {},
+      ),
+      'postgres',
+    );
+    expect(mysql.modelOptions.indexes).toHaveLength(0);
+    expect(postgres.modelOptions.indexes).toHaveLength(1);
+  });
+
+  it('skips extracted array-relation indexes on SQL and relation-field compounds', () => {
+    const chatRoom = new ConduitSchema(
+      'ChatRoom',
+      {
+        participants: [{ type: TYPE.Relation, model: 'User', required: true }],
+        deleted: { type: TYPE.Boolean },
+      },
+      {
+        timestamps: true,
+        indexes: [
+          { fields: ['participants'], types: [CompatibleIndexType.Ascending] },
+          {
+            fields: ['participants', 'deleted'],
+            types: [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+          },
+        ],
+      },
+    );
+    const [mysql] = sqlSchemaConverter(chatRoom, 'mysql');
+    const [pg] = pgSchemaConverter(chatRoom);
+    expect(mysql.modelOptions.indexes ?? []).toHaveLength(0);
+    expect(pg.modelOptions.indexes ?? []).toHaveLength(0);
+
+    const message = new ConduitSchema(
+      'Message',
+      {
+        room: { type: TYPE.Relation, model: 'ChatRoom', required: true },
+        deleted: { type: TYPE.Boolean },
+        createdAt: { type: TYPE.Date },
+      },
+      {
+        timestamps: true,
+        indexes: [
+          {
+            fields: ['room', 'createdAt'],
+            types: [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+          },
+        ],
+      },
+    );
+    const [mysqlMessage] = sqlSchemaConverter(message, 'mysql');
+    const [pgMessage] = pgSchemaConverter(message);
+    expect(mysqlMessage.modelOptions.indexes ?? []).toHaveLength(0);
+    expect(pgMessage.modelOptions.indexes ?? []).toHaveLength(0);
+
+    const scalar = new ConduitSchema(
+      'Message',
+      {
+        deleted: { type: TYPE.Boolean },
+        createdAt: { type: TYPE.Date },
+      },
+      {
+        timestamps: true,
+        indexes: [
+          {
+            fields: ['deleted', 'createdAt'],
+            types: [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+          },
+        ],
+      },
+    );
+    const [mysqlScalar] = sqlSchemaConverter(scalar, 'mysql');
+    const [pgScalar] = pgSchemaConverter(scalar);
+    expect(mysqlScalar.modelOptions.indexes).toHaveLength(1);
+    expect(pgScalar.modelOptions.indexes).toHaveLength(1);
+  });
 });
 
 describe('mongoose SchemaConverter indexes', () => {
@@ -191,5 +317,53 @@ describe('mongoose SchemaConverter indexes', () => {
     expect(
       (converted.fields.email as { index: { type: MongoIndexType } }).index.type,
     ).toBe(MongoIndexType.Ascending);
+  });
+
+  it('keeps single-field array indexes on modelOptions with compounds', () => {
+    const converted = schemaConverter(
+      new ConduitSchema(
+        'ChatRoom',
+        {
+          participants: [{ type: TYPE.Relation, model: 'User', required: true }],
+          deleted: { type: TYPE.Boolean },
+        },
+        {
+          indexes: [
+            { fields: ['participants'], types: [CompatibleIndexType.Ascending] },
+            {
+              fields: ['participants', 'deleted'],
+              types: [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+            },
+          ],
+        },
+      ),
+    );
+    const remaining = converted.modelOptions.indexes ?? [];
+    expect(remaining.map(index => index.fields)).toEqual([
+      ['participants'],
+      ['participants', 'deleted'],
+    ]);
+  });
+
+  it('lifts field-level array Compatible indexes onto modelOptions', () => {
+    const converted = schemaConverter(
+      new ConduitSchema(
+        'ObjectIndex',
+        {
+          inheritanceTree: {
+            type: [TYPE.String],
+            default: [],
+            index: { type: CompatibleIndexType.Ascending },
+          },
+        },
+        {},
+      ),
+    );
+    expect(
+      (converted.fields.inheritanceTree as { index?: unknown }).index,
+    ).toBeUndefined();
+    expect(converted.modelOptions.indexes?.map(index => index.fields)).toEqual([
+      ['inheritanceTree'],
+    ]);
   });
 });
