@@ -4,6 +4,7 @@ import {
   CompatibleIndexType,
   MongoIndexType,
   PostgresIndexType,
+  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import {
   assertUniqueIndexPrivilege,
@@ -15,6 +16,7 @@ import {
   isCompatibleIndexType,
   isIndexAlreadyExistsError,
   isMongoIndexType,
+  isMongoNamespaceMissingError,
   keepDeclaredIndexExtras,
   liveNameConflictAllowsReuse,
   mapCompatibleToMongo,
@@ -28,6 +30,7 @@ import {
   resolveIndexName,
   sqlDialectAllowsIndexType,
   sqlIndexFields,
+  sqlIndexUnsupportedReason,
   validateIndexFields,
 } from '../../adapters/utils/indexes.js';
 
@@ -41,29 +44,64 @@ describe('index helpers', () => {
     expect(isMongoIndexType('Ascending')).toBe(false);
   });
 
-  it('generates a deterministic name when one is missing', () => {
-    const name = generateIndexName(['email'], [CompatibleIndexType.Ascending], false);
-    expect(name).toBe('cnd_idx_email_asc');
+  it('generates a deterministic name unique per collection', () => {
+    const name = generateIndexName(
+      ['email'],
+      [CompatibleIndexType.Ascending],
+      false,
+      'cnd_User',
+    );
+    expect(name).toBe('cnd_idx_cnd_User_email_asc');
+    const permission = generateIndexName(
+      ['resource'],
+      [CompatibleIndexType.Ascending],
+      false,
+      'cnd_Permission',
+    );
+    const relationship = generateIndexName(
+      ['resource'],
+      [CompatibleIndexType.Ascending],
+      false,
+      'cnd_Relationship',
+    );
+    expect(permission).toBe('cnd_idx_cnd_Permission_resource_asc');
+    expect(relationship).toBe('cnd_idx_cnd_Relationship_resource_asc');
+    expect(permission).not.toBe(relationship);
     const unique = generateIndexName(
       ['room', 'createdAt'],
       [CompatibleIndexType.Ascending, CompatibleIndexType.Descending],
       true,
+      'cnd_User',
     );
     expect(unique).toBe(
       generateIndexName(
         ['room', 'createdAt'],
         [CompatibleIndexType.Ascending, CompatibleIndexType.Descending],
         true,
+        'cnd_User',
       ),
     );
     expect(unique).toMatch(/^cnd_uidx_/);
+    expect(unique).toContain('cnd_User');
+  });
+
+  it('hashes long names with collectionName in the identity', () => {
+    const fields = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+    const left = generateIndexName(fields, undefined, false, 'cnd_VeryLongTableNameOne');
+    const right = generateIndexName(fields, undefined, false, 'cnd_VeryLongTableNameTwo');
+    expect(left.length).toBeLessThanOrEqual(63);
+    expect(right.length).toBeLessThanOrEqual(63);
+    expect(left).not.toBe(right);
   });
 
   it('keeps a provided name on the index and options', () => {
-    const named = ensureIndexName({
-      fields: ['email'],
-      name: 'custom_email_idx',
-    });
+    const named = ensureIndexName(
+      {
+        fields: ['email'],
+        name: 'custom_email_idx',
+      },
+      'cnd_User',
+    );
     expect(resolveIndexName(named)).toBe('custom_email_idx');
     expect(named.options?.name).toBe('custom_email_idx');
   });
@@ -96,11 +134,14 @@ describe('index helpers', () => {
   });
 
   it('preserves unique when generating a name', () => {
-    const unique = ensureIndexName({
-      fields: ['email'],
-      types: [CompatibleIndexType.Ascending],
-      options: { unique: true },
-    });
+    const unique = ensureIndexName(
+      {
+        fields: ['email'],
+        types: [CompatibleIndexType.Ascending],
+        options: { unique: true },
+      },
+      'cnd_User',
+    );
     expect(unique.options?.unique).toBe(true);
     expect(resolveIndexName(unique)).toMatch(/uidx/);
   });
@@ -112,6 +153,7 @@ describe('index helpers', () => {
         { fields: ['a'], name: 'idx_a', options: { unique: true } },
         { fields: ['b'], name: 'idx_b' },
       ],
+      'cnd_User',
     );
     expect(merged.map(index => index.name)).toEqual(['idx_a', 'idx_b']);
     expect(merged[0].options?.unique).toBeUndefined();
@@ -241,6 +283,7 @@ describe('index helpers', () => {
           options: { name: 'room_1_createdAt_1', unique: false },
         },
       ],
+      'cnd_User',
     );
     expect(resolveIndexName(bound[0])).toBe('room_1_createdAt_1');
     expect(indexIdentity(bound[0])).toEqual({
@@ -259,6 +302,7 @@ describe('index helpers', () => {
           options: { name: 'email_1', unique: false },
         },
       ],
+      'cnd_User',
     );
     expect(resolveIndexName(bound[0])).not.toBe('email_1');
     expect(resolveIndexName(bound[0])).toMatch(/uidx/);
@@ -280,6 +324,7 @@ describe('index helpers', () => {
         },
         { fields: ['email'], name: 'admin_email_idx' },
       ],
+      'cnd_User',
     );
     expect(unioned.map(index => index.name)).toEqual([
       'room_1_createdAt_1',
@@ -386,5 +431,81 @@ describe('index helpers', () => {
     expect(sqlDialectAllowsIndexType('postgres', PostgresIndexType.GIN)).toBe(true);
     expect(mongoAllowsIndexType(CompatibleIndexType.Ascending)).toBe(true);
     expect(mongoAllowsIndexType(PostgresIndexType.BTREE)).toBe(false);
+  });
+
+  it('adopts a live old global name and generates a table-qualified name when unmatched', () => {
+    const adopted = bindDeclaredIndexesToLive(
+      [{ fields: ['resource'], types: [CompatibleIndexType.Ascending] }],
+      [
+        {
+          name: 'cnd_idx_resource_asc',
+          fields: ['resource'],
+          options: { name: 'cnd_idx_resource_asc', unique: false },
+        },
+      ],
+      'cnd_Permission',
+    );
+    expect(resolveIndexName(adopted[0])).toBe('cnd_idx_resource_asc');
+    const generated = bindDeclaredIndexesToLive(
+      [{ fields: ['resource'], types: [CompatibleIndexType.Ascending] }],
+      [],
+      'cnd_Relationship',
+    );
+    expect(resolveIndexName(generated[0])).toBe('cnd_idx_cnd_Relationship_resource_asc');
+  });
+
+  it('does not treat a missing-ns Mongo error as a live name conflict', () => {
+    expect(
+      isMongoNamespaceMissingError({
+        code: 26,
+        codeName: 'NamespaceNotFound',
+        message: 'ns does not exist: test.cnd_adminapitokens',
+      }),
+    ).toBe(true);
+    expect(isMongoNamespaceMissingError({ message: 'unauthorized' })).toBe(false);
+  });
+
+  it('reports unsupported SQL JSON and extracted-relation indexes', () => {
+    expect(
+      sqlIndexUnsupportedReason(
+        'mysql',
+        { fields: ['inheritanceTree'] },
+        { inheritanceTree: { type: [TYPE.String] } },
+      ),
+    ).toMatch(/MySQL JSON field 'inheritanceTree'/);
+    expect(
+      sqlIndexUnsupportedReason(
+        'postgres',
+        { fields: ['inheritanceTree'] },
+        { inheritanceTree: { type: [TYPE.String] } },
+      ),
+    ).toBeUndefined();
+    expect(
+      sqlIndexUnsupportedReason(
+        'postgres',
+        { fields: ['participants'] },
+        {
+          participants: [{ type: TYPE.Relation, model: 'User' }],
+        },
+      ),
+    ).toMatch(/relation join table/);
+    expect(
+      sqlIndexUnsupportedReason(
+        'postgres',
+        { fields: ['room', 'createdAt'] },
+        {
+          room: { type: TYPE.Relation, model: 'ChatRoom' },
+          createdAt: { type: TYPE.Date },
+        },
+        { timestamps: true },
+      ),
+    ).toMatch(/relation and cannot be indexed/);
+    expect(
+      sqlIndexUnsupportedReason(
+        'mysql',
+        { fields: ['email'] },
+        { email: { type: TYPE.String } },
+      ),
+    ).toBeUndefined();
   });
 });

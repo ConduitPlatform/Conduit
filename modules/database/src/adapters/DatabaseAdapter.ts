@@ -25,6 +25,7 @@ import {
 } from '../interfaces/index.js';
 import { stitchSchema, validateExtensionFields } from './utils/extensions.js';
 import {
+  indexNameCollection,
   keepDeclaredIndexExtras,
   persistDeclaredSchemaIndexes,
 } from './utils/indexes.js';
@@ -640,6 +641,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
       schema.modelOptions.indexes = keepDeclaredIndexExtras(
         schema.modelOptions.indexes ?? [],
         model.modelOptions?.indexes,
+        indexNameCollection(schema),
       );
       await this.models['_DeclaredSchema'].findByIdAndUpdate(model._id, {
         name: schema.name,

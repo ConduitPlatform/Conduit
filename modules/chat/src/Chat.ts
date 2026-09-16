@@ -396,21 +396,18 @@ export default class Chat extends ManagedModule<Config> {
     });
   }
 
-  protected registerSchemas(): Promise<unknown> {
-    const promises = Object.values(models).map(model => {
+  protected async registerSchemas(): Promise<void> {
+    for (const model of Object.values(models)) {
       const modelInstance = model.getInstance(this.database);
-      //TODO: add support for multiple schemas types
       if (
         Object.keys((modelInstance as ConduitActiveSchema<typeof modelInstance>).fields)
-          .length !== 0
+          .length === 0
       ) {
-        // borrowed foreign model
-        return this.database
-          .createSchemaFromAdapter(modelInstance)
-          .then(() => this.database.migrate(modelInstance.name));
+        continue;
       }
-    });
-    return Promise.all(promises);
+      await this.database.createSchemaFromAdapter(modelInstance);
+      await this.database.migrate(modelInstance.name);
+    }
   }
 
   private scheduleAppRouteRefresh() {

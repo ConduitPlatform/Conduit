@@ -10,11 +10,13 @@ import {
 import { checkIfPostgresOptions } from '../sequelize-adapter/utils/index.js';
 import {
   ensureIndexName,
+  indexNameCollection,
   isPortableDirection,
   isPostgresIndexType,
   mapCompatibleToSqlOrder,
   normalizeIndexTypes,
   sqlDialectAllowsIndexType,
+  sqlIndexUnsupportedReason,
   type SqlIndexField,
 } from './indexes.js';
 
@@ -57,8 +59,9 @@ function toSqlEngineIndex(
   raw: ModelOptionsIndexes,
   dialect: string,
   schemaName: string,
+  collectionName: string,
 ): SqlEngineIndex | null {
-  const index = ensureIndexName({ ...raw, fields: [...raw.fields] });
+  const index = ensureIndexName({ ...raw, fields: [...raw.fields] }, collectionName);
   if (index.options && !checkIfPostgresOptions(index.options)) {
     skipIndex(schemaName, dialect, 'options');
     return null;
@@ -95,9 +98,19 @@ function toSqlEngineIndex(
 }
 
 export function convertModelOptionsIndexes(copy: ConduitSchema, dialect = 'postgres') {
+  const collectionName = indexNameCollection(copy);
   const converted: SqlEngineIndex[] = [];
   for (const raw of copy.modelOptions.indexes ?? []) {
-    const index = toSqlEngineIndex(raw, dialect, copy.name);
+    const unsupported = sqlIndexUnsupportedReason(dialect, raw, copy.fields, {
+      timestamps: copy.modelOptions.timestamps,
+    });
+    if (unsupported) {
+      ConduitGrpcSdk.Logger.warn(
+        `Skipping index on '${copy.name}' for ${dialect}: ${unsupported}`,
+      );
+      continue;
+    }
+    const index = toSqlEngineIndex(raw, dialect, copy.name, collectionName);
     if (index) converted.push(index);
   }
   setSqlEngineIndexes(copy, converted);
@@ -105,6 +118,7 @@ export function convertModelOptionsIndexes(copy: ConduitSchema, dialect = 'postg
 }
 
 export function convertSchemaFieldIndexes(copy: ConduitSchema, dialect = 'postgres') {
+  const collectionName = indexNameCollection(copy);
   const indexes: SqlEngineIndex[] = [];
   for (const [fieldName, fieldValue] of Object.entries(copy.fields)) {
     const field = fieldValue as ConduitModelField;
@@ -115,16 +129,23 @@ export function convertSchemaFieldIndexes(copy: ConduitSchema, dialect = 'postgr
       delete field.index;
       continue;
     }
-    const converted = toSqlEngineIndex(
-      {
-        fields: [fieldName],
-        types: index.type === undefined ? undefined : [index.type],
-        options: index.options,
-        name: index.name,
-      },
-      dialect,
-      copy.name,
-    );
+    const raw = {
+      fields: [fieldName],
+      types: index.type === undefined ? undefined : [index.type],
+      options: index.options,
+      name: index.name,
+    };
+    const unsupported = sqlIndexUnsupportedReason(dialect, raw, copy.fields, {
+      timestamps: copy.modelOptions.timestamps,
+    });
+    if (unsupported) {
+      ConduitGrpcSdk.Logger.warn(
+        `Skipping index on '${copy.name}' for ${dialect}: ${unsupported}`,
+      );
+      delete field.index;
+      continue;
+    }
+    const converted = toSqlEngineIndex(raw, dialect, copy.name, collectionName);
     delete field.index;
     if (converted) indexes.push(converted);
   }

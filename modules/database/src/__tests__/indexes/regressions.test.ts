@@ -62,4 +62,21 @@ describe('do not port old PR #643 bugs', () => {
     expect(sequelize).not.toMatch(/createIndexes[\s\S]*createSchemaFromAdapter/);
     expect(sequelize).not.toMatch(/await this\.models\[schemaName\]\.sync\(\)/);
   });
+
+  it('skips index creation on replica instanceSync paths', () => {
+    const mongoose = readFileSync(
+      resolve(process.cwd(), 'src/adapters/mongoose-adapter/index.ts'),
+      'utf8',
+    );
+    const sequelize = readFileSync(
+      resolve(process.cwd(), 'src/adapters/sequelize-adapter/index.ts'),
+      'utf8',
+    );
+    expect(mongoose).toMatch(/if \(indexes && !isInstanceSync\)/);
+    expect(mongoose).toMatch(
+      /if \(!isInstanceSync\) \{\s*await this\.createMongooseFieldIndexes/,
+    );
+    expect(sequelize).toMatch(/isInstanceSync/);
+    expect(sequelize).toMatch(/noSync/);
+  });
 });

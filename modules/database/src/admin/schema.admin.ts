@@ -801,7 +801,15 @@ export class SchemaAdmin {
     const indexes: Array<ModelOptionsIndexes & { schemaName: string }> = [];
     for (const schema of schemas) {
       if (!this.database.models[schema.name]) continue;
-      const schemaIndexes = await this.database.getIndexes(schema.name);
+      let schemaIndexes: ModelOptionsIndexes[];
+      try {
+        schemaIndexes = await this.database.getIndexes(schema.name);
+      } catch (e) {
+        ConduitGrpcSdk.Logger.warn(
+          `Skipping indexes export for schema '${schema.name}': ${(e as Error).message}`,
+        );
+        continue;
+      }
       if (isNil(schemaIndexes) || isEmpty(schemaIndexes)) continue;
       indexes.push(
         ...schemaIndexes.map(index => ({ ...index, schemaName: schema.name })),
@@ -837,10 +845,12 @@ export class SchemaAdmin {
           `Requested schema not found: ${schemaName}`,
         );
       }
+      const collectionName =
+        this.database.models[schemaName].originalSchema.collectionName ?? schemaName;
       const existing = await this.database.getIndexes(schemaName);
       const existingNames = collectExistingIndexNames(existing);
       const toCreate = schemaIndexes
-        .map(index => ensureIndexName(index))
+        .map(index => ensureIndexName(index, collectionName))
         .filter(index => {
           const name = resolveIndexName(index);
           return !name || !existingNames.has(name);

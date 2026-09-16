@@ -35,8 +35,10 @@ import {
   bindDeclaredIndexesToLive,
   ensureIndexName,
   findLiveIndex,
+  indexNameCollection,
   isIndexAlreadyExistsError,
   isIndexKeySpecsConflictError,
+  isMongoNamespaceMissingError,
   liveIndexFromMongo,
   liveNameConflictAllowsReuse,
   mapCompatibleToMongo,
@@ -661,10 +663,12 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const collectionName = indexNameCollection(this.models[schemaName].originalSchema);
     const live = await this.listLiveIndexes(schemaName);
     const prepared = bindDeclaredIndexesToLive(
       this.checkIndexes(schemaName, indexes, callerModule, options?.privileged),
       live,
+      collectionName,
     );
     const collection = this.mongoose.model(schemaName).collection;
     const applied: ModelOptionsIndexes[] = [];
@@ -701,7 +705,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
           const relisted = await this.listLiveIndexes(schemaName);
           const match = findLiveIndex(relisted, index);
           if (match) {
-            applied.push(bindDeclaredIndexesToLive([index], relisted)[0]);
+            applied.push(bindDeclaredIndexesToLive([index], relisted, collectionName)[0]);
             live.splice(0, live.length, ...relisted);
             continue;
           }
@@ -727,8 +731,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     try {
       const result = await this.mongoose.model(schemaName).collection.indexes();
       return result.map(liveIndexFromMongo);
-    } catch {
-      return [];
+    } catch (e) {
+      if (isMongoNamespaceMissingError(e)) return [];
+      throw e;
     }
   }
 
@@ -785,7 +790,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const collection = this.mongoose.model(schemaName).collection;
-    const result = await collection.indexes();
+    let result: Awaited<ReturnType<typeof collection.indexes>>;
+    try {
+      result = await collection.indexes();
+    } catch (e) {
+      if (isMongoNamespaceMissingError(e)) return [];
+      throw e;
+    }
     const declared = this.models[schemaName].originalSchema.modelOptions.indexes;
     return result.map(index => {
       const options: Record<string, unknown> = {};
@@ -1102,6 +1113,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         schema.modelOptions.indexes = bindDeclaredIndexesToLive(
           schema.modelOptions.indexes,
           live,
+          indexNameCollection(schema),
         );
       }
       if (saveToDb) {
@@ -1129,9 +1141,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     privileged?: boolean,
   ): ModelOptionsIndexes[] {
     const schema = this.models[schemaName].originalSchema;
+    const collectionName = indexNameCollection(schema);
     const prepared: ModelOptionsIndexes[] = [];
     for (const raw of toMutableIndexes(indexes)) {
-      const index = ensureIndexName(raw);
+      const index = ensureIndexName(raw, collectionName);
       validateIndexFields(schema, index);
       const options = index.options;
       const types = index.types;

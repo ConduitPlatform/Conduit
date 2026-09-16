@@ -12,6 +12,7 @@ import { checkIfMongoOptions } from './utils.js';
 import { applyMongoVectorField } from '../utils/vectorMappings.js';
 import { isVectorTypeName } from '../utils/vectorField.js';
 import {
+  isArrayLikeConduitField,
   isCompatibleIndexType,
   mapCompatibleToMongo,
   mongoAllowsIndexType,
@@ -30,10 +31,10 @@ export function schemaConverter(jsonSchema: ConduitSchema) {
     delete copy.fields['_id'];
   }
   copy = convertSchemaFieldIndexes(copy);
-  deepdash.eachDeep(copy.fields, convert);
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
+  deepdash.eachDeep(copy.fields, convert);
   iterDeep(copy.fields);
   return copy;
 }
@@ -111,8 +112,10 @@ function convert(value: any, key: any, parentValue: any) {
 }
 
 function convertSchemaFieldIndexes(copy: ConduitSchema) {
+  const lifted: ModelOptionsIndexes[] = [];
   for (const field of Object.entries(copy.fields)) {
-    const index = (field[1] as ConduitModelField).index;
+    const modelField = field[1] as ConduitModelField;
+    const index = modelField.index;
     if (!index) continue;
     const type = index.type;
     const options = index.options;
@@ -120,7 +123,7 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
       ConduitGrpcSdk.Logger.warn(
         `Invalid index type for MongoDB found in '${copy.name}', ignoring index`,
       );
-      delete (field[1] as ConduitModelField).index;
+      delete modelField.index;
       continue;
     }
     if (type && isCompatibleIndexType(type)) {
@@ -131,7 +134,7 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
         ConduitGrpcSdk.Logger.warn(
           `Invalid index options for MongoDB found in '${copy.name}', ignoring index`,
         );
-        delete (field[1] as ConduitModelField).index;
+        delete modelField.index;
         continue;
       }
       for (const [option, optionValue] of Object.entries(options)) {
@@ -139,6 +142,21 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
       }
       delete index.options;
     }
+    if (isArrayLikeConduitField(field[1])) {
+      lifted.push({
+        fields: [field[0]],
+        types: index.type !== undefined ? [index.type] : undefined,
+        options: {
+          ...(typeof index.unique === 'boolean' ? { unique: index.unique } : {}),
+          ...(typeof index.name === 'string' ? { name: index.name } : {}),
+        },
+        name: index.name,
+      });
+      delete modelField.index;
+    }
+  }
+  if (lifted.length) {
+    copy.modelOptions.indexes = [...(copy.modelOptions.indexes ?? []), ...lifted];
   }
   return copy;
 }
@@ -162,14 +180,14 @@ function convertModelOptionsIndexes(copy: ConduitSchema) {
       mappedTypes = types.map(mapCompatibleToMongo);
       index.types = mappedTypes;
     }
-    // compound indexes stay on modelOptions and are created after schema creation
     if (index.fields.length !== 1) {
       remaining.push(index);
       continue;
     }
     const modelField = copy.fields[index.fields[0]] as ConduitModelField;
-    if (!modelField) {
-      throw new Error(`Field ${index.fields[0]} in index definition doesn't exist`);
+    if (!modelField || isArrayLikeConduitField(modelField)) {
+      remaining.push(index);
+      continue;
     }
     if (index.options && !checkIfMongoOptions(index.options)) {
       ConduitGrpcSdk.Logger.warn(

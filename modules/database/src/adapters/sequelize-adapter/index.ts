@@ -55,6 +55,7 @@ import {
   bindDeclaredIndexesToLive,
   ensureIndexName,
   findLiveIndex,
+  indexNameCollection,
   inferSqlIndexType,
   isIndexAlreadyExistsError,
   isIndexKeySpecsConflictError,
@@ -66,6 +67,7 @@ import {
   removeIndexFromSchemaFields,
   sqlDialectAllowsIndexType,
   sqlIndexFields,
+  sqlIndexUnsupportedReason,
   toMutableIndexes,
   validateIndexFields,
 } from '../utils/indexes.js';
@@ -285,13 +287,15 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       this.sequelize.models,
     );
     const dialect = this.sequelize.getDialect();
+    const collectionName = this.getCollectionName(schema);
     const live = isInstanceSync
       ? []
-      : await this.listLiveIndexesForCollection(this.getCollectionName(schema));
+      : await this.listLiveIndexesForCollection(collectionName);
     if (!isInstanceSync && schema.modelOptions.indexes?.length) {
       schema.modelOptions.indexes = bindDeclaredIndexesToLive(
         schema.modelOptions.indexes,
         live,
+        collectionName,
       );
       compiledSchema.modelOptions.indexes = schema.modelOptions.indexes;
     }
@@ -303,6 +307,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       newSchema.modelOptions.indexes = bindDeclaredIndexesToLive(
         newSchema.modelOptions.indexes,
         live,
+        collectionName,
       );
     }
     const relatedSchemas = await resolveRelatedSchemas(
@@ -424,6 +429,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     const prepared = bindDeclaredIndexesToLive(
       this.checkAndConvertIndexes(schemaName, indexes, callerModule, options?.privileged),
       live,
+      collectionName,
     );
     const queryInterface = this.sequelize.getQueryInterface();
     const applied: ModelOptionsIndexes[] = [];
@@ -449,6 +455,12 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
             live.splice(0, live.length, ...relisted);
             continue;
           }
+          const match = findLiveIndex(relisted, index);
+          if (match) {
+            applied.push(bindDeclaredIndexesToLive([index], relisted, collectionName)[0]);
+            live.splice(0, live.length, ...relisted);
+            continue;
+          }
           failure = e;
           break;
         }
@@ -456,7 +468,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
           const relisted = await this.listLiveIndexesForCollection(collectionName);
           const match = findLiveIndex(relisted, index);
           if (match) {
-            applied.push(bindDeclaredIndexesToLive([index], relisted)[0]);
+            applied.push(bindDeclaredIndexesToLive([index], relisted, collectionName)[0]);
             live.splice(0, live.length, ...relisted);
             continue;
           }
@@ -801,10 +813,23 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   ): ModelOptionsIndexes[] {
     const schema = this.models[schemaName].originalSchema;
     const dialect = this.sequelize.getDialect();
+    const collectionName = indexNameCollection(schema);
     const prepared: ModelOptionsIndexes[] = [];
     for (const raw of toMutableIndexes(indexes)) {
-      const index = ensureIndexName(raw);
+      const index = ensureIndexName(raw, collectionName);
       validateIndexFields(schema, index);
+      const unsupported = sqlIndexUnsupportedReason(
+        dialect,
+        index,
+        {
+          ...(schema.fields as Record<string, unknown>),
+          ...(schema.compiledFields as Record<string, unknown>),
+        },
+        { timestamps: schema.modelOptions?.timestamps },
+      );
+      if (unsupported) {
+        throw new GrpcError(status.INVALID_ARGUMENT, unsupported);
+      }
       if (index.types) {
         const types = normalizeIndexTypes(index.types, index.fields.length) ?? [];
         if (types.some(type => !sqlDialectAllowsIndexType(dialect, type))) {
