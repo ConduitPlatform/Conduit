@@ -71,9 +71,15 @@ export function indexFieldNames(
     .filter(name => name.length > 0);
 }
 
-export function indexIdentity(index: ModelOptionsIndexes): IndexIdentity {
+export type IndexFieldNormalizer = (fields: string[]) => string[];
+
+export function indexIdentity(
+  index: ModelOptionsIndexes,
+  normalizeFields?: IndexFieldNormalizer,
+): IndexIdentity {
+  const fields = indexFieldNames(index);
   return {
-    fields: indexFieldNames(index),
+    fields: normalizeFields ? normalizeFields(fields) : fields,
     unique: isUniqueIndex(index),
   };
 }
@@ -99,10 +105,13 @@ export function isSkippedLiveIndex(index: ModelOptionsIndexes): boolean {
 export function findLiveIndex(
   live: readonly ModelOptionsIndexes[],
   declared: ModelOptionsIndexes,
+  normalizeFields?: IndexFieldNormalizer,
 ): ModelOptionsIndexes | undefined {
-  const wanted = indexIdentity(declared);
+  const wanted = indexIdentity(declared, normalizeFields);
   return live.find(
-    row => !isSkippedLiveIndex(row) && indexIdentitiesEqual(indexIdentity(row), wanted),
+    row =>
+      !isSkippedLiveIndex(row) &&
+      indexIdentitiesEqual(indexIdentity(row, normalizeFields), wanted),
   );
 }
 
@@ -116,12 +125,16 @@ export function findIndexByName(
 export function liveNameConflictAllowsReuse(
   declared: ModelOptionsIndexes,
   live: readonly ModelOptionsIndexes[],
+  normalizeFields?: IndexFieldNormalizer,
 ): boolean {
   const name = resolveIndexName(declared);
   if (!name) return false;
   const row = findIndexByName(live, name);
   if (!row) return false;
-  return indexIdentitiesEqual(indexIdentity(row), indexIdentity(declared));
+  return indexIdentitiesEqual(
+    indexIdentity(row, normalizeFields),
+    indexIdentity(declared, normalizeFields),
+  );
 }
 
 export function indexNameCollection(schema: {
@@ -138,9 +151,10 @@ export function bindDeclaredIndexesToLive<T extends ModelOptionsIndexes>(
   declared: readonly T[],
   live: readonly ModelOptionsIndexes[],
   collectionName: string,
+  normalizeFields?: IndexFieldNormalizer,
 ): T[] {
   return declared.map(index => {
-    const match = findLiveIndex(live, index);
+    const match = findLiveIndex(live, index, normalizeFields);
     if (match) {
       const name = resolveIndexName(match);
       if (name) {
@@ -569,6 +583,16 @@ export function sqlIndexFields(index: ModelOptionsIndexes): SqlIndexField[] {
   }));
 }
 
+export function sqlEngineIndexFields(
+  index: ModelOptionsIndexes,
+  schemaFields: Record<string, unknown>,
+): SqlIndexField[] {
+  return sqlIndexFields({
+    ...index,
+    fields: mapIndexFieldsToSqlEngine(index, schemaFields),
+  });
+}
+
 export function inferSqlIndexType(
   row: { type?: string; definition?: string },
   dialect: string,
@@ -643,6 +667,77 @@ export function isScalarRelationField(field: unknown): boolean {
   );
 }
 
+export function collectSchemaIndexFields(schema: {
+  fields?: Record<string, unknown>;
+  compiledFields?: Record<string, unknown>;
+}): Record<string, unknown> {
+  return {
+    ...(schema.fields ?? {}),
+    ...(schema.compiledFields ?? {}),
+  };
+}
+
+export function sqlEngineIndexFieldName(
+  declaredField: string,
+  fields: Record<string, unknown>,
+): string {
+  if (isScalarRelationField(fields[declaredField])) {
+    return `${declaredField}Id`;
+  }
+  return declaredField;
+}
+
+export function sqlDeclaredIndexFieldName(
+  engineField: string,
+  fields: Record<string, unknown>,
+): string {
+  if (Object.prototype.hasOwnProperty.call(fields, engineField)) {
+    return engineField;
+  }
+  if (engineField.endsWith('Id')) {
+    const declared = engineField.slice(0, -2);
+    if (declared.length > 0 && isScalarRelationField(fields[declared])) {
+      return declared;
+    }
+  }
+  return engineField;
+}
+
+export function mapIndexFieldsToSqlEngine(
+  index: Pick<ModelOptionsIndexes, 'fields'> | { fields?: readonly unknown[] },
+  fields: Record<string, unknown>,
+): string[] {
+  return indexFieldNames(index).map(name => sqlEngineIndexFieldName(name, fields));
+}
+
+export function mapIndexFieldsToDeclared(
+  index: Pick<ModelOptionsIndexes, 'fields'> | { fields?: readonly unknown[] },
+  fields: Record<string, unknown>,
+): string[] {
+  return indexFieldNames(index).map(name => sqlDeclaredIndexFieldName(name, fields));
+}
+
+export function canonicalizeDeclaredIndexFields<T extends ModelOptionsIndexes>(
+  index: T,
+  fields: Record<string, unknown>,
+): T {
+  const mapped = mapIndexFieldsToDeclared(index, fields);
+  const current = indexFieldNames(index);
+  if (
+    mapped.length === current.length &&
+    mapped.every((name, i) => name === current[i])
+  ) {
+    return index;
+  }
+  return { ...index, fields: mapped };
+}
+
+export function sqlIndexFieldNormalizer(
+  fields: Record<string, unknown>,
+): IndexFieldNormalizer {
+  return names => names.map(name => sqlEngineIndexFieldName(name, fields));
+}
+
 export function sqlIndexUnsupportedReason(
   dialect: string,
   index: Pick<ModelOptionsIndexes, 'fields'>,
@@ -659,9 +754,6 @@ export function sqlIndexUnsupportedReason(
     const field = fields[name];
     if (isExtractedArrayRelationField(field)) {
       return `Field '${name}' is stored as a relation join table and cannot be indexed on SQL`;
-    }
-    if (isScalarRelationField(field)) {
-      return `Field '${name}' is a relation and cannot be indexed on SQL`;
     }
     if (mysqlJson && isMysqlJsonLikeField(field)) {
       return `Compatible btree indexes are not supported on MySQL JSON field '${name}'`;

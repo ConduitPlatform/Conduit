@@ -11,6 +11,7 @@ import {
   convertModelOptionsIndexes,
   convertSchemaFieldIndexes,
   extractFieldProperties,
+  liftSqlScalarRelationFieldIndexes,
 } from '../../utils/index.js';
 import { sqlDataTypeMap } from '../utils/sqlTypeMap.js';
 import {
@@ -38,6 +39,7 @@ export function pgSchemaConverter(jsonSchema: ConduitSchema): [
   if (copy.fields.hasOwnProperty('_id')) {
     delete copy.fields['_id'];
   }
+  copy = liftSqlScalarRelationFieldIndexes(copy);
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy, 'postgres');
   }
