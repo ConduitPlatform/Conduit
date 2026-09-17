@@ -53,6 +53,8 @@ import {
 import {
   assertUniqueIndexPrivilege,
   bindDeclaredIndexesToLive,
+  canonicalizeDeclaredIndexFields,
+  collectSchemaIndexFields,
   ensureIndexName,
   findLiveIndex,
   indexNameCollection,
@@ -65,8 +67,10 @@ import {
   overlayDeclaredOnLive,
   normalizeIndexTypes,
   removeIndexFromSchemaFields,
+  sqlDeclaredIndexFieldName,
   sqlDialectAllowsIndexType,
-  sqlIndexFields,
+  sqlEngineIndexFields,
+  sqlIndexFieldNormalizer,
   sqlIndexUnsupportedReason,
   toMutableIndexes,
   validateIndexFields,
@@ -288,6 +292,8 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     );
     const dialect = this.sequelize.getDialect();
     const collectionName = this.getCollectionName(schema);
+    const schemaFields = collectSchemaIndexFields(schema);
+    const normalizeFields = sqlIndexFieldNormalizer(schemaFields);
     const live = isInstanceSync
       ? []
       : await this.listLiveIndexesForCollection(collectionName);
@@ -296,6 +302,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         schema.modelOptions.indexes,
         live,
         collectionName,
+        normalizeFields,
       );
       compiledSchema.modelOptions.indexes = schema.modelOptions.indexes;
     }
@@ -308,6 +315,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         newSchema.modelOptions.indexes,
         live,
         collectionName,
+        normalizeFields,
       );
     }
     const relatedSchemas: {
@@ -428,24 +436,27 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const collectionName = this.models[schemaName].originalSchema.collectionName;
+    const schemaFields = collectSchemaIndexFields(this.models[schemaName].originalSchema);
+    const normalizeFields = sqlIndexFieldNormalizer(schemaFields);
     const live = await this.listLiveIndexesForCollection(collectionName);
     const prepared = bindDeclaredIndexesToLive(
       this.checkAndConvertIndexes(schemaName, indexes, callerModule, options?.privileged),
       live,
       collectionName,
+      normalizeFields,
     );
     const queryInterface = this.sequelize.getQueryInterface();
     const applied: ModelOptionsIndexes[] = [];
     let failure: unknown;
     for (const index of prepared) {
-      const existing = findLiveIndex(live, index);
+      const existing = findLiveIndex(live, index, normalizeFields);
       if (existing) {
         applied.push(index);
         continue;
       }
       try {
         await queryInterface.addIndex(collectionName, {
-          fields: sqlIndexFields(index),
+          fields: sqlEngineIndexFields(index, schemaFields),
           ...index.options,
         });
         applied.push(index);
@@ -453,14 +464,21 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       } catch (e) {
         if (isIndexAlreadyExistsError(e)) {
           const relisted = await this.listLiveIndexesForCollection(collectionName);
-          if (liveNameConflictAllowsReuse(index, relisted)) {
+          if (liveNameConflictAllowsReuse(index, relisted, normalizeFields)) {
             applied.push(index);
             live.splice(0, live.length, ...relisted);
             continue;
           }
-          const match = findLiveIndex(relisted, index);
+          const match = findLiveIndex(relisted, index, normalizeFields);
           if (match) {
-            applied.push(bindDeclaredIndexesToLive([index], relisted, collectionName)[0]);
+            applied.push(
+              bindDeclaredIndexesToLive(
+                [index],
+                relisted,
+                collectionName,
+                normalizeFields,
+              )[0],
+            );
             live.splice(0, live.length, ...relisted);
             continue;
           }
@@ -469,9 +487,16 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         }
         if (isIndexKeySpecsConflictError(e)) {
           const relisted = await this.listLiveIndexesForCollection(collectionName);
-          const match = findLiveIndex(relisted, index);
+          const match = findLiveIndex(relisted, index, normalizeFields);
           if (match) {
-            applied.push(bindDeclaredIndexesToLive([index], relisted, collectionName)[0]);
+            applied.push(
+              bindDeclaredIndexesToLive(
+                [index],
+                relisted,
+                collectionName,
+                normalizeFields,
+              )[0],
+            );
             live.splice(0, live.length, ...relisted);
             continue;
           }
@@ -513,10 +538,15 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     const queryInterface = this.sequelize.getQueryInterface();
     const result = (await queryInterface.showIndex(collectionName)) as UntypedArray;
     const dialect = this.sequelize.getDialect();
-    const declared = this.models[schemaName].originalSchema.modelOptions.indexes;
+    const originalSchema = this.models[schemaName].originalSchema;
+    const schemaFields = collectSchemaIndexFields(originalSchema);
+    const declared = originalSchema.modelOptions.indexes;
     return result.map(row => {
-      const fields = (row.fields ?? []).map((field: unknown) =>
+      const engineFields = (row.fields ?? []).map((field: unknown) =>
         typeof field === 'string' ? field : (field as { attribute?: string }).attribute,
+      );
+      const fields = engineFields.map((field: string) =>
+        sqlDeclaredIndexFieldName(field, schemaFields),
       );
       const name = row.name as string;
       return overlayDeclaredOnLive(
@@ -817,9 +847,13 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     const schema = this.models[schemaName].originalSchema;
     const dialect = this.sequelize.getDialect();
     const collectionName = indexNameCollection(schema);
+    const schemaFields = collectSchemaIndexFields(schema);
     const prepared: ModelOptionsIndexes[] = [];
     for (const raw of toMutableIndexes(indexes)) {
-      const index = ensureIndexName(raw, collectionName);
+      const index = ensureIndexName(
+        canonicalizeDeclaredIndexFields(raw, schemaFields),
+        collectionName,
+      );
       validateIndexFields(schema, index);
       const unsupported = sqlIndexUnsupportedReason(
         dialect,

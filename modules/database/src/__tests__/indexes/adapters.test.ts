@@ -704,4 +704,107 @@ describe('sequelize adapter indexes', () => {
     expect(addIndex).not.toHaveBeenCalled();
     expect(findByIdAndUpdate).not.toHaveBeenCalled();
   });
+
+  it('creates scalar Relation compounds on roomId while persisting declared room', async () => {
+    const { adapter, addIndex, findByIdAndUpdate, originalSchema } =
+      makeSequelizeAdapter('postgres');
+    originalSchema.fields.room = { type: TYPE.Relation, model: 'ChatRoom' };
+    originalSchema.compiledFields.room = { type: TYPE.Relation, model: 'ChatRoom' };
+    await adapter.createIndexes(
+      'User',
+      [
+        {
+          fields: ['room', 'createdAt'],
+          types: [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+        },
+      ],
+      'database',
+    );
+    expect(addIndex.mock.calls[0][1].fields).toEqual([
+      { name: 'roomId', order: 'ASC' },
+      { name: 'createdAt', order: 'ASC' },
+    ]);
+    const update = findByIdAndUpdate.mock.calls[0][1] as {
+      modelOptions: { indexes: { fields: string[]; name?: string }[] };
+    };
+    expect(update.modelOptions.indexes[0].fields).toEqual(['room', 'createdAt']);
+    expect(update.modelOptions.indexes[0].name).toBe(
+      'cnd_idx_custom_users_room_createdAt_asc_asc',
+    );
+  });
+
+  it('adopts a live roomId compound for declared room and skips addIndex', async () => {
+    const { adapter, addIndex, showIndex, findByIdAndUpdate, originalSchema } =
+      makeSequelizeAdapter();
+    originalSchema.fields.room = { type: TYPE.Relation, model: 'ChatRoom' };
+    originalSchema.compiledFields.room = { type: TYPE.Relation, model: 'ChatRoom' };
+    showIndex.mockResolvedValue([
+      {
+        name: 'roomId_createdAt',
+        unique: false,
+        fields: [{ attribute: 'roomId' }, { attribute: 'createdAt' }],
+      },
+    ]);
+    await adapter.createIndexes(
+      'User',
+      [
+        {
+          fields: ['room', 'createdAt'],
+          types: [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+        },
+      ],
+      'database',
+    );
+    expect(addIndex).not.toHaveBeenCalled();
+    const update = findByIdAndUpdate.mock.calls[0][1] as {
+      modelOptions: { indexes: { fields: string[]; name?: string }[] };
+    };
+    expect(update.modelOptions.indexes[0].name).toBe('roomId_createdAt');
+    expect(update.modelOptions.indexes[0].fields).toEqual(['room', 'createdAt']);
+  });
+
+  it('returns declared room names from live roomId indexes', async () => {
+    const { adapter, showIndex, originalSchema } = makeSequelizeAdapter();
+    originalSchema.fields.room = { type: TYPE.Relation, model: 'ChatRoom' };
+    originalSchema.compiledFields.room = { type: TYPE.Relation, model: 'ChatRoom' };
+    originalSchema.modelOptions.indexes = [
+      {
+        fields: ['room', 'createdAt'],
+        name: 'cnd_idx_custom_users_room_createdAt_asc_asc',
+        types: [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+      },
+    ];
+    showIndex.mockResolvedValue([
+      {
+        name: 'roomId_createdAt',
+        unique: false,
+        fields: [{ attribute: 'roomId' }, { attribute: 'createdAt' }],
+        definition:
+          'CREATE INDEX roomId_createdAt ON custom_users USING btree ("roomId", "createdAt")',
+      },
+    ]);
+    const result = await adapter.getIndexes('User');
+    expect(result[0].fields).toEqual(['room', 'createdAt']);
+    expect(result[0].name).toBe('roomId_createdAt');
+    expect(result[0].types).toEqual([
+      CompatibleIndexType.Ascending,
+      CompatibleIndexType.Ascending,
+    ]);
+  });
+
+  it('leaves Authz String *Id fields unchanged on SQL create', async () => {
+    const { adapter, addIndex, originalSchema } = makeSequelizeAdapter();
+    originalSchema.fields.resource = { type: TYPE.String };
+    originalSchema.fields.resourceId = { type: TYPE.String };
+    originalSchema.compiledFields.resource = { type: TYPE.String };
+    originalSchema.compiledFields.resourceId = { type: TYPE.String };
+    await adapter.createIndexes(
+      'User',
+      [{ fields: ['resource'], types: [CompatibleIndexType.Ascending] }],
+      'database',
+    );
+    expect(addIndex.mock.calls[0][1].fields).toEqual([
+      { name: 'resource', order: 'ASC' },
+    ]);
+  });
 });

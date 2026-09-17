@@ -26,7 +26,9 @@ import { parseSortParam } from '../handlers/utils.js';
 import escapeStringRegexp from 'escape-string-regexp';
 import {
   ADMIN_INDEX_CALLER,
+  canonicalizeDeclaredIndexFields,
   collectExistingIndexNames,
+  collectSchemaIndexFields,
   ensureIndexName,
   resolveIndexName,
 } from '../adapters/utils/indexes.js';
@@ -751,9 +753,12 @@ export class SchemaAdmin {
   async createIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, indexes } = call.request.params;
     const requestedSchema = await this.findDeclaredSchemaById(id);
+    const schemaFields = collectSchemaIndexFields(requestedSchema);
     return await this.database.createIndexes(
       requestedSchema.name,
-      indexes,
+      (indexes as ModelOptionsIndexes[]).map(index =>
+        canonicalizeDeclaredIndexFields(index, schemaFields),
+      ),
       ADMIN_INDEX_CALLER,
       { privileged: true },
     );
@@ -847,10 +852,18 @@ export class SchemaAdmin {
       }
       const collectionName =
         this.database.models[schemaName].originalSchema.collectionName ?? schemaName;
+      const schemaFields = collectSchemaIndexFields(
+        this.database.models[schemaName].originalSchema,
+      );
       const existing = await this.database.getIndexes(schemaName);
       const existingNames = collectExistingIndexNames(existing);
       const toCreate = schemaIndexes
-        .map(index => ensureIndexName(index, collectionName))
+        .map(index =>
+          ensureIndexName(
+            canonicalizeDeclaredIndexFields(index, schemaFields),
+            collectionName,
+          ),
+        )
         .filter(index => {
           const name = resolveIndexName(index);
           return !name || !existingNames.has(name);

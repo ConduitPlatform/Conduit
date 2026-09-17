@@ -9,7 +9,9 @@ import {
 import {
   assertUniqueIndexPrivilege,
   bindDeclaredIndexesToLive,
+  canonicalizeDeclaredIndexFields,
   collectExistingIndexNames,
+  collectSchemaIndexFields,
   ensureIndexName,
   generateIndexName,
   indexIdentity,
@@ -21,6 +23,8 @@ import {
   liveNameConflictAllowsReuse,
   mapCompatibleToMongo,
   mapCompatibleToSqlOrder,
+  mapIndexFieldsToDeclared,
+  mapIndexFieldsToSqlEngine,
   mergeDeclaredIndexes,
   mongoAllowsIndexType,
   overlayDeclaredOnLive,
@@ -28,7 +32,10 @@ import {
   removeDeclaredIndexes,
   removeIndexFromSchemaFields,
   resolveIndexName,
+  sqlDeclaredIndexFieldName,
   sqlDialectAllowsIndexType,
+  sqlEngineIndexFieldName,
+  sqlIndexFieldNormalizer,
   sqlIndexFields,
   sqlIndexUnsupportedReason,
   validateIndexFields,
@@ -499,7 +506,7 @@ describe('index helpers', () => {
         },
         { timestamps: true },
       ),
-    ).toMatch(/relation and cannot be indexed/);
+    ).toBeUndefined();
     expect(
       sqlIndexUnsupportedReason(
         'mysql',
@@ -507,5 +514,104 @@ describe('index helpers', () => {
         { email: { type: TYPE.String } },
       ),
     ).toBeUndefined();
+  });
+
+  it('maps declared scalar relations to engine *Id and never Authz String *Id fields', () => {
+    const fields = collectSchemaIndexFields({
+      fields: {
+        room: { type: TYPE.Relation, model: 'ChatRoom' },
+        createdAt: { type: TYPE.Date },
+        resource: { type: TYPE.String },
+        resourceId: { type: TYPE.String },
+        subject: { type: TYPE.String },
+        subjectId: { type: TYPE.String },
+      },
+    });
+    expect(sqlEngineIndexFieldName('room', fields)).toBe('roomId');
+    expect(sqlDeclaredIndexFieldName('roomId', fields)).toBe('room');
+    expect(sqlEngineIndexFieldName('resource', fields)).toBe('resource');
+    expect(sqlEngineIndexFieldName('resourceId', fields)).toBe('resourceId');
+    expect(sqlDeclaredIndexFieldName('resourceId', fields)).toBe('resourceId');
+    expect(sqlDeclaredIndexFieldName('subjectId', fields)).toBe('subjectId');
+    expect(mapIndexFieldsToSqlEngine({ fields: ['room', 'createdAt'] }, fields)).toEqual([
+      'roomId',
+      'createdAt',
+    ]);
+    expect(mapIndexFieldsToDeclared({ fields: ['roomId', 'createdAt'] }, fields)).toEqual(
+      ['room', 'createdAt'],
+    );
+    expect(
+      canonicalizeDeclaredIndexFields({ fields: ['roomId', 'createdAt'] }, fields).fields,
+    ).toEqual(['room', 'createdAt']);
+    expect(
+      canonicalizeDeclaredIndexFields({ fields: ['resourceId'] }, fields).fields,
+    ).toEqual(['resourceId']);
+  });
+
+  it('generates index names from declared fields, not engine *Id columns', () => {
+    expect(
+      generateIndexName(
+        ['room', 'createdAt'],
+        [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+        false,
+        'cnd_ChatMessage',
+      ),
+    ).toBe('cnd_idx_cnd_ChatMessage_room_createdAt_asc_asc');
+    expect(
+      generateIndexName(
+        ['roomId', 'createdAt'],
+        [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+        false,
+        'cnd_ChatMessage',
+      ),
+    ).not.toBe('cnd_idx_cnd_ChatMessage_room_createdAt_asc_asc');
+  });
+
+  it('binds live engine roomId to declared room without renaming Authz String *Id', () => {
+    const fields = {
+      room: { type: TYPE.Relation, model: 'ChatRoom' },
+      createdAt: { type: TYPE.Date },
+      resource: { type: TYPE.String },
+      resourceId: { type: TYPE.String },
+    };
+    const normalize = sqlIndexFieldNormalizer(fields);
+    const bound = bindDeclaredIndexesToLive(
+      [
+        {
+          fields: ['room', 'createdAt'],
+          types: [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+        },
+      ],
+      [
+        {
+          name: 'roomId_createdAt',
+          fields: ['roomId', 'createdAt'],
+          options: { name: 'roomId_createdAt', unique: false },
+        },
+      ],
+      'cnd_ChatMessage',
+      normalize,
+    );
+    expect(resolveIndexName(bound[0])).toBe('roomId_createdAt');
+    expect(bound[0].fields).toEqual(['room', 'createdAt']);
+    expect(indexIdentity(bound[0])).toEqual({
+      fields: ['room', 'createdAt'],
+      unique: false,
+    });
+
+    const authz = bindDeclaredIndexesToLive(
+      [{ fields: ['resource'], types: [CompatibleIndexType.Ascending] }],
+      [
+        {
+          name: 'cnd_idx_cnd_Permission_resource_asc',
+          fields: ['resource'],
+          options: { name: 'cnd_idx_cnd_Permission_resource_asc', unique: false },
+        },
+      ],
+      'cnd_Permission',
+      normalize,
+    );
+    expect(resolveIndexName(authz[0])).toBe('cnd_idx_cnd_Permission_resource_asc');
+    expect(authz[0].fields).toEqual(['resource']);
   });
 });

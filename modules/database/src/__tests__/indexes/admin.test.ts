@@ -23,6 +23,20 @@ function setup() {
     _id: 'schema-1',
     name: 'User',
     ownerModule: 'database',
+    fields: {
+      email: { type: 'String' },
+      room: { type: 'Relation', model: 'ChatRoom' },
+      createdAt: { type: 'Date' },
+      resource: { type: 'String' },
+      resourceId: { type: 'String' },
+    },
+    compiledFields: {
+      email: { type: 'String' },
+      room: { type: 'Relation', model: 'ChatRoom' },
+      createdAt: { type: 'Date' },
+      resource: { type: 'String' },
+      resourceId: { type: 'String' },
+    },
   });
   const findMany = jest.fn().mockResolvedValue([{ name: 'User' }, { name: 'ChatRoom' }]);
   const countDocuments = jest.fn().mockResolvedValue(2);
@@ -41,7 +55,25 @@ function setup() {
     deleteIndexes,
     systemSchemas: ['_DeclaredSchema'],
     models: {
-      User: { originalSchema: { ownerModule: 'database' } },
+      User: {
+        originalSchema: {
+          ownerModule: 'database',
+          fields: {
+            email: { type: 'String' },
+            room: { type: 'Relation', model: 'ChatRoom' },
+            createdAt: { type: 'Date' },
+            resource: { type: 'String' },
+            resourceId: { type: 'String' },
+          },
+          compiledFields: {
+            email: { type: 'String' },
+            room: { type: 'Relation', model: 'ChatRoom' },
+            createdAt: { type: 'Date' },
+            resource: { type: 'String' },
+            resourceId: { type: 'String' },
+          },
+        },
+      },
       ChatRoom: { originalSchema: { ownerModule: 'chat' } },
     },
   } as unknown as DatabaseAdapter<MongooseSchema | SequelizeSchema>;
@@ -66,6 +98,38 @@ describe('SchemaAdmin indexes', () => {
     expect(createIndexes).toHaveBeenCalledWith(
       'User',
       [{ fields: ['email'], options: { unique: true } }],
+      ADMIN_INDEX_CALLER,
+      { privileged: true },
+    );
+  });
+
+  it('canonicalizes inbound roomId to room when room is a scalar Relation', async () => {
+    const { admin, createIndexes } = setup();
+    await admin.createIndexes(
+      makeCall({
+        id: 'schema-1',
+        indexes: [{ fields: ['roomId', 'createdAt'] }],
+      }),
+    );
+    expect(createIndexes).toHaveBeenCalledWith(
+      'User',
+      [{ fields: ['room', 'createdAt'] }],
+      ADMIN_INDEX_CALLER,
+      { privileged: true },
+    );
+  });
+
+  it('does not rewrite Authz String *Id fields on Admin create', async () => {
+    const { admin, createIndexes } = setup();
+    await admin.createIndexes(
+      makeCall({
+        id: 'schema-1',
+        indexes: [{ fields: ['resourceId'] }],
+      }),
+    );
+    expect(createIndexes).toHaveBeenCalledWith(
+      'User',
+      [{ fields: ['resourceId'] }],
       ADMIN_INDEX_CALLER,
       { privileged: true },
     );
@@ -135,6 +199,21 @@ describe('SchemaAdmin indexes', () => {
     expect(createIndexes).toHaveBeenCalledWith(
       'ChatRoom',
       expect.any(Array),
+      ADMIN_INDEX_CALLER,
+      { privileged: false },
+    );
+  });
+
+  it('canonicalizes inbound roomId on import when room is a scalar Relation', async () => {
+    const { admin, createIndexes } = setup();
+    await admin.importIndexes(
+      makeCall({
+        indexes: [{ schemaName: 'User', fields: ['roomId'], name: 'msg_room' }],
+      }),
+    );
+    expect(createIndexes).toHaveBeenCalledWith(
+      'User',
+      [expect.objectContaining({ fields: ['room'], name: 'msg_room' })],
       ADMIN_INDEX_CALLER,
       { privileged: false },
     );

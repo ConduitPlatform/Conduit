@@ -192,7 +192,7 @@ describe('SQL index converters', () => {
     expect(postgres.modelOptions.indexes).toHaveLength(1);
   });
 
-  it('skips extracted array-relation indexes on SQL and relation-field compounds', () => {
+  it('skips extracted array-relation indexes on SQL and keeps scalar relation compounds', () => {
     const chatRoom = new ConduitSchema(
       'ChatRoom',
       {
@@ -234,8 +234,24 @@ describe('SQL index converters', () => {
     );
     const [mysqlMessage] = sqlSchemaConverter(message, 'mysql');
     const [pgMessage] = pgSchemaConverter(message);
-    expect(mysqlMessage.modelOptions.indexes ?? []).toHaveLength(0);
-    expect(pgMessage.modelOptions.indexes ?? []).toHaveLength(0);
+    const expectedFields = [
+      { name: 'roomId', order: 'ASC' },
+      { name: 'createdAt', order: 'ASC' },
+    ];
+    expect(mysqlMessage.modelOptions.indexes).toHaveLength(1);
+    expect(pgMessage.modelOptions.indexes).toHaveLength(1);
+    expect((mysqlMessage.modelOptions.indexes![0] as ConvertedSqlIndex).fields).toEqual(
+      expectedFields,
+    );
+    expect((pgMessage.modelOptions.indexes![0] as ConvertedSqlIndex).fields).toEqual(
+      expectedFields,
+    );
+    expect((mysqlMessage.modelOptions.indexes![0] as { name?: string }).name).toBe(
+      'cnd_idx_Message_room_createdAt_asc_asc',
+    );
+    expect((pgMessage.modelOptions.indexes![0] as { name?: string }).name).toBe(
+      'cnd_idx_Message_room_createdAt_asc_asc',
+    );
 
     const scalar = new ConduitSchema(
       'Message',
@@ -257,6 +273,68 @@ describe('SQL index converters', () => {
     const [pgScalar] = pgSchemaConverter(scalar);
     expect(mysqlScalar.modelOptions.indexes).toHaveLength(1);
     expect(pgScalar.modelOptions.indexes).toHaveLength(1);
+  });
+
+  it('lifts field-level scalar Relation indexes before extract and skips field-level arrays', () => {
+    const message = new ConduitSchema(
+      'Message',
+      {
+        room: {
+          type: TYPE.Relation,
+          model: 'ChatRoom',
+          required: true,
+          index: { type: CompatibleIndexType.Ascending },
+        },
+        createdAt: { type: TYPE.Date },
+      },
+      { timestamps: true },
+    );
+    const [pg] = pgSchemaConverter(message);
+    const [mysql] = sqlSchemaConverter(message, 'mysql');
+    expect(pg.modelOptions.indexes).toHaveLength(1);
+    expect(mysql.modelOptions.indexes).toHaveLength(1);
+    expect((pg.modelOptions.indexes![0] as { name?: string }).name).toBe(
+      'cnd_idx_Message_room_asc',
+    );
+    expect((pg.modelOptions.indexes![0] as ConvertedSqlIndex).fields).toEqual([
+      { name: 'roomId', order: 'ASC' },
+    ]);
+    expect(pg.fields.room).toBeUndefined();
+
+    const chatRoom = new ConduitSchema(
+      'ChatRoom',
+      {
+        participants: {
+          type: [{ type: TYPE.Relation, model: 'User', required: true }],
+          index: { type: CompatibleIndexType.Ascending },
+        },
+        deleted: { type: TYPE.Boolean },
+      },
+      { timestamps: true },
+    );
+    const [pgRoom] = pgSchemaConverter(chatRoom);
+    const [mysqlRoom] = sqlSchemaConverter(chatRoom, 'mysql');
+    expect(pgRoom.modelOptions.indexes ?? []).toHaveLength(0);
+    expect(mysqlRoom.modelOptions.indexes ?? []).toHaveLength(0);
+  });
+
+  it('does not rewrite Authz String *Id fields to a second Id suffix', () => {
+    const permission = convertModelOptionsIndexes(
+      new ConduitSchema(
+        'Permission',
+        {
+          resource: { type: TYPE.String },
+          resourceId: { type: TYPE.String },
+        },
+        { indexes: [{ fields: ['resource'], types: [CompatibleIndexType.Ascending] }] },
+      ),
+      'postgres',
+    );
+    const index = permission.modelOptions.indexes![0] as ConvertedSqlIndex & {
+      name?: string;
+    };
+    expect(index.name).toBe('cnd_idx_Permission_resource_asc');
+    expect(index.fields[0]).toEqual({ name: 'resource', order: 'ASC' });
   });
 });
 

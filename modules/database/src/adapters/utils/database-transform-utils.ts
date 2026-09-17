@@ -13,7 +13,9 @@ import {
   indexNameCollection,
   isPortableDirection,
   isPostgresIndexType,
+  isScalarRelationField,
   mapCompatibleToSqlOrder,
+  mapIndexFieldsToSqlEngine,
   normalizeIndexTypes,
   sqlDialectAllowsIndexType,
   sqlIndexUnsupportedReason,
@@ -60,6 +62,7 @@ function toSqlEngineIndex(
   dialect: string,
   schemaName: string,
   collectionName: string,
+  schemaFields: Record<string, unknown>,
 ): SqlEngineIndex | null {
   const index = ensureIndexName({ ...raw, fields: [...raw.fields] }, collectionName);
   if (index.options && !checkIfPostgresOptions(index.options)) {
@@ -67,7 +70,8 @@ function toSqlEngineIndex(
     return null;
   }
 
-  let fields: SqlIndexField[] = [...index.fields];
+  const engineFieldNames = mapIndexFieldsToSqlEngine(index, schemaFields);
+  let fields: SqlIndexField[] = [...engineFieldNames];
   let using = PostgresIndexType.BTREE;
   if (index.types) {
     const types = normalizeIndexTypes(index.types, index.fields.length) ?? [];
@@ -76,7 +80,7 @@ function toSqlEngineIndex(
       return null;
     }
     if (types.some(isPortableDirection)) {
-      fields = index.fields.map((field, i) => ({
+      fields = engineFieldNames.map((field, i) => ({
         name: field,
         order: mapCompatibleToSqlOrder(types[i]),
       }));
@@ -97,6 +101,27 @@ function toSqlEngineIndex(
   };
 }
 
+export function liftSqlScalarRelationFieldIndexes(copy: ConduitSchema) {
+  const lifted: ModelOptionsIndexes[] = [];
+  for (const [fieldName, fieldValue] of Object.entries(copy.fields)) {
+    if (!isScalarRelationField(fieldValue)) continue;
+    const field = fieldValue as ConduitModelField;
+    const index = field.index;
+    if (!index) continue;
+    lifted.push({
+      fields: [fieldName],
+      types: index.type === undefined ? undefined : [index.type],
+      options: index.options,
+      name: index.name,
+    });
+    delete field.index;
+  }
+  if (lifted.length) {
+    copy.modelOptions.indexes = [...(copy.modelOptions.indexes ?? []), ...lifted];
+  }
+  return copy;
+}
+
 export function convertModelOptionsIndexes(copy: ConduitSchema, dialect = 'postgres') {
   const collectionName = indexNameCollection(copy);
   const converted: SqlEngineIndex[] = [];
@@ -110,7 +135,7 @@ export function convertModelOptionsIndexes(copy: ConduitSchema, dialect = 'postg
       );
       continue;
     }
-    const index = toSqlEngineIndex(raw, dialect, copy.name, collectionName);
+    const index = toSqlEngineIndex(raw, dialect, copy.name, collectionName, copy.fields);
     if (index) converted.push(index);
   }
   setSqlEngineIndexes(copy, converted);
@@ -145,7 +170,13 @@ export function convertSchemaFieldIndexes(copy: ConduitSchema, dialect = 'postgr
       delete field.index;
       continue;
     }
-    const converted = toSqlEngineIndex(raw, dialect, copy.name, collectionName);
+    const converted = toSqlEngineIndex(
+      raw,
+      dialect,
+      copy.name,
+      collectionName,
+      copy.fields,
+    );
     delete field.index;
     if (converted) indexes.push(converted);
   }
