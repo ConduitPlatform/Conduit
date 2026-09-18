@@ -13,9 +13,6 @@ export async function editChatMessage(
   }
 
   const { messageId, userId, newMessage } = params;
-  if (isNil(newMessage) || newMessage === '') {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'newMessage is required');
-  }
 
   const message = await grpcSdk
     .database!.findOne<ChatMessage>(ChatMessage.name, { _id: messageId, deleted: false })

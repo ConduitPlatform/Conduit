@@ -164,22 +164,20 @@ describe('editChatMessage', () => {
     assert.equal(sdk.busEvents.length, 0);
   });
 
-  it('throws INVALID_ARGUMENT when newMessage is empty', async () => {
+  it('still writes and broadcasts when newMessage is empty', async () => {
     const sdk = createSdk(EXISTING_MESSAGE);
 
-    await assert.rejects(
-      () =>
-        editChatMessage(sdk.grpcSdk, {
-          messageId: 'msg-1',
-          userId: 'user-1',
-          newMessage: '',
-        }),
-      { code: status.INVALID_ARGUMENT, message: 'newMessage is required' },
-    );
-    assert.equal(sdk.finds.length, 0);
-    assert.equal(sdk.updates.length, 0);
-    assert.equal(sdk.socketPushes.length, 0);
-    assert.equal(sdk.busEvents.length, 0);
+    await editChatMessage(sdk.grpcSdk, {
+      messageId: 'msg-1',
+      userId: 'user-1',
+      newMessage: '',
+    });
+
+    assert.deepEqual(sdk.updates, [
+      { schemaName: 'ChatMessage', id: 'msg-1', document: { message: '' } },
+    ]);
+    assert.equal(sdk.socketPushes.length, 1);
+    assert.equal(sdk.busEvents.length, 1);
   });
 
   it('throws FAILED_PRECONDITION and does not write when allowMessageEdit is false', async () => {
