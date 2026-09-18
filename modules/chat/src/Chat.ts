@@ -294,15 +294,11 @@ export default class Chat extends ManagedModule<Config> {
 
   async editMessage(call: GrpcRequest<EditMessageRequest>, callback: GrpcCallback<null>) {
     try {
-      await editChatMessage(
-        this.grpcSdk,
-        {
-          messageId: call.request.messageId,
-          userId: call.request.userId,
-          newMessage: call.request.newMessage,
-        },
-        models.ChatMessage.getInstance(),
-      );
+      await editChatMessage(this.grpcSdk, {
+        messageId: call.request.messageId,
+        userId: call.request.userId,
+        newMessage: call.request.newMessage,
+      });
       callback(null, null);
     } catch (e) {
       return callback({

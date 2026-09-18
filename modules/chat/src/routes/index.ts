@@ -456,11 +456,11 @@ export class ChatRoutes {
   async patchMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { messageId, newMessage } = call.request.params;
     const { user } = call.request.context;
-    await editChatMessage(
-      this.grpcSdk,
-      { messageId, userId: user._id, newMessage },
-      ChatMessage.getInstance(),
-    );
+    await editChatMessage(this.grpcSdk, {
+      messageId,
+      userId: user._id,
+      newMessage,
+    });
     return 'Message updated successfully';
   }
 
