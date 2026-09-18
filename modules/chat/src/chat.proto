@@ -16,6 +16,12 @@ message SendMessageRequest {
   repeated string files = 6;
 }
 
+message EditMessageRequest {
+  string messageId = 1;
+  string userId = 2;
+  string newMessage = 3;
+}
+
 message DeleteRoomRequest {
   string _id = 1;
 }
@@ -34,4 +40,5 @@ service Chat {
   rpc CreateRoom(CreateRoomRequest) returns (Room);
   rpc DeleteRoom(DeleteRoomRequest) returns (Room);
   rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty);
+  rpc EditMessage(EditMessageRequest) returns (google.protobuf.Empty);
 }

@@ -16,7 +16,8 @@
     "build": "rimraf dist && tsc",
     "prepare": "npm run build",
     "build:docker": "docker build -t ghcr.io/conduitplatform/chat:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/chat:latest",
-    "generateTypes": "sh build.sh"
+    "generateTypes": "sh build.sh",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/utils/editChatMessage.test.js"
   },
   "directories": {
     "lib": "src"
