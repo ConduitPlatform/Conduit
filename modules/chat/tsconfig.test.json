@@ -10,7 +10,9 @@
   "include": [
     "src/utils/invitationHelpers.ts",
     "src/utils/invitationHelpers.test.ts",
-    "src/utils/membershipCache.ts"
+    "src/utils/membershipCache.ts",
+    "src/utils/editMessage.ts",
+    "src/utils/editMessage.test.ts"
   ],
   "exclude": []
 }

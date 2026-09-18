@@ -29,7 +29,7 @@
     "prepare": "npm run build",
     "build:docker": "docker build -t ghcr.io/conduitplatform/chat:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/chat:latest",
     "generateTypes": "sh build.sh",
-    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/utils/invitationHelpers.test.js"
+    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/utils/invitationHelpers.test.js dist-test/utils/editMessage.test.js"
   },
   "directories": {
     "lib": "src"
