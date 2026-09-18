@@ -635,6 +635,35 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
+        path: '/indexes/export',
+        action: ConduitRouteActions.GET,
+        description: `Exports schema indexes. Admin-only and paginated.`,
+        queryParams: {
+          skip: ConduitNumber.OptionalWith({ min: 0, integer: true }),
+          limit: ConduitNumber.OptionalWith({ min: 1, max: 1000, integer: true }),
+        },
+      },
+      new ConduitRouteReturnDefinition('ExportSchemaIndexes', {
+        indexes: [ConduitJson.Required],
+        count: ConduitNumber.Required,
+      }),
+      this.schemaAdmin.exportIndexes.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/indexes/import',
+        action: ConduitRouteActions.POST,
+        description: `Imports schema indexes. Skips indexes that already exist by name. Unique indexes respect schema owner privilege.`,
+        mcp: false,
+        bodyParams: {
+          indexes: { type: [TYPE.JSON], required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('ImportSchemaIndexes', 'String'),
+      this.schemaAdmin.importIndexes.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
         path: '/schemas/:id/indexes',
         action: ConduitRouteActions.POST,
         description: `Creates indexes for a schema.`,
