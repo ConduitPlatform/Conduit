@@ -2,15 +2,153 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [Unreleased]
+## [0.17.0-alpha.7](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.6...v0.17.0-alpha.7) (2026-09-18)
+
 
 ### ⚠ BREAKING CHANGES
 
-* **storage:** Client APIs no longer create missing containers (404). An omitted folder now resolves to a personal `cnd_<userId>/` folder. Creating under a missing or unmanaged `cnd_<otherUserId>/` path is denied. File create with `scope` now requires `edit` on that scope, not `read`. Client list-files is deferred.
+* **storage:** Client storage APIs return 404 for missing
+containers instead of creating them. An omitted folder now
+creates cnd_<userId>/.
+
+* refactor(storage): trim leftover authz handler slop
+
+Share admin container/folder setup, resolve file ids consistently,
+and drop the unused getFileUrl fallback.
+
+* test(storage): move authz tests into src/__tests__
+
+Keep implementation files in authz/ and handlers/ and collect the
+authz coverage in one dedicated test folder.
+
+* fix(storage): make filesystem ReBAC upgrade-safe
+
+Skip can(edit) on leftover unowned folders and named containers,
+heal them on first write, and always stamp scope ?? User on File
+creates. Deny unmanaged cnd_<other>/ squats. No second flag and
+no reconstruct job. Old files are not backfilled.
+
+Sibling-file A1 scans were explicitly rejected.
+
+* docs(storage): note Admin scope is optional but needed for Client writes
+
+Admin without scope still owns a folder via the container only.
+On the default container that locks Client users out; pass a scope
+when the folder should stay Client-writable.
+* **authentication:** biometric login must sign a one-time challenge from
+POST /authentication/biometrics/challenge instead of user._id.
+
+* fix(ci): keep qrcode external in authentication and core bundles
+
+The PNG renderer in qrcode requires fs. Leave it outside the ESM service
+bundle the same way notp and thirty-two already are.
+
+* fix(node-2fa): generate TOTP QR with uqr instead of qrcode
+
+qrcode pulls in fs (breaks ESM bundles) and a vulnerable yargs/y18n
+tree. uqr is a zero-dep SVG encoder that can be inlined in the bundle.
+
+* revert: drop changelog edits and cookie secure warnings
+
+Release actions own CHANGELOG.md. Cookie secure is a UI concern;
+NODE_ENV is production even in some local/dev deployments.
+
+* fix(authentication): prevent biometric and 2FA token replay attacks
+
+- Fix TOCTOU race in biometricLogin by consuming challenge before signature verification
+- Fix TOCTOU race in biometricVerifyEnroll by consuming token before signature verification
+- Fix SMS 2FA replay vulnerability by consuming verification token after use
+
+All challenge tokens are now atomically consumed before or immediately after
+verification to ensure one-shot use and prevent concurrent request races.
+
+Co-authored-by: Christina Papadogianni <ChrisPdgn@users.noreply.github.com>
+
+* fix(authentication): use atomic token consumption in biometric flows
+
+Replace findOne + deleteMany pattern with findOneAndDelete to prevent
+TOCTOU race where concurrent requests could both retrieve the same
+challenge token before either deletes it.
+
+- biometricLogin: atomic consume via findOneAndDelete ensures only one
+  caller gets the LOGIN_BIOMETRICS_TOKEN, eliminating replay window
+- biometricVerifyEnroll: atomic consume via findOneAndDelete ensures
+  only one caller gets the REGISTER_BIOMETRICS_TOKEN
+- Expired tokens are consumed and return 'Invalid signature!'
+- Changed 'Invalid token!' to 'Invalid signature!' in enroll verify
+  for consistency and to avoid leaking token existence
+
+Co-authored-by: Christina Papadogianni <ChrisPdgn@users.noreply.github.com>
+
+* Revert "fix(authentication): use atomic token consumption in biometric flows"
+
+This reverts commit c8677efddae734e19e6efb46ead9135de2b38bdf.
+
+* Revert "fix(authentication): prevent biometric and 2FA token replay attacks"
+
+This reverts commit 80096a8ceac745a43954d3f5addc3056dcc269e7.
+
+* feat(database): add findOneAndDelete to adapters and schema API
+
+Atomic find-and-delete is required for one-shot challenge tokens.
+Mongo uses findOneAndDelete; Postgres/SQL use a row-locked transaction.
+
+Co-authored-by: Christina Papadogianni <ChrisPdgn@users.noreply.github.com>
+
+* fix(authentication): consume biometric and SMS 2FA tokens atomically
+
+Use findOneAndDelete for biometric login/enroll challenges so concurrent
+requests cannot both succeed. Consume SMS 2FA tokens only after a
+successful verify. Adopt a persisted jwtSecret in HA instead of minting
+conflicting secrets on onConfig.
+
+Co-authored-by: Christina Papadogianni <ChrisPdgn@users.noreply.github.com>
+
+* fix(authentication): pin Apple id_token audience to resolved clientId
+
+jwt.verify types reject string[] audiences; pass the single resolved
+OAuth clientId. Cast convict apple.clients[] entries so auth tests typecheck.
+
+* revert(database,authentication): drop findOneAndDelete; use deleteOne for token consume
+
+Co-authored-by: Christina Papadogianni <ChrisPdgn@users.noreply.github.com>
+
+* fix(authentication): fail closed on jwtSecret reads and reuse live biometric challenges
+
+Treat config.get errors as unread so replicas cannot persist a mint over a
+live secret. Reuse a non-expired biometric nonce instead of wiping it, and
+map Apple JWKS fetch failures to UNAVAILABLE.
+
+* fix(authentication): add Apple JWKS key resolver and jwtSecret reconciler
+
+* fix(authentication): serialize biometric challenges and fail closed on jwtSecret mint
+* **auth:** support multiple Apple OAuth client credential sets (#1547)
 
 ### Features
 
-* **storage:** complete filesystem-shaped ReBAC for Container, Folder, and File behind `authorization.enabled` ([#1173](https://github.com/ConduitPlatform/Conduit/issues/1173)). Leftover unowned folders/containers are unmanaged until the first write heals them; old files are not backfilled. There is no reconstruct job and no second filesystem flag. Provision named containers via Admin. Admin writes without `scope` make a folder container-owned (Client 403 on the default container); pass a scope if Client users should keep writing. Products that share prefixes (for example fyllo) should keep authorization off until they have per-user folder roots and per-file grants or privileged fetch.
+* **authentication:** add OAuth sign-in-only mode ([#1596](https://github.com/ConduitPlatform/Conduit/issues/1596)) ([61809da](https://github.com/ConduitPlatform/Conduit/commit/61809daf255d96a168ef8ede554433bac5bb1993))
+* **authentication:** add opt-in email restrictions on intake ([#1578](https://github.com/ConduitPlatform/Conduit/issues/1578)) ([6f1fe7c](https://github.com/ConduitPlatform/Conduit/commit/6f1fe7c8a1a92ba8fd3e6631324f387ee427230b))
+* **auth:** support multiple Apple OAuth client credential sets ([#1547](https://github.com/ConduitPlatform/Conduit/issues/1547)) ([c06819d](https://github.com/ConduitPlatform/Conduit/commit/c06819d3b5f7d63cf4ffc213567f0340b3da7585))
+* **chat:** add EditMessage gRPC RPC ([#1616](https://github.com/ConduitPlatform/Conduit/issues/1616)) ([39538be](https://github.com/ConduitPlatform/Conduit/commit/39538be4c605e392050f78f698109cea94462b49))
+* **embeddings:** add cross-database vector search ([#1592](https://github.com/ConduitPlatform/Conduit/issues/1592)) ([04c438f](https://github.com/ConduitPlatform/Conduit/commit/04c438fd71355f799f6a5b75bf2c15b7753ed591))
+* **functions:** implement cron scheduling with BullMQ ([#1507](https://github.com/ConduitPlatform/Conduit/issues/1507)) ([d9ed82e](https://github.com/ConduitPlatform/Conduit/commit/d9ed82e6de6a6f42756b01029b2861495ec2ff78))
+* ship Docker images from ESM service bundles ([#1581](https://github.com/ConduitPlatform/Conduit/issues/1581)) ([c50f955](https://github.com/ConduitPlatform/Conduit/commit/c50f955dafd87f3425fead4b5f41e7b0c621cb22))
+* **storage:** add GCS parity and public file URI semantics ([#1509](https://github.com/ConduitPlatform/Conduit/issues/1509)) ([601939a](https://github.com/ConduitPlatform/Conduit/commit/601939a9a42582fdddcec152cd6d45225571aed1))
+* **storage:** enable module by default with the local provider ([#1614](https://github.com/ConduitPlatform/Conduit/issues/1614)) ([4aca891](https://github.com/ConduitPlatform/Conduit/commit/4aca89115622581ca9cc17d6dfe3d87329de324f))
+* **storage:** storage authz completion ([#1279](https://github.com/ConduitPlatform/Conduit/issues/1279)) ([1283653](https://github.com/ConduitPlatform/Conduit/commit/128365333ddf9969c9eced27a0e5333e9e42af93)), closes [#1173](https://github.com/ConduitPlatform/Conduit/issues/1173)
+
+
+### Bug Fixes
+
+* **admin:** strip undeclared config keys so MCP settings updates succeed ([#1575](https://github.com/ConduitPlatform/Conduit/issues/1575)) ([2ac2d15](https://github.com/ConduitPlatform/Conduit/commit/2ac2d1555598270612e25f8336ecbd2339ead287))
+* **authentication:** case-insensitive email lookup in verifyEmailWithCode ([#1573](https://github.com/ConduitPlatform/Conduit/issues/1573)) ([1e63771](https://github.com/ConduitPlatform/Conduit/commit/1e637713481160b957c08d7f5db450a22b630175))
+* **authentication:** harden JWT, Apple identity tokens, and biometric login ([#1586](https://github.com/ConduitPlatform/Conduit/issues/1586)) ([f0be1d6](https://github.com/ConduitPlatform/Conduit/commit/f0be1d6a6d785d6ce2dd26801af4cd63b74f7b4a))
+* **chat:** invitation email hook paths and login return flow ([#1512](https://github.com/ConduitPlatform/Conduit/issues/1512)) ([4b70942](https://github.com/ConduitPlatform/Conduit/commit/4b70942c79ada3b5391cefc2a56ebc806a80e80b))
+* **ci:** bundle router and authentication images in Docker builds ([#1584](https://github.com/ConduitPlatform/Conduit/issues/1584)) ([d82eab4](https://github.com/ConduitPlatform/Conduit/commit/d82eab484929e38ca7a7481c9302b76549637abb))
+* **communications:** guard template list handlers when params are missing ([#1567](https://github.com/ConduitPlatform/Conduit/issues/1567)) ([2cb100e](https://github.com/ConduitPlatform/Conduit/commit/2cb100e04c31ae9a4ea4f8a6c2683e850e3fb5d0))
+* **communications:** register client routes after router startup ([#1566](https://github.com/ConduitPlatform/Conduit/issues/1566)) ([efba147](https://github.com/ConduitPlatform/Conduit/commit/efba1477f8ff584f69d07b5c2445cd15c9f607f3))
+* **communications:** unwrap SMS verification gRPC responses ([#1565](https://github.com/ConduitPlatform/Conduit/issues/1565)) ([713362b](https://github.com/ConduitPlatform/Conduit/commit/713362ba30a4dbe44da4983b2e6730fcf8af5c74))
+* **embeddings:** enforce disabled search gate ([#1615](https://github.com/ConduitPlatform/Conduit/issues/1615)) ([81dad6e](https://github.com/ConduitPlatform/Conduit/commit/81dad6e4ba8a2d802c6b0390641a81b60bddd858))
 
 ## [0.17.0-alpha.6](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.5...v0.17.0-alpha.6) (2026-07-26)
 
