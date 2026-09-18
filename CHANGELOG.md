@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.30](https://github.com/ConduitPlatform/Conduit/compare/v0.16.29...v0.16.30) (2026-09-18)
+
+
+### Features
+
+* **authentication:** add OAuth sign-in-only mode ([#1597](https://github.com/ConduitPlatform/Conduit/issues/1597)) ([d614e83](https://github.com/ConduitPlatform/Conduit/commit/d614e8356a4f7df3a27c6fc4f1f42e4fb1174cbb))
+* **authentication:** add opt-in email restrictions on intake ([#1577](https://github.com/ConduitPlatform/Conduit/issues/1577)) ([9385b60](https://github.com/ConduitPlatform/Conduit/commit/9385b60a379e1292a0c1355841d8ab7d3a605bb0))
+* **chat:** add EditMessage gRPC matching REST patch ([#1617](https://github.com/ConduitPlatform/Conduit/issues/1617)) ([ff1a8a6](https://github.com/ConduitPlatform/Conduit/commit/ff1a8a6f9a1f363a69268bc3dc8c0d4571d66653))
+* **database:** disable eager collection creation for all schemas ([#1553](https://github.com/ConduitPlatform/Conduit/issues/1553)) ([274ba86](https://github.com/ConduitPlatform/Conduit/commit/274ba86415fdc7d7f5ed08c92616d1550788a2e4))
+
 ### [0.16.29](https://github.com/ConduitPlatform/Conduit/compare/v0.16.28...v0.16.29) (2026-07-09)
 
 
