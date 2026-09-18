@@ -1,5 +1,10 @@
 import { ConduitModule } from '../../classes/index.js';
-import { ChatDefinition, Room, SendMessageRequest } from '../../protoUtils/chat.js';
+import {
+  ChatDefinition,
+  EditMessageRequest,
+  Room,
+  SendMessageRequest,
+} from '../../protoUtils/chat.js';
 
 export type SendMessageInput = Omit<SendMessageRequest, 'files'> & {
   files?: SendMessageRequest['files'];
@@ -17,6 +22,10 @@ export class Chat extends ConduitModule<typeof ChatDefinition> {
 
   sendMessage(messageData: SendMessageInput): Promise<any> {
     return this.client!.sendMessage(SendMessageRequest.fromPartial(messageData));
+  }
+
+  editMessage(messageData: EditMessageRequest): Promise<any> {
+    return this.client!.editMessage(EditMessageRequest.fromPartial(messageData));
   }
 
   createRoom(name: string, participants: string[]): Promise<Room> {
