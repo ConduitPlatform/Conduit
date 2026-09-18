@@ -160,25 +160,23 @@ describe('editChatMessage', () => {
     assert.equal(publish.mock.callCount(), 0);
   });
 
-  it('returns INVALID_ARGUMENT when newMessage is empty', async () => {
-    const { grpcSdk, findOne, findByIdAndUpdate, socketPush, publish } = mockGrpcSdk();
+  it('still updates and broadcasts when newMessage is empty', async () => {
+    const { grpcSdk, findByIdAndUpdate, socketPush, publish } = mockGrpcSdk();
 
-    await assert.rejects(
-      () =>
-        editChatMessage(grpcSdk, {
-          messageId: MESSAGE_ID,
-          userId: USER_ID,
-          newMessage: '',
-        }),
-      (err: unknown) =>
-        err instanceof GrpcError &&
-        err.code === status.INVALID_ARGUMENT &&
-        err.message === 'newMessage is required',
-    );
-    assert.equal(findOne.mock.callCount(), 0);
-    assert.equal(findByIdAndUpdate.mock.callCount(), 0);
-    assert.equal(socketPush.mock.callCount(), 0);
-    assert.equal(publish.mock.callCount(), 0);
+    await editChatMessage(grpcSdk, {
+      messageId: MESSAGE_ID,
+      userId: USER_ID,
+      newMessage: '',
+    });
+
+    assert.equal(findByIdAndUpdate.mock.callCount(), 1);
+    assert.deepEqual(findByIdAndUpdate.mock.calls[0].arguments, [
+      'ChatMessage',
+      MESSAGE_ID,
+      { message: '' },
+    ]);
+    assert.equal(socketPush.mock.callCount(), 1);
+    assert.equal(publish.mock.callCount(), 1);
   });
 
   it('does not write when allowMessageEdit is false', async () => {

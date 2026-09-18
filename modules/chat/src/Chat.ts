@@ -302,7 +302,7 @@ export default class Chat extends ManagedModule<Config> {
       callback(null, null);
     } catch (e) {
       return callback({
-        code: (e as GrpcError).code,
+        code: (e as GrpcError).code ?? status.INTERNAL,
         message: (e as GrpcError).message,
       });
     }

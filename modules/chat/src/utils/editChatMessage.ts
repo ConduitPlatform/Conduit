@@ -10,10 +10,6 @@ export async function editChatMessage(
 ): Promise<void> {
   const { messageId, userId, newMessage } = input;
 
-  if (!newMessage) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'newMessage is required');
-  }
-
   if (!ConfigController.getInstance().config.allowMessageEdit) {
     throw new GrpcError(status.FAILED_PRECONDITION, 'Message editing is disabled');
   }
