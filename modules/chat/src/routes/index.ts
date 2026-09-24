@@ -21,7 +21,12 @@ import {
 import { ChatMessage, ChatParticipantsLog, ChatRoom, User } from '../models/index.js';
 import { isArray, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { editChatMessage, sendInvitations, validateUsersInput } from '../utils/index.js';
+import {
+  deleteChatMessage,
+  editChatMessage,
+  sendInvitations,
+  validateUsersInput,
+} from '../utils/index.js';
 import { InvitationRoutes } from './InvitationRoutes.js';
 import * as templates from '../templates/index.js';
 import { MessageType } from '../enums/messageType.enum.js';
@@ -417,39 +422,7 @@ export class ChatRoutes {
   async deleteMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { messageId } = call.request.params;
     const { user } = call.request.context;
-    const message = await ChatMessage.getInstance()
-      .findOne({ _id: messageId, deleted: false })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    if (isNil(message) || message.senderUser !== user._id) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Message does not exist or you don't have access",
-      );
-    }
-    if (ConfigController.getInstance().config.auditMode) {
-      await ChatMessage.getInstance()
-        .findByIdAndUpdate(messageId, { deleted: true })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
-    } else {
-      await ChatMessage.getInstance()
-        .deleteOne({ _id: messageId })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
-    }
-
-    this.grpcSdk.router?.socketPush({
-      event: 'message-deleted',
-      receivers: [],
-      rooms: [message.room as string],
-      data: JSON.stringify({ messageId, room: message.room }),
-    });
-
-    this.grpcSdk.bus?.publish('chat:delete:ChatMessage', JSON.stringify(messageId));
+    await deleteChatMessage(this.grpcSdk, { messageId, userId: user._id });
     return 'Message deleted successfully';
   }
 

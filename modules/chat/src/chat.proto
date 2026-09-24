@@ -22,6 +22,11 @@ message EditMessageRequest {
   string newMessage = 3;
 }
 
+message DeleteMessageRequest {
+  string messageId = 1;
+  string userId = 2;
+}
+
 message DeleteRoomRequest {
   string _id = 1;
 }
@@ -41,4 +46,5 @@ service Chat {
   rpc DeleteRoom(DeleteRoomRequest) returns (Room);
   rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty);
   rpc EditMessage(EditMessageRequest) returns (google.protobuf.Empty);
+  rpc DeleteMessage(DeleteMessageRequest) returns (google.protobuf.Empty);
 }

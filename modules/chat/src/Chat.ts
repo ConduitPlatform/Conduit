@@ -11,7 +11,7 @@ import AppConfigSchema, { Config } from './config/index.js';
 import { AdminHandlers } from './admin/index.js';
 import { ChatRoutes } from './routes/index.js';
 import * as models from './models/index.js';
-import { editChatMessage, validateUsersInput } from './utils/index.js';
+import { deleteChatMessage, editChatMessage, validateUsersInput } from './utils/index.js';
 import { MessageType } from './enums/messageType.enum.js';
 import path from 'path';
 import { isArray, isNil } from 'lodash-es';
@@ -19,6 +19,7 @@ import { status } from '@grpc/grpc-js';
 import { runMigrations } from './migrations/index.js';
 import {
   CreateRoomRequest,
+  DeleteMessageRequest,
   DeleteRoomRequest,
   EditMessageRequest,
   Room,
@@ -45,6 +46,7 @@ export default class Chat extends ManagedModule<Config> {
       deleteRoom: this.deleteRoom.bind(this),
       sendMessage: this.sendMessage.bind(this),
       editMessage: this.editMessage.bind(this),
+      deleteMessage: this.deleteMessage.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -300,6 +302,22 @@ export default class Chat extends ManagedModule<Config> {
         newMessage: call.request.newMessage,
       });
       callback(null, null);
+    } catch (e) {
+      return callback({
+        code: (e as GrpcError).code ?? status.INTERNAL,
+        message: (e as GrpcError).message,
+      });
+    }
+  }
+
+  async deleteMessage(
+    call: GrpcRequest<DeleteMessageRequest>,
+    callback: GrpcCallback<Record<string, never>>,
+  ) {
+    const { messageId, userId } = call.request;
+    try {
+      await deleteChatMessage(this.grpcSdk, { messageId, userId });
+      callback(null, {});
     } catch (e) {
       return callback({
         code: (e as GrpcError).code ?? status.INTERNAL,
