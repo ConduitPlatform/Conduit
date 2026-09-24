@@ -1,6 +1,7 @@
 import { ConduitModule } from '../../classes/index.js';
 import {
   ChatDefinition,
+  DeleteMessageRequest,
   EditMessageRequest,
   Room,
   SendMessageRequest,
@@ -26,6 +27,10 @@ export class Chat extends ConduitModule<typeof ChatDefinition> {
 
   editMessage(messageData: EditMessageRequest): Promise<any> {
     return this.client!.editMessage(EditMessageRequest.fromPartial(messageData));
+  }
+
+  deleteMessage(messageData: DeleteMessageRequest): Promise<any> {
+    return this.client!.deleteMessage(DeleteMessageRequest.fromPartial(messageData));
   }
 
   createRoom(name: string, participants: string[]): Promise<Room> {
