@@ -6,6 +6,11 @@
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["src/utils/editChatMessage.ts", "src/utils/editChatMessage.test.ts"],
+  "include": [
+    "src/utils/editChatMessage.ts",
+    "src/utils/editChatMessage.test.ts",
+    "src/utils/deleteMessage.ts",
+    "src/utils/deleteMessage.test.ts"
+  ],
   "exclude": []
 }
