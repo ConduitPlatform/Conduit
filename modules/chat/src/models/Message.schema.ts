@@ -1,8 +1,9 @@
 import {
+  CompatibleIndexType,
   ConduitModel,
+  ConduitSchemaOptions,
   DatabaseProvider,
   TYPE,
-  ConduitSchemaOptions,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 import { ChatRoom } from './ChatRoom.schema.js';
@@ -53,8 +54,18 @@ const schema: ConduitModel = {
 const modelOptions: ConduitSchemaOptions = {
   timestamps: true,
   indexes: [
-    { fields: ['room', 'createdAt'] },
-    { fields: ['room', 'deleted', 'createdAt'] },
+    {
+      fields: ['room', 'createdAt'],
+      types: [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+    },
+    {
+      fields: ['room', 'deleted', 'createdAt'],
+      types: [
+        CompatibleIndexType.Ascending,
+        CompatibleIndexType.Ascending,
+        CompatibleIndexType.Ascending,
+      ],
+    },
   ],
   conduit: {
     permissions: {

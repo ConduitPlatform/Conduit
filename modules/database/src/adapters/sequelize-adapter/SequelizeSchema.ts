@@ -93,32 +93,36 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
           }
         : undefined,
     });
-    // if a relation is to self, then it will be undefined inside the extractedRelations
-    // so we set it manually to self
-    for (const relation in extractedRelations) {
-      if (
-        Array.isArray(extractedRelations[relation]) &&
-        (extractedRelations[relation] as SequelizeSchema[])[0] === undefined
-      ) {
-        extractedRelations[relation] = [this];
-      } else if (
-        !Array.isArray(extractedRelations[relation]) &&
-        extractedRelations[relation] === undefined
-      ) {
-        extractedRelations[relation] = this;
-      }
-    }
     this.objectDotPaths = [];
     for (const concatenatedKey of Object.keys(objectPaths)) {
       const { parentKey, childKey } = objectPaths[concatenatedKey];
       this.objectDotPaths.push(`${parentKey}.${childKey}`);
       this.objectDotPathMapping[concatenatedKey] = `${parentKey}.${childKey}`;
     }
+    if (Object.keys(extractedRelations).length > 0) {
+      this.bindExtractedRelations();
+    }
+  }
+
+  bindExtractedRelations() {
+    for (const relation in this.extractedRelations) {
+      if (
+        Array.isArray(this.extractedRelations[relation]) &&
+        (this.extractedRelations[relation] as SequelizeSchema[])[0] === undefined
+      ) {
+        this.extractedRelations[relation] = [this];
+      } else if (
+        !Array.isArray(this.extractedRelations[relation]) &&
+        this.extractedRelations[relation] === undefined
+      ) {
+        this.extractedRelations[relation] = this;
+      }
+    }
     extractRelations(
       this.originalSchema.name,
-      originalSchema,
+      this.originalSchema,
       this.model,
-      extractedRelations,
+      this.extractedRelations,
     );
   }
 
@@ -339,6 +343,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       scope?: string;
       select?: string;
       populate?: string[];
+      readPreference?: string;
     },
   ) {
     const filter = await this.getAuthorizedQuery(
