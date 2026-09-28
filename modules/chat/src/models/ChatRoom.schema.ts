@@ -1,4 +1,5 @@
 import {
+  CompatibleIndexType,
   ConduitModel,
   ConduitSchemaOptions,
   DatabaseProvider,
@@ -40,7 +41,13 @@ const schema: ConduitModel = {
 };
 const modelOptions: ConduitSchemaOptions = {
   timestamps: true,
-  indexes: [{ fields: ['participants'] }, { fields: ['participants', 'deleted'] }],
+  indexes: [
+    { fields: ['participants'], types: [CompatibleIndexType.Ascending] },
+    {
+      fields: ['participants', 'deleted'],
+      types: [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
+    },
+  ],
   conduit: {
     permissions: {
       extendable: true,

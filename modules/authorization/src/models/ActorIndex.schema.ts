@@ -1,8 +1,8 @@
 import {
+  CompatibleIndexType,
   ConduitModel,
   ConduitSchemaOptions,
   DatabaseProvider,
-  MongoIndexType,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
@@ -23,7 +23,7 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: true,
     index: {
-      type: MongoIndexType.Ascending,
+      type: CompatibleIndexType.Ascending,
     },
   },
   subjectId: {
@@ -41,7 +41,7 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: true,
     index: {
-      type: MongoIndexType.Ascending,
+      type: CompatibleIndexType.Ascending,
     },
   },
   entityId: {
@@ -69,6 +69,7 @@ const schemaOptions: ConduitSchemaOptions = {
   indexes: [
     {
       fields: ['subject', 'entity'],
+      types: [CompatibleIndexType.Ascending, CompatibleIndexType.Ascending],
     },
   ],
   conduit: {

@@ -50,12 +50,13 @@ describe('mongoose vector index lifecycle', () => {
       toArray: async () => [],
     }));
     const createIndex = jest.fn(async () => 'title_1');
+    const indexes = jest.fn(async () => [{ v: 2, key: { _id: 1 }, name: '_id_' }]);
     const adapter = Object.create(MongooseAdapter.prototype) as MongooseAdapter;
     Object.assign(adapter, {
       models: { Article: articleModel() },
       mongoose: {
         model: () => ({
-          collection: { createSearchIndex, listSearchIndexes, createIndex },
+          collection: { createSearchIndex, listSearchIndexes, createIndex, indexes },
         }),
       },
     });
