@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.31](https://github.com/ConduitPlatform/Conduit/compare/v0.16.30...v0.16.31) (2026-09-28)
+
+
+### Features
+
+* **chat:** add DeleteMessage gRPC RPC ([#1622](https://github.com/ConduitPlatform/Conduit/issues/1622)) ([602d9b8](https://github.com/ConduitPlatform/Conduit/commit/602d9b896ce5a9c296531e3d230d376ee210faee))
+
 ### [0.16.30](https://github.com/ConduitPlatform/Conduit/compare/v0.16.29...v0.16.30) (2026-09-18)
 
 
