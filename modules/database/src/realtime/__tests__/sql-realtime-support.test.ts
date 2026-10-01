@@ -21,6 +21,7 @@ describe('SqlRealtimeSupport', () => {
       } as never);
       const result = await support.checkTopology();
       expect(result.supported).toBe(false);
+      expect(result.retryable).toBe(false);
       expect(result.message).toMatch(/PostgreSQL WAL CDC only/i);
     }
   });
@@ -44,7 +45,24 @@ describe('SqlRealtimeSupport', () => {
     } as never);
     const result = await support.checkTopology();
     expect(result.supported).toBe(false);
+    expect(result.retryable).toBe(true);
     expect(result.message).toMatch(/wal_level=logical/);
+  });
+
+  it('fails topology as retryable when Postgres is unreachable', async () => {
+    const support = new SqlRealtimeSupport({
+      sequelize: {
+        getDialect: () => 'postgres',
+        query: async () => {
+          throw new Error('connect ECONNREFUSED');
+        },
+      },
+      connectionUri: 'postgres://localhost/db',
+    } as never);
+    const result = await support.checkTopology();
+    expect(result.supported).toBe(false);
+    expect(result.retryable).toBe(true);
+    expect(result.message).toMatch(/cannot reach the database/);
   });
 
   it('does not create a probe replication slot during topology checks', async () => {
@@ -95,6 +113,7 @@ describe('SqlRealtimeSupport', () => {
     } as never);
     const result = await support.checkTopology();
     expect(result.supported).toBe(false);
+    expect(result.retryable).toBe(true);
     expect(result.message).toMatch(/max_replication_slots/);
   });
 
@@ -139,6 +158,49 @@ describe('SqlRealtimeSupport', () => {
     expect(queries.some(sql => sql.includes('CREATE TRIGGER'))).toBe(false);
     expect(queries.some(sql => sql.includes('LISTEN'))).toBe(false);
   });
+
+  it('skips a missing table and still publishes the rest', async () => {
+    const queries: string[] = [];
+    const sequelize = {
+      getDialect: () => 'postgres',
+      query: async (sql: string, options?: { replacements?: { table?: string } }) => {
+        queries.push(sql);
+        if (sql.includes('FROM pg_publication ') && sql.includes('pubname')) {
+          return [];
+        }
+        if (sql.includes('pg_publication_tables')) {
+          return [];
+        }
+        if (sql.includes('relreplident')) {
+          if (options?.replacements?.table === 'missing_orders') {
+            return [];
+          }
+          return [{ ident: 'd', has_pk: true }];
+        }
+        return [];
+      },
+    };
+    const support = new SqlRealtimeSupport({
+      sequelize,
+      connectionUri: 'postgres://localhost/db',
+    } as never);
+    await support.prepare([
+      {
+        name: 'Order',
+        collectionName: 'orders',
+        authorizationEnabled: false,
+      },
+      {
+        name: 'Missing',
+        collectionName: 'missing_orders',
+        authorizationEnabled: false,
+      },
+    ]);
+    const added = queries.filter(sql => sql.includes('ADD TABLE'));
+    expect(added).toHaveLength(1);
+    expect(added[0]).toMatch(/orders/);
+    expect(added.some(sql => sql.includes('missing_orders'))).toBe(false);
+  });
 });
 
 describe('SqlChangeStream', () => {
@@ -173,6 +235,33 @@ describe('SqlChangeStream', () => {
     expect(JSON.stringify(received)).not.toContain('hidden');
     await stream.close();
     expect(feed.stopped).toBe(true);
+  });
+
+  it('emits truncate as a metadata-only change without a document id', async () => {
+    const feed = new FakeFeed();
+    const stream = new SqlChangeStream({
+      connectionUri: 'postgres://localhost/db',
+      createFeed: () => feed,
+    });
+    const received: unknown[] = [];
+    stream.on('change', change => received.push(change));
+    await stream.ready;
+    feed.push({
+      tag: 'truncate',
+      table: 'orders',
+      lsn: '0/2:1:1',
+      occurredAt: new Date('2026-03-01T00:00:00.000Z'),
+    });
+    expect(received).toEqual([
+      {
+        operationType: 'truncate',
+        ns: { coll: 'orders' },
+        wallTime: new Date('2026-03-01T00:00:00.000Z'),
+        _id: '0/2:1:1',
+      },
+    ]);
+    expect(JSON.stringify(received)).not.toMatch(/documentKey|fullDocument/);
+    await stream.close();
   });
 
   it('skips rows with a NULL document id', async () => {

@@ -8,8 +8,16 @@ export type PublicationTable = {
   table: string;
 };
 
+const PUBLICATION_OPS = 'insert,update,delete,truncate';
+
 export function createPublicationSql(publicationName: string = PUBLICATION_NAME): string {
-  return `CREATE PUBLICATION ${quoteIdent(publicationName)} WITH (publish = 'insert,update,delete')`;
+  return `CREATE PUBLICATION ${quoteIdent(publicationName)} WITH (publish = '${PUBLICATION_OPS}')`;
+}
+
+export function setPublicationPublishSql(
+  publicationName: string = PUBLICATION_NAME,
+): string {
+  return `ALTER PUBLICATION ${quoteIdent(publicationName)} SET (publish = '${PUBLICATION_OPS}')`;
 }
 
 export function addPublicationTableSql(
@@ -37,10 +45,16 @@ export async function ensurePublication(
   publicationName: string = PUBLICATION_NAME,
 ): Promise<void> {
   const rows = await sequelize.query(
-    `SELECT pubname FROM pg_publication WHERE pubname = :name`,
+    `SELECT pubname, pubtruncate FROM pg_publication WHERE pubname = :name`,
     { type: QueryTypes.SELECT, replacements: { name: publicationName } },
   );
-  if (rows.length > 0) return;
+  const existing = rows[0] as { pubname?: string; pubtruncate?: unknown } | undefined;
+  if (existing) {
+    if (!truthy(existing.pubtruncate)) {
+      await sequelize.query(setPublicationPublishSql(publicationName));
+    }
+    return;
+  }
   try {
     await sequelize.query(createPublicationSql(publicationName));
   } catch (err) {
@@ -68,7 +82,7 @@ export async function syncPublication(
   sequelize: Sequelize,
   schemas: OptedInSchema[],
   options: { schemaName: string; publicationName?: string },
-): Promise<void> {
+): Promise<string[]> {
   const publicationName = options.publicationName ?? PUBLICATION_NAME;
   await ensurePublication(sequelize, publicationName);
   const desired = new Map<string, PublicationTable>();
@@ -90,25 +104,36 @@ export async function syncPublication(
       tableKey(table.schema, table.table),
     ),
   );
+  const skipped: string[] = [];
   for (const table of desired.values()) {
     const key = tableKey(table.schema, table.table);
-    await ensureReplicaIdentity(sequelize, table.schema, table.table);
+    const ready = await ensureReplicaIdentity(sequelize, table.schema, table.table);
+    if (!ready) {
+      skipped.push(table.table);
+      continue;
+    }
     if (afterDrop.has(key)) continue;
     try {
       await sequelize.query(
         addPublicationTableSql(publicationName, table.schema, table.table),
       );
     } catch (err) {
-      if (!isAlreadyPresent(err)) throw err;
+      if (isAlreadyPresent(err)) continue;
+      if (isMissingRelation(err)) {
+        skipped.push(table.table);
+        continue;
+      }
+      throw err;
     }
   }
+  return skipped;
 }
 
 async function ensureReplicaIdentity(
   sequelize: Sequelize,
   schema: string,
   table: string,
-): Promise<void> {
+): Promise<boolean> {
   const rows = await sequelize.query(
     `SELECT c.relreplident AS ident,
             EXISTS (
@@ -122,14 +147,13 @@ async function ensureReplicaIdentity(
   );
   const row = rows[0] as { ident?: string; has_pk?: unknown } | undefined;
   if (!row) {
-    throw new Error(
-      `PostgreSQL live updates cannot publish ${quoteQualified(schema, table)}: table not found`,
-    );
+    return false;
   }
   if (truthy(row.has_pk) || row.ident === 'f' || row.ident === 'i') {
-    return;
+    return true;
   }
   await sequelize.query(replicaIdentityFullSql(schema, table));
+  return true;
 }
 
 function tableKey(schema: string, table: string): string {
@@ -145,4 +169,24 @@ function truthy(value: unknown): boolean {
 function isAlreadyPresent(err: unknown): boolean {
   const message = err instanceof Error ? err.message : String(err);
   return /already member|already exists/i.test(message);
+}
+
+function isMissingRelation(err: unknown): boolean {
+  const code = postgresErrorCode(err);
+  if (code === '42P01') return true;
+  const message = err instanceof Error ? err.message : String(err);
+  return /does not exist/i.test(message);
+}
+
+function postgresErrorCode(err: unknown): string | undefined {
+  if (!err || typeof err !== 'object') return undefined;
+  const candidate = err as {
+    code?: unknown;
+    original?: { code?: unknown };
+    parent?: { code?: unknown };
+  };
+  if (typeof candidate.code === 'string') return candidate.code;
+  if (typeof candidate.original?.code === 'string') return candidate.original.code;
+  if (typeof candidate.parent?.code === 'string') return candidate.parent.code;
+  return undefined;
 }

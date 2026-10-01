@@ -40,3 +40,16 @@ export function toRawChangeEvent(change: MappedWalChange): RawChangeEvent {
     _id: change.lsn,
   };
 }
+
+export function toRawTruncateEvent(change: {
+  table: string;
+  lsn: string;
+  occurredAt: Date;
+}): RawChangeEvent {
+  return {
+    operationType: 'truncate',
+    ns: { coll: change.table },
+    wallTime: change.occurredAt,
+    _id: change.lsn,
+  };
+}

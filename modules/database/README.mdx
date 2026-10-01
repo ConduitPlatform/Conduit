@@ -58,11 +58,11 @@ subscribe({ schema: 'Order', documentId?: string })
 unsubscribe({ schema: 'Order', documentId?: string })
 ```
 
-Events arrive as `change` with `{ version, operation, schema, documentId, occurredAt, resumeToken }` and contain no document fields. Consumers should refetch through their authorized REST or custom-endpoint path.
+Events arrive as `change` with `{ version, operation, schema, documentId, occurredAt, resumeToken }` and contain no document fields. Consumers should refetch through their authorized REST or custom-endpoint path. PostgreSQL `TRUNCATE` is published as a schema-level `reset` (no row dump); clients refetch the collection.
 
 MongoDB uses native change streams. PostgreSQL uses in-process WAL CDC (`pgoutput` publication + a **temporary** logical slot). That is WAL CDC, Postgres-only — not a changelog table, not triggers, not Debezium. There is **no catch-up**: re-subscribe, leader restart, or slot drop does not replay missed events; clients fetch current data. `LISTEN`/`NOTIFY` is not the capture path.
 
-The database role needs permission to `CREATE PUBLICATION`, `ALTER PUBLICATION`, and to create a logical replication slot (`REPLICATION` / managed-Postgres logical-replication grants). A transaction-mode pooler cannot speak the replication protocol; use a direct/session URI. Tables without a primary key get `REPLICA IDENTITY FULL` so UPDATE/DELETE can be published. `TRUNCATE` is not emitted as document events. Custom PKs use the schema’s physical primary key (`idField`), not a virtual `_id`.
+The database role needs permission to `CREATE PUBLICATION`, `ALTER PUBLICATION`, and to create a logical replication slot (`REPLICATION` / managed-Postgres logical-replication grants). A transaction-mode pooler cannot speak the replication protocol; use a direct/session URI. Tables without a primary key get `REPLICA IDENTITY FULL` so UPDATE/DELETE can be published. Custom PKs use the schema’s physical primary key (`idField`), not a virtual `_id`. Missing opted-in tables are skipped so the rest of the watch can still start.
 
 MySQL, MariaDB, and SQLite are unsupported for live updates. Do not enable `realtime` on those engines.
 

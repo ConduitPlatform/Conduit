@@ -75,14 +75,22 @@ describe('pgoutput CopyData fixture', () => {
       copyListeners[0]({
         chunk: xlogData(encodeInsert(7, ['order-1', 'do-not-leak'])),
       });
+      copyListeners[0]({
+        chunk: xlogData(encodeTruncate([7])),
+      });
       copyListeners[0]({ chunk: keepalive(0x16b3748n, true) });
       expect(errors).toEqual([]);
-      expect(changes).toHaveLength(1);
+      expect(changes).toHaveLength(2);
       expect(changes[0]).toMatchObject({
         tag: 'insert',
         table: 'orders',
         newRow: { _id: 'order-1', secret: 'do-not-leak' },
       });
+      expect(changes[1]).toMatchObject({
+        tag: 'truncate',
+        table: 'orders',
+      });
+      expect(changes[1]).not.toHaveProperty('newRow');
       expect(fakeConnection.sendCopyFromChunk).toHaveBeenCalled();
     } finally {
       await feed.stop();
@@ -184,6 +192,15 @@ function encodeInsert(oid: number, values: string[]): Buffer {
     parts.push(Buffer.from('t'), i32(bytes.length), bytes);
   }
   return Buffer.concat(parts);
+}
+
+function encodeTruncate(oids: number[], flags = 0): Buffer {
+  const buf = Buffer.alloc(1 + 4 + 1 + 4 * oids.length);
+  buf[0] = 'T'.charCodeAt(0);
+  buf.writeInt32BE(oids.length, 1);
+  buf[5] = flags;
+  oids.forEach((oid, i) => buf.writeInt32BE(oid, 6 + 4 * i));
+  return buf;
 }
 
 function cstring(value: string): Buffer {
