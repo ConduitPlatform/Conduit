@@ -5,6 +5,7 @@ import {
   addPublicationTableSql,
   dropPublicationTableSql,
   replicaIdentityFullSql,
+  setPublicationPublishSql,
 } from '../sql/publication.js';
 import { PUBLICATION_NAME } from '../sql/constants.js';
 import { quoteIdent, quoteQualified } from '../sql/identifiers.js';
@@ -17,10 +18,13 @@ import {
 } from '../sql/pgoutput.js';
 
 describe('PostgreSQL WAL publication SQL', () => {
-  it('creates a pgoutput publication for DML only', () => {
+  it('creates a pgoutput publication including truncate', () => {
     const sql = createPublicationSql();
     expect(sql).toContain(quoteIdent(PUBLICATION_NAME));
-    expect(sql).toContain("publish = 'insert,update,delete'");
+    expect(sql).toContain("publish = 'insert,update,delete,truncate'");
+    expect(setPublicationPublishSql()).toContain(
+      "SET (publish = 'insert,update,delete,truncate')",
+    );
     expect(sql).not.toMatch(/TRIGGER|_cnd_DatabaseChange|pg_notify|LISTEN/i);
   });
 
@@ -62,8 +66,17 @@ describe('pgoutput decoder', () => {
     });
     const del = decoder.decodeMessage(encodeDelete(42, ['order-1']));
     expect(del?.tag).toBe('delete');
-    expect(documentIdFromChange(del!)).toBe('order-1');
-    expect(documentIdFromChange(insert!, 'sku')).toBeUndefined();
+    if (del && del.tag === 'delete') {
+      expect(documentIdFromChange(del)).toBe('order-1');
+    }
+    if (insert && insert.tag === 'insert') {
+      expect(documentIdFromChange(insert, 'sku')).toBeUndefined();
+    }
+    const truncate = decoder.decodeMessage(encodeTruncate([42]));
+    expect(truncate).toMatchObject({
+      tag: 'truncate',
+      relations: [{ name: 'orders' }],
+    });
   });
 
   it('decodes begin commit timestamps from the postgres epoch', () => {
@@ -191,6 +204,15 @@ function encodeUpdate(
 
 function encodeDelete(oid: number, key: (string | null)[]): Buffer {
   return Buffer.concat([Buffer.from('D'), i32(oid), Buffer.from('K'), encodeTuple(key)]);
+}
+
+function encodeTruncate(oids: number[], flags = 0): Buffer {
+  const buf = Buffer.alloc(1 + 4 + 1 + 4 * oids.length);
+  buf[0] = 'T'.charCodeAt(0);
+  buf.writeInt32BE(oids.length, 1);
+  buf[5] = flags;
+  oids.forEach((oid, i) => buf.writeInt32BE(oid, 6 + 4 * i));
+  return buf;
 }
 
 function encodeBegin(finalLsn: bigint, micros: bigint, xid: number): Buffer {

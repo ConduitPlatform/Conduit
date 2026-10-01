@@ -1,7 +1,11 @@
 import { EventEmitter } from 'node:events';
 import type { ChangeStreamLike } from '../types.js';
 import { DEFAULT_ID_FIELD, PUBLICATION_NAME } from './constants.js';
-import { documentIdFromChange, toRawChangeEvent } from './mapEvent.js';
+import {
+  documentIdFromChange,
+  toRawChangeEvent,
+  toRawTruncateEvent,
+} from './mapEvent.js';
 import {
   createPgoutputFeed,
   type ReplicationChange,
@@ -65,6 +69,17 @@ export class SqlChangeStream implements ChangeStreamLike {
 
   private onChange(change: ReplicationChange): void {
     if (this.closed) return;
+    if (change.tag === 'truncate') {
+      this.emitter.emit(
+        'change',
+        toRawTruncateEvent({
+          table: change.table,
+          lsn: change.lsn,
+          occurredAt: change.occurredAt,
+        }),
+      );
+      return;
+    }
     const idField = this.idFieldByTable[change.table] ?? DEFAULT_ID_FIELD;
     const documentId = documentIdFromChange(change, idField);
     if (!documentId) return;

@@ -3,7 +3,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { EJSON, ObjectId } from 'bson';
 import { ChangeStreamCoordinator } from '../ChangeStreamCoordinator.js';
 import { RealtimeSubscriptionTracker } from '../subscriptions.js';
-import { roomsForPublicChange } from '../rooms.js';
+import { roomsForPublicChange, schemaRoom } from '../rooms.js';
 import { SQL_LEADER_LOCK } from '../sql/constants.js';
 
 class MemoryStore {
@@ -42,6 +42,12 @@ function createCoordinator(overrides?: {
     authorizationEnabled: boolean;
     documentIdField?: string;
   }[];
+  getOptedInSchemas?: () => {
+    name: string;
+    collectionName: string;
+    authorizationEnabled: boolean;
+    documentIdField?: string;
+  }[];
   getKeyDelayMs?: number;
   onResumePersisted?: (token: string) => Promise<void>;
   parseResumeToken?: (token: string | null | undefined) => unknown | undefined;
@@ -50,6 +56,12 @@ function createCoordinator(overrides?: {
   resumeTokenKey?: string;
   adminPush?: () => Promise<void>;
   watchReady?: Promise<void>;
+  checkTopology?: () => Promise<{
+    supported: boolean;
+    message?: string;
+    retryable?: boolean;
+  }>;
+  prepare?: () => Promise<void>;
 }) {
   const stream = new EventEmitter() as EventEmitter & {
     close: () => Promise<void>;
@@ -104,8 +116,9 @@ function createCoordinator(overrides?: {
   const coordinator = new ChangeStreamCoordinator({
     grpcSdk: grpcSdk as never,
     watch,
-    checkTopology: async () => ({ supported: true }),
+    checkTopology: overrides?.checkTopology ?? (async () => ({ supported: true })),
     getOptedInSchemas: () =>
+      overrides?.getOptedInSchemas?.() ??
       overrides?.schemas ?? [
         { name: 'Order', collectionName: 'orders', authorizationEnabled: false },
       ],
@@ -116,6 +129,7 @@ function createCoordinator(overrides?: {
     persistResume: overrides?.persistResume,
     leaderLock: overrides?.leaderLock,
     resumeTokenKey: overrides?.resumeTokenKey,
+    prepare: overrides?.prepare,
   });
   return {
     coordinator,
@@ -416,6 +430,128 @@ describe('ChangeStreamCoordinator', () => {
     await reconcile;
     await waitFor(() => coordinator.getState() === 'degraded');
     expect(coordinator.getState()).toBe('degraded');
+    await coordinator.shutdown();
+  });
+
+  it('retries a failed Postgres topology check and not a non-Postgres engine', async () => {
+    jest.useFakeTimers();
+    const postgres = createCoordinator({
+      persistResume: false,
+      checkTopology: jest
+        .fn()
+        .mockResolvedValueOnce({
+          supported: false,
+          retryable: true,
+          message:
+            'PostgreSQL live updates require wal_level=logical (managed Postgres: enable logical replication / rds.logical_replication).',
+        })
+        .mockResolvedValue({ supported: true }),
+    });
+    await postgres.coordinator.reconcile();
+    expect(postgres.coordinator.getState()).toBe('idle');
+    expect(postgres.watch).not.toHaveBeenCalled();
+    await jest.advanceTimersByTimeAsync(1_000);
+    expect(postgres.coordinator.getState()).toBe('live');
+    await postgres.coordinator.shutdown();
+
+    const mysql = createCoordinator({
+      persistResume: false,
+      checkTopology: async () => ({
+        supported: false,
+        retryable: false,
+        message:
+          'Live updates are PostgreSQL WAL CDC only. MySQL, MariaDB, and SQLite are out of v1.',
+      }),
+    });
+    await mysql.coordinator.reconcile();
+    expect(mysql.coordinator.getState()).toBe('idle');
+    await jest.advanceTimersByTimeAsync(30_000);
+    expect(mysql.watch).not.toHaveBeenCalled();
+    await mysql.coordinator.shutdown();
+    jest.useRealTimers();
+  });
+
+  it('runs prepare only after this process holds the leader lock', async () => {
+    const prepare = jest.fn(async () => undefined);
+    const follower = createCoordinator({
+      persistResume: false,
+      prepare,
+    });
+    follower.grpcSdk.state.tryAcquireLock.mockResolvedValue(null);
+    await follower.coordinator.reconcile();
+    expect(prepare).not.toHaveBeenCalled();
+    expect(follower.watch).not.toHaveBeenCalled();
+    await follower.coordinator.shutdown();
+
+    const leader = createCoordinator({ persistResume: false, prepare });
+    await leader.coordinator.reconcile();
+    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(leader.grpcSdk.state.tryAcquireLock).toHaveBeenCalled();
+    expect(leader.watch).toHaveBeenCalledTimes(1);
+    await leader.coordinator.shutdown();
+  });
+
+  it('reopens the watch when opted-in tables or id fields change', async () => {
+    let schemas = [
+      {
+        name: 'Order',
+        collectionName: 'orders',
+        authorizationEnabled: false,
+        documentIdField: '_id',
+      },
+    ];
+    const { coordinator, watch } = createCoordinator({
+      persistResume: false,
+      getOptedInSchemas: () => schemas,
+    });
+    await coordinator.reconcile();
+    expect(watch).toHaveBeenCalledTimes(1);
+    schemas = [
+      {
+        name: 'Order',
+        collectionName: 'orders',
+        authorizationEnabled: false,
+        documentIdField: 'sku',
+      },
+    ];
+    await coordinator.reconcile();
+    expect(watch).toHaveBeenCalledTimes(2);
+    await coordinator.shutdown();
+  });
+
+  it('emits a schema-level reset on TRUNCATE without row payloads', async () => {
+    const { coordinator, stream, publish, adminPush, routerPush } = createCoordinator({
+      persistResume: false,
+    });
+    await coordinator.reconcile();
+    stream.emit('change', {
+      operationType: 'truncate',
+      ns: { coll: 'orders' },
+      _id: '0/20:1:1',
+      wallTime: new Date('2026-03-01T00:00:00.000Z'),
+      fullDocument: { secret: 'nope' },
+    });
+    await coordinator.waitForIdle();
+    expect(publish).toHaveBeenCalledWith(
+      'database:reset:Order',
+      expect.stringContaining('"schema":"Order"'),
+    );
+    const payload = JSON.parse(publish.mock.calls[0][1] as string);
+    expect(payload).not.toHaveProperty('documentId');
+    expect(payload).not.toHaveProperty('fullDocument');
+    expect(JSON.stringify(payload)).not.toContain('nope');
+    expect(adminPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'reset',
+        rooms: [schemaRoom('Order')],
+      }),
+    );
+    expect(routerPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'reset',
+        rooms: [schemaRoom('Order')],
+      }),
+    );
     await coordinator.shutdown();
   });
 });
