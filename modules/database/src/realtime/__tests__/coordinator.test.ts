@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { ObjectId } from 'bson';
 import { MongoChangeStreamCoordinator } from '../MongoChangeStreamCoordinator.js';
 import { RealtimeSubscriptionTracker } from '../subscriptions.js';
-import { roomsForPublicChange } from '../rooms.js';
+import { roomsForPublicChange, schemaRoom } from '../rooms.js';
 
 class MemoryStore {
   private sets = new Map<string, Set<string>>();
@@ -62,14 +62,24 @@ function createCoordinator(overrides?: {
   const routerPush = jest.fn(async () => undefined);
   const adminPush = jest.fn(async () => undefined);
   const publish = jest.fn();
+  const subscribe = jest.fn();
+  const unsubscribe = jest.fn();
   const watch = jest.fn(() => stream as never);
   const subscriptions = new RealtimeSubscriptionTracker(new MemoryStore());
+  let fence = 0;
+  const incr = jest.fn(async () => {
+    fence += 1;
+    return fence;
+  });
+  const getKey = jest.fn(async () => String(fence));
   const grpcSdk = {
     state: {
       tryAcquireLock: jest.fn(async () => lock),
       releaseLock: jest.fn(async () => undefined),
+      incr,
+      getKey,
     },
-    bus: { publish },
+    bus: { publish, subscribe, unsubscribe },
     router: { socketPush: routerPush },
     admin: { socketPush: adminPush },
     isAvailable: () => overrides?.authorizationAvailable !== false,
@@ -118,10 +128,11 @@ function insertChange(collection: string, id: string) {
   };
 }
 
-function expectWatchFromNow(
-  watch: { mock: { calls: unknown[][] } },
-  callIndex = 0,
-) {
+function pushesFor(mock: { mock: { calls: unknown[][] } }, event: 'change' | 'reset') {
+  return mock.mock.calls.filter(call => (call[0] as { event: string }).event === event);
+}
+
+function expectWatchFromNow(watch: { mock: { calls: unknown[][] } }, callIndex = 0) {
   expect(watch.mock.calls[callIndex]).toHaveLength(1);
   expect(watch.mock.calls[callIndex][0]).not.toHaveProperty('resumeAfter');
 }
@@ -153,14 +164,21 @@ describe('MongoChangeStreamCoordinator', () => {
     expect(payload).not.toHaveProperty('resumeToken');
     expect(payload).not.toHaveProperty('secret');
     const expectedRooms = roomsForPublicChange('Order', '64b64c4c4c4c4c4c4c4c4c4c');
-    expect(routerPush).toHaveBeenCalledWith(
+    expect(pushesFor(adminPush, 'reset')).toHaveLength(1);
+    expect(pushesFor(adminPush, 'reset')[0][0]).toEqual(
+      expect.objectContaining({
+        event: 'reset',
+        rooms: [schemaRoom('Order')],
+      }),
+    );
+    expect(pushesFor(routerPush, 'change')[0][0]).toEqual(
       expect.objectContaining({ event: 'change', rooms: expectedRooms }),
     );
-    expect(adminPush).toHaveBeenCalledWith(
+    expect(pushesFor(adminPush, 'change')[0][0]).toEqual(
       expect.objectContaining({ event: 'change', rooms: expectedRooms }),
     );
     expect(
-      JSON.parse((adminPush.mock.calls[0][0] as { data: string }).data),
+      JSON.parse((pushesFor(adminPush, 'change')[0][0] as { data: string }).data),
     ).not.toHaveProperty('resumeToken');
     await coordinator.shutdown();
   });
@@ -172,7 +190,8 @@ describe('MongoChangeStreamCoordinator', () => {
       release = resolve;
     });
     let first = true;
-    adminPush.mockImplementation(async () => {
+    adminPush.mockImplementation(async (push: { event?: string }) => {
+      if (push.event !== 'change') return;
       if (first) {
         first = false;
         await gate;
@@ -183,10 +202,10 @@ describe('MongoChangeStreamCoordinator', () => {
     stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4d'));
     await Promise.resolve();
     await new Promise(resolve => setImmediate(resolve));
-    expect(adminPush).toHaveBeenCalledTimes(1);
+    expect(adminPush).toHaveBeenCalledTimes(2);
     release();
     await coordinator.waitForIdle();
-    expect(adminPush).toHaveBeenCalledTimes(2);
+    expect(pushesFor(adminPush, 'change')).toHaveLength(2);
     await coordinator.shutdown();
   });
 
@@ -256,7 +275,7 @@ describe('MongoChangeStreamCoordinator', () => {
     await coordinator.reconcile();
     stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
     await coordinator.waitForIdle();
-    expect(routerPush).not.toHaveBeenCalled();
+    expect(pushesFor(routerPush, 'change')).toHaveLength(0);
     expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual(
       [],
     );
@@ -296,6 +315,7 @@ describe('MongoChangeStreamCoordinator', () => {
     });
     adminPush
       .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('push failed'))
       .mockResolvedValue(undefined);
     await coordinator.reconcile();
@@ -304,13 +324,14 @@ describe('MongoChangeStreamCoordinator', () => {
     streams[0].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
     streams[0].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4d'));
     await coordinator.waitForIdle();
-    expect(adminPush).toHaveBeenCalledTimes(2);
+    expect(pushesFor(adminPush, 'change')).toHaveLength(2);
     await jest.advanceTimersByTimeAsync(1_000);
     expect(watch).toHaveBeenCalledTimes(2);
     expectWatchFromNow(watch, 1);
     streams[1].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
     await coordinator.waitForIdle();
-    expect(adminPush).toHaveBeenCalledTimes(3);
+    expect(pushesFor(adminPush, 'change')).toHaveLength(3);
+    expect(pushesFor(adminPush, 'reset')).toHaveLength(2);
     await coordinator.shutdown();
     jest.useRealTimers();
   });
@@ -361,7 +382,7 @@ describe('MongoChangeStreamCoordinator', () => {
     await coordinator.reconcile();
     stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
     await coordinator.waitForIdle();
-    expect(routerPush).not.toHaveBeenCalled();
+    expect(pushesFor(routerPush, 'change')).toHaveLength(0);
     expect(removeUser).not.toHaveBeenCalled();
     expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual([
       'user-1',
@@ -388,7 +409,7 @@ describe('MongoChangeStreamCoordinator', () => {
     expect(coordinator.getState()).toBe('idle');
     stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
     await coordinator.waitForIdle();
-    expect(adminPush).not.toHaveBeenCalled();
+    expect(pushesFor(adminPush, 'change')).toHaveLength(0);
     await coordinator.shutdown();
     jest.useRealTimers();
   });
@@ -416,12 +437,74 @@ describe('MongoChangeStreamCoordinator', () => {
     await coordinator.reconcile();
     stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
     await coordinator.waitForIdle();
-    expect(adminPush).toHaveBeenCalledTimes(1);
+    expect(pushesFor(adminPush, 'reset')).toHaveLength(1);
+    expect(pushesFor(adminPush, 'change')).toHaveLength(1);
     expect(routerPush).not.toHaveBeenCalled();
     expect(can).not.toHaveBeenCalled();
     expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual([
       'user-1',
     ]);
     await coordinator.shutdown();
+  });
+
+  it('drops change publishes when the Redis fence token is no longer ours', async () => {
+    const { coordinator, stream, adminPush, publish, grpcSdk } = createCoordinator();
+    await coordinator.reconcile();
+    expect(coordinator.getState()).toBe('live');
+    expect(grpcSdk.state.incr).toHaveBeenCalledWith('realtime:change-stream:fence');
+    grpcSdk.state.getKey.mockResolvedValue('999');
+    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
+    await coordinator.waitForIdle();
+    expect(publish).not.toHaveBeenCalledWith('database:change:Order', expect.anything());
+    expect(pushesFor(adminPush, 'change')).toHaveLength(0);
+    expect(coordinator.getState()).toBe('idle');
+    await coordinator.shutdown();
+  });
+
+  it('polls the leader lock about every second without exponential backoff', async () => {
+    jest.useFakeTimers();
+    const { coordinator, grpcSdk } = createCoordinator();
+    grpcSdk.state.tryAcquireLock.mockResolvedValue(null);
+    await coordinator.reconcile();
+    expect(grpcSdk.state.tryAcquireLock).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(8_000);
+    expect(grpcSdk.state.tryAcquireLock.mock.calls.length).toBeGreaterThan(4);
+    await coordinator.shutdown();
+    jest.useRealTimers();
+  });
+
+  it('publishes a wake after releasing the lock on clean shutdown', async () => {
+    const { coordinator, publish } = createCoordinator();
+    await coordinator.reconcile();
+    publish.mockClear();
+    await coordinator.shutdown();
+    expect(publish).toHaveBeenCalledWith('realtime:change-stream:released', 'released');
+  });
+
+  it('reconciles immediately when a leader-release wake arrives', async () => {
+    const { coordinator, grpcSdk, lock, watch } = createCoordinator();
+    grpcSdk.state.tryAcquireLock.mockResolvedValueOnce(null);
+    await coordinator.reconcile();
+    expect(watch).not.toHaveBeenCalled();
+    grpcSdk.state.tryAcquireLock.mockResolvedValue(lock);
+    const onWake = grpcSdk.bus.subscribe.mock.calls[0][1] as () => void;
+    onWake();
+    await Promise.resolve();
+    await new Promise(resolve => setImmediate(resolve));
+    expect(coordinator.getState()).toBe('live');
+    expect(watch).toHaveBeenCalledTimes(1);
+    await coordinator.shutdown();
+  });
+
+  it('pushes reset when a watch opens, not on lock renew', async () => {
+    jest.useFakeTimers();
+    const { coordinator, adminPush } = createCoordinator();
+    await coordinator.reconcile();
+    expect(pushesFor(adminPush, 'reset')).toHaveLength(1);
+    await jest.advanceTimersByTimeAsync(5_000);
+    expect(coordinator.getState()).toBe('live');
+    expect(pushesFor(adminPush, 'reset')).toHaveLength(1);
+    await coordinator.shutdown();
+    jest.useRealTimers();
   });
 });
