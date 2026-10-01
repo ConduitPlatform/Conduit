@@ -141,4 +141,8 @@ export class StateManager {
   getKey(keyName: string) {
     return this.redisClient.get(keyName);
   }
+
+  incr(keyName: string) {
+    return this.redisClient.incr(keyName);
+  }
 }
