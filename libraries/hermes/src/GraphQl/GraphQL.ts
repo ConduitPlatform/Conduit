@@ -447,6 +447,9 @@ export class GraphQLController extends ConduitRouter {
               };
             }
           }
+          if (isArray(result)) {
+            result = { result };
+          }
           if (caching) {
             this.storeInCache(hashKey, result, cacheAge!);
           }
