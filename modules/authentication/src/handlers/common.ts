@@ -37,10 +37,10 @@ export class CommonHandlers implements IAuthenticationStrategy {
       { populate: ['user'], readPreference: 'primary' },
     );
     if (isNil(oldRefreshToken)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Refresh token not found');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Refresh token not found');
     }
     if (moment.utc().isAfter(moment.utc(oldRefreshToken.expiresOn))) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
+      throw new GrpcError(status.UNAUTHENTICATED, 'Token expired');
     }
     if (!oldRefreshToken.user) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Invalid user');
