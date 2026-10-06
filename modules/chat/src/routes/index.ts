@@ -21,7 +21,12 @@ import {
 import { ChatMessage, ChatParticipantsLog, ChatRoom, User } from '../models/index.js';
 import { isArray, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { sendInvitations, validateUsersInput } from '../utils/index.js';
+import {
+  deleteChatMessage,
+  editChatMessage,
+  sendInvitations,
+  validateUsersInput,
+} from '../utils/index.js';
 import {
   getMembershipCacheKey,
   MEMBERSHIP_CACHE_TTL_MS,
@@ -421,78 +426,18 @@ export class ChatRoutes {
   async deleteMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { messageId } = call.request.params;
     const { user } = call.request.context;
-    const message = await ChatMessage.getInstance()
-      .findOne({ _id: messageId, deleted: false })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    if (isNil(message) || message.senderUser !== user._id) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Message does not exist or you don't have access",
-      );
-    }
-    if (ConfigController.getInstance().config.auditMode) {
-      await ChatMessage.getInstance()
-        .findByIdAndUpdate(messageId, { deleted: true })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
-    } else {
-      await ChatMessage.getInstance()
-        .deleteOne({ _id: messageId })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
-    }
-
-    this.grpcSdk.router?.socketPush({
-      event: 'message-deleted',
-      receivers: [],
-      rooms: [message.room as string],
-      data: JSON.stringify({ messageId, room: message.room }),
-    });
-
-    this.grpcSdk.bus?.publish('chat:delete:ChatMessage', JSON.stringify(messageId));
+    await deleteChatMessage(this.grpcSdk, { messageId, userId: user._id });
     return 'Message deleted successfully';
   }
 
   async patchMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { messageId, newMessage } = call.request.params;
     const { user } = call.request.context;
-    const message: ChatMessage | null = await ChatMessage.getInstance()
-      .findOne({ _id: messageId, deleted: false })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    if (isNil(message) || message.senderUser !== user._id) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Message does not exist or you don't have access",
-      );
-    }
-    message.message = newMessage;
-    await ChatMessage.getInstance()
-      .findByIdAndUpdate(message._id, { message: message.message })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-
-    this.grpcSdk.router?.socketPush({
-      event: 'message-edited',
-      receivers: [],
-      rooms: [message.room as string],
-      data: JSON.stringify({
-        messageId,
-        message: newMessage,
-        room: message.room,
-      }),
+    await editChatMessage(this.grpcSdk, {
+      messageId,
+      userId: user._id,
+      newMessage,
     });
-
-    this.grpcSdk.bus?.publish(
-      'chat:edit:ChatMessage',
-      JSON.stringify({ id: messageId, newMessage }),
-    );
     return 'Message updated successfully';
   }
 

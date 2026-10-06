@@ -59,6 +59,7 @@ Can't find what you're interested in? Shoot us a message [on Discord](https://di
 - [Chat](https://getconduit.dev/docs/modules/chat) - Build realtime chat applications.
 - [Database](https://getconduit.dev/docs/modules/database) - Create schemas with auto-generated CRUD and Query-based functional endpoints. Supports MongoDB and PostgreSQL.
 - [Email](https://getconduit.dev/docs/modules/email) - Send emails using multiple supported providers.
+- [Embeddings](modules/embeddings) - Opt-in text-to-vector generation and semantic search. Disabled by default; not included in standalone v1. See the [rollout runbook](deploy/embeddings.md).
 - [Forms](https://getconduit.dev/docs/modules/forms) - Submit forms and have responses forwarded to an email address.
 - [PushNotifications](https://getconduit.dev/docs/modules/push-notifications) - Send push notifications to your users.
 - [Router](https://getconduit.dev/docs/modules/router) - Seamlessly expose REST, GraphQL and WebSockets APIs with auto-generated endpoint documentation.

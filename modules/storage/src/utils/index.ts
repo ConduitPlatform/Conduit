@@ -51,7 +51,7 @@ export function normalizeFolderPath(folderPath?: string) {
   return `${path.normalize(folderPath.trim()).replace(/^\/|\/$/g, '')}/`;
 }
 
-function getNestedPaths(inputPath: string): string[] {
+export function getNestedPaths(inputPath: string): string[] {
   const paths: string[] = [];
   const strippedPath = !inputPath.trim()
     ? ''

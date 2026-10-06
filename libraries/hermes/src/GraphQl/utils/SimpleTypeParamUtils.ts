@@ -1,4 +1,4 @@
-import { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 
 const GQL_PRIMITIVES = ['Number', 'Boolean', 'Date', 'String'];
 
@@ -7,6 +7,8 @@ function extractParam(param: string, required: boolean = false) {
     return 'ID' + (required ? '!' : '');
   } else if (param === 'JSON') {
     return 'JSONObject' + (required ? '!' : '');
+  } else if (param === TYPE.Vector || param === 'Vector') {
+    return '[Number]' + (required ? '!' : '');
   } else {
     return param + (required ? '!' : '');
   }
@@ -17,7 +19,9 @@ function extractArrayParam(
   required: boolean = false,
   originalParam?: any,
 ) {
-  if (GQL_PRIMITIVES.indexOf(param) !== -1) {
+  if (param === TYPE.Vector || param === 'Vector') {
+    return '[[Number]]' + (required ? '!' : '');
+  } else if (GQL_PRIMITIVES.indexOf(param) !== -1) {
     return `[${param}]` + (required ? '!' : '');
   } else if (param === 'ObjectId') {
     return '[ID]' + (required ? '!' : '');

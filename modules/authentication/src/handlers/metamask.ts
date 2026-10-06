@@ -6,6 +6,7 @@ import {
   ConduitRouteReturnDefinition,
   GrpcError,
   ParsedRouterRequest,
+  Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { User } from '../models/index.js';
@@ -80,9 +81,8 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     const normalizedEthPublicAddress = ethPublicAddress.toLowerCase();
 
     const existingUser: User | null = await User.getInstance().findOne({
-      // @ts-expect-error Unsafe nested property access
       'metamask.ethPublicAddress': normalizedEthPublicAddress,
-    });
+    } as Query<User>);
 
     if (existingUser) {
       return { nonce: existingUser.metamask!.nonce };
@@ -110,9 +110,8 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     }
 
     const user = await User.getInstance().findOne({
-      // @ts-expect-error Unsafe nested property access
       'metamask.ethPublicAddress': normalizedEthPublicAddress,
-    });
+    } as Query<User>);
 
     if (isNil(user)) {
       throw new GrpcError(
@@ -155,9 +154,8 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     }
 
     await User.getInstance().findByIdAndUpdate(user._id, {
-      // @ts-expect-error Unsafe nested property access
       'metamask.nonce': uuid(),
-    });
+    } as Query<User>);
 
     const config = ConfigController.getInstance().config;
     return TokenProvider.getInstance().provideUserTokens({
