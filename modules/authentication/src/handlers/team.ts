@@ -147,9 +147,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async getUserInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const invites = await Token.getInstance().findMany({
       tokenType: TokenType.TEAM_INVITE_TOKEN,
-      // @ts-ignore
       'data.email': call.request.context.user.email,
-    });
+    } as Query<Token>);
     return {
       invites: invites.map(invite => ({
         teamId: invite.data.teamId,
@@ -597,10 +596,9 @@ export class TeamsHandler implements IAuthenticationStrategy {
     // Delete any existing invite for the same email and team
     await Token.getInstance().deleteOne({
       tokenType: TokenType.TEAM_INVITE_TOKEN,
-      // @ts-expect-error Unsafe nested property access
       'data.teamId': teamId,
       'data.email': email,
-    });
+    } as Query<Token>);
 
     const invitation = await this.createUserInvitation({
       teamId,
@@ -663,10 +661,9 @@ export class TeamsHandler implements IAuthenticationStrategy {
     // Delete any existing invite for the same email and team
     await Token.getInstance().deleteOne({
       tokenType: TokenType.TEAM_INVITE_TOKEN,
-      // @ts-expect-error Unsafe nested property access
       'data.teamId': teamId,
       'data.email': email,
-    });
+    } as Query<Token>);
 
     return 'OK';
   }
@@ -698,17 +695,14 @@ export class TeamsHandler implements IAuthenticationStrategy {
       );
     }
 
-    const invites = await Token.getInstance().findMany({
+    const teamInvitesQuery = {
       tokenType: TokenType.TEAM_INVITE_TOKEN,
-      // @ts-expect-error Unsafe nested property access
       'data.teamId': teamId,
-    });
+    } as Query<Token>;
 
-    const count = await Token.getInstance().countDocuments({
-      tokenType: TokenType.TEAM_INVITE_TOKEN,
-      // @ts-expect-error Unsafe nested property access
-      'data.teamId': teamId,
-    });
+    const invites = await Token.getInstance().findMany(teamInvitesQuery);
+
+    const count = await Token.getInstance().countDocuments(teamInvitesQuery);
 
     return {
       invites,

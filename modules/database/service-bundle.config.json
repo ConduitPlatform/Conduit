@@ -17,6 +17,7 @@
     "object-hash",
     "pg",
     "pg-hstore",
+    "pgvector",
     "sequelize",
     "sequelize-auto",
     "sqlite3"

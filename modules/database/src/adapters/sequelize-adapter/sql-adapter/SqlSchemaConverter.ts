@@ -92,6 +92,8 @@ function extractType(type: string, sqlType?: SQLDataType) {
       }
     case 'JSON':
       return DataTypes.JSON;
+    case 'Vector':
+      return DataTypes.JSON;
     case 'Relation':
     case 'ObjectId':
       return DataTypes.UUID;

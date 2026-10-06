@@ -6,6 +6,8 @@ import { v4 as uuid } from 'uuid';
 import { buildInvitationHookUrl } from './invitationHelpers.js';
 
 export { buildInvitationHookUrl };
+export { editChatMessage } from './editMessage.js';
+export { deleteChatMessage } from './deleteMessage.js';
 
 export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: UntypedArray) {
   const uniqueUsers = Array.from(new Set(users));

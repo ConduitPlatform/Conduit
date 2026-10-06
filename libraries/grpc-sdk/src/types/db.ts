@@ -37,9 +37,18 @@ type setQuery<T> = {
   $set: simpleQuery<T>;
 };
 
+type numericDocumentKeys<T> = {
+  [K in keyof T]-?: NonNullable<T[K]> extends number ? K : never;
+}[keyof T];
+
+type incQuery<T> = {
+  $inc: { [K in numericDocumentKeys<T>]?: number };
+};
+
 export type Query<T> =
   | simpleQuery<T>
   | pushQuery<T>
   | setQuery<T>
+  | incQuery<T>
   // | arrayQuery<T>
   | conditionalQuery<T>;

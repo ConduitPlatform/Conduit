@@ -12,3 +12,5 @@ It is utilized by [Admin](../../packages/admin) and [Router](../../modules/route
 - WebSockets (via Socket.io)
 - Support for middleware
 - Auto-generated API documentation
+
+`TYPE.Vector` is documented and validated as an array of finite numbers (`[Number]` in GraphQL, OpenAPI `array` of `number`). It is never emitted as a referenced `Vector` schema or GraphQL type. Dimension constraints are applied in Zod/OpenAPI when `dimensions` is present; GraphQL cannot express array length.

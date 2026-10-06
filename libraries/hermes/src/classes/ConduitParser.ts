@@ -9,7 +9,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ParserUtils } from './ParserUtils.js';
 
-const baseTypes = ['String', 'Number', 'Boolean', 'Date', 'ObjectId', 'JSON'];
+const baseTypes = ['String', 'Number', 'Boolean', 'Date', 'ObjectId', 'JSON', 'Vector'];
 
 export abstract class ConduitParser<ParseResult, ProcessingObject> {
   result!: ParseResult;
