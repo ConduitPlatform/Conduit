@@ -8,6 +8,10 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { clampVectorSearchLimits } from './vectorSearchLimits.js';
 import { validateVectorSearchFilter } from './vectorSearchFilter.js';
+import {
+  castMongoVectorFilterObjectIds,
+  mongoObjectIdFields,
+} from './vectorSearchObjectIds.js';
 import { renderPostgresVectorWhere, PostgresWhereRenderer } from './vectorSearchWhere.js';
 import { pgVectorDistanceOperator } from './vectorMappings.js';
 import { mongoVectorProjection, postgresVectorSelectList } from './vectorProjection.js';
@@ -147,7 +151,10 @@ export function planMongoVectorSearch(args: {
       vector: args.request.vector,
       numCandidates: limits.numCandidates,
       limit: limits.numCandidates,
-      filter: validated.filter,
+      filter: castMongoVectorFilterObjectIds(
+        validated.filter,
+        mongoObjectIdFields(args.schemaFields),
+      ),
       projection: mongoVectorProjection(args.schemaFields, args.request.select),
     }),
   };
