@@ -312,6 +312,9 @@ export class EmailService implements IChannel {
     }
 
     const sentMessageInfo = await this.emailer!.sendEmail(builder);
+    if (!sentMessageInfo) {
+      throw new Error('Failed to send email');
+    }
     const messageId = this.emailer!._transport?.getMessageId(sentMessageInfo);
 
     if (config.email?.storeEmails?.enabled) {
@@ -339,7 +342,7 @@ export class EmailService implements IChannel {
         }
       }
     }
-    return { messageId, ...sentMessageInfo };
+    return { ...sentMessageInfo, messageId: messageId ?? sentMessageInfo.messageId };
   }
 
   async resendEmail(emailRecordId: string) {
