@@ -58,7 +58,7 @@
     "jsonwebtoken": "^9.0.3",
     "jwks-rsa": "^4.1.0",
     "lodash-es": "^4.18.1",
-    "moment": "^2.30.1",
+    "moment": "^2.31.0",
     "uuid": "^14.0.2"
   },
   "devDependencies": {

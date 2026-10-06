@@ -46,7 +46,7 @@
     "helmet": "8.2.0",
     "ioredis": "^5.11.1",
     "lodash-es": "^4.18.1",
-    "moment": "^2.30.1",
+    "moment": "^2.31.0",
     "swagger-ui-express": "5.0.1"
   },
   "directories": {
