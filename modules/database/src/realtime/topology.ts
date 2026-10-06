@@ -8,7 +8,15 @@ const CHANGE_STREAM_ERROR_CODES = new Set([
 export type TopologyResult = {
   supported: boolean;
   message?: string;
+  retryable?: boolean;
 };
+
+export function shouldRetryTopology(result: TopologyResult): boolean {
+  if (result.supported) return false;
+  if (result.retryable === true) return true;
+  if (result.retryable === false) return false;
+  return !result.message || result.message.includes('Unable to determine');
+}
 
 export function topologyFromHello(
   hello:

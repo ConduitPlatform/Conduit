@@ -13,6 +13,13 @@ export type PgoutputChange = {
   keyRow?: Record<string, string | null>;
 };
 
+export type PgoutputTruncate = {
+  tag: 'truncate';
+  relations: PgoutputRelation[];
+};
+
+export type PgoutputMessage = PgoutputBegin | PgoutputChange | PgoutputTruncate;
+
 export type PgoutputBegin = {
   tag: 'begin';
   finalLsn: bigint;
@@ -123,7 +130,7 @@ export function parseLsn(value: string): bigint {
 export class PgoutputDecoder {
   private readonly relations = new Map<number, PgoutputRelation>();
 
-  decodeMessage(payload: Buffer): PgoutputBegin | PgoutputChange | undefined {
+  decodeMessage(payload: Buffer): PgoutputMessage | undefined {
     if (payload.length === 0) return undefined;
     const reader = new BufferReader(payload);
     const tag = reader.char();
@@ -139,6 +146,8 @@ export class PgoutputDecoder {
         return this.update(reader);
       case 'D':
         return this.delete(reader);
+      case 'T':
+        return this.truncate(reader);
       default:
         return undefined;
     }
@@ -212,6 +221,18 @@ export class PgoutputDecoder {
       oldRow: kind === 'O' ? row : undefined,
       keyRow: kind === 'K' ? row : undefined,
     };
+  }
+
+  private truncate(reader: BufferReader): PgoutputTruncate | undefined {
+    const count = reader.i32();
+    reader.u8();
+    const relations: PgoutputRelation[] = [];
+    for (let i = 0; i < count; i++) {
+      const relation = this.relations.get(reader.i32());
+      if (relation) relations.push(relation);
+    }
+    if (relations.length === 0) return undefined;
+    return { tag: 'truncate', relations };
   }
 }
 

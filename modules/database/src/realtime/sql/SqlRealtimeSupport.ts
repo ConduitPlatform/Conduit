@@ -1,3 +1,4 @@
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { QueryTypes } from 'sequelize';
 import type { SequelizeAdapter } from '../../adapters/sequelize-adapter/index.js';
 import type { ChangeStreamLike, OptedInSchema } from '../types.js';
@@ -22,16 +23,17 @@ export class SqlRealtimeSupport {
   ) {}
 
   async checkTopology(): Promise<TopologyResult> {
-    await dropLegacyCapture(this.adapter.sequelize).catch(() => undefined);
     const dialect = this.adapter.sequelize.getDialect();
     if (dialect !== 'postgres') {
-      return { supported: false, message: SQL_ENGINE_UNSUPPORTED };
+      await dropLegacyCapture(this.adapter.sequelize).catch(() => undefined);
+      return { supported: false, message: SQL_ENGINE_UNSUPPORTED, retryable: false };
     }
     try {
       await this.adapter.sequelize.query('SELECT 1');
     } catch (err) {
       return {
         supported: false,
+        retryable: true,
         message: `SQL live updates cannot reach the database: ${errorMessage(err)}`,
       };
     }
@@ -44,10 +46,15 @@ export class SqlRealtimeSupport {
     if (this.adapter.sequelize.getDialect() !== 'postgres') {
       return;
     }
-    await syncPublication(this.adapter.sequelize, schemas, {
+    const skipped = await syncPublication(this.adapter.sequelize, schemas, {
       schemaName: sqlSchemaName(),
       publicationName: PUBLICATION_NAME,
     });
+    for (const table of skipped) {
+      ConduitGrpcSdk.Logger?.warn(
+        `PostgreSQL live updates skipped missing table ${table}`,
+      );
+    }
   }
 
   openWatch(): ChangeStreamLike {
@@ -80,6 +87,7 @@ export class SqlRealtimeSupport {
     if (map.get('wal_level') !== 'logical') {
       return {
         supported: false,
+        retryable: true,
         message:
           'PostgreSQL live updates require wal_level=logical (managed Postgres: enable logical replication / rds.logical_replication).',
       };
@@ -87,6 +95,7 @@ export class SqlRealtimeSupport {
     if (map.get('max_replication_slots') === '0' || map.get('max_wal_senders') === '0') {
       return {
         supported: false,
+        retryable: true,
         message:
           'PostgreSQL live updates need max_replication_slots and max_wal_senders greater than 0.',
       };

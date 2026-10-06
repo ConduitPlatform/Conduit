@@ -9,10 +9,10 @@ import {
   nowPostgresMicros,
   parseLsn,
   type PgoutputBegin,
-  type PgoutputChange,
+  type PgoutputMessage,
 } from './pgoutput.js';
 
-export type ReplicationChange = {
+export type ReplicationDmlChange = {
   tag: 'insert' | 'update' | 'delete';
   table: string;
   newRow?: Record<string, string | null>;
@@ -21,6 +21,15 @@ export type ReplicationChange = {
   lsn: string;
   occurredAt: Date;
 };
+
+export type ReplicationTruncateChange = {
+  tag: 'truncate';
+  table: string;
+  lsn: string;
+  occurredAt: Date;
+};
+
+export type ReplicationChange = ReplicationDmlChange | ReplicationTruncateChange;
 
 export type ReplicationFeed = {
   on(event: 'change', listener: (change: ReplicationChange) => void): void;
@@ -140,7 +149,7 @@ export class PgoutputReplicationFeed implements ReplicationFeed {
       this.changeSeq = 0;
       return;
     }
-    this.emitChange(message, walStart);
+    this.emitWalMessage(message, walStart);
   }
 
   private onKeepalive(chunk: Buffer, connection: PgReplicationConnection): void {
@@ -157,16 +166,31 @@ export class PgoutputReplicationFeed implements ReplicationFeed {
     }
   }
 
-  private emitChange(change: PgoutputChange, walStart: bigint): void {
-    this.changeSeq += 1;
+  private emitWalMessage(
+    message: Exclude<PgoutputMessage, PgoutputBegin>,
+    walStart: bigint,
+  ): void {
     const xid = this.lastBegin?.xid ?? 0;
     const occurredAt = this.lastBegin?.commitTime ?? new Date();
+    if (message.tag === 'truncate') {
+      for (const relation of message.relations) {
+        this.changeSeq += 1;
+        this.emitter.emit('change', {
+          tag: 'truncate',
+          table: relation.name,
+          lsn: `${formatLsn(walStart)}:${xid}:${this.changeSeq}`,
+          occurredAt,
+        });
+      }
+      return;
+    }
+    this.changeSeq += 1;
     this.emitter.emit('change', {
-      tag: change.tag,
-      table: change.relation.name,
-      newRow: change.newRow,
-      oldRow: change.oldRow,
-      keyRow: change.keyRow,
+      tag: message.tag,
+      table: message.relation.name,
+      newRow: message.newRow,
+      oldRow: message.oldRow,
+      keyRow: message.keyRow,
       lsn: `${formatLsn(walStart)}:${xid}:${this.changeSeq}`,
       occurredAt,
     });

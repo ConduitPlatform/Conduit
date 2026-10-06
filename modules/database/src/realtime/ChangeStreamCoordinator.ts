@@ -5,13 +5,18 @@ import {
   parseResumeToken as parseMongoResumeToken,
   type RawChangeEvent,
 } from './normalize.js';
-import { authorizedDocumentRoom, roomsForPublicChange } from './rooms.js';
-import { isResumeTokenUnusable, type TopologyResult } from './topology.js';
-import type {
-  ChangeStreamLike,
-  DatabaseChangeEvent,
-  OptedInSchema,
-  RealtimeStatusCode,
+import {
+  isResumeTokenUnusable,
+  shouldRetryTopology,
+  type TopologyResult,
+} from './topology.js';
+import { authorizedDocumentRoom, roomsForPublicChange, schemaRoom } from './rooms.js';
+import {
+  DATABASE_CHANGE_EVENT_VERSION,
+  type ChangeStreamLike,
+  type DatabaseChangeEvent,
+  type OptedInSchema,
+  type RealtimeStatusCode,
 } from './types.js';
 import type { RealtimeSubscriptionTracker } from './subscriptions.js';
 import { documentReadDecision, type AuthorizationSdk } from './authorize.js';
@@ -59,6 +64,7 @@ export class ChangeStreamCoordinator {
   private opening = false;
   private ignoreClose = false;
   private changeQueue: Promise<void> = Promise.resolve();
+  private watchFingerprint: string | null = null;
 
   constructor(private readonly options: CoordinatorOptions) {}
 
@@ -85,7 +91,9 @@ export class ChangeStreamCoordinator {
   async reconcile(): Promise<void> {
     if (this.closed) return;
     if (!this.options.enabled()) {
-      await this.safePrepare();
+      if (this.lock) {
+        await this.safePrepare();
+      }
       await this.stopStream('idle');
       await this.releaseLeader();
       this.streamState = 'disabled';
@@ -93,6 +101,7 @@ export class ChangeStreamCoordinator {
     }
     this.topology = await this.options.checkTopology().catch(() => ({
       supported: false,
+      retryable: true,
       message: 'Unable to determine database topology',
     }));
     if (!this.topology.supported) {
@@ -100,24 +109,15 @@ export class ChangeStreamCoordinator {
       await this.releaseLeader();
       this.streamState = 'idle';
       this.lastError = this.topology.message;
-      if (
-        !this.topology.message ||
-        this.topology.message.includes('Unable to determine')
-      ) {
+      if (shouldRetryTopology(this.topology)) {
         this.scheduleRetry();
       }
       return;
     }
-    try {
-      await this.options.prepare?.();
-    } catch (err) {
-      this.lastError = err instanceof Error ? err.message : String(err);
-      this.streamState = 'degraded';
-      ConduitGrpcSdk.Logger.error(err as Error);
-      this.scheduleRetry();
-      return;
-    }
     if (this.options.getOptedInSchemas().length === 0) {
+      if (this.lock) {
+        await this.safePrepare();
+      }
       await this.stopStream('idle');
       await this.releaseLeader();
       this.streamState = 'idle';
@@ -155,29 +155,50 @@ export class ChangeStreamCoordinator {
   }
 
   private async ensureLeader(): Promise<void> {
-    if (this.lock) {
-      if (!this.watching) {
-        await this.openStream();
-      }
-      return;
-    }
-    try {
-      const acquired = await this.options.grpcSdk.state!.tryAcquireLock(
-        this.leaderLockName,
-        LOCK_TTL_MS,
-      );
-      if (!acquired) {
-        this.streamState = 'idle';
+    if (!this.lock) {
+      try {
+        const acquired = await this.options.grpcSdk.state!.tryAcquireLock(
+          this.leaderLockName,
+          LOCK_TTL_MS,
+        );
+        if (!acquired) {
+          this.streamState = 'idle';
+          this.scheduleRetry();
+          return;
+        }
+        this.lock = acquired;
+        this.startRenewal();
+      } catch (err) {
+        this.lastError = err instanceof Error ? err.message : String(err);
+        this.streamState = 'degraded';
         this.scheduleRetry();
         return;
       }
-      this.lock = acquired;
-      this.startRenewal();
-      await this.openStream();
+    }
+    await this.lead();
+  }
+
+  private async lead(): Promise<void> {
+    try {
+      await this.options.prepare?.();
     } catch (err) {
       this.lastError = err instanceof Error ? err.message : String(err);
       this.streamState = 'degraded';
+      ConduitGrpcSdk.Logger.error(err as Error);
       this.scheduleRetry();
+      return;
+    }
+    if (this.options.getOptedInSchemas().length === 0) {
+      await this.stopStream('idle');
+      await this.releaseLeader();
+      this.streamState = 'idle';
+      return;
+    }
+    if (this.watching && this.watchNeedsRebuild()) {
+      await this.stopStream('starting');
+    }
+    if (!this.watching) {
+      await this.openStream();
     }
   }
 
@@ -211,6 +232,7 @@ export class ChangeStreamCoordinator {
           )
         : undefined;
       if (this.watching || this.closed) return;
+      this.watchFingerprint = this.currentWatchFingerprint();
       const stream = this.options.watch({ resumeAfter });
       this.stream = stream;
       this.watching = true;
@@ -258,6 +280,12 @@ export class ChangeStreamCoordinator {
   private async handleChange(change: RawChangeEvent) {
     const token = resumeTokenOf(change);
     const schema = this.resolveSchema(change.ns?.coll);
+    if (change.operationType === 'truncate') {
+      if (schema) {
+        await this.emitSchemaReset(schema, wallTimeOf(change));
+      }
+      return;
+    }
     const event = schema ? normalizeChangeEvent(change, schema.name) : null;
     if (!event || !schema) {
       if (this.persistResume && token) {
@@ -289,6 +317,25 @@ export class ChangeStreamCoordinator {
       operation: event.operation,
     });
     await this.pushEvent(schema, event, payload);
+  }
+
+  private async emitSchemaReset(schema: OptedInSchema, occurredAt: string) {
+    this.lastEventAt = occurredAt;
+    this.lastError = undefined;
+    const payload = JSON.stringify({
+      version: DATABASE_CHANGE_EVENT_VERSION,
+      schema: schema.name,
+      occurredAt,
+    });
+    const rooms = [schemaRoom(schema.name)];
+    this.options.grpcSdk.bus?.publish(`database:reset:${schema.name}`, payload);
+    ConduitGrpcSdk.Metrics?.increment('database_realtime_events_total', 1, {
+      operation: 'reset',
+    });
+    await this.safePush('admin', rooms, payload, 'reset');
+    if (!schema.authorizationEnabled) {
+      await this.safePush('router', rooms, payload, 'reset');
+    }
   }
 
   private async pushEvent(
@@ -335,12 +382,13 @@ export class ChangeStreamCoordinator {
     target: 'admin' | 'router',
     rooms: string[],
     data: string,
+    event: 'change' | 'reset' = 'change',
   ): Promise<void> {
     const client =
       target === 'admin' ? this.options.grpcSdk.admin : this.options.grpcSdk.router;
     if (!client?.socketPush) return;
     await client.socketPush({
-      event: 'change',
+      event,
       data,
       rooms,
       receivers: [],
@@ -352,6 +400,21 @@ export class ChangeStreamCoordinator {
     return this.options
       .getOptedInSchemas()
       .find(schema => schema.collectionName === collectionName);
+  }
+
+  private currentWatchFingerprint(): string {
+    return this.options
+      .getOptedInSchemas()
+      .map(schema => `${schema.collectionName}\0${schema.documentIdField ?? ''}`)
+      .sort()
+      .join('\n');
+  }
+
+  private watchNeedsRebuild(): boolean {
+    return (
+      this.watchFingerprint !== null &&
+      this.watchFingerprint !== this.currentWatchFingerprint()
+    );
   }
 
   private async handleStreamError(err: unknown) {
@@ -381,6 +444,7 @@ export class ChangeStreamCoordinator {
     const stream = this.stream;
     this.stream = null;
     this.watching = false;
+    this.watchFingerprint = null;
     this.streamState = nextState;
     this.ignoreClose = true;
     if (stream) {
@@ -424,4 +488,11 @@ function resumeTokenOf(change: RawChangeEvent): string | undefined {
     return undefined;
   }
   return EJSON.stringify(change._id);
+}
+
+function wallTimeOf(change: RawChangeEvent): string {
+  if (change.wallTime instanceof Date) {
+    return change.wallTime.toISOString();
+  }
+  return new Date().toISOString();
 }
