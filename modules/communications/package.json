@@ -48,7 +48,7 @@
     "@onesignal/node-onesignal": "^5.9.0",
     "@sendgrid/client": "^8.1.6",
     "await-to-js": "^3.0.0",
-    "axios": "^1.18.0",
+    "axios": "^1.20.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.79.0",
     "convict": "^6.2.5",

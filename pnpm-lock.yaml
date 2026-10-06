@@ -190,7 +190,7 @@ importers:
         version: 1.29.0(zod@4.4.3)
       '@scalar/api-reference':
         specifier: ^1.60.0
-        version: 1.60.0(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)
+        version: 1.60.0(axios@1.20.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)
       '@scalar/express-api-reference':
         specifier: ^0.10.18
         version: 0.10.18
@@ -475,8 +475,8 @@ importers:
         specifier: ^0.8.1
         version: 0.8.1
       axios:
-        specifier: ^1.18.0
-        version: 1.18.0(debug@4.4.3)
+        specifier: ^1.20.0
+        version: 1.20.0(debug@4.4.3)
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -557,8 +557,8 @@ importers:
         specifier: ^0.8.1
         version: 0.8.1
       axios:
-        specifier: ^1.18.0
-        version: 1.18.0(debug@4.4.3)
+        specifier: ^1.20.0
+        version: 1.20.0(debug@4.4.3)
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -715,8 +715,8 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
       axios:
-        specifier: ^1.18.0
-        version: 1.18.0(debug@4.4.3)
+        specifier: ^1.20.0
+        version: 1.20.0(debug@4.4.3)
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -1015,8 +1015,8 @@ importers:
         specifier: ^0.8.1
         version: 0.8.1
       axios:
-        specifier: ^1.18.0
-        version: 1.18.0(debug@4.4.3)
+        specifier: ^1.20.0
+        version: 1.20.0(debug@4.4.3)
       bullmq:
         specifier: ^5.79.0
         version: 5.79.0
@@ -1085,8 +1085,8 @@ importers:
         specifier: ^0.8.1
         version: 0.8.1
       axios:
-        specifier: ^1.18.0
-        version: 1.18.0(debug@4.4.3)
+        specifier: ^1.20.0
+        version: 1.20.0(debug@4.4.3)
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -4021,8 +4021,8 @@ packages:
     resolution: {integrity: sha512-NZKeq9AfyQvEeNlN0zSYAaWrmBffJh3IELMZfRpJVWgrpEbtEpnjvzqBPf+mxoI287JohRDoa+/nsfqqiZmF6g==}
     engines: {node: '>= 6.0.0'}
 
-  axios@1.18.0:
-    resolution: {integrity: sha512-E32NzpYKp++W7XRe52rHiXV2ehxmh3wbdgO7MHeFM+vqxLBYHzt0ElkiImtOBxtOmyp0yoC8C6uESVV84Y2/hw==}
+  axios@1.20.0:
+    resolution: {integrity: sha512-r8aOh8j9cGKpgQAqpzrUHnSIc6a59Y3Xf/cv8sy1DrHCkZHzQGEuoq1tARk6qSyDdtQGSDgpb9kFlruzPvrgwg==}
 
   babel-jest@30.5.2:
     resolution: {integrity: sha512-ES8WeJ2fNWPEDunyAtUfJ12nHyaWUloCHdkfK2oW5uSoQSUmjNKdWiGaXJITJwvFEWoD/evHEg/QoCXAvLaQqQ==}
@@ -5251,8 +5251,8 @@ packages:
   focus-trap@7.8.0:
     resolution: {integrity: sha512-/yNdlIkpWbM0ptxno3ONTuf+2g318kh2ez3KSeZN5dZ8YC6AAmgeWz+GasYYiBJPFaYcSAPeu4GfhUaChzIJXA==}
 
-  follow-redirects@1.16.0:
-    resolution: {integrity: sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw==}
+  follow-redirects@1.16.1:
+    resolution: {integrity: sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -10215,7 +10215,7 @@ snapshots:
 
   '@mailchimp/mailchimp_transactional@1.4.1':
     dependencies:
-      axios: 1.18.0(debug@4.4.3)
+      axios: 1.20.0(debug@4.4.3)
     transitivePeerDependencies:
       - debug
       - supports-color
@@ -10514,10 +10514,10 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.62.0':
     optional: true
 
-  '@scalar/agent-chat@0.12.11(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)':
+  '@scalar/agent-chat@0.12.11(axios@1.20.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)':
     dependencies:
       '@ai-sdk/vue': 3.0.33(vue@3.5.38(typescript@6.0.3))(zod@4.4.3)
-      '@scalar/api-client': 3.10.4(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)
+      '@scalar/api-client': 3.10.4(axios@1.20.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)
       '@scalar/components': 0.27.2(tailwindcss@4.3.1)(typescript@6.0.3)
       '@scalar/helpers': 0.8.2
       '@scalar/icons': 0.7.3(typescript@6.0.3)
@@ -10552,7 +10552,7 @@ snapshots:
       - universal-cookie
       - zod
 
-  '@scalar/api-client@3.10.4(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)':
+  '@scalar/api-client@3.10.4(axios@1.20.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)':
     dependencies:
       '@headlessui/tailwindcss': 0.2.2(tailwindcss@4.3.1)
       '@headlessui/vue': 1.7.23(vue@3.5.38(typescript@6.0.3))
@@ -10573,7 +10573,7 @@ snapshots:
       '@scalar/workspace-store': 0.54.4(typescript@6.0.3)
       '@types/har-format': 1.2.16
       '@vueuse/core': 13.9.0(vue@3.5.38(typescript@6.0.3))
-      '@vueuse/integrations': 13.9.0(axios@1.18.0(debug@4.4.3))(focus-trap@7.8.0)(fuse.js@7.4.2)(vue@3.5.38(typescript@6.0.3))
+      '@vueuse/integrations': 13.9.0(axios@1.20.0(debug@4.4.3))(focus-trap@7.8.0)(fuse.js@7.4.2)(vue@3.5.38(typescript@6.0.3))
       focus-trap: 7.8.0
       fuse.js: 7.4.2
       js-base64: 3.7.8
@@ -10601,11 +10601,11 @@ snapshots:
       - typescript
       - universal-cookie
 
-  '@scalar/api-reference@1.60.0(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)':
+  '@scalar/api-reference@1.60.0(axios@1.20.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)':
     dependencies:
       '@headlessui/vue': 1.7.23(vue@3.5.38(typescript@6.0.3))
-      '@scalar/agent-chat': 0.12.11(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)
-      '@scalar/api-client': 3.10.4(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)
+      '@scalar/agent-chat': 0.12.11(axios@1.20.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)
+      '@scalar/api-client': 3.10.4(axios@1.20.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)
       '@scalar/code-highlight': 0.3.6
       '@scalar/components': 0.27.2(tailwindcss@4.3.1)(typescript@6.0.3)
       '@scalar/helpers': 0.8.2
@@ -10849,7 +10849,7 @@ snapshots:
   '@sendgrid/client@8.1.6':
     dependencies:
       '@sendgrid/helpers': 8.0.0
-      axios: 1.18.0(debug@4.4.3)
+      axios: 1.20.0(debug@4.4.3)
     transitivePeerDependencies:
       - debug
       - supports-color
@@ -11467,13 +11467,13 @@ snapshots:
       '@vueuse/shared': 13.9.0(vue@3.5.38(typescript@6.0.3))
       vue: 3.5.38(typescript@6.0.3)
 
-  '@vueuse/integrations@13.9.0(axios@1.18.0(debug@4.4.3))(focus-trap@7.8.0)(fuse.js@7.4.2)(vue@3.5.38(typescript@6.0.3))':
+  '@vueuse/integrations@13.9.0(axios@1.20.0(debug@4.4.3))(focus-trap@7.8.0)(fuse.js@7.4.2)(vue@3.5.38(typescript@6.0.3))':
     dependencies:
       '@vueuse/core': 13.9.0(vue@3.5.38(typescript@6.0.3))
       '@vueuse/shared': 13.9.0(vue@3.5.38(typescript@6.0.3))
       vue: 3.5.38(typescript@6.0.3)
     optionalDependencies:
-      axios: 1.18.0(debug@4.4.3)
+      axios: 1.20.0(debug@4.4.3)
       focus-trap: 7.8.0
       fuse.js: 7.4.2
 
@@ -11699,9 +11699,9 @@ snapshots:
 
   aws-ssl-profiles@1.1.2: {}
 
-  axios@1.18.0(debug@4.4.3):
+  axios@1.20.0(debug@4.4.3):
     dependencies:
-      follow-redirects: 1.16.0(debug@4.4.3)
+      follow-redirects: 1.16.1(debug@4.4.3)
       form-data: 4.0.6
       https-proxy-agent: 5.0.1
       proxy-from-env: 2.1.0
@@ -12872,7 +12872,7 @@ snapshots:
     dependencies:
       tabbable: 6.4.0
 
-  follow-redirects@1.16.0(debug@4.4.3):
+  follow-redirects@1.16.1(debug@4.4.3):
     optionalDependencies:
       debug: 4.4.3
 
@@ -14294,7 +14294,7 @@ snapshots:
 
   mailgun.js@14.0.1:
     dependencies:
-      axios: 1.18.0(debug@4.4.3)
+      axios: 1.20.0(debug@4.4.3)
       base-64: 1.0.0
       url-join: 4.0.1
     transitivePeerDependencies:
@@ -14303,7 +14303,7 @@ snapshots:
 
   mailgun.js@8.2.2:
     dependencies:
-      axios: 1.18.0(debug@4.4.3)
+      axios: 1.20.0(debug@4.4.3)
       base-64: 1.0.0
       url-join: 4.0.1
     transitivePeerDependencies:
@@ -16392,7 +16392,7 @@ snapshots:
 
   twilio@6.0.2:
     dependencies:
-      axios: 1.18.0(debug@4.4.3)
+      axios: 1.20.0(debug@4.4.3)
       dayjs: 1.11.21
       https-proxy-agent: 5.0.1
       jsonwebtoken: 9.0.3
