@@ -11,7 +11,7 @@ import AppConfigSchema, { Config } from './config/index.js';
 import { AdminHandlers } from './admin/index.js';
 import { ChatRoutes } from './routes/index.js';
 import * as models from './models/index.js';
-import { validateUsersInput } from './utils/index.js';
+import { deleteChatMessage, editChatMessage, validateUsersInput } from './utils/index.js';
 import { MessageType } from './enums/messageType.enum.js';
 import path from 'path';
 import { isArray, isNil } from 'lodash-es';
@@ -19,7 +19,9 @@ import { status } from '@grpc/grpc-js';
 import { runMigrations } from './migrations/index.js';
 import {
   CreateRoomRequest,
+  DeleteMessageRequest,
   DeleteRoomRequest,
+  EditMessageRequest,
   Room,
   SendMessageRequest,
 } from './protoTypes/chat.js';
@@ -43,6 +45,8 @@ export default class Chat extends ManagedModule<Config> {
       createRoom: this.createRoom.bind(this),
       deleteRoom: this.deleteRoom.bind(this),
       sendMessage: this.sendMessage.bind(this),
+      editMessage: this.editMessage.bind(this),
+      deleteMessage: this.deleteMessage.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -325,6 +329,38 @@ export default class Chat extends ManagedModule<Config> {
       callback({
         code: status.INTERNAL,
         message: (e as Error).message,
+      });
+    }
+  }
+
+  async editMessage(
+    call: GrpcRequest<EditMessageRequest>,
+    callback: GrpcCallback<Record<string, never>>,
+  ) {
+    const { messageId, userId, newMessage } = call.request;
+    try {
+      await editChatMessage(this.grpcSdk, { messageId, userId, newMessage });
+      callback(null, {});
+    } catch (e) {
+      return callback({
+        code: (e as GrpcError).code ?? status.INTERNAL,
+        message: (e as GrpcError).message,
+      });
+    }
+  }
+
+  async deleteMessage(
+    call: GrpcRequest<DeleteMessageRequest>,
+    callback: GrpcCallback<Record<string, never>>,
+  ) {
+    const { messageId, userId } = call.request;
+    try {
+      await deleteChatMessage(this.grpcSdk, { messageId, userId });
+      callback(null, {});
+    } catch (e) {
+      return callback({
+        code: (e as GrpcError).code ?? status.INTERNAL,
+        message: (e as GrpcError).message,
       });
     }
   }

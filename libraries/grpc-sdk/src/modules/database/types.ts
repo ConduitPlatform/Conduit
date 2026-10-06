@@ -4,6 +4,8 @@ export type FindOneOptions = {
   userId?: string;
   scope?: string;
   readPreference?: string;
+  embeddingsJob?: boolean;
+  embeddingsAllowedFields?: string[];
 };
 
 export type FindManyOptions = {

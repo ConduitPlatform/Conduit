@@ -159,6 +159,24 @@ target "database" {
   }
 }
 
+target "conduit-base-bundle-embeddings" {
+  inherits = ["conduit-base"]
+  args = {
+    BUILDING_SERVICE = "modules/embeddings"
+    BUILD_BUNDLE     = "1"
+  }
+}
+
+target "embeddings" {
+  inherits = ["_runtime"]
+  context    = "modules/embeddings"
+  dockerfile = "Dockerfile"
+  contexts = {
+    conduit-base    = "target:conduit-base-bundle-embeddings"
+    conduit-builder = "target:conduit-builder"
+  }
+}
+
 target "functions" {
   inherits = ["_runtime"]
   context    = "modules/functions"
@@ -230,6 +248,7 @@ group "all" {
     "chat",
     "communications",
     "database",
+    "embeddings",
     "functions",
     "router",
     "storage",

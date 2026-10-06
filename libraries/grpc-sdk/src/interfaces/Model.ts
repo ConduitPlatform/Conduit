@@ -1,3 +1,5 @@
+import type { Indexable } from './Indexable.js';
+
 export enum TYPE {
   String = 'String',
   Number = 'Number',
@@ -6,6 +8,7 @@ export enum TYPE {
   ObjectId = 'ObjectId',
   JSON = 'JSON',
   Relation = 'Relation',
+  Vector = 'Vector',
 }
 
 export enum SQLDataType {
@@ -20,7 +23,42 @@ export enum SQLDataType {
   TIME = 'TIME',
   DATETIME = 'DATETIME',
   TIMESTAMP = 'TIMESTAMP',
+  VECTOR = 'VECTOR',
 }
+
+export enum VectorSimilarity {
+  Cosine = 'cosine',
+  Euclidean = 'euclidean',
+  DotProduct = 'dotProduct',
+}
+
+export enum VectorIndexMethod {
+  HNSW = 'hnsw',
+  IVFFlat = 'ivfflat',
+  Flat = 'flat',
+}
+
+export function defaultVectorIndexMethod(method?: string | null): VectorIndexMethod {
+  if (method == null || method === '') {
+    return VectorIndexMethod.HNSW;
+  }
+  return method as VectorIndexMethod;
+}
+
+export function vectorIndexMethodsEquivalent(
+  left?: string | null,
+  right?: string | null,
+): boolean {
+  return defaultVectorIndexMethod(left) === defaultVectorIndexMethod(right);
+}
+
+export enum VectorIndexStatus {
+  Pending = 'pending',
+  Ready = 'ready',
+  Failed = 'failed',
+}
+
+export type VectorSearchProvider = 'mongodb' | 'postgres';
 
 export enum MongoIndexType {
   Ascending = 1,
@@ -71,9 +109,7 @@ export interface ConduitArrayValidation {
 }
 
 export type ConduitValidationRules =
-  | ConduitStringValidation
-  | ConduitNumberValidation
-  | ConduitArrayValidation;
+  ConduitStringValidation | ConduitNumberValidation | ConduitArrayValidation;
 
 type BaseConduitModelField = {
   type?: TYPE | TYPE[] | ConduitModel | ArrayConduitModel[];
@@ -109,6 +145,14 @@ export type ConduitModelFieldJSON = BasicConduitModelField & {
   type: TYPE.JSON | TYPE.JSON[];
 };
 
+export type ConduitModelFieldVector = BasicConduitModelField & {
+  type: TYPE.Vector;
+  dimensions: number;
+  similarity?: VectorSimilarity;
+  provider?: string;
+  model?: string;
+};
+
 export type ConduitModelFieldEnum = BasicConduitModelField & {
   type: ExcludeJSONRelation<TYPE> | ExcludeJSONRelation<TYPE>[];
   enum: any;
@@ -127,6 +171,7 @@ export type allowedTypes =
   | ConduitModelField
   | ConduitModelFieldEnum
   | ConduitModelFieldJSON
+  | ConduitModelFieldVector
   | ConduitModelFieldRelation;
 
 type embeddableArray =
@@ -195,6 +240,7 @@ export interface ConduitSchemaOptions {
   };
   /** Includes readonly/const-asserted index arrays (e.g. `as const` in schema definitions). */
   indexes?: ReadonlyArray<ModelOptionsIndexes>;
+  vectorIndexes?: ReadonlyArray<VectorIndexDefinition>;
 }
 
 export interface SchemaFieldIndex {
@@ -246,4 +292,70 @@ export interface PostgresIndexOptions {
   where?: {
     [opt: string]: any;
   };
+}
+
+export interface VectorIndexDefinition {
+  name?: string;
+  field: string;
+  dimensions: number;
+  similarity: VectorSimilarity;
+  method?: VectorIndexMethod;
+  filterFields?: string[];
+  status?: VectorIndexStatus;
+  queryable?: boolean;
+  options?: {
+    numCandidates?: number;
+    quantization?: 'none' | 'scalar' | 'binary';
+    hnsw?: {
+      maxEdges?: number;
+      numEdgeCandidates?: number;
+      m?: number;
+      efConstruction?: number;
+    };
+    ivfflat?: {
+      lists?: number;
+      probes?: number;
+    };
+    storedSource?: boolean | { include?: string[]; exclude?: string[] };
+  };
+}
+
+export interface VectorCapabilities {
+  supported: boolean;
+  storage: boolean;
+  indexing: boolean;
+  search: boolean;
+  provider: 'mongodb' | 'postgres' | 'unsupported';
+  reason?: string;
+}
+
+export interface VectorSearchInput {
+  schemaName: string;
+  field: string;
+  vector: number[];
+  indexName?: string;
+  filter?: Indexable;
+  limit?: number;
+  numCandidates?: number;
+  select?: string;
+  userId?: string;
+  scope?: string;
+  adminOperator?: boolean;
+}
+
+export interface VectorSearchResult<T = Indexable> {
+  document: T;
+  /**
+   * Provider-neutral, higher-is-better similarity.
+   *
+   * Cosine is normalized so identical vectors score `1` (Postgres cosine
+   * distance is converted with `1 - distance`). Euclidean and inner-product
+   * scores are also higher-is-better ranking values, but they are **not**
+   * comparable across Mongo Atlas Vector Search and pgvector.
+   */
+  score: number;
+  /** Raw backend distance or provider score before Conduit normalization. */
+  distance?: number;
+  metric?: VectorSimilarity;
+  provider?: VectorSearchProvider;
 }

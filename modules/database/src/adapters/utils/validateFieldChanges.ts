@@ -2,6 +2,7 @@ import { ConduitError, Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitDatabaseSchema, Fields } from '../../interfaces/index.js';
 import { isArray, isEqual, isNil, isString } from 'lodash-es';
 import { DataTypes } from 'sequelize';
+import { assertSafeVectorFieldChange } from './vectorField.js';
 
 /*
  * Validates schema compiled fields for type changes.
@@ -29,6 +30,7 @@ function validateSchemaFields(oldSchemaFields: Indexable, newSchemaFields: Index
       if (isNil(newSchemaFields)) return;
       const newType = newSchemaFields[key]?.type ?? null;
       if (!newType) return;
+      assertSafeVectorFieldChange(key, oldSchemaFields[key], newSchemaFields[key]);
       if (oldType === DataTypes.JSONB && newType === 'JSON') return;
       if (isArray(oldType) && isArray(newType)) {
         if (typeof oldType[0] === 'object') {

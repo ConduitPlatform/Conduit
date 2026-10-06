@@ -679,6 +679,91 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
+        path: '/vector/capabilities',
+        action: ConduitRouteActions.GET,
+        description: `Returns vector storage, index, and search capabilities for the active database.`,
+        queryParams: {
+          schemaName: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('getVectorCapabilities', {
+        supported: { type: TYPE.Boolean, required: true },
+        storage: { type: TYPE.Boolean, required: true },
+        indexing: { type: TYPE.Boolean, required: true },
+        search: { type: TYPE.Boolean, required: true },
+        provider: ConduitString.Required,
+        reason: ConduitString.Optional,
+      }),
+      this.schemaAdmin.getVectorCapabilities.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/schemas/:id/vector-indexes',
+        action: ConduitRouteActions.POST,
+        description: `Creates a vector index for a schema.`,
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+        bodyParams: {
+          index: ConduitJson.Required,
+        },
+      } as any,
+      new ConduitRouteReturnDefinition('createVectorIndex', 'String'),
+      this.schemaAdmin.createVectorIndex.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/schemas/:id/vector-indexes',
+        action: ConduitRouteActions.GET,
+        description: `Returns vector indexes of a schema.`,
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('getVectorIndexes', {
+        indexes: [ConduitJson.Required],
+      }),
+      this.schemaAdmin.getVectorIndexes.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/schemas/:id/vector-indexes/:indexName',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes a vector index of a schema.`,
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+          indexName: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('deleteVectorIndex', 'String'),
+      this.schemaAdmin.deleteVectorIndex.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/schemas/:schemaName/vector-search',
+        action: ConduitRouteActions.POST,
+        description: `Runs vector search for a schema.`,
+        urlParams: {
+          schemaName: ConduitString.Required,
+        },
+        bodyParams: {
+          field: ConduitString.Required,
+          vector: [ConduitNumber.Required],
+          indexName: ConduitString.Optional,
+          filter: ConduitJson.Optional,
+          limit: ConduitNumber.Optional,
+          numCandidates: ConduitNumber.Optional,
+          select: ConduitString.Optional,
+          scope: ConduitString.Optional,
+        },
+      } as any,
+      new ConduitRouteReturnDefinition('vectorSearch', {
+        results: [ConduitJson.Required],
+      }),
+      this.schemaAdmin.vectorSearch.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
         path: '/database-type',
         action: ConduitRouteActions.GET,
         description: `Returns the type of the database.`,

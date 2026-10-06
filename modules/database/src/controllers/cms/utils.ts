@@ -57,6 +57,112 @@ export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): n
   }
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isVectorField(field: unknown): boolean {
+  if (field === TYPE.Vector || field === 'Vector') return true;
+  if (Array.isArray(field) && field.length > 0) return isVectorField(field[0]);
+  if (!isPlainObject(field)) return false;
+  return isVectorField(field.type);
+}
+
+function isHiddenSelectField(field: unknown): boolean {
+  return isPlainObject(field) && field.select === false;
+}
+
+function isManagedHashField(name: string): boolean {
+  return name.endsWith('SourceHash');
+}
+
+export function isCmsWriteOmittedField(name: string, field: unknown): boolean {
+  if (name === '_id' || name === 'createdAt' || name === 'updatedAt') return true;
+  if (isManagedHashField(name)) return true;
+  if (isHiddenSelectField(field)) return true;
+  return isVectorField(field);
+}
+
+export function getAssignableCmsFields(sourceFields: ConduitModel): ConduitModel {
+  return stripAssignableModel(sourceFields);
+}
+
+const FIELD_DESCRIPTOR_KEYS = new Set([
+  'type',
+  'sqlType',
+  'default',
+  'description',
+  'required',
+  'select',
+  'unique',
+  'index',
+  'enum',
+  'model',
+  'validate',
+  'dimensions',
+  'similarity',
+  'provider',
+]);
+
+function isNestedConduitModel(field: unknown): field is ConduitModel {
+  if (!isPlainObject(field)) return false;
+  if (isVectorField(field) || isHiddenSelectField(field)) return false;
+  if ('type' in field || 'enum' in field || 'model' in field) return false;
+  return Object.keys(field).some(key => !FIELD_DESCRIPTOR_KEYS.has(key));
+}
+
+function stripAssignableModel(source: ConduitModel): ConduitModel {
+  const assignable: ConduitModel = {};
+  for (const [name, field] of Object.entries(source)) {
+    if (isCmsWriteOmittedField(name, field)) continue;
+    assignable[name] = cloneAssignableValue(field);
+  }
+  return assignable;
+}
+
+function cloneAssignableArrayItem(item: unknown): unknown {
+  if (Array.isArray(item)) {
+    return item.map(cloneAssignableArrayItem);
+  }
+  if (!isPlainObject(item)) return item;
+  if (isVectorField(item)) {
+    return { ...item };
+  }
+  if (isNestedConduitModel(item)) {
+    return stripAssignableModel(item);
+  }
+  return cloneAssignableValue(item);
+}
+
+function cloneAssignableValue(field: unknown): ConduitModel[string] {
+  if (Array.isArray(field)) {
+    return field.map(cloneAssignableArrayItem) as ConduitModel[string];
+  }
+  if (!isPlainObject(field)) {
+    return field as ConduitModel[string];
+  }
+  if (isNestedConduitModel(field)) {
+    return stripAssignableModel(field) as ConduitModel[string];
+  }
+  const cloned: Record<string, unknown> = { ...field };
+  if (Array.isArray(cloned.type)) {
+    cloned.type = cloned.type.map(cloneAssignableArrayItem);
+  } else if (isPlainObject(cloned.type) && !isVectorField(cloned)) {
+    if (isNestedConduitModel(cloned.type) || isPlainObject(cloned.type)) {
+      cloned.type = stripAssignableModel(cloned.type as ConduitModel);
+    }
+  }
+  return cloned as ConduitModel[string];
+}
+
+function cloneConduitModel(fields: ConduitModel): ConduitModel {
+  const cloned: ConduitModel = {};
+  for (const [name, field] of Object.entries(fields)) {
+    cloned[name] = cloneAssignableValue(field);
+  }
+  return cloned;
+}
+
 function removeRequiredFields(fields: ConduitModel) {
   for (const field in fields) {
     const modelField = fields[field] as ConduitModelField;
@@ -133,10 +239,7 @@ export function getOps(
   const sourceFields =
     (actualSchema as unknown as { compiledFields?: ConduitModel }).compiledFields ??
     actualSchema.fields;
-  const assignableFields: ConduitModel = Object.assign({}, sourceFields);
-  delete assignableFields._id;
-  delete assignableFields.createdAt;
-  delete assignableFields.updatedAt;
+  const assignableFields: ConduitModel = getAssignableCmsFields(sourceFields);
   if (createIsEnabled) {
     let route = new RouteBuilder()
       .path(`/${schemaName}`)
@@ -210,7 +313,7 @@ export function getOps(
         docs: {
           type: [
             {
-              ...removeRequiredFields(Object.assign({}, assignableFields)),
+              ...removeRequiredFields(cloneConduitModel(assignableFields)),
               _id: { type: 'String', unique: true },
             } as unknown as ArrayConduitModel,
           ],
@@ -254,7 +357,7 @@ export function getOps(
       })
       .bodyParams(
         removeRequiredFields(
-          Object.assign({}, assignableFields),
+          cloneConduitModel(assignableFields),
         ) as unknown as ConduitModel,
       )
       .return(`patch${schemaName}`, actualSchema.fields)

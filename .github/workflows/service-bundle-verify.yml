@@ -11,6 +11,7 @@ on:
       - 'modules/authorization/**'
       - 'modules/communications/**'
       - 'modules/database/**'
+      - 'modules/embeddings/**'
       - 'modules/router/**'
       - 'packages/core/**'
       - 'libraries/service-bundle/**'
@@ -39,6 +40,7 @@ on:
       - 'modules/authorization/**'
       - 'modules/communications/**'
       - 'modules/database/**'
+      - 'modules/embeddings/**'
       - 'modules/router/**'
       - 'packages/core/**'
       - 'libraries/service-bundle/**'
@@ -67,7 +69,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [chat, functions, storage, authentication, authorization, communications, database, router, core]
+        service: [chat, functions, storage, authentication, authorization, communications, database, embeddings, router, core]
     name: Verify ${{ matrix.service }} bundle
     steps:
       - name: Checkout
