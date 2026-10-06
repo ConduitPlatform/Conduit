@@ -235,6 +235,9 @@ export interface ConduitSchemaOptions {
     authorization?: {
       enabled: boolean;
     };
+    realtime?: {
+      enabled: boolean;
+    };
     /** Mongoose read preference for this schema (ignored by SQL); per-query wins. */
     readPreference?: string;
   };

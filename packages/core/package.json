@@ -12,6 +12,7 @@
     "start": "node dist/bin/www.js",
     "start:bundle": "node bundle/index.js",
     "lint": "eslint src",
+    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/admin/realtime/*.test.js",
     "prebuild": "npm run generateTypes",
     "build": "rimraf dist && tsc",
     "generateTypes": "sh build.sh",

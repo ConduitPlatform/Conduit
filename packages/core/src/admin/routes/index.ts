@@ -20,3 +20,4 @@ export * from './ToggleTwoFa.route.js';
 export * from './VerifyQrCode.route.js';
 export * from './VerifyTwoFa.route.js';
 export * from './ApiTokens.route.js';
+export * from './RealtimeTicket.route.js';

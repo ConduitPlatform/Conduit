@@ -185,6 +185,21 @@ describe('SchemaAdmin PUT/PATCH split', () => {
       warnSpy.mockRestore();
     });
 
+    it('persists realtime conduitOptions used by live document updates', async () => {
+      const requestedSchema = makeRequestedSchema();
+      const { admin, createSchema } = setup(requestedSchema);
+
+      await admin.patchSchema(
+        makeCall({
+          id: 'schema-1',
+          conduitOptions: { realtime: { enabled: true } },
+        }),
+      );
+
+      const [writtenSchema] = createSchema.mock.calls[0];
+      expect(writtenSchema.modelOptions.conduit.realtime.enabled).toBe(true);
+    });
+
     it('wipes existing documents when enabling authorization via conduitOptions', async () => {
       const requestedSchema = makeRequestedSchema();
       const { admin, deleteMany } = setup(requestedSchema);

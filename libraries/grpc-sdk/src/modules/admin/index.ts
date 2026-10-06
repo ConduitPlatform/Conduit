@@ -3,7 +3,8 @@ import {
   AdminDefinition,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
-} from '../../protoUtils/index.js';
+  SocketPushRequest,
+} from '../../protoUtils/core.js';
 import { ConduitRouteActions } from '../../interfaces/index.js';
 
 export class Admin extends ConduitModule<typeof AdminDefinition> {
@@ -26,6 +27,10 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
     };
 
     return this.client!.registerAdminRoute(request);
+  }
+
+  socketPush(data: SocketPushRequest) {
+    return this.client!.socketPush(data);
   }
 
   patchRouteMiddlewares(

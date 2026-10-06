@@ -62,9 +62,17 @@ export class SocketController extends ConduitRouter {
     };
     this.io = new IOServer(this.httpServer, this.options);
     this.redisClient = grpcSdk.redisManager.getClient();
+    // Admin (e.g. :3031) and Router (e.g. :3001) are separate Socket.IO
+    // servers that share Redis. The adapter defaults would put both on the
+    // same stream, so a database change pushed to admin *and* router is
+    // delivered twice to every socket in those rooms.
+    const adapterKey = `socket.io:${this.port}`;
     this.io.adapter(
       createAdapter(this.redisClient, {
         onlyPlaintext: true,
+        streamName: adapterKey,
+        channelPrefix: adapterKey,
+        sessionKeyPrefix: `sio:session:${this.port}:`,
       }),
     );
     this.httpServer.listen(this.port);
@@ -144,11 +152,15 @@ export class SocketController extends ConduitRouter {
 
     this.io.of(namespace).on('connect', socket => {
       if (socket.recovered) {
+        const recoveredRooms = [...socket.rooms].filter(
+          room => room.startsWith('er:') || room.startsWith('database:'),
+        );
         const recovered = conduitSocket.executeRecovered({
           event: 'recovered',
           socketId: socket.id,
           context: socket.data,
-          recoveredRooms: [...socket.rooms].filter(room => room.startsWith('er:')),
+          params: recoveredRooms,
+          recoveredRooms,
         });
         if (recovered) {
           recovered
@@ -187,12 +199,13 @@ export class SocketController extends ConduitRouter {
           });
       });
 
-      socket.on('disconnect', () => {
+      socket.on('disconnect', (reason: string) => {
         conduitSocket
           .executeRequest({
             event: 'disconnect',
             socketId: socket.id,
             context: socket.data,
+            params: [reason],
           })
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {

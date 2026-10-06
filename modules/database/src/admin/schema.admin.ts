@@ -250,6 +250,7 @@ export class SchemaAdmin {
       cms: call.request.params.conduitOptions?.cms,
       permissions: call.request.params.conduitOptions?.permissions,
       authorization: call.request.params.conduitOptions?.authorization,
+      realtime: call.request.params.conduitOptions?.realtime,
       readPreference: call.request.params.conduitOptions?.readPreference,
       timestamps: call.request.params.timestamps,
     });
@@ -343,6 +344,7 @@ export class SchemaAdmin {
       cms: conduitOptions?.cms,
       authorization: conduitOptions?.authorization,
       permissions: conduitOptions?.permissions,
+      realtime: conduitOptions?.realtime,
       readPreference: conduitOptions?.readPreference,
       existingModelOptions: requestedSchema.modelOptions,
     });

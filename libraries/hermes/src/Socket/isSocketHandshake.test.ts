@@ -16,6 +16,7 @@ describe('isSocketHandshake', () => {
       isSocketHandshake({ url: '/realtime/ticket?EIO=4&transport=polling' }),
       false,
     );
+    assert.equal(isSocketHandshake({ url: '/realtime/ticket' }), false);
     assert.equal(isSocketHandshake({ originalUrl: '/realtime' }), false);
     assert.equal(isSocketHandshake({ url: '/graphql?EIO=4&transport=polling' }), false);
     assert.equal(
