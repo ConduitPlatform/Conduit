@@ -12,8 +12,8 @@ import {
   type PgoutputMessage,
 } from './pgoutput.js';
 
-export type ReplicationChange = {
-  tag: 'insert' | 'update' | 'delete' | 'truncate';
+export type ReplicationDmlChange = {
+  tag: 'insert' | 'update' | 'delete';
   table: string;
   newRow?: Record<string, string | null>;
   oldRow?: Record<string, string | null>;
@@ -21,6 +21,15 @@ export type ReplicationChange = {
   lsn: string;
   occurredAt: Date;
 };
+
+export type ReplicationTruncateChange = {
+  tag: 'truncate';
+  table: string;
+  lsn: string;
+  occurredAt: Date;
+};
+
+export type ReplicationChange = ReplicationDmlChange | ReplicationTruncateChange;
 
 export type ReplicationFeed = {
   on(event: 'change', listener: (change: ReplicationChange) => void): void;
