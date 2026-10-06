@@ -1,6 +1,6 @@
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { normalizeChangeEvent, type RawChangeEvent } from './normalize.js';
-import { authorizedDocumentRoom, roomsForPublicChange } from './rooms.js';
+import { authorizedDocumentRoom, roomsForPublicChange, schemaRoom } from './rooms.js';
 import { topologyFromHello, type TopologyResult } from './topology.js';
 import type {
   ChangeStreamLike,
@@ -19,6 +19,9 @@ import {
 } from './watchPipeline.js';
 
 const LEADER_LOCK = 'realtime:change-stream:leader';
+const FENCE_KEY = 'realtime:change-stream:fence';
+const LEADER_WAKE_CHANNEL = 'realtime:change-stream:released';
+const LEADER_WAKE_SUBSCRIBER = 'mongo-change-stream-leader-wake';
 const LOCK_TTL_MS = 15_000;
 const LOCK_RENEW_MS = 5_000;
 const RETRY_BASE_MS = 1_000;
@@ -56,11 +59,18 @@ export class MongoChangeStreamCoordinator {
   private acquiring = false;
   private ignoreClose = false;
   private lockGeneration = 0;
+  private fenceToken: number | null = null;
   private changeQueue: Promise<void> = Promise.resolve();
   private watchedCollectionsKey = '';
   private readonly rebacCache = new RealtimeRebacCache();
 
-  constructor(private readonly options: CoordinatorOptions) {}
+  constructor(private readonly options: CoordinatorOptions) {
+    this.options.grpcSdk.bus?.subscribe(
+      LEADER_WAKE_CHANNEL,
+      () => this.onLeaderWake(),
+      LEADER_WAKE_SUBSCRIBER,
+    );
+  }
 
   getState(): RealtimeStatusCode {
     return this.streamState;
@@ -122,6 +132,7 @@ export class MongoChangeStreamCoordinator {
   async shutdown(): Promise<void> {
     this.closed = true;
     this.clearTimers();
+    this.options.grpcSdk.bus?.unsubscribe(LEADER_WAKE_SUBSCRIBER);
     await this.changeQueue;
     await this.stopStream('idle');
     await this.releaseLeader();
@@ -154,7 +165,7 @@ export class MongoChangeStreamCoordinator {
       );
       if (!acquired) {
         this.streamState = 'idle';
-        this.scheduleRetry();
+        this.scheduleRetry('lock');
         return;
       }
       if (this.lock) {
@@ -178,7 +189,14 @@ export class MongoChangeStreamCoordinator {
         }
         this.lock = null;
         this.streamState = 'idle';
-        this.scheduleRetry();
+        this.scheduleRetry('lock');
+        return;
+      }
+      try {
+        this.fenceToken = await this.options.grpcSdk.state!.incr(FENCE_KEY);
+      } catch {
+        await this.fenceLock('idle');
+        this.scheduleRetry('lock');
         return;
       }
       this.bumpLockGeneration();
@@ -208,7 +226,7 @@ export class MongoChangeStreamCoordinator {
     } catch {
       if (this.lockGeneration !== generation) return;
       await this.fenceLock('idle');
-      this.scheduleRetry();
+      this.scheduleRetry('lock');
     }
   }
 
@@ -246,9 +264,10 @@ export class MongoChangeStreamCoordinator {
         if (generation !== this.lockGeneration) return;
         this.watching = false;
         if (!this.closed && !this.ignoreClose && this.lock) {
-          this.scheduleRetry();
+          this.scheduleRetry('stream');
         }
       });
+      await this.emitWatchReset();
     } catch (err) {
       this.watching = false;
       await this.handleStreamError(err);
@@ -268,7 +287,7 @@ export class MongoChangeStreamCoordinator {
         ConduitGrpcSdk.Logger.error(err as Error);
         this.watching = false;
         await this.stopStream('degraded');
-        this.scheduleRetry();
+        this.scheduleRetry('stream');
       }
     });
   }
@@ -280,7 +299,7 @@ export class MongoChangeStreamCoordinator {
     if (!event || !schema) {
       if (change.operationType && WATCH_RESTART_OPERATIONS.has(change.operationType)) {
         await this.stopStream('starting');
-        this.scheduleRetry();
+        this.scheduleRetry('stream');
       }
       return;
     }
@@ -290,12 +309,24 @@ export class MongoChangeStreamCoordinator {
   }
 
   private async emitChange(schema: OptedInSchema, event: DatabaseChangeEvent) {
+    if (!(await this.assertFence())) return;
     const payload = JSON.stringify(event);
     this.options.grpcSdk.bus?.publish(`database:change:${schema.name}`, payload);
     ConduitGrpcSdk.Metrics?.increment('database_realtime_events_total', 1, {
       operation: event.operation,
     });
     await this.pushEvent(schema, event, payload);
+  }
+
+  private async emitWatchReset() {
+    for (const schema of this.options.getOptedInSchemas()) {
+      const rooms = [schemaRoom(schema.name)];
+      const payload = JSON.stringify({ schema: schema.name });
+      await this.safePush('admin', rooms, payload, 'reset');
+      if (schema.cmsReadEnabled) {
+        await this.safePush('router', rooms, payload, 'reset');
+      }
+    }
   }
 
   private async pushEvent(
@@ -347,12 +378,14 @@ export class MongoChangeStreamCoordinator {
     target: 'admin' | 'router',
     rooms: string[],
     data: string,
+    event: 'change' | 'reset' = 'change',
   ): Promise<void> {
+    if (!(await this.assertFence())) return;
     const client =
       target === 'admin' ? this.options.grpcSdk.admin : this.options.grpcSdk.router;
     if (!client?.socketPush) return;
     await client.socketPush({
-      event: 'change',
+      event,
       data,
       rooms,
       receivers: [],
@@ -373,13 +406,25 @@ export class MongoChangeStreamCoordinator {
     ConduitGrpcSdk.Metrics?.increment('database_realtime_stream_errors_total');
     ConduitGrpcSdk.Logger.error(err as Error);
     await this.stopStream('degraded');
-    this.scheduleRetry();
+    this.scheduleRetry('stream');
   }
 
-  private scheduleRetry() {
+  private scheduleRetry(reason: 'lock' | 'stream' = 'stream') {
     if (this.closed || this.retryTimer) return;
-    const delay = Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** this.retryAttempt);
-    this.retryAttempt += 1;
+    let delay: number;
+    switch (reason) {
+      case 'lock':
+        delay = RETRY_BASE_MS;
+        break;
+      case 'stream':
+        delay = Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** this.retryAttempt);
+        this.retryAttempt += 1;
+        break;
+      default: {
+        const _exhaustive: never = reason;
+        throw new Error(`Unhandled retry reason: ${_exhaustive}`);
+      }
+    }
     this.retryTimer = setTimeout(() => {
       this.retryTimer = null;
       void this.reconcile();
@@ -408,6 +453,7 @@ export class MongoChangeStreamCoordinator {
 
   private async fenceLock(nextState: RealtimeStatusCode) {
     this.bumpLockGeneration();
+    this.fenceToken = null;
     this.clearRenewTimer();
     const lock = this.lock;
     this.lock = null;
@@ -418,6 +464,34 @@ export class MongoChangeStreamCoordinator {
     } catch {
       // lock may already have expired
     }
+    this.options.grpcSdk.bus?.publish(LEADER_WAKE_CHANNEL, 'released');
+  }
+
+  private async assertFence(): Promise<boolean> {
+    if (await this.isFenceHeld()) return true;
+    if (!this.lock && !this.watching) return false;
+    await this.fenceLock('idle');
+    this.scheduleRetry('lock');
+    return false;
+  }
+
+  private async isFenceHeld(): Promise<boolean> {
+    if (this.fenceToken == null) return false;
+    try {
+      const current = await this.options.grpcSdk.state!.getKey(FENCE_KEY);
+      return Number(current) === this.fenceToken;
+    } catch {
+      return false;
+    }
+  }
+
+  private onLeaderWake() {
+    if (this.closed || this.lock) return;
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+    void this.reconcile();
   }
 
   private bumpLockGeneration() {
