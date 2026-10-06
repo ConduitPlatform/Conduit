@@ -26,7 +26,7 @@
     "prebuild": "npm run protoc",
     "build": "rimraf dist && tsup",
     "protoc": "sh build.sh",
-    "test": "node --experimental-strip-types --test src/interfaces/vectorIndexMethod.test.ts"
+    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/utilities/EventBus.test.js && node --experimental-strip-types --test src/interfaces/vectorIndexMethod.test.ts"
   },
   "license": "MIT",
   "dependencies": {

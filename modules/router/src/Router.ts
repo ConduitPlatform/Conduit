@@ -1,4 +1,4 @@
-import { NextFunction } from 'express';
+import { NextFunction, Response } from 'express';
 import { status } from '@grpc/grpc-js';
 import {
   ConduitGrpcSdk,
@@ -40,6 +40,11 @@ import * as adminRoutes from './admin/routes/index.js';
 import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 import { fileURLToPath } from 'node:url';
+import {
+  createEventRelayPusher,
+  createEventsSocket,
+  EventRelayManager,
+} from './event-relays/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,6 +66,11 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private adminRouter: AdminHandlers;
   private readonly _routes: string[];
   private readonly _globalMiddlewares: string[];
+  private readonly _socketGlobalMiddlewareHandlers: ((
+    req: ConduitRequest,
+    res: Response,
+    next: NextFunction,
+  ) => void)[];
   private _grpcRoutes: {
     [field: string]: RouteT[];
   } = {};
@@ -69,12 +79,17 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private hasAppliedMiddleware: string[] = [];
   private _refreshTimeout: NodeJS.Timeout | null = null;
   private _haInitialized = false;
+  private eventRelayManager: EventRelayManager;
+  private eventsSocket?: ConduitSocket;
+  private socketsPreviouslyStopped = false;
+  private securityMiddlewareInitialized = false;
 
   constructor(peerManifestRoot?: string) {
     super('router', peerManifestRoot);
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     this._routes = [];
     this._globalMiddlewares = [];
+    this._socketGlobalMiddlewareHandlers = [];
   }
 
   async onServerStart() {
@@ -102,7 +117,22 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   async onRegister() {
-    this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this);
+    this.eventRelayManager = new EventRelayManager(
+      this.grpcSdk,
+      createEventRelayPusher(data => this._internalRouter.socketPush(data)),
+      {
+        getLocalRoomUserIds: (room: string) =>
+          this._internalRouter.getLocalRoomUserIds('/events/', room),
+        getLocalRoomsWithPrefix: (prefix: string) =>
+          this._internalRouter.getLocalRoomsWithPrefix('/events/', prefix),
+      },
+    );
+    this.adminRouter = new AdminHandlers(
+      this.grpcServer,
+      this.grpcSdk,
+      this,
+      this.eventRelayManager,
+    );
     this._security = new SecurityModule(this.grpcSdk, this);
   }
 
@@ -117,6 +147,10 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   async onConfig() {
     const config = ConfigController.getInstance().config;
+    const shouldRebindSocketGlobals =
+      config.transports.sockets &&
+      this.socketsPreviouslyStopped &&
+      this.securityMiddlewareInitialized;
     let atLeastOne = false;
     if (config.transports.graphql) {
       this._internalRouter.initGraphQL();
@@ -132,13 +166,24 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     }
     if (config.transports.sockets) {
       this._internalRouter.initSockets();
+      await this.eventRelayManager.start();
       atLeastOne = true;
     } else {
+      await this.eventRelayManager?.stop();
       this._internalRouter.stopSockets();
+      this.socketsPreviouslyStopped = true;
     }
 
-    if (atLeastOne) {
+    if (atLeastOne && !this.securityMiddlewareInitialized) {
       this._security.setupMiddlewares();
+      this.securityMiddlewareInitialized = true;
+    }
+    if (config.transports.sockets) {
+      if (shouldRebindSocketGlobals) {
+        this.rebindSocketGlobalMiddlewares();
+      }
+      this.socketsPreviouslyStopped = false;
+      this.registerEventsNamespace();
     }
     if (!this._sdkRoutes.some(r => r.path === '/ready')) {
       this.registerRoute(adminRoutes.getReadyRoute());
@@ -316,11 +361,27 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   registerGlobalMiddleware(
     name: string,
-    middleware: any,
+    middleware: (req: ConduitRequest, res: Response, next: NextFunction) => void,
     socketMiddleware: boolean = false,
   ) {
     this._globalMiddlewares.push(name);
+    if (socketMiddleware) {
+      this._socketGlobalMiddlewareHandlers.push(middleware);
+    }
     this._internalRouter.registerMiddleware(middleware, socketMiddleware);
+  }
+
+  private rebindSocketGlobalMiddlewares() {
+    for (const middleware of this._socketGlobalMiddlewareHandlers) {
+      this._internalRouter.registerSocketGlobalMiddleware(middleware);
+    }
+  }
+
+  async shutdown(): Promise<void> {
+    if (this.eventRelayManager) {
+      await this.eventRelayManager.stop();
+    }
+    this.grpcSdk.bus?.quit();
   }
 
   getRegisteredRoutes() {
@@ -334,6 +395,13 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
     this._internalRouter.registerConduitRoute(route);
+  }
+
+  private registerEventsNamespace() {
+    if (!this.eventsSocket) {
+      this.eventsSocket = createEventsSocket(this.grpcSdk, this.eventRelayManager);
+    }
+    this._internalRouter.registerConduitSocket(this.eventsSocket);
   }
 
   protected registerSchemas(): Promise<unknown> {
