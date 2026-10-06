@@ -1,3 +1,4 @@
+import { EJSON } from 'bson';
 import {
   DATABASE_CHANGE_EVENT_VERSION,
   DATABASE_CHANGE_OPERATIONS,
@@ -12,6 +13,8 @@ export type RawChangeEvent = {
   ns?: { coll?: string };
   documentKey?: { _id?: unknown };
   wallTime?: Date;
+  clusterTime?: { toString?: () => string };
+  _id?: unknown;
 };
 
 export function normalizeChangeEvent(
@@ -37,6 +40,15 @@ export function normalizeChangeEvent(
       : occurredAt
     ).toISOString(),
   };
+}
+
+export function parseResumeToken(token: string | null | undefined): unknown | undefined {
+  if (!token) return undefined;
+  try {
+    return EJSON.parse(token);
+  } catch {
+    return undefined;
+  }
 }
 
 function extractDocumentId(id: unknown): string | null {

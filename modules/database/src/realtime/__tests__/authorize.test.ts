@@ -3,6 +3,7 @@ import { status } from '@grpc/grpc-js';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import {
   assertSchemaAvailable,
+  documentReadDecision,
   optionalDocumentId,
   parseSubscribeRequest,
   requireSchemaName,
@@ -65,5 +66,37 @@ describe('realtime authorization helpers', () => {
         message: 'Schema does not exist',
       }),
     );
+  });
+
+  it('treats missing authorization and can() failures as unavailable', async () => {
+    expect(
+      await documentReadDecision({ isAvailable: () => false }, 'Order', '1', 'user-1'),
+    ).toBe('unavailable');
+    expect(
+      await documentReadDecision(
+        {
+          isAvailable: () => true,
+          authorization: {
+            can: async () => {
+              throw new Error('down');
+            },
+          },
+        },
+        'Order',
+        '1',
+        'user-1',
+      ),
+    ).toBe('unavailable');
+    expect(
+      await documentReadDecision(
+        {
+          isAvailable: () => true,
+          authorization: { can: async () => ({ allow: false }) },
+        },
+        'Order',
+        '1',
+        'user-1',
+      ),
+    ).toBe('deny');
   });
 });

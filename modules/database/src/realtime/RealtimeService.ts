@@ -11,19 +11,24 @@ import {
 } from '@conduitplatform/module-tools';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
 import { MongooseAdapter } from '../adapters/mongoose-adapter/index.js';
+import { SequelizeAdapter } from '../adapters/sequelize-adapter/index.js';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
 import { toOptedInSchema } from './authorize.js';
+import { ChangeStreamCoordinator } from './ChangeStreamCoordinator.js';
 import { MongoChangeStreamCoordinator } from './MongoChangeStreamCoordinator.js';
 import { registerDatabaseRealtimeSocket } from './sockets.js';
 import { buildRealtimeStatus } from './status.js';
 import { RealtimeSubscriptionTracker } from './subscriptions.js';
 import type { ChangeStreamLike, OptedInSchema, RealtimeStatus } from './types.js';
 import type { WatchPipeline } from './watchPipeline.js';
+import { SqlRealtimeSupport } from './sql/SqlRealtimeSupport.js';
+import { SQL_LEADER_LOCK } from './sql/constants.js';
 
 export class RealtimeService {
   private readonly subscriptions: RealtimeSubscriptionTracker;
-  private coordinator?: MongoChangeStreamCoordinator;
+  private coordinator?: ChangeStreamCoordinator | MongoChangeStreamCoordinator;
+  private sqlSupport?: SqlRealtimeSupport;
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
@@ -47,6 +52,22 @@ export class RealtimeService {
         subscriptions: this.subscriptions,
         enabled: () => this.isGloballyEnabled(),
         engine: () => adapter.getDatabaseType(),
+      });
+    } else if (adapter instanceof SequelizeAdapter) {
+      this.sqlSupport = new SqlRealtimeSupport(adapter);
+      this.coordinator = new ChangeStreamCoordinator({
+        grpcSdk,
+        watch: () => this.sqlSupport!.openWatch(),
+        checkTopology: () => this.sqlSupport!.checkTopology(),
+        getOptedInSchemas: () => this.getOptedInSchemas(),
+        subscriptions: this.subscriptions,
+        enabled: () => this.isGloballyEnabled(),
+        persistResume: false,
+        leaderLock: SQL_LEADER_LOCK,
+        prepare: () =>
+          this.sqlSupport!.prepare(
+            this.isGloballyEnabled() ? this.getOptedInSchemas() : [],
+          ),
       });
     }
   }
@@ -104,8 +125,7 @@ export class RealtimeService {
       topologySupported: this.coordinator?.getTopology().supported ?? false,
       topologyMessage: this.coordinator?.getTopology().message,
       activeSchemaCount: optedIn.length,
-      streamState:
-        this.coordinator?.getState() ?? (engine === 'MongoDB' ? 'idle' : 'unsupported'),
+      streamState: this.coordinator?.getState() ?? 'unsupported',
       lastEventAt: this.coordinator?.getLastEventAt(),
       lastError: this.coordinator?.getLastError(),
       socketsEnabled: await this.areAdminSocketsEnabled(),
@@ -122,6 +142,7 @@ export class RealtimeService {
       const optedIn = toOptedInSchema({
         name: schema.name,
         collectionName: schema.collectionName,
+        documentIdField: this.documentIdField(schema.name),
         modelOptions: schema.modelOptions,
       });
       if (optedIn) schemas.push(optedIn);
@@ -129,10 +150,15 @@ export class RealtimeService {
     return schemas;
   }
 
-  private openWatch(
-    adapter: MongooseAdapter,
-    pipeline: WatchPipeline,
-  ): ChangeStreamLike {
+  private documentIdField(schemaName: string): string | undefined {
+    const model = this.adapter.models[schemaName];
+    if (model && 'idField' in model && typeof model.idField === 'string') {
+      return model.idField;
+    }
+    return undefined;
+  }
+
+  private openWatch(adapter: MongooseAdapter, pipeline: WatchPipeline): ChangeStreamLike {
     const db = adapter.mongoose.connection.db;
     if (!db) {
       throw new Error('MongoDB connection is not ready');

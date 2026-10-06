@@ -49,7 +49,7 @@ const AppConfigSchema = {
   },
   realtime: {
     enabled: {
-      doc: 'Enable MongoDB change-stream live updates for opted-in schemas',
+      doc: 'Enable live updates for opted-in schemas',
       format: 'Boolean',
       default: false,
     },

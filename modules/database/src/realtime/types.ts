@@ -34,6 +34,7 @@ export type OptedInSchema = {
   name: string;
   collectionName: string;
   authorizationEnabled: boolean;
+  documentIdField?: string;
   cmsReadEnabled: boolean;
 };
 
@@ -48,4 +49,5 @@ export type ChangeStreamLike = {
     listener: (...args: unknown[]) => void,
   ): void;
   close(): Promise<void> | void;
+  ready?: Promise<void>;
 };

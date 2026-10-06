@@ -34,14 +34,14 @@ since the latter need to go through parsers that are otherwise unnecessary for M
 
 ## Environment Variables 📃 <a name="env-vars"></a>
 
-|       Variable       | Description                                          | Required |      Example       | Default  |
-|:--------------------:|:-----------------------------------------------------| :------: | :----------------: | :------: |
-|   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |    -     |
-|     `SERVICE_URL`    | This should be where this service listens on. If behind a LB it should point to the LB's IP/DNS  |   False   |  `0.0.0.0:55190`   |
-|     `GRPC_PORT`      | The port number the gRPC server will listen to                      |  False   |  `55190`           |
-|     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` | - |
-|   `DB_CONN_URI`      | DB Connection URI  |  False   | `postgres://conduit:pass@localhost:5432/conduit` | `mongodb://localhost:27017` |
-|     `DB_TYPE`        | DB Engine Type     |  False   |                    `postgres`                    | `mongodb`                   |
+|     Variable     | Description                                                                                     | Required |                     Example                      |           Default           |
+| :--------------: | :---------------------------------------------------------------------------------------------- | :------: | :----------------------------------------------: | :-------------------------: |
+| `CONDUIT_SERVER` | Conduit Core's address and port                                                                 |   True   |                 `0.0.0.0:55152`                  |              -              |
+|  `SERVICE_URL`   | This should be where this service listens on. If behind a LB it should point to the LB's IP/DNS |  False   |                 `0.0.0.0:55190`                  |
+|   `GRPC_PORT`    | The port number the gRPC server will listen to                                                  |  False   |                     `55190`                      |
+|    `GRPC_KEY`    | Specifying a secret enables gRPC signed request protection (**use across modules**)             |  False   |                `someRandomSecret`                |              -              |
+|  `DB_CONN_URI`   | DB Connection URI                                                                               |  False   | `postgres://conduit:pass@localhost:5432/conduit` | `mongodb://localhost:27017` |
+|    `DB_TYPE`     | DB Engine Type                                                                                  |  False   |                    `postgres`                    |          `mongodb`          |
 
 ## Replica Set Configuration
 
@@ -50,6 +50,8 @@ When using MongoDB with a replica set (e.g., MongoDB Atlas), the database module
 Live document updates require a replica set or sharded cluster (Atlas is fine). Helm’s bundled Mongo chart is a **standalone** Deployment (`replicas: 1`, no `--replSet`), so live updates stay `idle` there until you point `DB_CONN_URI` at Atlas or an operator-managed replica set.
 
 Local Compose files initialize a single-node `rs0`. **Existing Compose Mongo volumes will not become a replica set cleanly** — drop the volume or start from an empty data dir if `hello` still reports standalone.
+
+PostgreSQL live updates require logical replication (`wal_level=logical`, a `pgoutput` publication, and a replication slot). MySQL, MariaDB, and SQLite live updates are out of v1.
 
 ### Live updates
 
@@ -60,7 +62,15 @@ subscribe({ schema: 'Order', documentId?: string })
 unsubscribe({ schema: 'Order', documentId?: string })
 ```
 
-Events arrive as `change` with `{ version, operation, schema, documentId, occurredAt }` and contain no document fields and no resume token. This is **live-tail, not backfill**: the change stream starts at the end of the oplog. A leader restart or cursor drop does not replay missed events; clients subscribe again and refetch over authorized REST.
+Events arrive as `change` with `{ version, operation, schema, documentId, occurredAt }` and contain no document fields. Consumers should refetch through their authorized REST or custom-endpoint path. PostgreSQL `TRUNCATE` is published as a schema-level `reset` (no row dump); clients refetch the collection.
+
+MongoDB uses native change streams and is **live-tail, not backfill**: the change stream starts at the end of the oplog. A leader restart or cursor drop does not replay missed events; clients subscribe again and refetch over authorized REST.
+
+PostgreSQL uses in-process WAL CDC (`pgoutput` publication + a **temporary** logical slot). That is WAL CDC, Postgres-only — not a changelog table, not triggers, not Debezium. There is **no catch-up**: re-subscribe, leader restart, or slot drop does not replay missed events; clients fetch current data. `LISTEN`/`NOTIFY` is not the capture path.
+
+The database role needs permission to `CREATE PUBLICATION`, `ALTER PUBLICATION`, and to create a logical replication slot (`REPLICATION` / managed-Postgres logical-replication grants). A transaction-mode pooler cannot speak the replication protocol; use a direct/session URI. Tables without a primary key get `REPLICA IDENTITY FULL` so UPDATE/DELETE can be published. Custom PKs use the schema’s physical primary key (`idField`), not a virtual `_id`. Missing opted-in tables are skipped so the rest of the watch can still start.
+
+MySQL, MariaDB, and SQLite are unsupported for live updates. Do not enable `realtime` on those engines.
 
 The leader also publishes `database:change:${schema}` on the Redis bus. **Do not also relay `database:change:*` on `/events/` if the same client is on `/database/`** — that duplicates notifications. Keep the bus for other modules; just do not dual-subscribe.
 
@@ -70,16 +80,17 @@ Admin sockets must be enabled (`admin.transports.sockets`) and the Admin socket 
 
 ### Configuration Options
 
-|      Setting      | Values                                                                    | Default   | Description                                              |
-| :---------------: | :------------------------------------------------------------------------ | :-------: | :------------------------------------------------------- |
-| `readPreference`  | `primary`, `primaryPreferred`, `secondary`, `secondaryPreferred`, `nearest` | `primary` | Controls which replica set members receive read queries  |
-| `writeConcern`    | `1`, `majority`                                                           |    `1`    | How many members must acknowledge a write                |
-| `readConcern`     | `local`, `available`, `majority`, `linearizable`, `snapshot`              |  `local`  | Consistency level for read operations                    |
-| `realtime.enabled` | `true`, `false`                                                          |  `false`  | Enable MongoDB change-stream live updates for opted-in schemas |
+|      Setting       | Values                                                                      |  Default  | Description                                             |
+| :----------------: | :-------------------------------------------------------------------------- | :-------: | :------------------------------------------------------ |
+|  `readPreference`  | `primary`, `primaryPreferred`, `secondary`, `secondaryPreferred`, `nearest` | `primary` | Controls which replica set members receive read queries |
+|   `writeConcern`   | `1`, `majority`                                                             |    `1`    | How many members must acknowledge a write               |
+|   `readConcern`    | `local`, `available`, `majority`, `linearizable`, `snapshot`                |  `local`  | Consistency level for read operations                   |
+| `realtime.enabled` | `true`, `false`                                                             |  `false`  | Enable live updates for opted-in schemas                |
 
 ### Recommended Production Settings
 
 For MongoDB Atlas deployments with read replicas:
+
 - **readPreference**: `secondaryPreferred` — distributes reads across replicas, falls back to primary
 - **writeConcern**: `majority` — ensures writes survive replica set elections
 - **readConcern**: `local` — suitable for most workloads
@@ -91,7 +102,7 @@ Modules can override the configured readPreference on individual queries when th
 ```typescript
 const doc = await MySchema.getInstance().findOne(
   { _id: someId },
-  { readPreference: 'primary' }
+  { readPreference: 'primary' },
 );
 ```
 
@@ -104,19 +115,19 @@ Standalone deployments (without replicas) work identically regardless of these s
 
 |  Operator  | Description                                                                                                              |
 | :--------: | :----------------------------------------------------------------------------------------------------------------------- |
-| `in`       | Matches any of the values specified in an array                                                                          |
+|    `in`    | Matches any of the values specified in an array                                                                          |
 | `contains` | Checks if a value is contained in an array or not.                                                                       |
-| `nin`      | Selects the documents where the value of a field is not equal any value in the specified array.                          |
-| `eq`       | Matches documents where the value of a field equals the specified value.                                                 |
-| `ne`       | Selects the documents where the value of the field is not equal to the specified value                                   |
-| `lt`       | Selects the documents where the value of the field is less than (i.e. <) the specified value.                            |
-| `gt`       | Selects the documents where the value of the field is greater than (i.e. >) the specified value.                         |
-| `lte`      | Selects the documents where the value of the field is less or equal than (i.e. <=) the specified value.                  |
-| `gte`      | Selects the documents where the value of the field is greater or equal than (i.e. >=) the specified value.               |
-| `or`       | Performs OR operation on an array of two or more expressions and selects the documents that satisfy at least one         |
-| `and`      | Performs AND operation on an array of two or more expressions and selects the documents that satisfy at least one        |
-| `not`      | Performs NOT operation on an array of two or more expressions and selects the documents that do not match the expression |
-| `regex`    | Select the documents where the value of the field matches the regex.                                                     |
+|   `nin`    | Selects the documents where the value of a field is not equal any value in the specified array.                          |
+|    `eq`    | Matches documents where the value of a field equals the specified value.                                                 |
+|    `ne`    | Selects the documents where the value of the field is not equal to the specified value                                   |
+|    `lt`    | Selects the documents where the value of the field is less than (i.e. <) the specified value.                            |
+|    `gt`    | Selects the documents where the value of the field is greater than (i.e. >) the specified value.                         |
+|   `lte`    | Selects the documents where the value of the field is less or equal than (i.e. <=) the specified value.                  |
+|   `gte`    | Selects the documents where the value of the field is greater or equal than (i.e. >=) the specified value.               |
+|    `or`    | Performs OR operation on an array of two or more expressions and selects the documents that satisfy at least one         |
+|   `and`    | Performs AND operation on an array of two or more expressions and selects the documents that satisfy at least one        |
+|   `not`    | Performs NOT operation on an array of two or more expressions and selects the documents that do not match the expression |
+|  `regex`   | Select the documents where the value of the field matches the regex.                                                     |
 
 These operators have been tested thoroughly in varying levels of complexity.
 
@@ -141,6 +152,7 @@ add its id in place of the data.
 ## Sequelize Caveats
 
 Currently, the Sequelize implementation has the following limitations:
+
 - No index creation
 - Update queries only update provided fields without the option to replace entire rows, unless all columns are provided.
 - Like operations do not work

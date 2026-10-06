@@ -1,0 +1,112 @@
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { QueryTypes } from 'sequelize';
+import type { SequelizeAdapter } from '../../adapters/sequelize-adapter/index.js';
+import type { ChangeStreamLike, OptedInSchema } from '../types.js';
+import type { TopologyResult } from '../topology.js';
+import {
+  DEFAULT_ID_FIELD,
+  PUBLICATION_NAME,
+  SQL_ENGINE_UNSUPPORTED,
+  sqlSchemaName,
+} from './constants.js';
+import { dropLegacyCapture } from './leftover.js';
+import { syncPublication } from './publication.js';
+import { SqlChangeStream } from './SqlChangeStream.js';
+import type { ReplicationFeedFactory } from './replication.js';
+
+export class SqlRealtimeSupport {
+  private schemas: OptedInSchema[] = [];
+
+  constructor(
+    private readonly adapter: SequelizeAdapter,
+    private readonly createFeed?: ReplicationFeedFactory,
+  ) {}
+
+  async checkTopology(): Promise<TopologyResult> {
+    const dialect = this.adapter.sequelize.getDialect();
+    if (dialect !== 'postgres') {
+      await dropLegacyCapture(this.adapter.sequelize).catch(() => undefined);
+      return { supported: false, message: SQL_ENGINE_UNSUPPORTED, retryable: false };
+    }
+    try {
+      await this.adapter.sequelize.query('SELECT 1');
+    } catch (err) {
+      return {
+        supported: false,
+        retryable: true,
+        message: `SQL live updates cannot reach the database: ${errorMessage(err)}`,
+      };
+    }
+    return this.probeLogicalReplication();
+  }
+
+  async prepare(schemas: OptedInSchema[]): Promise<void> {
+    this.schemas = schemas;
+    await dropLegacyCapture(this.adapter.sequelize);
+    if (this.adapter.sequelize.getDialect() !== 'postgres') {
+      return;
+    }
+    const skipped = await syncPublication(this.adapter.sequelize, schemas, {
+      schemaName: sqlSchemaName(),
+      publicationName: PUBLICATION_NAME,
+    });
+    for (const table of skipped) {
+      ConduitGrpcSdk.Logger?.warn(
+        `PostgreSQL live updates skipped missing table ${table}`,
+      );
+    }
+  }
+
+  openWatch(): ChangeStreamLike {
+    return new SqlChangeStream({
+      connectionUri: this.adapter.connectionUri,
+      publicationName: PUBLICATION_NAME,
+      idFieldByTable: Object.fromEntries(
+        this.schemas.map(schema => [
+          schema.collectionName,
+          schema.documentIdField ?? DEFAULT_ID_FIELD,
+        ]),
+      ),
+      createFeed: this.createFeed,
+    });
+  }
+
+  private async probeLogicalReplication(): Promise<TopologyResult> {
+    const settings = await this.adapter.sequelize.query(
+      `SELECT name, setting
+       FROM pg_settings
+       WHERE name IN ('wal_level', 'max_replication_slots', 'max_wal_senders')`,
+      { type: QueryTypes.SELECT },
+    );
+    const map = new Map(
+      (settings as { name: string; setting: string }[]).map(row => [
+        String(row.name),
+        String(row.setting),
+      ]),
+    );
+    if (map.get('wal_level') !== 'logical') {
+      return {
+        supported: false,
+        retryable: true,
+        message:
+          'PostgreSQL live updates require wal_level=logical (managed Postgres: enable logical replication / rds.logical_replication).',
+      };
+    }
+    if (map.get('max_replication_slots') === '0' || map.get('max_wal_senders') === '0') {
+      return {
+        supported: false,
+        retryable: true,
+        message:
+          'PostgreSQL live updates need max_replication_slots and max_wal_senders greater than 0.',
+      };
+    }
+    // Settings only: do not CREATE_REPLICATION_SLOT here. Every pod reconciles;
+    // a probe slot would compete with the leader's live temp slot and fail-close
+    // the feed. Slot create belongs in PgoutputReplicationFeed.start() (degraded + retry).
+    return { supported: true };
+  }
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}

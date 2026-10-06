@@ -1,13 +1,13 @@
 import { EventEmitter } from 'node:events';
-import { afterEach, describe, expect, it, jest } from '@jest/globals';
-import { ObjectId } from 'bson';
-import { MongoChangeStreamCoordinator } from '../MongoChangeStreamCoordinator.js';
+import { describe, expect, it, jest } from '@jest/globals';
+import { EJSON, ObjectId } from 'bson';
+import { ChangeStreamCoordinator } from '../ChangeStreamCoordinator.js';
 import { RealtimeSubscriptionTracker } from '../subscriptions.js';
 import { roomsForPublicChange, schemaRoom } from '../rooms.js';
+import { SQL_LEADER_LOCK } from '../sql/constants.js';
 
 class MemoryStore {
   private sets = new Map<string, Set<string>>();
-  readonly ttls = new Map<string, number>();
   async sadd(key: string, ...members: string[]) {
     const set = this.sets.get(key) ?? new Set<string>();
     members.forEach(member => set.add(member));
@@ -27,85 +27,115 @@ class MemoryStore {
     return this.sets.get(key)?.size ?? 0;
   }
   async del(...keys: string[]) {
-    keys.forEach(key => {
-      this.sets.delete(key);
-      this.ttls.delete(key);
-    });
+    keys.forEach(key => this.sets.delete(key));
     return keys.length;
   }
-  async expire(key: string, seconds: number) {
-    this.ttls.set(key, seconds);
+  async expire(_key: string, _seconds: number) {
+    return 1;
   }
-  async persist(key: string) {
-    this.ttls.delete(key);
+  async persist(_key: string) {
+    return 1;
   }
 }
 
 function createCoordinator(overrides?: {
   allow?: boolean;
   authorizationAvailable?: boolean;
+  canThrows?: boolean;
   schemas?: {
     name: string;
     collectionName: string;
     authorizationEnabled: boolean;
-    cmsReadEnabled?: boolean;
+    documentIdField?: string;
   }[];
+  getOptedInSchemas?: () => {
+    name: string;
+    collectionName: string;
+    authorizationEnabled: boolean;
+    documentIdField?: string;
+  }[];
+  getKeyDelayMs?: number;
+  onResumePersisted?: (token: string) => Promise<void>;
+  parseResumeToken?: (token: string | null | undefined) => unknown | undefined;
+  persistResume?: boolean;
+  leaderLock?: string;
+  resumeTokenKey?: string;
+  adminPush?: () => Promise<void>;
+  watchReady?: Promise<void>;
+  checkTopology?: () => Promise<{
+    supported: boolean;
+    message?: string;
+    retryable?: boolean;
+  }>;
+  prepare?: () => Promise<void>;
 }) {
-  const stream = new EventEmitter() as EventEmitter & { close: () => Promise<void> };
+  const stream = new EventEmitter() as EventEmitter & {
+    close: () => Promise<void>;
+    ready?: Promise<void>;
+  };
   stream.close = async () => {
     stream.emit('close');
   };
+  if (overrides?.watchReady) {
+    stream.ready = overrides.watchReady;
+  }
+  const state = new Map<string, string>();
   const lock = {
     extend: jest.fn(async () => lock),
     release: jest.fn(async () => undefined),
   };
   const routerPush = jest.fn(async () => undefined);
-  const adminPush = jest.fn(async () => undefined);
+  const adminPush = jest.fn(overrides?.adminPush ?? (async () => undefined));
   const publish = jest.fn();
-  const subscribe = jest.fn();
-  const unsubscribe = jest.fn();
   const watch = jest.fn(() => stream as never);
   const subscriptions = new RealtimeSubscriptionTracker(new MemoryStore());
-  let fence = 0;
-  const incr = jest.fn(async () => {
-    fence += 1;
-    return fence;
-  });
-  const getKey = jest.fn(async () => String(fence));
   const grpcSdk = {
     state: {
       tryAcquireLock: jest.fn(async () => lock),
       releaseLock: jest.fn(async () => undefined),
-      incr,
-      getKey,
+      getKey: jest.fn(async (key: string) => {
+        if (overrides?.getKeyDelayMs) {
+          await new Promise(resolve => setTimeout(resolve, overrides.getKeyDelayMs));
+        }
+        return state.get(key) ?? null;
+      }),
+      setKey: jest.fn(async (key: string, value: string) => {
+        state.set(key, value);
+      }),
+      clearKey: jest.fn(async (key: string) => {
+        state.delete(key);
+      }),
     },
-    bus: { publish, subscribe, unsubscribe },
+    bus: { publish },
     router: { socketPush: routerPush },
     admin: { socketPush: adminPush },
     isAvailable: () => overrides?.authorizationAvailable !== false,
-    authorization:
-      overrides?.authorizationAvailable === false
-        ? null
-        : {
-            can: async () => ({ allow: overrides?.allow !== false }),
-          },
+    authorization: {
+      can: async () => {
+        if (overrides?.canThrows) {
+          throw new Error('authorization unavailable');
+        }
+        return { allow: overrides?.allow !== false };
+      },
+    },
   };
-  const coordinator = new MongoChangeStreamCoordinator({
+  const coordinator = new ChangeStreamCoordinator({
     grpcSdk: grpcSdk as never,
     watch,
-    hello: async () => ({ setName: 'rs0' }),
+    checkTopology: overrides?.checkTopology ?? (async () => ({ supported: true })),
     getOptedInSchemas: () =>
-      (
-        overrides?.schemas ?? [
-          { name: 'Order', collectionName: 'orders', authorizationEnabled: false },
-        ]
-      ).map(schema => ({
-        cmsReadEnabled: true,
-        ...schema,
-      })),
+      overrides?.getOptedInSchemas?.() ??
+      overrides?.schemas ?? [
+        { name: 'Order', collectionName: 'orders', authorizationEnabled: false },
+      ],
     subscriptions,
     enabled: () => true,
-    engine: () => 'MongoDB',
+    onResumePersisted: overrides?.onResumePersisted,
+    parseResumeToken: overrides?.parseResumeToken,
+    persistResume: overrides?.persistResume,
+    leaderLock: overrides?.leaderLock,
+    resumeTokenKey: overrides?.resumeTokenKey,
+    prepare: overrides?.prepare,
   });
   return {
     coordinator,
@@ -116,41 +146,30 @@ function createCoordinator(overrides?: {
     publish,
     subscriptions,
     grpcSdk,
+    state,
     lock,
   };
 }
 
-function insertChange(collection: string, id: string) {
-  return {
-    operationType: 'insert',
-    ns: { coll: collection },
-    documentKey: { _id: new ObjectId(id) },
-  };
-}
-
-function pushesFor(mock: { mock: { calls: unknown[][] } }, event: 'change' | 'reset') {
-  return mock.mock.calls.filter(call => (call[0] as { event: string }).event === event);
-}
-
-function expectWatchFromNow(watch: { mock: { calls: unknown[][] } }, callIndex = 0) {
-  expect(watch.mock.calls[callIndex]).toHaveLength(1);
-  expect(watch.mock.calls[callIndex][0]).not.toHaveProperty('resumeAfter');
-}
-
-describe('MongoChangeStreamCoordinator', () => {
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
+describe('ChangeStreamCoordinator', () => {
   it('emits one normalized event to public rooms and ignores other collections', async () => {
     const { coordinator, stream, routerPush, adminPush, publish } = createCoordinator();
     await coordinator.reconcile();
+    const resume = { _data: 'token' };
     stream.emit('change', {
-      ...insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'),
+      operationType: 'insert',
+      ns: { coll: 'orders' },
+      documentKey: { _id: new ObjectId('64b64c4c4c4c4c4c4c4c4c4c') },
       fullDocument: { secret: 'nope' },
+      _id: resume,
       wallTime: new Date('2026-01-02T00:00:00.000Z'),
     });
-    stream.emit('change', insertChange('other', '64b64c4c4c4c4c4c4c4c4c4d'));
+    stream.emit('change', {
+      operationType: 'insert',
+      ns: { coll: 'other' },
+      documentKey: { _id: new ObjectId('64b64c4c4c4c4c4c4c4c4c4d') },
+      _id: resume,
+    });
     await coordinator.waitForIdle();
     expect(publish).toHaveBeenCalledTimes(1);
     expect(publish.mock.calls[0][0]).toBe('database:change:Order');
@@ -161,103 +180,94 @@ describe('MongoChangeStreamCoordinator', () => {
       documentId: '64b64c4c4c4c4c4c4c4c4c4c',
     });
     expect(payload).not.toHaveProperty('fullDocument');
-    expect(payload).not.toHaveProperty('resumeToken');
     expect(payload).not.toHaveProperty('secret');
     const expectedRooms = roomsForPublicChange('Order', '64b64c4c4c4c4c4c4c4c4c4c');
-    expect(pushesFor(adminPush, 'reset')).toHaveLength(1);
-    expect(pushesFor(adminPush, 'reset')[0][0]).toEqual(
-      expect.objectContaining({
-        event: 'reset',
-        rooms: [schemaRoom('Order')],
-      }),
-    );
-    expect(pushesFor(routerPush, 'change')[0][0]).toEqual(
+    expect(routerPush).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'change', rooms: expectedRooms }),
     );
-    expect(pushesFor(adminPush, 'change')[0][0]).toEqual(
+    expect(adminPush).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'change', rooms: expectedRooms }),
     );
-    expect(
-      JSON.parse((pushesFor(adminPush, 'change')[0][0] as { data: string }).data),
-    ).not.toHaveProperty('resumeToken');
     await coordinator.shutdown();
   });
 
-  it('serializes overlapping handlers', async () => {
-    const { coordinator, stream, adminPush } = createCoordinator();
-    let release!: () => void;
-    const gate = new Promise<void>(resolve => {
-      release = resolve;
-    });
-    let first = true;
-    adminPush.mockImplementation(async (push: { event?: string }) => {
-      if (push.event !== 'change') return;
-      if (first) {
-        first = false;
-        await gate;
-      }
-    });
-    await coordinator.reconcile();
-    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
-    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4d'));
-    await Promise.resolve();
-    await new Promise(resolve => setImmediate(resolve));
-    expect(adminPush).toHaveBeenCalledTimes(2);
-    release();
-    await coordinator.waitForIdle();
-    expect(pushesFor(adminPush, 'change')).toHaveLength(2);
-    await coordinator.shutdown();
-  });
-
-  it('watches opted-in collections with $match and $project from now', async () => {
-    const { coordinator, watch } = createCoordinator();
-    await coordinator.reconcile();
-    expect(watch).toHaveBeenCalledTimes(1);
-    const pipeline = watch.mock.calls[0][0] as Record<string, unknown>[];
-    expectWatchFromNow(watch);
-    expect(pipeline[0]).toEqual(
-      expect.objectContaining({
-        $match: expect.objectContaining({
-          $or: expect.arrayContaining([
-            expect.objectContaining({
-              'ns.coll': { $in: ['orders'] },
-            }),
-          ]),
-        }),
-      }),
-    );
-    expect(pipeline[1]).toEqual({
-      $project: {
-        fullDocument: 0,
-        updateDescription: 0,
-        fullDocumentBeforeChange: 0,
+  it('persists skipped collection tokens after the opted-in emit', async () => {
+    const order: string[] = [];
+    const { coordinator, stream, grpcSdk } = createCoordinator({
+      onResumePersisted: async () => {
+        order.push('trim');
       },
     });
+    grpcSdk.state.setKey.mockImplementation(async (key: string, value: string) => {
+      order.push(`setKey:${value}`);
+    });
+    await coordinator.reconcile();
+    stream.emit('change', {
+      operationType: 'insert',
+      ns: { coll: 'orders' },
+      documentKey: { _id: new ObjectId('64b64c4c4c4c4c4c4c4c4c4c') },
+      _id: { _data: 'token-a' },
+      wallTime: new Date('2026-01-02T00:00:00.000Z'),
+    });
+    stream.emit('change', {
+      operationType: 'insert',
+      ns: { coll: 'other' },
+      documentKey: { _id: new ObjectId('64b64c4c4c4c4c4c4c4c4c4d') },
+      _id: { _data: 'token-b' },
+    });
+    await coordinator.waitForIdle();
+    expect(order).toEqual([
+      `setKey:${EJSON.stringify({ _data: 'token-a' })}`,
+      'trim',
+      `setKey:${EJSON.stringify({ _data: 'token-b' })}`,
+      'trim',
+    ]);
     await coordinator.shutdown();
   });
 
-  it('reopens the watch when the opt-in set changes', async () => {
-    const schemas = [
-      { name: 'Order', collectionName: 'orders', authorizationEnabled: false },
-    ];
-    const { coordinator, watch } = createCoordinator({ schemas });
-    await coordinator.reconcile();
-    expect(watch).toHaveBeenCalledTimes(1);
-    schemas.push({
-      name: 'Item',
-      collectionName: 'items',
-      authorizationEnabled: false,
+  it('persists resume and trims only after a successful emit', async () => {
+    const order: string[] = [];
+    const { coordinator, stream, grpcSdk, publish } = createCoordinator({
+      onResumePersisted: async () => {
+        order.push('trim');
+      },
+    });
+    publish.mockImplementation(() => {
+      order.push('publish');
+    });
+    grpcSdk.state.setKey.mockImplementation(async () => {
+      order.push('setKey');
     });
     await coordinator.reconcile();
-    expect(watch).toHaveBeenCalledTimes(2);
-    const pipeline = watch.mock.calls[1][0] as Record<string, unknown>[];
-    const match = pipeline[0] as {
-      $match: { $or: Array<{ 'ns.coll'?: { $in: string[] } }> };
-    };
-    expect(match.$match.$or[0]['ns.coll']?.$in).toEqual(
-      expect.arrayContaining(['orders', 'items']),
-    );
-    expectWatchFromNow(watch, 1);
+    stream.emit('change', {
+      operationType: 'update',
+      ns: { coll: 'orders' },
+      documentKey: { _id: 'order-1' },
+      _id: '1842',
+      wallTime: new Date('2026-03-01T00:00:00.000Z'),
+    });
+    await coordinator.waitForIdle();
+    expect(order).toEqual(['publish', 'setKey', 'trim']);
+    await coordinator.shutdown();
+  });
+
+  it('does not persist a later token when emit fails', async () => {
+    const { coordinator, stream, grpcSdk, adminPush } = createCoordinator({
+      adminPush: async () => {
+        throw new Error('socket down');
+      },
+    });
+    await coordinator.reconcile();
+    stream.emit('change', {
+      operationType: 'insert',
+      ns: { coll: 'orders' },
+      documentKey: { _id: 'order-1' },
+      _id: '10',
+      wallTime: new Date('2026-03-01T00:00:00.000Z'),
+    });
+    await coordinator.waitForIdle();
+    expect(grpcSdk.state.setKey).not.toHaveBeenCalled();
+    expect(coordinator.getState()).toBe('degraded');
     await coordinator.shutdown();
   });
 
@@ -273,12 +283,40 @@ describe('MongoChangeStreamCoordinator', () => {
       'user-1',
     );
     await coordinator.reconcile();
-    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
+    stream.emit('change', {
+      operationType: 'update',
+      ns: { coll: 'orders' },
+      documentKey: { _id: new ObjectId('64b64c4c4c4c4c4c4c4c4c4c') },
+      _id: { _data: 'token' },
+    });
     await coordinator.waitForIdle();
-    expect(pushesFor(routerPush, 'change')).toHaveLength(0);
-    expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual(
-      [],
+    expect(routerPush).not.toHaveBeenCalled();
+    expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c')).toEqual([]);
+    await coordinator.shutdown();
+  });
+
+  it('does not remove users when authorization is unavailable', async () => {
+    const { coordinator, stream, routerPush, subscriptions, grpcSdk } = createCoordinator(
+      {
+        authorizationAvailable: false,
+        schemas: [
+          { name: 'Order', collectionName: 'orders', authorizationEnabled: true },
+        ],
+      },
     );
+    expect(grpcSdk.isAvailable('authorization')).toBe(false);
+    await subscriptions.addAuthorizedDocument('sock-1', 'Order', 'doc-1', 'user-1');
+    expect(await subscriptions.listUsers('Order', 'doc-1')).toEqual(['user-1']);
+    await coordinator.reconcile();
+    stream.emit('change', {
+      operationType: 'update',
+      ns: { coll: 'orders' },
+      documentKey: { _id: 'doc-1' },
+      _id: { _data: 'token' },
+    });
+    await coordinator.waitForIdle();
+    expect(routerPush).not.toHaveBeenCalled();
+    expect(await subscriptions.listUsers('Order', 'doc-1')).toEqual(['user-1']);
     await coordinator.shutdown();
   });
 
@@ -295,216 +333,240 @@ describe('MongoChangeStreamCoordinator', () => {
   });
 
   it('opens a single watch when reconcile runs concurrently', async () => {
-    const { coordinator, watch } = createCoordinator();
+    const { coordinator, watch } = createCoordinator({ getKeyDelayMs: 40 });
     await Promise.all([coordinator.reconcile(), coordinator.reconcile()]);
     expect(watch).toHaveBeenCalledTimes(1);
     await coordinator.shutdown();
   });
 
-  it('stops the stream and retries from now when emit fails', async () => {
-    jest.useFakeTimers();
-    const streams: Array<EventEmitter & { close: () => Promise<void> }> = [];
-    const { coordinator, adminPush, watch } = createCoordinator();
-    watch.mockImplementation(() => {
-      const next = new EventEmitter() as EventEmitter & { close: () => Promise<void> };
-      next.close = async () => {
-        next.emit('close');
-      };
-      streams.push(next);
-      return next as never;
-    });
-    adminPush
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error('push failed'))
-      .mockResolvedValue(undefined);
+  it('clears an unusable resume token and retries', async () => {
+    const { coordinator, stream, grpcSdk } = createCoordinator();
     await coordinator.reconcile();
-    streams[0].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4b'));
-    await coordinator.waitForIdle();
-    streams[0].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
-    streams[0].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4d'));
-    await coordinator.waitForIdle();
-    expect(pushesFor(adminPush, 'change')).toHaveLength(2);
-    await jest.advanceTimersByTimeAsync(1_000);
-    expect(watch).toHaveBeenCalledTimes(2);
-    expectWatchFromNow(watch, 1);
-    streams[1].emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
-    await coordinator.waitForIdle();
-    expect(pushesFor(adminPush, 'change')).toHaveLength(3);
-    expect(pushesFor(adminPush, 'reset')).toHaveLength(2);
-    await coordinator.shutdown();
-    jest.useRealTimers();
-  });
-
-  it.each(['drop', 'rename', 'invalidate', 'dropDatabase'] as const)(
-    'reopens the watch on %s from now',
-    async operationType => {
-      jest.useFakeTimers();
-      const streams: Array<EventEmitter & { close: () => Promise<void> }> = [];
-      const { coordinator, watch } = createCoordinator();
-      watch.mockImplementation(() => {
-        const next = new EventEmitter() as EventEmitter & { close: () => Promise<void> };
-        next.close = async () => {
-          next.emit('close');
-        };
-        streams.push(next);
-        return next as never;
-      });
-      await coordinator.reconcile();
-      streams[0].emit('change', {
-        operationType,
-        ns: { coll: 'orders' },
-      });
-      await coordinator.waitForIdle();
-      await jest.advanceTimersByTimeAsync(1_000);
-      expect(watch).toHaveBeenCalledTimes(2);
-      expectWatchFromNow(watch, 1);
-      await coordinator.shutdown();
-      jest.useRealTimers();
-    },
-  );
-
-  it('does not remove users when authorization is unavailable', async () => {
-    const { coordinator, stream, routerPush, subscriptions } = createCoordinator({
-      authorizationAvailable: false,
-      schemas: [{ name: 'Order', collectionName: 'orders', authorizationEnabled: true }],
-    });
-    const removeUser = jest.spyOn(subscriptions, 'removeUser');
-    await subscriptions.addAuthorizedDocument(
-      'sock-1',
-      'Order',
-      '64b64c4c4c4c4c4c4c4c4c4c',
-      'user-1',
-    );
-    expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual([
-      'user-1',
-    ]);
-    await coordinator.reconcile();
-    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
-    await coordinator.waitForIdle();
-    expect(pushesFor(routerPush, 'change')).toHaveLength(0);
-    expect(removeUser).not.toHaveBeenCalled();
-    expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual([
-      'user-1',
-    ]);
-    await coordinator.shutdown();
-  });
-
-  it('does not open a watch when the lock cannot be extended after acquire', async () => {
-    const { coordinator, watch, lock } = createCoordinator();
-    lock.extend.mockRejectedValueOnce(new Error('extend failed'));
-    await coordinator.reconcile();
-    expect(watch).not.toHaveBeenCalled();
-    expect(coordinator.getState()).toBe('idle');
-    await coordinator.shutdown();
-  });
-
-  it('ignores draining watch events after lock renew failure', async () => {
-    jest.useFakeTimers();
-    const { coordinator, stream, lock, adminPush } = createCoordinator();
-    lock.extend.mockResolvedValueOnce(lock).mockRejectedValueOnce(new Error('lost lock'));
-    await coordinator.reconcile();
-    expect(coordinator.getState()).toBe('live');
-    await jest.advanceTimersByTimeAsync(5_000);
-    expect(coordinator.getState()).toBe('idle');
-    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
-    await coordinator.waitForIdle();
-    expect(pushesFor(adminPush, 'change')).toHaveLength(0);
-    await coordinator.shutdown();
-    jest.useRealTimers();
-  });
-
-  it('does not emit to clients when CMS read is denied and keeps membership', async () => {
-    const can = jest.fn(async () => ({ allow: true }));
-    const { coordinator, stream, routerPush, adminPush, subscriptions, grpcSdk } =
-      createCoordinator({
-        schemas: [
-          {
-            name: 'Order',
-            collectionName: 'orders',
-            authorizationEnabled: true,
-            cmsReadEnabled: false,
-          },
-        ],
-      });
-    grpcSdk.authorization = { can };
-    await subscriptions.addAuthorizedDocument(
-      'sock-1',
-      'Order',
-      '64b64c4c4c4c4c4c4c4c4c4c',
-      'user-1',
-    );
-    await coordinator.reconcile();
-    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
-    await coordinator.waitForIdle();
-    expect(pushesFor(adminPush, 'reset')).toHaveLength(1);
-    expect(pushesFor(adminPush, 'change')).toHaveLength(1);
-    expect(routerPush).not.toHaveBeenCalled();
-    expect(can).not.toHaveBeenCalled();
-    expect(await subscriptions.listUsers('Order', '64b64c4c4c4c4c4c4c4c4c4c')).toEqual([
-      'user-1',
-    ]);
-    await coordinator.shutdown();
-  });
-
-  it('drops change publishes when the Redis fence token is no longer ours', async () => {
-    const { coordinator, stream, adminPush, publish, grpcSdk } = createCoordinator();
-    await coordinator.reconcile();
-    expect(coordinator.getState()).toBe('live');
-    expect(grpcSdk.state.incr).toHaveBeenCalledWith('realtime:change-stream:fence');
-    grpcSdk.state.getKey.mockResolvedValue('999');
-    stream.emit('change', insertChange('orders', '64b64c4c4c4c4c4c4c4c4c4c'));
-    await coordinator.waitForIdle();
-    expect(publish).not.toHaveBeenCalledWith('database:change:Order', expect.anything());
-    expect(pushesFor(adminPush, 'change')).toHaveLength(0);
-    expect(coordinator.getState()).toBe('idle');
-    await coordinator.shutdown();
-  });
-
-  it('polls the leader lock about every second without exponential backoff', async () => {
-    jest.useFakeTimers();
-    const { coordinator, grpcSdk } = createCoordinator();
-    grpcSdk.state.tryAcquireLock.mockResolvedValue(null);
-    await coordinator.reconcile();
-    expect(grpcSdk.state.tryAcquireLock).toHaveBeenCalledTimes(1);
-    await jest.advanceTimersByTimeAsync(8_000);
-    expect(grpcSdk.state.tryAcquireLock.mock.calls.length).toBeGreaterThan(4);
-    await coordinator.shutdown();
-    jest.useRealTimers();
-  });
-
-  it('publishes a wake after releasing the lock on clean shutdown', async () => {
-    const { coordinator, publish } = createCoordinator();
-    await coordinator.reconcile();
-    publish.mockClear();
-    await coordinator.shutdown();
-    expect(publish).toHaveBeenCalledWith('realtime:change-stream:released', 'released');
-  });
-
-  it('reconciles immediately when a leader-release wake arrives', async () => {
-    const { coordinator, grpcSdk, lock, watch } = createCoordinator();
-    grpcSdk.state.tryAcquireLock.mockResolvedValueOnce(null);
-    await coordinator.reconcile();
-    expect(watch).not.toHaveBeenCalled();
-    grpcSdk.state.tryAcquireLock.mockResolvedValue(lock);
-    const onWake = grpcSdk.bus.subscribe.mock.calls[0][1] as () => void;
-    onWake();
-    await Promise.resolve();
+    stream.emit('error', { code: 280, message: 'ChangeStreamHistoryLost' });
     await new Promise(resolve => setImmediate(resolve));
-    expect(coordinator.getState()).toBe('live');
-    expect(watch).toHaveBeenCalledTimes(1);
+    expect(grpcSdk.state.clearKey).toHaveBeenCalled();
     await coordinator.shutdown();
   });
 
-  it('pushes reset when a watch opens, not on lock renew', async () => {
-    jest.useFakeTimers();
-    const { coordinator, adminPush } = createCoordinator();
+  it('fans out SQL-shaped WAL events without document fields', async () => {
+    const { coordinator, stream, publish } = createCoordinator({ persistResume: false });
     await coordinator.reconcile();
-    expect(pushesFor(adminPush, 'reset')).toHaveLength(1);
-    await jest.advanceTimersByTimeAsync(5_000);
-    expect(coordinator.getState()).toBe('live');
-    expect(pushesFor(adminPush, 'reset')).toHaveLength(1);
+    stream.emit('change', {
+      operationType: 'update',
+      ns: { coll: 'orders' },
+      documentKey: { _id: 'order-1' },
+      _id: '0/16B3748:12:1',
+      wallTime: new Date('2026-03-01T00:00:00.000Z'),
+      fullDocument: { secret: 'nope' },
+    });
+    await coordinator.waitForIdle();
+    expect(publish).toHaveBeenCalledTimes(1);
+    const payload = JSON.parse(publish.mock.calls[0][1] as string);
+    expect(payload).toMatchObject({
+      operation: 'update',
+      schema: 'Order',
+      documentId: 'order-1',
+    });
+    expect(payload).not.toHaveProperty('fullDocument');
+    expect(JSON.stringify(payload)).not.toContain('nope');
     await coordinator.shutdown();
+  });
+
+  it('opens a SQL watch without resume catch-up', async () => {
+    const { coordinator, watch, grpcSdk } = createCoordinator({
+      persistResume: false,
+      leaderLock: SQL_LEADER_LOCK,
+    });
+    await coordinator.reconcile();
+    expect(watch).toHaveBeenCalledWith({ resumeAfter: undefined });
+    expect(grpcSdk.state.tryAcquireLock).toHaveBeenCalledWith(
+      SQL_LEADER_LOCK,
+      expect.any(Number),
+    );
+    expect(grpcSdk.state.getKey).not.toHaveBeenCalled();
+    await coordinator.shutdown();
+  });
+
+  it('does not persist resume tokens when persistResume is false', async () => {
+    const { coordinator, stream, grpcSdk } = createCoordinator({ persistResume: false });
+    await coordinator.reconcile();
+    stream.emit('change', {
+      operationType: 'insert',
+      ns: { coll: 'orders' },
+      documentKey: { _id: 'order-1' },
+      _id: '0/1:1:1',
+      wallTime: new Date('2026-03-01T00:00:00.000Z'),
+    });
+    await coordinator.waitForIdle();
+    expect(grpcSdk.state.setKey).not.toHaveBeenCalled();
+    await coordinator.shutdown();
+  });
+
+  it('stays starting until the watch is ready', async () => {
+    let resolveReady: () => void = () => undefined;
+    const watchReady = new Promise<void>(resolve => {
+      resolveReady = resolve;
+    });
+    const { coordinator } = createCoordinator({
+      persistResume: false,
+      watchReady,
+    });
+    const reconcile = coordinator.reconcile();
+    await waitFor(() => coordinator.getState() === 'starting');
+    expect(coordinator.getState()).toBe('starting');
+    resolveReady();
+    await reconcile;
+    expect(coordinator.getState()).toBe('live');
+    await coordinator.shutdown();
+  });
+
+  it('retries as degraded when the watch errors before it is live', async () => {
+    let resolveReady: () => void = () => undefined;
+    const watchReady = new Promise<void>(resolve => {
+      resolveReady = resolve;
+    });
+    const { coordinator, stream } = createCoordinator({
+      persistResume: false,
+      watchReady,
+    });
+    const reconcile = coordinator.reconcile();
+    await waitFor(() => coordinator.getState() === 'starting');
+    stream.emit('error', new Error('all replication slots are in use'));
+    resolveReady();
+    await reconcile;
+    await waitFor(() => coordinator.getState() === 'degraded');
+    expect(coordinator.getState()).toBe('degraded');
+    await coordinator.shutdown();
+  });
+
+  it('retries a failed Postgres topology check and not a non-Postgres engine', async () => {
+    jest.useFakeTimers();
+    const postgres = createCoordinator({
+      persistResume: false,
+      checkTopology: jest
+        .fn()
+        .mockResolvedValueOnce({
+          supported: false,
+          retryable: true,
+          message:
+            'PostgreSQL live updates require wal_level=logical (managed Postgres: enable logical replication / rds.logical_replication).',
+        })
+        .mockResolvedValue({ supported: true }),
+    });
+    await postgres.coordinator.reconcile();
+    expect(postgres.coordinator.getState()).toBe('idle');
+    expect(postgres.watch).not.toHaveBeenCalled();
+    await jest.advanceTimersByTimeAsync(1_000);
+    expect(postgres.coordinator.getState()).toBe('live');
+    await postgres.coordinator.shutdown();
+
+    const mysql = createCoordinator({
+      persistResume: false,
+      checkTopology: async () => ({
+        supported: false,
+        retryable: false,
+        message:
+          'Live updates are PostgreSQL WAL CDC only. MySQL, MariaDB, and SQLite are out of v1.',
+      }),
+    });
+    await mysql.coordinator.reconcile();
+    expect(mysql.coordinator.getState()).toBe('idle');
+    await jest.advanceTimersByTimeAsync(30_000);
+    expect(mysql.watch).not.toHaveBeenCalled();
+    await mysql.coordinator.shutdown();
     jest.useRealTimers();
+  });
+
+  it('runs prepare only after this process holds the leader lock', async () => {
+    const prepare = jest.fn(async () => undefined);
+    const follower = createCoordinator({
+      persistResume: false,
+      prepare,
+    });
+    follower.grpcSdk.state.tryAcquireLock.mockResolvedValue(null);
+    await follower.coordinator.reconcile();
+    expect(prepare).not.toHaveBeenCalled();
+    expect(follower.watch).not.toHaveBeenCalled();
+    await follower.coordinator.shutdown();
+
+    const leader = createCoordinator({ persistResume: false, prepare });
+    await leader.coordinator.reconcile();
+    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(leader.grpcSdk.state.tryAcquireLock).toHaveBeenCalled();
+    expect(leader.watch).toHaveBeenCalledTimes(1);
+    await leader.coordinator.shutdown();
+  });
+
+  it('reopens the watch when opted-in tables or id fields change', async () => {
+    let schemas = [
+      {
+        name: 'Order',
+        collectionName: 'orders',
+        authorizationEnabled: false,
+        documentIdField: '_id',
+      },
+    ];
+    const { coordinator, watch } = createCoordinator({
+      persistResume: false,
+      getOptedInSchemas: () => schemas,
+    });
+    await coordinator.reconcile();
+    expect(watch).toHaveBeenCalledTimes(1);
+    schemas = [
+      {
+        name: 'Order',
+        collectionName: 'orders',
+        authorizationEnabled: false,
+        documentIdField: 'sku',
+      },
+    ];
+    await coordinator.reconcile();
+    expect(watch).toHaveBeenCalledTimes(2);
+    await coordinator.shutdown();
+  });
+
+  it('emits a schema-level reset on TRUNCATE without row payloads', async () => {
+    const { coordinator, stream, publish, adminPush, routerPush } = createCoordinator({
+      persistResume: false,
+    });
+    await coordinator.reconcile();
+    stream.emit('change', {
+      operationType: 'truncate',
+      ns: { coll: 'orders' },
+      _id: '0/20:1:1',
+      wallTime: new Date('2026-03-01T00:00:00.000Z'),
+      fullDocument: { secret: 'nope' },
+    });
+    await coordinator.waitForIdle();
+    expect(publish).toHaveBeenCalledWith(
+      'database:reset:Order',
+      expect.stringContaining('"schema":"Order"'),
+    );
+    const payload = JSON.parse(publish.mock.calls[0][1] as string);
+    expect(payload).not.toHaveProperty('documentId');
+    expect(payload).not.toHaveProperty('fullDocument');
+    expect(JSON.stringify(payload)).not.toContain('nope');
+    expect(adminPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'reset',
+        rooms: [schemaRoom('Order')],
+      }),
+    );
+    expect(routerPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'reset',
+        rooms: [schemaRoom('Order')],
+      }),
+    );
+    await coordinator.shutdown();
   });
 });
+
+async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (predicate()) return;
+    await new Promise(resolve => setImmediate(resolve));
+  }
+  throw new Error('timed out waiting for condition');
+}

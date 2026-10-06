@@ -917,6 +917,9 @@ importers:
       '@types/object-hash':
         specifier: ^3.0.6
         version: 3.0.6
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
       copyfiles:
         specifier: ^2.4.1
         version: 2.4.1
@@ -3463,6 +3466,9 @@ packages:
 
   '@types/otp-generator@4.0.2':
     resolution: {integrity: sha512-9+qqWzuFb332hXPbLgjUyOXlbcaTQkmkmqQjTduvNuOmPV5fW+iLv70JsVEhdUy0DWi4kY34++HDCaWl6N0AYg==}
+
+  '@types/pg@8.23.1':
+    resolution: {integrity: sha512-fKVHpikPdg4GKks3JuLEhvwSyvwzF23hnabPy6DD8ljVbC7+6J5dQzdv4arV6jqq57djnMgs1HKBxX4P8aBI3A==}
 
   '@types/qs@6.15.1':
     resolution: {integrity: sha512-GZHUBZR9hckSUhrxmp1nG6NwdpM9fCunJwyThLW1X3AyHgd9IlHb6VANpQQqDr2o/qQp6McZ3y/IA2rVzKzSbw==}
@@ -11142,6 +11148,12 @@ snapshots:
   '@types/object-hash@3.0.6': {}
 
   '@types/otp-generator@4.0.2': {}
+
+  '@types/pg@8.23.1':
+    dependencies:
+      '@types/node': 24.13.6
+      pg-protocol: 1.15.0
+      pg-types: 2.2.0
 
   '@types/qs@6.15.1': {}
 

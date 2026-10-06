@@ -82,6 +82,8 @@ export async function readDocumentDecision(
   }
 }
 
+export const documentReadDecision = readDocumentDecision;
+
 export async function canReadDocument(
   grpcSdk: AuthorizationSdk,
   schema: string,
@@ -129,6 +131,7 @@ export function assertSchemaAvailable(
 export function toOptedInSchema(schema: {
   name: string;
   collectionName: string;
+  documentIdField?: string;
   modelOptions?: {
     conduit?: {
       realtime?: { enabled?: boolean };
@@ -141,6 +144,7 @@ export function toOptedInSchema(schema: {
   return {
     name: schema.name,
     collectionName: schema.collectionName,
+    documentIdField: schema.documentIdField,
     authorizationEnabled: schema.modelOptions.conduit.authorization?.enabled === true,
     cmsReadEnabled:
       schema.modelOptions.conduit.cms?.crudOperations?.read?.enabled === true,

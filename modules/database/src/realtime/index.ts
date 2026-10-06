@@ -1,4 +1,5 @@
 export { RealtimeService } from './RealtimeService.js';
+export { ChangeStreamCoordinator } from './ChangeStreamCoordinator.js';
 export { buildRealtimeStatus } from './status.js';
 export { normalizeChangeEvent } from './normalize.js';
 export {
