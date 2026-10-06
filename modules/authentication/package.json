@@ -47,7 +47,7 @@
     "@conduitplatform/grpc-sdk": "workspace:*",
     "@conduitplatform/module-tools": "workspace:*",
     "@conduitplatform/node-2fa": "workspace:*",
-    "@grpc/grpc-js": "^1.14.4",
+    "@grpc/grpc-js": "^1.14.5",
     "@grpc/proto-loader": "^0.8.1",
     "axios": "^1.18.0",
     "bcrypt": "^6.0.0",
