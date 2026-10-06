@@ -3,6 +3,7 @@ import { eventRelayRoom } from './rooms.js';
 import { renderMessageTemplate } from './template.js';
 import { validateResourceId } from './validation.js';
 import { EventRelayValidationError } from './validationError.js';
+import { MAX_INBOUND_BUS_BYTES } from './constants.js';
 
 export type RelayProcessInput = {
   _id: string;
@@ -31,14 +32,35 @@ export type ProcessResult = {
   failures: RelayFailure[];
 };
 
-export function parseBusPayload(rawMessage: string): unknown {
+export function parseBusPayload(
+  rawMessage: string,
+  maxBytes: number = MAX_INBOUND_BUS_BYTES,
+): unknown {
   if (typeof rawMessage !== 'string' || rawMessage.trim() === '') {
     throw new EventRelayValidationError('Bus payload is empty');
+  }
+  if (Buffer.byteLength(rawMessage, 'utf8') > maxBytes) {
+    throw new EventRelayValidationError(`Bus payload exceeds ${maxBytes} bytes`);
   }
   try {
     return JSON.parse(rawMessage);
   } catch {
     throw new EventRelayValidationError('Bus payload is not valid JSON');
+  }
+}
+
+export function assertJsonPayloadSize(
+  payload: unknown,
+  maxBytes: number = MAX_INBOUND_BUS_BYTES,
+): void {
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(payload);
+  } catch {
+    throw new EventRelayValidationError('Sample payload must be valid JSON');
+  }
+  if (Buffer.byteLength(serialized, 'utf8') > maxBytes) {
+    throw new EventRelayValidationError(`Sample payload exceeds ${maxBytes} bytes`);
   }
 }
 

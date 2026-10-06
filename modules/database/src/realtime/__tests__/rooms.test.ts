@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import {
   authorizedDocumentRoom,
   documentRoom,
+  parseAuthorizedDocumentRoom,
   roomsForPublicChange,
   schemaRoom,
 } from '../rooms.js';
@@ -21,6 +22,13 @@ describe('realtime rooms', () => {
     expect(authorizedDocumentRoom('Order', 'abc', 'u1')).not.toBe(
       authorizedDocumentRoom('Order', 'abc', 'u2'),
     );
+    expect(
+      parseAuthorizedDocumentRoom(authorizedDocumentRoom('Order', 'abc', 'user-1')),
+    ).toEqual({
+      schema: 'Order',
+      documentId: 'abc',
+      userId: 'user-1',
+    });
   });
 
   it('encodes reserved characters so rooms cannot collide', () => {

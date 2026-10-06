@@ -15,7 +15,6 @@ export type DatabaseChangeEvent = {
   schema: string;
   documentId: string;
   occurredAt: string;
-  resumeToken: string;
 };
 
 export type RealtimeStatusCode =
@@ -29,11 +28,14 @@ export type RealtimeStatus = {
   message?: string;
 };
 
+export type RebacDecision = 'allow' | 'deny' | 'unavailable';
+
 export type OptedInSchema = {
   name: string;
   collectionName: string;
   authorizationEnabled: boolean;
   documentIdField?: string;
+  cmsReadEnabled: boolean;
 };
 
 export type SubscribeRequest = {

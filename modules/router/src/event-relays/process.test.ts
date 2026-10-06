@@ -69,6 +69,7 @@ describe('createEventRelayPusher', () => {
     const calls: unknown[] = [];
     const push = createEventRelayPusher(async data => {
       calls.push(data);
+      return true;
     });
     await push('order-updated', { id: '1' }, ['room-1']);
     assert.deepEqual(calls, [
@@ -79,6 +80,8 @@ describe('createEventRelayPusher', () => {
         rooms: ['room-1'],
         namespace: EVENTS_NAMESPACE,
         localOnly: true,
+        skipEmptyRooms: true,
+        boundedEmit: true,
       },
     ]);
   });

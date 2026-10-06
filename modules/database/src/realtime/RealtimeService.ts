@@ -16,17 +16,18 @@ import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
 import { toOptedInSchema } from './authorize.js';
 import { ChangeStreamCoordinator } from './ChangeStreamCoordinator.js';
+import { MongoChangeStreamCoordinator } from './MongoChangeStreamCoordinator.js';
 import { registerDatabaseRealtimeSocket } from './sockets.js';
 import { buildRealtimeStatus } from './status.js';
 import { RealtimeSubscriptionTracker } from './subscriptions.js';
 import type { ChangeStreamLike, OptedInSchema, RealtimeStatus } from './types.js';
-import { topologyFromHello } from './topology.js';
+import type { WatchPipeline } from './watchPipeline.js';
 import { SqlRealtimeSupport } from './sql/SqlRealtimeSupport.js';
 import { SQL_LEADER_LOCK } from './sql/constants.js';
 
 export class RealtimeService {
   private readonly subscriptions: RealtimeSubscriptionTracker;
-  private coordinator?: ChangeStreamCoordinator;
+  private coordinator?: ChangeStreamCoordinator | MongoChangeStreamCoordinator;
   private sqlSupport?: SqlRealtimeSupport;
 
   constructor(
@@ -43,13 +44,14 @@ export class RealtimeService {
       void this.reconcile();
     });
     if (adapter instanceof MongooseAdapter) {
-      this.coordinator = new ChangeStreamCoordinator({
+      this.coordinator = new MongoChangeStreamCoordinator({
         grpcSdk,
-        watch: options => this.openWatch(adapter, options.resumeAfter),
-        checkTopology: () => this.checkMongoTopology(adapter),
+        watch: pipeline => this.openWatch(adapter, pipeline),
+        hello: () => this.hello(adapter),
         getOptedInSchemas: () => this.getOptedInSchemas(),
         subscriptions: this.subscriptions,
         enabled: () => this.isGloballyEnabled(),
+        engine: () => adapter.getDatabaseType(),
       });
     } else if (adapter instanceof SequelizeAdapter) {
       this.sqlSupport = new SqlRealtimeSupport(adapter);
@@ -156,19 +158,12 @@ export class RealtimeService {
     return undefined;
   }
 
-  private openWatch(adapter: MongooseAdapter, resumeAfter?: unknown): ChangeStreamLike {
+  private openWatch(adapter: MongooseAdapter, pipeline: WatchPipeline): ChangeStreamLike {
     const db = adapter.mongoose.connection.db;
     if (!db) {
       throw new Error('MongoDB connection is not ready');
     }
-    return db.watch(
-      [],
-      resumeAfter ? { resumeAfter: resumeAfter as never } : {},
-    ) as unknown as ChangeStreamLike;
-  }
-
-  private async checkMongoTopology(adapter: MongooseAdapter) {
-    return topologyFromHello(await this.hello(adapter).catch(() => null));
+    return db.watch(pipeline) as unknown as ChangeStreamLike;
   }
 
   private async hello(

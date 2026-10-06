@@ -296,8 +296,8 @@ export class ChangeStreamCoordinator {
     this.lastEventAt = event.occurredAt;
     this.lastError = undefined;
     await this.emitChange(schema, event);
-    if (this.persistResume) {
-      await this.persistResumeToken(event.resumeToken);
+    if (this.persistResume && token) {
+      await this.persistResumeToken(token);
     }
   }
 

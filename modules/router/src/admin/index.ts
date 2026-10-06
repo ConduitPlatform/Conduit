@@ -242,6 +242,21 @@ export class AdminHandlers {
       }),
       this.eventRelayAdmin.deleteEventRelay.bind(this.eventRelayAdmin),
     );
+    this.routingManager.route(
+      {
+        path: '/event-relays/preview',
+        action: ConduitRouteActions.POST,
+        description: `Renders a relay message template against sample bus JSON (same engine as runtime).`,
+        bodyParams: {
+          messageTemplate: ConduitJson.Required,
+          samplePayload: ConduitJson.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('PreviewEventRelay', {
+        rendered: ConduitJson.Required,
+      }),
+      this.eventRelayAdmin.previewEventRelay.bind(this.eventRelayAdmin),
+    );
     this.routingManager.registerRoutes();
   }
 }

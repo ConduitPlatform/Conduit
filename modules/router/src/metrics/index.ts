@@ -38,4 +38,39 @@ export default {
       help: 'Tracks denied or unavailable event-relay socket subscriptions',
     },
   },
+  eventRelaysActive: {
+    type: MetricType.Gauge,
+    config: {
+      name: 'event_relays_active_total',
+      help: 'Active event relays on this router replica',
+    },
+  },
+  eventRelaysSubscribedChannels: {
+    type: MetricType.Gauge,
+    config: {
+      name: 'event_relays_subscribed_channels_total',
+      help: 'Bus channels this router replica subscribes to for event relays',
+    },
+  },
+  eventRelaysEmptyRoom: {
+    type: MetricType.Counter,
+    config: {
+      name: 'event_relays_empty_room_total',
+      help: 'Skipped emits because no local sockets were in the relay room',
+    },
+  },
+  eventRelaysInboundDropped: {
+    type: MetricType.Counter,
+    config: {
+      name: 'event_relays_inbound_dropped_total',
+      help: 'Inbound bus payloads dropped for exceeding the size cap',
+    },
+  },
+  eventRelaysEmitDropped: {
+    type: MetricType.Counter,
+    config: {
+      name: 'event_relays_emit_dropped_total',
+      help: 'Socket emits dropped or disconnected due to backpressure',
+    },
+  },
 };

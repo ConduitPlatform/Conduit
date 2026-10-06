@@ -1,9 +1,13 @@
+export const RECOVERY_REDIS_TTL_SECONDS = 120;
+
 export type SubscriptionStore = {
   sadd(key: string, ...members: string[]): Promise<unknown>;
   srem(key: string, ...members: string[]): Promise<unknown>;
   smembers(key: string): Promise<string[]>;
   scard(key: string): Promise<number>;
   del(...keys: string[]): Promise<unknown>;
+  expire(key: string, seconds: number): Promise<unknown>;
+  persist(key: string): Promise<unknown>;
 };
 
 function socketKey(socketId: string): string {
@@ -31,12 +35,15 @@ export class RealtimeSubscriptionTracker {
     documentId: string,
     userId: string,
   ): Promise<void> {
-    await this.store.sadd(
-      socketKey(socketId),
-      subscriptionRecord(schema, documentId, userId),
-    );
-    await this.store.sadd(userDocSocketsKey(schema, documentId, userId), socketId);
-    await this.store.sadd(docUsersKey(schema, documentId), userId);
+    const socket = socketKey(socketId);
+    const userDoc = userDocSocketsKey(schema, documentId, userId);
+    const docUsers = docUsersKey(schema, documentId);
+    await this.store.sadd(socket, subscriptionRecord(schema, documentId, userId));
+    await this.store.sadd(userDoc, socketId);
+    await this.store.sadd(docUsers, userId);
+    await this.store.persist(socket);
+    await this.store.persist(userDoc);
+    await this.store.persist(docUsers);
   }
 
   async removeAuthorizedDocument(
@@ -88,5 +95,42 @@ export class RealtimeSubscriptionTracker {
       }
     }
     await this.store.del(socketKey(socketId));
+  }
+
+  async armRecoverableTtl(
+    socketId: string,
+    ttlSeconds: number = RECOVERY_REDIS_TTL_SECONDS,
+  ): Promise<void> {
+    const socket = socketKey(socketId);
+    const records = await this.store.smembers(socket);
+    await this.store.expire(socket, ttlSeconds);
+    for (const record of records) {
+      try {
+        const parsed = JSON.parse(record) as {
+          schema: string;
+          documentId: string;
+          userId: string;
+        };
+        const userDoc = userDocSocketsKey(
+          parsed.schema,
+          parsed.documentId,
+          parsed.userId,
+        );
+        const others = (await this.store.smembers(userDoc)).filter(id => id !== socketId);
+        if (others.length > 0) continue;
+        await this.store.expire(userDoc, ttlSeconds);
+        const users = await this.store.smembers(
+          docUsersKey(parsed.schema, parsed.documentId),
+        );
+        if (users.length <= 1) {
+          await this.store.expire(
+            docUsersKey(parsed.schema, parsed.documentId),
+            ttlSeconds,
+          );
+        }
+      } catch {
+        // ignore malformed records
+      }
+    }
   }
 }

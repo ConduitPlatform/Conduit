@@ -9,7 +9,6 @@
   },
   "include": [
     "src/admin/realtime/ticket.ts",
-    "src/admin/realtime/handshake.ts",
     "src/admin/realtime/namespace.ts",
     "src/admin/realtime/*.test.ts"
   ],

@@ -1,6 +1,6 @@
 import { status } from '@grpc/grpc-js';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
-import type { OptedInSchema, SubscribeRequest } from './types.js';
+import type { OptedInSchema, RebacDecision, SubscribeRequest } from './types.js';
 
 export class RealtimeSubscriptionError extends GrpcError {
   constructor(code: number, message: string) {
@@ -61,20 +61,17 @@ export function optionalDocumentId(value: unknown): string | undefined {
   return value;
 }
 
-export type DocumentReadDecision = 'allow' | 'deny' | 'unavailable';
-
-export async function documentReadDecision(
+export async function readDocumentDecision(
   grpcSdk: AuthorizationSdk,
   schema: string,
   documentId: string,
   userId: string,
-): Promise<DocumentReadDecision> {
-  const auth = grpcSdk.authorization;
-  if (!auth || !grpcSdk.isAvailable('authorization')) {
+): Promise<RebacDecision> {
+  if (!grpcSdk.authorization || !grpcSdk.isAvailable('authorization')) {
     return 'unavailable';
   }
   try {
-    const decision = await auth.can({
+    const decision = await grpcSdk.authorization.can({
       subject: `User:${userId}`,
       actions: ['read'],
       resource: `${schema}:${documentId}`,
@@ -85,13 +82,15 @@ export async function documentReadDecision(
   }
 }
 
+export const documentReadDecision = readDocumentDecision;
+
 export async function canReadDocument(
   grpcSdk: AuthorizationSdk,
   schema: string,
   documentId: string,
   userId: string,
 ): Promise<boolean> {
-  return (await documentReadDecision(grpcSdk, schema, documentId, userId)) === 'allow';
+  return (await readDocumentDecision(grpcSdk, schema, documentId, userId)) === 'allow';
 }
 
 export function assertSchemaAvailable(
@@ -136,6 +135,7 @@ export function toOptedInSchema(schema: {
   modelOptions?: {
     conduit?: {
       realtime?: { enabled?: boolean };
+      cms?: { crudOperations?: { read?: { enabled?: boolean } } };
       authorization?: { enabled?: boolean };
     };
   };
@@ -144,7 +144,9 @@ export function toOptedInSchema(schema: {
   return {
     name: schema.name,
     collectionName: schema.collectionName,
-    authorizationEnabled: schema.modelOptions.conduit.authorization?.enabled === true,
     documentIdField: schema.documentIdField,
+    authorizationEnabled: schema.modelOptions.conduit.authorization?.enabled === true,
+    cmsReadEnabled:
+      schema.modelOptions.conduit.cms?.crudOperations?.read?.enabled === true,
   };
 }

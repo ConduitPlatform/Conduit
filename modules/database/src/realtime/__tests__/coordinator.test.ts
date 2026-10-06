@@ -30,6 +30,12 @@ class MemoryStore {
     keys.forEach(key => this.sets.delete(key));
     return keys.length;
   }
+  async expire(_key: string, _seconds: number) {
+    return 1;
+  }
+  async persist(_key: string) {
+    return 1;
+  }
 }
 
 function createCoordinator(overrides?: {

@@ -2,9 +2,8 @@ import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash-es';
 // Removed ConduitCommons import - now using configManager directly
 import { isDev } from '../utils/middleware.js';
-import { ConduitRequest } from '@conduitplatform/hermes';
+import { ConduitRequest, isSocketHandshake } from '@conduitplatform/hermes';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import { isSocketHandshake } from '../realtime/handshake.js';
 
 export function getAdminMiddleware(configManager: any) {
   return async function adminMiddleware(

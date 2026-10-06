@@ -47,7 +47,11 @@ since the latter need to go through parsers that are otherwise unnecessary for M
 
 When using MongoDB with a replica set (e.g., MongoDB Atlas), the database module supports configuring read preference, write concern, and read concern through the admin panel at `PATCH /config/database`.
 
-Live document updates on MongoDB also require a replica set or sharded cluster. Local Compose files initialize a single-node replica set so change streams can be exercised. PostgreSQL live updates require logical replication (`wal_level=logical`, a `pgoutput` publication, and a replication slot) — the same class of topology tax as a Mongo replica set. MySQL, MariaDB, and SQLite live updates are out of v1.
+Live document updates require a replica set or sharded cluster (Atlas is fine). Helm’s bundled Mongo chart is a **standalone** Deployment (`replicas: 1`, no `--replSet`), so live updates stay `idle` there until you point `DB_CONN_URI` at Atlas or an operator-managed replica set.
+
+Local Compose files initialize a single-node `rs0`. **Existing Compose Mongo volumes will not become a replica set cleanly** — drop the volume or start from an empty data dir if `hello` still reports standalone.
+
+PostgreSQL live updates require logical replication (`wal_level=logical`, a `pgoutput` publication, and a replication slot). MySQL, MariaDB, and SQLite live updates are out of v1.
 
 ### Live updates
 
@@ -58,15 +62,19 @@ subscribe({ schema: 'Order', documentId?: string })
 unsubscribe({ schema: 'Order', documentId?: string })
 ```
 
-Events arrive as `change` with `{ version, operation, schema, documentId, occurredAt, resumeToken }` and contain no document fields. Consumers should refetch through their authorized REST or custom-endpoint path. PostgreSQL `TRUNCATE` is published as a schema-level `reset` (no row dump); clients refetch the collection.
+Events arrive as `change` with `{ version, operation, schema, documentId, occurredAt }` and contain no document fields. Consumers should refetch through their authorized REST or custom-endpoint path. PostgreSQL `TRUNCATE` is published as a schema-level `reset` (no row dump); clients refetch the collection.
 
-MongoDB uses native change streams. PostgreSQL uses in-process WAL CDC (`pgoutput` publication + a **temporary** logical slot). That is WAL CDC, Postgres-only — not a changelog table, not triggers, not Debezium. There is **no catch-up**: re-subscribe, leader restart, or slot drop does not replay missed events; clients fetch current data. `LISTEN`/`NOTIFY` is not the capture path.
+MongoDB uses native change streams and is **live-tail, not backfill**: the change stream starts at the end of the oplog. A leader restart or cursor drop does not replay missed events; clients subscribe again and refetch over authorized REST.
+
+PostgreSQL uses in-process WAL CDC (`pgoutput` publication + a **temporary** logical slot). That is WAL CDC, Postgres-only — not a changelog table, not triggers, not Debezium. There is **no catch-up**: re-subscribe, leader restart, or slot drop does not replay missed events; clients fetch current data. `LISTEN`/`NOTIFY` is not the capture path.
 
 The database role needs permission to `CREATE PUBLICATION`, `ALTER PUBLICATION`, and to create a logical replication slot (`REPLICATION` / managed-Postgres logical-replication grants). A transaction-mode pooler cannot speak the replication protocol; use a direct/session URI. Tables without a primary key get `REPLICA IDENTITY FULL` so UPDATE/DELETE can be published. Custom PKs use the schema’s physical primary key (`idField`), not a virtual `_id`. Missing opted-in tables are skipped so the rest of the watch can still start.
 
 MySQL, MariaDB, and SQLite are unsupported for live updates. Do not enable `realtime` on those engines.
 
-Client subscribers must authenticate. Schemas with document-level authorization reject schema-wide subscriptions and require a document ID plus a `read` check. Admin consumers use `POST /realtime/ticket` for a 30-second handshake token; session JWTs and masterkeys must not be sent from browser code.
+The leader also publishes `database:change:${schema}` on the Redis bus. **Do not also relay `database:change:*` on `/events/` if the same client is on `/database/`** — that duplicates notifications. Keep the bus for other modules; just do not dual-subscribe.
+
+Client subscribers must authenticate. Schemas with document-level authorization reject schema-wide subscriptions and require a document ID plus a `read` check. Client sockets also require CMS `crudOperations.read.enabled` (checked again at emit: deny skips client delivery and keeps membership; authorization UNAVAILABLE keeps membership without emitting). Admin consumers use `POST /realtime/ticket` for a 30-second handshake token; that token cannot mint another ticket or call REST/GraphQL. Session JWTs and masterkeys must not be sent from browser code.
 
 Admin sockets must be enabled (`admin.transports.sockets`) and the Admin socket port (`ADMIN_SOCKET_PORT`, default 3031) reachable from the UI.
 

@@ -10,6 +10,7 @@ export interface ConduitSocketParameters {
   socketId: string;
   params?: UntypedArray;
   context?: Indexable;
+  recoveredRooms?: string[];
 }
 
 export type ConduitSocketParamTypes = (TYPE | ConduitSocketParamTypes)[];
@@ -19,6 +20,7 @@ export interface ConduitSocketOptions {
   name?: string;
   description?: string;
   middlewares?: string[];
+  onRecovered?: ConduitSocketEventHandler;
 }
 
 export type EventResponse = {
@@ -84,6 +86,18 @@ export class ConduitSocket {
       return this._events.get('any')!.handler(request);
     }
     return Promise.reject('no such event registered');
+  }
+
+  executeRecovered(
+    request: ConduitSocketParameters,
+  ): ConduitSocketHandlerResponse | null {
+    if (this._input.onRecovered) {
+      return this._input.onRecovered(request);
+    }
+    if (this._events.has('recovered')) {
+      return this._events.get('recovered')!.handler(request);
+    }
+    return null;
   }
 }
 

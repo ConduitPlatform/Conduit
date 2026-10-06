@@ -30,9 +30,6 @@ export function normalizeChangeEvent(
   if (!documentId) {
     return null;
   }
-  if (!change._id) {
-    return null;
-  }
   return {
     version: DATABASE_CHANGE_EVENT_VERSION,
     operation: operation as DatabaseChangeOperation,
@@ -42,7 +39,6 @@ export function normalizeChangeEvent(
       ? change.wallTime
       : occurredAt
     ).toISOString(),
-    resumeToken: EJSON.stringify(change._id),
   };
 }
 
