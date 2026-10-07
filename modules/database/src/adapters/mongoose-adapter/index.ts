@@ -29,6 +29,8 @@ import {
   bindVectorIndexToField,
   planMongoVectorIndexCreate,
   assertMongoVectorSearchIndexDropTarget,
+  castMongoPipelineObjectIds,
+  mongoObjectIdFields,
 } from '../utils/index.js';
 import pluralize from '../../utils/pluralize.js';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils.js';
@@ -248,7 +250,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
     const model = this.models[modelName];
     const viewOn = model.originalSchema.collectionName;
-    const pipeline = this.parseViewPipeline(query);
+    const pipeline = this.parseViewPipeline(query, model);
 
     const metadata = await this.models['Views'].findOne(
       { name: viewName },
@@ -274,9 +276,16 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return 'waiting';
   }
 
-  private parseViewPipeline(query: any): object[] {
+  private parseViewPipeline(query: any, model: MongooseSchema): object[] {
     const raw = query.mongoQuery;
-    return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const pipeline = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return castMongoPipelineObjectIds(pipeline, this.objectIdFields(model)) as object[];
+  }
+
+  private objectIdFields(model: MongooseSchema): Set<string> {
+    return mongoObjectIdFields(
+      model.originalSchema.compiledFields ?? model.originalSchema.fields ?? {},
+    );
   }
 
   private async mongoViewNamespaceExists(viewName: string): Promise<boolean> {
@@ -453,7 +462,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
     const model = this.models[modelName];
     const viewOn = model.originalSchema.collectionName;
-    const pipeline = this.parseViewPipeline(query);
+    const pipeline = this.parseViewPipeline(query, model);
 
     if (existingView && !isEqual(existingView.viewQuery, query)) {
       await this.reconcileStaleView(viewName);
@@ -879,16 +888,22 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async execRawQuery(schemaName: string, rawQuery: RawMongoQuery) {
-    let collection = this.models[schemaName]?.model.collection;
-    if (!collection) {
-      collection = this.views[schemaName]?.model.collection;
-    }
+    const schema = this.models[schemaName]?.model
+      ? this.models[schemaName]
+      : this.views[schemaName];
+    const collection = schema?.model.collection;
     let result;
     try {
       const queryOperation = Object.keys(rawQuery).filter(v => {
         if (v !== 'options') return v;
       })[0];
-      const queryObjects = rawQuery[queryOperation as keyof RawMongoQuery];
+      let queryObjects = rawQuery[queryOperation as keyof RawMongoQuery];
+      if (queryOperation === 'aggregate' && schema) {
+        queryObjects = castMongoPipelineObjectIds(
+          queryObjects,
+          this.objectIdFields(schema),
+        ) as object[];
+      }
       // @ts-ignore
       result = await collection[queryOperation](
         ...(isArray(queryObjects) && queryOperation !== 'aggregate'
