@@ -1,5 +1,6 @@
 import { Schema } from 'mongoose';
 import {
+  ConduitGrpcSdk,
   ConduitModelField,
   ConduitSchema,
   ModelOptionsIndexes,
@@ -10,6 +11,13 @@ import { cloneDeep, isArray, isNil, isObject } from 'lodash-es';
 import { checkIfMongoOptions } from './utils.js';
 import { applyMongoVectorField } from '../utils/vectorMappings.js';
 import { isVectorTypeName } from '../utils/vectorField.js';
+import {
+  isArrayLikeConduitField,
+  isCompatibleIndexType,
+  mapCompatibleToMongo,
+  mongoAllowsIndexType,
+  normalizeIndexTypes,
+} from '../utils/indexes.js';
 
 import * as deepdash from 'deepdash-es/standalone';
 
@@ -23,10 +31,10 @@ export function schemaConverter(jsonSchema: ConduitSchema) {
     delete copy.fields['_id'];
   }
   copy = convertSchemaFieldIndexes(copy);
-  deepdash.eachDeep(copy.fields, convert);
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
+  deepdash.eachDeep(copy.fields, convert);
   iterDeep(copy.fields);
   return copy;
 }
@@ -104,60 +112,94 @@ function convert(value: any, key: any, parentValue: any) {
 }
 
 function convertSchemaFieldIndexes(copy: ConduitSchema) {
+  const lifted: ModelOptionsIndexes[] = [];
   for (const field of Object.entries(copy.fields)) {
-    const index = (field[1] as ConduitModelField).index;
+    const modelField = field[1] as ConduitModelField;
+    const index = modelField.index;
     if (!index) continue;
     const type = index.type;
     const options = index.options;
-    if (type && !Object.values(MongoIndexType).includes(type)) {
-      throw new Error('Incorrect index type for MongoDB');
+    if (type && !mongoAllowsIndexType(type)) {
+      ConduitGrpcSdk.Logger.warn(
+        `Invalid index type for MongoDB found in '${copy.name}', ignoring index`,
+      );
+      delete modelField.index;
+      continue;
+    }
+    if (type && isCompatibleIndexType(type)) {
+      index.type = mapCompatibleToMongo(type);
     }
     if (options) {
       if (!checkIfMongoOptions(options)) {
-        throw new Error('Incorrect index options for MongoDB');
+        ConduitGrpcSdk.Logger.warn(
+          `Invalid index options for MongoDB found in '${copy.name}', ignoring index`,
+        );
+        delete modelField.index;
+        continue;
       }
       for (const [option, optionValue] of Object.entries(options)) {
         index[option as keyof SchemaFieldIndex] = optionValue;
       }
       delete index.options;
     }
+    if (isArrayLikeConduitField(field[1])) {
+      lifted.push({
+        fields: [field[0]],
+        types: index.type !== undefined ? [index.type] : undefined,
+        options: {
+          ...(typeof index.unique === 'boolean' ? { unique: index.unique } : {}),
+          ...(typeof index.name === 'string' ? { name: index.name } : {}),
+        },
+        name: index.name,
+      });
+      delete modelField.index;
+    }
+  }
+  if (lifted.length) {
+    copy.modelOptions.indexes = [...(copy.modelOptions.indexes ?? []), ...lifted];
   }
   return copy;
 }
 
 function convertModelOptionsIndexes(copy: ConduitSchema) {
   if (!copy.modelOptions.indexes?.length) return copy;
-  const mutIndexes = copy.modelOptions.indexes as ModelOptionsIndexes[];
-  for (const index of mutIndexes) {
-    // compound indexes are maintained in modelOptions in order to be created after schema creation
-    // single field index => add it to specified schema field
-    if (index.fields.length !== 1) continue;
-    const modelField = copy.fields[index.fields[0]] as ConduitModelField;
-    if (!modelField) {
-      throw new Error(`Field ${modelField} in index definition doesn't exist`);
-    }
+  const remaining: ModelOptionsIndexes[] = [];
+  for (const index of copy.modelOptions.indexes) {
+    let mappedTypes: MongoIndexType[] | undefined;
     if (index.types) {
+      const types = normalizeIndexTypes(index.types, index.fields.length) ?? [];
       if (
-        !isArray(index.types) ||
-        !Object.values(MongoIndexType).includes(index.types[0]) ||
-        index.fields.length !== index.types.length
+        types.some(type => !mongoAllowsIndexType(type)) ||
+        (isArray(index.types) && index.fields.length !== index.types.length)
       ) {
-        throw new Error('Invalid index type for MongoDB');
+        ConduitGrpcSdk.Logger.warn(
+          `Invalid index type for MongoDB found in '${copy.name}', ignoring index`,
+        );
+        continue;
       }
-      const type = index.types[0] as MongoIndexType;
-      modelField.index = {
-        type: type,
-      };
+      mappedTypes = types.map(mapCompatibleToMongo);
+      index.types = mappedTypes;
     }
-    if (index.options) {
-      if (!checkIfMongoOptions(index.options)) {
-        throw new Error('Incorrect index options for MongoDB');
-      }
-      for (const [option, optionValue] of Object.entries(index.options)) {
-        modelField.index![option as keyof SchemaFieldIndex] = optionValue;
-      }
+    if (index.fields.length !== 1) {
+      remaining.push(index);
+      continue;
     }
-    mutIndexes.splice(mutIndexes.indexOf(index), 1);
+    const modelField = copy.fields[index.fields[0]] as ConduitModelField;
+    if (!modelField || isArrayLikeConduitField(modelField)) {
+      remaining.push(index);
+      continue;
+    }
+    if (index.options && !checkIfMongoOptions(index.options)) {
+      ConduitGrpcSdk.Logger.warn(
+        `Invalid index options for MongoDB found in '${copy.name}', ignoring index`,
+      );
+      continue;
+    }
+    modelField.index = {
+      ...(mappedTypes ? { type: mappedTypes[0] } : {}),
+      ...index.options,
+    };
   }
+  copy.modelOptions.indexes = remaining;
   return copy;
 }
