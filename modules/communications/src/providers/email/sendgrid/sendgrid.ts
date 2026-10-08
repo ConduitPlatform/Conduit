@@ -112,14 +112,17 @@ function toSentMessageInfo(response: {
   const messageId =
     typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : undefined;
 
-  return [
-    {
+  return {
+    messageId: messageId ?? '',
+    response: String(response.statusCode),
+    envelope: { from: false, to: [] },
+    0: {
       caseless: { dict: { 'x-message-id': messageId } },
       headers: response.headers,
       statusCode: response.statusCode,
     },
-    response.body,
-  ] as SentMessageInfo;
+    1: response.body,
+  };
 }
 
 class SendgridTransport implements Transport<SentMessageInfo> {
