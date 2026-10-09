@@ -3,12 +3,12 @@ import { status } from '@grpc/grpc-js';
 
 export const CLIENT_SEMANTIC_SEARCH_MAX_LIMIT = 50;
 
-export function clientSearchSubject(context?: {
-  user?: { _id?: unknown };
-  scope?: unknown;
+export function clientSearchSubject(input?: {
+  context?: { user?: { _id?: unknown }; scope?: unknown };
+  queryParams?: { scope?: unknown };
 }): { userId?: string; scope?: string } {
-  const userId = context?.user?._id;
-  const scope = context?.scope;
+  const userId = input?.context?.user?._id;
+  const scope = input?.queryParams?.scope;
   return {
     ...(typeof userId === 'string' && userId.length > 0 ? { userId } : {}),
     ...(typeof scope === 'string' && scope.length > 0 ? { scope } : {}),
@@ -16,16 +16,17 @@ export function clientSearchSubject(context?: {
 }
 
 export function assertClientSearchSubject(subject: { userId?: string; scope?: string }): {
-  userId?: string;
+  userId: string;
   scope?: string;
 } {
-  if (!subject.userId && !subject.scope) {
+  if (!subject.userId) {
     throw new GrpcError(
       status.PERMISSION_DENIED,
-      'Semantic search requires an authenticated user or scope from router context',
+      'Semantic search requires an authenticated user',
     );
   }
-  return subject;
+  if (!subject.scope) return { userId: subject.userId };
+  return { userId: subject.userId, scope: subject.scope };
 }
 
 export function clampClientSearchLimit(limit?: number): number | undefined {
