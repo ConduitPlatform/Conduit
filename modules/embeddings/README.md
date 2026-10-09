@@ -74,8 +74,8 @@ backfill fail closed while convict `enabled` is false.
 - `POST /embeddings/search`
 
 Config and backfill APIs are never exposed as client routes. Client
-`POST /embeddings/search` accepts text only and takes user/scope from the
-authenticated router context.
+`POST /embeddings/search` accepts text only. userId comes from the bearer
+token. Optional `scope` is a query parameter.
 
 ## Packaging
 

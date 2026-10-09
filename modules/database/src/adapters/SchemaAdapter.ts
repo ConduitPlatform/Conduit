@@ -226,11 +226,10 @@ export abstract class SchemaAdapter<T> {
   ): Promise<string[]> {
     const ids = candidateIds.map(id => String(id)).filter(Boolean);
     if (!ids.length) return [];
-    if (!this.authzEnabled || (isNil(userId) && isNil(scope))) {
-      return ids;
-    }
+    if (!this.authzEnabled) return ids;
+    if (!userId && !scope) return [];
     const view = await this.permissionCheck(operation, userId, scope);
-    if (!view) return ids;
+    if (!view) return [];
     const query =
       this.adapter.getDatabaseType() === 'MongoDB'
         ? { _id: { $in: ids } }
