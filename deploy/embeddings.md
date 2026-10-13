@@ -68,8 +68,9 @@ pod with module convict `enabled` still false.
    `GET /embeddings/backfills/:id` and `GET /embeddings/status` queue counts.
    Do not scan collections in the request thread; backfills are queued.
 9. Run a scoped canary semantic search (`POST /embeddings/search` as an
-   operator, or client search with authenticated user/scope). Confirm
-   fail-closed behavior on authorization-enabled schemas.
+   operator, or client search as an authenticated user with an optional
+   `scope` query parameter). Confirm fail-closed behavior on
+   authorization-enabled schemas.
 
 ## Rollback
 

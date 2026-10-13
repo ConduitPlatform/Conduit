@@ -1,6 +1,7 @@
 import {
   ConduitGrpcSdk,
   ConduitRouteActions,
+  ConduitRouteOptions,
   ConduitRouteReturnDefinition,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -20,6 +21,63 @@ import {
   clientSearchSubject,
 } from '../utils/clientSearchContext.js';
 
+export function clientSearchCall(call: ParsedRouterRequest): {
+  request: {
+    schemaName: string;
+    text: string;
+    targetField?: string;
+    limit?: number;
+    filter?: string;
+    userId: string;
+    scope?: string;
+  };
+  caller: { callerModule: 'router' };
+} {
+  const subject = assertClientSearchSubject(
+    clientSearchSubject({
+      context: call.request.context,
+      queryParams: call.request.queryParams,
+    }),
+  );
+  const rawFilter = call.request.params.filter;
+  let filter: string | undefined;
+  if (typeof rawFilter === 'string') {
+    filter = rawFilter;
+  } else if (rawFilter != null) {
+    filter = JSON.stringify(rawFilter);
+  }
+  return {
+    request: {
+      schemaName: call.request.params.schemaName,
+      text: call.request.params.text,
+      targetField: call.request.params.targetField,
+      limit: clampClientSearchLimit(call.request.params.limit),
+      filter,
+      userId: subject.userId,
+      scope: subject.scope,
+    },
+    caller: { callerModule: 'router' },
+  };
+}
+
+export const CLIENT_SEMANTIC_SEARCH_ROUTE: ConduitRouteOptions = {
+  path: '/search',
+  action: ConduitRouteActions.POST,
+  description:
+    'Client semantic search by text. userId comes from the authenticated bearer token. Optional scope is a query parameter. Raw vectors, body or query userId, body scope, and adminOperator are not accepted. Client limit is capped below the admin/gRPC vector-search maximum.',
+  bodyParams: {
+    schemaName: ConduitString.Required,
+    text: ConduitString.Required,
+    targetField: ConduitString.Optional,
+    filter: ConduitJson.Optional,
+    limit: ConduitNumber.Optional,
+  },
+  queryParams: {
+    scope: ConduitString.Optional,
+  },
+  middlewares: ['authMiddleware'],
+};
+
 export class EmbeddingsRoutes {
   private readonly routingManager: RoutingManager;
 
@@ -36,25 +94,8 @@ export class EmbeddingsRoutes {
   }
 
   async semanticSearch(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const subject = assertClientSearchSubject(clientSearchSubject(call.request.context));
-    const filter = call.request.params.filter;
-    const result = await this.api.semanticSearch(
-      {
-        schemaName: call.request.params.schemaName,
-        text: call.request.params.text,
-        targetField: call.request.params.targetField,
-        limit: clampClientSearchLimit(call.request.params.limit),
-        filter:
-          filter == null
-            ? undefined
-            : typeof filter === 'string'
-              ? filter
-              : JSON.stringify(filter),
-        userId: subject.userId,
-        scope: subject.scope,
-      },
-      { callerModule: 'router' },
-    );
+    const search = clientSearchCall(call);
+    const result = await this.api.semanticSearch(search.request, search.caller);
     return {
       hits: result.hits.map(hit => ({
         ...hit,
@@ -66,20 +107,7 @@ export class EmbeddingsRoutes {
   async registerRoutes() {
     this.routingManager.clear();
     this.routingManager.route(
-      {
-        path: '/search',
-        action: ConduitRouteActions.POST,
-        description:
-          'Client semantic search by text. User and scope are taken from the authenticated router context; raw vectors, userId, scope, and adminOperator are not accepted. Client limit is capped below the admin/gRPC vector-search maximum.',
-        bodyParams: {
-          schemaName: ConduitString.Required,
-          text: ConduitString.Required,
-          targetField: ConduitString.Optional,
-          filter: ConduitJson.Optional,
-          limit: ConduitNumber.Optional,
-        },
-        middlewares: ['authMiddleware'],
-      },
+      CLIENT_SEMANTIC_SEARCH_ROUTE,
       new ConduitRouteReturnDefinition('ClientSemanticSearch', {
         hits: [ConduitJson.Required],
       }),

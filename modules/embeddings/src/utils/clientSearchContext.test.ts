@@ -10,21 +10,67 @@ import {
 } from './clientSearchContext.js';
 
 describe('client semantic search context', () => {
-  it('accepts text-only search subjects from router context and fail-closes otherwise', () => {
+  it('forwards the token user id and an optional query scope', () => {
     assert.deepEqual(
-      clientSearchSubject({ user: { _id: 'user-1' }, scope: 'Team:org' }),
-      {
-        userId: 'user-1',
-        scope: 'Team:org',
-      },
+      clientSearchSubject({
+        context: { user: { _id: 'user-1' }, scope: 'Team:ignored' },
+        queryParams: { scope: 'Team:org' },
+      }),
+      { userId: 'user-1', scope: 'Team:org' },
     );
-    assert.deepEqual(clientSearchSubject({ user: { _id: 1 } }), {});
+    assert.deepEqual(clientSearchSubject({ context: { user: { _id: 'user-1' } } }), {
+      userId: 'user-1',
+    });
+    assert.deepEqual(
+      assertClientSearchSubject(
+        clientSearchSubject({
+          context: { user: { _id: 'user-1' } },
+          queryParams: { scope: 'Team:org' },
+        }),
+      ),
+      { userId: 'user-1', scope: 'Team:org' },
+    );
+  });
+
+  it('ignores router context scope and treats empty or non-string scope as absent', () => {
+    assert.deepEqual(
+      clientSearchSubject({
+        context: { user: { _id: 'user-1' }, scope: 'Team:context' },
+        queryParams: {},
+      }),
+      { userId: 'user-1' },
+    );
+    assert.deepEqual(
+      clientSearchSubject({
+        context: { user: { _id: 'user-1' } },
+        queryParams: { scope: '' },
+      }),
+      { userId: 'user-1' },
+    );
+    assert.deepEqual(
+      clientSearchSubject({
+        context: { user: { _id: 'user-1' } },
+        queryParams: { scope: ['Team:a', 'Team:b'] },
+      }),
+      { userId: 'user-1' },
+    );
+    assert.deepEqual(clientSearchSubject({ context: { user: { _id: 1 } } }), {});
+  });
+
+  it('rejects a missing token user even when scope is set', () => {
+    assert.throws(
+      () =>
+        assertClientSearchSubject(
+          clientSearchSubject({
+            context: { scope: 'Team:org' },
+            queryParams: { scope: 'Team:org' },
+          }),
+        ),
+      (err: unknown) => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+    );
     assert.throws(
       () => assertClientSearchSubject(clientSearchSubject({})),
       (err: unknown) => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
-    );
-    assert.doesNotThrow(() =>
-      assertClientSearchSubject(clientSearchSubject({ user: { _id: 'user-1' } })),
     );
   });
 
