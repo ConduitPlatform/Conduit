@@ -895,43 +895,6 @@ export function unresolvedRealmError(
 }
 
 // ---------------------------------------------------------------------------
-// DTOs
-// ---------------------------------------------------------------------------
-
-export type RealmMembershipDto = {
-  _id: string;
-  user: string;
-  realm: string;
-  type: RealmMembershipType;
-  createdAt?: string;
-};
-
-function toIsoString(value: unknown): string | undefined {
-  if (value === null || value === undefined) return undefined;
-  const date = value instanceof Date ? value : new Date(value as string);
-  return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
-}
-
-/** Contract `RealmMembership` shape (the stored field is `membershipType`). */
-export function toRealmMembershipDto(doc: {
-  _id: unknown;
-  user: unknown;
-  realm: unknown;
-  membershipType: RealmMembershipType;
-  createdAt?: unknown;
-}): RealmMembershipDto {
-  const dto: RealmMembershipDto = {
-    _id: String(doc._id),
-    user: String(doc.user),
-    realm: String(doc.realm),
-    type: doc.membershipType,
-  };
-  const createdAt = toIsoString(doc.createdAt);
-  if (createdAt !== undefined) dto.createdAt = createdAt;
-  return dto;
-}
-
-// ---------------------------------------------------------------------------
 // Cache
 // ---------------------------------------------------------------------------
 
