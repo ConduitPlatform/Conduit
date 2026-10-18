@@ -71,15 +71,12 @@ import {
 import { anyRealmEnables } from '../../utils/strategyRealms.js';
 import {
   hasCompleteOAuthCredentials,
-  invalidateOAuthSettingsCache,
   isGlobalOAuthAvailable,
   OAuthSettingsCache,
   pickCallbackRedirect,
   settingsForRealm,
   stateRealmRef,
 } from './utils/oauthSettings.logic.js';
-
-export { invalidateOAuthSettingsCache };
 
 /**
  * Base of the OAuth2 providers.

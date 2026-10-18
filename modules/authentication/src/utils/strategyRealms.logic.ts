@@ -11,14 +11,6 @@ const TOGGLE_STRATEGIES = [
 ] as const;
 
 /**
- * Realm strategy key of an OAuth2 handler export (`LinkedInHandlers` ->
- * `oauth.linkedin`, `GoogleHandlers` -> `oauth.google`).
- */
-export function oauthStrategyKey(handlerName: string): string {
-  return `oauth.${handlerName.replace(/Handlers$/, '').toLowerCase()}`;
-}
-
-/**
  * Query for the active realms that enable a strategy. Keys are the strategy names
  * ('local', 'username', 'magicLink', 'phone', 'metamask', 'biometric') or
  * `oauth.<provider>`. Unknown keys throw, so a typo cannot silently match nothing.

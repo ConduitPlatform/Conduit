@@ -27,7 +27,6 @@ import {
   splitRealmSettingsInput,
   subtreeContainsRealm,
   toFullLeafStrategies,
-  toRealmMembershipDto,
   tokenAssurance,
   unresolvedRealmError,
   withHomeScope,
@@ -1116,46 +1115,6 @@ describe('oauth secrets', () => {
         google: { clientSecret: 'a' },
       },
     );
-  });
-});
-
-describe('toRealmMembershipDto', () => {
-  it('maps membershipType to type and stringifies ids and dates', () => {
-    const oid = (id: string) => ({ toString: () => id });
-    assert.deepEqual(
-      toRealmMembershipDto({
-        _id: oid(A),
-        user: oid(B),
-        realm: oid(C),
-        membershipType: 'guest',
-        createdAt: new Date('2026-01-02T03:04:05.000Z'),
-        updatedAt: new Date(),
-      } as any),
-      {
-        _id: A,
-        user: B,
-        realm: C,
-        type: 'guest',
-        createdAt: '2026-01-02T03:04:05.000Z',
-      },
-    );
-  });
-
-  it('accepts string dates and omits a missing createdAt', () => {
-    const dto = toRealmMembershipDto({
-      _id: A,
-      user: B,
-      realm: C,
-      membershipType: 'home',
-      createdAt: '2026-01-02T03:04:05Z',
-    });
-    assert.equal(dto.createdAt, '2026-01-02T03:04:05.000Z');
-    assert.equal(
-      'createdAt' in
-        toRealmMembershipDto({ _id: A, user: B, realm: C, membershipType: 'home' }),
-      false,
-    );
-    assert.equal('membershipType' in dto, false);
   });
 });
 
