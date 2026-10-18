@@ -1,4 +1,9 @@
-import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  CompatibleIndexType,
+  ConduitModel,
+  DatabaseProvider,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 import { User, AccessToken } from './index.js';
 
@@ -38,8 +43,15 @@ const schema: ConduitModel = {
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
+// non-unique: realm sweeps (demote, guest removal) delete tokens by realm
 const modelOptions = {
   timestamps: true,
+  indexes: [
+    {
+      fields: ['realm'],
+      types: [CompatibleIndexType.Ascending],
+    },
+  ],
   conduit: {
     permissions: {
       extendable: true,
