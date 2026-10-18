@@ -15,12 +15,14 @@ import {
   hasNestedRealmViolation,
   homeScopedQuery,
   isRealmId,
+  isRealmsDisableTransition,
   isValidSlug,
   maskRealmSettings,
   mergeOAuthSecrets,
   nearestRealmInChain,
   normalizeIdList,
   normalizeSlug,
+  realmsDisableBlockedMessage,
   shouldCheckRealmAccess,
   splitRealmSettingsInput,
   subtreeContainsRealm,
@@ -1566,5 +1568,58 @@ describe('toFullLeafStrategies', () => {
     assert.deepEqual(input, { local: { enabled: true }, oauth: {} });
     assert.deepEqual(result.username, { enabled: false });
     assert.deepEqual(result.biometric, { enabled: false });
+  });
+});
+
+describe('isRealmsDisableTransition / realmsDisableBlockedMessage', () => {
+  const on = { enabled: true, realms: { enabled: true } };
+
+  it('is true when the update switches realms or teams off while they were on', () => {
+    assert.equal(isRealmsDisableTransition(on, { realms: { enabled: false } }), true);
+    assert.equal(
+      isRealmsDisableTransition(on, { enabled: true, realms: { enabled: false } }),
+      true,
+    );
+    assert.equal(isRealmsDisableTransition(on, { enabled: false }), true);
+    assert.equal(
+      isRealmsDisableTransition(on, { enabled: false, realms: { enabled: true } }),
+      true,
+    );
+  });
+
+  it('is false for updates that keep realms on, partial or not', () => {
+    assert.equal(isRealmsDisableTransition(on, undefined), false);
+    assert.equal(isRealmsDisableTransition(on, {}), false);
+    assert.equal(isRealmsDisableTransition(on, { realms: {} }), false);
+    assert.equal(isRealmsDisableTransition(on, { realms: { enabled: true } }), false);
+  });
+
+  it('is false when realms were not on, so no database call is made', () => {
+    assert.equal(
+      isRealmsDisableTransition(undefined, { realms: { enabled: false } }),
+      false,
+    );
+    assert.equal(
+      isRealmsDisableTransition(
+        { enabled: false, realms: { enabled: true } },
+        { realms: { enabled: false } },
+      ),
+      false,
+    );
+    assert.equal(
+      isRealmsDisableTransition(
+        { enabled: true, realms: { enabled: false } },
+        { enabled: false },
+      ),
+      false,
+    );
+  });
+
+  it('blocks only while enabled realms exist', () => {
+    assert.equal(realmsDisableBlockedMessage(0), null);
+    assert.equal(
+      realmsDisableBlockedMessage(3),
+      '3 enabled realm(s) exist; demote them before disabling realms',
+    );
   });
 });

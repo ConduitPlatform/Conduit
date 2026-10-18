@@ -20,6 +20,31 @@ export function computeRealmsEnabled(
   return teams?.enabled === true && teams?.realms?.enabled === true;
 }
 
+/**
+ * Whether a config update switches the realms feature from on to off. `previousTeams` is
+ * the applied `teams` config, `incomingTeams` the `teams` section of the update, which
+ * may be partial (an absent flag keeps the applied value). Only this transition needs the
+ * database check of `realmsDisableBlockedMessage`; every other update skips it.
+ */
+export function isRealmsDisableTransition(
+  previousTeams: { enabled?: unknown; realms?: { enabled?: unknown } } | null | undefined,
+  incomingTeams: { enabled?: unknown; realms?: { enabled?: unknown } } | null | undefined,
+): boolean {
+  if (!computeRealmsEnabled(previousTeams)) return false;
+  return !computeRealmsEnabled({
+    enabled: incomingTeams?.enabled ?? previousTeams?.enabled,
+    realms: {
+      enabled: incomingTeams?.realms?.enabled ?? previousTeams?.realms?.enabled,
+    },
+  });
+}
+
+/** Why a config update that disables realms is refused, or null when it may proceed. */
+export function realmsDisableBlockedMessage(enabledRealmCount: number): string | null {
+  if (!(enabledRealmCount > 0)) return null;
+  return `${enabledRealmCount} enabled realm(s) exist; demote them before disabling realms`;
+}
+
 export const REALM_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}$/;
 
 export const REALM_OAUTH_PROVIDERS = [
