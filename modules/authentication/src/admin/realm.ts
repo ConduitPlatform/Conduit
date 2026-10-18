@@ -146,7 +146,11 @@ async function rollbackPromote(teamId: string, plan: PromotePlan) {
         );
       }
     },
-    () => Team.getInstance().findByIdAndUpdate(teamId, { realm: { enabled: false } }),
+    // the slug is released with an explicit null (SQL keeps a leaf that is not written)
+    () =>
+      Team.getInstance().findByIdAndUpdate(teamId, {
+        realm: { enabled: false, slug: null },
+      } as Indexable),
     () => RealmSettings.getInstance().deleteMany({ team: teamId }),
   ];
   for (const step of steps) {
@@ -467,10 +471,6 @@ export class RealmsAdmin {
     notifyRealmChange(this.grpcSdk, teamId, this.onRealmChange);
   }
 
-  private findUsersByIds(ids: string[]): Promise<User[]> {
-    return findUsersByIds(ids);
-  }
-
   private async hasRelationOn(userId: string, teamId: string): Promise<boolean> {
     const found = await this.grpcSdk.authorization!.findRelation({
       subject: 'User:' + userId,
@@ -574,7 +574,7 @@ export class RealmsAdmin {
     const typeByUser = new Map(
       memberships.map(membership => [String(membership.user), membership.membershipType]),
     );
-    const loaded = await this.findUsersByIds(Array.from(typeByUser.keys()));
+    const loaded = await findUsersByIds(Array.from(typeByUser.keys()));
     const usersById = new Map(loaded.map(user => [String(user._id), user]));
     const users = memberships
       .map(membership => usersById.get(String(membership.user)))
@@ -719,9 +719,12 @@ export class RealmsAdmin {
       deleteSettings: async () => {
         await RealmSettings.getInstance().deleteMany({ team: teamId });
       },
-      // replaces the whole realm object: the slug is dropped with it
+      // the slug is released with an explicit null: nested objects are flattened columns
+      // on SQL and a write only touches the leaves it defines
       flipTeam: async () => {
-        await Team.getInstance().findByIdAndUpdate(teamId, { realm: { enabled: false } });
+        await Team.getInstance().findByIdAndUpdate(teamId, {
+          realm: { enabled: false, slug: null },
+        } as Indexable);
       },
       publish: async () => this.notifyRealmChange(teamId),
       // last: the realm no longer resolves, so no session can be minted after the sweep
@@ -751,7 +754,7 @@ export class RealmsAdmin {
       );
     }
     const uniqueIds = Array.from(new Set<string>(userIds.map(String)));
-    const users = await this.findUsersByIds(uniqueIds);
+    const users = await findUsersByIds(uniqueIds);
     if (users.length !== uniqueIds.length) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'userIds contains invalid user ids');
     }

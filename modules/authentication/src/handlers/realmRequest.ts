@@ -12,6 +12,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { TokenType } from '../constants/index.js';
 import { errors } from '../errors.js';
+import { hasConduitCode } from '../utils/common.logic.js';
 import { Token, User } from '../models/index.js';
 import {
   assertValidSlug,
@@ -183,21 +184,10 @@ export async function resolveHomeRealmContext(
   try {
     return await resolveRealmById(String(user.homeRealm));
   } catch (err) {
-    if (err instanceof ModuleError && isRealmNotFound(err)) {
+    if (hasConduitCode(err, errors.REALM_NOT_FOUND)) {
       throw new ModuleError(errors.REALM_ACCESS_DENIED);
     }
     throw err;
-  }
-}
-
-function isRealmNotFound(err: ModuleError): boolean {
-  try {
-    return (
-      (JSON.parse(err.message) as { conduitCode?: string }).conduitCode ===
-      errors.REALM_NOT_FOUND.conduitCode
-    );
-  } catch {
-    return false;
   }
 }
 

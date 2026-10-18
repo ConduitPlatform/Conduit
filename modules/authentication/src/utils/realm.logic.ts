@@ -2,6 +2,7 @@ import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { errors } from '../errors.js';
+import { isRecord } from './common.logic.js';
 
 /*
  * Pure realm logic (no database or grpc access) so it can be unit tested like
@@ -322,6 +323,52 @@ export function defaultRealmSettings(): RealmSettingsData {
   };
 }
 
+const OAUTH_CLEARABLE_LEAVES = ['clientId', 'redirect_uri', 'accountLinking'] as const;
+const OAUTH_APPLE_LEAVES = ['teamId', 'keyId'] as const;
+
+/**
+ * The strategies with EVERY leaf the schema knows present: all providers (a provider
+ * missing from `strategies` is disabled), and every credential / override that is unset
+ * as an explicit `null`. Nested objects are flattened columns on SQL and a write only
+ * touches the leaves it defines, so an overwrite that must not keep old values (GitOps
+ * import: the file is the source of truth) has to state them all.
+ */
+export function toFullLeafStrategies(
+  strategies: StoredRealmStrategies,
+): StoredRealmStrategies {
+  const defaults = defaultRealmSettings().strategies;
+  const oauth: Record<string, any> = {};
+  for (const provider of REALM_OAUTH_PROVIDERS) {
+    const entry: Record<string, any> = isRecord(strategies.oauth?.[provider])
+      ? (strategies.oauth[provider] as Record<string, any>)
+      : {};
+    const full: Record<string, any> = { enabled: entry.enabled === true };
+    const leaves: readonly string[] =
+      provider === 'apple'
+        ? [...OAUTH_CLEARABLE_LEAVES, ...OAUTH_APPLE_LEAVES]
+        : OAUTH_CLEARABLE_LEAVES;
+    for (const leaf of leaves) full[leaf] = entry[leaf] ?? null;
+    oauth[provider] = full;
+  }
+  const toggle = (
+    key: 'username' | 'magicLink' | 'phone' | 'metamask' | 'biometric',
+  ) => ({
+    enabled: (strategies[key] ?? defaults[key]).enabled === true,
+  });
+  return {
+    local: {
+      enabled: (strategies.local ?? defaults.local).enabled === true,
+      verificationRequired: strategies.local?.verificationRequired ?? null,
+    } as StoredRealmStrategies['local'],
+    username: toggle('username'),
+    magicLink: toggle('magicLink'),
+    phone: toggle('phone'),
+    metamask: toggle('metamask'),
+    biometric: toggle('biometric'),
+    oauth,
+  };
+}
+
 function nonEmptyString(value: unknown): string | undefined {
   return typeof value === 'string' && value !== '' ? value : undefined;
 }
@@ -336,12 +383,11 @@ function nonEmptyString(value: unknown): string | undefined {
 //   { [provider]: { clientSecret?: string; privateKey?: string } }
 // ---------------------------------------------------------------------------
 
-const OAUTH_SECRET_FIELDS: RealmOAuthSecretField[] = ['clientSecret', 'privateKey'];
+export const OAUTH_SECRET_FIELDS: RealmOAuthSecretField[] = [
+  'clientSecret',
+  'privateKey',
+];
 const OAUTH_READ_FLAGS = ['hasClientSecret', 'hasPrivateKey'] as const;
-
-function isRecord(value: unknown): value is Record<string, any> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isProvider(key: string): key is RealmOAuthProviderKey {
   return (REALM_OAUTH_PROVIDERS as readonly string[]).includes(key);
@@ -379,9 +425,21 @@ export function mergeOAuthSecrets(
   return { ...settings, strategies: { ...settings.strategies, oauth } };
 }
 
+/** A copy without the keys whose value is `null` (unset overrides and credentials). */
+function omitNullKeys<T extends Record<string, any>>(value: T): T {
+  const result: Record<string, any> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (entry !== null) result[key] = entry;
+  }
+  return result as T;
+}
+
 /**
  * Contract read shape: `has*` flags per provider instead of secret values, and no
- * `oauthSecrets` key. Accepts stored settings (with or without `oauthSecrets`) as well
+ * `oauthSecrets` key. Credentials and overrides that are unset are omitted: they are
+ * stored as explicit `null` leaves (see `deepMergeClearing`), which the read shape drops
+ * (`clientId`, `redirect_uri`, `accountLinking`, `teamId`, `keyId`,
+ * `local.verificationRequired`). Accepts stored settings (with or without `oauthSecrets`) as well
  * as merged ones, so a secret is reported whichever place it is found in. Always use
  * this before returning RealmSettings from an admin route.
  */
@@ -400,7 +458,7 @@ export function maskRealmSettings<
   for (const provider of providers) {
     if (!isProvider(provider)) continue;
     const entry = isRecord(entries[provider]) ? entries[provider] : { enabled: false };
-    const publicFields: Record<string, any> = { ...entry };
+    const publicFields: Record<string, any> = omitNullKeys(entry);
     for (const field of [...OAUTH_SECRET_FIELDS, ...OAUTH_READ_FLAGS]) {
       delete publicFields[field];
     }
@@ -414,9 +472,11 @@ export function maskRealmSettings<
     }
     oauth[provider] = masked;
   }
+  const rawLocal = (strategies as Record<string, any> | undefined)?.local;
+  const local = isRecord(rawLocal) ? { local: omitNullKeys(rawLocal) } : {};
   return {
     ...rest,
-    strategies: { ...(strategies as any), oauth },
+    strategies: { ...(strategies as any), ...local, oauth },
   } as Omit<T, 'strategies' | 'oauthSecrets'> & { strategies: MaskedRealmStrategies };
 }
 

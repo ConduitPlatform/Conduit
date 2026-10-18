@@ -2,6 +2,7 @@ import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { errors } from '../errors.js';
+import { filled, isRecord } from '../utils/common.logic.js';
 import {
   applyOAuthSecretsUpdate,
   evaluateGuestAllowed,
@@ -9,6 +10,7 @@ import {
   maskRealmSettings,
   normalizeIdList,
   normalizeSlug,
+  OAUTH_SECRET_FIELDS,
   REALM_OAUTH_PROVIDERS,
   RealmOAuthSecrets,
   RealmPolicies,
@@ -192,10 +194,6 @@ export function resolveSlugChange(
 
 type Record_ = Record<string, any>;
 
-function isRecord(value: unknown): value is Record_ {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function fail(message: string): never {
   throw new GrpcError(status.INVALID_ARGUMENT, message);
 }
@@ -228,8 +226,6 @@ const STRATEGY_TOGGLES = [
 
 const OAUTH_PLAIN_CREDENTIALS = ['clientId', 'redirect_uri'] as const;
 const OAUTH_APPLE_CREDENTIALS = ['teamId', 'keyId'] as const;
-const OAUTH_SECRET_FIELDS = ['clientSecret', 'privateKey'] as const;
-
 /** `null` and blank strings clear a credential, anything else must be a string. */
 function readCredential(value: unknown, path: string): string | null {
   if (value === null) return null;
@@ -367,15 +363,18 @@ export function sanitizeRealmInput(body: unknown): RealmSettingsInput {
 
 /**
  * Deep merge for realm settings: plain objects merge recursively, arrays and scalars
- * replace, and `null` removes the key (so the value falls back to its default or to the
- * global configuration). Neither input is mutated.
+ * replace, and `null` is kept as an explicit `null` leaf (the value falls back to its
+ * default or to the global configuration). The key is NOT deleted: nested objects are
+ * flattened columns on SQL and a write only touches the leaves it defines, so a deleted
+ * key would silently keep the old value there. Readers treat `null` as unset. Neither
+ * input is mutated.
  */
 export function deepMergeClearing<T extends Indexable>(base: T, patch: Indexable): T {
   const result: Indexable = { ...base };
   for (const [key, value] of Object.entries(patch)) {
     if (value === undefined) continue;
     if (value === null) {
-      delete result[key];
+      result[key] = null;
     } else if (isRecord(value) && isRecord(result[key])) {
       result[key] = deepMergeClearing(result[key], value);
     } else if (isRecord(value)) {
@@ -410,10 +409,6 @@ export function pickSettingsFields(stored: Indexable): RealmSettingsFields {
       },
     },
   };
-}
-
-function filled(value: unknown): boolean {
-  return typeof value === 'string' && value.trim() !== '';
 }
 
 /**

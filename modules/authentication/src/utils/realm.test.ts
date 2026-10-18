@@ -24,6 +24,7 @@ import {
   shouldCheckRealmAccess,
   splitRealmSettingsInput,
   subtreeContainsRealm,
+  toFullLeafStrategies,
   toRealmMembershipDto,
   tokenAssurance,
   unresolvedRealmError,
@@ -1416,5 +1417,154 @@ describe('buildEffectiveSettings credential pairing', () => {
       }),
     ).strategies.oauth.apple;
     assert.deepEqual([own.privateKey, own.teamId, own.keyId], ['P', 'T', 'K']);
+  });
+});
+
+describe('explicit null leaves', () => {
+  const nullGoogle = {
+    enabled: true,
+    clientId: null,
+    redirect_uri: null,
+    accountLinking: null,
+  };
+
+  it('buildEffectiveSettings treats null credentials and overrides as unset', () => {
+    const effective = buildEffectiveSettings(
+      {
+        google: {
+          clientId: 'global-id',
+          clientSecret: 'global-secret',
+          redirect_uri: 'https://global/cb',
+          accountLinking: false,
+        },
+        apple: {
+          clientId: 'g',
+          privateKey: 'gk',
+          teamId: 'gt',
+          keyId: 'gkid',
+        },
+        local: { verification: { required: true } },
+      },
+      settings({
+        strategies: {
+          ...defaultRealmSettings().strategies,
+          local: { enabled: true, verificationRequired: null } as any,
+          oauth: {
+            google: nullGoogle,
+            apple: { enabled: true, clientId: null, teamId: null, keyId: null },
+          } as any,
+        },
+      }),
+    );
+    assert.equal(effective.strategies.local.verificationRequired, true);
+    const google = effective.strategies.oauth.google;
+    assert.equal(google.enabled, true);
+    assert.equal(google.clientId, 'global-id');
+    assert.equal(google.clientSecret, 'global-secret');
+    assert.equal(google.redirect_uri, 'https://global/cb');
+    assert.equal(google.accountLinking, false);
+    const apple = effective.strategies.oauth.apple;
+    assert.equal(apple.privateKey, 'gk');
+    assert.equal(apple.teamId, 'gt');
+    assert.equal(apple.keyId, 'gkid');
+  });
+
+  it('maskRealmSettings omits null credentials and overrides from the read shape', () => {
+    const masked = maskRealmSettings({
+      ...defaultRealmSettings(),
+      strategies: {
+        ...defaultRealmSettings().strategies,
+        local: { enabled: true, verificationRequired: null },
+        oauth: { google: { ...nullGoogle, clientId: 'own' }, apple: nullGoogle },
+      },
+      oauthSecrets: { google: { clientSecret: 's' } },
+    } as any);
+    assert.deepEqual(masked.strategies.local, { enabled: true });
+    assert.deepEqual(masked.strategies.oauth.google, {
+      enabled: true,
+      clientId: 'own',
+      hasClientSecret: true,
+    });
+    assert.deepEqual(masked.strategies.oauth.apple, {
+      enabled: true,
+      hasClientSecret: false,
+      hasPrivateKey: false,
+    });
+  });
+
+  it('splitRealmSettingsInput carries null credentials through to the patch', () => {
+    const { settings: patch } = splitRealmSettingsInput({
+      strategies: { oauth: { google: { clientId: null, accountLinking: null } } },
+    } as any);
+    assert.deepEqual(patch.strategies?.oauth?.google, {
+      clientId: null,
+      accountLinking: null,
+    });
+  });
+});
+
+describe('toFullLeafStrategies', () => {
+  const full = (partial: any = {}) =>
+    toFullLeafStrategies({ ...defaultRealmSettings().strategies, ...partial } as any);
+
+  it('has every provider, disabled with null credentials when the input lacks it', () => {
+    const result = full();
+    assert.deepEqual(Object.keys(result.oauth).sort(), [
+      'apple',
+      'bitbucket',
+      'facebook',
+      'figma',
+      'github',
+      'gitlab',
+      'google',
+      'linkedin',
+      'microsoft',
+      'reddit',
+      'slack',
+      'twitch',
+      'twitter',
+    ]);
+    assert.deepEqual(result.oauth.google, {
+      enabled: false,
+      clientId: null,
+      redirect_uri: null,
+      accountLinking: null,
+    });
+    assert.deepEqual(result.oauth.apple, {
+      enabled: false,
+      clientId: null,
+      redirect_uri: null,
+      accountLinking: null,
+      teamId: null,
+      keyId: null,
+    });
+  });
+
+  it('keeps what the input sets and nulls the rest of the provider', () => {
+    const result = full({
+      oauth: { google: { enabled: true, clientId: 'id', redirect_uri: undefined } },
+    });
+    assert.deepEqual(result.oauth.google, {
+      enabled: true,
+      clientId: 'id',
+      redirect_uri: null,
+      accountLinking: null,
+    });
+  });
+
+  it('writes local.verificationRequired as null when the input has none', () => {
+    assert.deepEqual(full().local, { enabled: true, verificationRequired: null });
+    assert.deepEqual(
+      full({ local: { enabled: false, verificationRequired: true } }).local,
+      { enabled: false, verificationRequired: true },
+    );
+  });
+
+  it('does not mutate its input and fills missing toggles', () => {
+    const input: any = { local: { enabled: true }, oauth: {} };
+    const result = toFullLeafStrategies(input);
+    assert.deepEqual(input, { local: { enabled: true }, oauth: {} });
+    assert.deepEqual(result.username, { enabled: false });
+    assert.deepEqual(result.biometric, { enabled: false });
   });
 });

@@ -17,9 +17,12 @@ const schema: ConduitModel = {
   // Public, non-secret realm marker. Realm configuration lives in RealmSettings.
   // Slug uniqueness is NOT enforced by an index: a unique index on the nested
   // `realm.slug` path is not portable across Mongo and the SQL dialects (nested objects
-  // are JSON there, and the many teams without a slug would need a sparse/partial
-  // unique index, which has no portable option). It is enforced in the application by
-  // `assertSlugAvailable` in utils/realm.ts instead.
+  // are flattened into `realm_slug`-style columns there, and the many teams without a
+  // slug would need a sparse/partial unique index, which has no portable option). It is
+  // enforced in the application by `assertSlugAvailable` in utils/realm.ts instead.
+  // Writes: SQL only writes the leaves a write defines, so releasing the slug must send
+  // an explicit `slug: null` (`realm: { enabled: false, slug: null }`); readers treat
+  // null and absent alike.
   realm: {
     enabled: {
       type: TYPE.Boolean,

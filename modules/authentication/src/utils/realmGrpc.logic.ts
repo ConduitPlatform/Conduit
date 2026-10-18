@@ -4,11 +4,8 @@
  */
 import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { isRecord } from './common.logic.js';
 import { isRealmId, RealmMembershipType } from './realm.logic.js';
-
-function isRecord(value: unknown): value is Record<string, any> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 /** The slug of a team, only while it is an enabled realm. */
 export function realmSlugOf(team: Indexable | null | undefined): string | undefined {
