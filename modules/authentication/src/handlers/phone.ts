@@ -27,8 +27,9 @@ import { TeamsHandler } from './team.js';
 import { errors } from '../errors.js';
 import { RealmContext } from '../utils/realm.js';
 import {
+  assertAnonymousUserInRealm,
   assertStrategyEnabledForRealm,
-  grantHomeMembership,
+  grantHomeMembershipForRegistration,
   homeRealmFields,
   isInviteRequired,
   realmIdOf,
@@ -134,6 +135,15 @@ export class PhoneHandlers implements IAuthenticationStrategy {
 
     let user: User | null;
     if (existingToken.tokenType === TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN) {
+      // phone numbers are unique across realms: a number that belongs to a user of
+      // another realm cannot be registered here. The refusal happens only once the
+      // code was proven so that `authenticate` does not reveal which numbers exist.
+      const phoneOwner = await User.getInstance().findOne({
+        phoneNumber: existingToken.data.phone,
+      });
+      if (phoneOwner) {
+        throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
+      }
       user = await this.handlePhoneRegistration(
         existingUser ?? anonymousUser,
         existingToken,
@@ -170,7 +180,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     }
     if (!user) {
       const teams = ConfigController.getInstance().config.teams;
-      if (teams.enabled && invitationToken) {
+      if ((teams.enabled || realmCtx) && invitationToken) {
         // an invitation into a realm must agree with the realm being registered at
         await resolveInvitationRealm(realmCtx, invitationToken);
       }
@@ -184,7 +194,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         );
       }
 
-      if (teams.enabled && call.request.params.invitationToken) {
+      if ((teams.enabled || realmCtx) && call.request.params.invitationToken) {
         const valid = await TeamsHandler.getInstance().inviteValidation(
           call.request.params.invitationToken,
         );
@@ -252,6 +262,8 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     userData?: Indexable,
   ) {
     if (anonymousOrExisting) {
+      // converting a user of another realm must fail before anything is written
+      assertAnonymousUserInRealm(anonymousOrExisting, realmCtx);
       return (await User.getInstance().findByIdAndUpdate(anonymousOrExisting._id, {
         phoneNumber: existingToken.data.phone,
       })) as User;
@@ -265,13 +277,13 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       ...homeRealmFields(realmCtx),
     });
     if (realmCtx) {
-      // an invitation creates the team relation itself, otherwise the user becomes a
-      // plain member of the realm team
-      await grantHomeMembership(
+      // an invitation into the realm creates the team relation itself, otherwise the
+      // user becomes a plain member of the realm team
+      await grantHomeMembershipForRegistration(
         this.grpcSdk,
         user,
         realmCtx,
-        isNil(existingToken.data.invitationToken),
+        existingToken.data.invitationToken,
       ).catch(err => {
         ConduitGrpcSdk.Logger.error(err);
       });

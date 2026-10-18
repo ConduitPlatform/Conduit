@@ -15,6 +15,7 @@ import {
   BoundedTtlCache,
   buildEffectiveSettings,
   collectTeamChain,
+  computeRealmsEnabled,
   EffectiveAuthSettings,
   evaluateRealmAccess,
   hasNestedRealmViolation,
@@ -39,7 +40,7 @@ export type RealmContext = {
 // ---------------------------------------------------------------------------
 
 export function realmsEnabled(): boolean {
-  return ConfigController.getInstance().config?.teams?.realms?.enabled === true;
+  return computeRealmsEnabled(ConfigController.getInstance().config?.teams);
 }
 
 function cacheTtlMs(): number {

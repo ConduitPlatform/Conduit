@@ -136,6 +136,7 @@ describe('realm errors on the OAuth redirect', () => {
     'STRATEGY_NOT_AVAILABLE_FOR_REALM',
     'GUESTS_NOT_ALLOWED',
     'TWO_FA_REQUIRED_FOR_REALM',
+    'INVALID_INVITATION',
   ] as const) {
     it(`appends conduitCode for ${key}`, () => {
       const err = new ModuleError(errors[key]);

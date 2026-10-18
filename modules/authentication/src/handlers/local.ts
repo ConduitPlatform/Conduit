@@ -38,6 +38,7 @@ import {
   assertAnonymousUserInRealm,
   assertStrategyEnabledForRealm,
   grantHomeMembership,
+  grantHomeMembershipForRegistration,
   homeRealmFields,
   isInviteRequired,
   realmIdOf,
@@ -295,7 +296,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const config = ConfigController.getInstance().config;
     const teams = config.teams;
     let realmCtx = await resolveRealmFromCall(call);
-    if (teams.enabled && invitationToken) {
+    if ((teams.enabled || realmCtx) && invitationToken) {
       // an invitation into a realm implies that realm and must agree with an explicit one
       realmCtx = await resolveInvitationRealm(realmCtx, invitationToken, {
         allowImplied: true,
@@ -316,7 +317,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       assertAnonymousUserInRealm(anonymousUser, realmCtx);
     }
     let isVerified = false;
-    if (teams.enabled && invitationToken) {
+    if ((teams.enabled || realmCtx) && invitationToken) {
       const valid = await TeamsHandler.getInstance().inviteValidation(
         invitationToken,
         email,
@@ -391,13 +392,16 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
 
     if (realmCtx && !anonymousUser) {
-      // an invitation creates the team relation itself, otherwise the user becomes a
-      // plain member of the realm team
-      await grantHomeMembership(this.grpcSdk, user, realmCtx, !invitationToken).catch(
-        err => {
-          ConduitGrpcSdk.Logger.error(err);
-        },
-      );
+      // an invitation into the realm creates the team relation itself, otherwise the
+      // user becomes a plain member of the realm team
+      await grantHomeMembershipForRegistration(
+        this.grpcSdk,
+        user,
+        realmCtx,
+        invitationToken,
+      ).catch(err => {
+        ConduitGrpcSdk.Logger.error(err);
+      });
     }
     if (invitationToken) {
       await TeamsHandler.getInstance()

@@ -52,7 +52,9 @@ export function isInviteRequired(
 /**
  * Reconciles the realm named by the request with the realm of an invitation token
  * (both are realm team ids, null = global):
- *  - they must agree, otherwise INVALID_INVITATION;
+ *  - an invitation into a different realm is INVALID_INVITATION;
+ *  - an invitation into a team that belongs to no realm is allowed at any realm: the
+ *    realm stays the requested one and the invitation only adds the team (D4);
  *  - an invitation into a realm with no explicit realm implies that realm, but only
  *    where `allowImplied` is set (flows that issue no session straight away).
  */
@@ -64,6 +66,7 @@ export function reconcileInvitationRealm(
   const explicit = explicitRealmId ? String(explicitRealmId) : null;
   const invite = inviteRealmId ? String(inviteRealmId) : null;
   if (explicit === invite) return explicit;
+  if (invite === null) return explicit;
   if (explicit === null && allowImplied) return invite;
   throw new ModuleError(errors.INVALID_INVITATION);
 }

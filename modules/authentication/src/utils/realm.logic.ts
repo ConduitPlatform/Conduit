@@ -8,6 +8,17 @@ import { errors } from '../errors.js';
  * emailRestrictions. IO lives in ./realm.ts, which re-exports everything here.
  */
 
+/**
+ * Whether the realms feature is on. Realms are a teams feature (memberships need the
+ * authorization relations teams set up, invitation checks are gated on teams), so both
+ * flags are required.
+ */
+export function computeRealmsEnabled(
+  teams: { enabled?: unknown; realms?: { enabled?: unknown } } | null | undefined,
+): boolean {
+  return teams?.enabled === true && teams?.realms?.enabled === true;
+}
+
 export const REALM_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}$/;
 
 export const REALM_OAUTH_PROVIDERS = [
