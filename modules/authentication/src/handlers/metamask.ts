@@ -9,7 +9,7 @@ import {
   Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { User } from '../models/index.js';
+import { RealmMembership, User } from '../models/index.js';
 import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
@@ -22,6 +22,7 @@ import {
 import { Config } from '../config/index.js';
 import { ALT_STRATEGY_AUTH } from '../constants/index.js';
 import { errors } from '../errors.js';
+import { realmsEnabled } from '../utils/realm.js';
 import {
   assertStrategyEnabledForRealm,
   grantHomeMembership,
@@ -122,15 +123,25 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     }
 
     const nonce = uuid();
-    const user = await User.getInstance().create({
+    if (realmCtx || realmsEnabled()) {
+      // Addresses are unique across realms. A wallet that already belongs to a user of
+      // another realm gets a throw-away nonce and nothing is created: addresses are
+      // public, so this reveals nothing, and `authenticate` then fails through the
+      // normal "No user found" path because the scoped lookup does not find the user.
+      const otherRealmUser = await User.getInstance().findOne({
+        'metamask.ethPublicAddress': normalizedEthPublicAddress,
+      } as Query<User>);
+      if (otherRealmUser) return { nonce };
+    }
+
+    // The realm membership and role are granted by the first successful `authenticate`,
+    // once the wallet is proven: an unproven address must not own a membership.
+    await User.getInstance().create({
       metamask: {
         ethPublicAddress: normalizedEthPublicAddress,
         nonce,
       },
       ...homeRealmFields(realmCtx),
-    });
-    await grantHomeMembership(this.grpcSdk, user, realmCtx).catch(err => {
-      ConduitGrpcSdk.Logger.error(err);
     });
 
     return { nonce };
@@ -199,6 +210,17 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     await User.getInstance().findByIdAndUpdate(user._id, {
       'metamask.nonce': uuid(),
     } as Query<User>);
+
+    if (realmCtx) {
+      // the scoped lookup guarantees realmCtx is the user's home realm
+      const hasMembership = await RealmMembership.getInstance().findOne({
+        user: String(user._id),
+        realm: String(realmCtx.team._id),
+      });
+      if (!hasMembership) {
+        await grantHomeMembership(this.grpcSdk, user, realmCtx);
+      }
+    }
 
     const config = ConfigController.getInstance().config;
     return TokenProvider.getInstance().provideUserTokens({

@@ -16,6 +16,9 @@ import { errors } from '../errors.js';
 import { grantHomeMembership, homeRealmFields } from '../handlers/realmRequest.js';
 import { realmsEnabled, resolveRealmById, withHomeScope } from '../utils/realm.js';
 
+// Cap on the memberships loaded to resolve the `realm` filter next to other filters.
+const MAX_MEMBERSHIP_FILTER = 1000;
+
 export class UserAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
@@ -54,7 +57,27 @@ export class UserAdmin {
     }
     if (!isNil(realm)) {
       // users that are members (home or guest) of the realm
-      const memberships = await RealmMembership.getInstance().findMany({ realm });
+      if (Object.keys(query).length === 0 && isNil(sort)) {
+        // the realm is the only filter: page the memberships, then load those users
+        const memberships = await RealmMembership.getInstance().findMany(
+          { realm },
+          { skip, limit, sort: { _id: 1 } },
+        );
+        const memberIds = memberships.map(membership => String(membership.user));
+        const found = memberIds.length
+          ? await User.getInstance().findMany({ _id: { $in: memberIds } })
+          : [];
+        const byId = new Map(found.map(user => [String(user._id), user]));
+        const users = memberIds.flatMap(id => byId.get(id) ?? []);
+        const count = await RealmMembership.getInstance().countDocuments({ realm });
+        return { users, count };
+      }
+      // Combined with other filters the member ids are resolved first: only the first
+      // MAX_MEMBERSHIP_FILTER memberships of the realm are considered.
+      const memberships = await RealmMembership.getInstance().findMany(
+        { realm },
+        { limit: MAX_MEMBERSHIP_FILTER, sort: { _id: 1 } },
+      );
       const memberIds = memberships.map(membership => String(membership.user));
       if (typeof query._id === 'string') {
         if (!memberIds.includes(query._id)) query._id = { $in: [] };
@@ -95,7 +118,17 @@ export class UserAdmin {
       isVerified: true,
       ...homeRealmFields(realmCtx),
     });
-    await grantHomeMembership(this.grpcSdk, user, realmCtx);
+    try {
+      await grantHomeMembership(this.grpcSdk, user, realmCtx);
+    } catch (err) {
+      // never leave a realm user without its membership
+      await User.getInstance()
+        .deleteOne({ _id: user._id })
+        .catch(deleteErr => {
+          ConduitGrpcSdk.Logger.error(deleteErr as Error);
+        });
+      throw err;
+    }
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
     delete user.hashedPassword;
     return { user };

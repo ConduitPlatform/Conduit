@@ -27,7 +27,6 @@ export * from './realmRequest.logic.js';
 
 /** Optional `realm` slug route param (body or query) of the login/registration routes. */
 export const realmParam = ConduitString.Optional;
-export const realmParams = { realm: realmParam };
 
 /** Realm team id of a context, null for global. */
 export function realmIdOf(ctx: RealmContext | null | undefined): string | null {
@@ -100,6 +99,33 @@ export async function grantHomeMembership(
 }
 
 /**
+ * Writes the home membership of a user registering with an optional invitation. The
+ * `member` relation on the realm team is skipped only when the invitation is into that
+ * realm (it creates the team relation itself); an invitation into a team outside the
+ * realm still leaves the user a plain member of the realm team.
+ */
+export async function grantHomeMembershipForRegistration(
+  grpcSdk: ConduitGrpcSdk,
+  user: Pick<User, '_id'>,
+  ctx: RealmContext | null | undefined,
+  invitationToken?: string | null,
+): Promise<void> {
+  if (!ctx) return;
+  let withRole = true;
+  if (invitationToken) {
+    const inviteToken = await Token.getInstance().findOne(
+      { tokenType: TokenType.TEAM_INVITE_TOKEN, token: invitationToken },
+      { readPreference: 'primary' },
+    );
+    const inviteRealm = inviteToken?.data?.teamId
+      ? await resolveTeamRealm(String(inviteToken.data.teamId))
+      : null;
+    withRole = !inviteRealm || String(inviteRealm._id) !== realmIdOf(ctx);
+  }
+  await grantHomeMembership(grpcSdk, user, ctx, withRole);
+}
+
+/**
  * Reconciles the requested realm with the realm of an invitation token (see
  * reconcileInvitationRealm). Without realms or without a token this is a no-op.
  */
@@ -127,12 +153,33 @@ export async function resolveInvitationRealm(
   return resolveRealmById(realmId);
 }
 
-/** Realm context of a user's home realm (null for global users or with realms off). */
+/**
+ * Realm context of a user's home realm (null for global users or with realms off).
+ * An inactive or missing home realm is REALM_ACCESS_DENIED, like at token issuance.
+ */
 export async function resolveHomeRealmContext(
   user: Pick<User, 'homeRealm'>,
 ): Promise<RealmContext | null> {
   if (!user.homeRealm || !realmsEnabled()) return null;
-  return resolveRealmById(String(user.homeRealm));
+  try {
+    return await resolveRealmById(String(user.homeRealm));
+  } catch (err) {
+    if (err instanceof ModuleError && isRealmNotFound(err)) {
+      throw new ModuleError(errors.REALM_ACCESS_DENIED);
+    }
+    throw err;
+  }
+}
+
+function isRealmNotFound(err: ModuleError): boolean {
+  try {
+    return (
+      (JSON.parse(err.message) as { conduitCode?: string }).conduitCode ===
+      errors.REALM_NOT_FOUND.conduitCode
+    );
+  } catch {
+    return false;
+  }
 }
 
 /** Throws REALM_ACCESS_DENIED when an anonymous user is converted in another realm. */
@@ -148,17 +195,4 @@ export function assertAnonymousUserInRealm(
 /** Realm team id of the session behind an authenticated call (null for global). */
 export function sessionRealmId(context: Indexable | undefined): string | null {
   return context?.realm ? String(context.realm) : null;
-}
-
-/**
- * Realm team id from the `realm` slug claim of an access token payload. The auth
- * middleware already exposes the id as `context.realm` (see sessionRealmId); this is
- * for callers that only hold the decoded payload.
- */
-export async function realmIdFromJwt(
-  jwtPayload: Indexable | undefined,
-): Promise<string | null> {
-  const slug = jwtPayload?.realm;
-  if (typeof slug !== 'string' || slug === '') return null;
-  return realmIdOf(await resolveRealm(slug));
 }

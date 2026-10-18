@@ -73,6 +73,7 @@ export const OAUTH_REDIRECTABLE_ERRORS = [
   errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
   errors.GUESTS_NOT_ALLOWED,
   errors.TWO_FA_REQUIRED_FOR_REALM,
+  errors.INVALID_INVITATION,
 ] as const;
 
 /** Errors declared on the OAuth routes: the redirectable ones plus realm resolution. */

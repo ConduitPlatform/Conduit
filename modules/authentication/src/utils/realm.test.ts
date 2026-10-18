@@ -8,6 +8,7 @@ import {
   BoundedTtlCache,
   buildEffectiveSettings,
   collectTeamChain,
+  computeRealmsEnabled,
   defaultRealmSettings,
   evaluateGuestAllowed,
   evaluateRealmAccess,
@@ -56,6 +57,34 @@ function access(overrides: Partial<RealmAccessInput> = {}): RealmAccessInput {
 function settings(overrides: Partial<RealmSettingsData> = {}): RealmSettingsData {
   return { ...defaultRealmSettings(), ...overrides };
 }
+
+describe('computeRealmsEnabled', () => {
+  it('requires both teams and realms to be enabled', () => {
+    assert.equal(
+      computeRealmsEnabled({ enabled: true, realms: { enabled: true } }),
+      true,
+    );
+    assert.equal(
+      computeRealmsEnabled({ enabled: false, realms: { enabled: true } }),
+      false,
+    );
+    assert.equal(
+      computeRealmsEnabled({ enabled: true, realms: { enabled: false } }),
+      false,
+    );
+  });
+
+  it('is off for missing or non-boolean config', () => {
+    assert.equal(computeRealmsEnabled(undefined), false);
+    assert.equal(computeRealmsEnabled(null), false);
+    assert.equal(computeRealmsEnabled({ enabled: true }), false);
+    assert.equal(computeRealmsEnabled({ realms: { enabled: true } }), false);
+    assert.equal(
+      computeRealmsEnabled({ enabled: 'true', realms: { enabled: true } }),
+      false,
+    );
+  });
+});
 
 describe('slugs', () => {
   it('accepts lowercase alphanumerics with inner dashes', () => {

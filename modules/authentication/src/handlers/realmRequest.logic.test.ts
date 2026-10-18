@@ -89,6 +89,17 @@ describe('isInviteRequired', () => {
       true,
     );
   });
+
+  it('still requires the invitation of a realm when teams are disabled', () => {
+    assert.equal(
+      isInviteRequired({ allowWithoutInvite: false }, teams(false, false)),
+      true,
+    );
+    assert.equal(
+      isInviteRequired({ allowWithoutInvite: true }, teams(false, false)),
+      false,
+    );
+  });
 });
 
 describe('reconcileInvitationRealm', () => {
@@ -102,9 +113,15 @@ describe('reconcileInvitationRealm', () => {
     assert.equal(reconcileInvitationRealm(undefined, undefined, true), null);
   });
 
-  it('rejects a mismatch', () => {
+  it('rejects an invitation into a different realm', () => {
     assert.throws(() => reconcileInvitationRealm('r1', 'r2', true), invalid);
-    assert.throws(() => reconcileInvitationRealm('r1', null, true), invalid);
+    assert.throws(() => reconcileInvitationRealm('r1', 'r2', false), invalid);
+  });
+
+  it('keeps the requested realm for an invitation outside any realm', () => {
+    assert.equal(reconcileInvitationRealm('r1', null, true), 'r1');
+    assert.equal(reconcileInvitationRealm('r1', null, false), 'r1');
+    assert.equal(reconcileInvitationRealm('r1', undefined, false), 'r1');
   });
 
   it('implies the invitation realm only where allowed', () => {

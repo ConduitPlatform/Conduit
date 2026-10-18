@@ -240,7 +240,10 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     // like any other invalid signature
     const realmCtx = await resolveRealmFromSlug(existingToken.data.realm);
     assertStrategyEnabledForRealm(realmCtx, 'biometric');
-    if (!isHomeRealm((key.user as User).homeRealm, realmIdOf(realmCtx))) {
+    if (
+      (realmCtx || realmsEnabled()) &&
+      !isHomeRealm((key.user as User).homeRealm, realmIdOf(realmCtx))
+    ) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     return TokenProvider.getInstance().provideUserTokens({

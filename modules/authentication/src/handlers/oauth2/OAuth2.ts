@@ -52,7 +52,7 @@ import { errors } from '../../errors.js';
 import {
   assertAnonymousUserInRealm,
   assertStrategyEnabledForRealm,
-  grantHomeMembership,
+  grantHomeMembershipForRegistration,
   homeRealmFields,
   isInviteRequired,
   realmIdOf,
@@ -338,6 +338,14 @@ export abstract class OAuth2<
       user = await User.getInstance().findOne(
         scopedUserQuery({ [this.providerName + '.id']: payload.id }, realmCtx),
       );
+      if (isNil(user) && (realmCtx || realmsEnabled())) {
+        // provider identities are unique across realms: the id belongs to a user of
+        // another one
+        const otherRealmUser = await User.getInstance().findOne({
+          [this.providerName + '.id']: payload.id,
+        });
+        if (otherRealmUser) throw new ModuleError(errors.REALM_ACCESS_DENIED);
+      }
     } else {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -399,7 +407,7 @@ export abstract class OAuth2<
       ) {
         throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
       }
-      if (teams.enabled && invitationToken) {
+      if ((teams.enabled || realmCtx) && invitationToken) {
         const valid = await TeamsHandler.getInstance().inviteValidation(
           invitationToken,
           payload.email,
@@ -417,13 +425,16 @@ export abstract class OAuth2<
         ...homeRealmFields(realmCtx),
       });
       if (realmCtx) {
-        // an invitation creates the team relation itself, otherwise the user becomes a
-        // plain member of the realm team
-        await grantHomeMembership(this.grpcSdk, user, realmCtx, !invitationToken).catch(
-          err => {
-            ConduitGrpcSdk.Logger.error(err);
-          },
-        );
+        // an invitation into the realm creates the team relation itself, otherwise the
+        // user becomes a plain member of the realm team
+        await grantHomeMembershipForRegistration(
+          this.grpcSdk,
+          user,
+          realmCtx,
+          invitationToken,
+        ).catch(err => {
+          ConduitGrpcSdk.Logger.error(err);
+        });
       }
       if (invitationToken) {
         await TeamsHandler.getInstance()
