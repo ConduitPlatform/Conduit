@@ -4,9 +4,12 @@ import {
   GrpcCallback,
   GrpcError,
   GrpcRequest,
+  GrpcResponse,
   HealthCheckStatus,
   Indexable,
   Query,
+  SetConfigRequest,
+  SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isEmpty, isNil } from 'lodash-es';
@@ -91,6 +94,8 @@ import {
   deleteUserRealmMemberships,
   getRealmSlugById,
   invalidateRealmCache,
+  isRealmsDisableTransition,
+  realmsDisableBlockedMessage,
   realmsEnabled,
   resolveTeamRealm,
 } from './utils/realm.js';
@@ -305,6 +310,43 @@ export default class Authentication extends ManagedModule<Config> {
     invalidateRealmCache();
     this.grpcSdk.bus?.publish(REALM_UPDATE_EVENT, JSON.stringify({ import: true }));
     if (ConfigController.getInstance().config?.active) this.refreshAppRoutes();
+  }
+
+  /**
+   * Refuses to switch the realms feature off while enabled realm teams exist (the "flag
+   * off = no realm data" invariant): demote them first. Checked here and not in
+   * `preConfig`, which also runs for config updates received from the bus and for the
+   * startup reconciliation, where a throw would not reach the caller of the update.
+   * The database is only queried on the on -> off transition.
+   */
+  async setConfig(
+    call: GrpcRequest<SetConfigRequest>,
+    callback: GrpcResponse<SetConfigResponse>,
+  ) {
+    let incomingTeams: Config['teams'] | undefined;
+    try {
+      incomingTeams = JSON.parse(call.request.newConfig)?.teams;
+    } catch {
+      // malformed JSON is reported by the base implementation
+    }
+    const previousTeams = ConfigController.getInstance().config?.teams;
+    if (isRealmsDisableTransition(previousTeams, incomingTeams)) {
+      try {
+        const enabledRealmsQuery: Indexable = { 'realm.enabled': true };
+        const enabledRealms =
+          await models.Team.getInstance().countDocuments(enabledRealmsQuery);
+        const blocked = realmsDisableBlockedMessage(enabledRealms);
+        if (blocked) {
+          return callback({ code: status.FAILED_PRECONDITION, message: blocked });
+        }
+      } catch (e) {
+        return callback({
+          code: status.INTERNAL,
+          message: `Could not verify that no enabled realms exist: ${(e as Error).message}`,
+        });
+      }
+    }
+    return super.setConfig(call, callback);
   }
 
   async preConfig(config: Config) {
