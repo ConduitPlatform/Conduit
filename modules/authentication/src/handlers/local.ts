@@ -35,6 +35,7 @@ import { createHash } from 'crypto';
 import { authenticateChecks, changePassword } from './utils.js';
 import { errors } from '../errors.js';
 import {
+  assertAnonymousRealmAllowed,
   assertAnonymousUserInRealm,
   assertGlobalStrategyAvailable,
   assertStrategyEnabledForRealm,
@@ -47,6 +48,7 @@ import {
   resolveHomeRealmContext,
   resolveInvitationRealm,
   resolveRealmFromCall,
+  rollbackUserOnFailure,
   scopedUserQuery,
 } from './realmRequest.js';
 import { anyRealmEnables } from '../utils/strategyRealms.js';
@@ -383,6 +385,20 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
     delete user.hashedPassword;
 
+    if (realmCtx && !anonymousUser) {
+      // an invitation into the realm creates the team relation itself, otherwise the
+      // user becomes a plain member of the realm team. Before the response: a failure
+      // rolls the new user back and reaches the caller.
+      const createdUser = user;
+      await rollbackUserOnFailure(this.grpcSdk, createdUser, () =>
+        grantHomeMembershipForRegistration(
+          this.grpcSdk,
+          createdUser,
+          realmCtx,
+          invitationToken,
+        ),
+      );
+    }
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
     callback({ user });
 
@@ -396,18 +412,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
       });
     }
 
-    if (realmCtx && !anonymousUser) {
-      // an invitation into the realm creates the team relation itself, otherwise the
-      // user becomes a plain member of the realm team
-      await grantHomeMembershipForRegistration(
-        this.grpcSdk,
-        user,
-        realmCtx,
-        invitationToken,
-      ).catch(err => {
-        ConduitGrpcSdk.Logger.error(err);
-      });
-    }
     if (invitationToken) {
       await TeamsHandler.getInstance()
         .addUserToTeam(user, invitationToken)
@@ -439,6 +443,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (userData) {
       AuthUtils.checkUserData(userData);
     }
+    const context = call.request.context;
+    // refused by the realm policies (2FA, verified email, client pinning): fail before
+    // a user is created
+    assertAnonymousRealmAllowed(realmCtx, context.clientId);
     const anonymousUser = await User.getInstance().create({
       email,
       isAnonymous: true,
@@ -446,11 +454,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
       ...userData,
       ...homeRealmFields(realmCtx),
     });
-    const context = call.request.context;
     if (realmCtx) {
-      await grantHomeMembership(this.grpcSdk, anonymousUser, realmCtx).catch(err => {
-        ConduitGrpcSdk.Logger.error(err);
-      });
+      await rollbackUserOnFailure(this.grpcSdk, anonymousUser, () =>
+        grantHomeMembership(this.grpcSdk, anonymousUser, realmCtx),
+      );
     } else {
       await TeamsHandler.getInstance()
         .addUserToDefault(anonymousUser)
@@ -458,13 +465,16 @@ export class LocalHandlers implements IAuthenticationStrategy {
           ConduitGrpcSdk.Logger.error(err);
         });
     }
-    return TokenProvider.getInstance().provideUserTokens({
-      user: anonymousUser,
-      clientId: context.clientId,
-      config,
-      isRefresh: false,
-      realm: realmIdOf(realmCtx),
-    });
+    // a failure here must not leave the new anonymous user behind either
+    return rollbackUserOnFailure(this.grpcSdk, anonymousUser, () =>
+      TokenProvider.getInstance().provideUserTokens({
+        user: anonymousUser,
+        clientId: context.clientId,
+        config,
+        isRefresh: false,
+        realm: realmIdOf(realmCtx),
+      }),
+    );
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

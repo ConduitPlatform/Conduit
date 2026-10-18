@@ -59,6 +59,7 @@ import {
   realmParam,
   resolveInvitationRealm,
   resolveRealmFromSlug,
+  rollbackUserOnFailure,
   scopedUserQuery,
 } from '../realmRequest.js';
 import {
@@ -600,14 +601,15 @@ export abstract class OAuth2<
       if (realmCtx) {
         // an invitation into the realm creates the team relation itself, otherwise the
         // user becomes a plain member of the realm team
-        await grantHomeMembershipForRegistration(
-          this.grpcSdk,
-          user,
-          realmCtx,
-          invitationToken,
-        ).catch(err => {
-          ConduitGrpcSdk.Logger.error(err);
-        });
+        const createdUser = user;
+        await rollbackUserOnFailure(this.grpcSdk, createdUser, () =>
+          grantHomeMembershipForRegistration(
+            this.grpcSdk,
+            createdUser,
+            realmCtx,
+            invitationToken,
+          ),
+        );
       }
       if (invitationToken) {
         await TeamsHandler.getInstance()

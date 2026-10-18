@@ -38,6 +38,7 @@ import {
   resolveInvitationRealm,
   resolveRealmFromCall,
   resolveRealmFromSlug,
+  rollbackUserOnFailure,
   scopedUserQuery,
 } from './realmRequest.js';
 import { anyRealmEnables } from '../utils/strategyRealms.js';
@@ -286,14 +287,14 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     if (realmCtx) {
       // an invitation into the realm creates the team relation itself, otherwise the
       // user becomes a plain member of the realm team
-      await grantHomeMembershipForRegistration(
-        this.grpcSdk,
-        user,
-        realmCtx,
-        existingToken.data.invitationToken,
-      ).catch(err => {
-        ConduitGrpcSdk.Logger.error(err);
-      });
+      await rollbackUserOnFailure(this.grpcSdk, user, () =>
+        grantHomeMembershipForRegistration(
+          this.grpcSdk,
+          user,
+          realmCtx,
+          existingToken.data.invitationToken,
+        ),
+      );
     }
     if (isNil(existingToken.data.invitationToken)) {
       if (!realmCtx) {
