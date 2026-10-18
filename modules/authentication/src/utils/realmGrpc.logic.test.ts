@@ -2,9 +2,13 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import {
+  assertGrantMembershipAllowed,
   buildSetRealmParams,
   parseMembershipType,
+  parseOptionalMembershipType,
   parseSettingsJson,
   realmSlugOf,
   stripRealmSecrets,
@@ -113,5 +117,124 @@ describe('realm gRPC helpers', () => {
       true,
     );
     assert.deepEqual(stripRealmSecrets([{ privateKey: 'k', a: 1 }]), [{ a: 1 }]);
+  });
+});
+
+describe('stripRealmSecrets on nested structures', () => {
+  it('removes secrets at any depth, including arrays of arrays and objects', () => {
+    const input = {
+      settings: {
+        strategies: {
+          oauth: {
+            google: {
+              clientId: 'id',
+              clientSecret: 'LEAK',
+              nested: [[{ privateKey: 'LEAK' }]],
+            },
+          },
+        },
+        list: [
+          { oauthSecrets: { google: { clientSecret: 'LEAK' } }, keep: 1 },
+          [{ a: 1 }],
+        ],
+      },
+    };
+    const out = stripRealmSecrets(input);
+    assert.ok(!JSON.stringify(out).includes('LEAK'));
+    assert.deepEqual(out.settings.strategies.oauth.google.nested, [[{}]]);
+    assert.deepEqual(out.settings.list, [{ keep: 1 }, [{ a: 1 }]]);
+    // the input is not mutated
+    assert.ok(JSON.stringify(input).includes('LEAK'));
+  });
+
+  it('keeps the has* flags and scalars', () => {
+    assert.deepEqual(
+      stripRealmSecrets({ hasClientSecret: true, n: 3, s: 'x', z: null }),
+      {
+        hasClientSecret: true,
+        n: 3,
+        s: 'x',
+        z: null,
+      },
+    );
+  });
+});
+
+describe('toCallbackError with a ModuleError', () => {
+  it('keeps the gRPC code and the JSON message with the conduitCode', () => {
+    const error = toCallbackError(new ModuleError(errors.REALM_NOT_FOUND));
+    assert.equal(error.code, errors.REALM_NOT_FOUND.grpcCode);
+    assert.equal(
+      (JSON.parse(error.message) as { conduitCode: string }).conduitCode,
+      errors.REALM_NOT_FOUND.conduitCode,
+    );
+  });
+});
+
+describe('assertGrantMembershipAllowed', () => {
+  const REALM = 'aaaaaaaaaaaaaaaaaaaaaaaa';
+  const OTHER = 'bbbbbbbbbbbbbbbbbbbbbbbb';
+  const failedPrecondition = (e: unknown) =>
+    e instanceof GrpcError && e.code === status.FAILED_PRECONDITION;
+
+  it('refuses a guest membership for a home user of the realm', () => {
+    assert.throws(
+      () =>
+        assertGrantMembershipAllowed({
+          type: 'guest',
+          realmTeamId: REALM,
+          userHomeRealm: REALM,
+        }),
+      failedPrecondition,
+    );
+  });
+
+  it('allows guests homed elsewhere or global', () => {
+    for (const userHomeRealm of [OTHER, null, undefined]) {
+      assert.doesNotThrow(() =>
+        assertGrantMembershipAllowed({
+          type: 'guest',
+          realmTeamId: REALM,
+          userHomeRealm,
+        }),
+      );
+    }
+  });
+
+  it('refuses a home move over a different home realm unless forced', () => {
+    assert.throws(
+      () =>
+        assertGrantMembershipAllowed({
+          type: 'home',
+          realmTeamId: REALM,
+          userHomeRealm: OTHER,
+        }),
+      failedPrecondition,
+    );
+    assert.doesNotThrow(() =>
+      assertGrantMembershipAllowed({
+        type: 'home',
+        realmTeamId: REALM,
+        userHomeRealm: OTHER,
+        force: true,
+      }),
+    );
+  });
+
+  it('allows a home membership for global users and the current home realm', () => {
+    for (const userHomeRealm of [null, undefined, REALM]) {
+      assert.doesNotThrow(() =>
+        assertGrantMembershipAllowed({ type: 'home', realmTeamId: REALM, userHomeRealm }),
+      );
+    }
+  });
+});
+
+describe('parseOptionalMembershipType', () => {
+  it('accepts nothing, home and guest and rejects anything else', () => {
+    assert.equal(parseOptionalMembershipType(''), undefined);
+    assert.equal(parseOptionalMembershipType(undefined), undefined);
+    assert.equal(parseOptionalMembershipType('guest'), 'guest');
+    assert.throws(() => parseOptionalMembershipType('owner'), /home/);
   });
 });

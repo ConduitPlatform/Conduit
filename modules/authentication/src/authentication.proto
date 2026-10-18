@@ -2,9 +2,12 @@ syntax = "proto3";
 import "google/protobuf/empty.proto";
 package authentication;
 
+// Issues tokens for a user without a login. This is a trusted path: it does not run a
+// login strategy and satisfies a realm's requireTwoFa policy without a 2FA step.
 message UserLoginRequest {
   string userId = 1;
   string clientId = 2;
+  // realm slug the session is bound to; defaults to the user's home realm
   optional string realm = 3;
 }
 
@@ -173,10 +176,20 @@ message UnsetTeamRealmResponse {
 message RealmMembershipRequest {
   string teamId = 1;
   string userId = 2;
-  // 'home' | 'guest' (ignored by RevokeRealmMembership)
+  // 'home' | 'guest', anything else is INVALID_ARGUMENT (ignored by RevokeRealmMembership)
   string type = 3;
+  // GrantRealmMembership(home) only: the user already has a different home realm. Without
+  // force that is FAILED_PRECONDITION; with it the user is moved and all their tokens are
+  // revoked.
+  bool force = 4;
 }
 
+// Errors raised by the realm RPCs (and the other Authentication RPCs) keep their gRPC
+// code. Module errors (REALM_NOT_FOUND, REALM_SLUG_TAKEN, GUESTS_NOT_ALLOWED...) carry
+// the message as a JSON string, `{"conduitCode": "...", "message": "..."}`: clients
+// should key on conduitCode. GrantRealmMembership(guest) for a user whose home realm is
+// that realm, and GrantRealmMembership(home) over a different home realm without force,
+// are FAILED_PRECONDITION.
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);

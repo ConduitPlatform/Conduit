@@ -11,17 +11,31 @@
  * Secrets are never exported: every OAuth provider carries `clientSecret: null` (and
  * `privateKey: null` for apple) instead of the value or the `has*` flags. Realm team
  * ids are not portable between environments, so `policies.guests.allowedHomeRealms`
- * is exported as `allowedHomeRealmSlugs`.
+ * is exported as `allowedHomeRealmSlugs`. An id that is not an enabled realm cannot be
+ * named by slug; it is exported as `unresolved:<id>` (the export format has no warnings
+ * channel) so the import fails closed instead of silently widening the list: see
+ * `decideTrustedHomeRealms`.
+ *
+ * Import semantics (the file is the source of truth for the realms it lists):
+ *  - a realm team without `realmSettings` is written with the defaults, whatever it had;
+ *  - `realm.enabled: false` (or no `realm`) leaves a realm that exists in the database
+ *    alone: demoting is destructive and stays an explicit admin action;
+ *  - secrets are never imported; the ones stored for providers that remain are kept.
  */
 import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { buildRealmSettingsWrite, pickSettingsFields } from '../admin/realm.logic.js';
+import type { ImportResultEntry } from '@conduitplatform/module-tools';
 import {
   assertValidSlug,
   defaultRealmSettings,
   maskRealmSettings,
+  normalizeIdList,
   RealmOAuthSecrets,
 } from './realm.logic.js';
+
+/** Marks a trusted home realm id the exporting environment could not name by slug. */
+export const UNRESOLVED_REALM_PREFIX = 'unresolved:';
 
 function isRecord(value: unknown): value is Record<string, any> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -77,9 +91,9 @@ export function exportRealmSettings(
     oauth[provider] = exported;
   }
   const { allowedHomeRealms, ...guests } = fields.policies.guests;
-  const slugs = (allowedHomeRealms as string[])
-    .map(id => slugById.get(String(id)))
-    .filter((slug): slug is string => typeof slug === 'string');
+  const slugs = (allowedHomeRealms as string[]).map(
+    id => slugById.get(String(id)) ?? `${UNRESOLVED_REALM_PREFIX}${id}`,
+  );
   return {
     active: fields.active,
     strategies: { ...fields.strategies, oauth },
@@ -112,17 +126,24 @@ export type ImportedRealm =
       slug: string;
       /** settings write body: no secrets, no team ids */
       input: Indexable;
-      /** slugs of the trusted home realms, resolved once every realm team exists */
+      /**
+       * slugs of the trusted home realms (undefined = the file does not say), resolved
+       * against the database and the file's own realms before anything is written
+       */
       allowedHomeRealmSlugs: string[] | undefined;
+      /** `unresolved:<id>` entries of the file: they can never resolve */
+      unresolvedHomeRealms: string[];
     };
 
 /** Whitelists the settings keys and drops every secret and read-only flag. */
 function sanitizeImportedSettings(settings: Indexable): {
   input: Indexable;
   allowedHomeRealmSlugs: string[] | undefined;
+  unresolvedHomeRealms: string[];
 } {
   const input: Indexable = {};
   let allowedHomeRealmSlugs: string[] | undefined;
+  const unresolvedHomeRealms: string[] = [];
   if (settings.active !== undefined) input.active = settings.active;
   if (settings.registration !== undefined) input.registration = settings.registration;
   if (settings.policies !== undefined) {
@@ -138,8 +159,16 @@ function sanitizeImportedSettings(settings: Indexable): {
         if (!Array.isArray(slugs)) {
           invalid('realmSettings.policies.guests.allowedHomeRealmSlugs must be an array');
         }
+        const named: unknown[] = [];
+        for (const entry of slugs) {
+          if (typeof entry === 'string' && entry.startsWith(UNRESOLVED_REALM_PREFIX)) {
+            unresolvedHomeRealms.push(entry);
+          } else {
+            named.push(entry);
+          }
+        }
         allowedHomeRealmSlugs = Array.from(
-          new Set(slugs.map(slug => assertValidSlug(slug))),
+          new Set(named.map(slug => assertValidSlug(slug))),
         );
       }
     }
@@ -161,7 +190,7 @@ function sanitizeImportedSettings(settings: Indexable): {
       input.strategies.oauth = cleanOauth;
     }
   }
-  return { input, allowedHomeRealmSlugs };
+  return { input, allowedHomeRealmSlugs, unresolvedHomeRealms };
 }
 
 /**
@@ -177,8 +206,9 @@ export function parseImportedRealm(record: Indexable): ImportedRealm {
   const slug = assertValidSlug(realm.slug);
   const settings = record.realmSettings ?? {};
   if (!isRecord(settings)) invalid('realmSettings must be an object');
-  const { input, allowedHomeRealmSlugs } = sanitizeImportedSettings(settings);
-  return { enabled: true, slug, input, allowedHomeRealmSlugs };
+  const { input, allowedHomeRealmSlugs, unresolvedHomeRealms } =
+    sanitizeImportedSettings(settings);
+  return { enabled: true, slug, input, allowedHomeRealmSlugs, unresolvedHomeRealms };
 }
 
 /**
@@ -194,6 +224,9 @@ export function buildImportedSettings(params: {
     base: defaultRealmSettings(),
     baseSecrets: params.existingSecrets,
     input: params.input,
+    // secrets are never imported: a provider with its own clientId arrives before its
+    // secret does and fails closed at request time until the secret is set
+    allowIncompleteCredentials: true,
   });
   const providers = Object.keys(settings.strategies.oauth ?? {});
   const kept: RealmOAuthSecrets = {};
@@ -218,4 +251,120 @@ export function resolveAllowedHomeRealms(
     else missing.push(slug);
   }
   return { ids, missing };
+}
+
+// ---------------------------------------------------------------------------
+// Trusted home realms (fail closed)
+// ---------------------------------------------------------------------------
+
+export type TrustedHomeRealmsDecision = {
+  /** the list to store in `policies.guests.allowedHomeRealms` */
+  allowedHomeRealms: string[];
+  /** the realm does not exist yet and the list could not be resolved: no guests */
+  disallowGuests: boolean;
+  /** slugs / markers that did not resolve (empty = everything resolved) */
+  missing: string[];
+};
+
+/**
+ * Decides what to store for `policies.guests.allowedHomeRealms` BEFORE anything is
+ * written. An empty list means "any home realm", so an unresolved entry must never be
+ * dropped from it:
+ *  - everything resolved: the resolved ids;
+ *  - something unresolved and the realm already exists (`storedIds` given): keep the
+ *    stored list untouched;
+ *  - something unresolved and the realm is new (`storedIds` null): write
+ *    `guests.allowed = false` (the resolved ids are kept for when guests are enabled).
+ * `slugs` undefined (the file does not say) returns null: the imported settings stand.
+ */
+export function decideTrustedHomeRealms(params: {
+  slugs: string[] | undefined;
+  unresolved?: string[];
+  idBySlug: ReadonlyMap<string, string>;
+  storedIds: string[] | null;
+}): TrustedHomeRealmsDecision | null {
+  if (params.slugs === undefined) return null;
+  const { ids, missing } = resolveAllowedHomeRealms(params.slugs, params.idBySlug);
+  const unresolved = params.unresolved ?? [];
+  if (missing.length === 0 && unresolved.length === 0) {
+    return { allowedHomeRealms: ids, disallowGuests: false, missing: [] };
+  }
+  const allMissing = [...missing, ...unresolved];
+  if (params.storedIds) {
+    return {
+      allowedHomeRealms: normalizeIdList(params.storedIds),
+      disallowGuests: false,
+      missing: allMissing,
+    };
+  }
+  return { allowedHomeRealms: ids, disallowGuests: true, missing: allMissing };
+}
+
+/** Applies a trusted home realms decision to the settings about to be stored. */
+export function applyTrustedHomeRealms<
+  T extends { policies: { guests: { allowed: boolean; allowedHomeRealms: string[] } } },
+>(settings: T, decision: TrustedHomeRealmsDecision | null): T {
+  if (!decision) return settings;
+  return {
+    ...settings,
+    policies: {
+      ...settings.policies,
+      guests: {
+        ...settings.policies.guests,
+        allowed: decision.disallowGuests ? false : settings.policies.guests.allowed,
+        allowedHomeRealms: decision.allowedHomeRealms,
+      },
+    },
+  };
+}
+
+/** Realms are top-level: the query for a team by name on the top level. */
+export function topLevelTeamQuery(name: string): Indexable {
+  return {
+    name,
+    $or: [{ parentTeam: null }, { parentTeam: { $exists: false } }],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Result counting
+// ---------------------------------------------------------------------------
+
+type ImportOutcome = 'created' | 'updated' | 'failed';
+
+/**
+ * Counts every record of an import once. A record that was counted as created or
+ * updated and then fails in a later step (parent assignment, realm) is moved to
+ * `failed`, never counted twice; its error is recorded.
+ */
+export class ImportTally {
+  private readonly outcomes = new Map<number, ImportOutcome>();
+
+  constructor(private readonly result: ImportResultEntry) {}
+
+  outcome(index: number): ImportOutcome | undefined {
+    return this.outcomes.get(index);
+  }
+
+  created(index: number): void {
+    this.set(index, 'created');
+  }
+
+  updated(index: number): void {
+    this.set(index, 'updated');
+  }
+
+  /** Records the error; the record counts as failed exactly once. */
+  failed(index: number, message: string): void {
+    this.set(index, 'failed');
+    this.result.errors.push(message);
+  }
+
+  private set(index: number, next: ImportOutcome): void {
+    const previous = this.outcomes.get(index);
+    if (previous === next) return;
+    if (previous) this.result[previous] -= 1;
+    this.outcomes.set(index, next);
+    this.result[next] += 1;
+  }
 }

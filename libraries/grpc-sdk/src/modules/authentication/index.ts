@@ -25,6 +25,11 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     this.initializeClient(AuthenticationDefinition);
   }
 
+  /**
+   * Issues tokens for a user without a login. Trusted path: it runs no login strategy
+   * and satisfies a realm's `requireTwoFa` policy without a 2FA step. `realm` (slug)
+   * defaults to the user's home realm.
+   */
   userLogin(
     userId: string,
     clientId: string,
@@ -134,6 +139,9 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
    * `settings` is the realm settings body (strategies, policies, registration, active);
    * it may carry OAuth secrets (write-only). Changing the slug of an existing realm
    * needs `force`.
+   * Errors keep their gRPC code; module errors (REALM_SLUG_TAKEN, REALM_NESTED,
+   * GUESTS_NOT_ALLOWED...) carry a JSON string message (`{"conduitCode", "message"}`),
+   * so key on `conduitCode`.
    */
   setTeamRealm(
     teamId: string,
@@ -162,13 +170,25 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     return this.client!.unsetTeamRealm({ teamId, force });
   }
 
-  /** `home` makes the realm the user's home realm, `guest` adds a guest membership. */
-  grantRealmMembership(teamId: string, userId: string, type: 'home' | 'guest') {
-    return this.client!.grantRealmMembership({ teamId, userId, type });
+  /**
+   * `home` makes the realm the user's home realm, `guest` adds a guest membership.
+   * Fails with FAILED_PRECONDITION when `home` would replace a different home realm
+   * (unless `force`, which moves the user and revokes all their tokens) and when `guest`
+   * is requested for a user whose home realm is this realm.
+   * Errors keep their gRPC code; module errors carry a JSON string message
+   * (`{"conduitCode", "message"}`), so key on `conduitCode`.
+   */
+  grantRealmMembership(
+    teamId: string,
+    userId: string,
+    type: 'home' | 'guest',
+    force: boolean = false,
+  ) {
+    return this.client!.grantRealmMembership({ teamId, userId, type, force });
   }
 
   /** Removes a guest membership (home users are moved, not removed). */
   revokeRealmMembership(teamId: string, userId: string) {
-    return this.client!.revokeRealmMembership({ teamId, userId, type: '' });
+    return this.client!.revokeRealmMembership({ teamId, userId, type: '', force: false });
   }
 }
