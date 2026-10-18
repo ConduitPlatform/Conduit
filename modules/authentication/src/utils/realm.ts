@@ -12,13 +12,18 @@ import {
 } from '../models/index.js';
 import {
   assertGuestAllowed,
+  BoundedTtlCache,
   buildEffectiveSettings,
+  collectTeamChain,
   EffectiveAuthSettings,
   evaluateRealmAccess,
+  hasNestedRealmViolation,
+  mergeOAuthSecrets,
   nearestRealmInChain,
   normalizeSlug,
   RealmMembershipType,
-  RealmSettingsData,
+  StoredRealmSettingsData,
+  unresolvedRealmError,
 } from './realm.logic.js';
 
 export * from './realm.logic.js';
@@ -42,30 +47,26 @@ function cacheTtlMs(): number {
   return typeof ttl === 'number' && ttl > 0 ? ttl : 0;
 }
 
-type CacheEntry<T> = { value: T; expires: number };
+const MAX_CACHE_ENTRIES = 500;
 
-const contextBySlug = new Map<string, CacheEntry<RealmContext>>();
-const contextById = new Map<string, CacheEntry<RealmContext>>();
-const slugById = new Map<string, CacheEntry<string | null>>();
+// The caches hand out clones (see BoundedTtlCache), so callers may mutate what they get.
+const contextBySlug = new BoundedTtlCache<RealmContext>(MAX_CACHE_ENTRIES);
+const contextById = new BoundedTtlCache<RealmContext>(MAX_CACHE_ENTRIES);
+const slugById = new BoundedTtlCache<string | null>(MAX_CACHE_ENTRIES);
+// Bumped by every invalidation so that a load that started before it cannot repopulate
+// the cache with data read before the write.
+let cacheGeneration = 0;
 
-function readCache<T>(cache: Map<string, CacheEntry<T>>, key: string): T | undefined {
-  const entry = cache.get(key);
-  if (!entry) return undefined;
-  if (entry.expires <= Date.now()) {
-    cache.delete(key);
-    return undefined;
-  }
-  return entry.value;
-}
-
-function writeCache<T>(cache: Map<string, CacheEntry<T>>, key: string, value: T) {
-  const ttl = cacheTtlMs();
-  if (ttl === 0) return;
-  cache.set(key, { value, expires: Date.now() + ttl });
-}
-
-/** Drops every cached realm (call after realm writes and on the realm bus event). */
+/**
+ * Drops every cached realm (contexts and id -> slug lookups).
+ *
+ * IMPORTANT: every code path that writes a realm (Team.realm, RealmSettings, promote,
+ * demote, delete, slug change, activation) MUST call this after the write, and the realm
+ * bus event handler must call it on the other replicas. Otherwise stale settings are
+ * served for up to `teams.realms.cacheTtlMs`.
+ */
 export function invalidateRealmCache(): void {
+  cacheGeneration++;
   contextBySlug.clear();
   contextById.clear();
   slugById.clear();
@@ -76,24 +77,31 @@ export function invalidateRealmCache(): void {
 // ---------------------------------------------------------------------------
 
 async function loadContext(teamQuery: Indexable): Promise<RealmContext | null> {
+  const generation = cacheGeneration;
   const query: Indexable = { ...teamQuery, 'realm.enabled': true };
   const team = await Team.getInstance().findOne(query);
   if (!team) return null;
-  const settings = await RealmSettings.getInstance().findOne({
-    team: team._id,
-    active: true,
-  });
+  // oauthSecrets is `select: false` (like hashedPassword): ask for it explicitly
+  const settings = await RealmSettings.getInstance().findOne(
+    { team: team._id, active: true },
+    { select: '+oauthSecrets' },
+  );
   if (!settings) return null;
+  const { oauthSecrets, ...storedSettings } = settings;
   const context: RealmContext = {
     team,
-    settings,
+    // the cached/returned settings never carry the secrets, only `effective` does
+    settings: storedSettings as RealmSettings,
     effective: buildEffectiveSettings(
       ConfigController.getInstance().config,
-      settings as RealmSettingsData,
+      mergeOAuthSecrets(storedSettings as StoredRealmSettingsData, oauthSecrets),
     ),
   };
-  if (team.realm?.slug) writeCache(contextBySlug, team.realm.slug, context);
-  writeCache(contextById, String(team._id), context);
+  if (generation === cacheGeneration) {
+    const ttl = cacheTtlMs();
+    if (team.realm?.slug) contextBySlug.set(team.realm.slug, context, ttl);
+    contextById.set(String(team._id), context, ttl);
+  }
   return context;
 }
 
@@ -107,16 +115,19 @@ export async function resolveRealm(slug?: string | null): Promise<RealmContext |
   if (!realmsEnabled()) throw new ModuleError(errors.REALMS_DISABLED);
   const normalized = normalizeSlug(String(slug));
   const context =
-    readCache(contextBySlug, normalized) ??
-    (await loadContext({ 'realm.slug': normalized }));
+    contextBySlug.get(normalized) ?? (await loadContext({ 'realm.slug': normalized }));
   if (!context) throw new ModuleError(errors.REALM_NOT_FOUND);
   return context;
 }
 
+async function findRealmContextById(realmId: string): Promise<RealmContext | null> {
+  const id = String(realmId);
+  return contextById.get(id) ?? (await loadContext({ _id: id }));
+}
+
 /** Same as resolveRealm, by realm team id. Throws REALM_NOT_FOUND. */
 export async function resolveRealmById(realmId: string): Promise<RealmContext> {
-  const id = String(realmId);
-  const context = readCache(contextById, id) ?? (await loadContext({ _id: id }));
+  const context = await findRealmContextById(realmId);
   if (!context) throw new ModuleError(errors.REALM_NOT_FOUND);
   return context;
 }
@@ -130,11 +141,12 @@ export async function getRealmSlugById(
 ): Promise<string | undefined> {
   if (!realmId) return undefined;
   const id = String(realmId);
-  const cached = readCache(slugById, id);
+  const cached = slugById.get(id);
   if (cached !== undefined) return cached ?? undefined;
+  const generation = cacheGeneration;
   const team = await Team.getInstance().findOne({ _id: id });
   const slug = team?.realm?.enabled ? (team.realm.slug ?? null) : null;
-  writeCache(slugById, id, slug);
+  if (generation === cacheGeneration) slugById.set(id, slug, cacheTtlMs());
   return slug ?? undefined;
 }
 
@@ -153,41 +165,41 @@ export async function assertSlugAvailable(
   if (existing) throw new ModuleError(errors.REALM_SLUG_TAKEN);
 }
 
+/**
+ * Second half of the slug check, for after the write: `assertSlugAvailable` is a
+ * check-then-write, so two concurrent writers can both pass it. Call this once the team
+ * carries the slug and roll the write back when it throws REALM_SLUG_TAKEN. When both
+ * racers see each other both roll back (the caller can simply retry), but a duplicate
+ * slug is never left in place.
+ */
+export async function assertSlugUniqueAfterWrite(
+  slug: string,
+  teamId: string,
+): Promise<void> {
+  // counts the teams carrying the slug other than the one just written: anything beyond
+  // the team itself (total > 1) is a collision
+  const query: Indexable = {
+    'realm.slug': normalizeSlug(slug),
+    _id: { $ne: String(teamId) },
+  };
+  const others = await Team.getInstance().countDocuments(query);
+  if (others > 0) throw new ModuleError(errors.REALM_SLUG_TAKEN);
+}
+
 // ---------------------------------------------------------------------------
 // Team tree
 // ---------------------------------------------------------------------------
 
-const MAX_TEAM_DEPTH = 64;
+const fetchTeamById = (id: string) => Team.getInstance().findOne({ _id: id });
+const fetchChildTeams = (parentIds: string[]) =>
+  Team.getInstance().findMany({ parentTeam: { $in: parentIds } });
 
 /**
  * Nearest realm team of `teamId` (the team itself or an ancestor), or null when the
  * team is not inside a realm.
  */
 export async function resolveTeamRealm(teamId: string): Promise<Team | null> {
-  const chain: Team[] = [];
-  const seen = new Set<string>();
-  let currentId: string | null | undefined = String(teamId);
-  while (currentId && !seen.has(currentId) && chain.length < MAX_TEAM_DEPTH) {
-    seen.add(currentId);
-    const team: Team | null = await Team.getInstance().findOne({ _id: currentId });
-    if (!team) break;
-    chain.push(team);
-    if (team.realm?.enabled) break;
-    currentId = team.parentTeam ? String(team.parentTeam) : null;
-  }
-  return nearestRealmInChain(chain);
-}
-
-async function subtreeHasRealm(teamId: string): Promise<boolean> {
-  let level = [String(teamId)];
-  const seen = new Set(level);
-  for (let depth = 0; level.length > 0 && depth < MAX_TEAM_DEPTH; depth++) {
-    const children = await Team.getInstance().findMany({ parentTeam: { $in: level } });
-    if (children.some(child => child.realm?.enabled)) return true;
-    level = children.map(child => String(child._id)).filter(id => !seen.has(id));
-    level.forEach(id => seen.add(id));
-  }
-  return false;
+  return nearestRealmInChain(await collectTeamChain(String(teamId), fetchTeamById));
 }
 
 /**
@@ -204,18 +216,14 @@ export async function assertNoNestedRealm(
 ): Promise<void> {
   const team = await Team.getInstance().findOne({ _id: teamId });
   if (!team) throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
-  const parent = parentTeamId === undefined ? team.parentTeam : parentTeamId;
-  const isRealm = team.realm?.enabled === true || options.promote === true;
-  if (isRealm && parent) throw new ModuleError(errors.REALM_NESTED);
-  if (parent) {
-    const ancestorRealm = await resolveTeamRealm(String(parent));
-    if (ancestorRealm && (isRealm || (await subtreeHasRealm(teamId)))) {
-      throw new ModuleError(errors.REALM_NESTED);
-    }
-  }
-  if (options.promote && (await subtreeHasRealm(teamId))) {
-    throw new ModuleError(errors.REALM_NESTED);
-  }
+  const violation = await hasNestedRealmViolation({
+    team,
+    parentTeamId,
+    promote: options.promote,
+    fetchTeam: fetchTeamById,
+    fetchChildren: fetchChildTeams,
+  });
+  if (violation) throw new ModuleError(errors.REALM_NESTED);
 }
 
 // ---------------------------------------------------------------------------
@@ -344,7 +352,11 @@ export async function assertRealmAccess(params: {
   let membershipType: RealmMembershipType | null = null;
   if (requestedRealm) {
     // inactive/unknown realms deny entry, which also kills their sessions on renew
-    policies = (await resolveRealmById(requestedRealm)).effective.policies;
+    const context = await findRealmContextById(requestedRealm);
+    if (!context) {
+      throw new ModuleError(errors[unresolvedRealmError(requestedRealm, userHomeRealm)]);
+    }
+    policies = context.effective.policies;
     if (requestedRealm !== userHomeRealm) {
       const membership = await RealmMembership.getInstance().findOne({
         user: String(user._id),

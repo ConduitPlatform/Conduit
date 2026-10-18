@@ -12,6 +12,7 @@ import { AccessToken, Client, User } from '../models/index.js';
 import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
+import { realmsEnabled } from '../utils/realm.js';
 import getToken = AuthUtils.getToken;
 
 /*
@@ -81,8 +82,8 @@ export async function handleAuthentication(
   return {
     user: accessToken.user,
     jwtPayload: payload,
-    // realm the session is in (team id), null for global sessions
-    realm: accessToken.realm ? String(accessToken.realm) : null,
+    // realm the session is in (team id), null for global sessions and with the flag off
+    realm: realmsEnabled() && accessToken.realm ? String(accessToken.realm) : null,
   };
 }
 

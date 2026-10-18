@@ -1,19 +1,37 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  applyOAuthSecretsUpdate,
   assertGuestAllowed,
+  assertRealmId,
   assertValidSlug,
+  BoundedTtlCache,
   buildEffectiveSettings,
+  collectTeamChain,
   defaultRealmSettings,
   evaluateGuestAllowed,
   evaluateRealmAccess,
+  hasNestedRealmViolation,
   homeScopedQuery,
+  isRealmId,
   isValidSlug,
+  maskRealmSettings,
+  mergeOAuthSecrets,
   nearestRealmInChain,
+  normalizeIdList,
   normalizeSlug,
+  shouldCheckRealmAccess,
+  splitRealmSettingsInput,
+  subtreeContainsRealm,
+  toRealmMembershipDto,
+  tokenAssurance,
+  unresolvedRealmError,
+  withHomeScope,
   type RealmAccessInput,
   type RealmPolicies,
   type RealmSettingsData,
+  type RealmTeamNode,
+  type StoredRealmSettingsData,
 } from './realm.logic.js';
 
 const A = 'aaaaaaaaaaaaaaaaaaaaaaaa';
@@ -75,15 +93,109 @@ describe('slugs', () => {
   });
 });
 
-describe('homeScopedQuery', () => {
+describe('homeScopedQuery / withHomeScope', () => {
+  const globalScope = {
+    $and: [{ $or: [{ homeRealm: null }, { homeRealm: { $exists: false } }] }],
+  };
+
   it('scopes to a realm id', () => {
     assert.deepEqual(homeScopedQuery(A), { homeRealm: A });
   });
 
-  it('matches both null and missing for global', () => {
-    const expected = { $or: [{ homeRealm: null }, { homeRealm: { $exists: false } }] };
-    assert.deepEqual(homeScopedQuery(null), expected);
-    assert.deepEqual(homeScopedQuery(undefined), expected);
+  it('matches both null and missing for global, without a top-level $or', () => {
+    assert.deepEqual(homeScopedQuery(null), globalScope);
+    assert.deepEqual(homeScopedQuery(undefined), globalScope);
+    assert.equal('$or' in homeScopedQuery(null), false);
+  });
+
+  it('withHomeScope keeps the caller $or next to the global scope', () => {
+    const callerOr = [{ email: 'a@b.c' }, { username: 'abc' }];
+    assert.deepEqual(withHomeScope({ $or: callerOr }, null), {
+      $or: callerOr,
+      $and: [{ $or: [{ homeRealm: null }, { homeRealm: { $exists: false } }] }],
+    });
+  });
+
+  it('withHomeScope appends to an existing $and instead of replacing it', () => {
+    const result = withHomeScope({ $and: [{ active: true }], email: 'x' }, null);
+    assert.deepEqual(result, {
+      email: 'x',
+      $and: [
+        { active: true },
+        { $or: [{ homeRealm: null }, { homeRealm: { $exists: false } }] },
+      ],
+    });
+    assert.deepEqual(withHomeScope({ $and: [{ active: true }] }, A), {
+      $and: [{ active: true }, { homeRealm: A }],
+    });
+  });
+
+  it('withHomeScope handles empty queries and does not mutate its input', () => {
+    assert.deepEqual(withHomeScope(undefined, A), { $and: [{ homeRealm: A }] });
+    assert.deepEqual(withHomeScope(null, null), globalScope);
+    const query = { $and: [{ active: true }] };
+    withHomeScope(query, null);
+    assert.deepEqual(query, { $and: [{ active: true }] });
+  });
+
+  it('withHomeScope cannot be bypassed by a caller homeRealm filter', () => {
+    const result = withHomeScope({ homeRealm: B }, A);
+    assert.deepEqual(result, { homeRealm: B, $and: [{ homeRealm: A }] });
+  });
+});
+
+describe('normalizeIdList', () => {
+  it('handles missing and non-array values', () => {
+    for (const value of [undefined, null, 'a;b', 5, {}, true]) {
+      assert.deepEqual(normalizeIdList(value), [], String(value));
+    }
+  });
+
+  it('drops the empty entry SQL produces for an empty list', () => {
+    assert.deepEqual(normalizeIdList(['']), []);
+    assert.deepEqual(normalizeIdList(['a', '', ' ', 'b']), ['a', 'b']);
+  });
+
+  it('stringifies and trims', () => {
+    const oid = { toString: () => A };
+    assert.deepEqual(normalizeIdList([oid, ' web ', 12, null, undefined]), [
+      A,
+      'web',
+      '12',
+    ]);
+  });
+});
+
+describe('realm ids', () => {
+  it('accepts ObjectIds, numeric ids and uuids', () => {
+    for (const id of [
+      A,
+      'AAAAAAAAAAAAAAAAAAAAAAAA',
+      '12',
+      42,
+      '0b8c9a3e-1f2d-4c5b-8a6e-7d9f0a1b2c3d',
+    ]) {
+      assert.equal(isRealmId(id), true, String(id));
+      assert.equal(assertRealmId(id), String(id));
+    }
+  });
+
+  it('rejects slugs and junk with INVALID_ARGUMENT', () => {
+    for (const id of [
+      'acme-corp',
+      '',
+      'zzzzzzzzzzzzzzzzzzzzzzzz',
+      null,
+      undefined,
+      {},
+      'a b',
+    ]) {
+      assert.equal(isRealmId(id), false, String(id));
+      assert.throws(
+        () => assertRealmId(id),
+        (e: any) => e.code === 3 && e.message === 'realm must be a realm team id',
+      );
+    }
   });
 });
 
@@ -529,3 +641,669 @@ describe('nearestRealmInChain', () => {
     assert.equal(nearestRealmInChain([]), null);
   });
 });
+
+describe('SQL primitive array tolerance', () => {
+  // MySQL/MariaDB/SQLite join primitive arrays with ';': [] reads back as [''] and a
+  // missing value as null/undefined.
+  const sqlPolicies = (clients: unknown, homes: unknown) =>
+    ({
+      ...defaultRealmSettings().policies,
+      allowedClientIds: clients,
+      guests: { allowed: true, allowedHomeRealms: homes },
+    }) as unknown as RealmPolicies;
+
+  it('buildEffectiveSettings normalizes [""], null and undefined lists', () => {
+    for (const value of [[''], null, undefined, [' ']]) {
+      const effective = buildEffectiveSettings(
+        {},
+        settings({ policies: sqlPolicies(value, value) }),
+      );
+      assert.deepEqual(effective.policies.allowedClientIds, [], String(value));
+      assert.deepEqual(effective.policies.guests.allowedHomeRealms, [], String(value));
+    }
+  });
+
+  it('buildEffectiveSettings keeps real ids and stringifies them', () => {
+    const oid = { toString: () => B };
+    const effective = buildEffectiveSettings(
+      {},
+      settings({ policies: sqlPolicies(['web', ''], [oid, '']) }),
+    );
+    assert.deepEqual(effective.policies.allowedClientIds, ['web']);
+    assert.deepEqual(effective.policies.guests.allowedHomeRealms, [B]);
+  });
+
+  it('buildEffectiveSettings survives missing policies and strategies', () => {
+    const effective = buildEffectiveSettings({}, {
+      active: true,
+    } as unknown as RealmSettingsData);
+    assert.deepEqual(effective.policies.allowedClientIds, []);
+    assert.equal(effective.policies.guests.allowed, true);
+  });
+
+  it('evaluateGuestAllowed treats [""] and null as "any home realm"', () => {
+    for (const value of [[''], null, undefined]) {
+      const p = sqlPolicies([], value);
+      assert.deepEqual(evaluateGuestAllowed(p, null), { allowed: true }, String(value));
+      assert.deepEqual(evaluateGuestAllowed(p, B), { allowed: true }, String(value));
+      assert.doesNotThrow(() => assertGuestAllowed(p, null));
+    }
+  });
+
+  it('evaluateGuestAllowed still filters when real ids sit next to the empty entry', () => {
+    const p = sqlPolicies([], ['', B]);
+    assert.deepEqual(evaluateGuestAllowed(p, B), { allowed: true });
+    assert.deepEqual(evaluateGuestAllowed(p, C), {
+      allowed: false,
+      error: 'GUESTS_NOT_ALLOWED',
+    });
+  });
+
+  it('evaluateRealmAccess treats allowedClientIds [""] and null as "any client"', () => {
+    for (const value of [[''], null, undefined]) {
+      assert.deepEqual(
+        evaluateRealmAccess(
+          access({
+            policies: sqlPolicies(value, []),
+            assurance: {
+              authorized: true,
+              hasTwoFA: false,
+              isVerified: true,
+              clientId: 'anything',
+            },
+          }),
+        ),
+        { allowed: true },
+        String(value),
+      );
+    }
+  });
+
+  it('evaluateRealmAccess still pins the client next to the empty entry', () => {
+    const p = sqlPolicies(['', 'web'], []);
+    const withClient = (clientId: string) =>
+      access({
+        policies: p,
+        assurance: { authorized: true, hasTwoFA: false, isVerified: true, clientId },
+      });
+    assert.deepEqual(evaluateRealmAccess(withClient('web')), { allowed: true });
+    assert.deepEqual(evaluateRealmAccess(withClient('')), {
+      allowed: false,
+      error: 'REALM_ACCESS_DENIED',
+    });
+  });
+});
+
+describe('evaluateRealmAccess edge cases', () => {
+  const denied = { allowed: false, error: 'REALM_ACCESS_DENIED' };
+
+  it('treats a guest membership row for the own home realm as home, not guest', () => {
+    // guests are not allowed, which would deny a real guest
+    const closed = policies({ guests: { allowed: false, allowedHomeRealms: [C] } });
+    assert.deepEqual(
+      evaluateRealmAccess(
+        access({
+          requestedRealm: A,
+          userHomeRealm: A,
+          membershipType: 'guest',
+          policies: closed,
+        }),
+      ),
+      { allowed: true },
+    );
+  });
+
+  it('treats an empty home realm as global', () => {
+    assert.deepEqual(
+      evaluateRealmAccess(
+        access({ requestedRealm: null, userHomeRealm: '', policies: null }),
+      ),
+      { allowed: true },
+    );
+    assert.deepEqual(
+      evaluateRealmAccess(access({ userHomeRealm: '', membershipType: 'guest' })),
+      { allowed: true },
+    );
+    assert.deepEqual(
+      evaluateRealmAccess(access({ userHomeRealm: '', membershipType: null })),
+      denied,
+    );
+  });
+
+  it('treats an empty requested realm as global', () => {
+    assert.deepEqual(
+      evaluateRealmAccess(
+        access({ requestedRealm: '', userHomeRealm: null, policies: null }),
+      ),
+      { allowed: true },
+    );
+    assert.deepEqual(
+      evaluateRealmAccess(
+        access({ requestedRealm: '', userHomeRealm: A, policies: null }),
+      ),
+      denied,
+    );
+  });
+
+  it('an unresolvable home realm is a denial, any other one is not found', () => {
+    assert.equal(unresolvedRealmError(A, A), 'REALM_ACCESS_DENIED');
+    assert.equal(unresolvedRealmError(A, B), 'REALM_NOT_FOUND');
+    assert.equal(unresolvedRealmError(A, null), 'REALM_NOT_FOUND');
+  });
+});
+
+describe('token issuance decisions', () => {
+  it('shouldCheckRealmAccess skips when the feature flag is off', () => {
+    assert.equal(
+      shouldCheckRealmAccess({ realmsEnabled: false, realm: A, homeRealm: A }),
+      false,
+    );
+  });
+
+  it('shouldCheckRealmAccess skips when both realms are empty', () => {
+    for (const empty of [null, undefined, '']) {
+      assert.equal(
+        shouldCheckRealmAccess({ realmsEnabled: true, realm: empty, homeRealm: empty }),
+        false,
+      );
+    }
+  });
+
+  it('shouldCheckRealmAccess checks when either realm is set', () => {
+    assert.equal(
+      shouldCheckRealmAccess({ realmsEnabled: true, realm: A, homeRealm: '' }),
+      true,
+    );
+    assert.equal(
+      shouldCheckRealmAccess({ realmsEnabled: true, realm: null, homeRealm: B }),
+      true,
+    );
+  });
+
+  it('tokenAssurance: users without 2FA are authorized', () => {
+    assert.deepEqual(tokenAssurance({ hasTwoFA: false }), {
+      authorized: true,
+      realmAuthorized: true,
+    });
+  });
+
+  it('tokenAssurance: a partial token is unauthorized but passes the realm check', () => {
+    assert.deepEqual(tokenAssurance({ hasTwoFA: true }), {
+      authorized: false,
+      realmAuthorized: true,
+    });
+    assert.deepEqual(tokenAssurance({ hasTwoFA: true, twoFaPass: false }), {
+      authorized: false,
+      realmAuthorized: true,
+    });
+  });
+
+  it('tokenAssurance: 2FA pass and refresh authorize', () => {
+    assert.deepEqual(tokenAssurance({ hasTwoFA: true, twoFaPass: true }), {
+      authorized: true,
+      realmAuthorized: true,
+    });
+    assert.deepEqual(tokenAssurance({ hasTwoFA: true, isRefresh: true }), {
+      authorized: true,
+      realmAuthorized: true,
+    });
+  });
+
+  it('a partial token still fails requireTwoFa for users without 2FA only', () => {
+    const p = policies({ requireTwoFa: true });
+    const evaluate = (hasTwoFA: boolean) =>
+      evaluateRealmAccess(
+        access({
+          policies: p,
+          assurance: {
+            authorized: tokenAssurance({ hasTwoFA }).realmAuthorized,
+            hasTwoFA,
+            isVerified: true,
+            clientId: 'web',
+          },
+        }),
+      );
+    assert.deepEqual(evaluate(true), { allowed: true });
+    assert.deepEqual(evaluate(false), {
+      allowed: false,
+      error: 'TWO_FA_REQUIRED_FOR_REALM',
+    });
+  });
+});
+
+describe('oauth secrets', () => {
+  const stored = (): StoredRealmSettingsData => ({
+    active: true,
+    strategies: {
+      ...defaultRealmSettings().strategies,
+      oauth: {
+        google: { enabled: true, clientId: 'gid' },
+        apple: { enabled: true, clientId: 'aid', teamId: 't', keyId: 'k' },
+      },
+    },
+    registration: { allowWithoutInvite: false },
+    policies: defaultRealmSettings().policies,
+  });
+  const secrets = () => ({
+    google: { clientSecret: 'gsecret' },
+    apple: { privateKey: 'akey', clientSecret: 'asecret' },
+  });
+
+  it('mergeOAuthSecrets puts the secrets back into the oauth entries', () => {
+    const merged = mergeOAuthSecrets(stored(), secrets());
+    assert.equal(merged.strategies.oauth.google?.clientSecret, 'gsecret');
+    assert.equal(merged.strategies.oauth.apple?.privateKey, 'akey');
+    assert.equal(merged.strategies.oauth.google?.clientId, 'gid');
+    const effective = buildEffectiveSettings({}, merged);
+    assert.equal(effective.strategies.oauth.google.clientSecret, 'gsecret');
+    assert.equal(effective.strategies.oauth.apple.privateKey, 'akey');
+  });
+
+  it('mergeOAuthSecrets tolerates missing secrets and ignores unknown providers', () => {
+    for (const value of [null, undefined, {}]) {
+      assert.deepEqual(
+        mergeOAuthSecrets(stored(), value).strategies,
+        stored().strategies,
+      );
+    }
+    const merged = mergeOAuthSecrets(stored(), {
+      nope: { clientSecret: 'x' },
+      github: { clientSecret: 'ghs' },
+    } as any);
+    assert.equal('nope' in merged.strategies.oauth, false);
+    assert.deepEqual(merged.strategies.oauth.github, {
+      enabled: false,
+      clientSecret: 'ghs',
+    });
+  });
+
+  it('mergeOAuthSecrets does not mutate its input', () => {
+    const input = stored();
+    mergeOAuthSecrets(input, secrets());
+    assert.deepEqual(input, stored());
+  });
+
+  it('maskRealmSettings reports has* flags and never a secret value', () => {
+    const masked = maskRealmSettings({
+      _id: A,
+      team: B,
+      ...stored(),
+      oauthSecrets: secrets(),
+    });
+    assert.equal('oauthSecrets' in masked, false);
+    assert.deepEqual(masked.strategies.oauth.google, {
+      enabled: true,
+      clientId: 'gid',
+      hasClientSecret: true,
+    });
+    assert.deepEqual(masked.strategies.oauth.apple, {
+      enabled: true,
+      clientId: 'aid',
+      teamId: 't',
+      keyId: 'k',
+      hasClientSecret: true,
+      hasPrivateKey: true,
+    });
+    assert.equal((masked as any)._id, A);
+    assert.equal((masked as any).team, B);
+    assert.equal(JSON.stringify(masked).includes('secret'), false);
+    assert.equal(JSON.stringify(masked).includes('akey'), false);
+  });
+
+  it('maskRealmSettings flags absent secrets as false and works without oauthSecrets', () => {
+    const masked = maskRealmSettings(stored());
+    assert.equal(masked.strategies.oauth.google?.hasClientSecret, false);
+    assert.equal(masked.strategies.oauth.apple?.hasPrivateKey, false);
+    assert.equal('hasPrivateKey' in (masked.strategies.oauth.google ?? {}), false);
+    const empty = maskRealmSettings({
+      ...stored(),
+      oauthSecrets: { google: { clientSecret: '' } },
+    });
+    assert.equal(empty.strategies.oauth.google?.hasClientSecret, false);
+  });
+
+  it('maskRealmSettings also masks secrets found inside merged settings', () => {
+    const masked = maskRealmSettings(mergeOAuthSecrets(stored(), secrets()));
+    assert.equal(masked.strategies.oauth.google?.hasClientSecret, true);
+    assert.equal(JSON.stringify(masked).includes('gsecret'), false);
+  });
+
+  it('maskRealmSettings does not mutate its input', () => {
+    const input = { ...stored(), oauthSecrets: secrets() };
+    maskRealmSettings(input);
+    assert.deepEqual(input, { ...stored(), oauthSecrets: secrets() });
+  });
+
+  it('splitRealmSettingsInput moves secrets out and drops read-only flags', () => {
+    const { settings, oauthSecrets } = splitRealmSettingsInput({
+      active: true,
+      strategies: {
+        local: { enabled: true },
+        oauth: {
+          google: {
+            enabled: true,
+            clientId: 'gid',
+            clientSecret: 'gsecret',
+            hasClientSecret: true,
+          },
+          apple: { enabled: true, privateKey: 'akey', hasPrivateKey: true, keyId: 'k' },
+          github: { enabled: false },
+        },
+      },
+      policies: { requireTwoFa: true, guests: { allowed: false } },
+      registration: { allowWithoutInvite: true },
+    });
+    assert.deepEqual(oauthSecrets, {
+      google: { clientSecret: 'gsecret' },
+      apple: { privateKey: 'akey' },
+    });
+    assert.deepEqual(settings, {
+      active: true,
+      strategies: {
+        local: { enabled: true },
+        oauth: {
+          google: { enabled: true, clientId: 'gid' },
+          apple: { enabled: true, keyId: 'k' },
+          github: { enabled: false },
+        },
+      },
+      policies: { requireTwoFa: true, guests: { allowed: false } },
+      registration: { allowWithoutInvite: true },
+    });
+  });
+
+  it('splitRealmSettingsInput carries only settings keys and ignores injected oauthSecrets', () => {
+    const { settings, oauthSecrets } = splitRealmSettingsInput({
+      slug: 'acme',
+      force: true,
+      oauthSecrets: { google: { clientSecret: 'injected' } },
+      active: false,
+    } as any);
+    assert.deepEqual(settings, { active: false });
+    assert.deepEqual(oauthSecrets, {});
+    assert.deepEqual(splitRealmSettingsInput(undefined), {
+      settings: {},
+      oauthSecrets: {},
+    });
+  });
+
+  it('split then merge then mask round-trips', () => {
+    const input = {
+      strategies: {
+        oauth: {
+          google: { enabled: true, clientId: 'gid', clientSecret: 'gsecret' },
+          apple: { enabled: true, privateKey: 'akey', teamId: 't', keyId: 'k' },
+        },
+      },
+    };
+    const { settings, oauthSecrets } = splitRealmSettingsInput(input);
+    const doc = {
+      ...stored(),
+      strategies: { ...stored().strategies, oauth: settings.strategies!.oauth! },
+    } as StoredRealmSettingsData;
+    const merged = mergeOAuthSecrets(doc, oauthSecrets);
+    assert.equal(merged.strategies.oauth.google?.clientSecret, 'gsecret');
+    assert.equal(merged.strategies.oauth.apple?.privateKey, 'akey');
+    const masked = maskRealmSettings({ ...doc, oauthSecrets });
+    assert.equal(masked.strategies.oauth.google?.hasClientSecret, true);
+    assert.equal(masked.strategies.oauth.apple?.hasPrivateKey, true);
+    assert.equal(JSON.stringify(masked).includes('gsecret'), false);
+  });
+
+  it('applyOAuthSecretsUpdate replaces, clears and keeps secrets', () => {
+    const existing = {
+      google: { clientSecret: 'old' },
+      apple: { privateKey: 'k', clientSecret: 's' },
+    };
+    const result = applyOAuthSecretsUpdate(existing, {
+      google: { clientSecret: 'new' },
+      apple: { clientSecret: '' },
+      github: { clientSecret: 'gh' },
+    });
+    assert.deepEqual(result, {
+      google: { clientSecret: 'new' },
+      apple: { privateKey: 'k' },
+      github: { clientSecret: 'gh' },
+    });
+    assert.deepEqual(existing.google, { clientSecret: 'old' });
+  });
+
+  it('applyOAuthSecretsUpdate drops providers left empty and tolerates no stored secrets', () => {
+    assert.deepEqual(
+      applyOAuthSecretsUpdate(
+        { google: { clientSecret: 'x' } },
+        { google: { clientSecret: '' } },
+      ),
+      {},
+    );
+    assert.deepEqual(applyOAuthSecretsUpdate(null, {}), {});
+    assert.deepEqual(
+      applyOAuthSecretsUpdate(undefined, { google: { clientSecret: 'a' } }),
+      {
+        google: { clientSecret: 'a' },
+      },
+    );
+  });
+});
+
+describe('toRealmMembershipDto', () => {
+  it('maps membershipType to type and stringifies ids and dates', () => {
+    const oid = (id: string) => ({ toString: () => id });
+    assert.deepEqual(
+      toRealmMembershipDto({
+        _id: oid(A),
+        user: oid(B),
+        realm: oid(C),
+        membershipType: 'guest',
+        createdAt: new Date('2026-01-02T03:04:05.000Z'),
+        updatedAt: new Date(),
+      } as any),
+      {
+        _id: A,
+        user: B,
+        realm: C,
+        type: 'guest',
+        createdAt: '2026-01-02T03:04:05.000Z',
+      },
+    );
+  });
+
+  it('accepts string dates and omits a missing createdAt', () => {
+    const dto = toRealmMembershipDto({
+      _id: A,
+      user: B,
+      realm: C,
+      membershipType: 'home',
+      createdAt: '2026-01-02T03:04:05Z',
+    });
+    assert.equal(dto.createdAt, '2026-01-02T03:04:05.000Z');
+    assert.equal(
+      'createdAt' in
+        toRealmMembershipDto({ _id: A, user: B, realm: C, membershipType: 'home' }),
+      false,
+    );
+    assert.equal('membershipType' in dto, false);
+  });
+});
+
+describe('team tree', () => {
+  const node = (id: string, parentTeam?: string, realm = false): RealmTeamNode => ({
+    _id: id,
+    parentTeam: parentTeam ?? null,
+    realm: realm ? { enabled: true, slug: id } : undefined,
+  });
+
+  const tree = (...nodes: RealmTeamNode[]) => {
+    const byId = new Map(nodes.map(n => [n._id, n]));
+    return {
+      byId,
+      fetchTeam: async (id: string) => byId.get(id) ?? null,
+      fetchChildren: async (parentIds: string[]) =>
+        nodes.filter(n => n.parentTeam && parentIds.includes(String(n.parentTeam))),
+    };
+  };
+
+  const violation = (
+    t: ReturnType<typeof tree>,
+    teamId: string,
+    parentTeamId?: string | null,
+    promote?: boolean,
+  ) =>
+    hasNestedRealmViolation({
+      team: t.byId.get(teamId)!,
+      parentTeamId,
+      promote,
+      fetchTeam: t.fetchTeam,
+      fetchChildren: t.fetchChildren,
+    });
+
+  it('collectTeamChain walks up to and including the first realm', async () => {
+    const t = tree(node('r', undefined, true), node('a', 'r'), node('b', 'a'));
+    const chain = await collectTeamChain('b', t.fetchTeam);
+    assert.deepEqual(
+      chain.map(n => n._id),
+      ['b', 'a', 'r'],
+    );
+    assert.equal(nearestRealmInChain(chain)?._id, 'r');
+  });
+
+  it('collectTeamChain survives cycles and missing parents', async () => {
+    const cyclic = tree(node('a', 'b'), node('b', 'a'));
+    assert.deepEqual(
+      (await collectTeamChain('a', cyclic.fetchTeam)).map(n => n._id),
+      ['a', 'b'],
+    );
+    const orphan = tree(node('a', 'gone'));
+    assert.deepEqual(
+      (await collectTeamChain('a', orphan.fetchTeam)).map(n => n._id),
+      ['a'],
+    );
+    assert.deepEqual(await collectTeamChain('nope', orphan.fetchTeam), []);
+  });
+
+  it('subtreeContainsRealm finds deep realms and ignores the root itself', async () => {
+    const t = tree(
+      node('root', undefined, true),
+      node('a', 'root'),
+      node('b', 'a'),
+      node('c', 'b', true),
+    );
+    assert.equal(await subtreeContainsRealm('root', t.fetchChildren), true);
+    assert.equal(await subtreeContainsRealm('b', t.fetchChildren), true);
+    assert.equal(await subtreeContainsRealm('c', t.fetchChildren), false);
+    assert.equal(await subtreeContainsRealm('x', t.fetchChildren), false);
+  });
+
+  it('subtreeContainsRealm is cycle safe', async () => {
+    const t = tree(node('a', 'b'), node('b', 'a'));
+    assert.equal(await subtreeContainsRealm('a', t.fetchChildren), false);
+  });
+
+  it('allows promoting a top-level team without realm descendants', async () => {
+    const t = tree(node('a'), node('b', 'a'));
+    assert.equal(await violation(t, 'a', undefined, true), false);
+  });
+
+  it('rejects promoting a team that has a parent', async () => {
+    const t = tree(node('a'), node('b', 'a'));
+    assert.equal(await violation(t, 'b', undefined, true), true);
+  });
+
+  it('rejects promoting a team with a realm descendant', async () => {
+    const t = tree(node('a'), node('b', 'a'), node('c', 'b', true));
+    assert.equal(await violation(t, 'a', undefined, true), true);
+  });
+
+  it('rejects moving a realm below another team, allows moving it to the top', async () => {
+    const t = tree(node('r', undefined, true), node('x'));
+    assert.equal(await violation(t, 'r', 'x'), true);
+    assert.equal(await violation(t, 'r', null), false);
+  });
+
+  it('rejects moving a team under a realm when its subtree holds a realm', async () => {
+    const t = tree(
+      node('r', undefined, true),
+      node('a'),
+      node('b', 'a'),
+      node('c', 'b', true),
+    );
+    assert.equal(await violation(t, 'a', 'r'), true);
+  });
+
+  it('allows moving a plain team under a realm or a plain team', async () => {
+    const t = tree(node('r', undefined, true), node('a'), node('x'));
+    assert.equal(await violation(t, 'a', 'r'), false);
+    assert.equal(await violation(t, 'a', 'x'), false);
+  });
+
+  it('validates a team where it sits when no new parent is given', async () => {
+    const t = tree(node('r', undefined, true), node('a', 'r'));
+    assert.equal(await violation(t, 'a'), false);
+    assert.equal(await violation(t, 'r'), false);
+    // a realm that somehow has a parent is invalid
+    const broken = tree(node('p'), node('r', 'p', true));
+    assert.equal(await violation(broken, 'r'), true);
+  });
+});
+
+describe('BoundedTtlCache', () => {
+  it('returns clones, so callers cannot mutate shared state', () => {
+    const cache = new BoundedTtlCache<{ list: string[] }>(10);
+    const original = { list: ['a'] };
+    cache.set('k', original, 1000);
+    original.list.push('mutated-after-set');
+    const first = cache.get('k')!;
+    assert.deepEqual(first, { list: ['a'] });
+    first.list.push('mutated-after-get');
+    assert.deepEqual(cache.get('k'), { list: ['a'] });
+  });
+
+  it('expires entries on read', () => {
+    let now = 1000;
+    const cache = new BoundedTtlCache<string>(10, () => now);
+    cache.set('k', 'v', 100);
+    assert.equal(cache.get('k'), 'v');
+    now = 1100;
+    assert.equal(cache.get('k'), undefined);
+    assert.equal(cache.size, 0);
+  });
+
+  it('does not cache with a ttl of 0', () => {
+    const cache = new BoundedTtlCache<string>(10);
+    cache.set('k', 'v', 0);
+    assert.equal(cache.get('k'), undefined);
+    assert.equal(cache.size, 0);
+  });
+
+  it('drops the oldest entry once full', () => {
+    const cache = new BoundedTtlCache<string>(3);
+    for (const key of ['a', 'b', 'c', 'd']) cache.set(key, key, 1000);
+    assert.equal(cache.size, 3);
+    assert.equal(cache.get('a'), undefined);
+    assert.equal(cache.get('d'), 'd');
+    // rewriting a key refreshes it instead of evicting another one
+    cache.set('b', 'b2', 1000);
+    cache.set('e', 'e', 1000);
+    assert.equal(cache.get('b'), 'b2');
+    assert.equal(cache.get('c'), undefined);
+  });
+
+  it('caches null values', () => {
+    const cache = new BoundedTtlCache<string | null>(3);
+    cache.set('k', null, 1000);
+    assert.equal(cache.get('k'), null);
+  });
+
+  it('clear drops everything', () => {
+    const cache = new BoundedTtlCache<string>(3);
+    cache.set('a', 'a', 1000);
+    cache.clear();
+    assert.equal(cache.get('a'), undefined);
+  });
+});
+
+// Not covered here (needs the database, grantRealmMembership is IO around the pure
+// guest policy checks above): membership idempotency, assertSlugAvailable and
+// assertSlugUniqueAfterWrite, the TokenProvider wiring. The decisions they delegate to
+// (shouldCheckRealmAccess, tokenAssurance, unresolvedRealmError, evaluateGuestAllowed)
+// are tested above.
