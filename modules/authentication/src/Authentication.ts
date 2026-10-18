@@ -62,6 +62,7 @@ import {
   convictConfigParser,
   createParsedRouterRequest,
   ManagedModule,
+  ModuleError,
   sanitizeDocumentsForExport,
   type ExportableResource,
   type ExportResult,
@@ -87,20 +88,31 @@ import {
 } from './handlers/realmRequest.js';
 import {
   assertNoNestedRealm,
+  deleteUserRealmMemberships,
   getRealmSlugById,
   invalidateRealmCache,
+  realmsEnabled,
+  resolveTeamRealm,
 } from './utils/realm.js';
+import {
+  collectTeamSubtreeIds,
+  collectTeamUserIds,
+  revokeOrphanedGuests,
+} from './utils/teamRealm.js';
 import { RealmsAdmin } from './admin/realm.js';
 import {
   assertTeamId,
   assertUserId,
   buildSetRealmParams,
+  assertGrantMembershipAllowed,
   parseMembershipType,
+  parseOptionalMembershipType,
   toCallbackError,
   toGrpcTeam,
   toRealmResponse,
 } from './utils/realmGrpc.logic.js';
 import { buildTeamRealmExports, importTeamRealms } from './utils/realmExport.js';
+import { ImportTally } from './utils/realmExport.logic.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -179,7 +191,15 @@ export default class Authentication extends ManagedModule<Config> {
     return [
       {
         type: 'teams',
-        description: 'Team structure (name, parent, isDefault, realm and realm settings)',
+        description:
+          'Team structure (name, parent, isDefault, realm and realm settings). ' +
+          'Realm import: the file is the source of truth for the realms it enables ' +
+          '(a realm team without realmSettings is reset to the defaults); a file with ' +
+          'realm.enabled false leaves a realm that exists in the database alone ' +
+          '(demote it explicitly). Secrets are never exported or imported. Trusted home ' +
+          'realms are exported as slugs, or unresolved:<id> when the id is no enabled ' +
+          'realm; an unresolved entry fails closed on import (the stored list is kept, ' +
+          'or guests are disabled for a new realm) and is reported per team.',
         priority: 35,
       },
     ];
@@ -221,6 +241,8 @@ export default class Authentication extends ManagedModule<Config> {
     const result: ImportResult = {
       teams: { created: 0, updated: 0, failed: 0, errors: [] },
     };
+    // every record is counted once, whatever step it fails in
+    const tally = new ImportTally(result.teams);
     const teamModel = models.Team.getInstance(this.database);
     const teams = (data.teams ?? []) as {
       name: string;
@@ -229,28 +251,26 @@ export default class Authentication extends ManagedModule<Config> {
       realm?: unknown;
       realmSettings?: unknown;
     }[];
-    for (const rec of teams) {
+    for (const [index, rec] of teams.entries()) {
       const name = rec.name;
       if (name == null || name === '') {
-        result.teams.failed += 1;
-        result.teams.errors.push('Missing name');
+        tally.failed(index, 'Missing name');
         continue;
       }
       try {
         const existing = await teamModel.findOne({ name });
         if (existing) {
           await teamModel.updateOne({ name }, { isDefault: rec.isDefault ?? false });
-          result.teams.updated += 1;
+          tally.updated(index);
         } else {
           await teamModel.create({ name, isDefault: rec.isDefault ?? false });
-          result.teams.created += 1;
+          tally.created(index);
         }
       } catch (e) {
-        result.teams.failed += 1;
-        result.teams.errors.push(`${name}: ${(e as Error).message}`);
+        tally.failed(index, `${name}: ${(e as Error).message}`);
       }
     }
-    for (const rec of teams) {
+    for (const [index, rec] of teams.entries()) {
       if (!rec.parentTeamName) continue;
       try {
         const parent = await teamModel.findOne(
@@ -258,17 +278,25 @@ export default class Authentication extends ManagedModule<Config> {
           { readPreference: 'primary' },
         );
         if (parent) {
+          const child = await teamModel.findOne({ name: rec.name });
+          if (child) {
+            // a realm stays top-level and never contains or sits inside another realm
+            await assertNoNestedRealm(String(child._id), String(parent._id));
+          }
           await teamModel.updateOne(
             { name: rec.name },
             { parentTeam: (parent as Indexable)._id },
           );
         }
-      } catch (_) {
-        // ignore
+      } catch (e) {
+        // a missing parent is ignored (as before); a realm that would nest is reported
+        if (e instanceof ModuleError) {
+          tally.failed(index, `${rec.name}: parent: ${(e as Error).message}`);
+        }
       }
     }
     // realms need the final team tree (a realm is top-level) and never import secrets
-    const realmsChanged = await importTeamRealms(teams, result.teams);
+    const realmsChanged = await importTeamRealms(this.grpcSdk, teams, tally);
     if (realmsChanged) this.notifyRealmsImported();
     return result;
   }
@@ -329,6 +357,10 @@ export default class Authentication extends ManagedModule<Config> {
 
   async onConfig() {
     const config = ConfigController.getInstance().config;
+    // realm contexts embed the global config (inherited OAuth credentials, local
+    // verification...), so any config change, a credential rotation included, must
+    // rebuild them (this also drops the per-realm OAuth settings)
+    invalidateRealmCache();
     await this.ensureSharedAccessTokenJwtSecret(config);
     if (config.redirectUris.allowAny && process.env.NODE_ENV === 'production') {
       ConduitGrpcSdk.Logger.warn(
@@ -770,6 +802,12 @@ export default class Authentication extends ManagedModule<Config> {
     const { userId } = call.request;
     try {
       await models.User.getInstance().deleteOne({ _id: userId });
+      // no membership row or session may outlive its user
+      await deleteUserRealmMemberships(userId);
+      await Promise.all([
+        models.AccessToken.getInstance().deleteMany({ user: userId }),
+        models.RefreshToken.getInstance().deleteMany({ user: userId }),
+      ]);
       return callback(null, {
         message: 'ok',
       });
@@ -931,10 +969,26 @@ export default class Authentication extends ManagedModule<Config> {
         }
       });
     // realm and home realm are exposed as slugs (absent for global sessions and users)
-    const [realm, homeRealm] =
-      accessStatus === ValidateAccessTokenResponse_Status.AUTHENTICATED
-        ? await Promise.all([getRealmSlugById(realmId), getRealmSlugById(homeRealmId)])
-        : [undefined, undefined];
+    // (a failed lookup must not turn an authenticated answer into an error)
+    let realm: string | undefined;
+    let homeRealm: string | undefined;
+    if (
+      accessStatus === ValidateAccessTokenResponse_Status.AUTHENTICATED &&
+      realmsEnabled()
+    ) {
+      try {
+        [realm, homeRealm] = await Promise.all([
+          getRealmSlugById(realmId),
+          getRealmSlugById(homeRealmId),
+        ]);
+      } catch (e) {
+        ConduitGrpcSdk.Logger.warn(
+          `Failed to resolve realm slugs for access token validation: ${(e as Error).message}`,
+        );
+        realm = undefined;
+        homeRealm = undefined;
+      }
+    }
     return callback(null, { status: accessStatus, userId, realm, homeRealm });
   }
 
@@ -1072,9 +1126,25 @@ export default class Authentication extends ManagedModule<Config> {
         ...(name && { name }),
       };
 
+      // An empty newParentTeamId means "parent unchanged" in this RPC (a team cannot be
+      // moved to the top level through it), so only a real re-parent touches realms.
+      let oldRealmId: string | null = null;
+      let movedUserIds: string[] = [];
       if (newParentTeamId) {
-        // a realm stays top-level and never contains or sits inside another realm
-        await assertNoNestedRealm(teamId, newParentTeamId);
+        if (realmsEnabled()) {
+          // a realm stays top-level and never contains or sits inside another realm
+          await assertNoNestedRealm(teamId, newParentTeamId);
+          const oldRealm = await resolveTeamRealm(teamId);
+          if (oldRealm) {
+            // collected before the move: guests whose only relations in the old realm
+            // were on this subtree lose their guest membership afterwards
+            oldRealmId = String(oldRealm._id);
+            movedUserIds = await collectTeamUserIds(
+              this.grpcSdk,
+              await collectTeamSubtreeIds(teamId),
+            );
+          }
+        }
         const newParentTeam = await models.Team.getInstance().findOne({
           _id: newParentTeamId,
         });
@@ -1123,6 +1193,14 @@ export default class Authentication extends ManagedModule<Config> {
 
       if (!updatedTeam) {
         return callback({ code: status.INTERNAL, message: 'Failed to update team' });
+      }
+
+      if (oldRealmId) {
+        const newRealm = await resolveTeamRealm(teamId);
+        if (!newRealm || String(newRealm._id) !== oldRealmId) {
+          // the team left its realm: same cleanup as when a sub-team is deleted
+          await revokeOrphanedGuests(this.grpcSdk, oldRealmId, movedUserIds);
+        }
       }
 
       if (name) {
@@ -1214,6 +1292,17 @@ export default class Authentication extends ManagedModule<Config> {
       const teamId = assertTeamId(call.request.teamId);
       const userId = assertUserId(call.request.userId);
       const type = parseMembershipType(call.request.type);
+      const force = call.request.force === true;
+      const user = await models.User.getInstance().findOne({ _id: userId });
+      if (!user) {
+        return callback({ code: status.NOT_FOUND, message: 'User not found' });
+      }
+      assertGrantMembershipAllowed({
+        type,
+        realmTeamId: teamId,
+        userHomeRealm: user.homeRealm,
+        force,
+      });
       const admin = this.realmsAdmin();
       if (type === 'guest') {
         const params = { teamId, userIds: [userId] };
@@ -1222,10 +1311,11 @@ export default class Authentication extends ManagedModule<Config> {
         );
       } else {
         // a home membership is the user's home realm
-        const params = { id: userId, realmTeamId: teamId, force: false };
+        const params = { id: userId, realmTeamId: teamId, force };
         await admin.moveUserHomeRealm(
           createParsedRouterRequest(params, { id: userId }, undefined, {
             realmTeamId: teamId,
+            force,
           }),
         );
       }
@@ -1242,6 +1332,7 @@ export default class Authentication extends ManagedModule<Config> {
     try {
       const teamId = assertTeamId(call.request.teamId);
       const userId = assertUserId(call.request.userId);
+      parseOptionalMembershipType(call.request.type);
       // guests only: removing a home user is refused (HOME_USER_REMOVAL)
       await this.realmsAdmin().removeGuest(
         createParsedRouterRequest({ teamId, userId }, { teamId, userId }),

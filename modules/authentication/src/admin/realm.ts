@@ -39,6 +39,7 @@ import {
   evaluateGuestAllowed,
   grantRealmMembership,
   invalidateRealmCache,
+  RealmOAuthSecrets,
   realmsEnabled,
   revokeRealmMembership,
 } from '../utils/realm.js';
@@ -49,6 +50,7 @@ import {
   revokeRealmlessTokens,
 } from '../utils/teamRealm.js';
 import {
+  assertTeamPromotable,
   buildRealmSettingsWrite,
   DEMOTE_STEPS,
   DemoteStep,
@@ -56,6 +58,7 @@ import {
   planOldHomeMembership,
   planPromoteMembers,
   PromotePlan,
+  RealmSettingsFields,
   resolveSlugChange,
   toRealmDto,
   toRealmMember,
@@ -73,6 +76,149 @@ const realmErrors = {
   notFound: errors.REALM_NOT_FOUND,
   disabled: errors.REALMS_DISABLED,
 };
+
+async function findUsersByIds(ids: string[]): Promise<User[]> {
+  const users: User[] = [];
+  for (const batch of chunk(ids)) {
+    users.push(...(await User.getInstance().findMany({ _id: { $in: batch } })));
+  }
+  return users;
+}
+
+/** Every replica clears its realm cache and refreshes routes on this event. */
+function notifyRealmChange(
+  grpcSdk: ConduitGrpcSdk,
+  teamId: string,
+  onRealmChange?: () => void,
+) {
+  invalidateRealmCache();
+  grpcSdk.bus?.publish(REALM_UPDATE_EVENT, JSON.stringify({ teamId }));
+  onRealmChange?.();
+}
+
+/** Home users get the realm as home realm (if they had none) and a home membership. */
+async function convertMembers(
+  grpcSdk: ConduitGrpcSdk,
+  teamId: string,
+  plan: PromotePlan,
+) {
+  for (const batch of chunk(plan.setHomeRealm)) {
+    await User.getInstance().updateMany({ _id: { $in: batch } }, { homeRealm: teamId });
+    // their global sessions end with the move into the realm
+    await revokeRealmlessTokens(batch);
+  }
+  // the authorization relations already exist, only the memberships are written
+  for (const batch of chunk(plan.home, 25)) {
+    await Promise.all(
+      batch.map(userId =>
+        grantRealmMembership(grpcSdk, {
+          userId,
+          realmTeamId: teamId,
+          type: 'home',
+        }),
+      ),
+    );
+  }
+  for (const batch of chunk(plan.guests, 25)) {
+    await Promise.all(
+      batch.map(userId =>
+        grantRealmMembership(grpcSdk, {
+          userId,
+          realmTeamId: teamId,
+          type: 'guest',
+          // already judged by planPromoteMembers
+          enforceGuestPolicy: false,
+        }),
+      ),
+    );
+  }
+}
+
+/** Best effort: never masks the error that triggered it. */
+async function rollbackPromote(teamId: string, plan: PromotePlan) {
+  const steps: (() => Promise<unknown>)[] = [
+    () => RealmMembership.getInstance().deleteMany({ realm: teamId }),
+    async () => {
+      for (const batch of chunk(plan.setHomeRealm)) {
+        await User.getInstance().updateMany(
+          { _id: { $in: batch }, homeRealm: teamId },
+          { homeRealm: null },
+        );
+      }
+    },
+    () => Team.getInstance().findByIdAndUpdate(teamId, { realm: { enabled: false } }),
+    () => RealmSettings.getInstance().deleteMany({ team: teamId }),
+  ];
+  for (const step of steps) {
+    try {
+      await step();
+    } catch (e) {
+      ConduitGrpcSdk.Logger.error(e as Error);
+    }
+  }
+}
+
+/**
+ * Turns a team into a realm, converting its existing members: the single code path of
+ * the promote route and of the GitOps import, so both keep the same invariants.
+ *  - members without a home realm become home users (the realm becomes their home);
+ *  - members homed in another realm become guests, subject to `settings.policies.guests`;
+ *    when the realm refuses any of them GUESTS_NOT_ALLOWED is thrown BEFORE anything is
+ *    written, listing the users;
+ *  - the write is rolled back (best effort) when a later step fails.
+ * The caller validates the request (promotable team, slug, settings, trusted home realm
+ * ids) and builds `settings`. Throws REALM_NESTED / REALM_SLUG_TAKEN. `notify: false`
+ * leaves the cache invalidation, the bus event and the route refresh to the caller (a
+ * batch import does it once at the end); the local cache is cleared on failure either way.
+ * Returns the promoted team.
+ */
+export async function promoteTeamToRealm(
+  grpcSdk: ConduitGrpcSdk,
+  team: Pick<Team, '_id'>,
+  input: {
+    slug: string;
+    settings: RealmSettingsFields;
+    oauthSecrets: RealmOAuthSecrets;
+  },
+  options: { onRealmChange?: () => void; notify?: boolean } = {},
+): Promise<Team> {
+  const teamId = String(team._id);
+  const { slug, settings, oauthSecrets } = input;
+  await assertNoNestedRealm(teamId, undefined, { promote: true });
+  await assertSlugAvailable(slug, teamId);
+
+  // decide what happens to the existing members before writing anything
+  const teamIds = await collectTeamSubtreeIds(teamId);
+  const memberIds = await collectTeamUserIds(grpcSdk, teamIds);
+  const members = await findUsersByIds(memberIds);
+  const plan = planPromoteMembers(members, teamId, settings.policies);
+  if (plan.rejected.length > 0) throw guestsNotAllowedError(plan.rejected, 'promote');
+
+  // leftovers of an earlier, half-demoted realm would trip the unique team index
+  await RealmSettings.getInstance().deleteMany({ team: teamId });
+  const notify = () => {
+    if (options.notify === false) invalidateRealmCache();
+    else notifyRealmChange(grpcSdk, teamId, options.onRealmChange);
+  };
+  try {
+    await RealmSettings.getInstance().create({
+      team: teamId,
+      ...settings,
+      oauthSecrets,
+    } as Indexable);
+    await Team.getInstance().findByIdAndUpdate(teamId, {
+      realm: { enabled: true, slug },
+    });
+    await assertSlugUniqueAfterWrite(slug, teamId);
+    await convertMembers(grpcSdk, teamId, plan);
+  } catch (e) {
+    await rollbackPromote(teamId, plan);
+    notify();
+    throw e;
+  }
+  notify();
+  return (await Team.getInstance().findOne({ _id: teamId }))!;
+}
 
 export class RealmsAdmin {
   constructor(
@@ -317,19 +463,12 @@ export class RealmsAdmin {
     );
   }
 
-  /** Every replica clears its realm cache and refreshes routes on this event. */
   private notifyRealmChange(teamId: string) {
-    invalidateRealmCache();
-    this.grpcSdk.bus?.publish(REALM_UPDATE_EVENT, JSON.stringify({ teamId }));
-    this.onRealmChange?.();
+    notifyRealmChange(this.grpcSdk, teamId, this.onRealmChange);
   }
 
-  private async findUsersByIds(ids: string[]): Promise<User[]> {
-    const users: User[] = [];
-    for (const batch of chunk(ids)) {
-      users.push(...(await User.getInstance().findMany({ _id: { $in: batch } })));
-    }
-    return users;
+  private findUsersByIds(ids: string[]): Promise<User[]> {
+    return findUsersByIds(ids);
   }
 
   private async hasRelationOn(userId: string, teamId: string): Promise<boolean> {
@@ -467,111 +606,22 @@ export class RealmsAdmin {
     const { teamId } = params;
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
-    if (team.realm?.enabled) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'Team is already a realm');
-    }
-    if (team.isDefault) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'The default team cannot become a realm: new users are added to it. ' +
-          'Make another team the default first.',
-      );
-    }
-    await assertNoNestedRealm(teamId, undefined, { promote: true });
+    assertTeamPromotable(team);
     const slug = assertValidSlug(params.slug);
-    await assertSlugAvailable(slug, teamId);
+    // (nesting and slug availability are checked by promoteTeamToRealm)
     const { settings, oauthSecrets } = buildRealmSettingsWrite({
       base: defaultRealmSettings(),
       input: params,
     });
     await assertRealmTeamIds(settings.policies.guests.allowedHomeRealms, teamId);
 
-    // decide what happens to the existing members before writing anything
-    const teamIds = await collectTeamSubtreeIds(teamId);
-    const memberIds = await collectTeamUserIds(this.grpcSdk, teamIds);
-    const members = await this.findUsersByIds(memberIds);
-    const plan = planPromoteMembers(members, teamId, settings.policies);
-    if (plan.rejected.length > 0) throw guestsNotAllowedError(plan.rejected, 'promote');
-
-    // leftovers of an earlier, half-demoted realm would trip the unique team index
-    await RealmSettings.getInstance().deleteMany({ team: teamId });
-    try {
-      await RealmSettings.getInstance().create({
-        team: teamId,
-        ...settings,
-        oauthSecrets,
-      } as Indexable);
-      await Team.getInstance().findByIdAndUpdate(teamId, {
-        realm: { enabled: true, slug },
-      });
-      await assertSlugUniqueAfterWrite(slug, teamId);
-      await this.convertMembers(teamId, plan);
-    } catch (e) {
-      await this.rollbackPromote(teamId, plan);
-      this.notifyRealmChange(teamId);
-      throw e;
-    }
-    this.notifyRealmChange(teamId);
-    const promoted = await Team.getInstance().findOne({ _id: teamId });
-    return this.buildRealm(promoted!);
-  }
-
-  /** Home users get the realm as home realm (if they had none) and a home membership. */
-  private async convertMembers(teamId: string, plan: PromotePlan) {
-    for (const batch of chunk(plan.setHomeRealm)) {
-      await User.getInstance().updateMany({ _id: { $in: batch } }, { homeRealm: teamId });
-      // their global sessions end with the move into the realm
-      await revokeRealmlessTokens(batch);
-    }
-    // the authorization relations already exist, only the memberships are written
-    for (const batch of chunk(plan.home, 25)) {
-      await Promise.all(
-        batch.map(userId =>
-          grantRealmMembership(this.grpcSdk, {
-            userId,
-            realmTeamId: teamId,
-            type: 'home',
-          }),
-        ),
-      );
-    }
-    for (const batch of chunk(plan.guests, 25)) {
-      await Promise.all(
-        batch.map(userId =>
-          grantRealmMembership(this.grpcSdk, {
-            userId,
-            realmTeamId: teamId,
-            type: 'guest',
-            // already judged by planPromoteMembers
-            enforceGuestPolicy: false,
-          }),
-        ),
-      );
-    }
-  }
-
-  /** Best effort: never masks the error that triggered it. */
-  private async rollbackPromote(teamId: string, plan: PromotePlan) {
-    const steps: (() => Promise<unknown>)[] = [
-      () => RealmMembership.getInstance().deleteMany({ realm: teamId }),
-      async () => {
-        for (const batch of chunk(plan.setHomeRealm)) {
-          await User.getInstance().updateMany(
-            { _id: { $in: batch }, homeRealm: teamId },
-            { homeRealm: null },
-          );
-        }
-      },
-      () => Team.getInstance().findByIdAndUpdate(teamId, { realm: { enabled: false } }),
-      () => RealmSettings.getInstance().deleteMany({ team: teamId }),
-    ];
-    for (const step of steps) {
-      try {
-        await step();
-      } catch (e) {
-        ConduitGrpcSdk.Logger.error(e as Error);
-      }
-    }
+    const promoted = await promoteTeamToRealm(
+      this.grpcSdk,
+      team,
+      { slug, settings, oauthSecrets },
+      { onRealmChange: this.onRealmChange },
+    );
+    return this.buildRealm(promoted);
   }
 
   async updateRealm(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

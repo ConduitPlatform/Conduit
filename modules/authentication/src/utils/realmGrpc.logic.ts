@@ -31,7 +31,11 @@ export function toGrpcTeam(team: Indexable) {
   };
 }
 
-/** gRPC callback error that keeps the code of a GrpcError (ModuleError included). */
+/**
+ * gRPC callback error that keeps the code of a GrpcError (ModuleError included). The
+ * message of a ModuleError is a JSON string (`{"conduitCode": ..., "message": ...}`) and
+ * reaches the caller as is; clients key on `conduitCode`.
+ */
 export function toCallbackError(e: unknown): { code: status; message: string } {
   if (e instanceof GrpcError) return { code: e.code, message: e.message };
   return { code: status.INTERNAL, message: (e as Error)?.message ?? String(e) };
@@ -54,6 +58,47 @@ export function assertUserId(value: unknown): string {
 export function parseMembershipType(value: unknown): RealmMembershipType {
   if (value === 'home' || value === 'guest') return value;
   throw new GrpcError(status.INVALID_ARGUMENT, "type must be 'home' or 'guest'");
+}
+
+/** Like parseMembershipType, but an empty type is allowed (RevokeRealmMembership). */
+export function parseOptionalMembershipType(
+  value: unknown,
+): RealmMembershipType | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  return parseMembershipType(value);
+}
+
+/**
+ * Pre-checks of GrantRealmMembership, before anything is written:
+ *  - `guest` for a user whose home realm is this realm is FAILED_PRECONDITION (a home
+ *    user is not a guest of their own realm, so it must not be a silent no-op);
+ *  - `home` over a different home realm is FAILED_PRECONDITION unless `force`, because
+ *    the move ends all the user's sessions.
+ */
+export function assertGrantMembershipAllowed(params: {
+  type: RealmMembershipType;
+  realmTeamId: string;
+  userHomeRealm: unknown;
+  force?: boolean;
+}): void {
+  const home = params.userHomeRealm ? String(params.userHomeRealm) : null;
+  const realm = String(params.realmTeamId);
+  if (params.type === 'guest') {
+    if (home === realm) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'The user is a home user of this realm and cannot be its guest',
+      );
+    }
+    return;
+  }
+  if (home && home !== realm && params.force !== true) {
+    throw new GrpcError(
+      status.FAILED_PRECONDITION,
+      'The user already has a different home realm. Set force to move them: all ' +
+        'their tokens are revoked.',
+    );
+  }
 }
 
 const SETTINGS_KEYS = ['active', 'strategies', 'policies', 'registration'] as const;

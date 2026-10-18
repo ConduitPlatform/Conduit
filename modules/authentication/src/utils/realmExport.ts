@@ -3,22 +3,28 @@
  * ./realmExport.logic.ts.
  */
 import { ConduitGrpcSdk, Indexable } from '@conduitplatform/grpc-sdk';
-import type { ImportResult } from '@conduitplatform/module-tools';
 
 import { RealmSettings, Team } from '../models/index.js';
+import { assertTeamPromotable } from '../admin/realm.logic.js';
+import { promoteTeamToRealm } from '../admin/realm.js';
 import {
   assertNoNestedRealm,
   assertSlugAvailable,
   assertSlugUniqueAfterWrite,
   invalidateRealmCache,
+  normalizeIdList,
 } from './realm.js';
 import {
+  applyTrustedHomeRealms,
   buildImportedSettings,
   buildSlugById,
+  decideTrustedHomeRealms,
   exportRealmSettings,
   exportTeamRealm,
+  ImportedRealm,
+  ImportTally,
   parseImportedRealm,
-  resolveAllowedHomeRealms,
+  topLevelTeamQuery,
 } from './realmExport.logic.js';
 
 /**
@@ -49,118 +55,214 @@ export async function buildTeamRealmExports(
   return exports;
 }
 
-type PendingHomeRealms = {
-  teamName: string;
-  settingsId: string;
-  settings: Indexable;
-  slugs: string[];
+type EnabledRealm = Extract<ImportedRealm, { enabled: true }>;
+
+type PreparedRealm = {
+  index: number;
+  name: string;
+  team: Team;
+  parsed: EnabledRealm;
 };
 
 /**
+ * Slug -> realm team id for every trusted home realm the file names, resolved before
+ * anything is written: the realms of the file itself win (their teams become realms
+ * under that slug), the rest comes from the realms in the database. A slug that is in
+ * neither is simply absent: the caller fails closed (see decideTrustedHomeRealms).
+ */
+async function resolveTrustedSlugs(
+  prepared: PreparedRealm[],
+): Promise<Map<string, string>> {
+  const idBySlug = new Map<string, string>();
+  for (const item of prepared) {
+    if (!idBySlug.has(item.parsed.slug)) {
+      idBySlug.set(item.parsed.slug, String(item.team._id));
+    }
+  }
+  const wanted = new Set<string>();
+  for (const item of prepared) {
+    for (const slug of item.parsed.allowedHomeRealmSlugs ?? []) {
+      if (!idBySlug.has(slug)) wanted.add(slug);
+    }
+  }
+  if (wanted.size > 0) {
+    const query: Indexable = {
+      'realm.slug': { $in: Array.from(wanted) },
+      'realm.enabled': true,
+    };
+    const realmTeams = await Team.getInstance().findMany(query, {
+      readPreference: 'primary',
+    });
+    for (const realmTeam of realmTeams) {
+      const slug = realmTeam.realm?.slug;
+      if (slug && !idBySlug.has(slug)) idBySlug.set(slug, String(realmTeam._id));
+    }
+  }
+  return idBySlug;
+}
+
+/** Overwrites the settings of a team that is already a realm (the file wins). */
+async function updateExistingRealm(
+  team: Team,
+  slug: string,
+  stored: Indexable | null,
+  write: { settings: Indexable; oauthSecrets: Indexable },
+): Promise<void> {
+  const teamId = String(team._id);
+  await assertNoNestedRealm(teamId, undefined, { promote: true });
+  await assertSlugAvailable(slug, teamId);
+
+  const previousRealm = team.realm;
+  const previousSettings = stored
+    ? {
+        active: stored.active,
+        strategies: stored.strategies,
+        registration: stored.registration,
+        policies: stored.policies,
+        oauthSecrets: stored.oauthSecrets ?? {},
+      }
+    : null;
+  const restore = async () => {
+    // best effort, never masks the error that triggered it
+    await Team.getInstance()
+      .findByIdAndUpdate(teamId, { realm: previousRealm ?? { enabled: false } })
+      .catch(err => ConduitGrpcSdk.Logger.error(err as Error));
+    if (stored && previousSettings) {
+      await RealmSettings.getInstance()
+        .findByIdAndUpdate(stored._id, previousSettings as Indexable)
+        .catch(err => ConduitGrpcSdk.Logger.error(err as Error));
+    } else {
+      await RealmSettings.getInstance()
+        .deleteMany({ team: teamId })
+        .catch(err => ConduitGrpcSdk.Logger.error(err as Error));
+    }
+  };
+
+  try {
+    if (stored) {
+      await RealmSettings.getInstance().findByIdAndUpdate(stored._id, {
+        ...write.settings,
+        oauthSecrets: write.oauthSecrets,
+      } as Indexable);
+    } else {
+      await RealmSettings.getInstance().create({
+        team: teamId,
+        ...write.settings,
+        oauthSecrets: write.oauthSecrets,
+      } as Indexable);
+    }
+    await Team.getInstance().findByIdAndUpdate(teamId, {
+      realm: { enabled: true, slug },
+    });
+    await assertSlugUniqueAfterWrite(slug, teamId);
+  } catch (e) {
+    await restore();
+    throw e;
+  }
+}
+
+/**
  * Applies the `realm` / `realmSettings` of exported team records on teams that already
- * exist (by name, with their parents set). Upserts RealmSettings by team and never
- * imports secrets. Errors are recorded per team in `result`; teams that are realms in
- * the database but not in the file are left alone (demotion is destructive).
- * Returns whether any realm was written.
+ * exist (by name, with their parents set). Realms are top-level, so the team is looked up
+ * by name on the top level. Never imports secrets (the ones stored are kept).
+ *  - a team that is not a realm yet goes through `promoteTeamToRealm`, like the admin
+ *    route: its existing members become home users / guests, a guest the realm refuses
+ *    fails the team (nothing written for it);
+ *  - a realm that exists is overwritten with the file's settings;
+ *  - realms that are in the database but not (enabled) in the file are left alone
+ *    (demotion is destructive);
+ *  - trusted home realm slugs are resolved before the first write and fail closed: an
+ *    unresolved entry keeps the stored list of an existing realm, or disables guests of a
+ *    new one, and the team is reported as failed.
+ * Every problem is recorded on `tally` per record. Returns whether any realm was written.
  */
 export async function importTeamRealms(
+  grpcSdk: ConduitGrpcSdk,
   records: Indexable[],
-  result: ImportResult[string],
+  tally: ImportTally,
 ): Promise<boolean> {
-  const pending: PendingHomeRealms[] = [];
-  let changed = false;
-  for (const rec of records) {
+  const prepared: PreparedRealm[] = [];
+  for (let index = 0; index < records.length; index++) {
+    const rec = records[index];
     const name = rec.name as string;
     if (!name) continue;
     try {
       const parsed = parseImportedRealm(rec);
       if (!parsed.enabled) continue;
-      const team = await Team.getInstance().findOne(
-        { name },
-        { readPreference: 'primary' },
-      );
-      if (!team) continue;
-      const teamId = String(team._id);
-      await assertNoNestedRealm(teamId, undefined, { promote: true });
-      await assertSlugAvailable(parsed.slug, teamId);
-
-      const existing = await RealmSettings.getInstance().findOne(
-        { team: teamId },
-        { select: '+oauthSecrets', readPreference: 'primary' },
-      );
-      const { settings, oauthSecrets } = buildImportedSettings({
-        input: parsed.input,
-        existingSecrets: existing?.oauthSecrets,
+      const team = await Team.getInstance().findOne(topLevelTeamQuery(name), {
+        readPreference: 'primary',
       });
-      let settingsId: string;
-      if (existing) {
-        await RealmSettings.getInstance().findByIdAndUpdate(existing._id, {
-          ...settings,
-          oauthSecrets,
-        } as Indexable);
-        settingsId = String(existing._id);
-      } else {
-        const created = await RealmSettings.getInstance().create({
-          team: teamId,
-          ...settings,
-          oauthSecrets,
-        } as Indexable);
-        settingsId = String(created._id);
-      }
-      const previousRealm = team.realm;
-      await Team.getInstance().findByIdAndUpdate(teamId, {
-        realm: { enabled: true, slug: parsed.slug },
-      });
-      changed = true;
-      try {
-        await assertSlugUniqueAfterWrite(parsed.slug, teamId);
-      } catch (e) {
-        await Team.getInstance()
-          .findByIdAndUpdate(teamId, { realm: previousRealm ?? { enabled: false } })
-          .catch(err => ConduitGrpcSdk.Logger.error(err as Error));
-        throw e;
-      }
-      if (parsed.allowedHomeRealmSlugs !== undefined) {
-        pending.push({
-          teamName: name,
-          settingsId,
-          settings,
-          slugs: parsed.allowedHomeRealmSlugs,
-        });
-      }
+      if (!team)
+        throw new Error('no top-level team with this name (realms are top-level)');
+      prepared.push({ index, name, team, parsed });
     } catch (e) {
-      result.failed += 1;
-      result.errors.push(`${name}: realm: ${(e as Error).message}`);
+      tally.failed(index, `${name}: realm: ${(e as Error).message}`);
     }
   }
+  if (prepared.length === 0) return false;
 
-  // trusted home realms refer to other realms: resolve them once all slugs are in place
-  for (const item of pending) {
+  let idBySlug: Map<string, string>;
+  try {
+    idBySlug = await resolveTrustedSlugs(prepared);
+  } catch (e) {
+    // nothing was written: fail every realm rather than guessing the trusted realms
+    for (const item of prepared) {
+      tally.failed(item.index, `${item.name}: realm: ${(e as Error).message}`);
+    }
+    return false;
+  }
+
+  let changed = false;
+  for (const { index, name, team, parsed } of prepared) {
     try {
-      const idBySlug = new Map<string, string>();
-      for (const slug of item.slugs) {
-        const query: Indexable = { 'realm.slug': slug, 'realm.enabled': true };
-        const realmTeam = await Team.getInstance().findOne(query, {
-          readPreference: 'primary',
+      const teamId = String(team._id);
+      const isRealm = team.realm?.enabled === true;
+      const stored = isRealm
+        ? await RealmSettings.getInstance().findOne(
+            { team: teamId },
+            { select: '+oauthSecrets', readPreference: 'primary' },
+          )
+        : null;
+      const decision = decideTrustedHomeRealms({
+        slugs: parsed.allowedHomeRealmSlugs,
+        unresolved: parsed.unresolvedHomeRealms,
+        idBySlug,
+        storedIds: stored
+          ? normalizeIdList(stored.policies?.guests?.allowedHomeRealms)
+          : null,
+      });
+      const built = buildImportedSettings({
+        input: parsed.input,
+        existingSecrets: stored?.oauthSecrets,
+      });
+      const settings = applyTrustedHomeRealms(built.settings, decision);
+
+      if (isRealm) {
+        await updateExistingRealm(team, parsed.slug, stored, {
+          settings,
+          oauthSecrets: built.oauthSecrets,
         });
-        if (realmTeam) idBySlug.set(slug, String(realmTeam._id));
+      } else {
+        assertTeamPromotable(team);
+        await promoteTeamToRealm(
+          grpcSdk,
+          team,
+          { slug: parsed.slug, settings, oauthSecrets: built.oauthSecrets },
+          { notify: false },
+        );
       }
-      const { ids, missing } = resolveAllowedHomeRealms(item.slugs, idBySlug);
-      await RealmSettings.getInstance().findByIdAndUpdate(item.settingsId, {
-        policies: {
-          ...item.settings.policies,
-          guests: { ...item.settings.policies.guests, allowedHomeRealms: ids },
-        },
-      } as Indexable);
-      if (missing.length > 0) {
-        result.failed += 1;
-        result.errors.push(
-          `${item.teamName}: realm: trusted home realms not found: ${missing.join(', ')}`,
+      changed = true;
+      if (decision && decision.missing.length > 0) {
+        tally.failed(
+          index,
+          `${name}: realm: trusted home realms not found: ${decision.missing.join(', ')}` +
+            (decision.disallowGuests
+              ? ' (guests are disabled until they are set)'
+              : ' (kept the stored list)'),
         );
       }
     } catch (e) {
-      result.failed += 1;
-      result.errors.push(`${item.teamName}: realm: ${(e as Error).message}`);
+      tally.failed(index, `${name}: realm: ${(e as Error).message}`);
     }
   }
   if (changed) invalidateRealmCache();
