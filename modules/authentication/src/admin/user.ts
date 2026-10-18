@@ -14,7 +14,7 @@ import escapeStringRegexp from 'escape-string-regexp';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
 import { grantHomeMembership, homeRealmFields } from '../handlers/realmRequest.js';
-import { homeScopedQuery, realmsEnabled, resolveRealmById } from '../utils/realm.js';
+import { realmsEnabled, resolveRealmById, withHomeScope } from '../utils/realm.js';
 
 export class UserAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -50,10 +50,7 @@ export class UserAdmin {
 
     if (!isNil(homeRealm)) {
       // 'global' = users without a home realm, otherwise a realm team id
-      Object.assign(
-        query,
-        homeRealm === 'global' ? homeScopedQuery(null) : { homeRealm },
-      );
+      query = withHomeScope(query, homeRealm === 'global' ? null : homeRealm);
     }
     if (!isNil(realm)) {
       // users that are members (home or guest) of the realm

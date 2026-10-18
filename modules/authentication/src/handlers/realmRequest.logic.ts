@@ -1,6 +1,6 @@
 import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
-import { EffectiveAuthSettings, homeScopedQuery } from '../utils/realm.logic.js';
+import { EffectiveAuthSettings, withHomeScope } from '../utils/realm.logic.js';
 
 /*
  * Pure request-level realm rules shared by the login and registration handlers (no
@@ -33,7 +33,7 @@ export function scopeUserQuery<T extends Record<string, unknown>>(
   realmsEnabled: boolean,
 ): T {
   if (!realmId && !realmsEnabled) return query;
-  return { ...query, ...homeScopedQuery(realmId) };
+  return withHomeScope(query, realmId) as T;
 }
 
 /**

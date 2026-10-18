@@ -51,14 +51,14 @@ describe('scopeUserQuery', () => {
   it('scopes to global (null or missing) with realms on', () => {
     assert.deepEqual(scopeUserQuery({ email: 'a@b.c' }, null, true), {
       email: 'a@b.c',
-      $or: [{ homeRealm: null }, { homeRealm: { $exists: false } }],
+      $and: [{ $or: [{ homeRealm: null }, { homeRealm: { $exists: false } }] }],
     });
   });
 
   it('scopes to a realm', () => {
     assert.deepEqual(scopeUserQuery({ username: 'bob' }, 'r1', true), {
       username: 'bob',
-      homeRealm: 'r1',
+      $and: [{ homeRealm: 'r1' }],
     });
   });
 });
