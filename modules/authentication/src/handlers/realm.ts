@@ -28,6 +28,7 @@ import {
 import {
   buildRealmDiscovery,
   buildUserRealms,
+  enterRealmTokenFlags,
   RealmPolicySummary,
   RealmRef,
   summarizePolicies,
@@ -199,7 +200,7 @@ export class RealmHandlers {
       clientId,
       config,
       realm: String(ctx.team._id),
-      twoFaPass: !!jwtPayload?.authorized,
+      ...enterRealmTokenFlags(jwtPayload),
     });
   }
 

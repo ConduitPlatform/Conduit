@@ -42,10 +42,18 @@ import {
   realmsEnabled,
   revokeRealmMembership,
 } from '../utils/realm.js';
-import { collectTeamSubtreeIds, collectTeamUserIds } from '../utils/teamRealm.js';
+import {
+  assertRealmTeamIds,
+  collectTeamSubtreeIds,
+  collectTeamUserIds,
+  revokeRealmlessTokens,
+} from '../utils/teamRealm.js';
 import {
   buildRealmSettingsWrite,
+  DEMOTE_STEPS,
+  DemoteStep,
   guestsNotAllowedError,
+  planOldHomeMembership,
   planPromoteMembers,
   PromotePlan,
   resolveSlugChange,
@@ -347,6 +355,17 @@ export class RealmsAdmin {
     }
   }
 
+  /** Ids of the users whose id, email or username matches the search text (capped). */
+  private async findUserIdsBySearch(search: string): Promise<string[]> {
+    if (search.match(/^[a-fA-F0-9]{24}$/)) return [search];
+    const pattern = { $regex: `.*${escapeStringRegexp(search)}.*`, $options: 'i' };
+    const matches = await User.getInstance().findMany(
+      { $or: [{ email: pattern }, { username: pattern }] },
+      { limit: 1000 },
+    );
+    return matches.map(user => String(user._id));
+  }
+
   // -------------------------------------------------------------------------
   // reads
   // -------------------------------------------------------------------------
@@ -395,22 +414,32 @@ export class RealmsAdmin {
 
     const membershipQuery: Indexable = { realm: teamId };
     if (type === 'home' || type === 'guest') membershipQuery.membershipType = type;
-    const memberships = await RealmMembership.getInstance().findMany(membershipQuery);
+    if (!isNil(search) && search !== '') {
+      // narrow by user first, then page through the memberships of the matches
+      const matchedIds = await this.findUserIdsBySearch(search);
+      if (matchedIds.length === 0) return { members: [], count: 0 };
+      membershipQuery.user = { $in: matchedIds };
+    }
+    // memberships are paged (a realm can have many users); `sort` applies to them, so
+    // only the membership timestamps are honoured and the default is newest first
+    const membershipSort =
+      typeof sort === 'string' && /^-?(createdAt|updatedAt)$/.test(sort)
+        ? sort
+        : '-createdAt';
+    const memberships = await RealmMembership.getInstance().findMany(membershipQuery, {
+      skip,
+      limit,
+      sort: membershipSort,
+    });
+    const count = await RealmMembership.getInstance().countDocuments(membershipQuery);
     const typeByUser = new Map(
       memberships.map(membership => [String(membership.user), membership.membershipType]),
     );
-    const userQuery: Indexable = { _id: { $in: Array.from(typeByUser.keys()) } };
-    if (!isNil(search) && search !== '') {
-      if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        if (!typeByUser.has(search)) return { members: [], count: 0 };
-        userQuery['_id'] = search;
-      } else {
-        const pattern = { $regex: `.*${escapeStringRegexp(search)}.*`, $options: 'i' };
-        userQuery['$or'] = [{ email: pattern }, { username: pattern }];
-      }
-    }
-    const users = await User.getInstance().findMany(userQuery, { skip, limit, sort });
-    const count = await User.getInstance().countDocuments(userQuery);
+    const loaded = await this.findUsersByIds(Array.from(typeByUser.keys()));
+    const usersById = new Map(loaded.map(user => [String(user._id), user]));
+    const users = memberships
+      .map(membership => usersById.get(String(membership.user)))
+      .filter((user): user is User => !!user);
     const members = await Promise.all(
       users.map(async user => {
         const relations = await this.grpcSdk.authorization!.findRelation({
@@ -441,6 +470,13 @@ export class RealmsAdmin {
     if (team.realm?.enabled) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Team is already a realm');
     }
+    if (team.isDefault) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'The default team cannot become a realm: new users are added to it. ' +
+          'Make another team the default first.',
+      );
+    }
     await assertNoNestedRealm(teamId, undefined, { promote: true });
     const slug = assertValidSlug(params.slug);
     await assertSlugAvailable(slug, teamId);
@@ -448,6 +484,7 @@ export class RealmsAdmin {
       base: defaultRealmSettings(),
       input: params,
     });
+    await assertRealmTeamIds(settings.policies.guests.allowedHomeRealms, teamId);
 
     // decide what happens to the existing members before writing anything
     const teamIds = await collectTeamSubtreeIds(teamId);
@@ -471,7 +508,7 @@ export class RealmsAdmin {
       await this.convertMembers(teamId, plan);
     } catch (e) {
       await this.rollbackPromote(teamId, plan);
-      invalidateRealmCache();
+      this.notifyRealmChange(teamId);
       throw e;
     }
     this.notifyRealmChange(teamId);
@@ -483,6 +520,8 @@ export class RealmsAdmin {
   private async convertMembers(teamId: string, plan: PromotePlan) {
     for (const batch of chunk(plan.setHomeRealm)) {
       await User.getInstance().updateMany({ _id: { $in: batch } }, { homeRealm: teamId });
+      // their global sessions end with the move into the realm
+      await revokeRealmlessTokens(batch);
     }
     // the authorization relations already exist, only the memberships are written
     for (const batch of chunk(plan.home, 25)) {
@@ -554,6 +593,9 @@ export class RealmsAdmin {
       assertValidSlug(newSlug);
       await assertSlugAvailable(newSlug, teamId);
     }
+    if (params.policies?.guests?.allowedHomeRealms !== undefined) {
+      await assertRealmTeamIds(settings.policies.guests.allowedHomeRealms, teamId);
+    }
 
     try {
       if (newSlug) {
@@ -575,7 +617,7 @@ export class RealmsAdmin {
           .findByIdAndUpdate(teamId, { realm: { enabled: true, slug: currentSlug } })
           .catch(err => ConduitGrpcSdk.Logger.error(err as Error));
       }
-      invalidateRealmCache();
+      this.notifyRealmChange(teamId);
       throw e;
     }
     this.notifyRealmChange(teamId);
@@ -598,36 +640,49 @@ export class RealmsAdmin {
     }
 
     let blockedUsers = 0;
-    if (homeUsers > 0) {
-      // block the home users first: they cannot authenticate anywhere else
-      const homeUserIds: string[] = [];
-      const pageSize = 500;
-      for (let skip = 0; ; skip += pageSize) {
-        const page = await User.getInstance().findMany(
-          { homeRealm: teamId },
-          { skip, limit: pageSize },
-        );
-        homeUserIds.push(...page.map(user => String(user._id)));
-        if (page.length < pageSize) break;
-      }
-      for (const batch of chunk(homeUserIds)) {
-        await User.getInstance().updateMany({ _id: { $in: batch } }, { active: false });
+    const steps: Record<DemoteStep, () => Promise<void>> = {
+      // the home users cannot authenticate anywhere else: block them first
+      blockHomeUsers: async () => {
+        if (homeUsers === 0) return;
+        const homeUserIds: string[] = [];
+        const pageSize = 500;
+        for (let skip = 0; ; skip += pageSize) {
+          const page = await User.getInstance().findMany(
+            { homeRealm: teamId },
+            { skip, limit: pageSize },
+          );
+          homeUserIds.push(...page.map(user => String(user._id)));
+          if (page.length < pageSize) break;
+        }
+        for (const batch of chunk(homeUserIds)) {
+          await User.getInstance().updateMany({ _id: { $in: batch } }, { active: false });
+          await Promise.all([
+            AccessToken.getInstance().deleteMany({ user: { $in: batch } }),
+            RefreshToken.getInstance().deleteMany({ user: { $in: batch } }),
+          ]);
+        }
+        blockedUsers = homeUserIds.length;
+      },
+      deleteMemberships: async () => {
+        await RealmMembership.getInstance().deleteMany({ realm: teamId });
+      },
+      deleteSettings: async () => {
+        await RealmSettings.getInstance().deleteMany({ team: teamId });
+      },
+      // replaces the whole realm object: the slug is dropped with it
+      flipTeam: async () => {
+        await Team.getInstance().findByIdAndUpdate(teamId, { realm: { enabled: false } });
+      },
+      publish: async () => this.notifyRealmChange(teamId),
+      // last: the realm no longer resolves, so no session can be minted after the sweep
+      sweepRealmTokens: async () => {
         await Promise.all([
-          AccessToken.getInstance().deleteMany({ user: { $in: batch } }),
-          RefreshToken.getInstance().deleteMany({ user: { $in: batch } }),
+          AccessToken.getInstance().deleteMany({ realm: teamId }),
+          RefreshToken.getInstance().deleteMany({ realm: teamId }),
         ]);
-      }
-      blockedUsers = homeUserIds.length;
-    }
-    // sessions bound to the realm (guests included) end with it
-    await Promise.all([
-      AccessToken.getInstance().deleteMany({ realm: teamId }),
-      RefreshToken.getInstance().deleteMany({ realm: teamId }),
-    ]);
-    await RealmMembership.getInstance().deleteMany({ realm: teamId });
-    await RealmSettings.getInstance().deleteMany({ team: teamId });
-    await Team.getInstance().findByIdAndUpdate(teamId, { realm: { enabled: false } });
-    this.notifyRealmChange(teamId);
+      },
+    };
+    for (const step of DEMOTE_STEPS) await steps[step]();
     return { message: 'Realm removed', blockedUsers };
   }
 
@@ -719,16 +774,33 @@ export class RealmsAdmin {
     if (targetId) await this.findRealmTeam(targetId);
 
     if (targetId !== oldId) {
-      if (targetId) await this.makeHomeMember(String(user._id), targetId);
-      await User.getInstance().findByIdAndUpdate(String(user._id), {
-        homeRealm: targetId,
-      });
-      if (oldId) {
+      const userId = String(user._id);
+      // judged before anything is written
+      const oldPlan = oldId
+        ? planOldHomeMembership(
+            (await RealmSettings.getInstance().findOne({ team: oldId }))?.policies,
+            targetId,
+          )
+        : null;
+      if (targetId) await this.makeHomeMember(userId, targetId);
+      await User.getInstance().findByIdAndUpdate(userId, { homeRealm: targetId });
+      if (!oldId) {
+        // a global user gets a home realm: their global sessions end
+        await revokeRealmlessTokens([userId]);
+      } else if (oldPlan === 'guest') {
+        // the old realm keeps the user as a guest
+        await RealmMembership.getInstance().updateMany(
+          { user: userId, realm: oldId },
+          { membershipType: 'guest' },
+        );
+      } else {
         await revokeRealmMembership(this.grpcSdk, {
-          userId: String(user._id),
+          userId,
           realmTeamId: oldId,
           allowHome: true,
+          removeRelations: true,
         });
+        await this.removeRelationsInRealm(userId, oldId);
       }
     }
     if (force === true) {

@@ -5,10 +5,12 @@ import { ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import {
   buildRealmSettingsWrite,
+  DEMOTE_STEPS,
   deepMergeClearing,
   describeUsers,
   guestsNotAllowedError,
   pickSettingsFields,
+  planOldHomeMembership,
   planPromoteMembers,
   resolveSlugChange,
   sanitizeRealmInput,
@@ -396,5 +398,78 @@ describe('response builders', () => {
       membershipType: 'guest',
     });
     assert.deepEqual(toRealmMember({ _id: 'u1' }, undefined, undefined), { _id: 'u1' });
+  });
+});
+
+describe('new OAuth provider entries', () => {
+  it('default to disabled when the write does not say', () => {
+    const { settings } = buildRealmSettingsWrite({
+      base: defaultRealmSettings(),
+      input: {
+        strategies: { oauth: { google: { clientId: 'id' }, github: { enabled: true } } },
+      },
+    });
+    assert.equal(settings.strategies.oauth.google?.enabled, false);
+    assert.equal(settings.strategies.oauth.github?.enabled, true);
+  });
+
+  it('keep an existing enabled flag when only credentials are patched', () => {
+    const base = {
+      ...defaultRealmSettings(),
+      strategies: {
+        ...defaultRealmSettings().strategies,
+        oauth: { google: { enabled: true, clientId: 'old' } },
+      },
+    };
+    const { settings } = buildRealmSettingsWrite({
+      base,
+      input: { strategies: { oauth: { google: { clientId: 'new' } } } },
+    });
+    assert.equal(settings.strategies.oauth.google?.enabled, true);
+    assert.equal(settings.strategies.oauth.google?.clientId, 'new');
+  });
+});
+
+describe('DEMOTE_STEPS', () => {
+  it('stops the realm from resolving before the realm sessions are swept', () => {
+    const at = (step: (typeof DEMOTE_STEPS)[number]) => DEMOTE_STEPS.indexOf(step);
+    assert.ok(at('deleteMemberships') < at('publish'));
+    assert.ok(at('deleteSettings') < at('publish'));
+    assert.ok(at('flipTeam') < at('publish'));
+    assert.equal(at('sweepRealmTokens'), DEMOTE_STEPS.length - 1);
+    assert.ok(at('blockHomeUsers') < at('flipTeam'));
+  });
+});
+
+describe('planOldHomeMembership', () => {
+  it('turns the old home membership into a guest one when the policy allows', () => {
+    assert.equal(planOldHomeMembership(openGuests, OTHER), 'guest');
+    assert.equal(planOldHomeMembership(openGuests, null), 'guest');
+    assert.equal(
+      planOldHomeMembership(
+        { guests: { allowed: true, allowedHomeRealms: [OTHER] } },
+        OTHER,
+      ),
+      'guest',
+    );
+  });
+
+  it('strips the user from the old realm otherwise', () => {
+    assert.equal(planOldHomeMembership(closedGuests, OTHER), 'revoke');
+    assert.equal(
+      planOldHomeMembership(
+        { guests: { allowed: true, allowedHomeRealms: [OTHER] } },
+        null,
+      ),
+      'revoke',
+    );
+    assert.equal(
+      planOldHomeMembership(
+        { guests: { allowed: true, allowedHomeRealms: [OTHER] } },
+        OTHER2,
+      ),
+      'revoke',
+    );
+    assert.equal(planOldHomeMembership(undefined, OTHER), 'revoke');
   });
 });
