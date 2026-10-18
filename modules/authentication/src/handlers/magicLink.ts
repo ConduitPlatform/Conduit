@@ -28,6 +28,7 @@ import { MagicLinkTemplate as magicLinkTemplate } from '../templates/index.js';
 import { AuthUtils } from '../utils/index.js';
 import { errors } from '../errors.js';
 import {
+  assertGlobalStrategyAvailable,
   assertStrategyEnabledForRealm,
   realmIdOf,
   realmParam,
@@ -132,6 +133,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     );
     const { clientId } = call.request.context;
     const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('magicLink');
     assertStrategyEnabledForRealm(realmCtx, 'magicLink');
     const user: User | null = await User.getInstance().findOne(
       scopedUserQuery({ email }, realmCtx),
@@ -207,6 +209,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     // the realm the link was requested for, re-validated at redemption
     const realmCtx = await resolveRealmFromSlug(token.data?.realm);
+    if (!realmCtx) assertGlobalStrategyAvailable('magicLink');
     assertStrategyEnabledForRealm(realmCtx, 'magicLink');
     await Token.getInstance()
       .deleteMany({ user: token.user, tokenType: TokenType.MAGIC_LINK })

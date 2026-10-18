@@ -21,6 +21,7 @@ import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import { errors } from '../errors.js';
 import {
+  assertGlobalStrategyAvailable,
   assertStrategyEnabledForRealm,
   isHomeRealm,
   realmIdOf,
@@ -138,6 +139,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('biometric');
     assertStrategyEnabledForRealm(realmCtx, 'biometric');
     const key = await BiometricToken.getInstance().findOne(
       { _id: keyId },
@@ -239,6 +241,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     // the realm comes from the challenge; a key owner from another home realm looks
     // like any other invalid signature
     const realmCtx = await resolveRealmFromSlug(existingToken.data.realm);
+    if (!realmCtx) assertGlobalStrategyAvailable('biometric');
     assertStrategyEnabledForRealm(realmCtx, 'biometric');
     if (
       (realmCtx || realmsEnabled()) &&

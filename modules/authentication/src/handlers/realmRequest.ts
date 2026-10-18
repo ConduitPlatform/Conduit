@@ -1,9 +1,15 @@
 import {
   ConduitGrpcSdk,
+  GrpcError,
   Indexable,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString, ModuleError } from '@conduitplatform/module-tools';
+import { status } from '@grpc/grpc-js';
+import {
+  ConfigController,
+  ConduitString,
+  ModuleError,
+} from '@conduitplatform/module-tools';
 import { TokenType } from '../constants/index.js';
 import { errors } from '../errors.js';
 import { Token, User } from '../models/index.js';
@@ -17,6 +23,7 @@ import {
   resolveTeamRealm,
 } from '../utils/realm.js';
 import {
+  isGlobalStrategyEnabled,
   isHomeRealm,
   isStrategyEnabled,
   reconcileInvitationRealm,
@@ -59,6 +66,18 @@ export function assertStrategyEnabledForRealm(
   if (!ctx) return;
   if (!isStrategyEnabled(ctx.effective, strategyKey)) {
     throw new ModuleError(errors.STRATEGY_NOT_AVAILABLE_FOR_REALM);
+  }
+}
+
+/**
+ * For a call without a realm: throws NOT_FOUND 'Requested resource not found' when the
+ * strategy is disabled in the global config. The route can exist only because a realm
+ * enables the strategy, and realm-less calls must not reach it (same answer as the
+ * OAuth handlers). Call it right after `resolveRealmFromCall` returned null.
+ */
+export function assertGlobalStrategyAvailable(strategyKey: string): void {
+  if (!isGlobalStrategyEnabled(ConfigController.getInstance().config, strategyKey)) {
+    throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
   }
 }
 

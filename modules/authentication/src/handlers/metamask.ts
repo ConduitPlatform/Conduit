@@ -24,6 +24,7 @@ import { ALT_STRATEGY_AUTH } from '../constants/index.js';
 import { errors } from '../errors.js';
 import { realmsEnabled } from '../utils/realm.js';
 import {
+  assertGlobalStrategyAvailable,
   assertStrategyEnabledForRealm,
   grantHomeMembership,
   homeRealmFields,
@@ -104,6 +105,7 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     const { ethPublicAddress } = call.request.params;
     const normalizedEthPublicAddress = ethPublicAddress.toLowerCase();
     const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('metamask');
     assertStrategyEnabledForRealm(realmCtx, 'metamask');
 
     const existingUser: User | null = await User.getInstance().findOne(
@@ -158,6 +160,7 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     }
 
     const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('metamask');
     assertStrategyEnabledForRealm(realmCtx, 'metamask');
 
     const user = await User.getInstance().findOne(
