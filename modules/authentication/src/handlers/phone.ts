@@ -39,6 +39,7 @@ import {
   resolveRealmFromSlug,
   scopedUserQuery,
 } from './realmRequest.js';
+import { anyRealmEnables } from '../utils/strategyRealms.js';
 
 export class PhoneHandlers implements IAuthenticationStrategy {
   private sms: SMS;
@@ -49,7 +50,10 @@ export class PhoneHandlers implements IAuthenticationStrategy {
   async validate(): Promise<boolean> {
     const config = ConfigController.getInstance().config;
     const isAvailable = this.grpcSdk.isAvailable('sms');
-    if (config.phoneAuthentication.enabled && isAvailable) {
+    // a realm may enable phone on its own: the sms client is needed then as well
+    const enabled =
+      config.phoneAuthentication.enabled || (await anyRealmEnables('phone'));
+    if (enabled && isAvailable) {
       this.sms = this.grpcSdk.sms!;
       ConduitGrpcSdk.Logger.log('Phone authentication is available');
       return (this.initialized = true);

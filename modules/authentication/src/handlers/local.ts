@@ -48,6 +48,7 @@ import {
   resolveRealmFromCall,
   scopedUserQuery,
 } from './realmRequest.js';
+import { anyRealmEnables } from '../utils/strategyRealms.js';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -266,7 +267,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async validate(): Promise<boolean> {
     const config = ConfigController.getInstance().config;
-    if (config.local.enabled) {
+    // a realm may enable local on its own: the email client and templates are needed
+    // then as well
+    if (config.local.enabled || (await anyRealmEnables('local'))) {
       try {
         await this.initDbAndEmail();
         ConduitGrpcSdk.Logger.log('Local authentication is available');

@@ -35,6 +35,7 @@ import {
   resolveRealmFromSlug,
   scopedUserQuery,
 } from './realmRequest.js';
+import { anyRealmEnables } from '../utils/strategyRealms.js';
 import { RealmContext } from '../utils/realm.js';
 
 export class MagicLinkHandlers implements IAuthenticationStrategy {
@@ -45,7 +46,10 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
 
   async validate(): Promise<boolean> {
     const config = ConfigController.getInstance().config;
-    if (config.magic_link.enabled && this.grpcSdk.isAvailable('email')) {
+    // a realm may enable magic link on its own: the email client and template are
+    // needed then as well
+    const enabled = config.magic_link.enabled || (await anyRealmEnables('magicLink'));
+    if (enabled && this.grpcSdk.isAvailable('email')) {
       this.emailModule = this.grpcSdk.emailProvider!;
       const success = await this.registerTemplate()
         .then(() => true)

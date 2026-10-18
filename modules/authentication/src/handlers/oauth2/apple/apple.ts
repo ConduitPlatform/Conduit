@@ -31,6 +31,10 @@ import {
   resolveOAuthMode,
 } from '../utils/index.js';
 import { realmIdOf } from '../../realmRequest.js';
+import { RealmContext, StoredRealmStrategies } from '../../../utils/realm.js';
+import { anyRealmEnables } from '../../../utils/strategyRealms.js';
+import { isGlobalOAuthAvailable } from '../utils/oauthSettings.logic.js';
+import { resolveRealmAppleClient } from '../utils/resolveRealmAppleClient.js';
 import {
   ConduitJson,
   ConduitString,
@@ -55,26 +59,38 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
 
   async validate(): Promise<boolean> {
     const authConfig = ConfigController.getInstance().config;
-    if (!authConfig['apple'].enabled) {
-      ConduitGrpcSdk.Logger.log(`Apple authentication not available`);
-      return (this.initialized = false);
-    }
-    if (
-      !authConfig['apple'] ||
-      !authConfig['apple'].clientId ||
-      !authConfig['apple'].privateKey ||
-      !authConfig['apple'].teamId ||
-      !authConfig['apple'].keyId
-    ) {
-      ConduitGrpcSdk.Logger.log(`Apple authentication not available`);
-      return (this.initialized = false);
-    }
+    if (isGlobalOAuthAvailable('apple', authConfig['apple'])) {
+      const clients = authConfig['apple'].clients ?? [];
+      validateAppleClients(clients);
 
-    const clients = authConfig['apple'].clients ?? [];
-    validateAppleClients(clients);
+      ConduitGrpcSdk.Logger.log(`Apple authentication is available`);
+      return (this.initialized = true);
+    }
+    // not available globally: still initialised when a realm enables it, the request
+    // paths check the credentials of the realm they resolve
+    if (await anyRealmEnables('oauth.apple')) {
+      ConduitGrpcSdk.Logger.log(`Apple authentication is available for realms`);
+      return (this.initialized = true);
+    }
+    ConduitGrpcSdk.Logger.log(`Apple authentication not available`);
+    return (this.initialized = false);
+  }
 
-    ConduitGrpcSdk.Logger.log(`Apple authentication is available`);
-    return (this.initialized = true);
+  /**
+   * The Apple client a request runs with. A realm that sets its own `clientId` uses its
+   * own credentials (key triple all-or-nothing, else the global triple); otherwise the
+   * global `oauthClientId` resolution applies.
+   */
+  private resolveAppleClient(realmCtx: RealmContext | null, oauthClientId?: string) {
+    if (!realmCtx) return resolveAppleOAuthClient(oauthClientId);
+    const stored = (realmCtx.settings.strategies as StoredRealmStrategies | undefined)
+      ?.oauth?.apple;
+    return resolveRealmAppleClient({
+      realmClientId: stored?.clientId,
+      realmRedirectUri: stored?.redirect_uri,
+      effective: realmCtx.effective.strategies.oauth.apple,
+      resolveGlobal: () => resolveAppleOAuthClient(oauthClientId),
+    });
   }
 
   // @ts-ignore
@@ -99,8 +115,11 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     };
   }
 
-  protected resolveOAuthClientId(call: ParsedRouterRequest): string {
-    return resolveAppleOAuthClient(call.request.params?.oauthClientId).clientId;
+  protected resolveOAuthClientId(
+    call: ParsedRouterRequest,
+    realmCtx: RealmContext | null = null,
+  ): string {
+    return this.resolveAppleClient(realmCtx, call.request.params?.oauthClientId).clientId;
   }
 
   protected getOAuthStateExtras(call: ParsedRouterRequest): Record<string, unknown> {
@@ -110,7 +129,12 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
     const stateToken = await validateStateToken(params.state);
-    const providerClient = resolveAppleOAuthClient(stateToken.data.oauthClientId);
+    // the realm the flow was started for, re-validated at the callback
+    const realmCtx = await this.resolveRealmContext(stateToken.data.realm);
+    const providerClient = this.resolveAppleClient(
+      realmCtx,
+      stateToken.data.oauthClientId,
+    );
     const clientTokenPayload = this.verifyIdentityToken(
       await this.loadPublicKeyFromToken(params.id_token),
       params.id_token,
@@ -167,8 +191,6 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       providerClient.redirect_uri;
     const conduitClientId = stateToken.data.clientId;
     try {
-      // the realm the flow was started for, re-validated at the callback
-      const realmCtx = await this.resolveRealmContext(stateToken.data.realm);
       const user = await this.createOrUpdateUser(
         userParams,
         stateToken.data.invitationToken,
@@ -195,7 +217,11 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   async nativeAuthorize(call: ParsedRouterRequest) {
     const params = call.request.bodyParams;
     const stateToken = await validateStateToken(params.state);
-    const providerClient = resolveAppleOAuthClient(stateToken.data.oauthClientId);
+    const realmCtx = await this.resolveRealmContext(stateToken.data.realm);
+    const providerClient = this.resolveAppleClient(
+      realmCtx,
+      stateToken.data.oauthClientId,
+    );
     const clientTokenPayload = this.verifyIdentityToken(
       await this.loadPublicKeyFromToken(params.id_token),
       params.id_token,
@@ -242,7 +268,6 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       email: payload.email,
       data: { ...userData, ...payload.email_verified },
     };
-    const realmCtx = await this.resolveRealmContext(stateToken.data.realm);
     const user = await this.createOrUpdateUser(
       userParams,
       stateToken.data.invitationToken,

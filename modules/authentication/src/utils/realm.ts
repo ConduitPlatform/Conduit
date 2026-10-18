@@ -26,6 +26,7 @@ import {
   StoredRealmSettingsData,
   unresolvedRealmError,
 } from './realm.logic.js';
+import { invalidateOAuthSettingsCache } from '../handlers/oauth2/utils/oauthSettings.logic.js';
 
 export * from './realm.logic.js';
 
@@ -71,6 +72,8 @@ export function invalidateRealmCache(): void {
   contextBySlug.clear();
   contextById.clear();
   slugById.clear();
+  // per-realm OAuth settings are built from the cached contexts
+  invalidateOAuthSettingsCache();
 }
 
 // ---------------------------------------------------------------------------
@@ -329,6 +332,21 @@ export async function revokeRealmMembership(
       // authorization throws when no relation exists
     }
   }
+}
+
+/**
+ * Removes every realm membership (home and guest) of the given user(s). Called when
+ * users are deleted, so no membership row outlives its user. DB only: relations and
+ * tokens are the caller's business.
+ */
+export async function deleteUserRealmMemberships(
+  userIds: string | string[],
+): Promise<void> {
+  const ids = (Array.isArray(userIds) ? userIds : [userIds]).map(String);
+  if (ids.length === 0) return;
+  await RealmMembership.getInstance().deleteMany(
+    ids.length === 1 ? { user: ids[0] } : { user: { $in: ids } },
+  );
 }
 
 // ---------------------------------------------------------------------------

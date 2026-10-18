@@ -20,6 +20,7 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { AuthUtils } from '../utils/index.js';
+import { deleteUserRealmMemberships } from '../utils/realm.js';
 import getToken = AuthUtils.getToken;
 
 export class CommonHandlers implements IAuthenticationStrategy {
@@ -126,6 +127,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
       );
     }
     await User.getInstance().deleteOne({ _id: user._id });
+    await deleteUserRealmMemberships(String(user._id));
     await this.grpcSdk.authorization!.deleteAllRelations({
       resource: 'User:' + user._id,
     });

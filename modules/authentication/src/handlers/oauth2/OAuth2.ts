@@ -62,6 +62,16 @@ import {
   scopedUserQuery,
 } from '../realmRequest.js';
 import { RealmContext, realmsEnabled, RealmOAuthProviderKey } from '../../utils/realm.js';
+import { anyRealmEnables } from '../../utils/strategyRealms.js';
+import {
+  hasCompleteOAuthCredentials,
+  invalidateOAuthSettingsCache,
+  isGlobalOAuthAvailable,
+  OAuthSettingsCache,
+  oauthSettingsVersion,
+} from './utils/oauthSettings.logic.js';
+
+export { invalidateOAuthSettingsCache };
 
 export abstract class OAuth2<
   T,
@@ -72,7 +82,8 @@ export abstract class OAuth2<
   mapScopes: { [key: string]: string };
   defaultScopes: string[];
   protected settings: S;
-  private readonly providerName: string;
+  protected readonly providerName: string;
+  private readonly realmSettings = new OAuthSettingsCache<S>();
 
   protected constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
     this.providerName = providerName;
@@ -83,25 +94,64 @@ export abstract class OAuth2<
 
   async validate(): Promise<boolean> {
     const authConfig = ConfigController.getInstance().config;
-    if (!authConfig[this.providerName].enabled) {
-      ConduitGrpcSdk.Logger.log(`${this.providerName} authentication not available`);
-      return (this.initialized = false);
+    if (isGlobalOAuthAvailable(this.providerName, authConfig[this.providerName])) {
+      ConduitGrpcSdk.Logger.log(`${this.providerName} authentication is available`);
+      return (this.initialized = true);
     }
-    if (
-      !authConfig[this.providerName] ||
-      !authConfig[this.providerName].clientId ||
-      !authConfig[this.providerName].clientSecret
-    ) {
-      ConduitGrpcSdk.Logger.log(`${this.providerName} authentication not available`);
-      return (this.initialized = false);
+    // not available globally: still initialised when a realm enables it, the request
+    // paths check the credentials of the realm they resolve
+    if (await anyRealmEnables(`oauth.${this.providerName}`)) {
+      ConduitGrpcSdk.Logger.log(
+        `${this.providerName} authentication is available for realms`,
+      );
+      return (this.initialized = true);
     }
-    ConduitGrpcSdk.Logger.log(`${this.providerName} authentication is available`);
-    return (this.initialized = true);
+    ConduitGrpcSdk.Logger.log(`${this.providerName} authentication not available`);
+    return (this.initialized = false);
   }
 
-  protected resolveOAuthClientId(_call: ParsedRouterRequest): string {
+  /**
+   * The OAuth settings a request runs with: the handler's own (global) settings, or for
+   * a realm the same provider parameters with the realm's effective credentials
+   * (`clientId`, `clientSecret`, `redirect_uri` -> `finalRedirect`, `accountLinking`).
+   * Cached per realm and credential version; see `invalidateOAuthSettingsCache`.
+   */
+  protected getSettingsFor(ctx: RealmContext | null): S {
+    if (!ctx) return this.settings;
+    const effective =
+      ctx.effective.strategies.oauth[this.providerName as RealmOAuthProviderKey];
+    if (!effective) return this.settings;
+    return this.realmSettings.get(
+      String(ctx.team._id),
+      oauthSettingsVersion(effective),
+      () => this.buildRealmSettings(effective),
+    );
+  }
+
+  /** The global settings (static provider params, PKCE verifier) with realm credentials. */
+  protected buildRealmSettings(effective: {
+    clientId: string;
+    clientSecret: string;
+    redirect_uri: string;
+    accountLinking: boolean;
+  }): S {
+    const settings: S = Object.assign(
+      Object.create(Object.getPrototypeOf(this.settings)),
+      this.settings,
+    );
+    settings.clientId = effective.clientId;
+    settings.clientSecret = effective.clientSecret;
+    settings.finalRedirect = effective.redirect_uri;
+    settings.accountLinking = effective.accountLinking;
+    return settings;
+  }
+
+  protected resolveOAuthClientId(
+    _call: ParsedRouterRequest,
+    realmCtx: RealmContext | null = null,
+  ): string {
     void _call;
-    return this.settings.clientId;
+    return this.getSettingsFor(realmCtx).clientId;
   }
 
   protected getOAuthStateExtras(_call: ParsedRouterRequest): Record<string, unknown> {
@@ -116,6 +166,22 @@ export abstract class OAuth2<
   protected async resolveRealmContext(slug: unknown): Promise<RealmContext | null> {
     const realmCtx = await resolveRealmFromSlug(slug);
     assertStrategyEnabledForRealm(realmCtx, `oauth.${this.providerName}`);
+    if (realmCtx) {
+      // enabled by the realm, but neither the realm nor the global config can sign in
+      const effective =
+        realmCtx.effective.strategies.oauth[this.providerName as RealmOAuthProviderKey];
+      if (!hasCompleteOAuthCredentials(this.providerName, effective)) {
+        throw new ModuleError(errors.STRATEGY_NOT_AVAILABLE_FOR_REALM);
+      }
+    } else if (
+      !isGlobalOAuthAvailable(
+        this.providerName,
+        ConfigController.getInstance().config[this.providerName],
+      )
+    ) {
+      // the routes exist because a realm enables the provider: global calls are refused
+      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
+    }
     return realmCtx;
   }
 
@@ -123,12 +189,13 @@ export abstract class OAuth2<
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const { anonymousUser } = call.request.context;
     const realmCtx = await this.resolveRealmContext(call.request.params?.realm);
+    const settings = this.getSettingsFor(realmCtx);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
 
     // returns part of regular redirect options for native usage
     const queryOptions: Partial<RedirectOptions> = {
-      client_id: this.resolveOAuthClientId(call),
-      redirect_uri: conduitUrl + this.settings.callbackUrl,
+      client_id: this.resolveOAuthClientId(call, realmCtx),
+      redirect_uri: conduitUrl + settings.callbackUrl,
       scope: this.constructScopes(scopes),
     };
     const stateToken = await Token.getInstance()
@@ -163,30 +230,31 @@ export abstract class OAuth2<
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const { anonymousUser } = call.request.context;
     const realmCtx = await this.resolveRealmContext(call.request.params?.realm);
+    const settings = this.getSettingsFor(realmCtx);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     let codeChallenge;
-    if (!isNil(this.settings.codeChallengeMethod)) {
+    if (!isNil(settings.codeChallengeMethod)) {
       codeChallenge = createHash('sha256')
-        .update(this.settings.codeVerifier!)
+        .update(settings.codeVerifier!)
         .digest('base64')
         .replace(/=/g, '')
         .replace(/\+/g, '-')
         .replace(/\//g, '_');
     }
     const queryOptions: RedirectOptions = {
-      client_id: this.resolveOAuthClientId(call),
-      redirect_uri: conduitUrl + this.settings.callbackUrl,
-      response_type: this.settings.responseType,
-      response_mode: this.settings.responseMode,
+      client_id: this.resolveOAuthClientId(call, realmCtx),
+      redirect_uri: conduitUrl + settings.callbackUrl,
+      response_type: settings.responseType,
+      response_mode: settings.responseMode,
       scope: this.constructScopes(scopes),
       ...(codeChallenge !== undefined && { code_challenge: codeChallenge }),
-      ...(this.settings.codeChallengeMethod !== undefined && {
-        code_challenge_method: this.settings.codeChallengeMethod,
+      ...(settings.codeChallengeMethod !== undefined && {
+        code_challenge_method: settings.codeChallengeMethod,
       }),
     };
-    const baseUrl = this.settings.authorizeUrl.endsWith('?')
-      ? this.settings.authorizeUrl.slice(0, -1)
-      : this.settings.authorizeUrl;
+    const baseUrl = settings.authorizeUrl.endsWith('?')
+      ? settings.authorizeUrl.slice(0, -1)
+      : settings.authorizeUrl;
     const stateToken = await Token.getInstance()
       .create({
         tokenType: TokenType.STATE_TOKEN,
@@ -221,23 +289,26 @@ export abstract class OAuth2<
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
     const stateToken = await validateStateToken(params.state);
+    // the realm the flow was started for, re-validated at the callback
+    const realmCtx = await this.resolveRealmContext(stateToken.data.realm);
+    const settings = this.getSettingsFor(realmCtx);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     const config = ConfigController.getInstance().config;
     const myParams: AuthParams = {
-      client_id: this.settings.clientId,
-      client_secret: this.settings.clientSecret,
+      client_id: settings.clientId,
+      client_secret: settings.clientSecret,
       code: params.code,
-      redirect_uri: `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
+      redirect_uri: `${conduitUrl}/hook/authentication/${settings.providerName}`,
     };
 
-    if (this.settings.hasOwnProperty('grantType')) {
-      myParams['grant_type'] = this.settings.grantType;
+    if (settings.hasOwnProperty('grantType')) {
+      myParams['grant_type'] = settings.grantType;
     }
-    if (!isNil(this.settings.codeChallengeMethod)) {
-      myParams['code_verifier'] = this.settings.codeVerifier;
+    if (!isNil(settings.codeChallengeMethod)) {
+      myParams['code_verifier'] = settings.codeVerifier;
     }
 
-    const providerOptions = this.makeRequest(myParams);
+    const providerOptions = this.makeRequest(myParams, settings);
     const providerResponse: { data: { access_token: string } } = await axios(
       providerOptions,
     ).catch(err => {
@@ -252,6 +323,7 @@ export abstract class OAuth2<
       accessToken: access_token,
       clientId,
       scope: scope,
+      providerClientId: settings.clientId,
     }).catch(err => {
       ConduitGrpcSdk.Logger.error(JSON.stringify(err.response.data));
       throw new GrpcError(status.INTERNAL, err.message);
@@ -260,10 +332,8 @@ export abstract class OAuth2<
     await Token.getInstance().deleteOne(stateToken);
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
-      this.settings.finalRedirect;
+      settings.finalRedirect;
     try {
-      // the realm the flow was started for, re-validated at the callback
-      const realmCtx = await this.resolveRealmContext(stateToken.data.realm);
       const user = await this.createOrUpdateUser(
         payload,
         stateToken.data.invitationToken,
@@ -288,13 +358,15 @@ export abstract class OAuth2<
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
     const realmCtx = await this.resolveRealmContext(call.request.params?.realm);
+    const settings = this.getSettingsFor(realmCtx);
     const scopes = this.constructScopes(
       call.request.params?.scopes ?? this.defaultScopes,
     );
     const payload = await this.connectWithProvider({
       accessToken: call.request.params['access_token'],
-      clientId: this.settings.clientId,
+      clientId: settings.clientId,
       scope: scopes,
+      providerClientId: settings.clientId,
     });
     const user = await this.createOrUpdateUser(
       payload,
@@ -574,10 +646,10 @@ export abstract class OAuth2<
     };
   }
 
-  makeRequest(data: AuthParams): OAuthRequest {
+  makeRequest(data: AuthParams, settings: OAuth2Settings = this.settings): OAuthRequest {
     return {
-      method: this.settings.accessTokenMethod,
-      url: this.settings.tokenUrl,
+      method: settings.accessTokenMethod,
+      url: settings.tokenUrl,
       params: { ...data },
       headers: {
         Accept: 'application/json',
