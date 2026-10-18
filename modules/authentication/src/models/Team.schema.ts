@@ -14,6 +14,21 @@ const schema: ConduitModel = {
     type: TYPE.Boolean,
     default: false,
   },
+  // Public, non-secret realm marker. Realm configuration lives in RealmSettings.
+  // Slug uniqueness is NOT enforced by an index: a unique index on the nested
+  // `realm.slug` path is not portable across Mongo and the SQL dialects (nested objects
+  // are JSON there, and the many teams without a slug would need a sparse/partial
+  // unique index, which has no portable option). It is enforced in the application by
+  // `assertSlugAvailable` in utils/realm.ts instead.
+  realm: {
+    enabled: {
+      type: TYPE.Boolean,
+      default: false,
+    },
+    slug: {
+      type: TYPE.String,
+    },
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -37,6 +52,10 @@ export class Team extends ConduitActiveSchema<Team> {
   declare name: string;
   parentTeam: string;
   isDefault: boolean;
+  realm?: {
+    enabled: boolean;
+    slug?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 

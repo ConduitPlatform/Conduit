@@ -120,6 +120,11 @@ const schema: ConduitModel = {
     type: TYPE.Boolean,
     required: false,
   },
+  // realm team id the user authenticates at; null/absent = global user
+  homeRealm: {
+    type: TYPE.ObjectId,
+    required: false,
+  },
   twoFaMethod: TYPE.String,
   phoneNumber: TYPE.String,
   createdAt: TYPE.Date,
@@ -158,6 +163,7 @@ export class User extends ConduitActiveSchema<User> {
   twoFaMethod: string;
   phoneNumber?: string;
   isAnonymous?: boolean;
+  homeRealm?: string | null;
   createdAt: Date;
   updatedAt: Date;
 

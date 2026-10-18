@@ -9,6 +9,8 @@
   "include": [
     "src/utils/emailRestrictions.ts",
     "src/utils/emailRestrictions.test.ts",
+    "src/utils/realm.logic.ts",
+    "src/utils/realm.test.ts",
     "src/utils/jwtSecret.ts",
     "src/utils/jwtSecret.test.ts",
     "src/utils/jwtSecretReconciler.ts",
