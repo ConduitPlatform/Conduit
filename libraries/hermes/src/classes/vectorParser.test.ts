@@ -81,3 +81,41 @@ describe('ZodParser Vector validation', () => {
     assert.deepEqual(parsed.meta, { a: 1 });
   });
 });
+
+describe('ZodParser boolean params', () => {
+  const parser = new ZodParser();
+  const params = { force: { type: TYPE.Boolean, required: false }, flag: TYPE.Boolean };
+
+  it('parses query/url boolean strings strictly when coercing', () => {
+    const schema = parser.buildZodSchema(params, { coerce: true });
+    const parse = (value: unknown) => schema.safeParse({ flag: value });
+    for (const truthy of ['true', 'TRUE', '1', ' true ', true]) {
+      const result = parse(truthy);
+      assert.equal(result.success && result.data.flag, true, String(truthy));
+    }
+    for (const falsy of ['false', 'False', '0', '', false]) {
+      const result = parse(falsy);
+      assert.equal(result.success && result.data.flag, false, String(falsy));
+    }
+    for (const invalid of ['yes', 'no', 'null', 'undefined', '2', 'truee']) {
+      assert.equal(parse(invalid).success, false, invalid);
+    }
+  });
+
+  it('keeps an omitted optional boolean undefined and a blank one false when coercing', () => {
+    const schema = parser.buildZodSchema(params, { coerce: true });
+    const result = schema.safeParse({ flag: 'true' });
+    assert.equal(result.success && result.data.force, undefined);
+    const blank = schema.safeParse({ flag: 'true', force: '' });
+    assert.equal(blank.success && blank.data.force, false);
+    const off = schema.safeParse({ flag: 'true', force: 'false' });
+    assert.equal(off.success && off.data.force, false);
+  });
+
+  it('leaves body booleans strict JSON booleans', () => {
+    const schema = parser.buildZodSchema(params, { coerce: false });
+    assert.equal(schema.safeParse({ flag: true }).success, true);
+    assert.equal(schema.safeParse({ flag: 'false' }).success, false);
+    assert.equal(schema.safeParse({ flag: 'true' }).success, false);
+  });
+});
