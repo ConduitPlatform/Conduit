@@ -18,6 +18,8 @@
  *
  * Import semantics (the file is the source of truth for the realms it lists):
  *  - a realm team without `realmSettings` is written with the defaults, whatever it had;
+ *  - while the realms feature is off the realm part of every record is skipped and
+ *    reported (nothing is promoted, re-homed or revoked), like the admin routes;
  *  - `realm.enabled: false` (or no `realm`) leaves a realm that exists in the database
  *    alone: demoting is destructive and stays an explicit admin action;
  *  - secrets are never imported; the ones stored for providers that remain are kept.
@@ -330,6 +332,14 @@ export function topLevelTeamQuery(name: string): Indexable {
 type ImportOutcome = 'created' | 'updated' | 'failed';
 
 /**
+ * Message of a realm part that is skipped because the realms feature is off, mirroring
+ * the admin routes' REALMS_DISABLED.
+ */
+export function realmsDisabledSkipMessage(name: string): string {
+  return `${name}: realm: skipped, realms are disabled (REALMS_DISABLED: enable teams and teams.realms in the authentication config and import again)`;
+}
+
+/**
  * Counts every record of an import once. A record that was counted as created or
  * updated and then fails in a later step (parent assignment, realm) is moved to
  * `failed`, never counted twice; its error is recorded.
@@ -349,6 +359,14 @@ export class ImportTally {
 
   updated(index: number): void {
     this.set(index, 'updated');
+  }
+
+  /**
+   * Reports a part of a record that was deliberately not applied (the record itself keeps
+   * its outcome and counts as before). The line goes to `errors` so it is visible.
+   */
+  skipped(message: string): void {
+    this.result.errors.push(message);
   }
 
   /** Records the error; the record counts as failed exactly once. */
