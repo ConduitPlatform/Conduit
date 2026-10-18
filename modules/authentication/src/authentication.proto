@@ -5,6 +5,7 @@ package authentication;
 message UserLoginRequest {
   string userId = 1;
   string clientId = 2;
+  optional string realm = 3;
 }
 
 message UserCreateRequest {
@@ -13,12 +14,14 @@ message UserCreateRequest {
   bool verify = 3;
   optional string anonymousId = 4;
   optional string userData = 5;
+  optional string realm = 6;
 }
 
 message UserCreateByUsernameRequest {
   string username = 1;
   optional string password = 2;
   optional string anonymousId = 3;
+  optional string realm = 4;
 }
 
 message UserChangePass {
@@ -62,6 +65,8 @@ message Team {
   string name = 2;
   string parentTeam = 3;
   bool isDefault = 4;
+  bool realmEnabled = 5;
+  optional string realmSlug = 6;
 }
 
 message TeamDeleteResponse {
@@ -87,10 +92,14 @@ message ValidateAccessTokenResponse {
   }
   Status status = 1;
   optional string userId = 2;
+  // slugs; absent for global sessions and global users
+  optional string realm = 3;
+  optional string homeRealm = 4;
 }
 
 message AnonymousUserCreateRequest {
   string clientId = 1;
+  optional string realm = 2;
 }
 
 message UserModifyStatusRequest {
@@ -130,6 +139,44 @@ message UpdateTeamRequest {
   optional string newParentTeamId = 3;
 }
 
+message SetTeamRealmRequest {
+  string teamId = 1;
+  string slug = 2;
+  // JSON of the realm settings (strategies, policies, registration, active); may carry secrets
+  optional string settingsJson = 3;
+  // required to change the slug of an existing realm
+  bool force = 4;
+}
+
+message GetRealmSettingsRequest {
+  string teamId = 1;
+}
+
+message RealmResponse {
+  Team team = 1;
+  // JSON of the masked realm settings, secrets never included
+  string settingsJson = 2;
+  int32 homeCount = 3;
+  int32 guestCount = 4;
+}
+
+message UnsetTeamRealmRequest {
+  string teamId = 1;
+  bool force = 2;
+}
+
+message UnsetTeamRealmResponse {
+  string message = 1;
+  int32 blockedUsers = 2;
+}
+
+message RealmMembershipRequest {
+  string teamId = 1;
+  string userId = 2;
+  // 'home' | 'guest' (ignored by RevokeRealmMembership)
+  string type = 3;
+}
+
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
@@ -147,4 +194,9 @@ service Authentication {
   rpc InvitationDelete(InvitationDeleteRequest) returns (InvitationDeleteResponse);
   rpc InviteUserToTeam(InviteUserToTeamRequest) returns (InviteUserToTeamResponse);
   rpc UpdateTeam(UpdateTeamRequest) returns (Team);
+  rpc SetTeamRealm(SetTeamRealmRequest) returns (RealmResponse);
+  rpc GetRealmSettings(GetRealmSettingsRequest) returns (RealmResponse);
+  rpc UnsetTeamRealm(UnsetTeamRealmRequest) returns (UnsetTeamRealmResponse);
+  rpc GrantRealmMembership(RealmMembershipRequest) returns (google.protobuf.Empty);
+  rpc RevokeRealmMembership(RealmMembershipRequest) returns (google.protobuf.Empty);
 }
