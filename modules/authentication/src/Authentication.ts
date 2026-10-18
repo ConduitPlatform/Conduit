@@ -17,7 +17,7 @@ import { AuthenticationRoutes } from './routes/index.js';
 import * as models from './models/index.js';
 import { Token, User } from './models/index.js';
 import { AuthUtils } from './utils/index.js';
-import { TokenType } from './constants/index.js';
+import { REALM_UPDATE_EVENT, TokenType } from './constants/index.js';
 import { v4 as uuid } from 'uuid';
 import {
   AnonymousUserCreateRequest,
@@ -79,6 +79,7 @@ import {
   homeRealmFields,
   resolveRealmFromSlug,
 } from './handlers/realmRequest.js';
+import { assertNoNestedRealm, invalidateRealmCache } from './utils/realm.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -114,6 +115,7 @@ export default class Authentication extends ManagedModule<Config> {
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
   private tokenCleanupInterval: ReturnType<typeof setInterval> | null = null;
   private monitorsActive = false;
+  private realmBusSubscribed = false;
   private _authzUserResourceDispose: (() => void) | null = null;
 
   constructor(peerManifestRoot?: string) {
@@ -133,6 +135,7 @@ export default class Authentication extends ManagedModule<Config> {
     this.database = this.grpcSdk.database!;
     TokenProvider.getInstance(this.grpcSdk);
     await this.registerSchemas();
+    this.subscribeToRealmUpdates();
     await runMigrations(this.grpcSdk);
     for (const model of Object.values(models)) {
       const modelInstance = model.getInstance();
@@ -302,7 +305,9 @@ export default class Authentication extends ManagedModule<Config> {
       if (shouldSendVerificationEmail && !this.grpcSdk.isAvailable('email')) {
         await this.grpcSdk.refreshModules(true);
       }
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, () =>
+        this.refreshAppRoutes(),
+      );
       this.refreshAppRoutes();
       this.initMonitors();
       this.startTokenCleanup();
@@ -362,6 +367,20 @@ export default class Authentication extends ManagedModule<Config> {
         }
         return this.grpcSdk.state.withLock(resource, ttl, fn);
       },
+    });
+  }
+
+  /**
+   * Realm settings live in the database. Every realm write publishes this event (the bus
+   * skips the publisher, which refreshes itself): replicas clear their realm cache and
+   * re-register routes, since a realm may now enable or disable a provider.
+   */
+  private subscribeToRealmUpdates() {
+    if (this.realmBusSubscribed || !this.grpcSdk.bus) return;
+    this.realmBusSubscribed = true;
+    this.grpcSdk.bus.subscribe(REALM_UPDATE_EVENT, () => {
+      invalidateRealmCache();
+      if (ConfigController.getInstance().config?.active) this.refreshAppRoutes();
     });
   }
 
@@ -1013,6 +1032,8 @@ export default class Authentication extends ManagedModule<Config> {
       };
 
       if (newParentTeamId) {
+        // a realm stays top-level and never contains or sits inside another realm
+        await assertNoNestedRealm(teamId, newParentTeamId);
         const newParentTeam = await models.Team.getInstance().findOne({
           _id: newParentTeamId,
         });
@@ -1074,7 +1095,10 @@ export default class Authentication extends ManagedModule<Config> {
         isDefault: updatedTeam.isDefault,
       });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback({
+        code: e instanceof GrpcError ? e.code : status.INTERNAL,
+        message: (e as Error).message,
+      });
     }
   }
 
