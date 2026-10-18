@@ -6,6 +6,9 @@ import {
   isGlobalOAuthAvailable,
   OAuthSettingsCache,
   oauthSettingsVersion,
+  pickCallbackRedirect,
+  settingsForRealm,
+  stateRealmRef,
 } from './oauthSettings.logic.js';
 
 describe('hasCompleteOAuthCredentials', () => {
@@ -123,5 +126,144 @@ describe('OAuthSettingsCache', () => {
       return 1;
     });
     assert.equal(rebuilt, true);
+  });
+});
+
+describe('settingsForRealm (getSettingsFor)', () => {
+  type Settings = { clientId: string; builtFrom?: string };
+  const globalSettings: Settings = { clientId: 'global' };
+  const effective = (clientId: string, clientSecret = 's') => ({
+    clientId,
+    clientSecret,
+  });
+  const missing = () => new Error('STRATEGY_NOT_AVAILABLE_FOR_REALM');
+  const build = (e: { clientId: string }): Settings => ({
+    clientId: e.clientId,
+    builtFrom: 'realm',
+  });
+
+  it('returns the global settings for a request without a realm', () => {
+    const cache = new OAuthSettingsCache<Settings>();
+    assert.equal(
+      settingsForRealm({ globalSettings, realm: null, cache, build, missing }),
+      globalSettings,
+    );
+    assert.equal(cache.size, 0);
+  });
+
+  it('fails closed for a realm without an entry for the provider', () => {
+    const cache = new OAuthSettingsCache<Settings>();
+    for (const eff of [undefined, null]) {
+      assert.throws(
+        () =>
+          settingsForRealm({
+            globalSettings,
+            realm: { id: 'r1', effective: eff },
+            cache,
+            build,
+            missing,
+          }),
+        /STRATEGY_NOT_AVAILABLE_FOR_REALM/,
+      );
+    }
+  });
+
+  it('builds distinct settings per realm and reuses them', () => {
+    const cache = new OAuthSettingsCache<Settings>();
+    let builds = 0;
+    const counting = (e: { clientId: string }) => {
+      builds++;
+      return build(e);
+    };
+    const get = (id: string, clientId: string) =>
+      settingsForRealm({
+        globalSettings,
+        realm: { id, effective: effective(clientId) },
+        cache,
+        build: counting,
+        missing,
+      });
+    const a = get('r1', 'id-a');
+    const b = get('r2', 'id-b');
+    assert.equal(a.clientId, 'id-a');
+    assert.equal(b.clientId, 'id-b');
+    assert.notEqual(a, globalSettings);
+    assert.equal(get('r1', 'id-a'), a);
+    assert.equal(builds, 2);
+  });
+
+  it('rebuilds when the credential version changes (rotated secret or client id)', () => {
+    const cache = new OAuthSettingsCache<Settings>();
+    const get = (e: { clientId: string; clientSecret: string }) =>
+      settingsForRealm({
+        globalSettings,
+        realm: { id: 'r1', effective: e },
+        cache,
+        build,
+        missing,
+      });
+    const first = get(effective('id', 'old'));
+    assert.equal(get(effective('id', 'old')), first);
+    const rotated = get(effective('id', 'new'));
+    assert.notEqual(rotated, first);
+    assert.equal(get(effective('other', 'new')).clientId, 'other');
+    assert.equal(cache.size, 1);
+  });
+
+  it('rebuilds after the cache is invalidated', () => {
+    const cache = new OAuthSettingsCache<Settings>();
+    const get = () =>
+      settingsForRealm({
+        globalSettings,
+        realm: { id: 'r1', effective: effective('id') },
+        cache,
+        build,
+        missing,
+      });
+    const first = get();
+    invalidateOAuthSettingsCache();
+    assert.notEqual(get(), first);
+  });
+});
+
+describe('hasCompleteOAuthCredentials with a mixed pair', () => {
+  it('a clientId without its own secret is incomplete', () => {
+    assert.equal(
+      hasCompleteOAuthCredentials('google', { clientId: 'realm-id', clientSecret: '' }),
+      false,
+    );
+  });
+});
+
+describe('stateRealmRef', () => {
+  it('prefers the realm id over the slug', () => {
+    assert.deepEqual(stateRealmRef({ realmId: 'abc', realm: 'acme' }), { id: 'abc' });
+    assert.deepEqual(stateRealmRef({ realmId: 42 }), { id: '42' });
+  });
+
+  it('falls back to the slug of an in-flight token', () => {
+    assert.deepEqual(stateRealmRef({ realm: 'acme' }), { slug: 'acme' });
+    assert.deepEqual(stateRealmRef({ realmId: '', realm: 'acme' }), { slug: 'acme' });
+  });
+
+  it('is null for a global flow', () => {
+    assert.equal(stateRealmRef({}), null);
+    assert.equal(stateRealmRef(undefined), null);
+    assert.equal(stateRealmRef({ realm: '', realmId: null }), null);
+  });
+});
+
+describe('pickCallbackRedirect', () => {
+  it('uses custom redirect, then the realm one, then the global one', () => {
+    assert.equal(
+      pickCallbackRedirect(['https://c', 'https://r', 'https://g']),
+      'https://c',
+    );
+    assert.equal(
+      pickCallbackRedirect([undefined, 'https://r', 'https://g']),
+      'https://r',
+    );
+    assert.equal(pickCallbackRedirect(['', '  ', 'https://g']), 'https://g');
+    assert.equal(pickCallbackRedirect([undefined, null, '']), undefined);
   });
 });

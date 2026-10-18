@@ -34,6 +34,7 @@ import {
   type RealmTeamNode,
   type StoredRealmSettingsData,
 } from './realm.logic.js';
+import { hasCompleteOAuthCredentials } from '../handlers/oauth2/utils/oauthSettings.logic.js';
 
 const A = 'aaaaaaaaaaaaaaaaaaaaaaaa';
 const B = 'bbbbbbbbbbbbbbbbbbbbbbbb';
@@ -1336,3 +1337,84 @@ describe('BoundedTtlCache', () => {
 // assertSlugUniqueAfterWrite, the TokenProvider wiring. The decisions they delegate to
 // (shouldCheckRealmAccess, tokenAssurance, unresolvedRealmError, evaluateGuestAllowed)
 // are tested above.
+
+describe('buildEffectiveSettings credential pairing', () => {
+  const globalConfig = {
+    google: {
+      enabled: true,
+      clientId: 'global-id',
+      clientSecret: 'global-secret',
+      redirect_uri: 'https://global/cb',
+    },
+    apple: {
+      enabled: true,
+      clientId: 'apple-global',
+      privateKey: 'global-key',
+      teamId: 'global-team',
+      keyId: 'global-kid',
+    },
+  };
+  const withOauth = (oauth: Record<string, any>) => ({
+    ...defaultRealmSettings(),
+    strategies: { ...defaultRealmSettings().strategies, oauth },
+  });
+
+  it('takes the secret only from the realm when the realm sets its own clientId', () => {
+    const google = buildEffectiveSettings(
+      globalConfig,
+      withOauth({ google: { enabled: true, clientId: 'realm-id' } }),
+    ).strategies.oauth.google;
+    assert.equal(google.clientId, 'realm-id');
+    // never the global secret with a foreign clientId
+    assert.equal(google.clientSecret, '');
+    assert.equal(hasCompleteOAuthCredentials('google', google), false);
+  });
+
+  it('uses the realm pair when both are set', () => {
+    const google = buildEffectiveSettings(
+      globalConfig,
+      withOauth({
+        google: { enabled: true, clientId: 'realm-id', clientSecret: 'realm-secret' },
+      }),
+    ).strategies.oauth.google;
+    assert.equal(google.clientId, 'realm-id');
+    assert.equal(google.clientSecret, 'realm-secret');
+    assert.equal(hasCompleteOAuthCredentials('google', google), true);
+  });
+
+  it('ignores a realm secret without a clientId and inherits both', () => {
+    const google = buildEffectiveSettings(
+      globalConfig,
+      withOauth({ google: { enabled: true, clientSecret: 'orphan' } }),
+    ).strategies.oauth.google;
+    assert.equal(google.clientId, 'global-id');
+    assert.equal(google.clientSecret, 'global-secret');
+  });
+
+  it('does not infect other providers or other realms', () => {
+    const effective = buildEffectiveSettings(
+      { ...globalConfig, github: { clientId: 'gh', clientSecret: 'ghs' } },
+      withOauth({ google: { enabled: true, clientId: 'realm-id' } }),
+    );
+    assert.equal(effective.strategies.oauth.github.clientSecret, 'ghs');
+  });
+
+  it('keeps the Apple key triple all-or-nothing', () => {
+    const partial = buildEffectiveSettings(
+      globalConfig,
+      withOauth({
+        apple: { enabled: true, clientId: 'svc', teamId: 'T', keyId: 'K' },
+      }),
+    ).strategies.oauth.apple;
+    assert.equal(partial.privateKey, 'global-key');
+    assert.equal(partial.teamId, 'global-team');
+    assert.equal(partial.keyId, 'global-kid');
+    const own = buildEffectiveSettings(
+      globalConfig,
+      withOauth({
+        apple: { enabled: true, privateKey: 'P', teamId: 'T', keyId: 'K' },
+      }),
+    ).strategies.oauth.apple;
+    assert.deepEqual([own.privateKey, own.teamId, own.keyId], ['P', 'T', 'K']);
+  });
+});

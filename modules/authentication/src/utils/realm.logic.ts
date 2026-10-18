@@ -506,11 +506,17 @@ function overlayOAuth(
 ): EffectiveOAuthSettings {
   const global = globalProvider ?? {};
   const realm = realmProvider ?? { enabled: false };
+  // clientId and clientSecret are a pair: a realm that sets its own clientId takes the
+  // secret from the realm only (a missing one leaves the pair incomplete, it is never
+  // filled from global), and a realm that sets only a secret inherits both from global.
+  const ownClientId = nonEmptyString(realm.clientId);
   const effective: EffectiveOAuthSettings = {
     // enablement is explicit per realm, the global flag is never inherited
     enabled: realm.enabled === true,
-    clientId: nonEmptyString(realm.clientId) ?? global.clientId ?? '',
-    clientSecret: nonEmptyString(realm.clientSecret) ?? global.clientSecret ?? '',
+    clientId: ownClientId ?? global.clientId ?? '',
+    clientSecret: ownClientId
+      ? (nonEmptyString(realm.clientSecret) ?? '')
+      : (global.clientSecret ?? ''),
     redirect_uri: nonEmptyString(realm.redirect_uri) ?? global.redirect_uri ?? '',
     accountLinking:
       typeof realm.accountLinking === 'boolean'

@@ -79,12 +79,48 @@ let settingsCacheGeneration = 0;
 
 /**
  * Drops the cached per-realm OAuth settings of every handler. Called whenever the realm
- * cache is invalidated (realm writes, bus events), so a changed realm never keeps
- * serving old credentials. Entries are also keyed by credential version, which
- * covers changes of the inherited global credentials.
+ * cache is invalidated (realm writes, bus events, and a change of the global module
+ * config, see `Authentication.onConfig`), so a changed realm never keeps serving old
+ * credentials.
+ *
+ * Entries are keyed by the credential version of the realm's *effective* settings, which
+ * are built from the cached realm context. A rotation of the inherited global
+ * credentials is therefore only visible once that context is rebuilt: the config change
+ * handler must invalidate the realm cache (which calls this), the version key alone does
+ * not cover it.
  */
 export function invalidateOAuthSettingsCache(): void {
   settingsCacheGeneration++;
+}
+
+/**
+ * Where the OAuth callback of a realm flow takes its realm from. New state tokens carry
+ * the realm team id (`realmId`, survives a slug rename mid-flow) next to the slug
+ * (`realm`); tokens created before that only have the slug. The id wins when present.
+ */
+export function stateRealmRef(
+  data: { realmId?: unknown; realm?: unknown } | null | undefined,
+): { id: string } | { slug: string } | null {
+  const id = data?.realmId;
+  if (typeof id === 'string' && id !== '') return { id };
+  if (typeof id === 'number') return { id: String(id) };
+  const slug = data?.realm;
+  if (typeof slug === 'string' && slug !== '') return { slug };
+  return null;
+}
+
+/**
+ * Redirect target for an OAuth callback that fails before the realm is known: the first
+ * non-empty candidate, in order of precedence (validated `customRedirectUri`, the
+ * realm's `redirect_uri`, the global `finalRedirect`).
+ */
+export function pickCallbackRedirect(
+  candidates: ReadonlyArray<string | null | undefined>,
+): string | undefined {
+  return candidates.find(
+    (candidate): candidate is string =>
+      typeof candidate === 'string' && candidate.trim() !== '',
+  );
 }
 
 /** Realm id -> settings, one entry per realm, rebuilt when the version changes. */
@@ -113,4 +149,26 @@ export class OAuthSettingsCache<T> {
   get size(): number {
     return this.entries.size;
   }
+}
+
+/**
+ * The settings a request runs with: the handler's global settings without a realm, else
+ * the realm's, built from its effective credentials and cached per realm id and
+ * credential version. A realm without an entry for the provider fails closed through
+ * `missing` (it must never fall back to the global credentials).
+ */
+export function settingsForRealm<S, E extends OAuthCredentials>(params: {
+  globalSettings: S;
+  realm: { id: string; effective: E | null | undefined } | null;
+  cache: OAuthSettingsCache<S>;
+  build: (effective: E) => S;
+  missing: () => Error;
+}): S {
+  const { realm } = params;
+  if (!realm) return params.globalSettings;
+  const effective = realm.effective;
+  if (!effective) throw params.missing();
+  return params.cache.get(realm.id, oauthSettingsVersion(effective), () =>
+    params.build(effective),
+  );
 }

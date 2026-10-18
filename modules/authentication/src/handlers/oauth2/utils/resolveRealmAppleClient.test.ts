@@ -100,4 +100,35 @@ describe('resolveRealmAppleClient', () => {
       /Unknown Apple OAuth client id/,
     );
   });
+
+  it('fails closed when the global resolution has an incomplete key triple', () => {
+    for (const partial of [
+      { privateKey: '' },
+      { teamId: '' },
+      { keyId: undefined as unknown as string },
+      { clientId: '' },
+    ]) {
+      assert.throws(
+        () =>
+          resolveRealmAppleClient({
+            realmClientId: undefined,
+            effective: effectiveOwn,
+            resolveGlobal: () => ({ ...globalClient, ...partial }),
+          }),
+        /STRATEGY_NOT_AVAILABLE_FOR_REALM/,
+      );
+    }
+  });
+
+  it('fails closed without effective settings and an incomplete global client', () => {
+    assert.throws(
+      () =>
+        resolveRealmAppleClient({
+          realmClientId: 'realm.client',
+          effective: null,
+          resolveGlobal: () => ({ ...globalClient, privateKey: '' }),
+        }),
+      /STRATEGY_NOT_AVAILABLE_FOR_REALM/,
+    );
+  });
 });
