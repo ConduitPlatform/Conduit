@@ -13,6 +13,7 @@ import {
   assertSlugUniqueAfterWrite,
   invalidateRealmCache,
   normalizeIdList,
+  realmsEnabled,
   toFullLeafStrategies,
 } from './realm.js';
 import {
@@ -25,6 +26,7 @@ import {
   ImportedRealm,
   ImportTally,
   parseImportedRealm,
+  realmsDisabledSkipMessage,
   topLevelTeamQuery,
 } from './realmExport.logic.js';
 
@@ -183,6 +185,8 @@ async function updateExistingRealm(
  *  - trusted home realm slugs are resolved before the first write and fail closed: an
  *    unresolved entry keeps the stored list of an existing realm, or disables guests of a
  *    new one, and the team is reported as failed.
+ * While the realms feature is off nothing is written: every record that asks for a realm
+ * is reported on `tally` as skipped (`REALMS_DISABLED`), like the admin routes.
  * Every problem is recorded on `tally` per record. Returns whether any realm was written.
  */
 export async function importTeamRealms(
@@ -198,6 +202,11 @@ export async function importTeamRealms(
     try {
       const parsed = parseImportedRealm(rec);
       if (!parsed.enabled) continue;
+      if (!realmsEnabled()) {
+        // flag off = no realm data is written, same as the admin routes
+        tally.skipped(realmsDisabledSkipMessage(name));
+        continue;
+      }
       const team = await Team.getInstance().findOne(topLevelTeamQuery(name), {
         readPreference: 'primary',
       });

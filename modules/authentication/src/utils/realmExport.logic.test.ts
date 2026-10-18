@@ -4,6 +4,7 @@ import {
   applyTrustedHomeRealms,
   decideTrustedHomeRealms,
   ImportTally,
+  realmsDisabledSkipMessage,
   topLevelTeamQuery,
   UNRESOLVED_REALM_PREFIX,
   buildImportedSettings,
@@ -433,6 +434,19 @@ describe('ImportTally', () => {
     assert.equal(result.updated, 0);
     assert.deepEqual(result.errors, ['first', 'second']);
     assert.equal(tally.outcome(0), 'failed');
+  });
+
+  it('reports a skipped realm part without changing the record outcome', () => {
+    const result = fresh();
+    const tally = new ImportTally(result);
+    tally.created(0);
+    tally.updated(1);
+    tally.skipped(realmsDisabledSkipMessage('acme'));
+    assert.deepEqual([result.created, result.updated, result.failed], [1, 1, 0]);
+    assert.equal(result.errors.length, 1);
+    assert.match(result.errors[0], /^acme: realm: skipped, realms are disabled/);
+    assert.match(result.errors[0], /REALMS_DISABLED/);
+    assert.equal(tally.outcome(0), 'created');
   });
 
   it('counts a record that failed outright once', () => {
