@@ -4,6 +4,7 @@ import { buildEffectiveSettings, defaultRealmSettings } from '../utils/realm.log
 import {
   buildRealmDiscovery,
   buildUserRealms,
+  enterRealmTokenFlags,
   summarizePolicies,
   toRealmRef,
 } from './realm.logic.js';
@@ -85,5 +86,33 @@ describe('user realms', () => {
       guests: [guest],
     });
     assert.deepEqual(dup.guests, []);
+  });
+});
+
+describe('enterRealmTokenFlags', () => {
+  it('does not mint sudo tokens from a session without sudo', () => {
+    assert.deepEqual(enterRealmTokenFlags({ authorized: true, sudo: false }), {
+      noSudo: true,
+      twoFaPass: true,
+    });
+    assert.deepEqual(enterRealmTokenFlags({ authorized: true }), {
+      noSudo: true,
+      twoFaPass: true,
+    });
+    assert.deepEqual(enterRealmTokenFlags({ authorized: false }), {
+      noSudo: true,
+      twoFaPass: false,
+    });
+    assert.deepEqual(enterRealmTokenFlags(undefined), {
+      noSudo: true,
+      twoFaPass: false,
+    });
+  });
+
+  it('carries sudo over only when the entering token has it', () => {
+    assert.deepEqual(enterRealmTokenFlags({ authorized: true, sudo: true }), {
+      noSudo: false,
+      twoFaPass: true,
+    });
   });
 });

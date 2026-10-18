@@ -95,3 +95,15 @@ export function buildUserRealms(params: {
     guests: params.guests.filter(guest => guest.team._id !== params.homeRealmId),
   };
 }
+
+/**
+ * Token flags of `POST /realms/:slug/enter`. A new session in a realm must not be more
+ * privileged than the one used to enter: sudo is only carried over when the entering
+ * token itself has it (which in turn requires a passed 2FA), and the 2FA state is
+ * inherited from it.
+ */
+export function enterRealmTokenFlags(
+  jwtPayload: { sudo?: unknown; authorized?: unknown } | null | undefined,
+): { noSudo: boolean; twoFaPass: boolean } {
+  return { noSudo: !jwtPayload?.sudo, twoFaPass: !!jwtPayload?.authorized };
+}

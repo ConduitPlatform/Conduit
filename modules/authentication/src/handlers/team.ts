@@ -31,6 +31,7 @@ import {
   assertInviteeAllowed,
   assertTeamDeletable,
   assertTeamMembersRemovable,
+  deleteTeamAndDetachChildren,
   decorateMembershipType,
   revokeOrphanedGuests,
 } from '../utils/teamRealm.js';
@@ -144,10 +145,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
       );
     }
     // a team inside a realm: writes the realm membership (guest policy applies) first
+    // (client path: an existing user is never re-homed, a new registration through an
+    // invite already got the realm as home from the registration)
     await addUserToTeamWithRealm(this.grpcSdk, {
       teamId: String(team._id),
       userId: String(user._id),
       role: inviteToken!.data.role,
+      mode: 'client',
     });
     if (inviteToken.data.email) {
       await Token.getInstance().deleteOne({ _id: inviteToken!._id });
@@ -195,6 +199,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       teamId,
       userId,
       role: role || 'member',
+      mode: 'client',
     });
     return 'User added to team';
   }
@@ -333,13 +338,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       );
     }
     assertTeamDeletable(existingTeam);
-    await Team.getInstance().deleteOne({ _id: teamId });
-    await this.grpcSdk.authorization!.deleteAllRelations({
-      resource: 'Team:' + teamId,
-    });
-    await this.grpcSdk.authorization!.deleteAllRelations({
-      subject: 'Team:' + teamId,
-    });
+    await deleteTeamAndDetachChildren(this.grpcSdk, existingTeam);
     return 'Deleted';
   }
 

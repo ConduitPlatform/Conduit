@@ -3,11 +3,19 @@ import {
   FindRelationRequest,
   FindRelationResponse,
   GrpcError,
+  Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { errors } from '../errors.js';
-import { RealmMembership, RealmSettings, Team, User } from '../models/index.js';
+import {
+  AccessToken,
+  RealmMembership,
+  RealmSettings,
+  RefreshToken,
+  Team,
+  User,
+} from '../models/index.js';
 import {
   assertGuestAllowed,
   evaluateGuestAllowed,
@@ -16,10 +24,15 @@ import {
   realmsEnabled,
   resolveTeamRealm,
   revokeRealmMembership,
+  withHomeScope,
 } from './realm.js';
 import {
   classifyRealmMember,
+  countUpdated,
   decorateMembers,
+  findUnknownRealmIds,
+  RealmMemberMode,
+  realmlessTokenQuery,
   relationsTouchTeams,
   relationUserIds,
 } from './teamRealm.logic.js';
@@ -93,6 +106,7 @@ async function loadGuestPolicies(realmTeamId: string) {
 export async function assertUsersCanJoinTeam(
   teamId: string,
   users: Pick<User, '_id' | 'homeRealm'>[],
+  mode: RealmMemberMode,
 ): Promise<void> {
   if (!realmsEnabled()) return;
   const realmTeam = await resolveTeamRealm(teamId);
@@ -101,7 +115,7 @@ export async function assertUsersCanJoinTeam(
   const policies = await loadGuestPolicies(realmId);
   if (!policies) return;
   for (const user of users) {
-    if (classifyRealmMember(user.homeRealm, realmId).type !== 'guest') continue;
+    if (classifyRealmMember(user.homeRealm, realmId, mode).type !== 'guest') continue;
     const existing = await RealmMembership.getInstance().findOne({
       user: String(user._id),
       realm: realmId,
@@ -111,45 +125,127 @@ export async function assertUsersCanJoinTeam(
   }
 }
 
+/** Deletes the user's sessions that are not bound to a realm (global sessions). */
+export async function revokeRealmlessTokens(userIds: string[]): Promise<void> {
+  if (userIds.length === 0) return;
+  const query = realmlessTokenQuery(userIds);
+  await Promise.all([
+    AccessToken.getInstance().deleteMany(query),
+    RefreshToken.getInstance().deleteMany(query),
+  ]);
+}
+
+/**
+ * Sets the home realm of a user who has none yet. The write is conditional on the user
+ * still having no home realm, so concurrent adds into different realms cannot give a
+ * user two homes:
+ *  - `claimed`: this call set it;
+ *  - `already`: the user is already home at this realm (a concurrent call won);
+ *  - `lost`: the user is homed elsewhere now.
+ */
+export async function claimHomeRealm(
+  userId: string,
+  realmId: string,
+): Promise<'claimed' | 'already' | 'lost'> {
+  const result = await User.getInstance().updateMany(
+    withHomeScope({ _id: userId }, null),
+    { homeRealm: realmId },
+  );
+  if (countUpdated(result) > 0) return 'claimed';
+  const fresh = await User.getInstance().findOne(
+    { _id: userId },
+    { readPreference: 'primary' },
+  );
+  if (!fresh) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+  return fresh.homeRealm && String(fresh.homeRealm) === realmId ? 'already' : 'lost';
+}
+
+/** Runs rollback steps, last first. Best effort: never masks the original error. */
+async function runRollback(steps: (() => Promise<unknown>)[]): Promise<void> {
+  for (const step of steps.reverse()) {
+    try {
+      await step();
+    } catch (e) {
+      ConduitGrpcSdk.Logger.error(e as Error);
+    }
+  }
+}
+
 /**
  * Adds a user to a team with `role`. For a team inside a realm the realm membership is
- * written first (home when the user has no home realm yet, which then becomes this
- * realm, or when it already is their home; guest otherwise, with the guest policy
- * enforced), so a refused guest leaves no relation behind. Idempotent.
+ * written first, classified by `mode` (see classifyRealmMember: `admin` homes users
+ * without a home realm, `client` never re-homes and makes them guests; the guest policy
+ * is enforced), so a refused guest leaves no relation behind. When the relation write
+ * fails, the membership and the home realm set by this call are rolled back.
+ * Idempotent.
  */
 export async function addUserToTeamWithRealm(
   grpcSdk: ConduitGrpcSdk,
-  params: { teamId: string; userId: string; role: string },
+  params: { teamId: string; userId: string; role: string; mode: RealmMemberMode },
 ): Promise<void> {
-  const { teamId, userId, role } = params;
+  const { teamId, userId, role, mode } = params;
   const realmTeam = realmsEnabled() ? await resolveTeamRealm(teamId) : null;
-  if (realmTeam) {
-    const realmId = String(realmTeam._id);
-    const existing = await RealmMembership.getInstance().findOne({
-      user: userId,
-      realm: realmId,
-    });
-    if (!existing) {
-      // always judge on the stored home realm, the caller's user object may be stale
-      const user = await User.getInstance().findOne({ _id: userId });
-      if (!user) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
-      const { type, setHomeRealm } = classifyRealmMember(user.homeRealm, realmId);
-      await grantRealmMembership(grpcSdk, {
-        userId,
-        realmTeamId: realmId,
-        type,
-        enforceGuestPolicy: true,
+  const rollback: (() => Promise<unknown>)[] = [];
+  try {
+    if (realmTeam) {
+      const realmId = String(realmTeam._id);
+      const existing = await RealmMembership.getInstance().findOne({
+        user: userId,
+        realm: realmId,
       });
-      if (setHomeRealm) {
-        await User.getInstance().findByIdAndUpdate(userId, { homeRealm: realmId });
-      }
+      if (!existing) await joinRealm(grpcSdk, { userId, realmId, mode }, rollback);
+    }
+    await grpcSdk.authorization!.createRelation({
+      subject: 'User:' + userId,
+      relation: role,
+      resource: 'Team:' + teamId,
+    });
+  } catch (e) {
+    await runRollback(rollback);
+    throw e;
+  }
+}
+
+/** Writes the membership (and the home realm for admins), registering the undo steps. */
+async function joinRealm(
+  grpcSdk: ConduitGrpcSdk,
+  params: { userId: string; realmId: string; mode: RealmMemberMode },
+  rollback: (() => Promise<unknown>)[],
+): Promise<void> {
+  const { userId, realmId, mode } = params;
+  // always judge on the stored home realm, the caller's user object may be stale
+  const user = await User.getInstance().findOne({ _id: userId });
+  if (!user) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+  const classification = classifyRealmMember(user.homeRealm, realmId, mode);
+  let type = classification.type;
+  let claimed = false;
+  if (classification.setHomeRealm) {
+    const claim = await claimHomeRealm(userId, realmId);
+    if (claim === 'claimed') {
+      claimed = true;
+      rollback.push(() =>
+        User.getInstance().updateMany(
+          { _id: userId, homeRealm: realmId },
+          { homeRealm: null },
+        ),
+      );
+    } else if (claim === 'lost') {
+      // another realm became their home in the meantime: they are a guest here
+      type = 'guest';
     }
   }
-  await grpcSdk.authorization!.createRelation({
-    subject: 'User:' + userId,
-    relation: role,
-    resource: 'Team:' + teamId,
+  await grantRealmMembership(grpcSdk, {
+    userId,
+    realmTeamId: realmId,
+    type,
+    enforceGuestPolicy: true,
   });
+  // registered only now: a failed grant created nothing that could be deleted here
+  rollback.push(() =>
+    RealmMembership.getInstance().deleteMany({ user: userId, realm: realmId }),
+  );
+  // sessions without a realm must not outlive the move into a realm
+  if (claimed) await revokeRealmlessTokens([userId]);
 }
 
 /**
@@ -236,11 +332,15 @@ export async function assertInviteeAllowed(
   const realmId = String(realmTeam._id);
   const invitee = await User.getInstance().findOne({ email: email.toLowerCase() });
   if (!invitee) return;
-  const { type } = classifyRealmMember(invitee.homeRealm, realmId);
+  // invites are a client path: an existing user is never re-homed, so never a home user
+  const { type } = classifyRealmMember(invitee.homeRealm, realmId, 'client');
   if (type !== 'guest') return;
   const policies = await loadGuestPolicies(realmId);
   if (!policies) return;
-  const result = evaluateGuestAllowed(policies, String(invitee.homeRealm));
+  const result = evaluateGuestAllowed(
+    policies,
+    invitee.homeRealm ? String(invitee.homeRealm) : null,
+  );
   if (!result.allowed) throw new ModuleError(errors[result.error]);
 }
 
@@ -250,6 +350,71 @@ export function assertTeamDeletable(team: Pick<Team, 'realm'>): void {
     throw new GrpcError(
       status.FAILED_PRECONDITION,
       'This team is a realm. Demote the realm before deleting the team.',
+    );
+  }
+}
+
+/**
+ * Deletes a team: its relations, then its child teams move to the team's own parent
+ * (top level when it has none) and, inside a realm, guests whose last relation in the
+ * realm was on this team lose their guest membership. Realm teams must be refused by the
+ * caller first (assertTeamDeletable).
+ */
+export async function deleteTeamAndDetachChildren(
+  grpcSdk: ConduitGrpcSdk,
+  team: Pick<Team, '_id' | 'parentTeam'>,
+): Promise<void> {
+  const teamId = String(team._id);
+  const parentId = team.parentTeam ? String(team.parentTeam) : null;
+  // collected up front: the relations are gone once the team is deleted
+  const memberIds =
+    parentId && realmsEnabled() ? await collectTeamUserIds(grpcSdk, [teamId]) : [];
+  const children = await Team.getInstance().findMany({ parentTeam: teamId });
+
+  await Team.getInstance().deleteOne({ _id: teamId });
+  await grpcSdk.authorization!.deleteAllRelations({ resource: 'Team:' + teamId });
+  await grpcSdk.authorization!.deleteAllRelations({ subject: 'Team:' + teamId });
+  if (children.length > 0) {
+    // null (not undefined, which an update drops) puts them on the top level
+    await Team.getInstance().updateMany({ parentTeam: teamId }, {
+      parentTeam: parentId,
+    } as Indexable);
+    if (parentId) {
+      // the owner relation of the deleted parent went with it
+      for (const child of children) {
+        await grpcSdk.authorization!.createRelation({
+          subject: 'Team:' + parentId,
+          relation: 'owner',
+          resource: 'Team:' + String(child._id),
+        });
+      }
+    }
+  }
+  // the parent is still inside the same realm (a top-level team has no realm guests)
+  if (parentId) await revokeOrphanedGuests(grpcSdk, parentId, memberIds);
+}
+
+/**
+ * Throws INVALID_ARGUMENT listing the ids in `requested` that are not realm teams.
+ * `selfId` (the realm being written) is accepted even when it is not a realm yet.
+ */
+export async function assertRealmTeamIds(
+  requested: string[],
+  selfId?: string,
+): Promise<void> {
+  const ids = requested.filter(id => id !== selfId);
+  if (ids.length === 0) return;
+  const query: Indexable = { _id: { $in: ids }, 'realm.enabled': true };
+  const teams = await Team.getInstance().findMany(query);
+  const unknown = findUnknownRealmIds(
+    ids,
+    teams.map(team => team._id),
+  );
+  if (unknown.length > 0) {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      'policies.guests.allowedHomeRealms contains ids that are not realm teams: ' +
+        unknown.join(', '),
     );
   }
 }

@@ -105,6 +105,40 @@ export function guestsNotAllowedError(
 }
 
 // ---------------------------------------------------------------------------
+// Demote and home realm moves
+// ---------------------------------------------------------------------------
+
+/**
+ * Order of a realm demotion. The realm stops resolving (team flipped, cache cleared and
+ * the change published) before the realm-bound sessions are swept, so no guest session
+ * can be minted after the sweep. Home users are blocked first: they cannot sign in
+ * anywhere meanwhile.
+ */
+export const DEMOTE_STEPS = [
+  'blockHomeUsers',
+  'deleteMemberships',
+  'deleteSettings',
+  'flipTeam',
+  'publish',
+  'sweepRealmTokens',
+] as const;
+export type DemoteStep = (typeof DEMOTE_STEPS)[number];
+
+/**
+ * What happens to the old home membership when a user is moved to another home realm
+ * (`newHome` null = global): it becomes a guest membership when the old realm's guest
+ * policy allows a user with the new home, otherwise the user loses every relation in
+ * the old realm.
+ */
+export function planOldHomeMembership(
+  oldRealmPolicies: Pick<RealmPolicies, 'guests'> | null | undefined,
+  newHome: string | null,
+): 'guest' | 'revoke' {
+  if (!oldRealmPolicies) return 'revoke';
+  return evaluateGuestAllowed(oldRealmPolicies, newHome).allowed ? 'guest' : 'revoke';
+}
+
+// ---------------------------------------------------------------------------
 // Slug changes
 // ---------------------------------------------------------------------------
 
@@ -372,6 +406,12 @@ export function buildRealmSettingsWrite(params: {
   );
   const settings = deepMergeClearing(pickSettingsFields(params.base), patch);
   settings.strategies.oauth = settings.strategies.oauth ?? {};
+  // a provider entry that was never switched on stays off (the toggle is explicit)
+  for (const entry of Object.values(settings.strategies.oauth) as Indexable[]) {
+    if (entry && typeof entry === 'object' && entry.enabled === undefined) {
+      entry.enabled = false;
+    }
+  }
   return {
     settings,
     oauthSecrets: applyOAuthSecretsUpdate(params.baseSecrets, secretsUpdate),

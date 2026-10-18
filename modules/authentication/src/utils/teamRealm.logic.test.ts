@@ -2,7 +2,10 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   classifyRealmMember,
+  countUpdated,
   decorateMembers,
+  findUnknownRealmIds,
+  realmlessTokenQuery,
   relationsTouchTeams,
   relationTeamIds,
   relationUserIds,
@@ -12,33 +15,75 @@ const REALM = 'aaaaaaaaaaaaaaaaaaaaaaaa';
 const OTHER = 'bbbbbbbbbbbbbbbbbbbbbbbb';
 
 describe('classifyRealmMember', () => {
-  it('users without a home realm become home users and get the realm', () => {
-    assert.deepEqual(classifyRealmMember(undefined, REALM), {
-      type: 'home',
-      setHomeRealm: true,
-    });
-    assert.deepEqual(classifyRealmMember(null, REALM), {
-      type: 'home',
-      setHomeRealm: true,
-    });
-    assert.deepEqual(classifyRealmMember('', REALM), {
-      type: 'home',
-      setHomeRealm: true,
-    });
+  it('admin mode: users without a home realm become home users and get the realm', () => {
+    for (const none of [undefined, null, '']) {
+      assert.deepEqual(classifyRealmMember(none, REALM, 'admin'), {
+        type: 'home',
+        setHomeRealm: true,
+      });
+    }
   });
 
-  it('keeps the home realm when it is this realm', () => {
-    assert.deepEqual(classifyRealmMember(REALM, REALM), {
-      type: 'home',
-      setHomeRealm: false,
-    });
+  it('client mode never re-homes: users without a home realm become guests', () => {
+    for (const none of [undefined, null, '']) {
+      assert.deepEqual(classifyRealmMember(none, REALM, 'client'), {
+        type: 'guest',
+        setHomeRealm: false,
+      });
+    }
   });
 
-  it('users of another realm are guests', () => {
-    assert.deepEqual(classifyRealmMember(OTHER, REALM), {
-      type: 'guest',
-      setHomeRealm: false,
+  it('keeps the home realm when it is this realm, in both modes', () => {
+    for (const mode of ['admin', 'client'] as const) {
+      assert.deepEqual(classifyRealmMember(REALM, REALM, mode), {
+        type: 'home',
+        setHomeRealm: false,
+      });
+    }
+  });
+
+  it('users of another realm are guests, in both modes', () => {
+    for (const mode of ['admin', 'client'] as const) {
+      assert.deepEqual(classifyRealmMember(OTHER, REALM, mode), {
+        type: 'guest',
+        setHomeRealm: false,
+      });
+    }
+  });
+});
+
+describe('countUpdated', () => {
+  it('reads the Mongo and SQL update results', () => {
+    assert.equal(countUpdated({ matchedCount: 1, modifiedCount: 1 }), 1);
+    assert.equal(countUpdated({ matchedCount: 1, modifiedCount: 0 }), 0);
+    assert.equal(countUpdated({ matchedCount: 0, modifiedCount: 0 }), 0);
+    assert.equal(countUpdated([{ _id: 'u1' }]), 1);
+    assert.equal(countUpdated([]), 0);
+  });
+
+  it('counts unknown shapes as nothing updated', () => {
+    assert.equal(countUpdated(null), 0);
+    assert.equal(countUpdated(undefined), 0);
+    assert.equal(countUpdated({}), 0);
+    assert.equal(countUpdated('ok'), 0);
+  });
+});
+
+describe('realmlessTokenQuery', () => {
+  it('matches tokens with a null or missing realm', () => {
+    assert.deepEqual(realmlessTokenQuery(['u1']), {
+      user: 'u1',
+      $or: [{ realm: null }, { realm: { $exists: false } }],
     });
+    assert.deepEqual(realmlessTokenQuery(['u1', 'u2']).user, { $in: ['u1', 'u2'] });
+  });
+});
+
+describe('findUnknownRealmIds', () => {
+  it('lists requested ids that are not realm teams, once', () => {
+    assert.deepEqual(findUnknownRealmIds([REALM, OTHER, OTHER], [REALM]), [OTHER]);
+    assert.deepEqual(findUnknownRealmIds([REALM], [REALM]), []);
+    assert.deepEqual(findUnknownRealmIds([], [REALM]), []);
   });
 });
 
