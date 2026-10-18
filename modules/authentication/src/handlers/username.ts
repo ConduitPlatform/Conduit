@@ -19,6 +19,14 @@ import {
 import { authenticateChecks, changePassword } from './utils.js';
 import { Config } from '../config/index.js';
 import { ALT_STRATEGY_AUTH } from '../constants/index.js';
+import { errors } from '../errors.js';
+import {
+  assertStrategyEnabledForRealm,
+  realmIdOf,
+  realmParam,
+  resolveRealmFromCall,
+  scopedUserQuery,
+} from './realmRequest.js';
 
 export class UsernameHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -37,11 +45,17 @@ export class UsernameHandlers implements IAuthenticationStrategy {
           username: ConduitString.Required,
           password: ConduitString.Required,
           captchaToken: ConduitString.Optional,
+          realm: realmParam,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.login
             ? ['captchaMiddleware']
             : undefined,
+        errors: [
+          errors.REALM_NOT_FOUND,
+          errors.REALMS_DISABLED,
+          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+        ],
         rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('LoginResponse', {
@@ -88,9 +102,11 @@ export class UsernameHandlers implements IAuthenticationStrategy {
 
     const clientId = context.clientId;
     const config = ConfigController.getInstance().config;
+    const realmCtx = await resolveRealmFromCall(call);
+    assertStrategyEnabledForRealm(realmCtx, 'username');
 
     const user: User | null = await User.getInstance().findOne(
-      { username },
+      scopedUserQuery({ username }, realmCtx),
       {
         select: '+hashedPassword',
       },
@@ -100,11 +116,22 @@ export class UsernameHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
     }
 
-    await authenticateChecks(password, config, user);
+    await authenticateChecks(
+      password,
+      config,
+      user,
+      realmCtx
+        ? {
+            verificationRequired:
+              realmCtx.effective.strategies.local.verificationRequired,
+          }
+        : undefined,
+    );
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId,
       config,
+      realm: realmIdOf(realmCtx),
     });
   }
 }

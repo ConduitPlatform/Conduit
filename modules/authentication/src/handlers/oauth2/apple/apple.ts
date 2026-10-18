@@ -19,16 +19,18 @@ import axios from 'axios';
 import { AppleUser } from './apple.user.js';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { TokenProvider } from '../../tokenProvider.js';
-import { Token, User } from '../../../models/index.js';
+import { Token } from '../../../models/index.js';
 import { status } from '@grpc/grpc-js';
 import jwksRsa from 'jwks-rsa';
 import {
   validateStateToken,
   resolveAppleOAuthClient,
   validateAppleClients,
+  OAUTH_ROUTE_ERRORS,
   redirectOnRegistrationNotAllowed,
   resolveOAuthMode,
 } from '../utils/index.js';
+import { realmIdOf } from '../../realmRequest.js';
 import {
   ConduitJson,
   ConduitString,
@@ -39,7 +41,6 @@ import { OAUTH_CALLBACK } from '../../../constants/index.js';
 import { AuthUtils } from '../../../utils/index.js';
 import { verifyAppleIdentityToken } from '../../../utils/appleIdentityToken.js';
 import { resolveAppleSigningKey } from '../../../utils/appleSigningKey.js';
-import { errors } from '../../../errors.js';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   private readonly jwksClient = jwksRsa({
@@ -164,29 +165,31 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       providerClient.redirect_uri;
-    let user: User;
+    const conduitClientId = stateToken.data.clientId;
     try {
-      user = await this.createOrUpdateUser(
+      // the realm the flow was started for, re-validated at the callback
+      const realmCtx = await this.resolveRealmContext(stateToken.data.realm);
+      const user = await this.createOrUpdateUser(
         userParams,
         stateToken.data.invitationToken,
         stateToken.data.anonymousUserId,
         resolveOAuthMode(stateToken.data.mode),
+        realmCtx,
+      );
+      await Token.getInstance().deleteOne(stateToken);
+      return await TokenProvider.getInstance()!.provideUserTokens(
+        {
+          user,
+          clientId: conduitClientId,
+          config,
+          realm: realmIdOf(realmCtx),
+        },
+        redirectUri,
       );
     } catch (err) {
       await Token.getInstance().deleteOne(stateToken);
       return redirectOnRegistrationNotAllowed(err, redirectUri);
     }
-    await Token.getInstance().deleteOne(stateToken);
-    const conduitClientId = stateToken.data.clientId;
-
-    return TokenProvider.getInstance()!.provideUserTokens(
-      {
-        user,
-        clientId: conduitClientId,
-        config,
-      },
-      redirectUri,
-    );
   }
 
   async nativeAuthorize(call: ParsedRouterRequest) {
@@ -239,11 +242,13 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       email: payload.email,
       data: { ...userData, ...payload.email_verified },
     };
+    const realmCtx = await this.resolveRealmContext(stateToken.data.realm);
     const user = await this.createOrUpdateUser(
       userParams,
       stateToken.data.invitationToken,
       stateToken.data.anonymousUserId,
       resolveOAuthMode(stateToken.data.mode),
+      realmCtx,
     );
     await Token.getInstance().deleteOne(stateToken);
 
@@ -253,6 +258,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       user,
       clientId: conduitClientId,
       config,
+      realm: realmIdOf(realmCtx),
     });
   }
 
@@ -269,7 +275,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
           state: ConduitString.Required,
           user: ConduitJson.Optional,
         },
-        errors: [errors.REGISTRATION_NOT_ALLOWED],
+        errors: OAUTH_ROUTE_ERRORS,
         rateLimit: OAUTH_CALLBACK,
       },
       new ConduitRouteReturnDefinition(`AppleResponse`, {

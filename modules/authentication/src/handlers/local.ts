@@ -34,6 +34,19 @@ import {
 import { createHash } from 'crypto';
 import { authenticateChecks, changePassword } from './utils.js';
 import { errors } from '../errors.js';
+import {
+  assertAnonymousUserInRealm,
+  assertStrategyEnabledForRealm,
+  grantHomeMembership,
+  homeRealmFields,
+  isInviteRequired,
+  realmIdOf,
+  realmParam,
+  resolveHomeRealmContext,
+  resolveInvitationRealm,
+  resolveRealmFromCall,
+  scopedUserQuery,
+} from './realmRequest.js';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -62,6 +75,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           captchaToken: ConduitString.Optional,
           redirectUri: ConduitString.Optional,
           userData: ConduitJson.Optional,
+          realm: realmParam,
         },
         middlewares: localRouteMiddleware,
         errors: [
@@ -69,6 +83,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
           errors.INVITATION_REQUIRED,
           errors.INVALID_INVITATION,
           errors.EMAIL_NOT_ALLOWED,
+          errors.REALM_NOT_FOUND,
+          errors.REALMS_DISABLED,
+          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
         ],
         rateLimit: AUTH_CREDENTIALS,
       },
@@ -82,6 +99,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           action: ConduitRouteActions.POST,
           bodyParams: {
             userData: ConduitJson.Optional,
+            realm: realmParam,
           },
           description: `Creates a new anonymous user.`,
           rateLimit: AUTH_CREDENTIALS,
@@ -104,6 +122,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           email: ConduitString.Required,
           password: ConduitString.Required,
           captchaToken: ConduitString.Optional,
+          realm: realmParam,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.login
@@ -127,6 +146,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           bodyParams: {
             email: ConduitString.Required,
             redirectUri: ConduitString.Optional,
+            realm: realmParam,
           },
           rateLimit: EMAIL_SEND_STRICT,
         },
@@ -157,6 +177,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           description: `Used to resend email verification after new user is created.`,
           bodyParams: {
             email: ConduitString.Required,
+            realm: realmParam,
           },
           rateLimit: EMAIL_SEND_STRICT,
         },
@@ -204,6 +225,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           bodyParams: {
             email: ConduitString.Required,
             code: ConduitString.Required,
+            realm: realmParam,
           },
           rateLimit: EMAIL_CODE_VERIFY,
         },
@@ -272,15 +294,26 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const config = ConfigController.getInstance().config;
     const teams = config.teams;
+    let realmCtx = await resolveRealmFromCall(call);
+    if (teams.enabled && invitationToken) {
+      // an invitation into a realm implies that realm and must agree with an explicit one
+      realmCtx = await resolveInvitationRealm(realmCtx, invitationToken, {
+        allowImplied: true,
+      });
+    }
+    assertStrategyEnabledForRealm(realmCtx, 'local');
     if (
-      teams.enabled &&
-      !teams.allowRegistrationWithoutInvite &&
+      isInviteRequired(realmCtx?.effective.registration, teams) &&
       isNil(invitationToken)
     ) {
       throw new ModuleError(
         errors.INVITATION_REQUIRED,
         `User with email ${email} tried registering without providing an invitation token`,
       );
+    }
+    const { anonymousUser } = call.request.context;
+    if (anonymousUser) {
+      assertAnonymousUserInRealm(anonymousUser, realmCtx);
     }
     let isVerified = false;
     if (teams.enabled && invitationToken) {
@@ -326,7 +359,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
 
     const hashedPassword = await AuthUtils.hashPassword(password);
-    const { anonymousUser } = call.request.context;
     if (anonymousUser) {
       user = (await User.getInstance().findByIdAndUpdate(anonymousUser._id, {
         email,
@@ -340,6 +372,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         hashedPassword,
         isVerified,
         ...merge(userInvitationExtensionData ?? {}, userData ?? {}),
+        ...homeRealmFields(realmCtx),
       });
     }
     delete user.hashedPassword;
@@ -357,13 +390,22 @@ export class LocalHandlers implements IAuthenticationStrategy {
       });
     }
 
+    if (realmCtx && !anonymousUser) {
+      // an invitation creates the team relation itself, otherwise the user becomes a
+      // plain member of the realm team
+      await grantHomeMembership(this.grpcSdk, user, realmCtx, !invitationToken).catch(
+        err => {
+          ConduitGrpcSdk.Logger.error(err);
+        },
+      );
+    }
     if (invitationToken) {
       await TeamsHandler.getInstance()
         .addUserToTeam(user, invitationToken)
         .catch(err => {
           ConduitGrpcSdk.Logger.error(err);
         });
-    } else if (!anonymousUser) {
+    } else if (!anonymousUser && !realmCtx) {
       await TeamsHandler.getInstance()
         .addUserToDefault(user)
         .catch(err => {
@@ -375,6 +417,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
   async anonymousRegister(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const email = `${uuid()}@anonymous.com`;
     const { userData } = call.request.params;
+    const config = ConfigController.getInstance().config;
+    const realmCtx = await resolveRealmFromCall(call);
+    assertStrategyEnabledForRealm(realmCtx, 'local');
+    if (realmCtx && isInviteRequired(realmCtx.effective.registration, config.teams)) {
+      throw new ModuleError(
+        errors.INVITATION_REQUIRED,
+        'Anonymous registration is not allowed without an invitation in this realm',
+      );
+    }
     if (userData) {
       AuthUtils.checkUserData(userData);
     }
@@ -383,19 +434,26 @@ export class LocalHandlers implements IAuthenticationStrategy {
       isAnonymous: true,
       isVerified: false,
       ...userData,
+      ...homeRealmFields(realmCtx),
     });
     const context = call.request.context;
-    const config = ConfigController.getInstance().config;
-    await TeamsHandler.getInstance()
-      .addUserToDefault(anonymousUser)
-      .catch(err => {
+    if (realmCtx) {
+      await grantHomeMembership(this.grpcSdk, anonymousUser, realmCtx).catch(err => {
         ConduitGrpcSdk.Logger.error(err);
       });
+    } else {
+      await TeamsHandler.getInstance()
+        .addUserToDefault(anonymousUser)
+        .catch(err => {
+          ConduitGrpcSdk.Logger.error(err);
+        });
+    }
     return TokenProvider.getInstance().provideUserTokens({
       user: anonymousUser,
       clientId: context.clientId,
       config,
       isRefresh: false,
+      realm: realmIdOf(realmCtx),
     });
   }
 
@@ -414,20 +472,33 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
 
     const config = ConfigController.getInstance().config;
+    const realmCtx = await resolveRealmFromCall(call);
+    assertStrategyEnabledForRealm(realmCtx, 'local');
 
     const user: User | null = await User.getInstance().findOne(
-      { email },
+      scopedUserQuery({ email }, realmCtx),
       {
         select: '+hashedPassword',
       },
     );
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
-    await authenticateChecks(password, config, user);
+    await authenticateChecks(
+      password,
+      config,
+      user,
+      realmCtx
+        ? {
+            verificationRequired:
+              realmCtx.effective.strategies.local.verificationRequired,
+          }
+        : undefined,
+    );
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId,
       config,
+      realm: realmIdOf(realmCtx),
     });
   }
 
@@ -437,9 +508,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const redirectUri =
       AuthUtils.validateRedirectUri(call.request.bodyParams.redirectUri) ??
       config.local.forgot_password_redirect_uri;
+    const realmCtx = await resolveRealmFromCall(call);
+    assertStrategyEnabledForRealm(realmCtx, 'local');
 
     const user: User | null = await User.getInstance().findOne(
-      { email },
+      scopedUserQuery({ email }, realmCtx),
       {
         select: '+hashedPassword',
       },
@@ -518,6 +591,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
       { select: '+hashedPassword' },
     );
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    // the realm comes from the user the token was issued for
+    assertStrategyEnabledForRealm(await resolveHomeRealmContext(user), 'local');
     if (isNil(user.hashedPassword))
       throw new GrpcError(
         status.PERMISSION_DENIED,
@@ -697,7 +772,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (invalidAddress) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
-    const user: User | null = await User.getInstance().findOne({ email });
+    const realmCtx = await resolveRealmFromCall(call);
+    assertStrategyEnabledForRealm(realmCtx, 'local');
+    const user: User | null = await User.getInstance().findOne(
+      scopedUserQuery({ email }, realmCtx),
+    );
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (user.isVerified)
       throw new GrpcError(status.FAILED_PRECONDITION, 'User already verified');
@@ -723,8 +802,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
   async verifyEmailWithCode(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const email = call.request.params.email.toLowerCase();
     const { code } = call.request.params;
+    const realmCtx = await resolveRealmFromCall(call);
+    assertStrategyEnabledForRealm(realmCtx, 'local');
     const foundUser = await User.getInstance().findOne(
-      { email },
+      scopedUserQuery({ email }, realmCtx),
       { readPreference: 'primary' },
     );
     if (!foundUser) {

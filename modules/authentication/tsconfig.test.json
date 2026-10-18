@@ -21,6 +21,8 @@
     "src/utils/appleIdentityToken.test.ts",
     "src/utils/appleSigningKey.ts",
     "src/utils/appleSigningKey.test.ts",
+    "src/handlers/realmRequest.logic.ts",
+    "src/handlers/realmRequest.logic.test.ts",
     "src/handlers/oauth2/utils/resolveAppleOAuthClient.ts",
     "src/handlers/oauth2/utils/resolveAppleOAuthClient.test.ts",
     "src/handlers/oauth2/utils/validateAppleClients.ts",

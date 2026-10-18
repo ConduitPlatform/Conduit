@@ -21,7 +21,12 @@ export async function changePassword(
   return 'Password changed successfully';
 }
 
-export async function authenticateChecks(password: string, config: Config, user: User) {
+export async function authenticateChecks(
+  password: string,
+  config: Config,
+  user: User,
+  overrides?: { verificationRequired?: boolean },
+) {
   if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
   if (!user.hashedPassword)
     throw new GrpcError(
@@ -32,7 +37,9 @@ export async function authenticateChecks(password: string, config: Config, user:
   if (!passwordsMatch)
     throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
 
-  if (config.local.verification.required && !user.isVerified) {
+  const verificationRequired =
+    overrides?.verificationRequired ?? config.local.verification.required;
+  if (verificationRequired && !user.isVerified) {
     throw new GrpcError(
       status.PERMISSION_DENIED,
       'You must verify your account to login',

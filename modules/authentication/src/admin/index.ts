@@ -47,6 +47,8 @@ export class AdminHandlers {
           isActive: ConduitBoolean.Optional,
           isAnonymous: ConduitBoolean.Optional,
           provider: ConduitString.Optional,
+          homeRealm: ConduitString.Optional,
+          realm: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('GetUsers', {
@@ -64,6 +66,7 @@ export class AdminHandlers {
           email: ConduitString.OptionalWith({ format: 'email' }),
           username: ConduitString.Optional,
           password: ConduitString.RequiredWith({ minLength: 8 }),
+          homeRealm: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition(User.name),

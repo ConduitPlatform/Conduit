@@ -68,6 +68,8 @@ export class CommonHandlers implements IAuthenticationStrategy {
       config,
       twoFaPass: true,
       isRefresh: true,
+      // the session stays in the realm it was issued for; issuance re-checks access
+      realm: oldRefreshToken.realm ? String(oldRefreshToken.realm) : null,
     });
   }
 

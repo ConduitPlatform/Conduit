@@ -16,10 +16,21 @@ import { TokenProvider } from './tokenProvider.js';
 import {
   ConduitString,
   ConfigController,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { Config } from '../config/index.js';
 import { ALT_STRATEGY_AUTH } from '../constants/index.js';
+import { errors } from '../errors.js';
+import {
+  assertStrategyEnabledForRealm,
+  grantHomeMembership,
+  homeRealmFields,
+  realmIdOf,
+  realmParam,
+  resolveRealmFromCall,
+  scopedUserQuery,
+} from './realmRequest.js';
 import {
   bytesToHex,
   ecrecover,
@@ -38,7 +49,13 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
         action: ConduitRouteActions.POST,
         description:
           'Returns a nonce for the user to sign using their wallet. If no user exists with the provided public address, a new user will be created.',
-        bodyParams: { ethPublicAddress: ConduitString.Required },
+        bodyParams: { ethPublicAddress: ConduitString.Required, realm: realmParam },
+        errors: [
+          errors.INVITATION_REQUIRED,
+          errors.REALM_NOT_FOUND,
+          errors.REALMS_DISABLED,
+          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+        ],
         rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('MetamaskNonce', {
@@ -55,7 +72,13 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
         bodyParams: {
           ethPublicAddress: ConduitString.Required,
           signature: ConduitString.Required,
+          realm: realmParam,
         },
+        errors: [
+          errors.REALM_NOT_FOUND,
+          errors.REALMS_DISABLED,
+          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+        ],
         rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('MetamaskAuthentication', {
@@ -79,21 +102,35 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
   async getNonce(call: ParsedRouterRequest) {
     const { ethPublicAddress } = call.request.params;
     const normalizedEthPublicAddress = ethPublicAddress.toLowerCase();
+    const realmCtx = await resolveRealmFromCall(call);
+    assertStrategyEnabledForRealm(realmCtx, 'metamask');
 
-    const existingUser: User | null = await User.getInstance().findOne({
-      'metamask.ethPublicAddress': normalizedEthPublicAddress,
-    } as Query<User>);
+    const existingUser: User | null = await User.getInstance().findOne(
+      scopedUserQuery(
+        { 'metamask.ethPublicAddress': normalizedEthPublicAddress },
+        realmCtx,
+      ) as Query<User>,
+    );
 
     if (existingUser) {
       return { nonce: existingUser.metamask!.nonce };
     }
 
+    // a nonce request registers the wallet, a wallet cannot present an invitation
+    if (realmCtx && !realmCtx.effective.registration.allowWithoutInvite) {
+      throw new ModuleError(errors.INVITATION_REQUIRED);
+    }
+
     const nonce = uuid();
-    await User.getInstance().create({
+    const user = await User.getInstance().create({
       metamask: {
         ethPublicAddress: normalizedEthPublicAddress,
         nonce,
       },
+      ...homeRealmFields(realmCtx),
+    });
+    await grantHomeMembership(this.grpcSdk, user, realmCtx).catch(err => {
+      ConduitGrpcSdk.Logger.error(err);
     });
 
     return { nonce };
@@ -109,9 +146,15 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     }
 
-    const user = await User.getInstance().findOne({
-      'metamask.ethPublicAddress': normalizedEthPublicAddress,
-    } as Query<User>);
+    const realmCtx = await resolveRealmFromCall(call);
+    assertStrategyEnabledForRealm(realmCtx, 'metamask');
+
+    const user = await User.getInstance().findOne(
+      scopedUserQuery(
+        { 'metamask.ethPublicAddress': normalizedEthPublicAddress },
+        realmCtx,
+      ) as Query<User>,
+    );
 
     if (isNil(user)) {
       throw new GrpcError(
@@ -162,6 +205,7 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
       user,
       clientId: context.clientId,
       config,
+      realm: realmIdOf(realmCtx),
     });
   }
 }

@@ -9,14 +9,19 @@ import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/index.js';
 import { assertEmailAllowed } from '../utils/emailRestrictions.js';
 import { isNil } from 'lodash-es';
-import { User } from '../models/index.js';
+import { RealmMembership, User } from '../models/index.js';
 import escapeStringRegexp from 'escape-string-regexp';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
+import { grantHomeMembership, homeRealmFields } from '../handlers/realmRequest.js';
+import { homeScopedQuery, realmsEnabled, resolveRealmById } from '../utils/realm.js';
 
 export class UserAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { isActive, isAnonymous, provider, search, sort } = call.request.params;
+    const { isActive, isAnonymous, provider, search, sort, homeRealm, realm } =
+      call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
@@ -43,6 +48,24 @@ export class UserAdmin {
       }
     }
 
+    if (!isNil(homeRealm)) {
+      // 'global' = users without a home realm, otherwise a realm team id
+      Object.assign(
+        query,
+        homeRealm === 'global' ? homeScopedQuery(null) : { homeRealm },
+      );
+    }
+    if (!isNil(realm)) {
+      // users that are members (home or guest) of the realm
+      const memberships = await RealmMembership.getInstance().findMany({ realm });
+      const memberIds = memberships.map(membership => String(membership.user));
+      if (typeof query._id === 'string') {
+        if (!memberIds.includes(query._id)) query._id = { $in: [] };
+      } else {
+        query._id = { $in: memberIds };
+      }
+    }
+
     const users: User[] = await User.getInstance().findMany(query, {
       skip,
       limit,
@@ -54,9 +77,14 @@ export class UserAdmin {
   }
 
   async createUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { email, username, password } = call.request.params;
+    const { email, username, password, homeRealm } = call.request.params;
 
     const query = AuthUtils.validateAndNormalizeIdentifier(email, username);
+    let realmCtx = null;
+    if (!isNil(homeRealm) && homeRealm !== '') {
+      if (!realmsEnabled()) throw new ModuleError(errors.REALMS_DISABLED);
+      realmCtx = await resolveRealmById(String(homeRealm));
+    }
 
     let user: User | null = await User.getInstance().findOne(query);
     if (!isNil(user)) {
@@ -68,7 +96,9 @@ export class UserAdmin {
       ...query,
       hashedPassword,
       isVerified: true,
+      ...homeRealmFields(realmCtx),
     });
+    await grantHomeMembership(this.grpcSdk, user, realmCtx);
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
     delete user.hashedPassword;
     return { user };
