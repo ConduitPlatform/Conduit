@@ -14,20 +14,24 @@ import {
 } from '@conduitplatform/module-tools';
 import { UserAdmin } from './user.js';
 import { TeamsAdmin } from './team.js';
+import { RealmsAdmin } from './realm.js';
 import { User } from '../models/index.js';
 import { Config } from '../config/index.js';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
   private readonly teamsAdmin: TeamsAdmin;
+  private readonly realmsAdmin: RealmsAdmin;
   private readonly routingManager: RoutingManager;
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
+    onRealmChange?: () => void,
   ) {
     this.userAdmin = new UserAdmin(this.grpcSdk);
     this.teamsAdmin = new TeamsAdmin(this.grpcSdk);
+    this.realmsAdmin = new RealmsAdmin(this.grpcSdk, onRealmChange);
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
@@ -158,6 +162,7 @@ export class AdminHandlers {
       config.teams.enabled && this.grpcSdk.isAvailable('authorization');
     if (teamsActivated) {
       this.teamsAdmin.declareRoutes(this.routingManager);
+      this.realmsAdmin.declareRoutes(this.routingManager);
     }
 
     return this.routingManager.registerRoutes().catch((err: Error) => {

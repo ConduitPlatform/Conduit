@@ -26,6 +26,15 @@ import { TeamInviteTemplate } from '../templates/index.js';
 import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/index.js';
 import { assertEmailAllowed } from '../utils/emailRestrictions.js';
+import {
+  addUserToTeamWithRealm,
+  assertInviteeAllowed,
+  assertTeamDeletable,
+  assertTeamMembersRemovable,
+  decorateMembershipType,
+  revokeOrphanedGuests,
+} from '../utils/teamRealm.js';
+import { errors } from '../errors.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { OAUTH_CALLBACK, TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
@@ -134,10 +143,11 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'Could not add user to team, team does not exist',
       );
     }
-    await this.grpcSdk.authorization!.createRelation({
-      subject: 'User:' + user._id,
-      relation: inviteToken!.data.role,
-      resource: 'Team:' + team._id,
+    // a team inside a realm: writes the realm membership (guest policy applies) first
+    await addUserToTeamWithRealm(this.grpcSdk, {
+      teamId: String(team._id),
+      userId: String(user._id),
+      role: inviteToken!.data.role,
     });
     if (inviteToken.data.email) {
       await Token.getInstance().deleteOne({ _id: inviteToken!._id });
@@ -181,10 +191,10 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'Could not add user to team, user does not exist',
       );
     }
-    await this.grpcSdk.authorization!.createRelation({
-      subject: 'User:' + userId,
-      relation: role || 'member',
-      resource: 'Team:' + teamId,
+    await addUserToTeamWithRealm(this.grpcSdk, {
+      teamId,
+      userId,
+      role: role || 'member',
     });
     return 'User added to team';
   }
@@ -322,6 +332,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'User does not have permission to delete this team',
       );
     }
+    assertTeamDeletable(existingTeam);
     await Team.getInstance().deleteOne({ _id: teamId });
     await this.grpcSdk.authorization!.deleteAllRelations({
       resource: 'Team:' + teamId,
@@ -392,7 +403,10 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'User does not have permission to remove team members',
       );
     }
+    // the home users of a realm cannot be removed from the realm team itself
+    await assertTeamMembersRemovable(targetTeam, members.map(String));
     let deletionError = false;
+    const removedMembers: string[] = [];
     for (const member of members) {
       const relation = await this.grpcSdk.authorization!.findRelation({
         subject: 'User:' + member,
@@ -417,7 +431,9 @@ export class TeamsHandler implements IAuthenticationStrategy {
         subject: 'User:' + member,
         resource: 'Team:' + teamId,
       });
+      removedMembers.push(String(member));
     }
+    await revokeOrphanedGuests(this.grpcSdk, teamId, removedMembers);
     if (deletionError) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
@@ -460,6 +476,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       sort,
       populate,
     });
+    await decorateMembershipType(members, teamId);
     return { members: members, count };
   }
 
@@ -591,6 +608,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
     }
     if (email) {
       assertEmailAllowed(email);
+      // a realm that refuses guests cannot invite existing users of other realms
+      await assertInviteeAllowed(teamId, email);
     }
 
     // Delete any existing invite for the same email and team
@@ -900,6 +919,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         },
         action: ConduitRouteActions.DELETE,
         middlewares: authRouteMiddlewares,
+        errors: [errors.HOME_USER_REMOVAL],
       },
       new ConduitRouteReturnDefinition('DeleteTeamMembersResponse', 'String'),
       this.removeTeamMembers.bind(this),
@@ -1039,6 +1059,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         },
         action: ConduitRouteActions.GET,
         middlewares: authRouteMiddlewares,
+        errors: [errors.GUESTS_NOT_ALLOWED],
       },
       new ConduitRouteReturnDefinition('InviteAccepted', 'String'),
       this.acceptInvite.bind(this),
@@ -1074,6 +1095,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         },
         action: ConduitRouteActions.POST,
         middlewares: authRouteMiddlewares,
+        errors: [errors.GUESTS_NOT_ALLOWED],
       },
       new ConduitRouteReturnDefinition('InvitationToken', 'String'),
       this.userInvite.bind(this),
@@ -1141,6 +1163,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           },
           action: ConduitRouteActions.POST,
           middlewares: authRouteMiddlewares,
+          errors: [errors.GUESTS_NOT_ALLOWED],
         },
         new ConduitRouteReturnDefinition('AddUserToTeam', 'String'),
         this.addUserToTeamRequest.bind(this),
