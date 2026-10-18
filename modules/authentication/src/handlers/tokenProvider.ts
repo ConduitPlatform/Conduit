@@ -6,6 +6,7 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import { Config } from '../config/index.js';
 import { isNil } from 'lodash-es';
 import { Cookie } from '../interfaces/index.js';
+import { assertRealmAccess, getRealmSlugById, realmsEnabled } from '../utils/realm.js';
 
 export interface TokenOptions {
   user: User;
@@ -14,6 +15,8 @@ export interface TokenOptions {
   twoFaPass?: boolean;
   isRefresh?: boolean;
   noSudo?: boolean;
+  /** Realm team id the session is issued in. Omitted/null = global. */
+  realm?: string | null;
 }
 
 export class TokenProvider {
@@ -203,11 +206,42 @@ export class TokenProvider {
     // the tokens should not be created during the refresh token flow
     // and the noSudo flag needs to be false or not set
     const sudo = authorized && !tokenOptions.isRefresh && !tokenOptions.noSudo;
+
+    // Universal realm backstop: every login path ends up here.
+    let realm: string | undefined;
+    let realmSlug: string | undefined;
+    let homeSlug: string | undefined;
+    const requestedRealm = tokenOptions.realm ? String(tokenOptions.realm) : null;
+    const homeRealm = tokenOptions.user.homeRealm
+      ? String(tokenOptions.user.homeRealm)
+      : null;
+    if (realmsEnabled() && (requestedRealm || homeRealm)) {
+      await assertRealmAccess({
+        user: tokenOptions.user,
+        requestedRealm,
+        // A partial token (2FA pending) can only reach the 2FA routes; the final
+        // tokens are issued by the 2FA step, which runs this check again with the
+        // real assurance. Evaluate every other policy early.
+        authorized: authorized || tokenOptions.user.hasTwoFA,
+        clientId: tokenOptions.clientId,
+      });
+      realm = requestedRealm ?? undefined;
+      realmSlug = await getRealmSlugById(requestedRealm);
+      homeSlug = await getRealmSlugById(homeRealm);
+    }
+
     const accessToken = await AccessToken.getInstance().create({
       user: tokenOptions.user._id,
       clientId: tokenOptions.clientId,
+      ...(realm ? { realm } : {}),
       token: this.signToken(
-        { id: tokenOptions.user._id, authorized, sudo },
+        {
+          id: tokenOptions.user._id,
+          authorized,
+          sudo,
+          realm: realmSlug,
+          home: homeSlug,
+        },
         tokenOptions.config.accessTokens.jwtSecret,
         signTokenOptions,
       ),
@@ -222,6 +256,7 @@ export class TokenProvider {
       refreshToken = await RefreshToken.getInstance().create({
         user: tokenOptions.user._id,
         clientId: tokenOptions.clientId,
+        ...(realm ? { realm } : {}),
         token: AuthUtils.randomToken(),
         accessToken: accessToken._id,
         expiresOn: moment

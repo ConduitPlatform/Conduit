@@ -78,7 +78,12 @@ export async function handleAuthentication(
   if (!accessToken.user || !(accessToken.user as User).active) {
     throw new GrpcError(status.PERMISSION_DENIED, 'User is blocked or deleted');
   }
-  return { user: accessToken.user, jwtPayload: payload };
+  return {
+    user: accessToken.user,
+    jwtPayload: payload,
+    // realm the session is in (team id), null for global sessions
+    realm: accessToken.realm ? String(accessToken.realm) : null,
+  };
 }
 
 function handleTokenRefresh(context: Indexable, headers: Headers, cookies: Cookies) {
