@@ -24,6 +24,7 @@
  */
 import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { isRecord } from './common.logic.js';
 import { buildRealmSettingsWrite, pickSettingsFields } from '../admin/realm.logic.js';
 import type { ImportResultEntry } from '@conduitplatform/module-tools';
 import {
@@ -36,10 +37,6 @@ import {
 
 /** Marks a trusted home realm id the exporting environment could not name by slug. */
 export const UNRESOLVED_REALM_PREFIX = 'unresolved:';
-
-function isRecord(value: unknown): value is Record<string, any> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function invalid(message: string): never {
   throw new GrpcError(status.INVALID_ARGUMENT, message);

@@ -207,7 +207,7 @@ describe('sanitizeRealmInput', () => {
 });
 
 describe('deepMergeClearing', () => {
-  it('merges objects, replaces arrays and removes nulls', () => {
+  it('merges objects, replaces arrays and keeps nulls as explicit null leaves', () => {
     const base = {
       a: { b: 1, c: [1, 2], d: { e: 1 } },
       keep: true,
@@ -217,12 +217,23 @@ describe('deepMergeClearing', () => {
       added: { x: null, y: 1 },
     });
     assert.deepEqual(merged, {
-      a: { c: [3], d: { e: 1, f: 2 } },
+      a: { b: null, c: [3], d: { e: 1, f: 2 } },
       keep: true,
-      added: { y: 1 },
+      added: { x: null, y: 1 },
     });
     // inputs are not mutated
     assert.deepEqual(base, { a: { b: 1, c: [1, 2], d: { e: 1 } }, keep: true });
+  });
+
+  it('keeps the key on a null (SQL only writes the leaves that are defined)', () => {
+    const merged = deepMergeClearing({ a: { b: 'x' } }, { a: { b: null } });
+    assert.equal(Object.prototype.hasOwnProperty.call(merged.a, 'b'), true);
+    assert.equal(merged.a.b, null);
+  });
+
+  it('ignores undefined and a null that is already null', () => {
+    const merged = deepMergeClearing({ a: null, b: 1 }, { a: null, b: undefined });
+    assert.deepEqual(merged, { a: null, b: 1 });
   });
 });
 
@@ -288,12 +299,18 @@ describe('buildRealmSettingsWrite', () => {
         },
       },
     });
+    // cleared credentials stay as explicit null leaves
     assert.deepEqual(settings.strategies.oauth.google, {
       enabled: true,
+      clientId: null,
       redirect_uri: 'https://x/cb',
       accountLinking: false,
     });
-    assert.deepEqual(settings.strategies.oauth.apple, { enabled: true });
+    assert.deepEqual(settings.strategies.oauth.apple, {
+      enabled: true,
+      teamId: null,
+      keyId: null,
+    });
     assert.deepEqual(oauthSecrets, { apple: { clientSecret: 'a' } });
   });
 
@@ -314,8 +331,11 @@ describe('buildRealmSettingsWrite', () => {
         },
       },
     });
-    assert.deepEqual(settings.strategies.local, { enabled: true });
-    assert.equal('accountLinking' in settings.strategies.oauth.google!, false);
+    assert.deepEqual(settings.strategies.local, {
+      enabled: true,
+      verificationRequired: null,
+    });
+    assert.equal(settings.strategies.oauth.google!.accountLinking, null);
   });
 
   it('replaces secrets, keeps untouched ones and never leaks them into settings', () => {
@@ -544,7 +564,7 @@ describe('OAuth credential pairing on write', () => {
       baseSecrets: { google: { clientSecret: 'stored' } },
       input: { strategies: { oauth: { google: { clientId: null } } } },
     });
-    assert.equal('clientId' in settings.strategies.oauth.google!, false);
+    assert.equal(settings.strategies.oauth.google!.clientId, null);
     assert.deepEqual(oauthSecrets, { google: { clientSecret: 'stored' } });
   });
 

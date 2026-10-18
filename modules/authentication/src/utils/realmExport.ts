@@ -13,6 +13,7 @@ import {
   assertSlugUniqueAfterWrite,
   invalidateRealmCache,
   normalizeIdList,
+  toFullLeafStrategies,
 } from './realm.js';
 import {
   applyTrustedHomeRealms,
@@ -122,10 +123,15 @@ async function updateExistingRealm(
         oauthSecrets: stored.oauthSecrets ?? {},
       }
     : null;
+  // slug: null releases the slug on SQL, where a leaf that is not written is kept
+  const previousRealmWrite = {
+    enabled: previousRealm?.enabled === true,
+    slug: previousRealm?.enabled === true ? (previousRealm.slug ?? null) : null,
+  };
   const restore = async () => {
     // best effort, never masks the error that triggered it
     await Team.getInstance()
-      .findByIdAndUpdate(teamId, { realm: previousRealm ?? { enabled: false } })
+      .findByIdAndUpdate(teamId, { realm: previousRealmWrite } as Indexable)
       .catch(err => ConduitGrpcSdk.Logger.error(err as Error));
     if (stored && previousSettings) {
       await RealmSettings.getInstance()
@@ -140,8 +146,11 @@ async function updateExistingRealm(
 
   try {
     if (stored) {
+      // the file is the source of truth: every leaf is written (see toFullLeafStrategies),
+      // an unset credential as an explicit null, so SQL drops the stored value as well
       await RealmSettings.getInstance().findByIdAndUpdate(stored._id, {
         ...write.settings,
+        strategies: toFullLeafStrategies(write.settings.strategies),
         oauthSecrets: write.oauthSecrets,
       } as Indexable);
     } else {

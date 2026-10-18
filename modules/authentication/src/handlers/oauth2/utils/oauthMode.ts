@@ -2,6 +2,7 @@ import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { ConduitString, ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { errors } from '../../../errors.js';
+import { parseConduitCode } from '../../../utils/common.logic.js';
 
 export const OAUTH_MODES = ['signIn', 'both'] as const;
 export type OAuthMode = (typeof OAUTH_MODES)[number];
@@ -45,17 +46,6 @@ export function assertOAuthRegistrationAllowed(
       const _exhaustive: never = mode;
       throw new GrpcError(status.INTERNAL, `Unhandled OAuth mode: ${_exhaustive}`);
     }
-  }
-}
-
-function parseConduitCode(err: unknown): string | undefined {
-  if (!(err instanceof ModuleError)) {
-    return undefined;
-  }
-  try {
-    return (JSON.parse(err.message) as { conduitCode?: string }).conduitCode;
-  } catch {
-    return undefined;
   }
 }
 

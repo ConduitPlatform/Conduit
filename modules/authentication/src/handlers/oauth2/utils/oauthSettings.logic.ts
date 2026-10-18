@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { filled } from '../../../utils/common.logic.js';
 
 /*
  * Pure rules for per-realm OAuth settings (no database or grpc access): credential
@@ -16,10 +17,6 @@ export type OAuthCredentials = {
   teamId?: string | null;
   keyId?: string | null;
 };
-
-function filled(value: unknown): boolean {
-  return typeof value === 'string' && value.trim() !== '';
-}
 
 /**
  * Whether a credential set can drive a login. Apple signs a client secret from its key
