@@ -7,8 +7,9 @@ import {
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 import {
   REALM_OAUTH_PROVIDERS,
+  RealmOAuthSecrets,
   RealmPolicies,
-  RealmStrategies,
+  StoredRealmStrategies,
 } from '../utils/realm.logic.js';
 
 const enabledFlag = (def = false) => ({ type: TYPE.Boolean, default: def }) as const;
@@ -17,13 +18,10 @@ function oauthProviderSchema(provider: string): ConduitModel {
   return {
     enabled: enabledFlag(),
     clientId: { type: TYPE.String, required: false },
-    // write-only secrets: never returned by default reads
-    clientSecret: { type: TYPE.String, required: false, select: false },
     redirect_uri: { type: TYPE.String, required: false },
     accountLinking: { type: TYPE.Boolean, required: false },
     ...(provider === 'apple'
       ? {
-          privateKey: { type: TYPE.String, required: false, select: false },
           teamId: { type: TYPE.String, required: false },
           keyId: { type: TYPE.String, required: false },
         }
@@ -69,12 +67,20 @@ const schema: ConduitModel = {
   policies: {
     requireTwoFa: enabledFlag(),
     requireVerifiedEmail: enabledFlag(),
-    allowedClientIds: [TYPE.String],
+    // `default: []` because SQL stores primitive arrays joined by ';' (NULL crashes the
+    // getter). Readers still go through normalizeIdList: `[]` reads back as `['']`.
+    allowedClientIds: { type: [TYPE.String], default: [] },
     guests: {
       allowed: enabledFlag(true),
-      allowedHomeRealms: [TYPE.ObjectId],
+      allowedHomeRealms: { type: [TYPE.ObjectId], default: [] },
     },
   },
+  // OAuth secrets, kept out of `strategies.oauth` because nested `select: false` is not
+  // portable (SQL excludes by leaf name against flattened columns). Shape:
+  //   { [provider]: { clientSecret?: string; privateKey?: string } }
+  // Never returned by default reads; select it with `select: '+oauthSecrets'` (same
+  // pattern as User.hashedPassword). Use maskRealmSettings/splitRealmSettingsInput.
+  oauthSecrets: { type: TYPE.JSON, select: false },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -96,9 +102,11 @@ export class RealmSettings extends ConduitActiveSchema<RealmSettings> {
   _id: string;
   team: string;
   active: boolean;
-  strategies: RealmStrategies;
+  strategies: StoredRealmStrategies;
   registration: { allowWithoutInvite: boolean };
   policies: RealmPolicies;
+  /** select: false; only present when read with `select: '+oauthSecrets'`. */
+  oauthSecrets?: RealmOAuthSecrets | null;
   createdAt: Date;
   updatedAt: Date;
 
