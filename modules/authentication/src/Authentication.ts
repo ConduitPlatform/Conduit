@@ -73,6 +73,12 @@ import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
 import { validateAppleClients } from './handlers/oauth2/utils/validateAppleClients.js';
+import {
+  assertAnonymousUserInRealm,
+  grantHomeMembership,
+  homeRealmFields,
+  resolveRealmFromSlug,
+} from './handlers/realmRequest.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -423,6 +429,8 @@ export default class Authentication extends ManagedModule<Config> {
         user,
         clientId,
         config,
+        // internal trusted path: the session lives in the user's own home realm
+        realm: user.homeRealm ? String(user.homeRealm) : null,
       });
 
       return callback(null, {
@@ -462,6 +470,10 @@ export default class Authentication extends ManagedModule<Config> {
     }
 
     try {
+      // optional realm slug: B5 adds it to the proto, it is read defensively until then
+      const realmCtx = await resolveRealmFromSlug(
+        (call.request as { realm?: string }).realm,
+      );
       let user = await models.User.getInstance().findOne({ email });
       if (user) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
@@ -475,6 +487,7 @@ export default class Authentication extends ManagedModule<Config> {
           hashedPassword,
           isVerified: !verify,
           ...userData,
+          ...homeRealmFields(realmCtx),
         });
       } else {
         const config = ConfigController.getInstance().config;
@@ -483,6 +496,14 @@ export default class Authentication extends ManagedModule<Config> {
             code: status.FAILED_PRECONDITION,
             message: 'Anonymous users configuration is disabled',
           });
+        }
+        if (realmCtx) {
+          // the anonymous user keeps its home realm on conversion
+          const anonymousUser = await models.User.getInstance().findOne({
+            _id: anonymousUserId,
+            isAnonymous: true,
+          });
+          if (anonymousUser) assertAnonymousUserInRealm(anonymousUser, realmCtx);
         }
         user = await models.User.getInstance().findByIdAndUpdate(anonymousUserId, {
           email,
@@ -526,11 +547,17 @@ export default class Authentication extends ManagedModule<Config> {
         );
       }
       if (!anonymousUserId) {
-        await TeamsHandler.getInstance()
-          .addUserToDefault(user)
-          .catch(err => {
+        if (realmCtx) {
+          await grantHomeMembership(this.grpcSdk, user, realmCtx).catch(err => {
             ConduitGrpcSdk.Logger.error(err);
           });
+        } else {
+          await TeamsHandler.getInstance()
+            .addUserToDefault(user)
+            .catch(err => {
+              ConduitGrpcSdk.Logger.error(err);
+            });
+        }
       }
       return callback(null, { password });
     } catch (e) {
@@ -551,6 +578,16 @@ export default class Authentication extends ManagedModule<Config> {
     if (isNil(password) || password.length === 0) {
       password = AuthUtils.randomToken(8);
     }
+    let realmCtx;
+    try {
+      // optional realm slug: B5 adds it to the proto, it is read defensively until then
+      realmCtx = await resolveRealmFromSlug((call.request as { realm?: string }).realm);
+    } catch (e) {
+      if (e instanceof GrpcError) {
+        return callback({ code: e.code, message: e.message });
+      }
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
     try {
       let user = await models.User.getInstance().findOne({ username });
       if (user) {
@@ -563,12 +600,19 @@ export default class Authentication extends ManagedModule<Config> {
           username,
           hashedPassword,
           isVerified: true,
+          ...homeRealmFields(realmCtx),
         });
-        await TeamsHandler.getInstance()
-          .addUserToDefault(user)
-          .catch(err => {
+        if (realmCtx) {
+          await grantHomeMembership(this.grpcSdk, user, realmCtx).catch(err => {
             ConduitGrpcSdk.Logger.error(err);
           });
+        } else {
+          await TeamsHandler.getInstance()
+            .addUserToDefault(user)
+            .catch(err => {
+              ConduitGrpcSdk.Logger.error(err);
+            });
+        }
       } else {
         const config = ConfigController.getInstance().config;
         if (!config.anonymousUsers.enabled) {
@@ -576,6 +620,14 @@ export default class Authentication extends ManagedModule<Config> {
             code: status.FAILED_PRECONDITION,
             message: 'Anonymous users configuration is disabled',
           });
+        }
+        if (realmCtx) {
+          // the anonymous user keeps its home realm on conversion
+          const anonymousUser = await models.User.getInstance().findOne({
+            _id: anonymousUserId,
+            isAnonymous: true,
+          });
+          if (anonymousUser) assertAnonymousUserInRealm(anonymousUser, realmCtx);
         }
         user = await models.User.getInstance().findByIdAndUpdate(anonymousUserId, {
           username,
@@ -608,22 +660,40 @@ export default class Authentication extends ManagedModule<Config> {
       });
     }
     const { clientId } = call.request;
+    let realmCtx;
+    try {
+      // optional realm slug: B5 adds it to the proto, it is read defensively until then
+      realmCtx = await resolveRealmFromSlug((call.request as { realm?: string }).realm);
+    } catch (e) {
+      if (e instanceof GrpcError) {
+        return callback({ code: e.code, message: e.message });
+      }
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
     const email = `${uuid()}@anonymous.com`;
     const anonymousUser = await User.getInstance().create({
       email,
       isAnonymous: true,
       isVerified: false,
+      ...homeRealmFields(realmCtx),
     });
-    await TeamsHandler.getInstance()
-      .addUserToDefault(anonymousUser)
-      .catch(err => {
+    if (realmCtx) {
+      await grantHomeMembership(this.grpcSdk, anonymousUser, realmCtx).catch(err => {
         ConduitGrpcSdk.Logger.error(err);
       });
+    } else {
+      await TeamsHandler.getInstance()
+        .addUserToDefault(anonymousUser)
+        .catch(err => {
+          ConduitGrpcSdk.Logger.error(err);
+        });
+    }
     const tokens = await TokenProvider.getInstance().provideUserTokensInternal({
       user: anonymousUser,
       clientId: clientId,
       config,
       isRefresh: false,
+      realm: realmCtx ? String(realmCtx.team._id) : null,
     });
 
     return callback(null, {

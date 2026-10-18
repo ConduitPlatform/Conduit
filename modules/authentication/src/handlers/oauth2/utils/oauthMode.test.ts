@@ -6,6 +6,7 @@ import { status } from '@grpc/grpc-js';
 import { errors } from '../../../errors.js';
 import {
   assertOAuthRegistrationAllowed,
+  getRedirectableOAuthErrorCode,
   isRegistrationNotAllowedError,
   redirectOnRegistrationNotAllowed,
   resolveOAuthMode,
@@ -126,5 +127,39 @@ describe('redirectOnRegistrationNotAllowed', () => {
       true,
     );
     assert.equal(isRegistrationNotAllowedError(new Error('nope')), false);
+  });
+});
+
+describe('realm errors on the OAuth redirect', () => {
+  for (const key of [
+    'REALM_ACCESS_DENIED',
+    'STRATEGY_NOT_AVAILABLE_FOR_REALM',
+    'GUESTS_NOT_ALLOWED',
+    'TWO_FA_REQUIRED_FOR_REALM',
+  ] as const) {
+    it(`appends conduitCode for ${key}`, () => {
+      const err = new ModuleError(errors[key]);
+      assert.equal(getRedirectableOAuthErrorCode(err), key);
+      assert.deepEqual(redirectOnRegistrationNotAllowed(err, 'https://app.example/o'), {
+        redirect: `https://app.example/o?conduitCode=${key}`,
+      });
+    });
+  }
+
+  it('does not redirect for other module errors', () => {
+    const err = new ModuleError(errors.REALM_NOT_FOUND);
+    assert.equal(getRedirectableOAuthErrorCode(err), undefined);
+    assert.throws(
+      () => redirectOnRegistrationNotAllowed(err, 'https://app.example/o'),
+      (thrown: unknown) => thrown === err,
+    );
+  });
+
+  it('rethrows realm errors when there is no redirect URI', () => {
+    const err = new ModuleError(errors.REALM_ACCESS_DENIED);
+    assert.throws(
+      () => redirectOnRegistrationNotAllowed(err),
+      (thrown: unknown) => thrown === err,
+    );
   });
 });

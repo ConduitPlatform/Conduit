@@ -24,6 +24,20 @@ import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy.js
 import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
 import { TeamsHandler } from './team.js';
+import { errors } from '../errors.js';
+import { RealmContext } from '../utils/realm.js';
+import {
+  assertStrategyEnabledForRealm,
+  grantHomeMembership,
+  homeRealmFields,
+  isInviteRequired,
+  realmIdOf,
+  realmParam,
+  resolveInvitationRealm,
+  resolveRealmFromCall,
+  resolveRealmFromSlug,
+  scopedUserQuery,
+} from './realmRequest.js';
 
 export class PhoneHandlers implements IAuthenticationStrategy {
   private sms: SMS;
@@ -57,11 +71,18 @@ export class PhoneHandlers implements IAuthenticationStrategy {
           phone: ConduitString.Required,
           captchaToken: ConduitString.Optional,
           invitationToken: ConduitString.Optional,
+          realm: realmParam,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.login
             ? ['captchaMiddleware']
             : undefined,
+        errors: [
+          errors.REALM_NOT_FOUND,
+          errors.REALMS_DISABLED,
+          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+          errors.INVALID_INVITATION,
+        ],
         rateLimit: PHONE_SMS_SEND,
       },
       new ConduitRouteReturnDefinition('PhoneAuthenticateResponse', {
@@ -107,11 +128,16 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
     }
 
+    // the realm the code was requested for, re-validated at verification
+    const realmCtx = await resolveRealmFromSlug(existingToken.data.realm);
+    assertStrategyEnabledForRealm(realmCtx, 'phone');
+
     let user: User | null;
     if (existingToken.tokenType === TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN) {
       user = await this.handlePhoneRegistration(
         existingUser ?? anonymousUser,
         existingToken,
+        realmCtx,
         userData,
       );
     } else {
@@ -122,6 +148,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       user,
       clientId: existingToken.data.clientId,
       config,
+      realm: realmIdOf(realmCtx),
     });
   }
 
@@ -129,7 +156,11 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
     const { phone, invitationToken } = call.request.params;
     const { clientId } = call.request.context;
-    const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
+    const realmCtx = await resolveRealmFromCall(call);
+    assertStrategyEnabledForRealm(realmCtx, 'phone');
+    const user: User | null = await User.getInstance().findOne(
+      scopedUserQuery({ phoneNumber: phone }, realmCtx),
+    );
     let foundInvitationToken;
     if (invitationToken) {
       foundInvitationToken = await Token.getInstance().findOne(
@@ -139,9 +170,12 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     }
     if (!user) {
       const teams = ConfigController.getInstance().config.teams;
+      if (teams.enabled && invitationToken) {
+        // an invitation into a realm must agree with the realm being registered at
+        await resolveInvitationRealm(realmCtx, invitationToken);
+      }
       if (
-        teams.enabled &&
-        !teams.allowRegistrationWithoutInvite &&
+        isInviteRequired(realmCtx?.effective.registration, teams) &&
         !foundInvitationToken
       ) {
         throw new GrpcError(
@@ -202,6 +236,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         phone,
         verification: verificationSid,
         invitationToken,
+        ...(realmCtx ? { realm: realmCtx.team.realm!.slug } : {}),
       },
       token: uuid(),
     });
@@ -213,6 +248,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
   private async handlePhoneRegistration(
     anonymousOrExisting: User | undefined,
     existingToken: Token,
+    realmCtx: RealmContext | null,
     userData?: Indexable,
   ) {
     if (anonymousOrExisting) {
@@ -226,13 +262,28 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const user = await User.getInstance().create({
       phoneNumber: existingToken.data.phone,
       ...userData,
+      ...homeRealmFields(realmCtx),
     });
+    if (realmCtx) {
+      // an invitation creates the team relation itself, otherwise the user becomes a
+      // plain member of the realm team
+      await grantHomeMembership(
+        this.grpcSdk,
+        user,
+        realmCtx,
+        isNil(existingToken.data.invitationToken),
+      ).catch(err => {
+        ConduitGrpcSdk.Logger.error(err);
+      });
+    }
     if (isNil(existingToken.data.invitationToken)) {
-      await TeamsHandler.getInstance()
-        .addUserToDefault(user)
-        .catch(err => {
-          ConduitGrpcSdk.Logger.error(err);
-        });
+      if (!realmCtx) {
+        await TeamsHandler.getInstance()
+          .addUserToDefault(user)
+          .catch(err => {
+            ConduitGrpcSdk.Logger.error(err);
+          });
+      }
     } else {
       await TeamsHandler.getInstance()
         .addUserToTeam(user, existingToken.data.invitationToken)

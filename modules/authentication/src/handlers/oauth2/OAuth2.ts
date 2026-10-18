@@ -26,6 +26,7 @@ import { TeamsHandler } from '../team.js';
 import {
   assertOAuthRegistrationAllowed,
   OAUTH_MODE_PARAM,
+  OAUTH_ROUTE_ERRORS,
   redirectOnRegistrationNotAllowed,
   resolveOAuthMode,
   type OAuthMode,
@@ -37,6 +38,7 @@ import {
   ConduitJson,
   ConduitString,
   ConfigController,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import {
@@ -47,6 +49,19 @@ import {
 import { AuthUtils } from '../../utils/index.js';
 import { assertEmailAllowed } from '../../utils/emailRestrictions.js';
 import { errors } from '../../errors.js';
+import {
+  assertAnonymousUserInRealm,
+  assertStrategyEnabledForRealm,
+  grantHomeMembership,
+  homeRealmFields,
+  isInviteRequired,
+  realmIdOf,
+  realmParam,
+  resolveInvitationRealm,
+  resolveRealmFromSlug,
+  scopedUserQuery,
+} from '../realmRequest.js';
+import { RealmContext, realmsEnabled, RealmOAuthProviderKey } from '../../utils/realm.js';
 
 export abstract class OAuth2<
   T,
@@ -94,9 +109,20 @@ export abstract class OAuth2<
     return {};
   }
 
+  /**
+   * Resolves the realm a request (or a state token) names and checks that it enables
+   * this provider. No slug means global.
+   */
+  protected async resolveRealmContext(slug: unknown): Promise<RealmContext | null> {
+    const realmCtx = await resolveRealmFromSlug(slug);
+    assertStrategyEnabledForRealm(realmCtx, `oauth.${this.providerName}`);
+    return realmCtx;
+  }
+
   async initNative(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const { anonymousUser } = call.request.context;
+    const realmCtx = await this.resolveRealmContext(call.request.params?.realm);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
 
     // returns part of regular redirect options for native usage
@@ -117,6 +143,7 @@ export abstract class OAuth2<
           customRedirectUri: call.request.params.redirectUri,
           anonymousUserId: anonymousUser?._id,
           mode: resolveOAuthMode(call.request.params?.mode),
+          ...(realmCtx ? { realm: realmCtx.team.realm!.slug } : {}),
           ...this.getOAuthStateExtras(call),
         },
       })
@@ -135,6 +162,7 @@ export abstract class OAuth2<
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const { anonymousUser } = call.request.context;
+    const realmCtx = await this.resolveRealmContext(call.request.params?.realm);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     let codeChallenge;
     if (!isNil(this.settings.codeChallengeMethod)) {
@@ -172,6 +200,7 @@ export abstract class OAuth2<
           customRedirectUri: call.request.params.redirectUri,
           anonymousUserId: anonymousUser?._id,
           mode: resolveOAuthMode(call.request.params?.mode),
+          ...(realmCtx ? { realm: realmCtx.team.realm!.slug } : {}),
           ...this.getOAuthStateExtras(call),
         },
       })
@@ -232,30 +261,33 @@ export abstract class OAuth2<
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       this.settings.finalRedirect;
-    let user: User;
     try {
-      user = await this.createOrUpdateUser(
+      // the realm the flow was started for, re-validated at the callback
+      const realmCtx = await this.resolveRealmContext(stateToken.data.realm);
+      const user = await this.createOrUpdateUser(
         payload,
         stateToken.data.invitationToken,
         stateToken.data.anonymousUserId,
         resolveOAuthMode(stateToken.data.mode),
+        realmCtx,
+      );
+      return await TokenProvider.getInstance().provideUserTokens(
+        {
+          user,
+          clientId,
+          config,
+          realm: realmIdOf(realmCtx),
+        },
+        redirectUri,
       );
     } catch (err) {
       return redirectOnRegistrationNotAllowed(err, redirectUri);
     }
-
-    return TokenProvider.getInstance().provideUserTokens(
-      {
-        user,
-        clientId,
-        config,
-      },
-      redirectUri,
-    );
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
+    const realmCtx = await this.resolveRealmContext(call.request.params?.realm);
     const scopes = this.constructScopes(
       call.request.params?.scopes ?? this.defaultScopes,
     );
@@ -269,12 +301,14 @@ export abstract class OAuth2<
       call.request.params.invitationToken,
       call.request.context.anonymousUser?._id,
       resolveOAuthMode(call.request.params?.mode),
+      realmCtx,
     );
     const config = ConfigController.getInstance().config;
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: call.request.context.clientId,
       config,
+      realm: realmIdOf(realmCtx),
     });
   }
 
@@ -283,19 +317,27 @@ export abstract class OAuth2<
     invitationToken?: string,
     anonymousUserId?: string,
     mode: OAuthMode = 'both',
+    realmCtx: RealmContext | null = null,
   ): Promise<User> {
     let user: User | null = null;
     if (payload.hasOwnProperty('email') && !isNil(payload.email)) {
-      user = await User.getInstance().findOne({
-        email: payload.email,
-      });
+      user = await User.getInstance().findOne(
+        scopedUserQuery({ email: payload.email }, realmCtx),
+      );
+      if (isNil(user) && (realmCtx || realmsEnabled())) {
+        // email is unique across realms: the address belongs to a user of another one
+        const otherRealmUser = await User.getInstance().findOne({
+          email: payload.email,
+        });
+        if (otherRealmUser) throw new ModuleError(errors.REALM_ACCESS_DENIED);
+      }
     } else if (
       payload.hasOwnProperty('id') &&
       (!payload.hasOwnProperty('email') || isNil(payload.email))
     ) {
-      user = await User.getInstance().findOne({
-        [this.providerName + '.id']: payload.id,
-      });
+      user = await User.getInstance().findOne(
+        scopedUserQuery({ [this.providerName + '.id']: payload.id }, realmCtx),
+      );
     } else {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -315,7 +357,11 @@ export abstract class OAuth2<
 
     if (!isNil(user)) {
       if (!user!.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
-      if (!this.settings.accountLinking) {
+      const accountLinking = realmCtx
+        ? (realmCtx.effective.strategies.oauth[this.providerName as RealmOAuthProviderKey]
+            ?.accountLinking ?? this.settings.accountLinking)
+        : this.settings.accountLinking;
+      if (!accountLinking) {
         throw new GrpcError(
           status.PERMISSION_DENIED,
           'User with this email already exists',
@@ -338,6 +384,7 @@ export abstract class OAuth2<
         assertEmailAllowed(payload.email);
       }
       if (anonymousUser) {
+        assertAnonymousUserInRealm(anonymousUser, realmCtx);
         return (await User.getInstance().findByIdAndUpdate(anonymousUser._id, {
           email: payload.email,
           [this.providerName]: payload,
@@ -347,8 +394,7 @@ export abstract class OAuth2<
       }
       const teams = ConfigController.getInstance().config.teams;
       if (
-        teams.enabled &&
-        !teams.allowRegistrationWithoutInvite &&
+        isInviteRequired(realmCtx?.effective.registration, teams) &&
         isNil(invitationToken)
       ) {
         throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
@@ -361,19 +407,31 @@ export abstract class OAuth2<
         if (!valid) {
           throw new GrpcError(status.PERMISSION_DENIED, 'Invalid invitation token');
         }
+        // an invitation into a realm must agree with the realm being registered at
+        await resolveInvitationRealm(realmCtx, invitationToken);
       }
       user = await User.getInstance().create({
         email: payload.email,
         [this.providerName]: payload,
         isVerified: true,
+        ...homeRealmFields(realmCtx),
       });
+      if (realmCtx) {
+        // an invitation creates the team relation itself, otherwise the user becomes a
+        // plain member of the realm team
+        await grantHomeMembership(this.grpcSdk, user, realmCtx, !invitationToken).catch(
+          err => {
+            ConduitGrpcSdk.Logger.error(err);
+          },
+        );
+      }
       if (invitationToken) {
         await TeamsHandler.getInstance()
           .addUserToTeam(user, invitationToken)
           .catch(err => {
             ConduitGrpcSdk.Logger.error(err);
           });
-      } else {
+      } else if (!realmCtx) {
         await TeamsHandler.getInstance()
           .addUserToDefault(user)
           .catch(err => {
@@ -432,7 +490,7 @@ export abstract class OAuth2<
             state: ConduitString.Required,
             user: ConduitJson.Optional,
           },
-          errors: [errors.REGISTRATION_NOT_ALLOWED],
+          errors: OAUTH_ROUTE_ERRORS,
           rateLimit: OAUTH_NATIVE_COMPLETE,
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
@@ -453,7 +511,7 @@ export abstract class OAuth2<
             code: ConduitString.Required,
             state: ConduitString.Required,
           },
-          errors: [errors.REGISTRATION_NOT_ALLOWED],
+          errors: OAUTH_ROUTE_ERRORS,
           rateLimit: OAUTH_CALLBACK,
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
@@ -472,7 +530,7 @@ export abstract class OAuth2<
             code: ConduitString.Required,
             state: ConduitString.Required,
           },
-          errors: [errors.REGISTRATION_NOT_ALLOWED],
+          errors: OAUTH_ROUTE_ERRORS,
           rateLimit: OAUTH_CALLBACK,
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
@@ -491,6 +549,7 @@ export abstract class OAuth2<
       captchaToken: ConduitString.Optional,
       redirectUri: ConduitString.Optional,
       mode: OAUTH_MODE_PARAM,
+      realm: realmParam,
     };
   }
 
@@ -500,6 +559,7 @@ export abstract class OAuth2<
       invitationToken: ConduitString.Optional,
       captchaToken: ConduitString.Optional,
       mode: OAUTH_MODE_PARAM,
+      realm: realmParam,
     };
   }
 

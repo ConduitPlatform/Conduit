@@ -48,31 +48,57 @@ export function assertOAuthRegistrationAllowed(
   }
 }
 
-export function isRegistrationNotAllowedError(err: unknown): boolean {
+function parseConduitCode(err: unknown): string | undefined {
   if (!(err instanceof ModuleError)) {
-    return false;
+    return undefined;
   }
   try {
-    const parsed = JSON.parse(err.message) as { conduitCode?: string };
-    return parsed.conduitCode === errors.REGISTRATION_NOT_ALLOWED.conduitCode;
+    return (JSON.parse(err.message) as { conduitCode?: string }).conduitCode;
   } catch {
-    return false;
+    return undefined;
   }
+}
+
+export function isRegistrationNotAllowedError(err: unknown): boolean {
+  return parseConduitCode(err) === errors.REGISTRATION_NOT_ALLOWED.conduitCode;
+}
+
+/**
+ * Errors an OAuth redirect flow reports to the app as a `conduitCode` query param
+ * instead of a raw error page (the browser is mid-redirect and has no API client).
+ */
+export const OAUTH_REDIRECTABLE_ERRORS = [
+  errors.REGISTRATION_NOT_ALLOWED,
+  errors.REALM_ACCESS_DENIED,
+  errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+  errors.GUESTS_NOT_ALLOWED,
+  errors.TWO_FA_REQUIRED_FOR_REALM,
+] as const;
+
+/** Errors declared on the OAuth routes: the redirectable ones plus realm resolution. */
+export const OAUTH_ROUTE_ERRORS = [
+  ...OAUTH_REDIRECTABLE_ERRORS,
+  errors.REALM_NOT_FOUND,
+  errors.REALMS_DISABLED,
+];
+
+export function getRedirectableOAuthErrorCode(err: unknown): string | undefined {
+  const code = parseConduitCode(err);
+  return OAUTH_REDIRECTABLE_ERRORS.find(definition => definition.conduitCode === code)
+    ?.conduitCode;
 }
 
 export function redirectOnRegistrationNotAllowed(
   err: unknown,
   redirectUri?: string,
 ): { redirect: string } {
-  if (!isRegistrationNotAllowedError(err) || !redirectUri) {
+  const conduitCode = getRedirectableOAuthErrorCode(err);
+  if (!conduitCode || !redirectUri) {
     throw err;
   }
   try {
     const redirectUrl = new URL(redirectUri);
-    redirectUrl.searchParams.set(
-      'conduitCode',
-      errors.REGISTRATION_NOT_ALLOWED.conduitCode,
-    );
+    redirectUrl.searchParams.set('conduitCode', conduitCode);
     return { redirect: redirectUrl.toString() };
   } catch {
     throw err;

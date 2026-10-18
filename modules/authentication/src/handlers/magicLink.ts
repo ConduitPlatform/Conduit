@@ -26,6 +26,16 @@ import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import { MagicLinkTemplate as magicLinkTemplate } from '../templates/index.js';
 import { AuthUtils } from '../utils/index.js';
+import { errors } from '../errors.js';
+import {
+  assertStrategyEnabledForRealm,
+  realmIdOf,
+  realmParam,
+  resolveRealmFromCall,
+  resolveRealmFromSlug,
+  scopedUserQuery,
+} from './realmRequest.js';
+import { RealmContext } from '../utils/realm.js';
 
 export class MagicLinkHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -63,7 +73,13 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
         bodyParams: {
           email: ConduitString.Required,
           redirectUri: ConduitString.Optional,
+          realm: realmParam,
         },
+        errors: [
+          errors.REALM_NOT_FOUND,
+          errors.REALMS_DISABLED,
+          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+        ],
         rateLimit: EMAIL_SEND_STRICT,
       },
       new ConduitRouteReturnDefinition('MagicLinkSendResponse', 'String'),
@@ -111,7 +127,11 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       call.request.bodyParams.redirectUri,
     );
     const { clientId } = call.request.context;
-    const user: User | null = await User.getInstance().findOne({ email });
+    const realmCtx = await resolveRealmFromCall(call);
+    assertStrategyEnabledForRealm(realmCtx, 'magicLink');
+    const user: User | null = await User.getInstance().findOne(
+      scopedUserQuery({ email }, realmCtx),
+    );
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (user.isAnonymous) throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
 
@@ -121,6 +141,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       data: {
         clientId,
         ...(redirectUri !== undefined ? { redirectUri } : {}),
+        ...(realmCtx ? { realm: realmCtx.team.realm!.slug } : {}),
       },
       token: uuid(),
     });
@@ -132,7 +153,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   async verifyLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { verificationToken } = call.request.urlParams;
     const config = ConfigController.getInstance().config;
-    const { user, data } = await this.redeemMagicToken(verificationToken);
+    const { user, data, realmCtx } = await this.redeemMagicToken(verificationToken);
     const redirectUri =
       AuthUtils.validateRedirectUri(data.redirectUri) ??
       config.magic_link.redirect_uri.replace(/\/$/, '');
@@ -141,6 +162,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
         user,
         clientId: data.clientId,
         config,
+        realm: realmIdOf(realmCtx),
       },
       redirectUri,
     );
@@ -150,18 +172,21 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
     const { magicToken } = call.request.urlParams;
-    const { user, data } = await this.redeemMagicToken(magicToken);
+    const { user, data, realmCtx } = await this.redeemMagicToken(magicToken);
     const config = ConfigController.getInstance().config;
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: data.clientId,
       config,
+      realm: realmIdOf(realmCtx),
     });
   }
 
-  private async redeemMagicToken(
-    magicToken: string,
-  ): Promise<{ user: User; data: Token['data'] & { clientId: Client['clientId'] } }> {
+  private async redeemMagicToken(magicToken: string): Promise<{
+    user: User;
+    data: Token['data'] & { clientId: Client['clientId'] };
+    realmCtx: RealmContext | null;
+  }> {
     const token: Token | null = await Token.getInstance().findOne(
       {
         tokenType: TokenType.MAGIC_LINK,
@@ -176,6 +201,9 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       _id: token.user! as string,
     });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    // the realm the link was requested for, re-validated at redemption
+    const realmCtx = await resolveRealmFromSlug(token.data?.realm);
+    assertStrategyEnabledForRealm(realmCtx, 'magicLink');
     await Token.getInstance()
       .deleteMany({ user: token.user, tokenType: TokenType.MAGIC_LINK })
       .catch(e => {
@@ -184,6 +212,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     return {
       user,
       data: token.data,
+      realmCtx,
     };
   }
 
