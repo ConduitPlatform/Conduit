@@ -14,7 +14,12 @@ import escapeStringRegexp from 'escape-string-regexp';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
 import { grantHomeMembership, homeRealmFields } from '../handlers/realmRequest.js';
-import { realmsEnabled, resolveRealmById, withHomeScope } from '../utils/realm.js';
+import {
+  deleteUserRealmMemberships,
+  realmsEnabled,
+  resolveRealmById,
+  withHomeScope,
+} from '../utils/realm.js';
 
 // Cap on the memberships loaded to resolve the `realm` filter next to other filters.
 const MAX_MEMBERSHIP_FILTER = 1000;
@@ -179,6 +184,7 @@ export class UserAdmin {
       throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
     const res = await User.getInstance().deleteOne({ _id: call.request.params.id });
+    await deleteUserRealmMemberships(String(user._id));
     await this.grpcSdk.authorization!.deleteAllRelations({
       resource: 'User:' + user._id,
     });
@@ -203,6 +209,7 @@ export class UserAdmin {
     }
 
     const res = await User.getInstance().deleteMany({ _id: { $in: ids } });
+    await deleteUserRealmMemberships(users.map(u => String(u._id)));
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
     return 'Users were deleted';
   }
