@@ -1,4 +1,5 @@
 import {
+  CompatibleIndexType,
   ConduitModel,
   DatabaseProvider,
   Indexable,
@@ -130,8 +131,15 @@ const schema: ConduitModel = {
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
+// non-unique: scoped user lookups and realm member counts filter on the home realm
 const modelOptions = {
   timestamps: true,
+  indexes: [
+    {
+      fields: ['homeRealm'],
+      types: [CompatibleIndexType.Ascending],
+    },
+  ],
   conduit: {
     permissions: {
       extendable: true,
