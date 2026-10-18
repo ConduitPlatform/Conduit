@@ -22,15 +22,21 @@ import { v4 as uuid } from 'uuid';
 import {
   AnonymousUserCreateRequest,
   CreateTeamRequest,
+  GetRealmSettingsRequest,
   GetTeamRequest,
   InvitationDeleteRequest,
   InvitationDeleteResponse,
   InviteUserToTeamRequest,
   InviteUserToTeamResponse,
   ModifyTeamMembersRequest,
+  RealmMembershipRequest,
+  RealmResponse,
+  SetTeamRealmRequest,
   Team as GrpcTeam,
   TeamDeleteRequest,
   TeamDeleteResponse,
+  UnsetTeamRealmRequest,
+  UnsetTeamRealmResponse,
   UpdateTeamRequest,
   UserChangePass,
   UserCreateByUsernameRequest,
@@ -79,7 +85,22 @@ import {
   homeRealmFields,
   resolveRealmFromSlug,
 } from './handlers/realmRequest.js';
-import { assertNoNestedRealm, invalidateRealmCache } from './utils/realm.js';
+import {
+  assertNoNestedRealm,
+  getRealmSlugById,
+  invalidateRealmCache,
+} from './utils/realm.js';
+import { RealmsAdmin } from './admin/realm.js';
+import {
+  assertTeamId,
+  assertUserId,
+  buildSetRealmParams,
+  parseMembershipType,
+  toCallbackError,
+  toGrpcTeam,
+  toRealmResponse,
+} from './utils/realmGrpc.logic.js';
+import { buildTeamRealmExports, importTeamRealms } from './utils/realmExport.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -106,6 +127,11 @@ export default class Authentication extends ManagedModule<Config> {
       invitationDelete: this.invitationDelete.bind(this),
       inviteUserToTeam: this.inviteUserToTeam.bind(this),
       updateTeam: this.updateTeam.bind(this),
+      setTeamRealm: this.setTeamRealm.bind(this),
+      getRealmSettings: this.getRealmSettings.bind(this),
+      unsetTeamRealm: this.unsetTeamRealm.bind(this),
+      grantRealmMembership: this.grantRealmMembership.bind(this),
+      revokeRealmMembership: this.revokeRealmMembership.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -153,7 +179,7 @@ export default class Authentication extends ManagedModule<Config> {
     return [
       {
         type: 'teams',
-        description: 'Team structure (name, parent, isDefault)',
+        description: 'Team structure (name, parent, isDefault, realm and realm settings)',
         priority: 35,
       },
     ];
@@ -177,9 +203,11 @@ export default class Authentication extends ManagedModule<Config> {
     const parentNameById = new Map(
       (parentTeams as Indexable[]).map((p: Indexable) => [p._id, p.name]),
     );
+    const realmExports = await buildTeamRealmExports(teams);
     const forExport = teams.map(t => {
       const { _id, parentTeam, createdAt, updatedAt, ...rest } = t;
-      const out = { ...rest };
+      // realm marker and non-secret settings (secrets export as null)
+      const out = { ...rest, ...realmExports.get(String(_id)) };
       if (parentTeam && parentNameById.has(parentTeam)) {
         (out as Indexable).parentTeamName = parentNameById.get(parentTeam);
       }
@@ -198,6 +226,8 @@ export default class Authentication extends ManagedModule<Config> {
       name: string;
       parentTeamName?: string;
       isDefault?: boolean;
+      realm?: unknown;
+      realmSettings?: unknown;
     }[];
     for (const rec of teams) {
       const name = rec.name;
@@ -237,7 +267,16 @@ export default class Authentication extends ManagedModule<Config> {
         // ignore
       }
     }
+    // realms need the final team tree (a realm is top-level) and never import secrets
+    const realmsChanged = await importTeamRealms(teams, result.teams);
+    if (realmsChanged) this.notifyRealmsImported();
     return result;
+  }
+
+  private notifyRealmsImported() {
+    invalidateRealmCache();
+    this.grpcSdk.bus?.publish(REALM_UPDATE_EVENT, JSON.stringify({ import: true }));
+    if (ConfigController.getInstance().config?.active) this.refreshAppRoutes();
   }
 
   async preConfig(config: Config) {
@@ -427,7 +466,7 @@ export default class Authentication extends ManagedModule<Config> {
     call: GrpcRequest<UserLoginRequest>,
     callback: GrpcCallback<UserLoginResponse>,
   ) {
-    const { userId, clientId } = call.request;
+    const { userId, clientId, realm } = call.request;
     const user = await models.User.getInstance(this.database).findOne({ _id: userId });
     if (!user) {
       return callback({
@@ -444,12 +483,18 @@ export default class Authentication extends ManagedModule<Config> {
     const config = ConfigController.getInstance().config;
 
     try {
+      // internal trusted path: the session lives in the requested realm, defaulting to
+      // the user's own home realm (token issuance still checks the user's access)
+      const realmCtx = await resolveRealmFromSlug(realm);
       const tokens = await TokenProvider.getInstance().provideUserTokensInternal({
         user,
         clientId,
         config,
-        // internal trusted path: the session lives in the user's own home realm
-        realm: user.homeRealm ? String(user.homeRealm) : null,
+        realm: realmCtx
+          ? String(realmCtx.team._id)
+          : user.homeRealm
+            ? String(user.homeRealm)
+            : null,
       });
 
       return callback(null, {
@@ -457,6 +502,7 @@ export default class Authentication extends ManagedModule<Config> {
         refreshToken: tokens.refreshToken ?? undefined,
       });
     } catch (e) {
+      if (e instanceof GrpcError) return callback(toCallbackError(e));
       return callback({
         code: status.INTERNAL,
         message: 'Failed to login',
@@ -489,10 +535,7 @@ export default class Authentication extends ManagedModule<Config> {
     }
 
     try {
-      // optional realm slug: B5 adds it to the proto, it is read defensively until then
-      const realmCtx = await resolveRealmFromSlug(
-        (call.request as { realm?: string }).realm,
-      );
+      const realmCtx = await resolveRealmFromSlug(call.request.realm);
       let user = await models.User.getInstance().findOne({ email });
       if (user) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
@@ -599,8 +642,7 @@ export default class Authentication extends ManagedModule<Config> {
     }
     let realmCtx;
     try {
-      // optional realm slug: B5 adds it to the proto, it is read defensively until then
-      realmCtx = await resolveRealmFromSlug((call.request as { realm?: string }).realm);
+      realmCtx = await resolveRealmFromSlug(call.request.realm);
     } catch (e) {
       if (e instanceof GrpcError) {
         return callback({ code: e.code, message: e.message });
@@ -681,8 +723,7 @@ export default class Authentication extends ManagedModule<Config> {
     const { clientId } = call.request;
     let realmCtx;
     try {
-      // optional realm slug: B5 adds it to the proto, it is read defensively until then
-      realmCtx = await resolveRealmFromSlug((call.request as { realm?: string }).realm);
+      realmCtx = await resolveRealmFromSlug(call.request.realm);
     } catch (e) {
       if (e instanceof GrpcError) {
         return callback({ code: e.code, message: e.message });
@@ -772,14 +813,9 @@ export default class Authentication extends ManagedModule<Config> {
       if (!team) {
         return callback({ code: status.NOT_FOUND, message: 'Team not found' });
       }
-      return callback(null, {
-        id: team._id,
-        name: team.name,
-        parentTeam: team.parentTeam,
-        isDefault: team.isDefault,
-      });
+      return callback(null, toGrpcTeam(team));
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(toCallbackError(e));
     }
   }
 
@@ -792,14 +828,9 @@ export default class Authentication extends ManagedModule<Config> {
       const team = (await new TeamsAdmin(this.grpcSdk).createTeam(
         request,
       )) as models.Team;
-      return callback(null, {
-        id: team._id,
-        name: team.name,
-        parentTeam: team.parentTeam,
-        isDefault: team.isDefault,
-      });
+      return callback(null, toGrpcTeam(team));
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(toCallbackError(e));
     }
   }
 
@@ -871,6 +902,8 @@ export default class Authentication extends ManagedModule<Config> {
     const accessToken = call.request.accessToken;
     const path = call.request.path ?? '';
     let userId: string | undefined = undefined;
+    let realmId: string | null = null;
+    let homeRealmId: string | null = null;
     const accessStatus = await handleAuthentication(
       {},
       { authorization: `Bearer ${accessToken}` },
@@ -878,7 +911,10 @@ export default class Authentication extends ManagedModule<Config> {
       path,
     )
       .then(r => {
-        userId = (r.user as models.User)._id;
+        const user = r.user as models.User;
+        userId = user._id;
+        realmId = r.realm ?? null;
+        homeRealmId = user.homeRealm ? String(user.homeRealm) : null;
         return ValidateAccessTokenResponse_Status.AUTHENTICATED;
       })
       .catch(err => {
@@ -894,7 +930,12 @@ export default class Authentication extends ManagedModule<Config> {
             return ValidateAccessTokenResponse_Status.UNAUTHENTICATED;
         }
       });
-    return callback(null, { status: accessStatus, userId });
+    // realm and home realm are exposed as slugs (absent for global sessions and users)
+    const [realm, homeRealm] =
+      accessStatus === ValidateAccessTokenResponse_Status.AUTHENTICATED
+        ? await Promise.all([getRealmSlugById(realmId), getRealmSlugById(homeRealmId)])
+        : [undefined, undefined];
+    return callback(null, { status: accessStatus, userId, realm, homeRealm });
   }
 
   async userModifyStatus(
@@ -1088,17 +1129,126 @@ export default class Authentication extends ManagedModule<Config> {
         ConduitGrpcSdk.Logger.info(`Team ${teamId} name updated to ${name}`);
       }
 
-      return callback(null, {
-        id: updatedTeam._id,
-        name: updatedTeam.name,
-        parentTeam: updatedTeam.parentTeam,
-        isDefault: updatedTeam.isDefault,
-      });
+      return callback(null, toGrpcTeam(updatedTeam));
     } catch (e) {
       return callback({
         code: e instanceof GrpcError ? e.code : status.INTERNAL,
         message: (e as Error).message,
       });
+    }
+  }
+
+  private realmsAdmin() {
+    return new RealmsAdmin(this.grpcSdk, () => this.refreshAppRoutes());
+  }
+
+  async setTeamRealm(
+    call: GrpcRequest<SetTeamRealmRequest>,
+    callback: GrpcCallback<RealmResponse>,
+  ) {
+    try {
+      const params = buildSetRealmParams(call.request);
+      const teamId = params.teamId as string;
+      const team = await models.Team.getInstance().findOne({ _id: teamId });
+      if (!team) {
+        return callback({ code: status.NOT_FOUND, message: 'Team not found' });
+      }
+      const request = createParsedRouterRequest(params, { teamId }, undefined, params);
+      const admin = this.realmsAdmin();
+      // an existing realm is updated, anything else is promoted
+      const realm = team.realm?.enabled
+        ? await admin.updateRealm(request)
+        : await admin.promote(request);
+      return callback(
+        null,
+        toRealmResponse(realm as Parameters<typeof toRealmResponse>[0]),
+      );
+    } catch (e) {
+      return callback(toCallbackError(e));
+    }
+  }
+
+  async getRealmSettings(
+    call: GrpcRequest<GetRealmSettingsRequest>,
+    callback: GrpcCallback<RealmResponse>,
+  ) {
+    try {
+      const teamId = assertTeamId(call.request.teamId);
+      const request = createParsedRouterRequest({ teamId }, { teamId });
+      const realm = await this.realmsAdmin().getRealm(request);
+      return callback(
+        null,
+        toRealmResponse(realm as Parameters<typeof toRealmResponse>[0]),
+      );
+    } catch (e) {
+      return callback(toCallbackError(e));
+    }
+  }
+
+  async unsetTeamRealm(
+    call: GrpcRequest<UnsetTeamRealmRequest>,
+    callback: GrpcCallback<UnsetTeamRealmResponse>,
+  ) {
+    try {
+      const teamId = assertTeamId(call.request.teamId);
+      const force = call.request.force === true;
+      const request = createParsedRouterRequest({ teamId, force }, { teamId }, { force });
+      const result = (await this.realmsAdmin().demoteRealm(request)) as {
+        message: string;
+        blockedUsers: number;
+      };
+      return callback(null, {
+        message: result.message,
+        blockedUsers: result.blockedUsers,
+      });
+    } catch (e) {
+      return callback(toCallbackError(e));
+    }
+  }
+
+  async grantRealmMembership(
+    call: GrpcRequest<RealmMembershipRequest>,
+    callback: GrpcCallback<Empty>,
+  ) {
+    try {
+      const teamId = assertTeamId(call.request.teamId);
+      const userId = assertUserId(call.request.userId);
+      const type = parseMembershipType(call.request.type);
+      const admin = this.realmsAdmin();
+      if (type === 'guest') {
+        const params = { teamId, userIds: [userId] };
+        await admin.addGuests(
+          createParsedRouterRequest(params, { teamId }, undefined, { userIds: [userId] }),
+        );
+      } else {
+        // a home membership is the user's home realm
+        const params = { id: userId, realmTeamId: teamId, force: false };
+        await admin.moveUserHomeRealm(
+          createParsedRouterRequest(params, { id: userId }, undefined, {
+            realmTeamId: teamId,
+          }),
+        );
+      }
+      return callback(null, {});
+    } catch (e) {
+      return callback(toCallbackError(e));
+    }
+  }
+
+  async revokeRealmMembership(
+    call: GrpcRequest<RealmMembershipRequest>,
+    callback: GrpcCallback<Empty>,
+  ) {
+    try {
+      const teamId = assertTeamId(call.request.teamId);
+      const userId = assertUserId(call.request.userId);
+      // guests only: removing a home user is refused (HOME_USER_REMOVAL)
+      await this.realmsAdmin().removeGuest(
+        createParsedRouterRequest({ teamId, userId }, { teamId, userId }),
+      );
+      return callback(null, {});
+    } catch (e) {
+      return callback(toCallbackError(e));
     }
   }
 

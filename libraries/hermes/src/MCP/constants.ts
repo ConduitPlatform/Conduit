@@ -40,7 +40,7 @@ Module discovery and activation:
 Common modules:
 - database: schemas, documents, custom endpoints, indexes
 - embeddings: embedding configuration, backfills, semantic search
-- authentication: users, teams, OAuth services
+- authentication: users, teams, realms (per-team authentication strategies and policies), OAuth services
 - storage: file storage configuration
 - authorization: relations, resources, permission checks (RBAC/ReBAC)
 - chat: rooms and messages management
