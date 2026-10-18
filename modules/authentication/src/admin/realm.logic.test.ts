@@ -4,6 +4,7 @@ import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import {
+  assertTeamPromotable,
   buildRealmSettingsWrite,
   DEMOTE_STEPS,
   deepMergeClearing,
@@ -282,7 +283,7 @@ describe('buildRealmSettingsWrite', () => {
         strategies: {
           oauth: {
             google: { clientId: null, clientSecret: null },
-            apple: { privateKey: null, teamId: null },
+            apple: { privateKey: null, teamId: null, keyId: null },
           },
         },
       },
@@ -292,7 +293,7 @@ describe('buildRealmSettingsWrite', () => {
       redirect_uri: 'https://x/cb',
       accountLinking: false,
     });
-    assert.deepEqual(settings.strategies.oauth.apple, { enabled: true, keyId: 'K' });
+    assert.deepEqual(settings.strategies.oauth.apple, { enabled: true });
     assert.deepEqual(oauthSecrets, { apple: { clientSecret: 'a' } });
   });
 
@@ -305,6 +306,7 @@ describe('buildRealmSettingsWrite', () => {
           local: { enabled: true, verificationRequired: true },
         },
       },
+      baseSecrets: storedSecrets,
       input: {
         strategies: {
           local: { verificationRequired: null },
@@ -406,7 +408,12 @@ describe('new OAuth provider entries', () => {
     const { settings } = buildRealmSettingsWrite({
       base: defaultRealmSettings(),
       input: {
-        strategies: { oauth: { google: { clientId: 'id' }, github: { enabled: true } } },
+        strategies: {
+          oauth: {
+            google: { clientId: 'id', clientSecret: 's' },
+            github: { enabled: true },
+          },
+        },
       },
     });
     assert.equal(settings.strategies.oauth.google?.enabled, false);
@@ -423,6 +430,7 @@ describe('new OAuth provider entries', () => {
     };
     const { settings } = buildRealmSettingsWrite({
       base,
+      baseSecrets: { google: { clientSecret: 'kept' } },
       input: { strategies: { oauth: { google: { clientId: 'new' } } } },
     });
     assert.equal(settings.strategies.oauth.google?.enabled, true);
@@ -471,5 +479,209 @@ describe('planOldHomeMembership', () => {
       'revoke',
     );
     assert.equal(planOldHomeMembership(undefined, OTHER), 'revoke');
+  });
+});
+
+describe('OAuth credential pairing on write', () => {
+  const withOauth = (oauth: Record<string, any>) => ({
+    ...defaultRealmSettings(),
+    strategies: { ...defaultRealmSettings().strategies, oauth },
+  });
+  const write = (params: Parameters<typeof buildRealmSettingsWrite>[0]) =>
+    buildRealmSettingsWrite(params);
+
+  it('rejects a clientId without a clientSecret and names the provider', () => {
+    assert.throws(
+      () =>
+        write({
+          base: defaultRealmSettings(),
+          input: { strategies: { oauth: { github: { enabled: true, clientId: 'id' } } } },
+        }),
+      (err: any) =>
+        err.code === status.INVALID_ARGUMENT &&
+        /oauth\.github.*clientSecret/.test(err.message),
+    );
+  });
+
+  it('counts the stored secret when the write omits it', () => {
+    const base = withOauth({ google: { enabled: true } });
+    const { oauthSecrets } = write({
+      base,
+      baseSecrets: { google: { clientSecret: 'stored' } },
+      input: { strategies: { oauth: { google: { clientId: 'id' } } } },
+    });
+    assert.deepEqual(oauthSecrets, { google: { clientSecret: 'stored' } });
+  });
+
+  it('rejects clearing the secret while the clientId stays', () => {
+    const base = withOauth({ google: { enabled: true, clientId: 'id' } });
+    assert.throws(
+      () =>
+        write({
+          base,
+          baseSecrets: { google: { clientSecret: 'stored' } },
+          input: { strategies: { oauth: { google: { clientSecret: null } } } },
+        }),
+      /oauth\.google.*clientId requires its own clientSecret/,
+    );
+  });
+
+  it('rejects a supplied clientSecret without any clientId', () => {
+    assert.throws(
+      () =>
+        write({
+          base: defaultRealmSettings(),
+          input: { strategies: { oauth: { google: { clientSecret: 'x' } } } },
+        }),
+      /oauth\.google.*clientSecret requires a clientId/,
+    );
+  });
+
+  it('tolerates a stored secret left behind by clearing the clientId', () => {
+    const base = withOauth({ google: { enabled: true, clientId: 'id' } });
+    const { settings, oauthSecrets } = write({
+      base,
+      baseSecrets: { google: { clientSecret: 'stored' } },
+      input: { strategies: { oauth: { google: { clientId: null } } } },
+    });
+    assert.equal('clientId' in settings.strategies.oauth.google!, false);
+    assert.deepEqual(oauthSecrets, { google: { clientSecret: 'stored' } });
+  });
+
+  it('does not re-validate providers a write leaves alone', () => {
+    // legacy mixed pair on google, the write only touches github
+    const base = withOauth({ google: { enabled: true, clientId: 'id' } });
+    assert.doesNotThrow(() =>
+      write({
+        base,
+        input: { strategies: { oauth: { github: { enabled: false } } } },
+      }),
+    );
+    assert.doesNotThrow(() => write({ base, input: { active: false } }));
+  });
+
+  it('skips a disabled provider whose credentials the write does not touch', () => {
+    const base = withOauth({ google: { enabled: true, clientId: 'id' } });
+    assert.doesNotThrow(() =>
+      write({
+        base,
+        input: { strategies: { oauth: { google: { enabled: false } } } },
+      }),
+    );
+    // enabling the incomplete pair is refused
+    assert.throws(
+      () =>
+        write({
+          base: withOauth({ google: { enabled: false, clientId: 'id' } }),
+          input: { strategies: { oauth: { google: { enabled: true } } } },
+        }),
+      /oauth\.google/,
+    );
+  });
+
+  it('accepts a complete pair', () => {
+    const { oauthSecrets } = write({
+      base: defaultRealmSettings(),
+      input: {
+        strategies: {
+          oauth: { google: { enabled: true, clientId: 'id', clientSecret: 's' } },
+        },
+      },
+    });
+    assert.deepEqual(oauthSecrets, { google: { clientSecret: 's' } });
+  });
+
+  it('allows an incomplete pair for the GitOps import (secrets never travel)', () => {
+    assert.doesNotThrow(() =>
+      write({
+        base: defaultRealmSettings(),
+        allowIncompleteCredentials: true,
+        input: { strategies: { oauth: { google: { enabled: true, clientId: 'id' } } } },
+      }),
+    );
+  });
+
+  it('does not apply the secret pairing to Apple, which signs from its key triple', () => {
+    assert.doesNotThrow(() =>
+      write({
+        base: defaultRealmSettings(),
+        input: { strategies: { oauth: { apple: { enabled: true, clientId: 'svc' } } } },
+      }),
+    );
+  });
+});
+
+describe('Apple key triple on write', () => {
+  const base = defaultRealmSettings();
+  const apple = (entry: Record<string, any>) => ({
+    base,
+    input: { strategies: { oauth: { apple: { enabled: true, ...entry } } } },
+  });
+
+  it('rejects a partial triple', () => {
+    for (const entry of [
+      { teamId: 'T' },
+      { keyId: 'K' },
+      { privateKey: 'P' },
+      { teamId: 'T', keyId: 'K' },
+      { privateKey: 'P', teamId: 'T' },
+    ]) {
+      assert.throws(
+        () => buildRealmSettingsWrite(apple(entry)),
+        (err: any) =>
+          err.code === status.INVALID_ARGUMENT &&
+          /oauth\.apple.*together/.test(err.message),
+      );
+    }
+  });
+
+  it('accepts all three or none', () => {
+    assert.doesNotThrow(() =>
+      buildRealmSettingsWrite(apple({ privateKey: 'P', teamId: 'T', keyId: 'K' })),
+    );
+    assert.doesNotThrow(() => buildRealmSettingsWrite(apple({ clientId: 'svc' })));
+  });
+
+  it('counts the stored private key when the write only sends the ids', () => {
+    const stored = {
+      ...base,
+      strategies: { ...base.strategies, oauth: { apple: { enabled: true } } },
+    };
+    const { oauthSecrets } = buildRealmSettingsWrite({
+      base: stored,
+      baseSecrets: { apple: { privateKey: 'P' } },
+      input: { strategies: { oauth: { apple: { teamId: 'T', keyId: 'K' } } } },
+    });
+    assert.deepEqual(oauthSecrets, { apple: { privateKey: 'P' } });
+    // clearing only the key leaves a partial triple
+    assert.throws(
+      () =>
+        buildRealmSettingsWrite({
+          base: {
+            ...base,
+            strategies: {
+              ...base.strategies,
+              oauth: { apple: { enabled: true, teamId: 'T', keyId: 'K' } },
+            },
+          },
+          baseSecrets: { apple: { privateKey: 'P' } },
+          input: { strategies: { oauth: { apple: { privateKey: null } } } },
+        }),
+      /oauth\.apple/,
+    );
+  });
+});
+
+describe('assertTeamPromotable', () => {
+  it('refuses realms and the default team', () => {
+    assert.doesNotThrow(() => assertTeamPromotable({ isDefault: false }));
+    assert.throws(
+      () => assertTeamPromotable({ realm: { enabled: true } }),
+      (err: any) => err.code === status.ALREADY_EXISTS,
+    );
+    assert.throws(
+      () => assertTeamPromotable({ isDefault: true }),
+      (err: any) => err.code === status.FAILED_PRECONDITION,
+    );
   });
 });

@@ -79,6 +79,26 @@ export function planPromoteMembers(
   return plan;
 }
 
+/**
+ * A team can become a realm unless it already is one or it is the default team (new
+ * users are added to the default team).
+ */
+export function assertTeamPromotable(team: {
+  isDefault?: boolean;
+  realm?: { enabled?: boolean } | null;
+}): void {
+  if (team.realm?.enabled) {
+    throw new GrpcError(status.ALREADY_EXISTS, 'Team is already a realm');
+  }
+  if (team.isDefault) {
+    throw new GrpcError(
+      status.FAILED_PRECONDITION,
+      'The default team cannot become a realm: new users are added to it. ' +
+        'Make another team the default first.',
+    );
+  }
+}
+
 /** `id (email)` list for error messages, capped. */
 export function describeUsers(users: PromoteCandidate[], max: number = 20): string {
   const shown = users.slice(0, max).map(user => {
@@ -392,14 +412,81 @@ export function pickSettingsFields(stored: Indexable): RealmSettingsFields {
   };
 }
 
+function filled(value: unknown): boolean {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+/**
+ * Rejects credential sets that cannot work, for the providers a write touches (a
+ * provider the write leaves alone is not re-validated, so stored legacy data never
+ * blocks unrelated changes). The inputs are the merged result, so a stored secret
+ * counts when the write omits it:
+ *  - `clientId` and `clientSecret` are a pair (every provider but Apple, which signs a
+ *    secret from its key triple): a realm that sets its own `clientId` must have its own
+ *    `clientSecret`, the secret is never inherited from global in that case. A write
+ *    that supplies a `clientSecret` without any `clientId` is refused as well (a stored
+ *    secret left behind by clearing the `clientId` is tolerated: it is ignored and both
+ *    credentials inherit from global);
+ *  - Apple's key triple (`privateKey`, `teamId`, `keyId`) is all-or-nothing.
+ * A provider that stays disabled and whose credentials the write does not touch is
+ * skipped; the check runs when it is enabled.
+ */
+export function assertOAuthCredentialsConsistent(params: {
+  oauth: Record<string, Indexable | undefined>;
+  secrets: RealmOAuthSecrets;
+  patchOauth: Record<string, Indexable | undefined>;
+  secretsUpdate: RealmOAuthSecrets;
+}): void {
+  const { oauth, secrets, patchOauth, secretsUpdate } = params;
+  for (const provider of Object.keys(patchOauth)) {
+    const entry = oauth[provider] ?? {};
+    const patch = patchOauth[provider] ?? {};
+    const update = (secretsUpdate as Record<string, Indexable | undefined>)[provider];
+    const touchesCredentials =
+      ['clientId', 'teamId', 'keyId'].some(field => patch[field] !== undefined) ||
+      update?.clientSecret !== undefined ||
+      update?.privateKey !== undefined;
+    if (entry.enabled !== true && !touchesCredentials) continue;
+    const stored = (secrets as Record<string, Indexable | undefined>)[provider] ?? {};
+    if (provider === 'apple') {
+      const set = [stored.privateKey, entry.teamId, entry.keyId].filter(filled).length;
+      if (set !== 0 && set !== 3) {
+        fail(
+          `strategies.oauth.apple: privateKey, teamId and keyId must be set together (all three or none, to inherit the global key)`,
+        );
+      }
+      continue;
+    }
+    const hasClientId = filled(entry.clientId);
+    const hasSecret = filled(stored.clientSecret);
+    if (hasClientId && !hasSecret) {
+      fail(
+        `strategies.oauth.${provider}: clientId requires its own clientSecret (the secret is never inherited from the global configuration)`,
+      );
+    }
+    if (!hasClientId && filled(update?.clientSecret)) {
+      fail(
+        `strategies.oauth.${provider}: clientSecret requires a clientId (credentials are a pair)`,
+      );
+    }
+  }
+}
+
 /**
  * Applies a write body to a base: the defaults for a promotion, the stored settings and
- * secrets for a PATCH. Returns what to store.
+ * secrets for a PATCH. Returns what to store. Throws INVALID_ARGUMENT for credential sets
+ * that cannot work (see `assertOAuthCredentialsConsistent`).
  */
 export function buildRealmSettingsWrite(params: {
   base: Indexable;
   baseSecrets?: RealmOAuthSecrets | null;
   input: unknown;
+  /**
+   * GitOps import: secrets are never exported, so a realm with its own `clientId` is
+   * imported before its secret exists. The pair is then incomplete, which is safe (the
+   * provider fails closed at request time) until the secret is set.
+   */
+  allowIncompleteCredentials?: boolean;
 }): { settings: RealmSettingsFields; oauthSecrets: RealmOAuthSecrets } {
   const { settings: patch, oauthSecrets: secretsUpdate } = splitRealmSettingsInput(
     sanitizeRealmInput(params.input),
@@ -412,10 +499,19 @@ export function buildRealmSettingsWrite(params: {
       entry.enabled = false;
     }
   }
-  return {
-    settings,
-    oauthSecrets: applyOAuthSecretsUpdate(params.baseSecrets, secretsUpdate),
-  };
+  const oauthSecrets = applyOAuthSecretsUpdate(params.baseSecrets, secretsUpdate);
+  if (!params.allowIncompleteCredentials) {
+    assertOAuthCredentialsConsistent({
+      oauth: settings.strategies.oauth as Record<string, Indexable | undefined>,
+      secrets: oauthSecrets,
+      patchOauth: (patch.strategies?.oauth ?? {}) as Record<
+        string,
+        Indexable | undefined
+      >,
+      secretsUpdate,
+    });
+  }
+  return { settings, oauthSecrets };
 }
 
 // ---------------------------------------------------------------------------

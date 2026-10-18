@@ -130,7 +130,12 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     const params = call.request.params;
     const stateToken = await validateStateToken(params.state);
     // the realm the flow was started for, re-validated at the callback
-    const realmCtx = await this.resolveRealmContext(stateToken.data.realm);
+    let realmCtx: RealmContext | null;
+    try {
+      realmCtx = await this.resolveStateRealm(stateToken.data);
+    } catch (err) {
+      return this.failCallback(err, stateToken);
+    }
     const providerClient = this.resolveAppleClient(
       realmCtx,
       stateToken.data.oauthClientId,
@@ -217,7 +222,17 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   async nativeAuthorize(call: ParsedRouterRequest) {
     const params = call.request.bodyParams;
     const stateToken = await validateStateToken(params.state);
-    const realmCtx = await this.resolveRealmContext(stateToken.data.realm);
+    let realmCtx: RealmContext | null;
+    try {
+      realmCtx = await this.resolveStateRealm(stateToken.data);
+    } catch (err) {
+      // the native client is an API client, not a browser mid-redirect: it gets the
+      // error (with its conduitCode) instead of a redirect
+      await Token.getInstance()
+        .deleteOne(stateToken)
+        .catch(() => undefined);
+      throw err;
+    }
     const providerClient = this.resolveAppleClient(
       realmCtx,
       stateToken.data.oauthClientId,

@@ -13,7 +13,9 @@ import { hasCompleteOAuthCredentials, OAuthCredentials } from './oauthSettings.l
  *    list and an `oauthClientId` param are not consulted.
  *  - The realm entry has no `clientId` (or there is no realm): `resolveGlobal` runs, i.e.
  *    the existing `resolveAppleOAuthClient(oauthClientId)` resolution, with the realm's
- *    own `redirect_uri` taking precedence when it sets one.
+ *    own `redirect_uri` taking precedence when it sets one. The resolved client must be
+ *    complete (client id and the whole key triple), otherwise
+ *    STRATEGY_NOT_AVAILABLE_FOR_REALM.
  */
 export function resolveRealmAppleClient(input: {
   /** The realm's own, non-inherited Apple `clientId` (null/empty = inherits). */
@@ -31,6 +33,11 @@ export function resolveRealmAppleClient(input: {
       : undefined;
   if (!effective || typeof realmClientId !== 'string' || realmClientId.trim() === '') {
     const global = input.resolveGlobal();
+    // never sign with an empty key: an incomplete global client (e.g. no key triple)
+    // fails closed for the realm
+    if (!hasCompleteOAuthCredentials('apple', global)) {
+      throw new ModuleError(errors.STRATEGY_NOT_AVAILABLE_FOR_REALM);
+    }
     return ownRedirect ? { ...global, redirect_uri: ownRedirect } : global;
   }
   if (!hasCompleteOAuthCredentials('apple', { ...effective, clientId: realmClientId })) {

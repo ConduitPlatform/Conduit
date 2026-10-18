@@ -61,18 +61,33 @@ import {
   resolveRealmFromSlug,
   scopedUserQuery,
 } from '../realmRequest.js';
-import { RealmContext, realmsEnabled, RealmOAuthProviderKey } from '../../utils/realm.js';
+import {
+  RealmContext,
+  realmsEnabled,
+  RealmOAuthProviderKey,
+  resolveRealmById,
+} from '../../utils/realm.js';
 import { anyRealmEnables } from '../../utils/strategyRealms.js';
 import {
   hasCompleteOAuthCredentials,
   invalidateOAuthSettingsCache,
   isGlobalOAuthAvailable,
   OAuthSettingsCache,
-  oauthSettingsVersion,
+  pickCallbackRedirect,
+  settingsForRealm,
+  stateRealmRef,
 } from './utils/oauthSettings.logic.js';
 
 export { invalidateOAuthSettingsCache };
 
+/**
+ * Base of the OAuth2 providers.
+ *
+ * Realms override the credentials (`clientId`, `clientSecret`, `redirect_uri`,
+ * `accountLinking`) per provider, nothing else: the static provider parameters, the PKCE
+ * `codeVerifier` and, for Microsoft, the `tenantId` baked into the endpoint URLs are
+ * global per handler and shared by every realm.
+ */
 export abstract class OAuth2<
   T,
   S extends OAuth2Settings,
@@ -117,15 +132,21 @@ export abstract class OAuth2<
    * Cached per realm and credential version; see `invalidateOAuthSettingsCache`.
    */
   protected getSettingsFor(ctx: RealmContext | null): S {
-    if (!ctx) return this.settings;
-    const effective =
-      ctx.effective.strategies.oauth[this.providerName as RealmOAuthProviderKey];
-    if (!effective) return this.settings;
-    return this.realmSettings.get(
-      String(ctx.team._id),
-      oauthSettingsVersion(effective),
-      () => this.buildRealmSettings(effective),
-    );
+    return settingsForRealm({
+      globalSettings: this.settings,
+      realm: ctx
+        ? {
+            id: String(ctx.team._id),
+            effective:
+              ctx.effective.strategies.oauth[this.providerName as RealmOAuthProviderKey],
+          }
+        : null,
+      cache: this.realmSettings,
+      build: effective => this.buildRealmSettings(effective),
+      // fail closed: a realm without an entry for this provider must never fall back to
+      // the global credentials
+      missing: () => new ModuleError(errors.STRATEGY_NOT_AVAILABLE_FOR_REALM),
+    });
   }
 
   /** The global settings (static provider params, PKCE verifier) with realm credentials. */
@@ -160,11 +181,30 @@ export abstract class OAuth2<
   }
 
   /**
-   * Resolves the realm a request (or a state token) names and checks that it enables
-   * this provider. No slug means global.
+   * Resolves the realm a request names and checks that it enables this provider. No
+   * slug means global.
    */
   protected async resolveRealmContext(slug: unknown): Promise<RealmContext | null> {
-    const realmCtx = await resolveRealmFromSlug(slug);
+    return this.checkRealmContext(await resolveRealmFromSlug(slug));
+  }
+
+  /**
+   * Resolves the realm a state token was created for (callback). By team id when the
+   * token has one, so a slug rename mid-flow does not break the flow; tokens created
+   * before the id was stored fall back to the slug.
+   */
+  protected async resolveStateRealm(
+    data: Record<string, unknown> | null | undefined,
+  ): Promise<RealmContext | null> {
+    const ref = stateRealmRef(data);
+    if (!ref) return this.checkRealmContext(null);
+    if ('slug' in ref) return this.resolveRealmContext(ref.slug);
+    if (!realmsEnabled()) throw new ModuleError(errors.REALMS_DISABLED);
+    return this.checkRealmContext(await resolveRealmById(ref.id));
+  }
+
+  /** Checks that the realm (or global, for null) can run this provider. */
+  protected checkRealmContext(realmCtx: RealmContext | null): RealmContext | null {
     assertStrategyEnabledForRealm(realmCtx, `oauth.${this.providerName}`);
     if (realmCtx) {
       // enabled by the realm, but neither the realm nor the global config can sign in
@@ -183,6 +223,58 @@ export abstract class OAuth2<
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     }
     return realmCtx;
+  }
+
+  /**
+   * Where a callback that fails on realm resolution sends the browser: the validated
+   * `customRedirectUri` of the flow, else the realm's own `redirect_uri` (the realm is
+   * looked up without validating the provider), else the global `finalRedirect`.
+   */
+  protected async callbackFallbackRedirect(
+    data: Record<string, unknown> | null | undefined,
+  ): Promise<string | undefined> {
+    let custom: string | undefined;
+    try {
+      custom = AuthUtils.validateRedirectUri(data?.customRedirectUri as string);
+    } catch {
+      custom = undefined;
+    }
+    let realmRedirect: string | undefined;
+    const ref = stateRealmRef(data);
+    if (ref) {
+      try {
+        const ctx =
+          'slug' in ref
+            ? await resolveRealmFromSlug(ref.slug)
+            : realmsEnabled()
+              ? await resolveRealmById(ref.id)
+              : null;
+        realmRedirect =
+          ctx?.effective.strategies.oauth[this.providerName as RealmOAuthProviderKey]
+            ?.redirect_uri;
+      } catch {
+        realmRedirect = undefined;
+      }
+    }
+    return pickCallbackRedirect([custom, realmRedirect, this.settings.finalRedirect]);
+  }
+
+  /**
+   * A realm failure at the callback: the state token is spent and the error is sent to
+   * the app as a `conduitCode` redirect when it is one the redirect flow reports
+   * (STRATEGY_NOT_AVAILABLE_FOR_REALM, REALM_ACCESS_DENIED...), otherwise it is thrown.
+   */
+  protected async failCallback(
+    err: unknown,
+    stateToken: Token,
+  ): Promise<{ redirect: string }> {
+    await Token.getInstance()
+      .deleteOne(stateToken)
+      .catch(() => undefined);
+    return redirectOnRegistrationNotAllowed(
+      err,
+      await this.callbackFallbackRedirect(stateToken.data),
+    );
   }
 
   async initNative(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -210,7 +302,9 @@ export abstract class OAuth2<
           customRedirectUri: call.request.params.redirectUri,
           anonymousUserId: anonymousUser?._id,
           mode: resolveOAuthMode(call.request.params?.mode),
-          ...(realmCtx ? { realm: realmCtx.team.realm!.slug } : {}),
+          ...(realmCtx
+            ? { realm: realmCtx.team.realm!.slug, realmId: realmIdOf(realmCtx) }
+            : {}),
           ...this.getOAuthStateExtras(call),
         },
       })
@@ -268,7 +362,9 @@ export abstract class OAuth2<
           customRedirectUri: call.request.params.redirectUri,
           anonymousUserId: anonymousUser?._id,
           mode: resolveOAuthMode(call.request.params?.mode),
-          ...(realmCtx ? { realm: realmCtx.team.realm!.slug } : {}),
+          ...(realmCtx
+            ? { realm: realmCtx.team.realm!.slug, realmId: realmIdOf(realmCtx) }
+            : {}),
           ...this.getOAuthStateExtras(call),
         },
       })
@@ -290,7 +386,12 @@ export abstract class OAuth2<
     const params = call.request.params;
     const stateToken = await validateStateToken(params.state);
     // the realm the flow was started for, re-validated at the callback
-    const realmCtx = await this.resolveRealmContext(stateToken.data.realm);
+    let realmCtx: RealmContext | null;
+    try {
+      realmCtx = await this.resolveStateRealm(stateToken.data);
+    } catch (err) {
+      return this.failCallback(err, stateToken);
+    }
     const settings = this.getSettingsFor(realmCtx);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     const config = ConfigController.getInstance().config;
