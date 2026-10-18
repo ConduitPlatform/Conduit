@@ -28,6 +28,7 @@ import { errors } from '../errors.js';
 import { RealmContext } from '../utils/realm.js';
 import {
   assertAnonymousUserInRealm,
+  assertGlobalStrategyAvailable,
   assertStrategyEnabledForRealm,
   grantHomeMembershipForRegistration,
   homeRealmFields,
@@ -135,6 +136,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
 
     // the realm the code was requested for, re-validated at verification
     const realmCtx = await resolveRealmFromSlug(existingToken.data.realm);
+    if (!realmCtx) assertGlobalStrategyAvailable('phone');
     assertStrategyEnabledForRealm(realmCtx, 'phone');
 
     let user: User | null;
@@ -171,6 +173,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const { phone, invitationToken } = call.request.params;
     const { clientId } = call.request.context;
     const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('phone');
     assertStrategyEnabledForRealm(realmCtx, 'phone');
     const user: User | null = await User.getInstance().findOne(
       scopedUserQuery({ phoneNumber: phone }, realmCtx),

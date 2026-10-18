@@ -4,6 +4,7 @@ import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
 import { buildEffectiveSettings, defaultRealmSettings } from '../utils/realm.logic.js';
 import {
+  isGlobalStrategyEnabled,
   isHomeRealm,
   isInviteRequired,
   isStrategyEnabled,
@@ -137,5 +138,64 @@ describe('isHomeRealm', () => {
     assert.equal(isHomeRealm('r1', null), false);
     assert.equal(isHomeRealm(null, 'r1'), false);
     assert.equal(isHomeRealm('r1', 'r1'), true);
+  });
+});
+
+describe('isGlobalStrategyEnabled (assertGlobalStrategyAvailable decision)', () => {
+  const on = {
+    local: { enabled: true, username_auth_enabled: true },
+    magic_link: { enabled: true },
+    phoneAuthentication: { enabled: true },
+    metamask: { enabled: true },
+    biometricAuthentication: { enabled: true },
+  };
+  const off = {
+    local: { enabled: false, username_auth_enabled: false },
+    magic_link: { enabled: false },
+    phoneAuthentication: { enabled: false },
+    metamask: { enabled: false },
+    biometricAuthentication: { enabled: false },
+  };
+  const keys = ['local', 'username', 'magicLink', 'phone', 'metamask', 'biometric'];
+
+  it('reads the right global flag per strategy', () => {
+    for (const key of keys) {
+      assert.equal(isGlobalStrategyEnabled(on, key), true, key);
+      assert.equal(isGlobalStrategyEnabled(off, key), false, key);
+    }
+    // each strategy depends on its own flag only
+    assert.equal(
+      isGlobalStrategyEnabled({ ...off, local: { enabled: true } }, 'username'),
+      false,
+    );
+    assert.equal(
+      isGlobalStrategyEnabled(
+        { ...off, local: { username_auth_enabled: true } },
+        'local',
+      ),
+      false,
+    );
+  });
+
+  it('treats missing config as disabled', () => {
+    for (const key of keys) {
+      assert.equal(isGlobalStrategyEnabled({}, key), false);
+      assert.equal(isGlobalStrategyEnabled(undefined, key), false);
+    }
+  });
+
+  it('only a strict true counts', () => {
+    assert.equal(
+      isGlobalStrategyEnabled({ metamask: { enabled: 'true' } }, 'metamask'),
+      false,
+    );
+    assert.equal(
+      isGlobalStrategyEnabled({ metamask: { enabled: 1 } }, 'metamask'),
+      false,
+    );
+  });
+
+  it('throws for an unknown strategy', () => {
+    assert.throws(() => isGlobalStrategyEnabled(on, 'oauth.google'), /Unknown strategy/);
   });
 });

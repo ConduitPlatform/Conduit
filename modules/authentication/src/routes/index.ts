@@ -25,7 +25,7 @@ import { UsernameHandlers } from '../handlers/username.js';
 import { MetamaskHandlers } from '../handlers/metamask.js';
 import { RealmHandlers } from '../handlers/realm.js';
 import { realmsEnabled } from '../utils/realm.js';
-import { activeOrRealmEnabled, oauthStrategyKey } from '../utils/strategyRealms.js';
+import { activeOrRealmEnabled } from '../utils/strategyRealms.js';
 
 type OAuthHandler = typeof oauth2;
 
@@ -64,11 +64,12 @@ export class AuthenticationRoutes {
 
     // A strategy's routes exist when it is enabled globally or by any active realm
     // (realms enable strategies on their own; calls without a realm are still checked
-    // by the handlers).
+    // by the handlers). OAuth, local, magic link and phone fold the realm check into
+    // their own `validate()` (so e.g. a missing email transport still disables magic
+    // link); the others are OR-ed with realm enablement here.
     const phoneActive = await this.phoneHandlers
       .validate()
-      .catch(e => ConduitGrpcSdk.Logger.error(e))
-      .then(active => activeOrRealmEnabled(active, 'phone'));
+      .catch(e => ConduitGrpcSdk.Logger.error(e));
 
     if (phoneActive) {
       await this.phoneHandlers.declareRoutes(this._routingManager);
@@ -85,15 +86,13 @@ export class AuthenticationRoutes {
 
     const magicLinkActive = await this.magicLinkHandlers
       .validate()
-      .catch(e => ConduitGrpcSdk.Logger.error(e))
-      .then(active => activeOrRealmEnabled(active, 'magicLink'));
+      .catch(e => ConduitGrpcSdk.Logger.error(e));
     if (magicLinkActive) {
       await this.magicLinkHandlers.declareRoutes(this._routingManager);
     }
     const authActive = await this.localHandlers
       .validate()
-      .catch(e => ConduitGrpcSdk.Logger.error(e))
-      .then(active => activeOrRealmEnabled(active, 'local'));
+      .catch(e => ConduitGrpcSdk.Logger.error(e));
     if (authActive) {
       await this.localHandlers.declareRoutes(this._routingManager);
       enabled = true;
@@ -121,7 +120,6 @@ export class AuthenticationRoutes {
         );
         return handler
           .validate()
-          .then((active: boolean) => activeOrRealmEnabled(active, oauthStrategyKey(key)))
           .then((active: boolean) => {
             if (active) {
               handler.declareRoutes(this._routingManager);

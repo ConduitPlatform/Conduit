@@ -80,3 +80,30 @@ export function isHomeRealm(
   const realm = realmId ? String(realmId) : null;
   return home === realm;
 }
+
+/**
+ * Whether a strategy is enabled in the global module config. Keys are the strategy
+ * names ('local', 'username', 'magicLink', 'phone', 'metamask', 'biometric').
+ * Unknown keys throw, so a typo cannot silently read as disabled.
+ */
+export function isGlobalStrategyEnabled(
+  config: Record<string, any> | null | undefined,
+  strategyKey: string,
+): boolean {
+  switch (strategyKey) {
+    case 'local':
+      return config?.local?.enabled === true;
+    case 'username':
+      return config?.local?.username_auth_enabled === true;
+    case 'magicLink':
+      return config?.magic_link?.enabled === true;
+    case 'phone':
+      return config?.phoneAuthentication?.enabled === true;
+    case 'metamask':
+      return config?.metamask?.enabled === true;
+    case 'biometric':
+      return config?.biometricAuthentication?.enabled === true;
+    default:
+      throw new Error(`Unknown strategy: ${strategyKey}`);
+  }
+}

@@ -36,6 +36,7 @@ import { authenticateChecks, changePassword } from './utils.js';
 import { errors } from '../errors.js';
 import {
   assertAnonymousUserInRealm,
+  assertGlobalStrategyAvailable,
   assertStrategyEnabledForRealm,
   grantHomeMembership,
   grantHomeMembershipForRegistration,
@@ -305,6 +306,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         allowImplied: true,
       });
     }
+    if (!realmCtx) assertGlobalStrategyAvailable('local');
     assertStrategyEnabledForRealm(realmCtx, 'local');
     if (
       isInviteRequired(realmCtx?.effective.registration, teams) &&
@@ -426,6 +428,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const { userData } = call.request.params;
     const config = ConfigController.getInstance().config;
     const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('local');
     assertStrategyEnabledForRealm(realmCtx, 'local');
     if (realmCtx && isInviteRequired(realmCtx.effective.registration, config.teams)) {
       throw new ModuleError(
@@ -480,6 +483,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const config = ConfigController.getInstance().config;
     const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('local');
     assertStrategyEnabledForRealm(realmCtx, 'local');
 
     const user: User | null = await User.getInstance().findOne(
@@ -516,6 +520,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       AuthUtils.validateRedirectUri(call.request.bodyParams.redirectUri) ??
       config.local.forgot_password_redirect_uri;
     const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('local');
     assertStrategyEnabledForRealm(realmCtx, 'local');
 
     const user: User | null = await User.getInstance().findOne(
@@ -780,6 +785,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
     const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('local');
     assertStrategyEnabledForRealm(realmCtx, 'local');
     const user: User | null = await User.getInstance().findOne(
       scopedUserQuery({ email }, realmCtx),
@@ -810,6 +816,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const email = call.request.params.email.toLowerCase();
     const { code } = call.request.params;
     const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('local');
     assertStrategyEnabledForRealm(realmCtx, 'local');
     const foundUser = await User.getInstance().findOne(
       scopedUserQuery({ email }, realmCtx),

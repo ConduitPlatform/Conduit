@@ -21,6 +21,7 @@ import { Config } from '../config/index.js';
 import { ALT_STRATEGY_AUTH } from '../constants/index.js';
 import { errors } from '../errors.js';
 import {
+  assertGlobalStrategyAvailable,
   assertStrategyEnabledForRealm,
   realmIdOf,
   realmParam,
@@ -103,6 +104,7 @@ export class UsernameHandlers implements IAuthenticationStrategy {
     const clientId = context.clientId;
     const config = ConfigController.getInstance().config;
     const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('username');
     assertStrategyEnabledForRealm(realmCtx, 'username');
 
     const user: User | null = await User.getInstance().findOne(
