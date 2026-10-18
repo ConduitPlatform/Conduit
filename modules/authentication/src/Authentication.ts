@@ -84,10 +84,12 @@ import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
 import { validateAppleClients } from './handlers/oauth2/utils/validateAppleClients.js';
 import {
+  assertAnonymousRealmAllowed,
   assertAnonymousUserInRealm,
   grantHomeMembership,
   homeRealmFields,
   resolveRealmFromSlug,
+  rollbackUserOnFailure,
 } from './handlers/realmRequest.js';
 import {
   assertNoNestedRealm,
@@ -625,6 +627,13 @@ export default class Authentication extends ManagedModule<Config> {
           ...userData,
           ...homeRealmFields(realmCtx),
         });
+        if (realmCtx) {
+          // a realm user is never left without its membership
+          const createdUser = user;
+          await rollbackUserOnFailure(this.grpcSdk, createdUser, () =>
+            grantHomeMembership(this.grpcSdk, createdUser, realmCtx),
+          );
+        }
       } else {
         const config = ConfigController.getInstance().config;
         if (!config.anonymousUsers.enabled) {
@@ -682,18 +691,12 @@ export default class Authentication extends ManagedModule<Config> {
           'Failed to send verification email.' + ' Email service not online!',
         );
       }
-      if (!anonymousUserId) {
-        if (realmCtx) {
-          await grantHomeMembership(this.grpcSdk, user, realmCtx).catch(err => {
+      if (!anonymousUserId && !realmCtx) {
+        await TeamsHandler.getInstance()
+          .addUserToDefault(user)
+          .catch(err => {
             ConduitGrpcSdk.Logger.error(err);
           });
-        } else {
-          await TeamsHandler.getInstance()
-            .addUserToDefault(user)
-            .catch(err => {
-              ConduitGrpcSdk.Logger.error(err);
-            });
-        }
       }
       return callback(null, { password });
     } catch (e) {
@@ -738,9 +741,11 @@ export default class Authentication extends ManagedModule<Config> {
           ...homeRealmFields(realmCtx),
         });
         if (realmCtx) {
-          await grantHomeMembership(this.grpcSdk, user, realmCtx).catch(err => {
-            ConduitGrpcSdk.Logger.error(err);
-          });
+          // a realm user is never left without its membership
+          const createdUser = user;
+          await rollbackUserOnFailure(this.grpcSdk, createdUser, () =>
+            grantHomeMembership(this.grpcSdk, createdUser, realmCtx),
+          );
         } else {
           await TeamsHandler.getInstance()
             .addUserToDefault(user)
@@ -805,35 +810,50 @@ export default class Authentication extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
     const email = `${uuid()}@anonymous.com`;
-    const anonymousUser = await User.getInstance().create({
-      email,
-      isAnonymous: true,
-      isVerified: false,
-      ...homeRealmFields(realmCtx),
-    });
-    if (realmCtx) {
-      await grantHomeMembership(this.grpcSdk, anonymousUser, realmCtx).catch(err => {
-        ConduitGrpcSdk.Logger.error(err);
+    try {
+      // refused by the realm policies (2FA, verified email, client pinning): fail before
+      // a user is created
+      assertAnonymousRealmAllowed(realmCtx, clientId);
+      const anonymousUser = await User.getInstance().create({
+        email,
+        isAnonymous: true,
+        isVerified: false,
+        ...homeRealmFields(realmCtx),
       });
-    } else {
-      await TeamsHandler.getInstance()
-        .addUserToDefault(anonymousUser)
-        .catch(err => {
-          ConduitGrpcSdk.Logger.error(err);
-        });
-    }
-    const tokens = await TokenProvider.getInstance().provideUserTokensInternal({
-      user: anonymousUser,
-      clientId: clientId,
-      config,
-      isRefresh: false,
-      realm: realmCtx ? String(realmCtx.team._id) : null,
-    });
+      // any failure from here on must not leave the new anonymous user behind
+      const tokens = await rollbackUserOnFailure(
+        this.grpcSdk,
+        anonymousUser,
+        async () => {
+          if (realmCtx) {
+            await grantHomeMembership(this.grpcSdk, anonymousUser, realmCtx);
+          } else {
+            await TeamsHandler.getInstance()
+              .addUserToDefault(anonymousUser)
+              .catch(err => {
+                ConduitGrpcSdk.Logger.error(err);
+              });
+          }
+          return TokenProvider.getInstance().provideUserTokensInternal({
+            user: anonymousUser,
+            clientId: clientId,
+            config,
+            isRefresh: false,
+            realm: realmCtx ? String(realmCtx.team._id) : null,
+          });
+        },
+      );
 
-    return callback(null, {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken ?? undefined,
-    });
+      return callback(null, {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken ?? undefined,
+      });
+    } catch (e) {
+      if (e instanceof GrpcError) {
+        return callback({ code: e.code, message: e.message });
+      }
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
   }
 
   // produces login credentials for a user without them having to login

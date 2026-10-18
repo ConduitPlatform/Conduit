@@ -16,6 +16,7 @@ import { hasConduitCode } from '../utils/common.logic.js';
 import { Token, User } from '../models/index.js';
 import {
   assertValidSlug,
+  deleteUserRealmMemberships,
   grantRealmMembership,
   RealmContext,
   realmsEnabled,
@@ -30,6 +31,8 @@ import {
   reconcileInvitationRealm,
   scopeUserQuery,
 } from './realmRequest.logic.js';
+
+import { anonymousRealmDenial } from './realmRequest.logic.js';
 
 export * from './realmRequest.logic.js';
 
@@ -143,6 +146,72 @@ export async function grantHomeMembershipForRegistration(
     withRole = !inviteRealm || String(inviteRealm._id) !== realmIdOf(ctx);
   }
   await grantHomeMembership(grpcSdk, user, ctx, withRole);
+}
+
+/**
+ * Throws the realm access error a new anonymous user would get at token issuance
+ * (REALM_ACCESS_DENIED, TWO_FA_REQUIRED_FOR_REALM), before the user is created.
+ */
+export function assertAnonymousRealmAllowed(
+  ctx: RealmContext | null | undefined,
+  clientId: string,
+): void {
+  if (!ctx) return;
+  const denial = anonymousRealmDenial(
+    String(ctx.team._id),
+    ctx.effective.policies,
+    clientId,
+  );
+  if (denial) throw new ModuleError(errors[denial]);
+}
+
+/**
+ * Best-effort cleanup of a user created by a registration that then failed: its realm
+ * membership, its authorization relations (realm team, default team) and the user
+ * itself. Never throws, so it cannot mask the error that triggered it.
+ */
+export async function rollbackRegisteredUser(
+  grpcSdk: ConduitGrpcSdk,
+  user: Pick<User, '_id'>,
+): Promise<void> {
+  const userId = String(user._id);
+  const steps: (() => Promise<unknown>)[] = [
+    () => deleteUserRealmMemberships(userId),
+    async () => {
+      try {
+        await grpcSdk.authorization!.deleteAllRelations({ subject: 'User:' + userId });
+      } catch {
+        // authorization is not available (teams off) or the user has no relations
+      }
+    },
+    () => User.getInstance().deleteOne({ _id: userId }),
+  ];
+  for (const step of steps) {
+    try {
+      await step();
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(err as Error);
+    }
+  }
+}
+
+/**
+ * Runs a step of a registration that happens after the user was created (home
+ * membership, token issuance). When it fails the user is rolled back and the error is
+ * rethrown, like the admin `createUser` does: a realm user is never left without its
+ * membership, and a failed registration leaves no orphan behind.
+ */
+export async function rollbackUserOnFailure<T>(
+  grpcSdk: ConduitGrpcSdk,
+  user: Pick<User, '_id'>,
+  step: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await step();
+  } catch (err) {
+    await rollbackRegisteredUser(grpcSdk, user);
+    throw err;
+  }
 }
 
 /**

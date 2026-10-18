@@ -4,6 +4,7 @@ import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
 import { buildEffectiveSettings, defaultRealmSettings } from '../utils/realm.logic.js';
 import {
+  anonymousRealmDenial,
   isGlobalStrategyEnabled,
   isHomeRealm,
   isInviteRequired,
@@ -197,5 +198,34 @@ describe('isGlobalStrategyEnabled (assertGlobalStrategyAvailable decision)', () 
 
   it('throws for an unknown strategy', () => {
     assert.throws(() => isGlobalStrategyEnabled(on, 'oauth.google'), /Unknown strategy/);
+  });
+});
+
+describe('anonymousRealmDenial', () => {
+  const R = 'aaaaaaaaaaaaaaaaaaaaaaaa';
+  const policies = (overrides: Record<string, unknown> = {}) => ({
+    ...defaultRealmSettings().policies,
+    ...overrides,
+  });
+
+  it('allows an anonymous user in a realm without restricting policies', () => {
+    assert.equal(anonymousRealmDenial(R, policies(), 'web'), null);
+  });
+
+  it('refuses realms that require 2FA or a verified email', () => {
+    assert.equal(
+      anonymousRealmDenial(R, policies({ requireTwoFa: true }), 'web'),
+      'TWO_FA_REQUIRED_FOR_REALM',
+    );
+    assert.equal(
+      anonymousRealmDenial(R, policies({ requireVerifiedEmail: true }), 'web'),
+      'REALM_ACCESS_DENIED',
+    );
+  });
+
+  it('refuses clients outside allowedClientIds', () => {
+    const pinned = policies({ allowedClientIds: ['web'] });
+    assert.equal(anonymousRealmDenial(R, pinned, 'web'), null);
+    assert.equal(anonymousRealmDenial(R, pinned, 'mobile'), 'REALM_ACCESS_DENIED');
   });
 });

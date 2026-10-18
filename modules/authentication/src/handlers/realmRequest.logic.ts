@@ -1,6 +1,11 @@
 import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
-import { EffectiveAuthSettings, withHomeScope } from '../utils/realm.logic.js';
+import {
+  EffectiveAuthSettings,
+  evaluateRealmAccess,
+  RealmPolicies,
+  withHomeScope,
+} from '../utils/realm.logic.js';
 
 /*
  * Pure request-level realm rules shared by the login and registration handlers (no
@@ -106,4 +111,26 @@ export function isGlobalStrategyEnabled(
     default:
       throw new Error(`Unknown strategy: ${strategyKey}`);
   }
+}
+
+/**
+ * Whether a brand-new anonymous user may hold a session in its home realm. An anonymous
+ * user has no 2FA and no verified email, so a realm that requires either (or pins its
+ * clients) refuses the session. Evaluated BEFORE the user is created, so a refused
+ * registration never leaves an orphan user behind. Returns the error key to throw, or
+ * null when the session is allowed.
+ */
+export function anonymousRealmDenial(
+  realmId: string,
+  policies: RealmPolicies,
+  clientId: string,
+): keyof typeof errors | null {
+  const result = evaluateRealmAccess({
+    requestedRealm: realmId,
+    userHomeRealm: realmId,
+    membershipType: null,
+    policies,
+    assurance: { authorized: true, hasTwoFA: false, isVerified: false, clientId },
+  });
+  return result.allowed ? null : result.error;
 }
