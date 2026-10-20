@@ -117,6 +117,7 @@ export class UsernameHandlers implements IAuthenticationStrategy {
         identifier: { username },
         password,
         strategyKey: 'username',
+        clientId: context.clientId,
       });
     }
 

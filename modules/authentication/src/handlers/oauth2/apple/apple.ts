@@ -197,7 +197,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       providerClient.redirect_uri;
     if (stateToken.data.discover === true) {
       await Token.getInstance().deleteOne(stateToken);
-      return this.discoveryRedirect(userParams, redirectUri);
+      return this.discoveryRedirect(userParams, redirectUri, stateToken.data.clientId);
     }
     const conduitClientId = stateToken.data.clientId;
     try {
@@ -291,7 +291,10 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     if (stateToken.data.discover === true) {
       // the native client is an API client: the answer is the JSON of the discovery
       await Token.getInstance().deleteOne(stateToken);
-      return discoverWithOAuth(this.providerName, userParams);
+      return discoverWithOAuth(this.providerName, userParams, {
+        clientId: stateToken.data.clientId,
+        globalAccountLinking: this.settings.accountLinking,
+      });
     }
     const user = await this.createOrUpdateUser(
       userParams,

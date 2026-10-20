@@ -6,6 +6,8 @@ import {
   assertDiscoveryRequestAllowed,
   buildDiscoveryAnswer,
   decideLinkProofUse,
+  DISCOVERY_MAX_ACCOUNTS,
+  DISCOVERY_PASSWORD_MAX_ACCOUNTS,
   discoveryRedirectUrl,
   discoveryRequestError,
   DiscoveryAccount,
@@ -13,6 +15,9 @@ import {
   isLinkProofLive,
   isProofConsumed,
   linkProofData,
+  oauthAccountLinking,
+  oauthAccountListed,
+  oauthAccountMatch,
   oauthDiscoveryFilter,
   REALM_LINK_PROOF_TTL_MS,
 } from './realmDiscovery.logic.js';
@@ -227,9 +232,16 @@ describe('buildDiscoveryAnswer', () => {
   });
 });
 
+describe('discovery limits', () => {
+  it('caps the password discovery at 15 accounts and the phone and OAuth ones at 50', () => {
+    assert.equal(DISCOVERY_PASSWORD_MAX_ACCOUNTS, 15);
+    assert.equal(DISCOVERY_MAX_ACCOUNTS, 50);
+  });
+});
+
 describe('link proof token data and use', () => {
   it('expires ten minutes after issue', () => {
-    const data = linkProofData([{ realmId: 'r-acme', userId: 'u1' }], NOW);
+    const data = linkProofData([{ realmId: 'r-acme', userId: 'u1' }], NOW, 'client-1');
     assert.equal(data.expiresAt, NOW + REALM_LINK_PROOF_TTL_MS);
     assert.equal(REALM_LINK_PROOF_TTL_MS, 10 * 60 * 1000);
   });
@@ -249,21 +261,41 @@ describe('link proof token data and use', () => {
         { realmId: null, userId: 'global-user' },
       ],
       NOW,
+      'client-1',
     );
-    assert.deepEqual(decideLinkProofUse(data, 'r-acme', NOW), { userId: 'acme-user' });
-    assert.deepEqual(decideLinkProofUse(data, null, NOW), { userId: 'global-user' });
-    assert.equal(decideLinkProofUse(data, 'r-other', NOW), null);
+    assert.deepEqual(decideLinkProofUse(data, 'r-acme', NOW, 'client-1'), {
+      userId: 'acme-user',
+    });
+    assert.deepEqual(decideLinkProofUse(data, null, NOW, 'client-1'), {
+      userId: 'global-user',
+    });
+    assert.equal(decideLinkProofUse(data, 'r-other', NOW, 'client-1'), null);
   });
 
   it('refuses an expired proof', () => {
-    const data = linkProofData([{ realmId: 'r-acme', userId: 'u1' }], NOW);
-    assert.equal(decideLinkProofUse(data, 'r-acme', NOW + REALM_LINK_PROOF_TTL_MS), null);
+    const data = linkProofData([{ realmId: 'r-acme', userId: 'u1' }], NOW, 'client-1');
+    assert.equal(
+      decideLinkProofUse(data, 'r-acme', NOW + REALM_LINK_PROOF_TTL_MS, 'client-1'),
+      null,
+    );
   });
 
   it('refuses a proof with a malformed entry', () => {
-    const data = { entries: [{ realmId: 'r-acme', userId: '' }], expiresAt: NOW + 1 };
-    assert.equal(decideLinkProofUse(data, 'r-acme', NOW), null);
-    assert.equal(decideLinkProofUse({ expiresAt: NOW + 1 }, 'r-acme', NOW), null);
+    const data = {
+      entries: [{ realmId: 'r-acme', userId: '' }],
+      expiresAt: NOW + 1,
+      clientId: 'client-1',
+    };
+    assert.equal(decideLinkProofUse(data, 'r-acme', NOW, 'client-1'), null);
+    assert.equal(
+      decideLinkProofUse(
+        { expiresAt: NOW + 1, clientId: 'client-1' },
+        'r-acme',
+        NOW,
+        'client-1',
+      ),
+      null,
+    );
   });
 
   it('counts a consumption only when the conditional delete removed the row', () => {
@@ -273,10 +305,40 @@ describe('link proof token data and use', () => {
   });
 });
 
+describe('link proof client binding', () => {
+  const data = linkProofData([{ realmId: null, userId: 'u1' }], NOW, 'client-1');
+
+  it('serves the proof to the client it was issued to', () => {
+    assert.deepEqual(decideLinkProofUse(data, null, NOW, 'client-1'), { userId: 'u1' });
+  });
+
+  it('refuses the proof from another client', () => {
+    assert.equal(decideLinkProofUse(data, null, NOW, 'client-2'), null);
+  });
+
+  it('refuses the proof from a request with no client', () => {
+    assert.equal(decideLinkProofUse(data, null, NOW, undefined), null);
+    assert.equal(decideLinkProofUse(data, null, NOW, null), null);
+    assert.equal(decideLinkProofUse(data, null, NOW, ''), null);
+  });
+
+  it('refuses a proof that was issued without a client', () => {
+    const noClient = { entries: data.entries, expiresAt: NOW + 1 };
+    assert.equal(decideLinkProofUse(noClient, null, NOW, 'client-1'), null);
+    assert.equal(decideLinkProofUse({ ...noClient, clientId: '' }, null, NOW, ''), null);
+  });
+});
+
 describe('oauthDiscoveryFilter', () => {
-  it('matches the provider id or the verified email', () => {
+  it('matches the provider id or the email', () => {
     assert.deepEqual(oauthDiscoveryFilter('google', { id: 'g-1', email: 'a@b.co' }), {
       $or: [{ 'google.id': 'g-1' }, { email: 'a@b.co' }],
+    });
+  });
+
+  it('lower-cases the email, as accounts store it', () => {
+    assert.deepEqual(oauthDiscoveryFilter('google', { email: ' A@B.Co ' }), {
+      $or: [{ email: 'a@b.co' }],
     });
   });
 
@@ -295,8 +357,74 @@ describe('oauthDiscoveryFilter', () => {
   });
 });
 
+describe('oauthAccountMatch', () => {
+  it('matches the stored provider id, as a string or a number', () => {
+    assert.deepEqual(oauthAccountMatch({ id: 42 }, { providerId: '42' }), {
+      byId: true,
+      byEmail: false,
+    });
+    assert.deepEqual(oauthAccountMatch({ id: 'g-1' }, { providerId: 'g-2' }), {
+      byId: false,
+      byEmail: false,
+    });
+  });
+
+  it('matches the email case-insensitively', () => {
+    assert.deepEqual(oauthAccountMatch({ email: 'A@B.co' }, { email: 'a@b.co' }), {
+      byId: false,
+      byEmail: true,
+    });
+  });
+
+  it('does not match an account with no id or email to an empty identity', () => {
+    assert.deepEqual(oauthAccountMatch({}, { providerId: undefined, email: undefined }), {
+      byId: false,
+      byEmail: false,
+    });
+    assert.deepEqual(oauthAccountMatch({ id: '' }, { providerId: '' }), {
+      byId: false,
+      byEmail: false,
+    });
+  });
+});
+
+describe('oauthAccountLinking', () => {
+  it('uses the realm setting when the realm sets one, whichever way', () => {
+    assert.equal(oauthAccountLinking(true, false), true);
+    assert.equal(oauthAccountLinking(false, true), false);
+  });
+
+  it('falls back to the global setting when the realm sets none', () => {
+    assert.equal(oauthAccountLinking(undefined, true), true);
+    assert.equal(oauthAccountLinking(null, false), false);
+  });
+});
+
+describe('oauthAccountListed', () => {
+  const byId = { byId: true, byEmail: false };
+  const byEmail = { byId: false, byEmail: true };
+  const both = { byId: true, byEmail: true };
+  const none = { byId: false, byEmail: false };
+
+  it('always lists a provider-id match, with or without account linking', () => {
+    assert.equal(oauthAccountListed(byId, true), true);
+    assert.equal(oauthAccountListed(byId, false), true);
+    assert.equal(oauthAccountListed(both, false), true);
+  });
+
+  it('lists an email-only match only when account linking is allowed for its scope', () => {
+    assert.equal(oauthAccountListed(byEmail, true), true);
+    assert.equal(oauthAccountListed(byEmail, false), false);
+  });
+
+  it('never lists an account that matches neither', () => {
+    assert.equal(oauthAccountListed(none, true), false);
+    assert.equal(oauthAccountListed(none, false), false);
+  });
+});
+
 describe('discoveryRedirectUrl', () => {
-  it('carries the realms as base64url JSON and the proof token', () => {
+  it('carries the realms and the proof token in the fragment, not the query', () => {
     const answer = {
       realms: [
         { slug: 'acme', name: 'Acme' },
@@ -306,16 +434,20 @@ describe('discoveryRedirectUrl', () => {
     };
     const url = new URL(discoveryRedirectUrl('https://app.example/cb?keep=1', answer));
     assert.equal(url.searchParams.get('keep'), '1');
-    assert.equal(url.searchParams.get('proofToken'), 'proof-1');
+    assert.equal(url.searchParams.has('proofToken'), false);
+    assert.equal(url.searchParams.has('realms'), false);
+    const fragment = new URLSearchParams(url.hash.slice(1));
+    assert.equal(fragment.get('proofToken'), 'proof-1');
     const realms = JSON.parse(
-      Buffer.from(url.searchParams.get('realms')!, 'base64url').toString('utf8'),
+      Buffer.from(fragment.get('realms')!, 'base64url').toString('utf8'),
     );
     assert.deepEqual(realms, answer.realms);
   });
 
-  it('omits the proof token when there is none', () => {
+  it('omits the proof token from the fragment when there is none', () => {
     const url = new URL(discoveryRedirectUrl('https://app.example/cb', { realms: [] }));
-    assert.equal(url.searchParams.has('proofToken'), false);
-    assert.equal(url.searchParams.get('realms'), Buffer.from('[]').toString('base64url'));
+    const fragment = new URLSearchParams(url.hash.slice(1));
+    assert.equal(fragment.has('proofToken'), false);
+    assert.equal(fragment.get('realms'), Buffer.from('[]').toString('base64url'));
   });
 });

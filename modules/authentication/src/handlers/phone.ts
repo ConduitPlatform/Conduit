@@ -137,8 +137,17 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const { anonymousUser, user: existingUser } = call.request.context;
     const config = ConfigController.getInstance().config;
 
+    // only the tokens of a phone login or registration are accepted here
     const existingToken: Token | null = await Token.getInstance().findOne(
-      { token: token },
+      {
+        token: token,
+        tokenType: {
+          $in: [
+            TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
+            TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN,
+          ],
+        },
+      },
       { readPreference: 'primary' },
     );
     if (!existingToken) {
@@ -153,7 +162,10 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     // no session (the code token is spent by verifyCode)
     if (existingToken.data?.discover === true) {
       assertDiscoveryAllowed({ discover: true });
-      return discoverWithPhone(String(existingToken.data.phone));
+      return discoverWithPhone(
+        String(existingToken.data.phone),
+        String(existingToken.data.clientId ?? ''),
+      );
     }
 
     // the realm the code was requested for, re-validated at verification

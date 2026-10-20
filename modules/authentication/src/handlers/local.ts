@@ -535,6 +535,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         identifier: { email },
         password,
         strategyKey: 'local',
+        clientId,
       });
     }
 

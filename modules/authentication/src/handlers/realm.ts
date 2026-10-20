@@ -42,13 +42,17 @@ import {
   buildRealmDiscovery,
   buildUserRealms,
   enterRealmTokenFlags,
+  isLeaveRefused,
+  linkSourceStillValid,
   RealmPolicySummary,
   RealmRef,
+  selectLinkSource,
+  subteamIdsOnLeave,
   summarizePolicies,
   toRealmRef,
 } from './realm.logic.js';
-import { consumeLinkProof, proofUserAt } from './realmDiscovery.js';
-import { isHomeRealm, resolveRealmFromSlug } from './realmRequest.js';
+import { consumeLinkProof, findLinkProof } from './realmDiscovery.js';
+import { resolveRealmFromSlug } from './realmRequest.js';
 import { TeamsHandler } from './team.js';
 import { TokenProvider } from './tokenProvider.js';
 
@@ -281,13 +285,13 @@ export class RealmHandlers {
   }
 
   /**
-   * The account a link is made for. A proof token gives its entry for the source realm; else
-   * the authenticated session's account, which must be fully authorized, not anonymous and,
-   * when `sourceRealm` is named, have that home realm. Anything else is INVALID_LINK_PROOF.
+   * The account a link is made for (see selectLinkSource). A proof token is read here (an
+   * expired one is deleted); the choice itself is pure. Anything else is INVALID_LINK_PROOF.
    */
   private async findLinkSource(params: {
     proofToken?: string;
     sourceRealm?: unknown;
+    clientId: string;
     session: { user: User; jwtPayload: Indexable } | null;
   }): Promise<{
     userId: string;
@@ -297,31 +301,31 @@ export class RealmHandlers {
     jwtPayload?: Indexable;
   }> {
     const named = await this.namedSourceRealm(params.sourceRealm);
-    if (params.proofToken) {
-      const found = await proofUserAt(params.proofToken, named ?? null);
-      if (found) {
-        return {
-          userId: found.userId,
-          sourceRealmId: named ?? null,
-          proof: found.token,
-          flow: 'proof',
-        };
-      }
-    }
+    const now = Date.now();
+    const proof = params.proofToken ? await findLinkProof(params.proofToken, now) : null;
     const session = params.session;
-    if (session) {
-      const home = session.user.homeRealm ? String(session.user.homeRealm) : null;
-      if (named === undefined || named === home) {
-        return {
-          userId: String(session.user._id),
-          sourceRealmId: home,
-          proof: null,
-          flow: 'session',
-          jwtPayload: session.jwtPayload,
-        };
-      }
-    }
-    throw new ModuleError(errors.INVALID_LINK_PROOF);
+    const picked = selectLinkSource({
+      proof: proof?.data ?? null,
+      clientId: params.clientId,
+      sourceRealm: named,
+      now,
+      session: session
+        ? {
+            userId: String(session.user._id),
+            homeRealmId: session.user.homeRealm ? String(session.user.homeRealm) : null,
+            anonymous: !!session.user.isAnonymous,
+            authorized: !!session.jwtPayload?.authorized,
+          }
+        : null,
+    });
+    if (!picked) throw new ModuleError(errors.INVALID_LINK_PROOF);
+    return {
+      userId: picked.userId,
+      sourceRealmId: picked.sourceRealmId,
+      proof: picked.flow === 'proof' ? proof : null,
+      flow: picked.flow,
+      jwtPayload: picked.flow === 'session' ? session?.jwtPayload : undefined,
+    };
   }
 
   /**
@@ -382,33 +386,39 @@ export class RealmHandlers {
     const config = ConfigController.getInstance().config;
     const { proofToken, sourceRealm, invitationToken } = call.request.params;
     const { user: sessionUser, jwtPayload, clientId } = call.request.context;
-    const session =
-      sessionUser && !sessionUser.isAnonymous && jwtPayload?.authorized
-        ? { user: sessionUser, jwtPayload }
-        : null;
+    const session = sessionUser ? { user: sessionUser, jwtPayload } : null;
 
-    const source = await this.findLinkSource({ proofToken, sourceRealm, session });
+    const source = await this.findLinkSource({
+      proofToken,
+      sourceRealm,
+      clientId,
+      session,
+    });
     const user = await User.getInstance().findOne(
       { _id: source.userId },
       { readPreference: 'primary' },
     );
     if (!user) throw new ModuleError(errors.INVALID_LINK_PROOF);
     const homeRealmId = user.homeRealm ? String(user.homeRealm) : null;
-    // the account may have moved home since the proof was issued: its home is the source
-    if (homeRealmId !== source.sourceRealmId) {
+    // the account may have moved home, or gained 2FA, since the proof was issued
+    if (
+      !linkSourceStillValid({
+        flow: source.flow,
+        sourceRealmId: source.sourceRealmId,
+        homeRealmId,
+        hasTwoFA: !!user.hasTwoFA,
+      })
+    ) {
       throw new ModuleError(errors.INVALID_LINK_PROOF);
     }
-    // a proof is for accounts without 2FA; one that gained 2FA since is refused
-    if (source.flow === 'proof' && user.hasTwoFA) {
-      throw new ModuleError(errors.INVALID_LINK_PROOF);
-    }
-    if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
+    // an inactive account is no link source: refused as a source that is not authenticated
+    if (!user.active) throw new ModuleError(errors.INVALID_LINK_PROOF);
 
     const { sourceOutbound, sourcePolicies } = await this.linkSourceSettings(homeRealmId);
-    const membership = await RealmMembership.getInstance().findOne({
-      user: String(user._id),
-      realm: targetId,
-    });
+    const membership = await RealmMembership.getInstance().findOne(
+      { user: String(user._id), realm: targetId },
+      { readPreference: 'primary' },
+    );
     const principalClash = await realmPrincipalClash(
       targetId,
       identifierQueriesOf(user),
@@ -472,15 +482,19 @@ export class RealmHandlers {
     const targetId = String(target.team._id);
     const { user } = call.request.context;
     const userId = String(user._id);
-    if (isHomeRealm(user.homeRealm, targetId)) {
+    if (isLeaveRefused(user.homeRealm, targetId)) {
       throw new ModuleError(errors.HOME_USER_REMOVAL);
     }
+    // the realm team's own relation is removed with the membership (removeRelations)
     await revokeRealmMembership(this.grpcSdk, {
       userId,
       realmTeamId: targetId,
       removeRelations: true,
     });
-    for (const teamId of await collectTeamSubtreeIds(targetId)) {
+    for (const teamId of subteamIdsOnLeave(
+      targetId,
+      await collectTeamSubtreeIds(targetId),
+    )) {
       try {
         await this.grpcSdk.authorization!.deleteAllRelations({
           subject: 'User:' + userId,

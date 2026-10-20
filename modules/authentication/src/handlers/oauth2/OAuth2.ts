@@ -451,7 +451,7 @@ export abstract class OAuth2<
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       settings.finalRedirect;
     if (stateToken.data.discover === true) {
-      return this.discoveryRedirect(payload, redirectUri);
+      return this.discoveryRedirect(payload, redirectUri, clientId);
     }
     try {
       const user = await this.createOrUpdateUser(
@@ -715,16 +715,22 @@ export abstract class OAuth2<
 
   /**
    * The answer of an OAuth discovery login as a redirect to the flow's redirect URI, with the
-   * realms and the proof token (see discoveryRedirectUrl).
+   * realms and the proof token in the fragment (see discoveryRedirectUrl). The proof is bound to
+   * `clientId`, the client that started the flow. An email-only match follows the provider's
+   * account linking setting (see discoverWithOAuth).
    */
   protected async discoveryRedirect(
     payload: { id?: unknown; email?: unknown },
     redirectUri: string | undefined,
+    clientId: string,
   ): Promise<{ redirect: string }> {
     if (!redirectUri) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'No redirect URI for the discovery');
     }
-    const answer = await discoverWithOAuth(this.providerName, payload);
+    const answer = await discoverWithOAuth(this.providerName, payload, {
+      clientId,
+      globalAccountLinking: this.settings.accountLinking,
+    });
     return { redirect: discoveryRedirectUrl(redirectUri, answer) };
   }
 

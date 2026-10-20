@@ -20,6 +20,7 @@ import { AuthenticationRoutes } from './routes/index.js';
 import * as models from './models/index.js';
 import { Token, User } from './models/index.js';
 import { AuthUtils } from './utils/index.js';
+import { purgeExpiredLinkProofs } from './handlers/realmDiscovery.js';
 import { REALM_UPDATE_EVENT, TokenType } from './constants/index.js';
 import { v4 as uuid } from 'uuid';
 import {
@@ -1484,6 +1485,7 @@ export default class Authentication extends ManagedModule<Config> {
         });
         await AuthUtils.cleanupExpiredUsers();
         await AuthUtils.reconcileLoggedInUsersMetric();
+        await purgeExpiredLinkProofs();
       } catch (e) {
         ConduitGrpcSdk.Logger.error(`Token cleanup failed: ${(e as Error).message}`);
       }
