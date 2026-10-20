@@ -270,13 +270,34 @@ export function normalizeSlug(slug: string): string {
   return slug.trim().toLowerCase();
 }
 
+/**
+ * The `realm` value that names the global scope (users without a home realm) explicitly.
+ * It is reserved: no realm may take it as a slug, so the value never names two scopes.
+ */
+export const GLOBAL_REALM_SCOPE = 'global';
+
+/** Whether a `realm` request value names the global scope (case and spaces ignored). */
+export function isGlobalRealmScope(realm: unknown): boolean {
+  return typeof realm === 'string' && normalizeSlug(realm) === GLOBAL_REALM_SCOPE;
+}
+
 export function isValidSlug(slug: unknown): slug is string {
-  return typeof slug === 'string' && REALM_SLUG_PATTERN.test(slug);
+  return (
+    typeof slug === 'string' &&
+    REALM_SLUG_PATTERN.test(slug) &&
+    slug !== GLOBAL_REALM_SCOPE
+  );
 }
 
 /** Normalizes and validates a slug, throwing INVALID_ARGUMENT when it is malformed. */
 export function assertValidSlug(slug: unknown): string {
   const normalized = typeof slug === 'string' ? normalizeSlug(slug) : '';
+  if (normalized === GLOBAL_REALM_SCOPE) {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      `Realm slug "${GLOBAL_REALM_SCOPE}" is reserved for the global scope`,
+    );
+  }
   if (!isValidSlug(normalized)) {
     throw new GrpcError(
       status.INVALID_ARGUMENT,
@@ -362,19 +383,35 @@ export function uniquenessQuery(
   return identifierQuery;
 }
 
+type TeamsModeFlags = {
+  enabled?: unknown;
+  realms?: { enabled?: unknown; identityMode?: unknown };
+};
+
 /**
- * Whether a config update moves the identity mode from `isolated` to `shared`. Values are
- * read as stored (not gated on realms being enabled), so a deployment that switches realms
- * off while keeping isolated duplicates cannot go back to shared either. A partial update
- * that does not name `realms.identityMode` keeps the applied value.
+ * Whether a config update moves the identity mode from `isolated` to `shared`, judged on
+ * the computed mode (see computeIdentityMode), not on the stored value. Disabling realms or
+ * teams therefore counts too: the deployment turns shared, so isolated duplicates would
+ * become ambiguous. `previousTeams` is the applied `teams` config and `incomingTeams` the
+ * `teams` section of the update, which may be partial or absent: an absent flag keeps the
+ * applied value.
  */
 export function isIdentityModeRevertTransition(
-  previousTeams: { realms?: { identityMode?: unknown } } | null | undefined,
-  incomingTeams: { realms?: { identityMode?: unknown } } | null | undefined,
+  previousTeams: TeamsModeFlags | null | undefined,
+  incomingTeams: TeamsModeFlags | null | undefined,
 ): boolean {
-  const previous = previousTeams?.realms?.identityMode;
-  const incoming = incomingTeams?.realms?.identityMode ?? previous;
-  return previous === 'isolated' && incoming === 'shared';
+  const merged: TeamsModeFlags = {
+    enabled: incomingTeams?.enabled ?? previousTeams?.enabled,
+    realms: {
+      enabled: incomingTeams?.realms?.enabled ?? previousTeams?.realms?.enabled,
+      identityMode:
+        incomingTeams?.realms?.identityMode ?? previousTeams?.realms?.identityMode,
+    },
+  };
+  return (
+    computeIdentityMode(previousTeams) === 'isolated' &&
+    computeIdentityMode(merged) === 'shared'
+  );
 }
 
 /** Why a config update that returns to shared mode is refused, or null when it may proceed. */

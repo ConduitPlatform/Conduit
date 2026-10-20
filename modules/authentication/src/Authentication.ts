@@ -101,6 +101,7 @@ import {
   identityMode,
   identityModeRevertBlockedMessage,
   invalidateRealmCache,
+  isGlobalRealmScope,
   isIdentityModeRevertTransition,
   isRealmsDisableTransition,
   realmsDisableBlockedMessage,
@@ -328,7 +329,8 @@ export default class Authentication extends ManagedModule<Config> {
    *  - switching the realms feature off while enabled realm teams exist (the "flag off = no
    *    realm data" invariant): demote them first;
    *  - returning the identity mode from isolated to shared while an identifier is held by
-   *    more than one account (identifiers would become ambiguous).
+   *    more than one account (identifiers would become ambiguous). The computed mode decides,
+   *    so switching realms or teams off while isolated is checked the same way.
    * The database is only queried on those transitions.
    */
   async setConfig(
@@ -917,12 +919,16 @@ export default class Authentication extends ManagedModule<Config> {
       password = AuthUtils.randomToken(8);
     }
     try {
-      // a realm scopes the lookup to that realm's accounts. Without one, shared mode looks
-      // the (unique) email up as before; isolated mode refuses an email held by several
-      // accounts, since the password would otherwise go to an arbitrary one
-      const realmCtx = await resolveRealmFromSlug(call.request.realm);
+      // a realm scopes the lookup to that realm's accounts; `realm: 'global'` scopes it to the
+      // accounts without a home realm. Without a realm, shared mode looks the (unique) email
+      // up as before; isolated mode refuses an email held by several accounts, since the
+      // password would otherwise go to an arbitrary one
+      const globalScope = isGlobalRealmScope(call.request.realm);
+      const realmCtx = globalScope
+        ? null
+        : await resolveRealmFromSlug(call.request.realm);
       let user: User | null;
-      if (realmCtx) {
+      if (globalScope || realmCtx) {
         user = await models.User.getInstance().findOne(
           scopedUserQuery({ email }, realmCtx),
         );

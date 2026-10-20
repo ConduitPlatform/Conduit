@@ -39,6 +39,9 @@ import { TokenProvider } from './tokenProvider.js';
 
 const realmRouteErrors = [errors.REALMS_DISABLED, errors.REALM_NOT_FOUND];
 
+/** Accounts read per email by discover; more home realms than this are not listed. */
+const DISCOVER_MAX_HOLDERS = 50;
+
 /** Client routes of the realms feature: discovery, own realms, entering a realm. */
 export class RealmHandlers {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -212,7 +215,11 @@ export class RealmHandlers {
     // a global lookup: in isolated mode the same email may be held by several accounts,
     // each under its own home realm. An unknown email answers like a global account, as it
     // always did, so the answer does not show whether an address is in use.
-    const users = await User.getInstance().findMany({ email });
+    // capped: an address is held by a handful of accounts at most, and the cap bounds the read
+    const users = await User.getInstance().findMany(
+      { email },
+      { limit: DISCOVER_MAX_HOLDERS },
+    );
     const homeRealmIds = users.length > 0 ? users.map(user => user.homeRealm) : [null];
     const slugs: (string | null)[] = [];
     for (const homeRealm of new Set(homeRealmIds.map(id => (id ? String(id) : null)))) {

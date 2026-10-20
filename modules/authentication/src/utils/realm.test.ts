@@ -12,7 +12,9 @@ import {
   computeRealmsEnabled,
   defaultRealmSettings,
   findIdentifierCollisions,
+  GLOBAL_REALM_SCOPE,
   identityModeRevertBlockedMessage,
+  isGlobalRealmScope,
   isIdentityModeRevertTransition,
   evaluateGuestAllowed,
   evaluateRealmAccess,
@@ -127,6 +129,28 @@ describe('slugs', () => {
     assert.equal(assertValidSlug(' Acme '), 'acme');
     assert.throws(() => assertValidSlug('-bad'));
     assert.throws(() => assertValidSlug(undefined));
+  });
+
+  it('reserves the global scope name', () => {
+    assert.equal(GLOBAL_REALM_SCOPE, 'global');
+    assert.equal(isValidSlug('global'), false);
+    assert.equal(isValidSlug('global-corp'), true);
+    assert.throws(() => assertValidSlug(' Global '));
+  });
+});
+
+describe('isGlobalRealmScope', () => {
+  it('matches the global scope name, ignoring case and spaces', () => {
+    assert.equal(isGlobalRealmScope('global'), true);
+    assert.equal(isGlobalRealmScope(' GLOBAL '), true);
+  });
+
+  it('does not match slugs, ids, or absent values', () => {
+    assert.equal(isGlobalRealmScope('acme'), false);
+    assert.equal(isGlobalRealmScope(A), false);
+    assert.equal(isGlobalRealmScope(''), false);
+    assert.equal(isGlobalRealmScope(undefined), false);
+    assert.equal(isGlobalRealmScope(null), false);
   });
 });
 
@@ -1663,8 +1687,9 @@ describe('computeIdentityMode', () => {
 });
 
 describe('isIdentityModeRevertTransition', () => {
-  const isolated = { realms: { identityMode: 'isolated' } };
-  const shared = { realms: { identityMode: 'shared' } };
+  // applied configs with realms and teams on, in the given identity mode
+  const isolated = { enabled: true, realms: { enabled: true, identityMode: 'isolated' } };
+  const shared = { enabled: true, realms: { enabled: true, identityMode: 'shared' } };
 
   it('is true only for isolated -> shared', () => {
     assert.equal(isIdentityModeRevertTransition(isolated, shared), true);
@@ -1673,10 +1698,39 @@ describe('isIdentityModeRevertTransition', () => {
     assert.equal(isIdentityModeRevertTransition(shared, shared), false);
   });
 
-  it('keeps the applied value when the update does not name identityMode', () => {
+  it('is true when realms are disabled while isolated', () => {
+    const update = { realms: { enabled: false } };
+    assert.equal(isIdentityModeRevertTransition(isolated, update), true);
+    assert.equal(
+      isIdentityModeRevertTransition(isolated, {
+        enabled: true,
+        realms: { enabled: false, identityMode: 'isolated' },
+      }),
+      true,
+    );
+  });
+
+  it('is true when teams are disabled while isolated', () => {
+    assert.equal(isIdentityModeRevertTransition(isolated, { enabled: false }), true);
+    assert.equal(
+      isIdentityModeRevertTransition(isolated, {
+        enabled: false,
+        realms: { enabled: true, identityMode: 'isolated' },
+      }),
+      true,
+    );
+  });
+
+  it('is true when the update returns to shared and disables realms together', () => {
+    const update = { realms: { enabled: false, identityMode: 'shared' } };
+    assert.equal(isIdentityModeRevertTransition(isolated, update), true);
+  });
+
+  it('keeps the applied value when the update does not name the flags', () => {
     assert.equal(isIdentityModeRevertTransition(isolated, {}), false);
     assert.equal(isIdentityModeRevertTransition(isolated, { realms: {} }), false);
     assert.equal(isIdentityModeRevertTransition(isolated, undefined), false);
+    assert.equal(isIdentityModeRevertTransition(isolated, null), false);
   });
 
   it('treats an unset previous value as shared', () => {
@@ -1684,12 +1738,20 @@ describe('isIdentityModeRevertTransition', () => {
     assert.equal(isIdentityModeRevertTransition({}, { realms: {} }), false);
   });
 
-  it('applies to the stored value even while realms are off', () => {
+  it('judges the computed mode: a stored isolated value with realms off is shared', () => {
     const realmsOff = {
       enabled: true,
       realms: { enabled: false, identityMode: 'isolated' },
     };
-    assert.equal(isIdentityModeRevertTransition(realmsOff, shared), true);
+    assert.equal(isIdentityModeRevertTransition(realmsOff, shared), false);
+  });
+
+  it('is false when realms are enabled again from off', () => {
+    const realmsOff = {
+      enabled: true,
+      realms: { enabled: false, identityMode: 'isolated' },
+    };
+    assert.equal(isIdentityModeRevertTransition(realmsOff, isolated), false);
   });
 });
 

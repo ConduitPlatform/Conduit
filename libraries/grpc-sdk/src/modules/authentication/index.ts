@@ -74,8 +74,9 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
   }
 
   /**
-   * Sets a new password. `realm` (slug) picks the account when the email is held by several
-   * accounts (isolated identity mode); without it such an email is refused.
+   * Sets a new password. `realm` picks the account when the email is held by several accounts
+   * (isolated identity mode): a realm slug picks that realm's account, `'global'` picks the
+   * account without a home realm. Without it such an email is refused with FAILED_PRECONDITION.
    */
   changePass(
     email: string,

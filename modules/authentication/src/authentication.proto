@@ -30,6 +30,9 @@ message UserCreateByUsernameRequest {
 message UserChangePass {
   string email = 1;
   optional string password = 2;
+  // Realm slug of the account to change, needed when the email is held by several accounts
+  // (isolated identity mode). 'global' names the account without a home realm. Unset: the
+  // deployment-wide lookup, which refuses an email held by several accounts.
   optional string realm = 3;
 }
 

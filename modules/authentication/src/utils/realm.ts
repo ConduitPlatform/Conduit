@@ -104,16 +104,17 @@ const IDENTIFIER_SCAN_SELECT = [
 /**
  * Counts the identifier values held by more than one user, over every account (global and
  * realm). Used by the switch to shared mode, which is refused while this is not zero. Pages
- * through `User` in id order and reads from the primary.
+ * through `User` in id order with a keyset cursor (`_id > last`), so a page does not shift
+ * when users are written during the scan, and reads from the primary.
  */
 export async function countIdentifierCollisions(): Promise<IdentifierCollisionCounts> {
   const counter = createIdentifierCollisionCounter();
-  for (let skip = 0; ; skip += IDENTIFIER_SCAN_PAGE_SIZE) {
+  let lastId: string | undefined;
+  for (;;) {
     const page = await User.getInstance().findMany(
-      {},
+      lastId === undefined ? {} : { _id: { $gt: lastId } },
       {
         select: IDENTIFIER_SCAN_SELECT,
-        skip,
         limit: IDENTIFIER_SCAN_PAGE_SIZE,
         sort: { _id: 1 },
         readPreference: 'primary',
@@ -121,6 +122,7 @@ export async function countIdentifierCollisions(): Promise<IdentifierCollisionCo
     );
     counter.add(page);
     if (page.length < IDENTIFIER_SCAN_PAGE_SIZE) break;
+    lastId = page[page.length - 1]._id;
   }
   return counter.result();
 }
