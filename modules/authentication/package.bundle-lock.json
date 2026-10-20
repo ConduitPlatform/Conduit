@@ -37,6 +37,7 @@
         "thirty-two": "1.0.2",
         "uuid": "^14.0.1",
         "winston": "^3.19.0",
+        "winston-daily-rotate-file": "^5.0.0",
         "winston-loki": "^6.1.7"
       },
       "engines": {
@@ -1203,6 +1204,15 @@
       "integrity": "sha512-OP2IUU6HeYKJi3i0z4A19kHMQoLVs4Hc+DPqqxI2h/DPZHTm/vjsfC6P0b4jCMy14XizLBqvndQ+UilD7707Jw==",
       "license": "MIT"
     },
+    "node_modules/file-stream-rotator": {
+      "version": "0.6.1",
+      "resolved": "https://registry.npmjs.org/file-stream-rotator/-/file-stream-rotator-0.6.1.tgz",
+      "integrity": "sha512-u+dBid4PvZw17PmDeRcNOtCP9CCK/9lRN2w+r1xIS7yOL9JFrIBKTvrYsxT4P0pGtThYTn++QS5ChHaUov3+zQ==",
+      "license": "MIT",
+      "dependencies": {
+        "moment": "^2.29.1"
+      }
+    },
     "node_modules/finalhandler": {
       "version": "2.1.1",
       "resolved": "https://registry.npmjs.org/finalhandler/-/finalhandler-2.1.1.tgz",
@@ -1920,6 +1930,15 @@
         "node": "> v0.6.0"
       }
     },
+    "node_modules/object-hash": {
+      "version": "3.0.0",
+      "resolved": "https://registry.npmjs.org/object-hash/-/object-hash-3.0.0.tgz",
+      "integrity": "sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 6"
+      }
+    },
     "node_modules/object-inspect": {
       "version": "1.13.4",
       "resolved": "https://registry.npmjs.org/object-inspect/-/object-inspect-1.13.4.tgz",
@@ -2586,6 +2605,24 @@
       },
       "engines": {
         "node": ">= 12.0.0"
+      }
+    },
+    "node_modules/winston-daily-rotate-file": {
+      "version": "5.0.0",
+      "resolved": "https://registry.npmjs.org/winston-daily-rotate-file/-/winston-daily-rotate-file-5.0.0.tgz",
+      "integrity": "sha512-JDjiXXkM5qvwY06733vf09I2wnMXpZEhxEVOSPenZMii+g7pcDcTBt2MRugnoi8BwVSuCT2jfRXBUy+n1Zz/Yw==",
+      "license": "MIT",
+      "dependencies": {
+        "file-stream-rotator": "^0.6.1",
+        "object-hash": "^3.0.0",
+        "triple-beam": "^1.4.1",
+        "winston-transport": "^4.7.0"
+      },
+      "engines": {
+        "node": ">=8"
+      },
+      "peerDependencies": {
+        "winston": "^3"
       }
     },
     "node_modules/winston-loki": {
