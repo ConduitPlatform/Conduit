@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   applyOAuthSecretsUpdate,
   evaluateLinkEligibility,
+  isAccountLinkOffered,
   type LinkEligibilityInput,
   assertGuestAllowed,
   assertRealmId,
@@ -2471,5 +2472,45 @@ describe('evaluateLinkEligibility', () => {
       evaluateLinkEligibility(link({ sourceRealm: B, targetInbound: false })),
       { allowed: false, error: 'LINK_CONFLICT' },
     );
+  });
+});
+
+describe('isAccountLinkOffered', () => {
+  // a registration or sign-up at B (inbound linking on) that found an account of A
+  const offered = {
+    mode: 'shared' as const,
+    realmId: B,
+    inboundLinking: true,
+    holderHomeRealm: A,
+    holderIsGuest: false,
+  };
+
+  it('offers the link of an account of another realm in shared mode', () => {
+    assert.equal(isAccountLinkOffered(offered), true);
+  });
+
+  it('offers the link of a global account to a realm', () => {
+    assert.equal(isAccountLinkOffered({ ...offered, holderHomeRealm: null }), true);
+  });
+
+  it('never offers the link in isolated mode, which creates the realm account', () => {
+    assert.equal(isAccountLinkOffered({ ...offered, mode: 'isolated' }), false);
+  });
+
+  it('does not offer it when the target takes no inbound links', () => {
+    assert.equal(isAccountLinkOffered({ ...offered, inboundLinking: false }), false);
+  });
+
+  it('does not offer it for a duplicate at home in the realm', () => {
+    assert.equal(isAccountLinkOffered({ ...offered, holderHomeRealm: B }), false);
+  });
+
+  it('does not offer it for an account that is already a guest of the realm', () => {
+    assert.equal(isAccountLinkOffered({ ...offered, holderIsGuest: true }), false);
+  });
+
+  it('does not offer it without a realm (global registration)', () => {
+    assert.equal(isAccountLinkOffered({ ...offered, realmId: null }), false);
+    assert.equal(isAccountLinkOffered({ ...offered, realmId: undefined }), false);
   });
 });

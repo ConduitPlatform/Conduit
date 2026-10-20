@@ -64,6 +64,7 @@ import {
   rollbackUserOnFailure,
 } from '../realmRequest.js';
 import {
+  accountLinkOffered,
   assertIdentifierFreeForUser,
   assertRealmPrincipalFree,
   identifierQuery,
@@ -520,11 +521,18 @@ export abstract class OAuth2<
       // isolated mode: the address may belong to another realm's account, so the request
       // realm gets its own account (the lookup above already missed)
       if (isNil(user) && (realmCtx || realmsEnabled()) && identityMode() === 'shared') {
-        // email is unique across realms: the address belongs to a user of another one
+        // email is unique across realms: the address belongs to a user of another one, which
+        // the realm may take in as a guest when it accepts linked accounts
         const otherRealmUser = await User.getInstance().findOne({
           email: payload.email,
         });
-        if (otherRealmUser) throw new ModuleError(errors.REALM_ACCESS_DENIED);
+        if (otherRealmUser) {
+          throw new ModuleError(
+            (await accountLinkOffered(realmCtx, otherRealmUser))
+              ? errors.ACCOUNT_LINK_AVAILABLE
+              : errors.REALM_ACCESS_DENIED,
+          );
+        }
       }
     } else if (
       payload.hasOwnProperty('id') &&
@@ -541,11 +549,17 @@ export abstract class OAuth2<
       // isolated mode: as for email, the request realm gets its own account
       if (isNil(user) && (realmCtx || realmsEnabled()) && identityMode() === 'shared') {
         // provider identities are unique across realms: the id belongs to a user of
-        // another one
+        // another one, which the realm may take in as a guest (see the email branch)
         const otherRealmUser = await User.getInstance().findOne({
           [this.providerName + '.id']: payload.id,
         });
-        if (otherRealmUser) throw new ModuleError(errors.REALM_ACCESS_DENIED);
+        if (otherRealmUser) {
+          throw new ModuleError(
+            (await accountLinkOffered(realmCtx, otherRealmUser))
+              ? errors.ACCOUNT_LINK_AVAILABLE
+              : errors.REALM_ACCESS_DENIED,
+          );
+        }
       }
     } else {
       throw new GrpcError(

@@ -664,6 +664,29 @@ export function findBatchPrincipalClashes(
   return clashing;
 }
 
+/**
+ * Whether a registration or an OAuth sign-up at realm R, which found an existing account
+ * holding the identifier, offers the link of that account instead of refusing. Shared mode
+ * only: the identifier is unique deployment-wide, so the account exists elsewhere and R may take
+ * it in as a guest. Not offered when R takes no inbound links, when the account is home at R
+ * (a plain duplicate), or when it is already a guest of R (the link exists already).
+ * Isolated mode never offers it: the registration creates R's own account.
+ */
+export function isAccountLinkOffered(params: {
+  mode: IdentityMode;
+  realmId: string | null | undefined;
+  inboundLinking: boolean;
+  holderHomeRealm: unknown;
+  holderIsGuest: boolean;
+}): boolean {
+  if (params.mode !== 'shared') return false;
+  const realm = params.realmId ? String(params.realmId) : null;
+  if (!realm || !params.inboundLinking) return false;
+  const home = params.holderHomeRealm ? String(params.holderHomeRealm) : null;
+  if (home === realm) return false;
+  return !params.holderIsGuest;
+}
+
 // ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------

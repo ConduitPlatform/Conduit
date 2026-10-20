@@ -13,6 +13,7 @@ import {
 import {
   assertGuestAllowed,
   BoundedTtlCache,
+  isAccountLinkOffered,
   buildEffectiveSettings,
   collectTeamChain,
   computeIdentityMode,
@@ -160,6 +161,36 @@ export async function assertRealmPrincipalsFree(
       `${clashing.size} user(s) hold an identifier that another principal of this realm holds: ${[...clashing].join(', ')}`,
     );
   }
+}
+
+/**
+ * Whether a registration or OAuth sign-up at `realmCtx` that found the existing account
+ * `holder` offers linking it (see isAccountLinkOffered). The guest membership is read only when
+ * the answer depends on it. Null realm context (global) never offers it.
+ */
+export async function accountLinkOffered(
+  realmCtx: RealmContext | null | undefined,
+  holder: { _id: unknown; homeRealm?: unknown },
+): Promise<boolean> {
+  if (!realmCtx || identityMode() !== 'shared') return false;
+  const realmId = String(realmCtx.team._id);
+  const holderHome = holder.homeRealm ? String(holder.homeRealm) : null;
+  const inboundLinking = realmCtx.effective.linking.inbound;
+  const mayOffer = inboundLinking && holderHome !== realmId;
+  const holderIsGuest = mayOffer
+    ? !!(await RealmMembership.getInstance().findOne({
+        user: String(holder._id),
+        realm: realmId,
+        membershipType: 'guest',
+      }))
+    : false;
+  return isAccountLinkOffered({
+    mode: 'shared',
+    realmId,
+    inboundLinking,
+    holderHomeRealm: holder.homeRealm,
+    holderIsGuest,
+  });
 }
 
 /**

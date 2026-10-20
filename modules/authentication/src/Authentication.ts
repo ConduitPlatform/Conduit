@@ -95,6 +95,7 @@ import {
 } from './handlers/realmRequest.js';
 import {
   assertNoNestedRealm,
+  accountLinkOffered,
   countIdentifierCollisions,
   deleteUserRealmMemberships,
   getRealmSlugById,
@@ -117,6 +118,7 @@ import {
   revokeOrphanedGuests,
 } from './utils/teamRealm.js';
 import { RealmsAdmin } from './admin/realm.js';
+import { errors } from './errors.js';
 import {
   assertTeamId,
   assertUserId,
@@ -648,6 +650,11 @@ export default class Authentication extends ManagedModule<Config> {
         identifierQuery('email', email),
       ]);
       if (user || guestHolder) {
+        // shared mode: the address belongs to an account of another realm, which may be
+        // connected to this realm instead (the error carries the conduit code)
+        if (user && (await accountLinkOffered(realmCtx, user))) {
+          throw new ModuleError(errors.ACCOUNT_LINK_AVAILABLE);
+        }
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
       AuthUtils.assertValidEmail(email);

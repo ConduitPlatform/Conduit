@@ -61,6 +61,7 @@ import {
   discoverWithPassword,
 } from './realmDiscovery.js';
 import {
+  accountLinkOffered,
   assertIdentifierFreeForUser,
   assertRealmPrincipalFree,
   identifierQuery,
@@ -99,6 +100,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         middlewares: localRouteMiddleware,
         errors: [
           errors.USER_EXISTS,
+          errors.ACCOUNT_LINK_AVAILABLE,
           errors.INVITATION_REQUIRED,
           errors.INVALID_INVITATION,
           errors.EMAIL_NOT_ALLOWED,
@@ -375,11 +377,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
     let user: User | null = await User.getInstance().findOne(
       uniqueIdentifierQuery({ email }, realmIdOf(realmCtx)),
     );
-    if (!isNil(user))
+    if (!isNil(user)) {
+      // shared mode: the address belongs to an account of another realm, which may be
+      // connected to this realm instead of a second one being refused
+      const linkable = await accountLinkOffered(realmCtx, user);
       throw new ModuleError(
-        errors.USER_EXISTS,
+        linkable ? errors.ACCOUNT_LINK_AVAILABLE : errors.USER_EXISTS,
         `User with email ${email} already exists`,
       );
+    }
     if (realmCtx) {
       // a linked guest of the realm holding the address is a principal there too
       await assertRealmPrincipalFree(

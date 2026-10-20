@@ -60,6 +60,7 @@ export function isRegistrationNotAllowedError(err: unknown): boolean {
 export const OAUTH_REDIRECTABLE_ERRORS = [
   errors.REGISTRATION_NOT_ALLOWED,
   errors.REALM_ACCESS_DENIED,
+  errors.ACCOUNT_LINK_AVAILABLE,
   errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
   errors.GUESTS_NOT_ALLOWED,
   errors.TWO_FA_REQUIRED_FOR_REALM,
