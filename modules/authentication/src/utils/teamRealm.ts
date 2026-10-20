@@ -21,6 +21,7 @@ import {
   evaluateGuestAllowed,
   grantRealmMembership,
   MAX_TEAM_DEPTH,
+  identityMode,
   realmsEnabled,
   resolveTeamRealm,
   revokeRealmMembership,
@@ -330,7 +331,17 @@ export async function assertInviteeAllowed(
   const realmTeam = await resolveTeamRealm(teamId);
   if (!realmTeam) return;
   const realmId = String(realmTeam._id);
-  const invitee = await User.getInstance().findOne({ email: email.toLowerCase() });
+  const emailQuery = { email: email.toLowerCase() };
+  let invitee: User | null;
+  if (identityMode() === 'isolated') {
+    // several accounts may hold the address, one per home realm: which one is invited is
+    // only known at accept, which enforces the policy
+    const holders = await User.getInstance().findMany(emailQuery, { limit: 2 });
+    if (holders.length > 1) return;
+    invitee = holders[0] ?? null;
+  } else {
+    invitee = await User.getInstance().findOne(emailQuery);
+  }
   if (!invitee) return;
   // invites are a client path: an existing user is never re-homed, so never a home user
   const { type } = classifyRealmMember(invitee.homeRealm, realmId, 'client');

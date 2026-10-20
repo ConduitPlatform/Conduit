@@ -8,8 +8,12 @@ import {
   BoundedTtlCache,
   buildEffectiveSettings,
   collectTeamChain,
+  computeIdentityMode,
   computeRealmsEnabled,
   defaultRealmSettings,
+  findIdentifierCollisions,
+  identityModeRevertBlockedMessage,
+  isIdentityModeRevertTransition,
   evaluateGuestAllowed,
   evaluateRealmAccess,
   hasNestedRealmViolation,
@@ -29,6 +33,7 @@ import {
   toFullLeafStrategies,
   tokenAssurance,
   unresolvedRealmError,
+  uniquenessQuery,
   withHomeScope,
   type RealmAccessInput,
   type RealmPolicies,
@@ -1580,5 +1585,265 @@ describe('isRealmsDisableTransition / realmsDisableBlockedMessage', () => {
       realmsDisableBlockedMessage(3),
       '3 enabled realm(s) exist; demote them before disabling realms',
     );
+  });
+});
+
+describe('uniquenessQuery', () => {
+  const identifier = { email: 'a@example.com' };
+
+  it('returns the identifier query itself in shared mode, whatever the realm', () => {
+    assert.equal(uniquenessQuery(identifier, null, 'shared'), identifier);
+    assert.equal(uniquenessQuery(identifier, A, 'shared'), identifier);
+  });
+
+  it('scopes to the home realm in isolated mode', () => {
+    assert.deepEqual(uniquenessQuery(identifier, A, 'isolated'), {
+      email: 'a@example.com',
+      $and: [{ homeRealm: A }],
+    });
+  });
+
+  it('scopes to global users in isolated mode when there is no realm', () => {
+    assert.deepEqual(uniquenessQuery(identifier, null, 'isolated'), {
+      email: 'a@example.com',
+      $and: [{ $or: [{ homeRealm: null }, { homeRealm: { $exists: false } }] }],
+    });
+  });
+
+  it('keeps the caller $and clauses in isolated mode', () => {
+    const query = { email: 'a', $and: [{ active: true }] };
+    assert.deepEqual(uniquenessQuery(query, B, 'isolated').$and, [
+      { active: true },
+      { homeRealm: B },
+    ]);
+  });
+
+  it('does not mutate the input query', () => {
+    const query = { email: 'a' };
+    uniquenessQuery(query, A, 'isolated');
+    assert.deepEqual(query, { email: 'a' });
+  });
+});
+
+describe('computeIdentityMode', () => {
+  it('is shared while realms are off, whatever identityMode holds', () => {
+    assert.equal(
+      computeIdentityMode({
+        enabled: true,
+        realms: { enabled: false, identityMode: 'isolated' },
+      }),
+      'shared',
+    );
+    assert.equal(
+      computeIdentityMode({
+        enabled: false,
+        realms: { enabled: true, identityMode: 'isolated' },
+      }),
+      'shared',
+    );
+    assert.equal(computeIdentityMode(null), 'shared');
+  });
+
+  it('reads isolated only when realms are on and the value says so', () => {
+    const on = { enabled: true, realms: { enabled: true } };
+    assert.equal(
+      computeIdentityMode({ ...on, realms: { enabled: true, identityMode: 'isolated' } }),
+      'isolated',
+    );
+    assert.equal(
+      computeIdentityMode({ ...on, realms: { enabled: true, identityMode: 'shared' } }),
+      'shared',
+    );
+    assert.equal(
+      computeIdentityMode({ ...on, realms: { enabled: true, identityMode: 'other' } }),
+      'shared',
+    );
+    assert.equal(computeIdentityMode(on), 'shared');
+  });
+});
+
+describe('isIdentityModeRevertTransition', () => {
+  const isolated = { realms: { identityMode: 'isolated' } };
+  const shared = { realms: { identityMode: 'shared' } };
+
+  it('is true only for isolated -> shared', () => {
+    assert.equal(isIdentityModeRevertTransition(isolated, shared), true);
+    assert.equal(isIdentityModeRevertTransition(shared, isolated), false);
+    assert.equal(isIdentityModeRevertTransition(isolated, isolated), false);
+    assert.equal(isIdentityModeRevertTransition(shared, shared), false);
+  });
+
+  it('keeps the applied value when the update does not name identityMode', () => {
+    assert.equal(isIdentityModeRevertTransition(isolated, {}), false);
+    assert.equal(isIdentityModeRevertTransition(isolated, { realms: {} }), false);
+    assert.equal(isIdentityModeRevertTransition(isolated, undefined), false);
+  });
+
+  it('treats an unset previous value as shared', () => {
+    assert.equal(isIdentityModeRevertTransition(undefined, shared), false);
+    assert.equal(isIdentityModeRevertTransition({}, { realms: {} }), false);
+  });
+
+  it('applies to the stored value even while realms are off', () => {
+    const realmsOff = {
+      enabled: true,
+      realms: { enabled: false, identityMode: 'isolated' },
+    };
+    assert.equal(isIdentityModeRevertTransition(realmsOff, shared), true);
+  });
+});
+
+describe('identityModeRevertBlockedMessage', () => {
+  it('allows the switch when nothing is held twice', () => {
+    assert.equal(identityModeRevertBlockedMessage(0), null);
+    assert.equal(identityModeRevertBlockedMessage(-1), null);
+  });
+
+  it('names the number of duplicated identifiers', () => {
+    assert.equal(
+      identityModeRevertBlockedMessage(3),
+      '3 identifier(s) are held by more than one account; identity mode cannot return to shared',
+    );
+  });
+});
+
+describe('findIdentifierCollisions', () => {
+  it('matches emails case-insensitively', () => {
+    const result = findIdentifierCollisions([
+      [
+        { _id: '1', email: 'A@Example.com' },
+        { _id: '2', email: 'a@example.com' },
+      ],
+    ]);
+    assert.equal(result.byKind.email, 1);
+    assert.equal(result.total, 1);
+  });
+
+  it('matches usernames case-insensitively and wallets in lowercase', () => {
+    const result = findIdentifierCollisions([
+      [
+        { _id: '1', username: 'Alice', metamask: { ethPublicAddress: '0xABC' } },
+        { _id: '2', username: 'alice', metamask: { ethPublicAddress: '0xabc' } },
+      ],
+    ]);
+    assert.equal(result.byKind.username, 1);
+    assert.equal(result.byKind.metamask, 1);
+    assert.equal(result.total, 2);
+  });
+
+  it('matches phone numbers exactly', () => {
+    const result = findIdentifierCollisions([
+      [
+        { _id: '1', phoneNumber: '+30123' },
+        { _id: '2', phoneNumber: '+30 123' },
+        { _id: '3', phoneNumber: '+30123' },
+      ],
+    ]);
+    assert.equal(result.byKind.phoneNumber, 1);
+  });
+
+  it('ignores null, empty and blank values', () => {
+    const result = findIdentifierCollisions([
+      [
+        { _id: '1', email: null, phoneNumber: '', username: '   ', metamask: null },
+        {
+          _id: '2',
+          email: '',
+          phoneNumber: null,
+          username: '   ',
+          metamask: { ethPublicAddress: '' },
+        },
+        { _id: '3', email: undefined, google: { id: null } },
+        { _id: '4', google: { id: '' } },
+      ],
+    ]);
+    assert.equal(result.total, 0);
+  });
+
+  it('keeps identifier kinds apart', () => {
+    const sameText = findIdentifierCollisions([
+      [
+        { _id: '1', email: 'x' },
+        { _id: '2', username: 'x' },
+      ],
+    ]);
+    assert.equal(sameText.total, 0);
+  });
+
+  it('counts OAuth ids per provider', () => {
+    const samePerProvider = findIdentifierCollisions([
+      [
+        { _id: '1', google: { id: 'g1' } },
+        { _id: '2', google: { id: 'g1' } },
+      ],
+    ]);
+    assert.equal(samePerProvider.byKind['oauth.google'], 1);
+    assert.equal(samePerProvider.total, 1);
+
+    const otherProvider = findIdentifierCollisions([
+      [
+        { _id: '1', github: { id: 'g1' } },
+        { _id: '2', google: { id: 'g1' } },
+      ],
+    ]);
+    assert.equal(otherProvider.total, 0);
+  });
+
+  it('counts global and realm users together', () => {
+    const result = findIdentifierCollisions([
+      [
+        { _id: '1', email: 'a@x.io' },
+        { _id: '2', email: 'a@x.io', homeRealm: A },
+        { _id: '3', email: 'a@x.io', homeRealm: B },
+        { _id: '4', email: 'b@x.io', homeRealm: A },
+      ],
+    ]);
+    assert.equal(result.byKind.email, 1);
+    assert.equal(result.total, 1);
+  });
+
+  it('counts a value once however many users hold it', () => {
+    const result = findIdentifierCollisions([
+      [
+        { _id: '1', email: 'a' },
+        { _id: '2', email: 'a' },
+        { _id: '3', email: 'a' },
+      ],
+      [
+        { _id: '4', email: 'b' },
+        { _id: '5', email: 'b' },
+      ],
+    ]);
+    assert.equal(result.byKind.email, 2);
+    assert.equal(result.total, 2);
+  });
+
+  it('finds collisions across batches', () => {
+    const result = findIdentifierCollisions([
+      [{ _id: '1', email: 'a' }],
+      [{ _id: '2', email: 'A' }],
+    ]);
+    assert.equal(result.total, 1);
+  });
+
+  it('does not count one user twice when batches overlap', () => {
+    const result = findIdentifierCollisions([
+      [{ _id: '1', email: 'a' }],
+      [{ _id: '1', email: 'a' }],
+    ]);
+    assert.equal(result.total, 0);
+  });
+
+  it('counts users without an id as distinct holders', () => {
+    const result = findIdentifierCollisions([[{ email: 'a' }, { email: 'a' }]]);
+    assert.equal(result.total, 1);
+  });
+
+  it('reports every kind, zero when clean', () => {
+    const result = findIdentifierCollisions([[{ _id: '1', email: 'a' }]]);
+    assert.equal(result.total, 0);
+    assert.equal(result.byKind.email, 0);
+    assert.equal(result.byKind.phoneNumber, 0);
+    assert.equal(result.byKind['oauth.apple'], 0);
   });
 });

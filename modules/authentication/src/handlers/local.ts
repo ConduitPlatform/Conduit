@@ -52,6 +52,7 @@ import {
   scopedUserQuery,
 } from './realmRequest.js';
 import { anyRealmEnables } from '../utils/strategyRealms.js';
+import { assertIdentifierFreeForUser, uniqueIdentifierQuery } from '../utils/realm.js';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -356,7 +357,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
     AuthUtils.assertValidEmail(email, 'module');
 
-    let user: User | null = await User.getInstance().findOne({ email });
+    let user: User | null = await User.getInstance().findOne(
+      uniqueIdentifierQuery({ email }, realmIdOf(realmCtx)),
+    );
     if (!isNil(user))
       throw new ModuleError(
         errors.USER_EXISTS,
@@ -670,10 +673,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
       );
     }
     AuthUtils.assertValidEmail(newEmail, 'module');
-    const dupEmailUser = await User.getInstance().findOne({ email: newEmail });
-    if (dupEmailUser) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
-    }
+    await assertIdentifierFreeForUser(
+      user,
+      { email: newEmail },
+      'Email address already taken',
+    );
 
     if (config.local.verification.required) {
       const verificationToken: Token | void = await AuthUtils.createToken(

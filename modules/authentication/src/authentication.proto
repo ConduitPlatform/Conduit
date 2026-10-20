@@ -30,6 +30,7 @@ message UserCreateByUsernameRequest {
 message UserChangePass {
   string email = 1;
   optional string password = 2;
+  optional string realm = 3;
 }
 
 message UserDeleteRequest {

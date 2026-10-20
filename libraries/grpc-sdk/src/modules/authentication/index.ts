@@ -73,8 +73,16 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     return this.client!.anonymousUserCreate({ clientId, realm });
   }
 
-  changePass(email: string, password?: string): Promise<UserCreateResponse> {
-    return this.client!.changePass({ email, password });
+  /**
+   * Sets a new password. `realm` (slug) picks the account when the email is held by several
+   * accounts (isolated identity mode); without it such an email is refused.
+   */
+  changePass(
+    email: string,
+    password?: string,
+    realm?: string,
+  ): Promise<UserCreateResponse> {
+    return this.client!.changePass({ email, password, realm });
   }
 
   getTeam(teamId: string): Promise<Team> {

@@ -22,7 +22,7 @@ import {
 import { Config } from '../config/index.js';
 import { ALT_STRATEGY_AUTH } from '../constants/index.js';
 import { errors } from '../errors.js';
-import { realmsEnabled } from '../utils/realm.js';
+import { identityMode, realmsEnabled } from '../utils/realm.js';
 import {
   assertGlobalStrategyAvailable,
   assertStrategyEnabledForRealm,
@@ -125,11 +125,12 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     }
 
     const nonce = uuid();
-    if (realmCtx || realmsEnabled()) {
-      // Addresses are unique across realms. A wallet that already belongs to a user of
-      // another realm gets a throw-away nonce and nothing is created: addresses are
-      // public, so this reveals nothing, and `authenticate` then fails through the
-      // normal "No user found" path because the scoped lookup does not find the user.
+    // Shared mode only: addresses are unique across realms. A wallet that already belongs to
+    // a user of another realm gets a throw-away nonce and nothing is created: addresses are
+    // public, so this reveals nothing, and `authenticate` then fails through the normal "No
+    // user found" path because the scoped lookup does not find the user. In isolated mode
+    // the scoped miss above creates the placeholder in the request realm, as for a new address.
+    if ((realmCtx || realmsEnabled()) && identityMode() === 'shared') {
       const otherRealmUser = await User.getInstance().findOne({
         'metamask.ethPublicAddress': normalizedEthPublicAddress,
       } as Query<User>);

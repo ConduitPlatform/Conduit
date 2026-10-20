@@ -36,6 +36,16 @@ export default {
         format: 'Boolean',
         default: false,
       },
+      identityMode: {
+        doc: "'shared': identifiers (email, phone, username, wallet, OAuth id) are unique across the deployment. 'isolated': they are unique per home realm. Returning to 'shared' is refused while any identifier is held by more than one account",
+        format: ['shared', 'isolated'],
+        default: 'shared',
+      },
+      discoveryLogin: {
+        doc: 'Allows login routes to discover the realms holding an account with the given credentials (declared for the account linking feature)',
+        format: 'Boolean',
+        default: false,
+      },
     },
     invites: {
       enabled: {

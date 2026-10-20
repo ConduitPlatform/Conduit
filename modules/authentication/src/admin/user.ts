@@ -13,11 +13,16 @@ import { RealmMembership, User } from '../models/index.js';
 import escapeStringRegexp from 'escape-string-regexp';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
-import { grantHomeMembership, homeRealmFields } from '../handlers/realmRequest.js';
+import {
+  grantHomeMembership,
+  homeRealmFields,
+  realmIdOf,
+} from '../handlers/realmRequest.js';
 import {
   deleteUserRealmMemberships,
   realmsEnabled,
   resolveRealmById,
+  uniqueIdentifierQuery,
   withHomeScope,
 } from '../utils/realm.js';
 
@@ -111,7 +116,10 @@ export class UserAdmin {
       realmCtx = await resolveRealmById(String(homeRealm));
     }
 
-    let user: User | null = await User.getInstance().findOne(query);
+    // isolated mode: the identifier only has to be free under the new user's home realm
+    let user: User | null = await User.getInstance().findOne(
+      uniqueIdentifierQuery(query, realmIdOf(realmCtx)),
+    );
     if (!isNil(user)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
     }
@@ -153,7 +161,10 @@ export class UserAdmin {
       );
     }
     if (user.email !== email) {
-      const duplicateEmail: User | null = await User.getInstance().findOne({ email });
+      // isolated mode: scoped to the target user's home realm
+      const duplicateEmail: User | null = await User.getInstance().findOne(
+        uniqueIdentifierQuery({ email }, user.homeRealm ? String(user.homeRealm) : null),
+      );
       if (!isNil(duplicateEmail)) {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Email already exists');
       }

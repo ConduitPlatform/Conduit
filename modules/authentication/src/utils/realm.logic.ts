@@ -323,6 +323,182 @@ export function withHomeScope(
 }
 
 // ---------------------------------------------------------------------------
+// Identity mode
+// ---------------------------------------------------------------------------
+
+/**
+ * `shared`: identifiers are unique across the deployment (global users and every realm
+ * share one namespace). `isolated`: identifiers are unique per home realm, global users
+ * forming their own scope.
+ */
+export type IdentityMode = 'shared' | 'isolated';
+
+/**
+ * The identity mode an applied `teams` config means. With realms off the mode is always
+ * `shared`, whatever `realms.identityMode` holds, because no realm can own an identity.
+ */
+export function computeIdentityMode(
+  teams:
+    | { enabled?: unknown; realms?: { enabled?: unknown; identityMode?: unknown } }
+    | null
+    | undefined,
+): IdentityMode {
+  if (!computeRealmsEnabled(teams)) return 'shared';
+  return teams?.realms?.identityMode === 'isolated' ? 'isolated' : 'shared';
+}
+
+/**
+ * The query a uniqueness check of an identifier must run. In shared mode it is the query
+ * itself (the check is deployment-wide, so `realmId` is ignored). In isolated mode it is
+ * scoped to the home realm (`null` = global users), so the same identifier may exist under
+ * another home realm.
+ */
+export function uniquenessQuery(
+  identifierQuery: Indexable,
+  realmId: string | null | undefined,
+  mode: IdentityMode,
+): Indexable {
+  if (mode === 'isolated') return withHomeScope(identifierQuery, realmId);
+  return identifierQuery;
+}
+
+/**
+ * Whether a config update moves the identity mode from `isolated` to `shared`. Values are
+ * read as stored (not gated on realms being enabled), so a deployment that switches realms
+ * off while keeping isolated duplicates cannot go back to shared either. A partial update
+ * that does not name `realms.identityMode` keeps the applied value.
+ */
+export function isIdentityModeRevertTransition(
+  previousTeams: { realms?: { identityMode?: unknown } } | null | undefined,
+  incomingTeams: { realms?: { identityMode?: unknown } } | null | undefined,
+): boolean {
+  const previous = previousTeams?.realms?.identityMode;
+  const incoming = incomingTeams?.realms?.identityMode ?? previous;
+  return previous === 'isolated' && incoming === 'shared';
+}
+
+/** Why a config update that returns to shared mode is refused, or null when it may proceed. */
+export function identityModeRevertBlockedMessage(collisionCount: number): string | null {
+  if (!(collisionCount > 0)) return null;
+  return `${collisionCount} identifier(s) are held by more than one account; identity mode cannot return to shared`;
+}
+
+/** Identifier kinds that shared mode keeps unique. OAuth ids are keyed per provider. */
+export type IdentifierKind =
+  'email' | 'phoneNumber' | 'username' | 'metamask' | `oauth.${RealmOAuthProviderKey}`;
+
+export const IDENTIFIER_KINDS: readonly IdentifierKind[] = [
+  'email',
+  'phoneNumber',
+  'username',
+  'metamask',
+  ...REALM_OAUTH_PROVIDERS.map(provider => `oauth.${provider}` as IdentifierKind),
+];
+
+/**
+ * The identifier fields of a user as read by the collision scan. Only these fields are
+ * selected; `homeRealm` is carried for diagnostics but does not change the result: a
+ * collision is a collision in shared mode whatever realm the holders belong to.
+ */
+export type IdentifierUser = {
+  _id?: unknown;
+  homeRealm?: unknown;
+  email?: unknown;
+  phoneNumber?: unknown;
+  username?: unknown;
+  metamask?: { ethPublicAddress?: unknown } | null;
+} & { [provider in RealmOAuthProviderKey]?: { id?: unknown } | null };
+
+export type IdentifierCollisionCounts = {
+  /** Sum of `byKind`: distinct values held by more than one user, over all kinds. */
+  total: number;
+  byKind: Record<IdentifierKind, number>;
+};
+
+export type IdentifierCollisionCounter = {
+  /** Adds one batch of users. Batches may overlap; a user is counted once per value. */
+  add(users: readonly IdentifierUser[]): void;
+  result(): IdentifierCollisionCounts;
+};
+
+/** Case-insensitive kinds are normalized the way the registration paths store them. */
+const CASE_INSENSITIVE_KINDS: ReadonlySet<IdentifierKind> = new Set<IdentifierKind>([
+  'email',
+  'username',
+  'metamask',
+]);
+
+/** The non-empty, normalized identifier values a user holds. */
+function identifierValuesOf(user: IdentifierUser): Array<[IdentifierKind, string]> {
+  const candidates: Array<[IdentifierKind, unknown]> = [
+    ['email', user.email],
+    ['phoneNumber', user.phoneNumber],
+    ['username', user.username],
+    ['metamask', user.metamask?.ethPublicAddress],
+    ...REALM_OAUTH_PROVIDERS.map((provider): [IdentifierKind, unknown] => [
+      `oauth.${provider}`,
+      user[provider]?.id,
+    ]),
+  ];
+  const values: Array<[IdentifierKind, string]> = [];
+  for (const [kind, raw] of candidates) {
+    if (typeof raw !== 'string' || raw.trim() === '') continue;
+    values.push([kind, CASE_INSENSITIVE_KINDS.has(kind) ? raw.toLowerCase() : raw]);
+  }
+  return values;
+}
+
+/**
+ * Incremental collision detection for the switch to shared mode. Feed it the users in
+ * batches (the IO scan does this) and read the result once. Holders are tracked by `_id`,
+ * so a user that a concurrent write makes appear in two pages is still counted once.
+ */
+export function createIdentifierCollisionCounter(): IdentifierCollisionCounter {
+  // "kind\0value" -> ids of the users holding it
+  const holders = new Map<string, Set<string>>();
+  let anonymousHolders = 0;
+  return {
+    add(users) {
+      for (const user of users) {
+        const holderId =
+          user._id === undefined || user._id === null
+            ? `#${anonymousHolders++}`
+            : String(user._id);
+        for (const [kind, value] of identifierValuesOf(user)) {
+          const key = `${kind}\u0000${value}`;
+          let ids = holders.get(key);
+          if (!ids) {
+            ids = new Set<string>();
+            holders.set(key, ids);
+          }
+          ids.add(holderId);
+        }
+      }
+    },
+    result() {
+      const byKind = Object.fromEntries(
+        IDENTIFIER_KINDS.map(kind => [kind, 0]),
+      ) as Record<IdentifierKind, number>;
+      for (const [key, ids] of holders) {
+        if (ids.size < 2) continue;
+        byKind[key.slice(0, key.indexOf('\u0000')) as IdentifierKind] += 1;
+      }
+      const total = IDENTIFIER_KINDS.reduce((sum, kind) => sum + byKind[kind], 0);
+      return { total, byKind };
+    },
+  };
+}
+
+/** Counts the identifier values held by more than one user, from batches of users. */
+export function findIdentifierCollisions(
+  batches: Iterable<readonly IdentifierUser[]>,
+): IdentifierCollisionCounts {
+  const counter = createIdentifierCollisionCounter();
+  for (const batch of batches) counter.add(batch);
+  return counter.result();
+}
+
+// ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------
 

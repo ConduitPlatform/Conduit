@@ -15,16 +15,22 @@ import {
   BoundedTtlCache,
   buildEffectiveSettings,
   collectTeamChain,
+  computeIdentityMode,
   computeRealmsEnabled,
+  createIdentifierCollisionCounter,
   EffectiveAuthSettings,
   evaluateRealmAccess,
   hasNestedRealmViolation,
+  IdentifierCollisionCounts,
+  IdentityMode,
   mergeOAuthSecrets,
   nearestRealmInChain,
   normalizeSlug,
+  REALM_OAUTH_PROVIDERS,
   RealmMembershipType,
   StoredRealmSettingsData,
   unresolvedRealmError,
+  uniquenessQuery,
 } from './realm.logic.js';
 import { invalidateOAuthSettingsCache } from '../handlers/oauth2/utils/oauthSettings.logic.js';
 
@@ -42,6 +48,81 @@ export type RealmContext = {
 
 export function realmsEnabled(): boolean {
   return computeRealmsEnabled(ConfigController.getInstance().config?.teams);
+}
+
+// ---------------------------------------------------------------------------
+// Identity mode
+// ---------------------------------------------------------------------------
+
+/** The applied identity mode. Always `shared` while realms are off. */
+export function identityMode(): IdentityMode {
+  return computeIdentityMode(ConfigController.getInstance().config?.teams);
+}
+
+/**
+ * Scopes a global identifier check (email, phone, username, wallet, OAuth id) to the
+ * identity mode: `realmId` is the realm of the request or of the target user, `null` for
+ * global. Shared mode returns `identifierQuery` untouched and makes no extra call.
+ */
+export function uniqueIdentifierQuery(
+  identifierQuery: Indexable,
+  realmId: string | null | undefined,
+): Indexable {
+  return uniquenessQuery(identifierQuery, realmId, identityMode());
+}
+
+/**
+ * Refuses an identifier (`identifierQuery`, e.g. `{ email }`) that another account already
+ * holds in the scope of the user: its home realm in isolated mode, every account in shared
+ * mode. Phase 2 extends the scope to the realms the user is linked into; callers do not
+ * change when it does.
+ */
+export async function assertIdentifierFreeForUser(
+  user: { homeRealm?: unknown },
+  identifierQuery: Indexable,
+  takenMessage: string,
+): Promise<void> {
+  const homeRealm = user.homeRealm ? String(user.homeRealm) : null;
+  const holder = await User.getInstance().findOne(
+    uniqueIdentifierQuery(identifierQuery, homeRealm),
+  );
+  if (holder) throw new GrpcError(status.ALREADY_EXISTS, takenMessage);
+}
+
+const IDENTIFIER_SCAN_PAGE_SIZE = 500;
+// top-level fields only: nested paths are not portable across the database adapters
+const IDENTIFIER_SCAN_SELECT = [
+  '_id',
+  'homeRealm',
+  'email',
+  'phoneNumber',
+  'username',
+  'metamask',
+  ...REALM_OAUTH_PROVIDERS,
+].join(' ');
+
+/**
+ * Counts the identifier values held by more than one user, over every account (global and
+ * realm). Used by the switch to shared mode, which is refused while this is not zero. Pages
+ * through `User` in id order and reads from the primary.
+ */
+export async function countIdentifierCollisions(): Promise<IdentifierCollisionCounts> {
+  const counter = createIdentifierCollisionCounter();
+  for (let skip = 0; ; skip += IDENTIFIER_SCAN_PAGE_SIZE) {
+    const page = await User.getInstance().findMany(
+      {},
+      {
+        select: IDENTIFIER_SCAN_SELECT,
+        skip,
+        limit: IDENTIFIER_SCAN_PAGE_SIZE,
+        sort: { _id: 1 },
+        readPreference: 'primary',
+      },
+    );
+    counter.add(page);
+    if (page.length < IDENTIFIER_SCAN_PAGE_SIZE) break;
+  }
+  return counter.result();
 }
 
 function cacheTtlMs(): number {

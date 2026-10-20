@@ -88,18 +88,25 @@ import {
   assertAnonymousUserInRealm,
   grantHomeMembership,
   homeRealmFields,
+  realmIdOf,
   resolveRealmFromSlug,
   rollbackUserOnFailure,
+  scopedUserQuery,
 } from './handlers/realmRequest.js';
 import {
   assertNoNestedRealm,
+  countIdentifierCollisions,
   deleteUserRealmMemberships,
   getRealmSlugById,
+  identityMode,
+  identityModeRevertBlockedMessage,
   invalidateRealmCache,
+  isIdentityModeRevertTransition,
   isRealmsDisableTransition,
   realmsDisableBlockedMessage,
   realmsEnabled,
   resolveTeamRealm,
+  uniqueIdentifierQuery,
 } from './utils/realm.js';
 import {
   collectTeamSubtreeIds,
@@ -315,11 +322,14 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   /**
-   * Refuses to switch the realms feature off while enabled realm teams exist (the "flag
-   * off = no realm data" invariant): demote them first. Checked here and not in
-   * `preConfig`, which also runs for config updates received from the bus and for the
-   * startup reconciliation, where a throw would not reach the caller of the update.
-   * The database is only queried on the on -> off transition.
+   * Refuses config updates that would leave the realm data in an unsafe state, checked here
+   * and not in `preConfig`, which also runs for config updates received from the bus and for
+   * the startup reconciliation, where a throw would not reach the caller of the update:
+   *  - switching the realms feature off while enabled realm teams exist (the "flag off = no
+   *    realm data" invariant): demote them first;
+   *  - returning the identity mode from isolated to shared while an identifier is held by
+   *    more than one account (identifiers would become ambiguous).
+   * The database is only queried on those transitions.
    */
   async setConfig(
     call: GrpcRequest<SetConfigRequest>,
@@ -332,6 +342,20 @@ export default class Authentication extends ManagedModule<Config> {
       // malformed JSON is reported by the base implementation
     }
     const previousTeams = ConfigController.getInstance().config?.teams;
+    if (isIdentityModeRevertTransition(previousTeams, incomingTeams)) {
+      try {
+        const collisions = await countIdentifierCollisions();
+        const blocked = identityModeRevertBlockedMessage(collisions.total);
+        if (blocked) {
+          return callback({ code: status.FAILED_PRECONDITION, message: blocked });
+        }
+      } catch (e) {
+        return callback({
+          code: status.INTERNAL,
+          message: `Could not verify identifier uniqueness: ${(e as Error).message}`,
+        });
+      }
+    }
     if (isRealmsDisableTransition(previousTeams, incomingTeams)) {
       try {
         const enabledRealmsQuery: Indexable = { 'realm.enabled': true };
@@ -612,7 +636,9 @@ export default class Authentication extends ManagedModule<Config> {
 
     try {
       const realmCtx = await resolveRealmFromSlug(call.request.realm);
-      let user = await models.User.getInstance().findOne({ email });
+      let user = await models.User.getInstance().findOne(
+        uniqueIdentifierQuery({ email }, realmIdOf(realmCtx)),
+      );
       if (user) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
@@ -727,7 +753,9 @@ export default class Authentication extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
     try {
-      let user = await models.User.getInstance().findOne({ username });
+      let user = await models.User.getInstance().findOne(
+        uniqueIdentifierQuery({ username }, realmIdOf(realmCtx)),
+      );
       if (user) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
@@ -889,7 +917,27 @@ export default class Authentication extends ManagedModule<Config> {
       password = AuthUtils.randomToken(8);
     }
     try {
-      const user = await models.User.getInstance().findOne({ email });
+      // a realm scopes the lookup to that realm's accounts. Without one, shared mode looks
+      // the (unique) email up as before; isolated mode refuses an email held by several
+      // accounts, since the password would otherwise go to an arbitrary one
+      const realmCtx = await resolveRealmFromSlug(call.request.realm);
+      let user: User | null;
+      if (realmCtx) {
+        user = await models.User.getInstance().findOne(
+          scopedUserQuery({ email }, realmCtx),
+        );
+      } else if (identityMode() === 'isolated') {
+        const holders = await models.User.getInstance().findMany({ email }, { limit: 2 });
+        if (holders.length > 1) {
+          return callback({
+            code: status.FAILED_PRECONDITION,
+            message: 'email is held by more than one account; pass realm',
+          });
+        }
+        user = holders[0] ?? null;
+      } else {
+        user = await models.User.getInstance().findOne({ email });
+      }
       if (!user) {
         return callback({ code: status.NOT_FOUND, message: 'User not found' });
       }
@@ -901,7 +949,7 @@ export default class Authentication extends ManagedModule<Config> {
 
       return callback(null, { password });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(toCallbackError(e));
     }
   }
 

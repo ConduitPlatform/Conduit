@@ -25,7 +25,7 @@ import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
 import { TeamsHandler } from './team.js';
 import { errors } from '../errors.js';
-import { RealmContext } from '../utils/realm.js';
+import { RealmContext, uniqueIdentifierQuery } from '../utils/realm.js';
 import {
   assertAnonymousUserInRealm,
   assertGlobalStrategyAvailable,
@@ -142,12 +142,16 @@ export class PhoneHandlers implements IAuthenticationStrategy {
 
     let user: User | null;
     if (existingToken.tokenType === TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN) {
-      // phone numbers are unique across realms: a number that belongs to a user of
-      // another realm cannot be registered here. The refusal happens only once the
-      // code was proven so that `authenticate` does not reveal which numbers exist.
-      const phoneOwner = await User.getInstance().findOne({
-        phoneNumber: existingToken.data.phone,
-      });
+      // shared mode: a number that belongs to a user of another realm cannot be registered
+      // here (isolated mode: only the same home realm is checked). The refusal happens
+      // only once the code was proven so that `authenticate` does not reveal which numbers
+      // exist.
+      const phoneOwner = await User.getInstance().findOne(
+        uniqueIdentifierQuery(
+          { phoneNumber: existingToken.data.phone },
+          realmIdOf(realmCtx),
+        ),
+      );
       if (phoneOwner) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
       }

@@ -63,6 +63,7 @@ import {
   scopedUserQuery,
 } from '../realmRequest.js';
 import {
+  identityMode,
   RealmContext,
   realmsEnabled,
   RealmOAuthProviderKey,
@@ -495,7 +496,9 @@ export abstract class OAuth2<
       user = await User.getInstance().findOne(
         scopedUserQuery({ email: payload.email }, realmCtx),
       );
-      if (isNil(user) && (realmCtx || realmsEnabled())) {
+      // isolated mode: the address may belong to another realm's account, so the request
+      // realm gets its own account (the scoped lookup above already missed)
+      if (isNil(user) && (realmCtx || realmsEnabled()) && identityMode() === 'shared') {
         // email is unique across realms: the address belongs to a user of another one
         const otherRealmUser = await User.getInstance().findOne({
           email: payload.email,
@@ -509,7 +512,8 @@ export abstract class OAuth2<
       user = await User.getInstance().findOne(
         scopedUserQuery({ [this.providerName + '.id']: payload.id }, realmCtx),
       );
-      if (isNil(user) && (realmCtx || realmsEnabled())) {
+      // isolated mode: as for email, the request realm gets its own account
+      if (isNil(user) && (realmCtx || realmsEnabled()) && identityMode() === 'shared') {
         // provider identities are unique across realms: the id belongs to a user of
         // another one
         const otherRealmUser = await User.getInstance().findOne({
