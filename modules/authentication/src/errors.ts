@@ -72,6 +72,27 @@ export const errors = {
     description:
       'The realm already has a home account or a linked guest holding one of the identifiers (email, phone, username, wallet or provider id) of the account. Each realm has at most one principal per identifier.',
   },
+  LINKING_NOT_ALLOWED: {
+    conduitCode: 'LINKING_NOT_ALLOWED',
+    grpcCode: status.FAILED_PRECONDITION,
+    message: 'Account linking is not allowed between these realms',
+    description:
+      'The target realm does not accept linked accounts (linking.inbound) or the source realm does not allow them to leave (linking.outbound)',
+  },
+  ACCOUNT_LINK_AVAILABLE: {
+    conduitCode: 'ACCOUNT_LINK_AVAILABLE',
+    grpcCode: status.ALREADY_EXISTS,
+    message: 'An account of another realm can be connected to this realm',
+    description:
+      'The identifier is held by an account of another realm and this realm accepts linked accounts. Connect that account instead of registering a new one.',
+  },
+  INVALID_LINK_PROOF: {
+    conduitCode: 'INVALID_LINK_PROOF',
+    grpcCode: status.INVALID_ARGUMENT,
+    message: 'Invalid or expired link proof',
+    description:
+      'The proof token is unknown, expired or already used, or no source account is authenticated for the link',
+  },
   HOME_USER_REMOVAL: {
     conduitCode: 'HOME_USER_REMOVAL',
     grpcCode: status.FAILED_PRECONDITION,

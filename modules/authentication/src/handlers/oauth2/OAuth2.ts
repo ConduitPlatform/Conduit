@@ -35,6 +35,7 @@ import {
 import { IAuthenticationStrategy } from '../../interfaces/index.js';
 import { TokenType } from '../../constants/index.js';
 import {
+  ConduitBoolean,
   ConduitJson,
   ConduitString,
   ConfigController,
@@ -75,6 +76,12 @@ import {
   resolveRealmById,
 } from '../../utils/realm.js';
 import { anyRealmEnables } from '../../utils/strategyRealms.js';
+import {
+  assertDiscoveryAllowed,
+  DISCOVERY_RESPONSE_FIELDS,
+  discoverWithOAuth,
+  discoveryRedirectUrl,
+} from '../realmDiscovery.js';
 import {
   hasCompleteOAuthCredentials,
   isGlobalOAuthAvailable,
@@ -284,6 +291,7 @@ export abstract class OAuth2<
   async initNative(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const { anonymousUser } = call.request.context;
+    const discover = this.discoveryRequested(call);
     const realmCtx = await this.resolveRealmContext(call.request.params?.realm);
     const settings = this.getSettingsFor(realmCtx);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
@@ -309,6 +317,7 @@ export abstract class OAuth2<
           ...(realmCtx
             ? { realm: realmCtx.team.realm!.slug, realmId: realmIdOf(realmCtx) }
             : {}),
+          ...(discover ? { discover: true } : {}),
           ...this.getOAuthStateExtras(call),
         },
       })
@@ -327,6 +336,7 @@ export abstract class OAuth2<
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const { anonymousUser } = call.request.context;
+    const discover = this.discoveryRequested(call);
     const realmCtx = await this.resolveRealmContext(call.request.params?.realm);
     const settings = this.getSettingsFor(realmCtx);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
@@ -369,6 +379,7 @@ export abstract class OAuth2<
           ...(realmCtx
             ? { realm: realmCtx.team.realm!.slug, realmId: realmIdOf(realmCtx) }
             : {}),
+          ...(discover ? { discover: true } : {}),
           ...this.getOAuthStateExtras(call),
         },
       })
@@ -438,6 +449,9 @@ export abstract class OAuth2<
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       settings.finalRedirect;
+    if (stateToken.data.discover === true) {
+      return this.discoveryRedirect(payload, redirectUri);
+    }
     try {
       const user = await this.createOrUpdateUser(
         payload,
@@ -670,6 +684,36 @@ export abstract class OAuth2<
     return user!;
   }
 
+  /**
+   * Whether the init call asks for a discovery login (`discover=true`), checked against the
+   * realm and invitation params of the same call. Discovery runs on the global provider only.
+   */
+  protected discoveryRequested(call: ParsedRouterRequest): boolean {
+    const params = call.request.params ?? {};
+    const discover = params.discover === true;
+    assertDiscoveryAllowed({
+      discover,
+      realm: params.realm,
+      invitationToken: params.invitationToken,
+    });
+    return discover;
+  }
+
+  /**
+   * The answer of an OAuth discovery login as a redirect to the flow's redirect URI, with the
+   * realms and the proof token (see discoveryRedirectUrl).
+   */
+  protected async discoveryRedirect(
+    payload: { id?: unknown; email?: unknown },
+    redirectUri: string | undefined,
+  ): Promise<{ redirect: string }> {
+    if (!redirectUri) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'No redirect URI for the discovery');
+    }
+    const answer = await discoverWithOAuth(this.providerName, payload);
+    return { redirect: discoveryRedirectUrl(redirectUri, answer) };
+  }
+
   declareRoutes(routingManager: RoutingManager) {
     const config = ConfigController.getInstance().config;
     const initRouteMiddleware = ['authMiddleware?', 'checkAnonymousMiddleware'];
@@ -724,6 +768,7 @@ export abstract class OAuth2<
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
           accessToken: ConduitString.Optional,
           refreshToken: ConduitString.Optional,
+          ...DISCOVERY_RESPONSE_FIELDS,
         }),
         this.nativeAuthorize.bind(this),
       );
@@ -745,6 +790,7 @@ export abstract class OAuth2<
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
           accessToken: ConduitString.Optional,
           refreshToken: ConduitString.Optional,
+          ...DISCOVERY_RESPONSE_FIELDS,
         }),
         this.authorize.bind(this),
       );
@@ -764,6 +810,7 @@ export abstract class OAuth2<
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
           accessToken: ConduitString.Optional,
           refreshToken: ConduitString.Optional,
+          ...DISCOVERY_RESPONSE_FIELDS,
         }),
         this.authorize.bind(this),
       );
@@ -778,6 +825,7 @@ export abstract class OAuth2<
       redirectUri: ConduitString.Optional,
       mode: OAUTH_MODE_PARAM,
       realm: realmParam,
+      discover: ConduitBoolean.Optional,
     };
   }
 
@@ -788,6 +836,7 @@ export abstract class OAuth2<
       captchaToken: ConduitString.Optional,
       mode: OAUTH_MODE_PARAM,
       realm: realmParam,
+      discover: ConduitBoolean.Optional,
     };
   }
 

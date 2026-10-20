@@ -11,6 +11,7 @@ import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import {
+  ConduitBoolean,
   ConduitString,
   ConfigController,
   RoutingManager,
@@ -19,6 +20,11 @@ import { authenticateChecks, changePassword } from './utils.js';
 import { Config } from '../config/index.js';
 import { ALT_STRATEGY_AUTH } from '../constants/index.js';
 import { errors } from '../errors.js';
+import {
+  assertDiscoveryAllowed,
+  DISCOVERY_RESPONSE_FIELDS,
+  discoverWithPassword,
+} from './realmDiscovery.js';
 import {
   assertGlobalStrategyAvailable,
   loginVerificationOverride,
@@ -40,12 +46,13 @@ export class UsernameHandlers implements IAuthenticationStrategy {
         path: '/username',
         action: ConduitRouteActions.POST,
         description: `Login endpoint that can be used to authenticate.
-         Tokens are returned according to configuration.`,
+         Tokens are returned according to configuration. With discover (and the realm discovery login enabled) it lists the realms of the accounts that accept the credentials instead, and opens no session.`,
         bodyParams: {
           username: ConduitString.Required,
           password: ConduitString.Required,
           captchaToken: ConduitString.Optional,
           realm: realmParam,
+          discover: ConduitBoolean.Optional,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.login
@@ -61,6 +68,7 @@ export class UsernameHandlers implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('LoginResponse', {
         accessToken: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
+        ...DISCOVERY_RESPONSE_FIELDS,
       }),
       this.authenticate.bind(this),
     );
@@ -98,6 +106,18 @@ export class UsernameHandlers implements IAuthenticationStrategy {
 
     if (isNil(context)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
+    }
+
+    assertDiscoveryAllowed({
+      discover: call.request.params.discover === true,
+      realm: call.request.params.realm,
+    });
+    if (call.request.params.discover === true) {
+      return discoverWithPassword({
+        identifier: { username },
+        password,
+        strategyKey: 'username',
+      });
     }
 
     const clientId = context.clientId;

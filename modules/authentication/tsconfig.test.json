@@ -27,6 +27,8 @@
     "src/handlers/realmRequest.logic.test.ts",
     "src/handlers/realm.logic.ts",
     "src/handlers/realm.logic.test.ts",
+    "src/handlers/realmDiscovery.logic.ts",
+    "src/handlers/realmDiscovery.logic.test.ts",
     "src/admin/realm.logic.ts",
     "src/admin/realm.logic.test.ts",
     "src/utils/teamRealm.logic.ts",

@@ -10,6 +10,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 
 import {
+  ConduitBoolean,
   ConduitJson,
   ConduitString,
   ConfigController,
@@ -48,6 +49,11 @@ import {
   rollbackUserOnFailure,
 } from './realmRequest.js';
 import { anyRealmEnables } from '../utils/strategyRealms.js';
+import {
+  assertDiscoveryAllowed,
+  DISCOVERY_RESPONSE_FIELDS,
+  discoverWithPhone,
+} from './realmDiscovery.js';
 
 export class PhoneHandlers implements IAuthenticationStrategy {
   private sms: SMS;
@@ -85,6 +91,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
           captchaToken: ConduitString.Optional,
           invitationToken: ConduitString.Optional,
           realm: realmParam,
+          discover: ConduitBoolean.Optional,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.login
@@ -119,6 +126,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('VerifyPhoneLoginResponse', {
         accessToken: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
+        ...DISCOVERY_RESPONSE_FIELDS,
       }),
       this.phoneLogin.bind(this),
     );
@@ -139,6 +147,13 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const verified = await AuthUtils.verifyCode(this.grpcSdk, existingToken, code);
     if (!verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
+    }
+
+    // a discovery login: the code proves the number, the answer lists its accounts and opens
+    // no session (the code token is spent by verifyCode)
+    if (existingToken.data?.discover === true) {
+      assertDiscoveryAllowed({ discover: true });
+      return discoverWithPhone(String(existingToken.data.phone));
     }
 
     // the realm the code was requested for, re-validated at verification
@@ -193,13 +208,22 @@ export class PhoneHandlers implements IAuthenticationStrategy {
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
-    const { phone, invitationToken } = call.request.params;
+    const { phone, invitationToken, discover } = call.request.params;
     const { clientId } = call.request.context;
-    const realmCtx = await resolveRealmFromCall(call);
-    if (!realmCtx) assertGlobalStrategyAvailable('phone');
-    const user: User | null =
-      (await resolveSignInPrincipal(realmCtx, { phoneNumber: phone }, 'phone'))?.user ??
-      null;
+    // a discovery login names no realm and sends the code like a login; the answer is given
+    // at verification (see phoneLogin)
+    const discovering = discover === true;
+    assertDiscoveryAllowed({
+      discover: discovering,
+      realm: call.request.params.realm,
+      invitationToken,
+    });
+    const realmCtx = discovering ? null : await resolveRealmFromCall(call);
+    if (!realmCtx && !discovering) assertGlobalStrategyAvailable('phone');
+    const user: User | null = discovering
+      ? null
+      : ((await resolveSignInPrincipal(realmCtx, { phoneNumber: phone }, 'phone'))
+          ?.user ?? null);
     let foundInvitationToken;
     if (invitationToken) {
       foundInvitationToken = await Token.getInstance().findOne(
@@ -207,7 +231,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         { readPreference: 'primary' },
       );
     }
-    if (!user) {
+    if (!discovering && !user) {
       const teams = ConfigController.getInstance().config.teams;
       if ((teams.enabled || realmCtx) && invitationToken) {
         // an invitation into a realm must agree with the realm being registered at
@@ -266,9 +290,10 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INTERNAL, 'Could not send verification code');
     }
     const token = await Token.getInstance().create({
-      tokenType: isNil(user)
-        ? TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN
-        : TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
+      tokenType:
+        isNil(user) && !discovering
+          ? TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN
+          : TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
       user: user ? user._id : undefined,
       data: {
         clientId,
@@ -276,6 +301,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         verification: verificationSid,
         invitationToken,
         ...(realmCtx ? { realm: realmCtx.team.realm!.slug } : {}),
+        ...(discovering ? { discover: true } : {}),
       },
       token: uuid(),
     });

@@ -13,4 +13,6 @@ export enum TokenType {
   TEAM_INVITE_TOKEN = 'TEAM_INVITE_TOKEN',
   MAGIC_LINK = 'MAGIC_LINK',
   STATE_TOKEN = 'STATE_TOKEN',
+  /** Proof of the source accounts found by a discovery login, single use, 10 minutes. */
+  REALM_LINK_PROOF = 'REALM_LINK_PROOF',
 }

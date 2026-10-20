@@ -25,6 +25,7 @@ import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import { TeamsHandler } from './team.js';
 import {
+  ConduitBoolean,
   ConduitJson,
   ConduitString,
   ConfigController,
@@ -54,6 +55,11 @@ import {
   scopedUserQuery,
 } from './realmRequest.js';
 import { anyRealmEnables } from '../utils/strategyRealms.js';
+import {
+  assertDiscoveryAllowed,
+  DISCOVERY_RESPONSE_FIELDS,
+  discoverWithPassword,
+} from './realmDiscovery.js';
 import {
   assertIdentifierFreeForUser,
   assertRealmPrincipalFree,
@@ -130,12 +136,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
         path: '/local',
         action: ConduitRouteActions.POST,
         description: `Login endpoint that can be used to authenticate.
-         Tokens are returned according to configuration.`,
+         Tokens are returned according to configuration. With discover (and the realm discovery login enabled) it lists the realms of the accounts that accept the credentials instead, and opens no session.`,
         bodyParams: {
           email: ConduitString.Required,
           password: ConduitString.Required,
           captchaToken: ConduitString.Optional,
           realm: realmParam,
+          discover: ConduitBoolean.Optional,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.login
@@ -146,6 +153,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('LoginResponse', {
         accessToken: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
+        ...DISCOVERY_RESPONSE_FIELDS,
       }),
       this.authenticate.bind(this),
     );
@@ -509,6 +517,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const invalidAddress = AuthUtils.invalidEmailAddress(email);
     if (invalidAddress) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
+    }
+
+    // discovery: no realm, no session, the answer lists the realms that accepted the password
+    assertDiscoveryAllowed({
+      discover: call.request.params.discover === true,
+      realm: call.request.params.realm,
+    });
+    if (call.request.params.discover === true) {
+      return discoverWithPassword({
+        identifier: { email },
+        password,
+        strategyKey: 'local',
+      });
     }
 
     const config = ConfigController.getInstance().config;

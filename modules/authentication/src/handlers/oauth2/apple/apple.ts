@@ -45,6 +45,7 @@ import { OAUTH_CALLBACK } from '../../../constants/index.js';
 import { AuthUtils } from '../../../utils/index.js';
 import { verifyAppleIdentityToken } from '../../../utils/appleIdentityToken.js';
 import { resolveAppleSigningKey } from '../../../utils/appleSigningKey.js';
+import { DISCOVERY_RESPONSE_FIELDS, discoverWithOAuth } from '../../realmDiscovery.js';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   private readonly jwksClient = jwksRsa({
@@ -194,6 +195,10 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       providerClient.redirect_uri;
+    if (stateToken.data.discover === true) {
+      await Token.getInstance().deleteOne(stateToken);
+      return this.discoveryRedirect(userParams, redirectUri);
+    }
     const conduitClientId = stateToken.data.clientId;
     try {
       const user = await this.createOrUpdateUser(
@@ -283,6 +288,11 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       email: payload.email,
       data: { ...userData, ...payload.email_verified },
     };
+    if (stateToken.data.discover === true) {
+      // the native client is an API client: the answer is the JSON of the discovery
+      await Token.getInstance().deleteOne(stateToken);
+      return discoverWithOAuth(this.providerName, userParams);
+    }
     const user = await this.createOrUpdateUser(
       userParams,
       stateToken.data.invitationToken,
@@ -321,6 +331,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       new ConduitRouteReturnDefinition(`AppleResponse`, {
         accessToken: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
+        ...DISCOVERY_RESPONSE_FIELDS,
       }),
       this.authorize.bind(this),
     );
