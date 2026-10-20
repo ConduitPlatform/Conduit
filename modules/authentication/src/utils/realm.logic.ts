@@ -1116,6 +1116,88 @@ export function evaluateRealmAccess(input: RealmAccessInput): RealmAccessResult 
 }
 
 // ---------------------------------------------------------------------------
+// Account linking
+//
+// A linked account is a guest of the target realm: it signs in there with its own
+// credentials. The link is allowed when every rule below holds. The checks run in this order,
+// and the first failure is the answer.
+// ---------------------------------------------------------------------------
+
+/**
+ * How the invitation of a link relates to the target realm:
+ *  - `none`: no invitation;
+ *  - `inside`: a valid invitation into a team of the target realm (the realm itself or one of
+ *    its sub-teams);
+ *  - `invalid`: an invitation that is not valid, or that targets another realm or no realm.
+ */
+export type LinkInvite = 'none' | 'inside' | 'invalid';
+
+export type LinkEligibilityInput = {
+  /** The target realm team id. */
+  targetRealm: string;
+  /** The account's home realm, the source of the link (null = a global account). */
+  sourceRealm: string | null;
+  /** Whether the account already holds a membership (guest) of the target realm. */
+  alreadyGuest: boolean;
+  /** The target realm's `linking.inbound`. */
+  targetInbound: boolean;
+  /** The source realm's `linking.outbound` (true for a global account). */
+  sourceOutbound: boolean;
+  /** Policies of the target realm. */
+  targetPolicies: RealmPolicies;
+  /** Policies of the source realm (null for a global account). */
+  sourcePolicies: RealmPolicies | null;
+  /** Assurance of the session the link is judged for (see tokenAssurance). */
+  assurance: RealmAssurance;
+  /** The target's registration rule: without it an invitation is needed. */
+  allowWithoutInvite: boolean;
+  invite: LinkInvite;
+  /** Whether another principal of the target realm holds one of the account's identifiers. */
+  principalClash: boolean;
+};
+
+export type LinkEligibility =
+  { allowed: true } | { allowed: false; error: RealmErrorKey };
+
+/**
+ * Whether an account may become a guest of the target realm. In order:
+ *  1. the account is not already home or guest there (LINK_CONFLICT);
+ *  2. the target has `linking.inbound` and the source `linking.outbound` (LINKING_NOT_ALLOWED);
+ *  3. the realm access rules for a guest of the target: its guest policy (`guests.allowed`,
+ *     `allowedHomeRealms`), the target's policies and the source realm's policies, as a guest
+ *     session would meet them (GUESTS_NOT_ALLOWED, TWO_FA_REQUIRED_FOR_REALM, ...);
+ *  4. the registration rule: an invitation into the target unless `allowWithoutInvite`
+ *     (INVITATION_REQUIRED), and a given invitation must be valid and inside the target
+ *     (INVALID_INVITATION);
+ *  5. the one-principal rule for the identifiers (LINK_CONFLICT).
+ */
+export function evaluateLinkEligibility(input: LinkEligibilityInput): LinkEligibility {
+  const fail = (error: RealmErrorKey): LinkEligibility => ({ allowed: false, error });
+  if (input.sourceRealm !== null && String(input.sourceRealm) === input.targetRealm) {
+    return fail('LINK_CONFLICT');
+  }
+  if (input.alreadyGuest) return fail('LINK_CONFLICT');
+  if (!input.targetInbound || !input.sourceOutbound) return fail('LINKING_NOT_ALLOWED');
+
+  const access = evaluateRealmAccess({
+    requestedRealm: input.targetRealm,
+    userHomeRealm: input.sourceRealm,
+    membershipType: 'guest',
+    policies: input.targetPolicies,
+    homePolicies: input.sourcePolicies,
+    assurance: input.assurance,
+  });
+  if (!access.allowed) return fail(access.error);
+
+  if (input.invite === 'invalid') return fail('INVALID_INVITATION');
+  if (input.invite === 'none' && !input.allowWithoutInvite) {
+    return fail('INVITATION_REQUIRED');
+  }
+  if (input.principalClash) return fail('LINK_CONFLICT');
+  return { allowed: true };
+}
+
+// ---------------------------------------------------------------------------
 // Nested realm detection
 // ---------------------------------------------------------------------------
 

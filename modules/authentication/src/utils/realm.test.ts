@@ -2,6 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   applyOAuthSecretsUpdate,
+  evaluateLinkEligibility,
+  type LinkEligibilityInput,
   assertGuestAllowed,
   assertRealmId,
   assertValidSlug,
@@ -2296,5 +2298,178 @@ describe('linking and direct sign-in settings', () => {
     assert.deepEqual(splitRealmSettingsInput({ linking: { inbound: true } }).settings, {
       linking: { inbound: true },
     });
+  });
+});
+
+describe('evaluateLinkEligibility', () => {
+  // a link of a home account of A into B, which takes inbound links; A allows outbound links
+  function link(overrides: Partial<LinkEligibilityInput> = {}): LinkEligibilityInput {
+    return {
+      targetRealm: B,
+      sourceRealm: A,
+      alreadyGuest: false,
+      targetInbound: true,
+      sourceOutbound: true,
+      targetPolicies: policies(),
+      sourcePolicies: policies(),
+      assurance: { authorized: true, hasTwoFA: false, isVerified: true, clientId: 'web' },
+      allowWithoutInvite: true,
+      invite: 'none',
+      principalClash: false,
+      ...overrides,
+    };
+  }
+
+  it('allows a link that passes every rule', () => {
+    assert.deepEqual(evaluateLinkEligibility(link()), { allowed: true });
+  });
+
+  it('allows a global account to link into a realm that accepts it', () => {
+    assert.deepEqual(
+      evaluateLinkEligibility(link({ sourceRealm: null, sourcePolicies: null })),
+      { allowed: true },
+    );
+  });
+
+  it('refuses an account that is already home at the target', () => {
+    assert.deepEqual(evaluateLinkEligibility(link({ sourceRealm: B })), {
+      allowed: false,
+      error: 'LINK_CONFLICT',
+    });
+  });
+
+  it('refuses an account that is already a guest of the target', () => {
+    assert.deepEqual(evaluateLinkEligibility(link({ alreadyGuest: true })), {
+      allowed: false,
+      error: 'LINK_CONFLICT',
+    });
+  });
+
+  it('refuses when the target has no inbound linking', () => {
+    assert.deepEqual(evaluateLinkEligibility(link({ targetInbound: false })), {
+      allowed: false,
+      error: 'LINKING_NOT_ALLOWED',
+    });
+  });
+
+  it('refuses when the source realm has no outbound linking', () => {
+    assert.deepEqual(evaluateLinkEligibility(link({ sourceOutbound: false })), {
+      allowed: false,
+      error: 'LINKING_NOT_ALLOWED',
+    });
+  });
+
+  it('refuses a source home realm the target guest policy rejects', () => {
+    const restricted = link({
+      targetPolicies: policies({
+        guests: { allowed: true, allowedHomeRealms: [C], directSignIn: true },
+      }),
+    });
+    assert.deepEqual(evaluateLinkEligibility(restricted), {
+      allowed: false,
+      error: 'GUESTS_NOT_ALLOWED',
+    });
+    assert.deepEqual(
+      evaluateLinkEligibility({
+        ...restricted,
+        targetPolicies: policies({
+          guests: { allowed: true, allowedHomeRealms: [A], directSignIn: true },
+        }),
+      }),
+      { allowed: true },
+    );
+  });
+
+  it('refuses a target that accepts no guests at all', () => {
+    const closed = link({
+      targetPolicies: policies({
+        guests: { allowed: false, allowedHomeRealms: [], directSignIn: true },
+      }),
+    });
+    assert.deepEqual(evaluateLinkEligibility(closed), {
+      allowed: false,
+      error: 'GUESTS_NOT_ALLOWED',
+    });
+  });
+
+  it('refuses a global account when the target only takes realm accounts', () => {
+    const realmsOnly = link({
+      sourceRealm: null,
+      sourcePolicies: null,
+      targetPolicies: policies({
+        guests: { allowed: true, allowedHomeRealms: [A], directSignIn: true },
+      }),
+    });
+    assert.deepEqual(evaluateLinkEligibility(realmsOnly), {
+      allowed: false,
+      error: 'GUESTS_NOT_ALLOWED',
+    });
+  });
+
+  it('applies the policies of the target and of the source home realm to the guest', () => {
+    const twoFaTarget = link({
+      targetPolicies: policies({ requireTwoFa: true }),
+      assurance: { authorized: true, hasTwoFA: false, isVerified: true, clientId: 'web' },
+    });
+    assert.deepEqual(evaluateLinkEligibility(twoFaTarget), {
+      allowed: false,
+      error: 'TWO_FA_REQUIRED_FOR_REALM',
+    });
+    const verifiedSource = link({
+      sourcePolicies: policies({ requireVerifiedEmail: true }),
+      assurance: {
+        authorized: true,
+        hasTwoFA: false,
+        isVerified: false,
+        clientId: 'web',
+      },
+    });
+    assert.deepEqual(evaluateLinkEligibility(verifiedSource), {
+      allowed: false,
+      error: 'REALM_ACCESS_DENIED',
+    });
+  });
+
+  it('refuses a source whose realm is unresolved, as the caller reports it', () => {
+    assert.deepEqual(
+      evaluateLinkEligibility(link({ sourcePolicies: null, sourceOutbound: false })),
+      { allowed: false, error: 'LINKING_NOT_ALLOWED' },
+    );
+  });
+
+  it('needs an invitation unless the target allows registration without one', () => {
+    assert.deepEqual(
+      evaluateLinkEligibility(link({ allowWithoutInvite: false, invite: 'none' })),
+      { allowed: false, error: 'INVITATION_REQUIRED' },
+    );
+    assert.deepEqual(
+      evaluateLinkEligibility(link({ allowWithoutInvite: false, invite: 'inside' })),
+      { allowed: true },
+    );
+  });
+
+  it('refuses an invalid invitation, whatever the registration rule', () => {
+    assert.deepEqual(evaluateLinkEligibility(link({ invite: 'invalid' })), {
+      allowed: false,
+      error: 'INVALID_INVITATION',
+    });
+    assert.deepEqual(
+      evaluateLinkEligibility(link({ allowWithoutInvite: false, invite: 'invalid' })),
+      { allowed: false, error: 'INVALID_INVITATION' },
+    );
+  });
+
+  it('refuses when another principal of the target holds an identifier', () => {
+    assert.deepEqual(evaluateLinkEligibility(link({ principalClash: true })), {
+      allowed: false,
+      error: 'LINK_CONFLICT',
+    });
+  });
+
+  it('judges the links in order: the conflict of home comes before the linking settings', () => {
+    assert.deepEqual(
+      evaluateLinkEligibility(link({ sourceRealm: B, targetInbound: false })),
+      { allowed: false, error: 'LINK_CONFLICT' },
+    );
   });
 });
