@@ -19,12 +19,23 @@ import {
   realmIdOf,
 } from '../handlers/realmRequest.js';
 import {
+  assertRealmPrincipalFree,
   deleteUserRealmMemberships,
+  identifierQuery,
+  identifierTakenForUser,
+  IdentifierQuery,
   realmsEnabled,
   resolveRealmById,
   uniqueIdentifierQuery,
   withHomeScope,
 } from '../utils/realm.js';
+
+/** The identifier of a validated `{ email }` or `{ username }` query. */
+function identifierOf(query: Record<string, unknown>): IdentifierQuery {
+  return 'email' in query
+    ? identifierQuery('email', String(query.email))
+    : identifierQuery('username', String(query.username));
+}
 
 // Cap on the memberships loaded to resolve the `realm` filter next to other filters.
 const MAX_MEMBERSHIP_FILTER = 1000;
@@ -124,6 +135,13 @@ export class UserAdmin {
       throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
     }
 
+    if (realmCtx) {
+      // a linked guest of the realm holding one of the identifiers is a principal there too
+      await assertRealmPrincipalFree(realmIdOf(realmCtx), [identifierOf(query)], {
+        conflict: 'USER_EXISTS',
+      });
+    }
+
     const hashedPassword = await AuthUtils.hashPassword(password);
     user = await User.getInstance().create({
       ...query,
@@ -161,11 +179,9 @@ export class UserAdmin {
       );
     }
     if (user.email !== email) {
-      // isolated mode: scoped to the target user's home realm
-      const duplicateEmail: User | null = await User.getInstance().findOne(
-        uniqueIdentifierQuery({ email }, user.homeRealm ? String(user.homeRealm) : null),
-      );
-      if (!isNil(duplicateEmail)) {
+      // isolated mode: scoped to the target user's home realm and to the realms the user is
+      // linked into as a guest
+      if (await identifierTakenForUser(user, identifierQuery('email', email))) {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Email already exists');
       }
       assertEmailAllowed(email);

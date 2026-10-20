@@ -13,7 +13,7 @@ import {
 import { TokenType } from '../constants/index.js';
 import { errors } from '../errors.js';
 import { hasConduitCode } from '../utils/common.logic.js';
-import { Token, User } from '../models/index.js';
+import { RealmMembership, Token, User } from '../models/index.js';
 import {
   assertValidSlug,
   deleteUserRealmMemberships,
@@ -25,6 +25,7 @@ import {
   resolveTeamRealm,
 } from '../utils/realm.js';
 import {
+  decideGuestPrincipal,
   isGlobalStrategyEnabled,
   isHomeRealm,
   isStrategyEnabled,
@@ -91,6 +92,77 @@ export function scopedUserQuery<T extends Record<string, unknown>>(
   ctx: RealmContext | null | undefined,
 ): T {
   return scopeUserQuery(query, realmIdOf(ctx), realmsEnabled());
+}
+
+/** The account an identifier signs in as, and how: its home account or a linked guest. */
+export type ResolvedPrincipal<U = User> = { user: U; via: 'home' | 'guest' };
+
+/**
+ * Resolves the account an identifier (`identifierQuery`, e.g. `{ email }`) signs in as at
+ * the realm (null = global):
+ *  1. the home account of the realm (scopedUserQuery), as before;
+ *  2. failing that, with a realm whose `guests.directSignIn` is on, the one linked guest of
+ *     the realm holding the identifier (`via: 'guest'`). Two or more are an invariant breach:
+ *     logged and refused (null), never resolved to one of them.
+ * Works in both identity modes. `options.select` is passed to the lookups (for example
+ * `+hashedPassword`).
+ */
+export async function resolvePrincipal(
+  realmCtx: RealmContext | null | undefined,
+  identifierQuery: Indexable,
+  options: { select?: string } = {},
+): Promise<ResolvedPrincipal | null> {
+  const home = await User.getInstance().findOne(
+    scopedUserQuery(identifierQuery, realmCtx),
+    options,
+  );
+  if (home) return { user: home, via: 'home' };
+  if (!realmCtx || !realmCtx.effective.policies.guests.directSignIn) return null;
+
+  const realmId = realmIdOf(realmCtx)!;
+  const holders = await User.getInstance().findMany(identifierQuery, options);
+  if (holders.length === 0) return null;
+  const guestOf = await RealmMembership.getInstance().findMany(
+    {
+      realm: realmId,
+      membershipType: 'guest',
+      user: { $in: holders.map(holder => String(holder._id)) },
+    },
+    { select: 'user' },
+  );
+  const decision = decideGuestPrincipal({
+    realmId,
+    directSignIn: true,
+    holders,
+    guestUserIds: guestOf.map(membership => String(membership.user)),
+  });
+  if (decision.outcome === 'one') return { user: decision.user, via: 'guest' };
+  if (decision.outcome === 'many') {
+    ConduitGrpcSdk.Logger.warn(
+      `Realm ${realmId} holds ${decision.count} guests for one identifier; sign-in refused`,
+    );
+  }
+  return null;
+}
+
+/**
+ * Checks the strategy of a login or credential flow for the account it resolved to (`user`
+ * null when none was found). A guest signs in with an identity that belongs to its home
+ * realm, so for a guest the strategy must be enabled at the home realm (the global config
+ * for a global home). Any other case is the requested realm's strategy, as before.
+ */
+export async function assertStrategyForPrincipal(
+  realmCtx: RealmContext | null | undefined,
+  user: Pick<User, 'homeRealm'> | null | undefined,
+  strategyKey: string,
+): Promise<void> {
+  if (!realmCtx || !user || isHomeRealm(user.homeRealm, realmIdOf(realmCtx))) {
+    assertStrategyEnabledForRealm(realmCtx, strategyKey);
+    return;
+  }
+  const homeCtx = await resolveHomeRealmContext(user);
+  if (homeCtx) assertStrategyEnabledForRealm(homeCtx, strategyKey);
+  else assertGlobalStrategyAvailable(strategyKey);
 }
 
 /** `{ homeRealm }` to spread into a new user's fields; empty for global users. */

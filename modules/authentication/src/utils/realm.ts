@@ -20,13 +20,20 @@ import {
   createIdentifierCollisionCounter,
   EffectiveAuthSettings,
   evaluateRealmAccess,
+  findBatchPrincipalClashes,
+  findPrincipalClash,
   hasNestedRealmViolation,
+  identifierQueriesOf,
   IdentifierCollisionCounts,
+  IdentifierQuery,
+  IdentifierUser,
   IdentityMode,
   mergeOAuthSecrets,
   nearestRealmInChain,
   normalizeSlug,
+  PrincipalClash,
   REALM_OAUTH_PROVIDERS,
+  RealmErrorKey,
   RealmMembershipType,
   StoredRealmSettingsData,
   unresolvedRealmError,
@@ -72,21 +79,127 @@ export function uniqueIdentifierQuery(
 }
 
 /**
- * Refuses an identifier (`identifierQuery`, e.g. `{ email }`) that another account already
- * holds in the scope of the user: its home realm in isolated mode, every account in shared
- * mode. Phase 2 extends the scope to the realms the user is linked into; callers do not
- * change when it does.
+ * Which holder of an identifier (`queries`, stored-value queries) already sits in realm R as
+ * a home account or a linked guest, other than `excludeUserId`. Null in shared mode, without
+ * queries, or when nothing else holds them. Pure decision in `findPrincipalClash`.
  */
-export async function assertIdentifierFreeForUser(
-  user: { homeRealm?: unknown },
-  identifierQuery: Indexable,
-  takenMessage: string,
+export async function realmPrincipalClash(
+  realmId: string | null | undefined,
+  identifiers: readonly IdentifierQuery[],
+  excludeUserId?: string | null,
+): Promise<PrincipalClash> {
+  const mode = identityMode();
+  // a query with an undefined or null value names no identifier (it must not match the
+  // accounts that lack one)
+  const usable = identifiers.filter(({ query }) =>
+    Object.values(query).every(value => value !== undefined && value !== null),
+  );
+  if (mode !== 'isolated' || usable.length === 0) return null;
+  const holders = await User.getInstance().findMany(
+    { $or: usable.map(({ query }) => query) },
+    { select: '_id homeRealm' },
+  );
+  if (holders.length === 0) return null;
+  const realm = realmId ? String(realmId) : null;
+  let guestUserIds: string[] = [];
+  if (realm) {
+    const guests = await RealmMembership.getInstance().findMany(
+      {
+        realm,
+        membershipType: 'guest',
+        user: { $in: holders.map(holder => String(holder._id)) },
+      },
+      { select: 'user' },
+    );
+    guestUserIds = guests.map(membership => String(membership.user));
+  }
+  return findPrincipalClash({ mode, realmId, excludeUserId, holders, guestUserIds });
+}
+
+/**
+ * Refuses an identifier (`queries`) that a home account or a linked guest already holds in
+ * realm `realmId` (`null` = the global scope). Isolated mode only: shared mode is unique
+ * deployment-wide, so this is a no-op there. Throws `conflict` (LINK_CONFLICT by default;
+ * registration passes USER_EXISTS).
+ */
+export async function assertRealmPrincipalFree(
+  realmId: string | null | undefined,
+  identifiers: readonly IdentifierQuery[],
+  options: { excludeUserId?: string | null; conflict?: RealmErrorKey } = {},
 ): Promise<void> {
+  const clash = await realmPrincipalClash(realmId, identifiers, options.excludeUserId);
+  if (clash) throw new ModuleError(errors[options.conflict ?? 'LINK_CONFLICT']);
+}
+
+/**
+ * Refuses a batch of users that are about to join realm R (guest adds, promotions, several
+ * links): a user must not hold an identifier that another holder of R already has, and
+ * the batch must not hold one twice. Checked before anything is written; the error names
+ * the users. No-op in shared mode.
+ */
+export async function assertRealmPrincipalsFree(
+  realmId: string | null | undefined,
+  users: ReadonlyArray<IdentifierUser & { _id: unknown }>,
+): Promise<void> {
+  if (identityMode() !== 'isolated' || users.length === 0) return;
+  const batch = users.map(user => ({
+    _id: user._id,
+    queries: identifierQueriesOf(user),
+  }));
+  const clashing = new Set(findBatchPrincipalClashes(batch));
+  for (const user of batch) {
+    const id = String(user._id);
+    if (clashing.has(id)) continue;
+    const clash = await realmPrincipalClash(realmId, user.queries, id);
+    if (clash) clashing.add(id);
+  }
+  if (clashing.size > 0) {
+    throw new ModuleError(
+      errors.LINK_CONFLICT,
+      `${clashing.size} user(s) hold an identifier that another principal of this realm holds: ${[...clashing].join(', ')}`,
+    );
+  }
+}
+
+/**
+ * Whether another account already holds an identifier (`identifierQuery`, e.g. `{ email }`)
+ * in the scope of the user. In shared mode that scope is the whole deployment. In isolated
+ * mode it is the user's home realm and every realm the user is linked into as a guest: there
+ * the identifier must not be held by a home account or another guest either.
+ */
+export async function identifierTakenForUser(
+  user: { _id: unknown; homeRealm?: unknown },
+  identifier: IdentifierQuery,
+): Promise<boolean> {
   const homeRealm = user.homeRealm ? String(user.homeRealm) : null;
   const holder = await User.getInstance().findOne(
-    uniqueIdentifierQuery(identifierQuery, homeRealm),
+    uniqueIdentifierQuery(identifier.query, homeRealm),
   );
-  if (holder) throw new GrpcError(status.ALREADY_EXISTS, takenMessage);
+  if (holder) return true;
+  if (identityMode() !== 'isolated') return false;
+
+  const userId = String(user._id);
+  const guestOf = await RealmMembership.getInstance().findMany(
+    { user: userId, membershipType: 'guest' },
+    { select: 'realm' },
+  );
+  const realms = new Set<string>(guestOf.map(membership => String(membership.realm)));
+  if (homeRealm) realms.add(homeRealm);
+  for (const realmId of realms) {
+    if (await realmPrincipalClash(realmId, [identifier], userId)) return true;
+  }
+  return false;
+}
+
+/** Refuses an identifier that identifierTakenForUser finds taken (ALREADY_EXISTS). */
+export async function assertIdentifierFreeForUser(
+  user: { _id: unknown; homeRealm?: unknown },
+  identifier: IdentifierQuery,
+  takenMessage: string,
+): Promise<void> {
+  if (await identifierTakenForUser(user, identifier)) {
+    throw new GrpcError(status.ALREADY_EXISTS, takenMessage);
+  }
 }
 
 const IDENTIFIER_SCAN_PAGE_SIZE = 500;
@@ -106,6 +219,10 @@ const IDENTIFIER_SCAN_SELECT = [
  * realm). Used by the switch to shared mode, which is refused while this is not zero. Pages
  * through `User` in id order with a keyset cursor (`_id > last`), so a page does not shift
  * when users are written during the scan, and reads from the primary.
+ *
+ * Guest links need no separate pass: a guest's identifiers are its own, on its own User
+ * document, so a linked guest that shares an identifier with a home account of the realm it
+ * is linked into is already two holders of the same value here.
  */
 export async function countIdentifierCollisions(): Promise<IdentifierCollisionCounts> {
   const counter = createIdentifierCollisionCounter();

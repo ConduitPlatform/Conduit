@@ -7,6 +7,7 @@ import {
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 import {
   REALM_OAUTH_PROVIDERS,
+  RealmLinking,
   RealmOAuthSecrets,
   RealmPolicies,
   StoredRealmStrategies,
@@ -73,7 +74,14 @@ const schema: ConduitModel = {
     guests: {
       allowed: enabledFlag(true),
       allowedHomeRealms: { type: [TYPE.ObjectId], default: [] },
+      directSignIn: enabledFlag(true),
     },
+  },
+  // account linking: inbound accounts from other realms may connect here (off by default),
+  // outbound accounts of this realm may connect elsewhere (on by default)
+  linking: {
+    inbound: enabledFlag(),
+    outbound: enabledFlag(true),
   },
   // OAuth secrets, kept out of `strategies.oauth` because nested `select: false` is not
   // portable (SQL excludes by leaf name against flattened columns). Shape:
@@ -105,6 +113,7 @@ export class RealmSettings extends ConduitActiveSchema<RealmSettings> {
   strategies: StoredRealmStrategies;
   registration: { allowWithoutInvite: boolean };
   policies: RealmPolicies;
+  linking: RealmLinking;
   /** select: false; only present when read with `select: '+oauthSecrets'`. */
   oauthSecrets?: RealmOAuthSecrets | null;
   createdAt: Date;

@@ -11,8 +11,11 @@ import {
   computeIdentityMode,
   computeRealmsEnabled,
   defaultRealmSettings,
+  findBatchPrincipalClashes,
   findIdentifierCollisions,
+  findPrincipalClash,
   GLOBAL_REALM_SCOPE,
+  identifierQueriesOf,
   identityModeRevertBlockedMessage,
   isGlobalRealmScope,
   isIdentityModeRevertTransition,
@@ -275,7 +278,7 @@ describe('defaultRealmSettings', () => {
       requireTwoFa: false,
       requireVerifiedEmail: false,
       allowedClientIds: [],
-      guests: { allowed: true, allowedHomeRealms: [] },
+      guests: { allowed: true, allowedHomeRealms: [], directSignIn: true },
     });
   });
 
@@ -438,7 +441,7 @@ describe('buildEffectiveSettings', () => {
         policies: policies({
           requireTwoFa: true,
           allowedClientIds: ['web'],
-          guests: { allowed: false, allowedHomeRealms: [B] },
+          guests: { allowed: false, allowedHomeRealms: [B], directSignIn: true },
         }),
       }),
     );
@@ -448,6 +451,7 @@ describe('buildEffectiveSettings', () => {
     assert.deepEqual(effective.policies.guests, {
       allowed: false,
       allowedHomeRealms: [B],
+      directSignIn: true,
     });
   });
 });
@@ -460,7 +464,9 @@ describe('evaluateGuestAllowed / assertGuestAllowed', () => {
   });
 
   it('rejects everyone when guests are not allowed', () => {
-    const p = policies({ guests: { allowed: false, allowedHomeRealms: [] } });
+    const p = policies({
+      guests: { allowed: false, allowedHomeRealms: [], directSignIn: true },
+    });
     assert.deepEqual(evaluateGuestAllowed(p, B), {
       allowed: false,
       error: 'GUESTS_NOT_ALLOWED',
@@ -469,7 +475,9 @@ describe('evaluateGuestAllowed / assertGuestAllowed', () => {
   });
 
   it('only trusts listed home realms and rejects global users then', () => {
-    const p = policies({ guests: { allowed: true, allowedHomeRealms: [B] } });
+    const p = policies({
+      guests: { allowed: true, allowedHomeRealms: [B], directSignIn: true },
+    });
     assert.deepEqual(evaluateGuestAllowed(p, B), { allowed: true });
     assert.deepEqual(evaluateGuestAllowed(p, C), {
       allowed: false,
@@ -513,7 +521,9 @@ describe('evaluateRealmAccess', () => {
     });
 
     it('ignores guest policies for home users', () => {
-      const p = policies({ guests: { allowed: false, allowedHomeRealms: [B] } });
+      const p = policies({
+        guests: { allowed: false, allowedHomeRealms: [B], directSignIn: true },
+      });
       assert.deepEqual(evaluateRealmAccess(access({ policies: p })), { allowed: true });
     });
 
@@ -573,17 +583,23 @@ describe('evaluateRealmAccess', () => {
     });
 
     it('applies the guest policy', () => {
-      const closed = policies({ guests: { allowed: false, allowedHomeRealms: [] } });
+      const closed = policies({
+        guests: { allowed: false, allowedHomeRealms: [], directSignIn: true },
+      });
       assert.deepEqual(evaluateRealmAccess(guest({ policies: closed })), {
         allowed: false,
         error: 'GUESTS_NOT_ALLOWED',
       });
-      const trusted = policies({ guests: { allowed: true, allowedHomeRealms: [C] } });
+      const trusted = policies({
+        guests: { allowed: true, allowedHomeRealms: [C], directSignIn: true },
+      });
       assert.deepEqual(evaluateRealmAccess(guest({ policies: trusted })), {
         allowed: false,
         error: 'GUESTS_NOT_ALLOWED',
       });
-      const trustsHome = policies({ guests: { allowed: true, allowedHomeRealms: [B] } });
+      const trustsHome = policies({
+        guests: { allowed: true, allowedHomeRealms: [B], directSignIn: true },
+      });
       assert.deepEqual(evaluateRealmAccess(guest({ policies: trustsHome })), {
         allowed: true,
       });
@@ -710,7 +726,7 @@ describe('SQL primitive array tolerance', () => {
     ({
       ...defaultRealmSettings().policies,
       allowedClientIds: clients,
-      guests: { allowed: true, allowedHomeRealms: homes },
+      guests: { allowed: true, allowedHomeRealms: homes, directSignIn: true },
     }) as unknown as RealmPolicies;
 
   it('buildEffectiveSettings normalizes [""], null and undefined lists', () => {
@@ -800,7 +816,9 @@ describe('evaluateRealmAccess edge cases', () => {
 
   it('treats a guest membership row for the own home realm as home, not guest', () => {
     // guests are not allowed, which would deny a real guest
-    const closed = policies({ guests: { allowed: false, allowedHomeRealms: [C] } });
+    const closed = policies({
+      guests: { allowed: false, allowedHomeRealms: [C], directSignIn: true },
+    });
     assert.deepEqual(
       evaluateRealmAccess(
         access({
@@ -944,6 +962,7 @@ describe('oauth secrets', () => {
     },
     registration: { allowWithoutInvite: false },
     policies: defaultRealmSettings().policies,
+    linking: defaultRealmSettings().linking,
   });
   const secrets = () => ({
     google: { clientSecret: 'gsecret' },
@@ -1907,5 +1926,238 @@ describe('findIdentifierCollisions', () => {
     assert.equal(result.byKind.email, 0);
     assert.equal(result.byKind.phoneNumber, 0);
     assert.equal(result.byKind['oauth.apple'], 0);
+  });
+});
+
+describe('identifierQueriesOf', () => {
+  it('lists every identifier the user holds with the query that finds it', () => {
+    assert.deepEqual(
+      identifierQueriesOf({
+        _id: 'u1',
+        email: 'a@x.io',
+        phoneNumber: '+30123',
+        username: 'alice',
+        metamask: { ethPublicAddress: '0xabc' },
+        google: { id: 'g1' },
+      }),
+      [
+        { kind: 'email', query: { email: 'a@x.io' } },
+        { kind: 'phoneNumber', query: { phoneNumber: '+30123' } },
+        { kind: 'username', query: { username: 'alice' } },
+        { kind: 'metamask', query: { 'metamask.ethPublicAddress': '0xabc' } },
+        { kind: 'oauth.google', query: { 'google.id': 'g1' } },
+      ],
+    );
+  });
+
+  it('skips absent, null and blank identifiers', () => {
+    assert.deepEqual(
+      identifierQueriesOf({
+        _id: 'u1',
+        email: '',
+        phoneNumber: null,
+        username: '   ',
+        metamask: { ethPublicAddress: null },
+        google: { id: undefined },
+        github: null,
+      }),
+      [],
+    );
+  });
+
+  it('keeps one entry per provider and the stored value as it is', () => {
+    const queries = identifierQueriesOf({
+      _id: 'u1',
+      email: 'Mixed@X.io',
+      github: { id: '42' },
+      google: { id: 'g1' },
+    });
+    assert.deepEqual(queries, [
+      { kind: 'email', query: { email: 'Mixed@X.io' } },
+      { kind: 'oauth.github', query: { 'github.id': '42' } },
+      { kind: 'oauth.google', query: { 'google.id': 'g1' } },
+    ]);
+  });
+});
+
+describe('findPrincipalClash', () => {
+  const holder = (id: string, homeRealm: string | null) => ({ _id: id, homeRealm });
+  const isolatedAt = (realmId: string | null, extra: object = {}) => ({
+    mode: 'isolated' as const,
+    realmId,
+    holders: [] as { _id: string; homeRealm: string | null }[],
+    guestUserIds: [] as string[],
+    ...extra,
+  });
+
+  it('never clashes in shared mode', () => {
+    assert.equal(
+      findPrincipalClash({
+        ...isolatedAt(A, { holders: [holder('u1', A)], guestUserIds: ['u2'] }),
+        mode: 'shared',
+      }),
+      null,
+    );
+  });
+
+  it('reports a home account of the realm', () => {
+    assert.equal(
+      findPrincipalClash(isolatedAt(A, { holders: [holder('u1', A)] })),
+      'home',
+    );
+  });
+
+  it('reports a linked guest of the realm', () => {
+    assert.equal(
+      findPrincipalClash(
+        isolatedAt(A, { holders: [holder('u2', B)], guestUserIds: ['u2'] }),
+      ),
+      'guest',
+    );
+  });
+
+  it('ignores a holder of another realm that is not a guest here', () => {
+    assert.equal(findPrincipalClash(isolatedAt(A, { holders: [holder('u3', B)] })), null);
+    assert.equal(
+      findPrincipalClash(
+        isolatedAt(A, { holders: [holder('u3', B)], guestUserIds: ['u9'] }),
+      ),
+      null,
+    );
+  });
+
+  it('never clashes with the account being judged', () => {
+    assert.equal(
+      findPrincipalClash(
+        isolatedAt(A, { holders: [holder('u1', A)], excludeUserId: 'u1' }),
+      ),
+      null,
+    );
+    assert.equal(
+      findPrincipalClash(
+        isolatedAt(A, {
+          holders: [holder('u2', B)],
+          guestUserIds: ['u2'],
+          excludeUserId: 'u2',
+        }),
+      ),
+      null,
+    );
+  });
+
+  it('reports a home account before a guest', () => {
+    assert.equal(
+      findPrincipalClash(
+        isolatedAt(A, {
+          holders: [holder('u2', B), holder('u1', A)],
+          guestUserIds: ['u2'],
+        }),
+      ),
+      'home',
+    );
+  });
+
+  it('the global scope clashes with global holders and has no guests', () => {
+    assert.equal(
+      findPrincipalClash(isolatedAt(null, { holders: [holder('u1', null)] })),
+      'home',
+    );
+    assert.equal(
+      findPrincipalClash(
+        isolatedAt(null, { holders: [holder('u2', B)], guestUserIds: ['u2'] }),
+      ),
+      null,
+    );
+  });
+});
+
+describe('findBatchPrincipalClashes', () => {
+  const q = (kind: 'email' | 'username', query: Record<string, string>) => ({
+    kind,
+    query,
+  });
+
+  it('lists the later user sharing an identifier with an earlier one', () => {
+    assert.deepEqual(
+      findBatchPrincipalClashes([
+        { _id: 'u1', queries: [q('email', { email: 'a' })] },
+        {
+          _id: 'u2',
+          queries: [q('email', { email: 'a' }), q('username', { username: 'x' })],
+        },
+      ]),
+      ['u2'],
+    );
+  });
+
+  it('does not clash over equal values of different kinds', () => {
+    assert.deepEqual(
+      findBatchPrincipalClashes([
+        { _id: 'u1', queries: [q('email', { email: 'x' })] },
+        { _id: 'u2', queries: [q('username', { username: 'x' })] },
+      ]),
+      [],
+    );
+  });
+
+  it('keeps the first holder standing and lists every later one once', () => {
+    assert.deepEqual(
+      findBatchPrincipalClashes([
+        { _id: 'u1', queries: [q('email', { email: 'a' })] },
+        { _id: 'u2', queries: [q('email', { email: 'a' })] },
+        { _id: 'u3', queries: [q('email', { email: 'a' })] },
+      ]),
+      ['u2', 'u3'],
+    );
+  });
+});
+
+describe('linking and direct sign-in settings', () => {
+  it('default to no inbound linking, outbound linking and direct guest sign-in', () => {
+    const defaults = defaultRealmSettings();
+    assert.deepEqual(defaults.linking, { inbound: false, outbound: true });
+    assert.equal(defaults.policies.guests.directSignIn, true);
+  });
+
+  it('read stored rows without the fields as the defaults', () => {
+    const effective = buildEffectiveSettings(
+      {},
+      {
+        ...defaultRealmSettings(),
+        linking: undefined as unknown as RealmSettingsData['linking'],
+        policies: {
+          ...defaultRealmSettings().policies,
+          guests: {
+            allowed: true,
+            allowedHomeRealms: [],
+            directSignIn: true,
+          } as RealmPolicies['guests'],
+        },
+      },
+    );
+    assert.deepEqual(effective.linking, { inbound: false, outbound: true });
+    assert.equal(effective.policies.guests.directSignIn, true);
+  });
+
+  it('carry explicit values into the effective settings', () => {
+    const effective = buildEffectiveSettings(
+      {},
+      {
+        ...defaultRealmSettings(),
+        linking: { inbound: true, outbound: false },
+        policies: {
+          ...defaultRealmSettings().policies,
+          guests: { allowed: true, allowedHomeRealms: [], directSignIn: false },
+        },
+      },
+    );
+    assert.deepEqual(effective.linking, { inbound: true, outbound: false });
+    assert.equal(effective.policies.guests.directSignIn, false);
+  });
+
+  it('splitRealmSettingsInput keeps linking in the settings patch', () => {
+    assert.deepEqual(splitRealmSettingsInput({ linking: { inbound: true } }).settings, {
+      linking: { inbound: true },
+    });
   });
 });

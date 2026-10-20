@@ -22,7 +22,12 @@ import {
 import { Config } from '../config/index.js';
 import { ALT_STRATEGY_AUTH } from '../constants/index.js';
 import { errors } from '../errors.js';
-import { identityMode, realmsEnabled } from '../utils/realm.js';
+import {
+  identifierQuery,
+  identityMode,
+  realmPrincipalClash,
+  realmsEnabled,
+} from '../utils/realm.js';
 import {
   assertGlobalStrategyAvailable,
   assertStrategyEnabledForRealm,
@@ -135,6 +140,16 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
         'metamask.ethPublicAddress': normalizedEthPublicAddress,
       } as Query<User>);
       if (otherRealmUser) return { nonce };
+    }
+    // isolated mode: a linked guest of the realm holding the wallet is the same principal
+    // there, so nothing is created either (the same answer as above)
+    if (
+      realmCtx &&
+      (await realmPrincipalClash(realmIdOf(realmCtx), [
+        identifierQuery('metamask', normalizedEthPublicAddress),
+      ]))
+    ) {
+      return { nonce };
     }
 
     // The realm membership and role are granted by the first successful `authenticate`,

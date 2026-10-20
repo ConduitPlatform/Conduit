@@ -101,6 +101,7 @@ export function exportRealmSettings(
       ...fields.policies,
       guests: { ...guests, allowedHomeRealmSlugs: slugs },
     },
+    linking: fields.linking,
   };
 }
 
@@ -145,6 +146,10 @@ function sanitizeImportedSettings(settings: Indexable): {
   const unresolvedHomeRealms: string[] = [];
   if (settings.active !== undefined) input.active = settings.active;
   if (settings.registration !== undefined) input.registration = settings.registration;
+  if (settings.linking !== undefined) {
+    if (!isRecord(settings.linking)) invalid('realmSettings.linking must be an object');
+    input.linking = settings.linking;
+  }
   if (settings.policies !== undefined) {
     if (!isRecord(settings.policies)) invalid('realmSettings.policies must be an object');
     const { guests, ...policies } = settings.policies;

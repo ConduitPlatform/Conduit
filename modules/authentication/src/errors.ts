@@ -65,6 +65,13 @@ export const errors = {
     message: "This realm does not allow guests from this user's home realm",
     description: 'The realm guest policy rejects the user',
   },
+  LINK_CONFLICT: {
+    conduitCode: 'LINK_CONFLICT',
+    grpcCode: status.FAILED_PRECONDITION,
+    message: 'The account conflicts with an account of this realm',
+    description:
+      'The realm already has a home account or a linked guest holding one of the identifiers (email, phone, username, wallet or provider id) of the account. Each realm has at most one principal per identifier.',
+  },
   HOME_USER_REMOVAL: {
     conduitCode: 'HOME_USER_REMOVAL',
     grpcCode: status.FAILED_PRECONDITION,

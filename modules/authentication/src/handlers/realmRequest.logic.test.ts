@@ -5,6 +5,7 @@ import { errors } from '../errors.js';
 import { buildEffectiveSettings, defaultRealmSettings } from '../utils/realm.logic.js';
 import {
   anonymousRealmDenial,
+  decideGuestPrincipal,
   isGlobalStrategyEnabled,
   isHomeRealm,
   isInviteRequired,
@@ -227,5 +228,94 @@ describe('anonymousRealmDenial', () => {
     const pinned = policies({ allowedClientIds: ['web'] });
     assert.equal(anonymousRealmDenial(R, pinned, 'web'), null);
     assert.equal(anonymousRealmDenial(R, pinned, 'mobile'), 'REALM_ACCESS_DENIED');
+  });
+});
+
+describe('decideGuestPrincipal', () => {
+  const REALM_ID = 'aaaaaaaaaaaaaaaaaaaaaaaa';
+  const OTHER_REALM = 'bbbbbbbbbbbbbbbbbbbbbbbb';
+  const guest = { _id: 'g1', homeRealm: OTHER_REALM };
+
+  it('resolves the single guest of the realm holding the identifier', () => {
+    assert.deepEqual(
+      decideGuestPrincipal({
+        realmId: REALM_ID,
+        directSignIn: true,
+        holders: [guest],
+        guestUserIds: ['g1'],
+      }),
+      { outcome: 'one', user: guest },
+    );
+  });
+
+  it('resolves nothing when direct sign-in is off, even with a guest', () => {
+    assert.deepEqual(
+      decideGuestPrincipal({
+        realmId: REALM_ID,
+        directSignIn: false,
+        holders: [guest],
+        guestUserIds: ['g1'],
+      }),
+      { outcome: 'none' },
+    );
+  });
+
+  it('resolves nothing when the holder has no guest membership in the realm', () => {
+    assert.deepEqual(
+      decideGuestPrincipal({
+        realmId: REALM_ID,
+        directSignIn: true,
+        holders: [guest],
+        guestUserIds: ['someone-else'],
+      }),
+      { outcome: 'none' },
+    );
+    assert.deepEqual(
+      decideGuestPrincipal({
+        realmId: REALM_ID,
+        directSignIn: true,
+        holders: [],
+        guestUserIds: [],
+      }),
+      { outcome: 'none' },
+    );
+  });
+
+  it('ignores a holder whose home realm is this realm', () => {
+    const home = { _id: 'h1', homeRealm: REALM_ID };
+    assert.deepEqual(
+      decideGuestPrincipal({
+        realmId: REALM_ID,
+        directSignIn: true,
+        holders: [home],
+        guestUserIds: ['h1'],
+      }),
+      { outcome: 'none' },
+    );
+  });
+
+  it('reports more than one guest as an invariant breach, without picking one', () => {
+    assert.deepEqual(
+      decideGuestPrincipal({
+        realmId: REALM_ID,
+        directSignIn: true,
+        holders: [guest, { _id: 'g2', homeRealm: null }],
+        guestUserIds: ['g1', 'g2'],
+      }),
+      { outcome: 'many', count: 2 },
+    );
+  });
+
+  it('counts a global holder (no home realm) as a guest candidate', () => {
+    const globalGuest = { _id: 'g3', homeRealm: null };
+    assert.deepEqual(
+      decideGuestPrincipal({
+        realmId: REALM_ID,
+        directSignIn: true,
+        holders: [globalGuest],
+        guestUserIds: ['g3'],
+      }),
+      { outcome: 'one', user: globalGuest },
+    );
   });
 });

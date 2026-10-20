@@ -134,3 +134,38 @@ export function anonymousRealmDenial(
   });
   return result.allowed ? null : result.error;
 }
+
+/** Outcome of the guest lookup of an identifier at a realm (see decideGuestPrincipal). */
+export type GuestPrincipalDecision<T> =
+  { outcome: 'none' } | { outcome: 'one'; user: T } | { outcome: 'many'; count: number };
+
+/**
+ * Picks the account an identifier resolves to among the guests of a realm, after the home
+ * lookup of the realm found nothing:
+ *  - direct sign-in off: none (linked guests sign in at their home realm);
+ *  - a holder whose home realm is this realm is not a guest here and is ignored;
+ *  - exactly one holder with a guest membership in the realm: that holder;
+ *  - more than one: an invariant breach (see realm.logic `assertRealmPrincipalFree`), which
+ *    the caller refuses instead of picking one of them.
+ * `holders` are the accounts holding the identifier anywhere, `guestUserIds` the ids of the
+ * accounts with a guest membership in `realmId`.
+ */
+export function decideGuestPrincipal<
+  T extends { _id: unknown; homeRealm?: unknown },
+>(params: {
+  realmId: string;
+  directSignIn: boolean;
+  holders: readonly T[];
+  guestUserIds: readonly string[];
+}): GuestPrincipalDecision<T> {
+  if (!params.directSignIn) return { outcome: 'none' };
+  const realm = String(params.realmId);
+  const guests = new Set(params.guestUserIds.map(String));
+  const matches = params.holders.filter(holder => {
+    const home = holder.homeRealm ? String(holder.homeRealm) : null;
+    return home !== realm && guests.has(String(holder._id));
+  });
+  if (matches.length === 0) return { outcome: 'none' };
+  if (matches.length === 1) return { outcome: 'one', user: matches[0] };
+  return { outcome: 'many', count: matches.length };
+}

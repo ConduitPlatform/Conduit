@@ -18,6 +18,7 @@ import {
 } from '../models/index.js';
 import {
   assertGuestAllowed,
+  assertRealmPrincipalsFree,
   evaluateGuestAllowed,
   grantRealmMembership,
   MAX_TEAM_DEPTH,
@@ -148,6 +149,13 @@ export async function claimHomeRealm(
   userId: string,
   realmId: string,
 ): Promise<'claimed' | 'already' | 'lost'> {
+  // a new home account of the realm: its identifiers must be free there (isolated mode)
+  const candidate = await User.getInstance().findOne(
+    { _id: userId },
+    { readPreference: 'primary' },
+  );
+  if (!candidate) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+  await assertRealmPrincipalsFree(realmId, [candidate]);
   const result = await User.getInstance().updateMany(
     withHomeScope({ _id: userId }, null),
     { homeRealm: realmId },
@@ -217,6 +225,8 @@ async function joinRealm(
   // always judge on the stored home realm, the caller's user object may be stale
   const user = await User.getInstance().findOne({ _id: userId });
   if (!user) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+  // home or guest, the user becomes a principal of the realm: judged before any write
+  await assertRealmPrincipalsFree(realmId, [user]);
   const classification = classifyRealmMember(user.homeRealm, realmId, mode);
   let type = classification.type;
   let claimed = false;

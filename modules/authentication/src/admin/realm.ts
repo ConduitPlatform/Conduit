@@ -32,6 +32,7 @@ import {
 } from '../models/index.js';
 import {
   assertNoNestedRealm,
+  assertRealmPrincipalsFree,
   assertSlugAvailable,
   assertSlugUniqueAfterWrite,
   assertValidSlug,
@@ -197,6 +198,13 @@ export async function promoteTeamToRealm(
   const members = await findUsersByIds(memberIds);
   const plan = planPromoteMembers(members, teamId, settings.policies);
   if (plan.rejected.length > 0) throw guestsNotAllowedError(plan.rejected, 'promote');
+  // every member joins the realm (home or guest): one principal per identifier, judged
+  // among the members and against the realm, before anything is written
+  const joining = new Set([...plan.home, ...plan.guests]);
+  await assertRealmPrincipalsFree(
+    teamId,
+    members.filter(member => joining.has(String(member._id))),
+  );
 
   // leftovers of an earlier, half-demoted realm would trip the unique team index
   await RealmSettings.getInstance().deleteMany({ team: teamId });
@@ -278,6 +286,7 @@ export class RealmsAdmin {
           strategies: ConduitJson.Optional,
           policies: ConduitJson.Optional,
           registration: ConduitJson.Optional,
+          linking: ConduitJson.Optional,
         },
         errors: [
           errors.REALMS_DISABLED,
@@ -309,6 +318,7 @@ export class RealmsAdmin {
           strategies: ConduitJson.Optional,
           policies: ConduitJson.Optional,
           registration: ConduitJson.Optional,
+          linking: ConduitJson.Optional,
         },
         errors: [errors.REALMS_DISABLED, errors.REALM_NOT_FOUND, errors.REALM_SLUG_TAKEN],
         name: 'UpdateRealm',
@@ -659,6 +669,7 @@ export class RealmsAdmin {
         strategies: settings.strategies,
         registration: settings.registration,
         policies: settings.policies,
+        linking: settings.linking,
         oauthSecrets,
       } as Indexable);
     } catch (e) {
@@ -781,6 +792,8 @@ export class RealmsAdmin {
       );
       if (rejected.length > 0) throw guestsNotAllowedError(rejected, 'add');
     }
+    // one principal per identifier in the realm, judged before anything is written
+    await assertRealmPrincipalsFree(teamId, toAdd);
     for (const user of toAdd) {
       const userId = String(user._id);
       await grantRealmMembership(this.grpcSdk, {
@@ -828,7 +841,9 @@ export class RealmsAdmin {
 
     if (targetId !== oldId) {
       const userId = String(user._id);
-      // judged before anything is written
+      // judged before anything is written: the user becomes a home account of the target
+      // (the global scope when there is none), so its identifiers must be free there
+      await assertRealmPrincipalsFree(targetId, [user]);
       const oldPlan = oldId
         ? planOldHomeMembership(
             (await RealmSettings.getInstance().findOne({ team: oldId }))?.policies,

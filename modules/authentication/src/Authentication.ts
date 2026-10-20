@@ -107,6 +107,8 @@ import {
   realmsDisableBlockedMessage,
   realmsEnabled,
   resolveTeamRealm,
+  identifierQuery,
+  realmPrincipalClash,
   uniqueIdentifierQuery,
 } from './utils/realm.js';
 import {
@@ -641,7 +643,11 @@ export default class Authentication extends ManagedModule<Config> {
       let user = await models.User.getInstance().findOne(
         uniqueIdentifierQuery({ email }, realmIdOf(realmCtx)),
       );
-      if (user) {
+      // a linked guest of the realm holding the address is a principal there too
+      const guestHolder = await realmPrincipalClash(realmIdOf(realmCtx), [
+        identifierQuery('email', email),
+      ]);
+      if (user || guestHolder) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
       AuthUtils.assertValidEmail(email);
@@ -758,7 +764,10 @@ export default class Authentication extends ManagedModule<Config> {
       let user = await models.User.getInstance().findOne(
         uniqueIdentifierQuery({ username }, realmIdOf(realmCtx)),
       );
-      if (user) {
+      const guestHolder = await realmPrincipalClash(realmIdOf(realmCtx), [
+        identifierQuery('username', username),
+      ]);
+      if (user || guestHolder) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
       const hashedPassword = await AuthUtils.hashPassword(password);

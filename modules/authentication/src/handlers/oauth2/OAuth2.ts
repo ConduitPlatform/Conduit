@@ -52,17 +52,22 @@ import { errors } from '../../errors.js';
 import {
   assertAnonymousUserInRealm,
   assertStrategyEnabledForRealm,
+  assertStrategyForPrincipal,
   grantHomeMembershipForRegistration,
   homeRealmFields,
   isInviteRequired,
   realmIdOf,
   realmParam,
   resolveInvitationRealm,
+  resolvePrincipal,
   resolveRealmFromSlug,
   rollbackUserOnFailure,
-  scopedUserQuery,
 } from '../realmRequest.js';
 import {
+  assertRealmPrincipalFree,
+  identifierQuery,
+  IdentifierKind,
+  IdentifierQuery,
   identityMode,
   RealmContext,
   realmsEnabled,
@@ -492,12 +497,13 @@ export abstract class OAuth2<
     realmCtx: RealmContext | null = null,
   ): Promise<User> {
     let user: User | null = null;
+    const providerKey = `oauth.${this.providerName}`;
     if (payload.hasOwnProperty('email') && !isNil(payload.email)) {
-      user = await User.getInstance().findOne(
-        scopedUserQuery({ email: payload.email }, realmCtx),
-      );
+      // the realm's own account, or its linked guest with direct sign-in
+      user = (await resolvePrincipal(realmCtx, { email: payload.email }))?.user ?? null;
+      if (user) await assertStrategyForPrincipal(realmCtx, user, providerKey);
       // isolated mode: the address may belong to another realm's account, so the request
-      // realm gets its own account (the scoped lookup above already missed)
+      // realm gets its own account (the lookup above already missed)
       if (isNil(user) && (realmCtx || realmsEnabled()) && identityMode() === 'shared') {
         // email is unique across realms: the address belongs to a user of another one
         const otherRealmUser = await User.getInstance().findOne({
@@ -509,9 +515,10 @@ export abstract class OAuth2<
       payload.hasOwnProperty('id') &&
       (!payload.hasOwnProperty('email') || isNil(payload.email))
     ) {
-      user = await User.getInstance().findOne(
-        scopedUserQuery({ [this.providerName + '.id']: payload.id }, realmCtx),
-      );
+      user =
+        (await resolvePrincipal(realmCtx, { [this.providerName + '.id']: payload.id }))
+          ?.user ?? null;
+      if (user) await assertStrategyForPrincipal(realmCtx, user, providerKey);
       // isolated mode: as for email, the request realm gets its own account
       if (isNil(user) && (realmCtx || realmsEnabled()) && identityMode() === 'shared') {
         // provider identities are unique across realms: the id belongs to a user of
@@ -565,6 +572,23 @@ export abstract class OAuth2<
       assertOAuthRegistrationAllowed(mode, invitationToken);
       if (payload.email) {
         assertEmailAllowed(payload.email);
+      }
+      if (realmCtx) {
+        // a linked guest of the realm holding the email or the provider id is a principal
+        // there too, even when direct sign-in is off. Only identifiers the payload carries.
+        const identifiers: IdentifierQuery[] = [];
+        if (payload.email) identifiers.push(identifierQuery('email', payload.email));
+        if (!isNil(payload.id) && payload.id !== '') {
+          identifiers.push(
+            identifierQuery(
+              `oauth.${this.providerName}` as IdentifierKind,
+              String(payload.id),
+            ),
+          );
+        }
+        await assertRealmPrincipalFree(realmIdOf(realmCtx), identifiers, {
+          conflict: 'USER_EXISTS',
+        });
       }
       if (anonymousUser) {
         assertAnonymousUserInRealm(anonymousUser, realmCtx);

@@ -39,6 +39,7 @@ import {
   assertAnonymousUserInRealm,
   assertGlobalStrategyAvailable,
   assertStrategyEnabledForRealm,
+  assertStrategyForPrincipal,
   grantHomeMembership,
   grantHomeMembershipForRegistration,
   homeRealmFields,
@@ -47,12 +48,18 @@ import {
   realmParam,
   resolveHomeRealmContext,
   resolveInvitationRealm,
+  resolvePrincipal,
   resolveRealmFromCall,
   rollbackUserOnFailure,
   scopedUserQuery,
 } from './realmRequest.js';
 import { anyRealmEnables } from '../utils/strategyRealms.js';
-import { assertIdentifierFreeForUser, uniqueIdentifierQuery } from '../utils/realm.js';
+import {
+  assertIdentifierFreeForUser,
+  assertRealmPrincipalFree,
+  identifierQuery,
+  uniqueIdentifierQuery,
+} from '../utils/realm.js';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -365,6 +372,16 @@ export class LocalHandlers implements IAuthenticationStrategy {
         errors.USER_EXISTS,
         `User with email ${email} already exists`,
       );
+    if (realmCtx) {
+      // a linked guest of the realm holding the address is a principal there too
+      await assertRealmPrincipalFree(
+        realmIdOf(realmCtx),
+        [identifierQuery('email', email)],
+        {
+          conflict: 'USER_EXISTS',
+        },
+      );
+    }
     if (userData) {
       AuthUtils.checkUserData(userData);
     }
@@ -497,14 +514,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const config = ConfigController.getInstance().config;
     const realmCtx = await resolveRealmFromCall(call);
     if (!realmCtx) assertGlobalStrategyAvailable('local');
-    assertStrategyEnabledForRealm(realmCtx, 'local');
 
-    const user: User | null = await User.getInstance().findOne(
-      scopedUserQuery({ email }, realmCtx),
-      {
-        select: '+hashedPassword',
-      },
-    );
+    const user: User | null =
+      (await resolvePrincipal(realmCtx, { email }, { select: '+hashedPassword' }))
+        ?.user ?? null;
+    await assertStrategyForPrincipal(realmCtx, user, 'local');
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
     await authenticateChecks(
@@ -534,14 +548,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
       config.local.forgot_password_redirect_uri;
     const realmCtx = await resolveRealmFromCall(call);
     if (!realmCtx) assertGlobalStrategyAvailable('local');
-    assertStrategyEnabledForRealm(realmCtx, 'local');
 
-    const user: User | null = await User.getInstance().findOne(
-      scopedUserQuery({ email }, realmCtx),
-      {
-        select: '+hashedPassword',
-      },
-    );
+    const user: User | null =
+      (await resolvePrincipal(realmCtx, { email }, { select: '+hashedPassword' }))
+        ?.user ?? null;
+    await assertStrategyForPrincipal(realmCtx, user, 'local');
 
     if (isNil(user))
       return 'If the email address is valid, a password reset link will be sent to it.';
@@ -675,7 +686,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     AuthUtils.assertValidEmail(newEmail, 'module');
     await assertIdentifierFreeForUser(
       user,
-      { email: newEmail },
+      identifierQuery('email', newEmail),
       'Email address already taken',
     );
 
@@ -777,6 +788,16 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
     const user: User = token.user as User;
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    // the address may have been taken since the change was requested
+    const newEmail = token.data?.email;
+    if (typeof newEmail !== 'string' || newEmail === '') {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Change email token is malformed');
+    }
+    await assertIdentifierFreeForUser(
+      user,
+      identifierQuery('email', newEmail),
+      'Email address already taken',
+    );
     const redirectUri =
       token.data.customRedirectUri ?? config.local.verification.redirect_uri;
     await Token.getInstance()
@@ -785,7 +806,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         ConduitGrpcSdk.Logger.error(e);
       });
     await User.getInstance().findByIdAndUpdate(user._id as string, {
-      email: token.data.email,
+      email: newEmail,
     });
     return redirectUri ? { redirect: redirectUri } : 'Email changed successfully';
   }

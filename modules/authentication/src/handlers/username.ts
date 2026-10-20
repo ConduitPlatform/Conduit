@@ -22,11 +22,11 @@ import { ALT_STRATEGY_AUTH } from '../constants/index.js';
 import { errors } from '../errors.js';
 import {
   assertGlobalStrategyAvailable,
-  assertStrategyEnabledForRealm,
+  assertStrategyForPrincipal,
   realmIdOf,
   realmParam,
+  resolvePrincipal,
   resolveRealmFromCall,
-  scopedUserQuery,
 } from './realmRequest.js';
 
 export class UsernameHandlers implements IAuthenticationStrategy {
@@ -105,14 +105,11 @@ export class UsernameHandlers implements IAuthenticationStrategy {
     const config = ConfigController.getInstance().config;
     const realmCtx = await resolveRealmFromCall(call);
     if (!realmCtx) assertGlobalStrategyAvailable('username');
-    assertStrategyEnabledForRealm(realmCtx, 'username');
 
-    const user: User | null = await User.getInstance().findOne(
-      scopedUserQuery({ username }, realmCtx),
-      {
-        select: '+hashedPassword',
-      },
-    );
+    const user: User | null =
+      (await resolvePrincipal(realmCtx, { username }, { select: '+hashedPassword' }))
+        ?.user ?? null;
+    await assertStrategyForPrincipal(realmCtx, user, 'username');
 
     if (isNil(user)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');

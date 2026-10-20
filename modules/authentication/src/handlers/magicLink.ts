@@ -29,12 +29,12 @@ import { AuthUtils } from '../utils/index.js';
 import { errors } from '../errors.js';
 import {
   assertGlobalStrategyAvailable,
-  assertStrategyEnabledForRealm,
+  assertStrategyForPrincipal,
   realmIdOf,
   realmParam,
+  resolvePrincipal,
   resolveRealmFromCall,
   resolveRealmFromSlug,
-  scopedUserQuery,
 } from './realmRequest.js';
 import { anyRealmEnables } from '../utils/strategyRealms.js';
 import { RealmContext } from '../utils/realm.js';
@@ -134,10 +134,8 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const { clientId } = call.request.context;
     const realmCtx = await resolveRealmFromCall(call);
     if (!realmCtx) assertGlobalStrategyAvailable('magicLink');
-    assertStrategyEnabledForRealm(realmCtx, 'magicLink');
-    const user: User | null = await User.getInstance().findOne(
-      scopedUserQuery({ email }, realmCtx),
-    );
+    const user: User | null = (await resolvePrincipal(realmCtx, { email }))?.user ?? null;
+    await assertStrategyForPrincipal(realmCtx, user, 'magicLink');
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (user.isAnonymous) throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
 
@@ -210,7 +208,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     // the realm the link was requested for, re-validated at redemption
     const realmCtx = await resolveRealmFromSlug(token.data?.realm);
     if (!realmCtx) assertGlobalStrategyAvailable('magicLink');
-    assertStrategyEnabledForRealm(realmCtx, 'magicLink');
+    await assertStrategyForPrincipal(realmCtx, user, 'magicLink');
     await Token.getInstance()
       .deleteMany({ user: token.user, tokenType: TokenType.MAGIC_LINK })
       .catch(e => {

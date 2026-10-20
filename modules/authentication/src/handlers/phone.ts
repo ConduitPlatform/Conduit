@@ -25,21 +25,26 @@ import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
 import { TeamsHandler } from './team.js';
 import { errors } from '../errors.js';
-import { RealmContext, uniqueIdentifierQuery } from '../utils/realm.js';
+import {
+  identifierQuery,
+  realmPrincipalClash,
+  RealmContext,
+  uniqueIdentifierQuery,
+} from '../utils/realm.js';
 import {
   assertAnonymousUserInRealm,
   assertGlobalStrategyAvailable,
-  assertStrategyEnabledForRealm,
+  assertStrategyForPrincipal,
   grantHomeMembershipForRegistration,
   homeRealmFields,
   isInviteRequired,
   realmIdOf,
   realmParam,
   resolveInvitationRealm,
+  resolvePrincipal,
   resolveRealmFromCall,
   resolveRealmFromSlug,
   rollbackUserOnFailure,
-  scopedUserQuery,
 } from './realmRequest.js';
 import { anyRealmEnables } from '../utils/strategyRealms.js';
 
@@ -138,21 +143,31 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     // the realm the code was requested for, re-validated at verification
     const realmCtx = await resolveRealmFromSlug(existingToken.data.realm);
     if (!realmCtx) assertGlobalStrategyAvailable('phone');
-    assertStrategyEnabledForRealm(realmCtx, 'phone');
+    // a login is for the account the code was sent to (a linked guest signs in at its home
+    // strategy); a registration uses the requested realm's strategy
+    const loginUser =
+      existingToken.tokenType === TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN ||
+      !existingToken.user
+        ? null
+        : await User.getInstance().findOne({ _id: existingToken.user as string });
+    await assertStrategyForPrincipal(realmCtx, loginUser, 'phone');
 
     let user: User | null;
     if (existingToken.tokenType === TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN) {
       // shared mode: a number that belongs to a user of another realm cannot be registered
       // here (isolated mode: only the same home realm is checked). The refusal happens
       // only once the code was proven so that `authenticate` does not reveal which numbers
-      // exist.
+      // exist. A linked guest of the realm holding the number refuses the same way.
       const phoneOwner = await User.getInstance().findOne(
         uniqueIdentifierQuery(
           { phoneNumber: existingToken.data.phone },
           realmIdOf(realmCtx),
         ),
       );
-      if (phoneOwner) {
+      const guestHolder = await realmPrincipalClash(realmIdOf(realmCtx), [
+        identifierQuery('phoneNumber', existingToken.data.phone),
+      ]);
+      if (phoneOwner || guestHolder) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
       }
       user = await this.handlePhoneRegistration(
@@ -162,7 +177,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         userData,
       );
     } else {
-      user = await User.getInstance().findOne({ _id: existingToken.user as string });
+      user = loginUser;
       if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
     }
     return TokenProvider.getInstance().provideUserTokens({
@@ -179,10 +194,9 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const { clientId } = call.request.context;
     const realmCtx = await resolveRealmFromCall(call);
     if (!realmCtx) assertGlobalStrategyAvailable('phone');
-    assertStrategyEnabledForRealm(realmCtx, 'phone');
-    const user: User | null = await User.getInstance().findOne(
-      scopedUserQuery({ phoneNumber: phone }, realmCtx),
-    );
+    const user: User | null =
+      (await resolvePrincipal(realmCtx, { phoneNumber: phone }))?.user ?? null;
+    await assertStrategyForPrincipal(realmCtx, user, 'phone');
     let foundInvitationToken;
     if (invitationToken) {
       foundInvitationToken = await Token.getInstance().findOne(

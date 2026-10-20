@@ -321,6 +321,12 @@ export function sanitizeRealmInput(body: unknown): RealmSettingsInput {
       if (guests.allowed !== undefined) {
         clean.guests.allowed = readBoolean(guests.allowed, 'policies.guests.allowed');
       }
+      if (guests.directSignIn !== undefined) {
+        clean.guests.directSignIn = readBoolean(
+          guests.directSignIn,
+          'policies.guests.directSignIn',
+        );
+      }
       if (guests.allowedHomeRealms !== undefined) {
         const realms = readStringList(
           guests.allowedHomeRealms,
@@ -333,6 +339,16 @@ export function sanitizeRealmInput(body: unknown): RealmSettingsInput {
       }
     }
     result.policies = clean;
+  }
+  if (input.linking !== undefined) {
+    const linking = readRecord(input.linking, 'linking');
+    const clean: Record_ = {};
+    for (const flag of ['inbound', 'outbound'] as const) {
+      if (linking[flag] !== undefined) {
+        clean[flag] = readBoolean(linking[flag], `linking.${flag}`);
+      }
+    }
+    result.linking = clean;
   }
   if (input.strategies !== undefined) {
     const strategies = readRecord(input.strategies, 'strategies');
@@ -406,7 +422,12 @@ export function pickSettingsFields(stored: Indexable): RealmSettingsFields {
       guests: {
         allowed: policies.guests?.allowed !== false,
         allowedHomeRealms: normalizeIdList(policies.guests?.allowedHomeRealms),
+        directSignIn: policies.guests?.directSignIn !== false,
       },
+    },
+    linking: {
+      inbound: stored.linking?.inbound === true,
+      outbound: stored.linking?.outbound !== false,
     },
   };
 }

@@ -88,6 +88,7 @@ describe('realm export', () => {
     // import fails closed instead of widening the list
     assert.deepEqual((out.policies as any).guests, {
       allowed: true,
+      directSignIn: true,
       allowedHomeRealmSlugs: [
         'other',
         `${UNRESOLVED_REALM_PREFIX}bbbbbbbbbbbbbbbbbbbbbbbb`,
@@ -171,7 +172,11 @@ describe('realm import', () => {
     });
     assert.equal(settings.strategies.local.enabled, false);
     assert.equal(settings.strategies.username.enabled, false);
-    assert.deepEqual(settings.policies.guests, { allowed: true, allowedHomeRealms: [] });
+    assert.deepEqual(settings.policies.guests, {
+      allowed: true,
+      allowedHomeRealms: [],
+      directSignIn: true,
+    });
     assert.deepEqual(oauthSecrets, { google: { clientSecret: 'kept' } });
     assert.ok(!JSON.stringify(settings).includes('kept'));
   });
@@ -366,6 +371,7 @@ describe('export -> import round trip', () => {
     assert.deepEqual(once.settings.policies.guests, {
       allowed: true,
       allowedHomeRealms: [OTHER_ID],
+      directSignIn: true,
     });
     assert.equal(once.settings.registration.allowWithoutInvite, true);
     assert.equal(once.settings.policies.requireVerifiedEmail, true);

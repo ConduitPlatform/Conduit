@@ -24,8 +24,12 @@ const REALM = 'aaaaaaaaaaaaaaaaaaaaaaaa';
 const OTHER = 'bbbbbbbbbbbbbbbbbbbbbbbb';
 const OTHER2 = 'cccccccccccccccccccccccc';
 
-const openGuests = { guests: { allowed: true, allowedHomeRealms: [] } };
-const closedGuests = { guests: { allowed: false, allowedHomeRealms: [] } };
+const openGuests = {
+  guests: { allowed: true, allowedHomeRealms: [], directSignIn: true },
+};
+const closedGuests = {
+  guests: { allowed: false, allowedHomeRealms: [], directSignIn: true },
+};
 
 function isInvalidArgument(e: unknown) {
   return e instanceof GrpcError && e.code === status.INVALID_ARGUMENT;
@@ -70,14 +74,16 @@ describe('planPromoteMembers', () => {
   });
 
   it('honours allowedHomeRealms', () => {
-    const policies = { guests: { allowed: true, allowedHomeRealms: [OTHER2] } };
+    const policies = {
+      guests: { allowed: true, allowedHomeRealms: [OTHER2], directSignIn: true },
+    };
     const plan = planPromoteMembers(users, REALM, policies);
     assert.deepEqual(
       plan.rejected.map(user => user._id),
       ['u3'],
     );
     const trusted = planPromoteMembers(users, REALM, {
-      guests: { allowed: true, allowedHomeRealms: [OTHER] },
+      guests: { allowed: true, allowedHomeRealms: [OTHER], directSignIn: true },
     });
     assert.deepEqual(trusted.guests, ['u3']);
   });
@@ -137,7 +143,7 @@ describe('sanitizeRealmInput', () => {
       policies: {
         requireTwoFa: true,
         allowedClientIds: ['web'],
-        guests: { allowed: false, allowedHomeRealms: [OTHER] },
+        guests: { allowed: false, allowedHomeRealms: [OTHER], directSignIn: true },
       },
       strategies: { local: { enabled: false }, phone: { enabled: true, nope: 1 } },
     });
@@ -147,7 +153,7 @@ describe('sanitizeRealmInput', () => {
       policies: {
         requireTwoFa: true,
         allowedClientIds: ['web'],
-        guests: { allowed: false, allowedHomeRealms: [OTHER] },
+        guests: { allowed: false, allowedHomeRealms: [OTHER], directSignIn: true },
       },
       strategies: { local: { enabled: false }, phone: { enabled: true } },
     });
@@ -386,6 +392,7 @@ describe('buildRealmSettingsWrite', () => {
     });
     assert.deepEqual(Object.keys(picked).sort(), [
       'active',
+      'linking',
       'policies',
       'registration',
       'strategies',
@@ -475,7 +482,7 @@ describe('planOldHomeMembership', () => {
     assert.equal(planOldHomeMembership(openGuests, null), 'guest');
     assert.equal(
       planOldHomeMembership(
-        { guests: { allowed: true, allowedHomeRealms: [OTHER] } },
+        { guests: { allowed: true, allowedHomeRealms: [OTHER], directSignIn: true } },
         OTHER,
       ),
       'guest',
@@ -486,14 +493,14 @@ describe('planOldHomeMembership', () => {
     assert.equal(planOldHomeMembership(closedGuests, OTHER), 'revoke');
     assert.equal(
       planOldHomeMembership(
-        { guests: { allowed: true, allowedHomeRealms: [OTHER] } },
+        { guests: { allowed: true, allowedHomeRealms: [OTHER], directSignIn: true } },
         null,
       ),
       'revoke',
     );
     assert.equal(
       planOldHomeMembership(
-        { guests: { allowed: true, allowedHomeRealms: [OTHER] } },
+        { guests: { allowed: true, allowedHomeRealms: [OTHER], directSignIn: true } },
         OTHER2,
       ),
       'revoke',
@@ -703,5 +710,46 @@ describe('assertTeamPromotable', () => {
       () => assertTeamPromotable({ isDefault: true }),
       (err: any) => err.code === status.FAILED_PRECONDITION,
     );
+  });
+});
+
+describe('linking and direct sign-in on write', () => {
+  it('sanitizeRealmInput keeps linking flags and guest direct sign-in', () => {
+    assert.deepEqual(
+      sanitizeRealmInput({
+        linking: { inbound: true, outbound: false, nope: 1 },
+        policies: { guests: { directSignIn: false } },
+      }),
+      {
+        linking: { inbound: true, outbound: false },
+        policies: { guests: { directSignIn: false } },
+      },
+    );
+  });
+
+  it('sanitizeRealmInput refuses non-boolean values', () => {
+    assert.throws(
+      () => sanitizeRealmInput({ linking: { inbound: 'yes' } }),
+      isInvalidArgument,
+    );
+    assert.throws(
+      () => sanitizeRealmInput({ policies: { guests: { directSignIn: 1 } } }),
+      isInvalidArgument,
+    );
+  });
+
+  it('pickSettingsFields reads stored rows without the fields as the defaults', () => {
+    const picked = pickSettingsFields({ policies: { guests: { allowed: true } } });
+    assert.deepEqual(picked.linking, { inbound: false, outbound: true });
+    assert.equal(picked.policies.guests.directSignIn, true);
+  });
+
+  it('buildRealmSettingsWrite merges a partial linking update over the base', () => {
+    const { settings } = buildRealmSettingsWrite({
+      base: defaultRealmSettings(),
+      input: { linking: { inbound: true } },
+    });
+    assert.deepEqual(settings.linking, { inbound: true, outbound: true });
+    assert.equal(settings.policies.guests.directSignIn, true);
   });
 });

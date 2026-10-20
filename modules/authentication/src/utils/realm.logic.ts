@@ -111,7 +111,21 @@ export type RealmPolicies = {
   guests: {
     allowed: boolean;
     allowedHomeRealms: string[];
+    /**
+     * Linked guests may sign in at this realm with their own credentials (the strategy must
+     * be enabled at their home realm). Off: a guest signs in at home and enters the realm.
+     */
+    directSignIn: boolean;
   };
+};
+
+/**
+ * Account linking of a realm. `inbound`: accounts of other realms may connect into this one.
+ * `outbound`: this realm's accounts may connect into other realms.
+ */
+export type RealmLinking = {
+  inbound: boolean;
+  outbound: boolean;
 };
 
 /** Settings with the oauth secrets merged back in (what `buildEffectiveSettings` reads). */
@@ -120,6 +134,7 @@ export type RealmSettingsData = {
   strategies: RealmStrategies;
   registration: { allowWithoutInvite: boolean };
   policies: RealmPolicies;
+  linking: RealmLinking;
 };
 
 /** Settings as stored: secrets live in `oauthSecrets` (select: false), not in oauth. */
@@ -158,6 +173,7 @@ export type RealmSettingsInput = {
   };
   registration?: Partial<RealmSettingsData['registration']>;
   policies?: PartialRealmPolicies;
+  linking?: Partial<RealmLinking>;
 };
 
 /** The part of a write body that goes into RealmSettings (no secrets, no read flags). */
@@ -168,6 +184,7 @@ export type RealmSettingsPatch = {
   };
   registration?: Partial<RealmSettingsData['registration']>;
   policies?: PartialRealmPolicies;
+  linking?: Partial<RealmLinking>;
 };
 
 /** Global module config, as read from ConfigController (loosely typed on purpose). */
@@ -196,6 +213,7 @@ export type EffectiveAuthSettings = {
   };
   registration: { allowWithoutInvite: boolean };
   policies: RealmPolicies;
+  linking: RealmLinking;
 };
 
 export type RealmAssurance = {
@@ -536,6 +554,110 @@ export function findIdentifierCollisions(
 }
 
 // ---------------------------------------------------------------------------
+// One principal per realm
+//
+// For a realm R and an identifier I at most one principal signs in at R with I: R's own
+// home account, or one linked guest. Shared mode gets that for free (identifiers are
+// global); isolated mode checks it when an account joins R (register, link, guest add,
+// promote, re-home) and when an identifier changes.
+// ---------------------------------------------------------------------------
+
+/** An identifier, with the query that finds its holders (the stored value, as is). */
+export type IdentifierQuery = { kind: IdentifierKind; query: Indexable };
+
+/** The query that finds the holders of one identifier value. */
+export function identifierQuery(kind: IdentifierKind, value: string): IdentifierQuery {
+  if (kind === 'email') return { kind, query: { email: value } };
+  if (kind === 'phoneNumber') return { kind, query: { phoneNumber: value } };
+  if (kind === 'username') return { kind, query: { username: value } };
+  if (kind === 'metamask') {
+    return { kind, query: { 'metamask.ethPublicAddress': value } };
+  }
+  const provider = kind.slice('oauth.'.length);
+  return { kind, query: { [`${provider}.id`]: value } };
+}
+
+/**
+ * Every identifier a user holds: email, phone, username, wallet and each provider id. The
+ * values are read as stored (not normalized), so each query finds the same holders the
+ * stored value does.
+ */
+export function identifierQueriesOf(user: IdentifierUser): IdentifierQuery[] {
+  const queries: IdentifierQuery[] = [];
+  const add = (kind: IdentifierKind, value: unknown) => {
+    if (typeof value === 'string' && value.trim() !== '') {
+      queries.push(identifierQuery(kind, value));
+    }
+  };
+  add('email', user.email);
+  add('phoneNumber', user.phoneNumber);
+  add('username', user.username);
+  add('metamask', user.metamask?.ethPublicAddress);
+  for (const provider of REALM_OAUTH_PROVIDERS) {
+    add(`oauth.${provider}`, user[provider]?.id);
+  }
+  return queries;
+}
+
+/** The side of a realm on which a clashing holder sits: its home account or a guest. */
+export type PrincipalClash = 'home' | 'guest' | null;
+
+/**
+ * Which holder of an identifier breaks the one-principal rule at realm R (null = none).
+ *  - `holders`: the accounts holding one of the identifiers, with their stored `homeRealm`;
+ *  - `guestUserIds`: the ids of the accounts with a guest membership in R;
+ *  - `excludeUserId`: the account being judged, which never clashes with itself.
+ * Shared mode never clashes here (uniqueness is deployment-wide). Realm `null` is the
+ * global scope, which has no guests.
+ */
+export function findPrincipalClash(params: {
+  mode: IdentityMode;
+  realmId: string | null | undefined;
+  excludeUserId?: string | null;
+  holders: ReadonlyArray<{ _id: unknown; homeRealm?: unknown }>;
+  guestUserIds: readonly string[];
+}): PrincipalClash {
+  if (params.mode !== 'isolated') return null;
+  const realm = params.realmId ? String(params.realmId) : null;
+  const exclude = params.excludeUserId ? String(params.excludeUserId) : null;
+  const others = params.holders.filter(holder => String(holder._id) !== exclude);
+  if (
+    others.some(holder => (holder.homeRealm ? String(holder.homeRealm) : null) === realm)
+  ) {
+    return 'home';
+  }
+  if (realm) {
+    const guests = new Set(params.guestUserIds.map(String));
+    if (others.some(holder => guests.has(String(holder._id)))) return 'guest';
+  }
+  return null;
+}
+
+/**
+ * Users of a batch that is about to join one realm and hold an identifier that an earlier
+ * user of the same batch already holds. Both would be principals of the realm, so the later
+ * one clashes. Returns the ids of the clashing users.
+ */
+export function findBatchPrincipalClashes(
+  users: ReadonlyArray<{ _id: unknown; queries: readonly IdentifierQuery[] }>,
+): string[] {
+  const firstHolder = new Map<string, string>();
+  const clashing: string[] = [];
+  for (const user of users) {
+    const id = String(user._id);
+    let clashes = false;
+    for (const { kind, query } of user.queries) {
+      const key = `${kind}\u0000${JSON.stringify(query)}`;
+      const holder = firstHolder.get(key);
+      if (holder === undefined) firstHolder.set(key, id);
+      else if (holder !== id) clashes = true;
+    }
+    if (clashes) clashing.push(id);
+  }
+  return clashing;
+}
+
+// ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------
 
@@ -556,8 +678,9 @@ export function defaultRealmSettings(): RealmSettingsData {
       requireTwoFa: false,
       requireVerifiedEmail: false,
       allowedClientIds: [],
-      guests: { allowed: true, allowedHomeRealms: [] },
+      guests: { allowed: true, allowedHomeRealms: [], directSignIn: true },
     },
+    linking: { inbound: false, outbound: true },
   };
 }
 
@@ -735,6 +858,7 @@ export function splitRealmSettingsInput(input: RealmSettingsInput | null | undef
   if (!isRecord(input)) return { settings, oauthSecrets };
   if (input.active !== undefined) settings.active = input.active;
   if (input.registration !== undefined) settings.registration = { ...input.registration };
+  if (input.linking !== undefined) settings.linking = { ...input.linking };
   if (input.policies !== undefined) {
     settings.policies = {
       ...input.policies,
@@ -885,7 +1009,13 @@ export function buildEffectiveSettings(
       guests: {
         allowed: policies.guests?.allowed ?? defaults.policies.guests.allowed,
         allowedHomeRealms: normalizeIdList(policies.guests?.allowedHomeRealms),
+        // stored rows written before the flag existed read as the default (true)
+        directSignIn: policies.guests?.directSignIn !== false,
       },
+    },
+    linking: {
+      inbound: realmSettings.linking?.inbound === true,
+      outbound: realmSettings.linking?.outbound !== false,
     },
   };
 }
