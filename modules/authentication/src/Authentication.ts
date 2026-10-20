@@ -101,6 +101,7 @@ import {
   deleteUserRealmMemberships,
   getRealmSlugById,
   identityMode,
+  identityModeConfigError,
   identityModeRevertBlockedMessage,
   invalidateRealmCache,
   isGlobalRealmScope,
@@ -331,6 +332,8 @@ export default class Authentication extends ManagedModule<Config> {
    * Refuses config updates that would leave the realm data in an unsafe state, checked here
    * and not in `preConfig`, which also runs for config updates received from the bus and for
    * the startup reconciliation, where a throw would not reach the caller of the update:
+   *  - an identity mode that is not `shared` or `isolated` (INVALID_ARGUMENT): checked here
+   *    so the refusal reaches the caller (preConfig also refuses it, for the other paths);
    *  - switching the realms feature off while enabled realm teams exist (the "flag off = no
    *    realm data" invariant): demote them first;
    *  - returning the identity mode from isolated to shared while an identifier is held by
@@ -347,6 +350,10 @@ export default class Authentication extends ManagedModule<Config> {
       incomingTeams = JSON.parse(call.request.newConfig)?.teams;
     } catch {
       // malformed JSON is reported by the base implementation
+    }
+    const modeError = identityModeConfigError(incomingTeams?.realms?.identityMode);
+    if (modeError) {
+      return callback({ code: status.INVALID_ARGUMENT, message: modeError });
     }
     const previousTeams = ConfigController.getInstance().config?.teams;
     if (isIdentityModeRevertTransition(previousTeams, incomingTeams)) {
@@ -426,6 +433,9 @@ export default class Authentication extends ManagedModule<Config> {
     if (config.apple?.clients) {
       validateAppleClients(config.apple.clients);
     }
+
+    const modeError = identityModeConfigError(config.teams?.realms?.identityMode);
+    if (modeError) throw new GrpcError(status.INVALID_ARGUMENT, modeError);
 
     return config;
   }

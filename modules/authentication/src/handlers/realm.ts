@@ -27,7 +27,6 @@ import {
   getRealmSlugById,
   grantRealmMembership,
   identifierQueriesOf,
-  isGlobalRealmScope,
   LinkInvite,
   realmPrincipalClash,
   realmsEnabled,
@@ -50,6 +49,7 @@ import {
   subteamIdsOnLeave,
   summarizePolicies,
   toRealmRef,
+  isGlobalSourceRealm,
 } from './realm.logic.js';
 import { consumeLinkProof, findLinkProof } from './realmDiscovery.js';
 import { resolveRealmFromSlug } from './realmRequest.js';
@@ -158,7 +158,7 @@ export class RealmHandlers {
       {
         path: '/realms/:slug/link',
         action: ConduitRouteActions.POST,
-        description: `Connects an account of another realm to this realm: the account becomes a guest of this realm and signs in here with its own credentials. The account is the one of the proof token (discovery login) for sourceRealm, or the authenticated session's account. Returns tokens bound to this realm.`,
+        description: `Connects an account of another realm to this realm: the account becomes a guest of this realm and signs in here with its own credentials. The account is the one of the proof token (discovery login) for sourceRealm, or the authenticated session's account. sourceRealm is the slug of the account's home realm; use "global" for a global account. Returns tokens bound to this realm.`,
         urlParams: { slug: ConduitString.Required },
         bodyParams: {
           proofToken: ConduitString.Optional,
@@ -277,9 +277,7 @@ export class RealmHandlers {
     sourceRealm: unknown,
   ): Promise<string | null | undefined> {
     if (sourceRealm === undefined) return undefined;
-    if (sourceRealm === null || sourceRealm === '' || isGlobalRealmScope(sourceRealm)) {
-      return null;
-    }
+    if (isGlobalSourceRealm(sourceRealm)) return null;
     const ctx = await this.requireRealm(sourceRealm);
     return String(ctx.team._id);
   }

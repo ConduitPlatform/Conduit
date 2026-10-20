@@ -18,7 +18,7 @@ import {
   toRealmDto,
   toRealmMember,
 } from './realm.logic.js';
-import { defaultRealmSettings } from '../utils/realm.logic.js';
+import { defaultRealmSettings, RealmSettingsData } from '../utils/realm.logic.js';
 
 const REALM = 'aaaaaaaaaaaaaaaaaaaaaaaa';
 const OTHER = 'bbbbbbbbbbbbbbbbbbbbbbbb';
@@ -751,5 +751,49 @@ describe('linking and direct sign-in on write', () => {
     });
     assert.deepEqual(settings.linking, { inbound: true, outbound: true });
     assert.equal(settings.policies.guests.directSignIn, true);
+  });
+});
+
+describe('realm reads report the fields added after creation', () => {
+  it('toRealmDto fills linking and guest direct sign-in of a legacy row', () => {
+    const legacy = {
+      ...defaultRealmSettings(),
+      linking: undefined as unknown as RealmSettingsData['linking'],
+      policies: {
+        ...defaultRealmSettings().policies,
+        guests: { allowed: true, allowedHomeRealms: [] },
+      } as unknown as RealmSettingsData['policies'],
+    };
+    const dto = toRealmDto({ _id: REALM }, legacy, { home: 1, guest: 0 });
+    assert.deepEqual(dto.settings.linking, { inbound: false, outbound: true });
+    assert.equal(dto.settings.policies.guests.directSignIn, true);
+    assert.equal(dto.settings.policies.guests.allowed, true);
+  });
+
+  it('toRealmDto defaults each linking key that is absent', () => {
+    const dto = toRealmDto(
+      { _id: REALM },
+      {
+        ...defaultRealmSettings(),
+        linking: { inbound: true } as RealmSettingsData['linking'],
+      },
+      { home: 1, guest: 0 },
+    );
+    assert.deepEqual(dto.settings.linking, { inbound: true, outbound: true });
+  });
+
+  it('toRealmDto keeps an explicit direct sign-in off', () => {
+    const dto = toRealmDto(
+      { _id: REALM },
+      {
+        ...defaultRealmSettings(),
+        policies: {
+          ...defaultRealmSettings().policies,
+          guests: { allowed: true, allowedHomeRealms: [], directSignIn: false },
+        },
+      },
+      { home: 1, guest: 0 },
+    );
+    assert.equal(dto.settings.policies.guests.directSignIn, false);
   });
 });

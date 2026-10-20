@@ -14,12 +14,16 @@ import {
   computeIdentityMode,
   computeRealmsEnabled,
   defaultRealmSettings,
+  directSignInOf,
   findBatchPrincipalClashes,
   findIdentifierCollisions,
   findPrincipalClash,
   GLOBAL_REALM_SCOPE,
   identifierQueriesOf,
+  identityModeConfigError,
   identityModeRevertBlockedMessage,
+  IDENTITY_MODES,
+  linkingFlagsOf,
   isGlobalRealmScope,
   isIdentityModeRevertTransition,
   evaluateGuestAllowed,
@@ -38,6 +42,7 @@ import {
   shouldCheckRealmAccess,
   splitRealmSettingsInput,
   subtreeContainsRealm,
+  withRealmFieldDefaults,
   toFullLeafStrategies,
   tokenAssurance,
   unresolvedRealmError,
@@ -2512,5 +2517,90 @@ describe('isAccountLinkOffered', () => {
   it('does not offer it without a realm (global registration)', () => {
     assert.equal(isAccountLinkOffered({ ...offered, realmId: null }), false);
     assert.equal(isAccountLinkOffered({ ...offered, realmId: undefined }), false);
+  });
+});
+
+describe('linking and direct sign-in defaults per key', () => {
+  it('linkingFlagsOf defaults each key that is absent', () => {
+    assert.deepEqual(linkingFlagsOf(undefined), { inbound: false, outbound: true });
+    assert.deepEqual(linkingFlagsOf(null), { inbound: false, outbound: true });
+    assert.deepEqual(linkingFlagsOf({}), { inbound: false, outbound: true });
+    assert.deepEqual(linkingFlagsOf({ inbound: true }), {
+      inbound: true,
+      outbound: true,
+    });
+    assert.deepEqual(linkingFlagsOf({ outbound: false }), {
+      inbound: false,
+      outbound: false,
+    });
+  });
+
+  it('directSignInOf is on unless the flag is explicitly false', () => {
+    assert.equal(directSignInOf(undefined), true);
+    assert.equal(directSignInOf({}), true);
+    assert.equal(directSignInOf({ directSignIn: true }), true);
+    assert.equal(directSignInOf({ directSignIn: false }), false);
+  });
+
+  it('withRealmFieldDefaults fills a legacy row and keeps the rest of it', () => {
+    const legacy = {
+      active: true,
+      strategies: { local: { enabled: true } },
+      policies: { requireTwoFa: true, guests: { allowed: false, allowedHomeRealms: [] } },
+    };
+    const read = withRealmFieldDefaults(legacy);
+    assert.deepEqual(read.linking, { inbound: false, outbound: true });
+    assert.equal(read.policies.guests.directSignIn, true);
+    assert.equal(read.policies.guests.allowed, false);
+    assert.equal(read.policies.requireTwoFa, true);
+    assert.deepEqual(read.strategies, legacy.strategies);
+  });
+
+  it('withRealmFieldDefaults keeps explicit values', () => {
+    const read = withRealmFieldDefaults({
+      linking: { inbound: true, outbound: false },
+      policies: { guests: { directSignIn: false } },
+    });
+    assert.deepEqual(read.linking, { inbound: true, outbound: false });
+    assert.equal(read.policies.guests.directSignIn, false);
+  });
+
+  it('withRealmFieldDefaults does not mutate its input', () => {
+    const input = { policies: { guests: {} as Record<string, unknown> } };
+    withRealmFieldDefaults(input);
+    assert.equal('linking' in input, false);
+    assert.equal('directSignIn' in input.policies.guests, false);
+  });
+});
+
+describe('identityModeConfigError', () => {
+  it('accepts the two modes', () => {
+    assert.deepEqual(IDENTITY_MODES, ['shared', 'isolated']);
+    assert.equal(identityModeConfigError('shared'), null);
+    assert.equal(identityModeConfigError('isolated'), null);
+  });
+
+  it('accepts an absent value (a partial update keeps the applied mode)', () => {
+    assert.equal(identityModeConfigError(undefined), null);
+  });
+
+  it('refuses any other value, including case and whitespace variants and null', () => {
+    for (const value of [
+      '',
+      'Isolated',
+      ' shared',
+      'shared ',
+      'mixed',
+      null,
+      1,
+      true,
+      {},
+    ]) {
+      const error = identityModeConfigError(value);
+      assert.match(
+        error ?? '',
+        /teams\.realms\.identityMode must be one of: shared, isolated/,
+      );
+    }
   });
 });

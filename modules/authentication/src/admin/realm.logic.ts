@@ -5,8 +5,10 @@ import { errors } from '../errors.js';
 import { filled, isRecord } from '../utils/common.logic.js';
 import {
   applyOAuthSecretsUpdate,
+  directSignInOf,
   evaluateGuestAllowed,
   isRealmId,
+  linkingFlagsOf,
   maskRealmSettings,
   normalizeIdList,
   normalizeSlug,
@@ -17,6 +19,7 @@ import {
   RealmSettingsInput,
   splitRealmSettingsInput,
   StoredRealmSettingsData,
+  withRealmFieldDefaults,
 } from '../utils/realm.logic.js';
 
 /*
@@ -422,13 +425,10 @@ export function pickSettingsFields(stored: Indexable): RealmSettingsFields {
       guests: {
         allowed: policies.guests?.allowed !== false,
         allowedHomeRealms: normalizeIdList(policies.guests?.allowedHomeRealms),
-        directSignIn: policies.guests?.directSignIn !== false,
+        directSignIn: directSignInOf(policies.guests),
       },
     },
-    linking: {
-      inbound: stored.linking?.inbound === true,
-      outbound: stored.linking?.outbound !== false,
-    },
+    linking: linkingFlagsOf(stored.linking),
   };
 }
 
@@ -538,7 +538,8 @@ export function buildRealmSettingsWrite(params: {
 export function toRealmDto<
   S extends { strategies: { oauth?: Record<string, any> }; oauthSecrets?: unknown },
 >(team: Indexable, settings: S, counts: { home: number; guest: number }) {
-  return { team, settings: maskRealmSettings(settings), counts };
+  const withDefaults = withRealmFieldDefaults(settings) as S;
+  return { team, settings: maskRealmSettings(withDefaults), counts };
 }
 
 /** Adds the realm team role and the membership type to a user, for the members list. */

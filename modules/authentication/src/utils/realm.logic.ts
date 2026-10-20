@@ -445,6 +445,26 @@ export function identityModeRevertBlockedMessage(collisionCount: number): string
   return `${collisionCount} identifier(s) are held by more than one account; identity mode cannot return to shared`;
 }
 
+/** The values `teams.realms.identityMode` may take. */
+export const IDENTITY_MODES: readonly IdentityMode[] = ['shared', 'isolated'];
+
+/**
+ * Why a `teams.realms.identityMode` value is refused, or null when it names a mode. An absent
+ * value (undefined) is not checked: a partial config update keeps the applied value. The
+ * schema declares the value as a String, and convict does not enforce `enum`, so this check
+ * is what rejects an unknown mode (any other value would silently act as shared).
+ */
+export function identityModeConfigError(value: unknown): string | null {
+  if (value === undefined) return null;
+  if (
+    typeof value === 'string' &&
+    (IDENTITY_MODES as readonly string[]).includes(value)
+  ) {
+    return null;
+  }
+  return `teams.realms.identityMode must be one of: ${IDENTITY_MODES.join(', ')}`;
+}
+
 /** Identifier kinds that shared mode keeps unique. OAuth ids are keyed per provider. */
 export type IdentifierKind =
   'email' | 'phoneNumber' | 'username' | 'metamask' | `oauth.${RealmOAuthProviderKey}`;
@@ -990,6 +1010,40 @@ function overlayOAuth(
 }
 
 /**
+ * The linking flags of a stored realm, each defaulted when absent (inbound off, outbound on):
+ * a realm created before the flags existed reads and runs with the defaults.
+ */
+export function linkingFlagsOf(
+  stored: { inbound?: unknown; outbound?: unknown } | null | undefined,
+): RealmLinking {
+  return { inbound: stored?.inbound === true, outbound: stored?.outbound !== false };
+}
+
+/** Whether a realm's guests sign in directly. A missing flag (before it existed) is on. */
+export function directSignInOf(
+  guests: { directSignIn?: unknown } | null | undefined,
+): boolean {
+  return guests?.directSignIn !== false;
+}
+
+/**
+ * Stored settings with the fields added after a realm may have been created (`linking` and
+ * `policies.guests.directSignIn`) filled with the value a missing field means. Reads use it,
+ * so they report what the runtime applies (see buildEffectiveSettings).
+ */
+export function withRealmFieldDefaults(settings: Indexable): Indexable {
+  const policies: Indexable = settings.policies ?? {};
+  return {
+    ...settings,
+    linking: linkingFlagsOf(settings.linking),
+    policies: {
+      ...policies,
+      guests: { ...policies.guests, directSignIn: directSignInOf(policies.guests) },
+    },
+  };
+}
+
+/**
  * Overlays a realm's settings on the global module config.
  *  - strategy enablement is explicit per realm (global `enabled` is not inherited);
  *  - OAuth credentials inherit from global when the realm leaves them empty;
@@ -1039,14 +1093,10 @@ export function buildEffectiveSettings(
       guests: {
         allowed: policies.guests?.allowed ?? defaults.policies.guests.allowed,
         allowedHomeRealms: normalizeIdList(policies.guests?.allowedHomeRealms),
-        // stored rows written before the flag existed read as the default (true)
-        directSignIn: policies.guests?.directSignIn !== false,
+        directSignIn: directSignInOf(policies.guests),
       },
     },
-    linking: {
-      inbound: realmSettings.linking?.inbound === true,
-      outbound: realmSettings.linking?.outbound !== false,
-    },
+    linking: linkingFlagsOf(realmSettings.linking),
   };
 }
 

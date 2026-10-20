@@ -25,7 +25,7 @@ import {
   resolveTeamRealm,
 } from '../utils/realm.js';
 import {
-  decideGuestPrincipal,
+  decideGuestPrincipalPaged,
   decideGuestSignIn,
   isGlobalStrategyEnabled,
   isHomeRealm,
@@ -100,19 +100,14 @@ export function scopedUserQuery<T extends Record<string, unknown>>(
 export type ResolvedPrincipal<U = User> = { user: U; via: 'home' | 'guest' };
 
 /**
- * Holders of one identifier read by a guest lookup. The holder count of an identifier is
- * bounded by the realms that share it (one account per realm), so a full page means the
- * decision cannot be made from a partial view: the lookup is refused and logged.
- */
-const GUEST_HOLDER_LIMIT = 10;
-
-/**
  * Resolves the account an identifier (`identifierQuery`, e.g. `{ email }`) signs in as at
  * the realm (null = global):
  *  1. the home account of the realm (scopedUserQuery), as before;
  *  2. failing that, with a realm whose `guests.directSignIn` is on, the one linked guest of
  *     the realm holding the identifier (`via: 'guest'`). Two or more are an invariant breach:
- *     logged and refused (null), never resolved to one of them.
+ *     logged and refused (null), never resolved to one of them. Every holder is considered
+ *     (paged, see decideGuestPrincipalPaged), so the answer does not depend on how many
+ *     realms share the identifier.
  * Works in both identity modes. `options.select` is passed to the lookups (for example
  * `+hashedPassword`). The guest lookup reads the holders without it and loads only the chosen
  * account in full.
@@ -130,34 +125,27 @@ export async function resolvePrincipal(
   if (!realmCtx || !realmCtx.effective.policies.guests.directSignIn) return null;
 
   const realmId = realmIdOf(realmCtx)!;
-  const holders = await User.getInstance().findMany(identifierQuery, {
-    select: '_id homeRealm',
-    limit: GUEST_HOLDER_LIMIT,
-  });
-  if (holders.length === 0) return null;
-  if (holders.length >= GUEST_HOLDER_LIMIT) {
-    ConduitGrpcSdk.Logger.warn(
-      `Realm ${realmId}: the identifier is held by ${GUEST_HOLDER_LIMIT}+ accounts; sign-in refused`,
-    );
-    return null;
-  }
-  const guestOf = await RealmMembership.getInstance().findMany(
-    {
-      realm: realmId,
-      membershipType: 'guest',
-      user: { $in: holders.map(holder => String(holder._id)) },
-    },
-    { select: 'user' },
-  );
-  const decision = decideGuestPrincipal({
+  const decision = await decideGuestPrincipalPaged({
     realmId,
     directSignIn: true,
-    holders,
-    guestUserIds: guestOf.map(membership => String(membership.user)),
+    readHolders: (skip, limit) =>
+      User.getInstance().findMany(identifierQuery, {
+        select: '_id homeRealm',
+        sort: { _id: 1 },
+        skip,
+        limit,
+      }),
+    guestIdsAmong: async userIds => {
+      const guestOf = await RealmMembership.getInstance().findMany(
+        { realm: realmId, membershipType: 'guest', user: { $in: userIds } },
+        { select: 'user' },
+      );
+      return guestOf.map(membership => String(membership.user));
+    },
   });
   if (decision.outcome === 'many') {
     ConduitGrpcSdk.Logger.warn(
-      `Realm ${realmId} holds ${decision.count} guests for one identifier; sign-in refused`,
+      `Realm ${realmId} holds more than one guest for one identifier; sign-in refused`,
     );
   }
   if (decision.outcome !== 'one') return null;

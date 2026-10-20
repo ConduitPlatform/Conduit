@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { buildEffectiveSettings, defaultRealmSettings } from '../utils/realm.logic.js';
 import {
   buildRealmDiscovery,
+  isGlobalSourceRealm,
   buildUserRealms,
   enterRealmTokenFlags,
   isLeaveRefused,
@@ -373,5 +374,25 @@ describe('leaving a realm', () => {
       'grand',
     ]);
     assert.deepEqual(subteamIdsOnLeave('root', ['root']), []);
+  });
+});
+
+describe('isGlobalSourceRealm', () => {
+  it('reads "global" and an empty string as the global account', () => {
+    assert.equal(isGlobalSourceRealm('global'), true);
+    assert.equal(isGlobalSourceRealm('Global'), true);
+    assert.equal(isGlobalSourceRealm(' global '), true);
+    assert.equal(isGlobalSourceRealm(''), true);
+  });
+
+  it('reads a null value as the global account too (it never arrives over the route)', () => {
+    assert.equal(isGlobalSourceRealm(null), true);
+  });
+
+  it('does not read a slug, an id, or an absent value as the global account', () => {
+    assert.equal(isGlobalSourceRealm('acme'), false);
+    assert.equal(isGlobalSourceRealm('aaaaaaaaaaaaaaaaaaaaaaaa'), false);
+    assert.equal(isGlobalSourceRealm(undefined), false);
+    assert.equal(isGlobalSourceRealm(0), false);
   });
 });

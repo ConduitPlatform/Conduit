@@ -6,6 +6,7 @@ import { buildEffectiveSettings, defaultRealmSettings } from '../utils/realm.log
 import {
   anonymousRealmDenial,
   decideGuestPrincipal,
+  decideGuestPrincipalPaged,
   decideGuestSignIn,
   isGlobalStrategyEnabled,
   isHomeRealm,
@@ -439,5 +440,132 @@ describe('decideGuestPrincipal', () => {
       }),
       { outcome: 'one', user: globalGuest },
     );
+  });
+});
+
+describe('decideGuestPrincipalPaged', () => {
+  const REALM_ID = 'aaaaaaaaaaaaaaaaaaaaaaaa';
+  const OTHER_REALM = 'bbbbbbbbbbbbbbbbbbbbbbbb';
+
+  /** An in-memory identifier: `holders` in id order, the guests of the realm among them. */
+  function fakeIdentifier(
+    holders: { _id: string; homeRealm: string | null }[],
+    guests: string[],
+  ) {
+    const reads: [number, number][] = [];
+    const lookups: string[][] = [];
+    return {
+      reads,
+      lookups,
+      readHolders: async (skip: number, limit: number) => {
+        reads.push([skip, limit]);
+        return holders.slice(skip, skip + limit);
+      },
+      guestIdsAmong: async (userIds: string[]) => {
+        lookups.push(userIds);
+        return userIds.filter(id => guests.includes(id));
+      },
+    };
+  }
+
+  /** Twelve holders (more than the old cap of ten), homed in other realms, ids h00..h11. */
+  const twelve = Array.from({ length: 12 }, (_, i) => ({
+    _id: `h${String(i).padStart(2, '0')}`,
+    homeRealm: OTHER_REALM,
+  }));
+
+  it('finds the one guest of the realm among more than ten holders', async () => {
+    const identifier = fakeIdentifier(twelve, ['h07']);
+    const decision = await decideGuestPrincipalPaged({
+      realmId: REALM_ID,
+      directSignIn: true,
+      pageSize: 5,
+      readHolders: identifier.readHolders,
+      guestIdsAmong: identifier.guestIdsAmong,
+    });
+    assert.deepEqual(decision, { outcome: 'one', user: twelve[7] });
+    // read to the end: 5 + 5 + 2 holders, the last page shorter than the page size
+    assert.deepEqual(identifier.reads, [
+      [0, 5],
+      [5, 5],
+      [10, 5],
+    ]);
+  });
+
+  it('finds a guest held by more than ten accounts beyond the first page of the default size', async () => {
+    const many = Array.from({ length: 450 }, (_, i) => ({
+      _id: `u${String(i).padStart(3, '0')}`,
+      homeRealm: OTHER_REALM,
+    }));
+    const identifier = fakeIdentifier(many, ['u399']);
+    const decision = await decideGuestPrincipalPaged({
+      realmId: REALM_ID,
+      directSignIn: true,
+      readHolders: identifier.readHolders,
+      guestIdsAmong: identifier.guestIdsAmong,
+    });
+    assert.deepEqual(decision, { outcome: 'one', user: many[399] });
+    assert.equal(identifier.reads.length, 3);
+  });
+
+  it('resolves nothing when more than ten holders have no guest membership in the realm', async () => {
+    const identifier = fakeIdentifier(twelve, []);
+    const decision = await decideGuestPrincipalPaged({
+      realmId: REALM_ID,
+      directSignIn: true,
+      pageSize: 4,
+      readHolders: identifier.readHolders,
+      guestIdsAmong: identifier.guestIdsAmong,
+    });
+    assert.deepEqual(decision, { outcome: 'none' });
+  });
+
+  it('stops reading as soon as a second guest is found, without picking one', async () => {
+    const identifier = fakeIdentifier(twelve, ['h00', 'h01']);
+    const decision = await decideGuestPrincipalPaged({
+      realmId: REALM_ID,
+      directSignIn: true,
+      pageSize: 2,
+      readHolders: identifier.readHolders,
+      guestIdsAmong: identifier.guestIdsAmong,
+    });
+    assert.deepEqual(decision, { outcome: 'many', count: 2 });
+    assert.deepEqual(identifier.reads, [[0, 2]]);
+  });
+
+  it('finds two guests split across pages and refuses them', async () => {
+    const identifier = fakeIdentifier(twelve, ['h01', 'h09']);
+    const decision = await decideGuestPrincipalPaged({
+      realmId: REALM_ID,
+      directSignIn: true,
+      pageSize: 4,
+      readHolders: identifier.readHolders,
+      guestIdsAmong: identifier.guestIdsAmong,
+    });
+    assert.equal(decision.outcome, 'many');
+  });
+
+  it('reads nothing when direct sign-in is off', async () => {
+    const identifier = fakeIdentifier(twelve, ['h07']);
+    const decision = await decideGuestPrincipalPaged({
+      realmId: REALM_ID,
+      directSignIn: false,
+      readHolders: identifier.readHolders,
+      guestIdsAmong: identifier.guestIdsAmong,
+    });
+    assert.deepEqual(decision, { outcome: 'none' });
+    assert.deepEqual(identifier.reads, []);
+  });
+
+  it('resolves nothing without holders', async () => {
+    const identifier = fakeIdentifier([], []);
+    const decision = await decideGuestPrincipalPaged({
+      realmId: REALM_ID,
+      directSignIn: true,
+      readHolders: identifier.readHolders,
+      guestIdsAmong: identifier.guestIdsAmong,
+    });
+    assert.deepEqual(decision, { outcome: 'none' });
+    assert.deepEqual(identifier.lookups, []);
   });
 });

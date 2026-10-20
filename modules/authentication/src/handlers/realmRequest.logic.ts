@@ -182,6 +182,50 @@ export function decideGuestPrincipal<
   return { outcome: 'many', count: matches.length };
 }
 
+/** Holders of an identifier read per page by the guest lookup (see decideGuestPrincipalPaged). */
+export const GUEST_HOLDER_PAGE_SIZE = 200;
+
+/**
+ * decideGuestPrincipal over every holder of an identifier, read in pages, with no cap on the
+ * number of holders: a realm may hold the identifier of many accounts (one per realm that
+ * shares it), and only the guests of the realm matter. Pages are read in order and the guest
+ * memberships of each page are looked up before the next one, until the holders run out or a
+ * second guest shows up (already a refusal, so the rest is not read). The decision is then
+ * exact: it is the one decideGuestPrincipal makes on the complete holder list.
+ *  - `readHolders(skip, limit)`: the next page of the holders of the identifier, in a stable
+ *    order (sorted by id);
+ *  - `guestIdsAmong(userIds)`: the ids among them that hold a guest membership in the realm.
+ */
+export async function decideGuestPrincipalPaged<
+  T extends { _id: unknown; homeRealm?: unknown },
+>(params: {
+  realmId: string;
+  directSignIn: boolean;
+  pageSize?: number;
+  readHolders: (skip: number, limit: number) => Promise<readonly T[]>;
+  guestIdsAmong: (userIds: string[]) => Promise<readonly string[]>;
+}): Promise<GuestPrincipalDecision<T>> {
+  if (!params.directSignIn) return { outcome: 'none' };
+  const pageSize = params.pageSize ?? GUEST_HOLDER_PAGE_SIZE;
+  const holders: T[] = [];
+  const guestUserIds: string[] = [];
+  for (let skip = 0; ; skip += pageSize) {
+    const page = await params.readHolders(skip, pageSize);
+    if (page.length > 0) {
+      holders.push(...page);
+      const guests = await params.guestIdsAmong(page.map(holder => String(holder._id)));
+      guestUserIds.push(...guests);
+    }
+    const decision = decideGuestPrincipal({
+      realmId: params.realmId,
+      directSignIn: true,
+      holders,
+      guestUserIds,
+    });
+    if (decision.outcome === 'many' || page.length < pageSize) return decision;
+  }
+}
+
 /** Result of the guest gate (see decideGuestSignIn). `ok: false` reads as "not found". */
 export type GuestSignInGate = { ok: true } | { ok: false };
 

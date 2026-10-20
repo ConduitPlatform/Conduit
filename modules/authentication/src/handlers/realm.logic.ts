@@ -1,4 +1,8 @@
-import { EffectiveAuthSettings, REALM_OAUTH_PROVIDERS } from '../utils/realm.logic.js';
+import {
+  EffectiveAuthSettings,
+  isGlobalRealmScope,
+  REALM_OAUTH_PROVIDERS,
+} from '../utils/realm.logic.js';
 import { decideLinkProofUse } from './realmDiscovery.logic.js';
 import { isHomeRealm } from './realmRequest.logic.js';
 
@@ -177,6 +181,15 @@ export function linkSourceStillValid(params: {
  * Whether leaving a realm is refused: the home realm of a user is never left (the user is moved
  * or blocked instead). Only guest realms can be left.
  */
+/**
+ * Whether a `sourceRealm` body value of a link request names the global scope. The route
+ * takes a string, so the global account is sent as "global" (or as an empty string); a JSON
+ * null never reaches here, the param parser refuses it.
+ */
+export function isGlobalSourceRealm(sourceRealm: unknown): boolean {
+  return sourceRealm === null || sourceRealm === '' || isGlobalRealmScope(sourceRealm);
+}
+
 export function isLeaveRefused(homeRealm: unknown, targetRealmId: string): boolean {
   return isHomeRealm(homeRealm, targetRealmId);
 }
