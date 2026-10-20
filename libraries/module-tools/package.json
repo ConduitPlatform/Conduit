@@ -24,7 +24,7 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "rimraf dist && tsup",
-    "test": "node --experimental-strip-types --test src/utilities/reconcileModuleConfig.test.ts"
+    "test": "node --experimental-strip-types --test src/utilities/reconcileModuleConfig.test.ts src/logging/fileTransports.test.ts"
   },
   "license": "MIT",
   "dependencies": {

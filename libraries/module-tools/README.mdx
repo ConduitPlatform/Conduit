@@ -6,6 +6,19 @@ This library provides a framework to build micro-services in NodeJS that can be 
 
 - run npm build
 
+## Logging
+
+Modules log to stdout. When `LOKI_URL` is set, the same logs are also shipped to Loki. File logging is off unless `LOG_TO_FILE=true`.
+
+| Variable             | Default                 | Description                                                                                                                    |
+| -------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `LOG_TO_FILE`        | unset                   | Set to `true` to also write `combined.log` (info and above) and `errors.log` (error). Any other value leaves file logging off. |
+| `LOG_FILE_DIR`       | `{tmpdir}/conduit-logs` | Directory for those files. It is created when missing.                                                                         |
+| `LOG_FILE_MAX_SIZE`  | `10485760`              | Max size in bytes of each file before rotation (10 MB). Non-positive or non-integer values use the default.                    |
+| `LOG_FILE_MAX_FILES` | `5`                     | Rotated files to keep. Non-positive or non-integer values use the default.                                                     |
+
+Rotated files use Winston's tailable file transport. Metadata in file lines is single-line JSON.
+
 ## Features ✔️
 
 - Service registration & discovery
