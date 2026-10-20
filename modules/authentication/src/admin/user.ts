@@ -9,7 +9,8 @@ import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/index.js';
 import { assertEmailAllowed } from '../utils/emailRestrictions.js';
 import { isNil } from 'lodash-es';
-import { RealmMembership, User } from '../models/index.js';
+import { RealmMembership, Team, User } from '../models/index.js';
+import { toRealmRef } from '../handlers/realm.logic.js';
 import escapeStringRegexp from 'escape-string-regexp';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
@@ -43,6 +44,37 @@ const MAX_MEMBERSHIP_FILTER = 1000;
 
 export class UserAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+
+  /**
+   * The home realm and the guest realms of a user. A guest realm carries the time the user was
+   * linked into it. A realm whose team no longer exists is left out.
+   */
+  async getUserRealms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
+    const user = await User.getInstance().findOne({ _id: id });
+    if (!user) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+    const homeId = user.homeRealm ? String(user.homeRealm) : null;
+    const memberships = await RealmMembership.getInstance().findMany(
+      { user: String(user._id), membershipType: 'guest' },
+      { sort: { _id: 1 } },
+    );
+    const realmIds = [
+      ...new Set([homeId, ...memberships.map(membership => String(membership.realm))]),
+    ].filter((realmId): realmId is string => !!realmId);
+    const teams = realmIds.length
+      ? await Team.getInstance().findMany({ _id: { $in: realmIds } })
+      : [];
+    const byId = new Map(teams.map(team => [String(team._id), team]));
+    const homeTeam = homeId ? byId.get(homeId) : undefined;
+    const home = homeTeam ? toRealmRef(homeTeam) : null;
+    const guests = memberships.flatMap(membership => {
+      const realmId = String(membership.realm);
+      const team = byId.get(realmId);
+      if (!team || realmId === homeId) return [];
+      return [{ ...toRealmRef(team), createdAt: membership.createdAt }];
+    });
+    return { home, guests };
+  }
 
   async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { isActive, isAnonymous, provider, search, sort, homeRealm, realm } =

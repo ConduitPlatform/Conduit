@@ -6,6 +6,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitBoolean,
+  ConduitDate,
   ConduitNumber,
   ConduitString,
   ConfigController,
@@ -142,6 +143,35 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('UnblockUser', 'String'),
       this.userAdmin.unblockUser.bind(this.userAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/users/:id/realms',
+        action: ConduitRouteActions.GET,
+        description: `Returns the home realm and the guest realms of a user. Each guest realm carries when the user was linked into it.`,
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('UserAdminRealms', {
+        home: {
+          type: {
+            _id: ConduitString.Required,
+            name: ConduitString.Required,
+            slug: ConduitString.Required,
+          },
+          required: false,
+        },
+        guests: [
+          {
+            _id: ConduitString.Required,
+            name: ConduitString.Required,
+            slug: ConduitString.Required,
+            createdAt: ConduitDate.Required,
+          },
+        ],
+      }),
+      this.userAdmin.getUserRealms.bind(this.userAdmin),
     );
     this.routingManager.route(
       {
