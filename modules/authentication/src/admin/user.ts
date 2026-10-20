@@ -19,6 +19,7 @@ import {
   realmIdOf,
 } from '../handlers/realmRequest.js';
 import {
+  assertIdentifierFreeForUser,
   assertRealmPrincipalFree,
   deleteUserRealmMemberships,
   identifierQuery,
@@ -185,6 +186,13 @@ export class UserAdmin {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Email already exists');
       }
       assertEmailAllowed(email);
+    }
+    if (!isNil(phoneNumber) && phoneNumber !== '' && phoneNumber !== user.phoneNumber) {
+      await assertIdentifierFreeForUser(
+        user,
+        identifierQuery('phoneNumber', phoneNumber),
+        'Phone number already exists',
+      );
     }
     let twoFaMethod: string | undefined;
     if (hasTwoFA) {

@@ -32,18 +32,19 @@ import {
   uniqueIdentifierQuery,
 } from '../utils/realm.js';
 import {
+  admitPrincipal,
   assertAnonymousUserInRealm,
   assertGlobalStrategyAvailable,
-  assertStrategyForPrincipal,
+  assertStrategyEnabledForRealm,
   grantHomeMembershipForRegistration,
   homeRealmFields,
   isInviteRequired,
   realmIdOf,
   realmParam,
   resolveInvitationRealm,
-  resolvePrincipal,
   resolveRealmFromCall,
   resolveRealmFromSlug,
+  resolveSignInPrincipal,
   rollbackUserOnFailure,
 } from './realmRequest.js';
 import { anyRealmEnables } from '../utils/strategyRealms.js';
@@ -143,17 +144,18 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     // the realm the code was requested for, re-validated at verification
     const realmCtx = await resolveRealmFromSlug(existingToken.data.realm);
     if (!realmCtx) assertGlobalStrategyAvailable('phone');
-    // a login is for the account the code was sent to (a linked guest signs in at its home
-    // strategy); a registration uses the requested realm's strategy
+    assertStrategyEnabledForRealm(realmCtx, 'phone');
+    const isRegistration =
+      existingToken.tokenType === TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN;
+    // a login is for the account the code was sent to; it is admitted again here (a linked
+    // guest needs direct sign-in and the strategy at its home realm)
     const loginUser =
-      existingToken.tokenType === TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN ||
-      !existingToken.user
+      isRegistration || !existingToken.user
         ? null
         : await User.getInstance().findOne({ _id: existingToken.user as string });
-    await assertStrategyForPrincipal(realmCtx, loginUser, 'phone');
 
     let user: User | null;
-    if (existingToken.tokenType === TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN) {
+    if (isRegistration) {
       // shared mode: a number that belongs to a user of another realm cannot be registered
       // here (isolated mode: only the same home realm is checked). The refusal happens
       // only once the code was proven so that `authenticate` does not reveal which numbers
@@ -177,8 +179,9 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         userData,
       );
     } else {
-      user = loginUser;
-      if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
+      const admitted = await admitPrincipal(realmCtx, loginUser, 'phone');
+      if (isNil(admitted)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
+      user = admitted.user;
     }
     return TokenProvider.getInstance().provideUserTokens({
       user,
@@ -195,8 +198,8 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const realmCtx = await resolveRealmFromCall(call);
     if (!realmCtx) assertGlobalStrategyAvailable('phone');
     const user: User | null =
-      (await resolvePrincipal(realmCtx, { phoneNumber: phone }))?.user ?? null;
-    await assertStrategyForPrincipal(realmCtx, user, 'phone');
+      (await resolveSignInPrincipal(realmCtx, { phoneNumber: phone }, 'phone'))?.user ??
+      null;
     let foundInvitationToken;
     if (invitationToken) {
       foundInvitationToken = await Token.getInstance().findOne(

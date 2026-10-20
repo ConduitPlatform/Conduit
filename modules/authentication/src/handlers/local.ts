@@ -39,17 +39,17 @@ import {
   assertAnonymousUserInRealm,
   assertGlobalStrategyAvailable,
   assertStrategyEnabledForRealm,
-  assertStrategyForPrincipal,
   grantHomeMembership,
   grantHomeMembershipForRegistration,
   homeRealmFields,
   isInviteRequired,
+  loginVerificationOverride,
   realmIdOf,
   realmParam,
   resolveHomeRealmContext,
   resolveInvitationRealm,
-  resolvePrincipal,
   resolveRealmFromCall,
+  resolveSignInPrincipal,
   rollbackUserOnFailure,
   scopedUserQuery,
 } from './realmRequest.js';
@@ -515,25 +515,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const realmCtx = await resolveRealmFromCall(call);
     if (!realmCtx) assertGlobalStrategyAvailable('local');
 
-    const user: User | null =
-      (await resolvePrincipal(realmCtx, { email }, { select: '+hashedPassword' }))
-        ?.user ?? null;
-    await assertStrategyForPrincipal(realmCtx, user, 'local');
-    if (isNil(user))
+    const principal = await resolveSignInPrincipal(realmCtx, { email }, 'local', {
+      select: '+hashedPassword',
+    });
+    if (isNil(principal))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
     await authenticateChecks(
       password,
       config,
-      user,
-      realmCtx
-        ? {
-            verificationRequired:
-              realmCtx.effective.strategies.local.verificationRequired,
-          }
-        : undefined,
+      principal.user,
+      loginVerificationOverride(realmCtx, principal, config.local.verification.required),
     );
     return TokenProvider.getInstance().provideUserTokens({
-      user,
+      user: principal.user,
       clientId,
       config,
       realm: realmIdOf(realmCtx),
@@ -550,9 +544,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (!realmCtx) assertGlobalStrategyAvailable('local');
 
     const user: User | null =
-      (await resolvePrincipal(realmCtx, { email }, { select: '+hashedPassword' }))
-        ?.user ?? null;
-    await assertStrategyForPrincipal(realmCtx, user, 'local');
+      (
+        await resolveSignInPrincipal(realmCtx, { email }, 'local', {
+          select: '+hashedPassword',
+        })
+      )?.user ?? null;
 
     if (isNil(user))
       return 'If the email address is valid, a password reset link will be sent to it.';

@@ -28,13 +28,13 @@ import { MagicLinkTemplate as magicLinkTemplate } from '../templates/index.js';
 import { AuthUtils } from '../utils/index.js';
 import { errors } from '../errors.js';
 import {
+  admitPrincipal,
   assertGlobalStrategyAvailable,
-  assertStrategyForPrincipal,
   realmIdOf,
   realmParam,
-  resolvePrincipal,
   resolveRealmFromCall,
   resolveRealmFromSlug,
+  resolveSignInPrincipal,
 } from './realmRequest.js';
 import { anyRealmEnables } from '../utils/strategyRealms.js';
 import { RealmContext } from '../utils/realm.js';
@@ -134,8 +134,8 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const { clientId } = call.request.context;
     const realmCtx = await resolveRealmFromCall(call);
     if (!realmCtx) assertGlobalStrategyAvailable('magicLink');
-    const user: User | null = (await resolvePrincipal(realmCtx, { email }))?.user ?? null;
-    await assertStrategyForPrincipal(realmCtx, user, 'magicLink');
+    const user: User | null =
+      (await resolveSignInPrincipal(realmCtx, { email }, 'magicLink'))?.user ?? null;
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (user.isAnonymous) throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
 
@@ -208,7 +208,10 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     // the realm the link was requested for, re-validated at redemption
     const realmCtx = await resolveRealmFromSlug(token.data?.realm);
     if (!realmCtx) assertGlobalStrategyAvailable('magicLink');
-    await assertStrategyForPrincipal(realmCtx, user, 'magicLink');
+    // a link requested while the guest could sign in is refused once direct sign-in is off
+    // (or a strategy is off at the realm or the home realm), with the not-found answer
+    const admitted = await admitPrincipal(realmCtx, user, 'magicLink');
+    if (!admitted) throw new GrpcError(status.NOT_FOUND, 'User not found');
     await Token.getInstance()
       .deleteMany({ user: token.user, tokenType: TokenType.MAGIC_LINK })
       .catch(e => {

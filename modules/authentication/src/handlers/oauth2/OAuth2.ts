@@ -52,18 +52,18 @@ import { errors } from '../../errors.js';
 import {
   assertAnonymousUserInRealm,
   assertStrategyEnabledForRealm,
-  assertStrategyForPrincipal,
   grantHomeMembershipForRegistration,
   homeRealmFields,
   isInviteRequired,
   realmIdOf,
   realmParam,
   resolveInvitationRealm,
-  resolvePrincipal,
   resolveRealmFromSlug,
+  resolveSignInPrincipal,
   rollbackUserOnFailure,
 } from '../realmRequest.js';
 import {
+  assertIdentifierFreeForUser,
   assertRealmPrincipalFree,
   identifierQuery,
   IdentifierKind,
@@ -500,8 +500,9 @@ export abstract class OAuth2<
     const providerKey = `oauth.${this.providerName}`;
     if (payload.hasOwnProperty('email') && !isNil(payload.email)) {
       // the realm's own account, or its linked guest with direct sign-in
-      user = (await resolvePrincipal(realmCtx, { email: payload.email }))?.user ?? null;
-      if (user) await assertStrategyForPrincipal(realmCtx, user, providerKey);
+      user =
+        (await resolveSignInPrincipal(realmCtx, { email: payload.email }, providerKey))
+          ?.user ?? null;
       // isolated mode: the address may belong to another realm's account, so the request
       // realm gets its own account (the lookup above already missed)
       if (isNil(user) && (realmCtx || realmsEnabled()) && identityMode() === 'shared') {
@@ -516,9 +517,13 @@ export abstract class OAuth2<
       (!payload.hasOwnProperty('email') || isNil(payload.email))
     ) {
       user =
-        (await resolvePrincipal(realmCtx, { [this.providerName + '.id']: payload.id }))
-          ?.user ?? null;
-      if (user) await assertStrategyForPrincipal(realmCtx, user, providerKey);
+        (
+          await resolveSignInPrincipal(
+            realmCtx,
+            { [this.providerName + '.id']: payload.id },
+            providerKey,
+          )
+        )?.user ?? null;
       // isolated mode: as for email, the request realm gets its own account
       if (isNil(user) && (realmCtx || realmsEnabled()) && identityMode() === 'shared') {
         // provider identities are unique across realms: the id belongs to a user of
@@ -555,6 +560,18 @@ export abstract class OAuth2<
         throw new GrpcError(
           status.PERMISSION_DENIED,
           'User with this email already exists',
+        );
+      }
+      // the provider account may be linked only once per scope: the user's home realm and
+      // each realm it is a guest of (the user's own id does not count)
+      if (!isNil(payload.id) && payload.id !== '') {
+        await assertIdentifierFreeForUser(
+          user,
+          identifierQuery(
+            `oauth.${this.providerName}` as IdentifierKind,
+            String(payload.id),
+          ),
+          'This provider account is already linked to another account',
         );
       }
 

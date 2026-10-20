@@ -35,6 +35,7 @@ import {
   REALM_OAUTH_PROVIDERS,
   RealmErrorKey,
   RealmMembershipType,
+  RealmPolicies,
   StoredRealmSettingsData,
   unresolvedRealmError,
   uniquenessQuery,
@@ -165,20 +166,22 @@ export async function assertRealmPrincipalsFree(
  * Whether another account already holds an identifier (`identifierQuery`, e.g. `{ email }`)
  * in the scope of the user. In shared mode that scope is the whole deployment. In isolated
  * mode it is the user's home realm and every realm the user is linked into as a guest: there
- * the identifier must not be held by a home account or another guest either.
+ * the identifier must not be held by a home account or another guest either. The user's own
+ * record never counts, so re-setting a value the user already holds is not a clash.
  */
 export async function identifierTakenForUser(
   user: { _id: unknown; homeRealm?: unknown },
   identifier: IdentifierQuery,
 ): Promise<boolean> {
   const homeRealm = user.homeRealm ? String(user.homeRealm) : null;
-  const holder = await User.getInstance().findOne(
-    uniqueIdentifierQuery(identifier.query, homeRealm),
-  );
+  const userId = String(user._id);
+  const holder = await User.getInstance().findOne({
+    ...uniqueIdentifierQuery(identifier.query, homeRealm),
+    _id: { $ne: userId },
+  });
   if (holder) return true;
   if (identityMode() !== 'isolated') return false;
 
-  const userId = String(user._id);
   const guestOf = await RealmMembership.getInstance().findMany(
     { user: userId, membershipType: 'guest' },
     { select: 'realm' },
@@ -568,6 +571,7 @@ export async function assertRealmAccess(params: {
   const userHomeRealm = user.homeRealm ? String(user.homeRealm) : null;
 
   let policies = null;
+  let homePolicies: RealmPolicies | null = null;
   let membershipType: RealmMembershipType | null = null;
   if (requestedRealm) {
     // inactive/unknown realms deny entry, which also kills their sessions on renew
@@ -582,6 +586,12 @@ export async function assertRealmAccess(params: {
         realm: requestedRealm,
       });
       membershipType = membership?.membershipType ?? null;
+      // a guest session also meets the home realm's policies; a missing or inactive home
+      // realm leaves them null, which evaluateRealmAccess refuses
+      if (membershipType === 'guest' && userHomeRealm) {
+        const home = await findRealmContextById(userHomeRealm);
+        homePolicies = home?.effective.policies ?? null;
+      }
     }
   }
   const result = evaluateRealmAccess({
@@ -589,6 +599,7 @@ export async function assertRealmAccess(params: {
     userHomeRealm,
     membershipType,
     policies,
+    homePolicies,
     assurance: {
       authorized,
       hasTwoFA: user.hasTwoFA,

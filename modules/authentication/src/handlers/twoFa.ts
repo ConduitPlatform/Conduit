@@ -18,6 +18,7 @@ import { status } from '@grpc/grpc-js';
 import { Token, TwoFactorBackUpCodes, TwoFactorSecret, User } from '../models/index.js';
 import { AuthUtils } from '../utils/index.js';
 import { sessionRealmId } from './realmRequest.js';
+import { assertIdentifierFreeForUser, identifierQuery } from '../utils/realm.js';
 import { TokenType, TWO_FA_CHALLENGE } from '../constants/index.js';
 import * as node2fa from '@conduitplatform/node-2fa';
 import { v4 as uuid } from 'uuid';
@@ -428,6 +429,15 @@ export class TwoFa implements IAuthenticationStrategy {
     const verified = await this.grpcSdk.sms!.verify(verificationSid, code);
     if (!verified.verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
+    }
+    const phoneNumber = verificationRecord.data?.phoneNumber;
+    if (typeof phoneNumber === 'string' && phoneNumber !== '') {
+      // the number becomes the login identifier of the user: it must be free in its scope
+      await assertIdentifierFreeForUser(
+        user,
+        identifierQuery('phoneNumber', phoneNumber),
+        'Phone number already exists',
+      );
     }
     const consumed = await Token.getInstance().deleteOne({
       _id: verificationRecord._id,

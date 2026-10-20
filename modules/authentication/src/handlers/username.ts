@@ -7,7 +7,6 @@ import {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { User } from '../models/index.js';
 import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
@@ -22,11 +21,11 @@ import { ALT_STRATEGY_AUTH } from '../constants/index.js';
 import { errors } from '../errors.js';
 import {
   assertGlobalStrategyAvailable,
-  assertStrategyForPrincipal,
+  loginVerificationOverride,
   realmIdOf,
   realmParam,
-  resolvePrincipal,
   resolveRealmFromCall,
+  resolveSignInPrincipal,
 } from './realmRequest.js';
 
 export class UsernameHandlers implements IAuthenticationStrategy {
@@ -106,28 +105,21 @@ export class UsernameHandlers implements IAuthenticationStrategy {
     const realmCtx = await resolveRealmFromCall(call);
     if (!realmCtx) assertGlobalStrategyAvailable('username');
 
-    const user: User | null =
-      (await resolvePrincipal(realmCtx, { username }, { select: '+hashedPassword' }))
-        ?.user ?? null;
-    await assertStrategyForPrincipal(realmCtx, user, 'username');
-
-    if (isNil(user)) {
+    const principal = await resolveSignInPrincipal(realmCtx, { username }, 'username', {
+      select: '+hashedPassword',
+    });
+    if (isNil(principal)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
     }
 
     await authenticateChecks(
       password,
       config,
-      user,
-      realmCtx
-        ? {
-            verificationRequired:
-              realmCtx.effective.strategies.local.verificationRequired,
-          }
-        : undefined,
+      principal.user,
+      loginVerificationOverride(realmCtx, principal, config.local.verification.required),
     );
     return TokenProvider.getInstance().provideUserTokens({
-      user,
+      user: principal.user,
       clientId,
       config,
       realm: realmIdOf(realmCtx),

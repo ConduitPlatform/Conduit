@@ -26,9 +26,11 @@ import {
 } from '../utils/realm.js';
 import {
   decideGuestPrincipal,
+  decideGuestSignIn,
   isGlobalStrategyEnabled,
   isHomeRealm,
   isStrategyEnabled,
+  passwordVerificationRequired,
   reconcileInvitationRealm,
   scopeUserQuery,
 } from './realmRequest.logic.js';
@@ -98,6 +100,13 @@ export function scopedUserQuery<T extends Record<string, unknown>>(
 export type ResolvedPrincipal<U = User> = { user: U; via: 'home' | 'guest' };
 
 /**
+ * Holders of one identifier read by a guest lookup. The holder count of an identifier is
+ * bounded by the realms that share it (one account per realm), so a full page means the
+ * decision cannot be made from a partial view: the lookup is refused and logged.
+ */
+const GUEST_HOLDER_LIMIT = 10;
+
+/**
  * Resolves the account an identifier (`identifierQuery`, e.g. `{ email }`) signs in as at
  * the realm (null = global):
  *  1. the home account of the realm (scopedUserQuery), as before;
@@ -105,7 +114,8 @@ export type ResolvedPrincipal<U = User> = { user: U; via: 'home' | 'guest' };
  *     the realm holding the identifier (`via: 'guest'`). Two or more are an invariant breach:
  *     logged and refused (null), never resolved to one of them.
  * Works in both identity modes. `options.select` is passed to the lookups (for example
- * `+hashedPassword`).
+ * `+hashedPassword`). The guest lookup reads the holders without it and loads only the chosen
+ * account in full.
  */
 export async function resolvePrincipal(
   realmCtx: RealmContext | null | undefined,
@@ -120,8 +130,17 @@ export async function resolvePrincipal(
   if (!realmCtx || !realmCtx.effective.policies.guests.directSignIn) return null;
 
   const realmId = realmIdOf(realmCtx)!;
-  const holders = await User.getInstance().findMany(identifierQuery, options);
+  const holders = await User.getInstance().findMany(identifierQuery, {
+    select: '_id homeRealm',
+    limit: GUEST_HOLDER_LIMIT,
+  });
   if (holders.length === 0) return null;
+  if (holders.length >= GUEST_HOLDER_LIMIT) {
+    ConduitGrpcSdk.Logger.warn(
+      `Realm ${realmId}: the identifier is held by ${GUEST_HOLDER_LIMIT}+ accounts; sign-in refused`,
+    );
+    return null;
+  }
   const guestOf = await RealmMembership.getInstance().findMany(
     {
       realm: realmId,
@@ -136,33 +155,120 @@ export async function resolvePrincipal(
     holders,
     guestUserIds: guestOf.map(membership => String(membership.user)),
   });
-  if (decision.outcome === 'one') return { user: decision.user, via: 'guest' };
   if (decision.outcome === 'many') {
     ConduitGrpcSdk.Logger.warn(
       `Realm ${realmId} holds ${decision.count} guests for one identifier; sign-in refused`,
     );
   }
-  return null;
+  if (decision.outcome !== 'one') return null;
+  const guest = await User.getInstance().findOne(
+    { _id: String(decision.user._id) },
+    options,
+  );
+  return guest ? { user: guest, via: 'guest' } : null;
+}
+
+/** A user admitted to sign in at a realm (see admitPrincipal). */
+export type SignInPrincipal<U = User> = {
+  user: U;
+  via: 'home' | 'guest';
+  /** A guest's home realm context (null for a global home). Unused for home accounts. */
+  homeCtx: RealmContext | null;
+};
+
+/**
+ * The guest gate of a user of realm R (see decideGuestSignIn). A home realm that is missing
+ * or inactive does not raise: it leaves the gate closed. `homeCtx` is the admitted home
+ * realm context, for the stricter verification rule of password logins.
+ */
+export async function guestSignInGate(
+  realmCtx: RealmContext,
+  user: Pick<User, 'homeRealm'>,
+  strategyKey: string,
+): Promise<{ ok: true; homeCtx: RealmContext | null } | { ok: false }> {
+  let homeCtx: RealmContext | null = null;
+  let homeStrategyEnabled: boolean | null;
+  if (user.homeRealm) {
+    try {
+      homeCtx = await resolveRealmById(String(user.homeRealm));
+    } catch (err) {
+      if (!hasConduitCode(err, errors.REALM_NOT_FOUND)) throw err;
+      homeCtx = null;
+    }
+    homeStrategyEnabled = homeCtx
+      ? isStrategyEnabled(homeCtx.effective, strategyKey)
+      : null;
+  } else {
+    homeStrategyEnabled = isGlobalStrategyEnabled(
+      ConfigController.getInstance().config,
+      strategyKey,
+    );
+  }
+  const gate = decideGuestSignIn({
+    directSignIn: realmCtx.effective.policies.guests.directSignIn,
+    strategyAtRealm: isStrategyEnabled(realmCtx.effective, strategyKey),
+    homeStrategyEnabled,
+  });
+  return gate.ok ? { ok: true, homeCtx } : { ok: false };
 }
 
 /**
- * Checks the strategy of a login or credential flow for the account it resolved to (`user`
- * null when none was found). A guest signs in with an identity that belongs to its home
- * realm, so for a guest the strategy must be enabled at the home realm (the global config
- * for a global home). Any other case is the requested realm's strategy, as before.
+ * Admits a user that a login flow found (or that a token points to) at the realm. The realm's
+ * strategy is checked first and throws, the same for every identifier. A home account is then
+ * admitted. A guest must pass the guest gate. `null` means "not found": a refused guest is
+ * answered exactly like an unknown identifier by the caller.
  */
-export async function assertStrategyForPrincipal(
+export async function admitPrincipal<U extends Pick<User, 'homeRealm'>>(
   realmCtx: RealmContext | null | undefined,
-  user: Pick<User, 'homeRealm'> | null | undefined,
+  user: U | null | undefined,
   strategyKey: string,
-): Promise<void> {
-  if (!realmCtx || !user || isHomeRealm(user.homeRealm, realmIdOf(realmCtx))) {
-    assertStrategyEnabledForRealm(realmCtx, strategyKey);
-    return;
+): Promise<SignInPrincipal<U> | null> {
+  assertStrategyEnabledForRealm(realmCtx, strategyKey);
+  if (!user) return null;
+  if (!realmCtx || isHomeRealm(user.homeRealm, realmIdOf(realmCtx))) {
+    return { user, via: 'home', homeCtx: null };
   }
-  const homeCtx = await resolveHomeRealmContext(user);
-  if (homeCtx) assertStrategyEnabledForRealm(homeCtx, strategyKey);
-  else assertGlobalStrategyAvailable(strategyKey);
+  const gate = await guestSignInGate(realmCtx, user, strategyKey);
+  return gate.ok ? { user, via: 'guest', homeCtx: gate.homeCtx } : null;
+}
+
+/**
+ * Resolves the principal of a login or credential flow for an identifier and applies the
+ * strategy rules (see admitPrincipal). `null` is "not found" for every reason, so the caller
+ * gives its usual not-found answer.
+ */
+export async function resolveSignInPrincipal(
+  realmCtx: RealmContext | null | undefined,
+  identifierQuery: Indexable,
+  strategyKey: string,
+  options: { select?: string } = {},
+): Promise<SignInPrincipal | null> {
+  // answered before any lookup, so the realm-level answer never depends on the identifier
+  assertStrategyEnabledForRealm(realmCtx, strategyKey);
+  const resolved = await resolvePrincipal(realmCtx, identifierQuery, options);
+  return admitPrincipal(realmCtx, resolved?.user ?? null, strategyKey);
+}
+
+/**
+ * The `verificationRequired` override of a password check for a resolved principal (see
+ * passwordVerificationRequired). Undefined without a realm: the global config applies.
+ */
+export function loginVerificationOverride(
+  realmCtx: RealmContext | null | undefined,
+  principal: SignInPrincipal,
+  globalVerificationRequired: boolean,
+): { verificationRequired: boolean } | undefined {
+  if (!realmCtx) return undefined;
+  const homeRequired = principal.homeCtx
+    ? principal.homeCtx.effective.strategies.local.verificationRequired
+    : globalVerificationRequired;
+  return {
+    verificationRequired: passwordVerificationRequired({
+      via: principal.via,
+      realmRequired: realmCtx.effective.strategies.local.verificationRequired,
+      homeRequired,
+    }),
+  };
 }
 
 /** `{ homeRealm }` to spread into a new user's fields; empty for global users. */

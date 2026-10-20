@@ -232,6 +232,11 @@ export type RealmAccessInput = {
   membershipType: RealmMembershipType | null;
   /** Policies of the requested realm (null when requestedRealm is null). */
   policies: RealmPolicies | null;
+  /**
+   * Policies of the user's home realm, read when the session is a guest one in another realm
+   * (null when unresolved, which fails closed). Unused for home sessions and global users.
+   */
+  homePolicies: RealmPolicies | null;
   assurance: RealmAssurance;
 };
 
@@ -309,6 +314,8 @@ export function isValidSlug(slug: unknown): slug is string {
 
 /** Normalizes and validates a slug, throwing INVALID_ARGUMENT when it is malformed. */
 export function assertValidSlug(slug: unknown): string {
+  // a realm created with 'global' before it was reserved keeps the slug: admin reads and demote
+  // address the team by id and never validate the slug, so they still work (no migration)
   const normalized = typeof slug === 'string' ? normalizeSlug(slug) : '';
   if (normalized === GLOBAL_REALM_SCOPE) {
     throw new GrpcError(
@@ -1077,10 +1084,14 @@ function evaluatePolicies(
  * Decides whether a session may be issued in `requestedRealm`.
  *  - global request: allowed only for global users;
  *  - the user's own home realm: policies only;
- *  - any other realm: needs a guest membership, the guest policy and the policies.
+ *  - a guest session in another realm: needs a guest membership and the guest policy, then
+ *    the policies of the requested realm AND the policies of the user's home realm (a
+ *    global user has no home realm, so only the requested one applies). The requested
+ *    realm's result is returned first when both refuse.
  */
 export function evaluateRealmAccess(input: RealmAccessInput): RealmAccessResult {
-  const { requestedRealm, userHomeRealm, membershipType, policies, assurance } = input;
+  const { requestedRealm, userHomeRealm, membershipType, policies, homePolicies } = input;
+  const { assurance } = input;
   const requested = requestedRealm ? String(requestedRealm) : null;
   const home = userHomeRealm ? String(userHomeRealm) : null;
 
@@ -1090,14 +1101,18 @@ export function evaluateRealmAccess(input: RealmAccessInput): RealmAccessResult 
   // fail closed: a realm was requested but its policies could not be resolved
   if (!policies) return { allowed: false, error: 'REALM_ACCESS_DENIED' };
 
-  if (requested !== home) {
-    if (membershipType !== 'guest') {
-      return { allowed: false, error: 'REALM_ACCESS_DENIED' };
-    }
-    const guest = evaluateGuestAllowed(policies, home);
-    if (!guest.allowed) return guest;
+  if (requested === home) return evaluatePolicies(policies, assurance);
+
+  if (membershipType !== 'guest') {
+    return { allowed: false, error: 'REALM_ACCESS_DENIED' };
   }
-  return evaluatePolicies(policies, assurance);
+  const guest = evaluateGuestAllowed(policies, home);
+  if (!guest.allowed) return guest;
+  const own = evaluatePolicies(policies, assurance);
+  if (!own.allowed || !home) return own;
+  // the identity belongs to the home realm: its policies bind the guest session as well
+  if (!homePolicies) return { allowed: false, error: 'REALM_ACCESS_DENIED' };
+  return evaluatePolicies(homePolicies, assurance);
 }
 
 // ---------------------------------------------------------------------------

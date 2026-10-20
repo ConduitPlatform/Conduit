@@ -62,6 +62,7 @@ function access(overrides: Partial<RealmAccessInput> = {}): RealmAccessInput {
     userHomeRealm: A,
     membershipType: null,
     policies: policies(),
+    homePolicies: policies(),
     assurance: { authorized: true, hasTwoFA: false, isVerified: true, clientId: 'web' },
     ...overrides,
   };
@@ -700,6 +701,142 @@ describe('evaluateRealmAccess', () => {
         { allowed: true },
       );
     });
+  });
+});
+
+describe('guest sessions and the home realm policies', () => {
+  const session = (overrides: Partial<RealmAccessInput> = {}) =>
+    access({
+      requestedRealm: A,
+      userHomeRealm: B,
+      membershipType: 'guest',
+      ...overrides,
+    });
+  const assurance = (overrides = {}) => ({
+    authorized: true,
+    hasTwoFA: true,
+    isVerified: true,
+    clientId: 'web',
+    ...overrides,
+  });
+
+  it('allows a guest when both realms are open', () => {
+    assert.deepEqual(evaluateRealmAccess(session()), { allowed: true });
+  });
+
+  it('applies the 2FA rule of the home realm', () => {
+    const home = policies({ requireTwoFa: true });
+    assert.deepEqual(
+      evaluateRealmAccess(
+        session({ homePolicies: home, assurance: assurance({ hasTwoFA: false }) }),
+      ),
+      { allowed: false, error: 'TWO_FA_REQUIRED_FOR_REALM' },
+    );
+    assert.deepEqual(
+      evaluateRealmAccess(
+        session({ homePolicies: home, assurance: assurance({ authorized: false }) }),
+      ),
+      { allowed: false, error: 'REALM_ACCESS_DENIED' },
+    );
+    assert.deepEqual(
+      evaluateRealmAccess(session({ homePolicies: home, assurance: assurance() })),
+      { allowed: true },
+    );
+  });
+
+  it('applies the verified email rule of the home realm', () => {
+    const home = policies({ requireVerifiedEmail: true });
+    assert.deepEqual(
+      evaluateRealmAccess(
+        session({ homePolicies: home, assurance: assurance({ isVerified: false }) }),
+      ),
+      { allowed: false, error: 'REALM_ACCESS_DENIED' },
+    );
+  });
+
+  it('applies the client pinning of the home realm', () => {
+    const home = policies({ allowedClientIds: ['mobile'] });
+    assert.deepEqual(
+      evaluateRealmAccess(
+        session({ homePolicies: home, assurance: assurance({ clientId: 'web' }) }),
+      ),
+      { allowed: false, error: 'REALM_ACCESS_DENIED' },
+    );
+    assert.deepEqual(
+      evaluateRealmAccess(
+        session({ homePolicies: home, assurance: assurance({ clientId: 'mobile' }) }),
+      ),
+      { allowed: true },
+    );
+  });
+
+  it('applies the policies of the requested realm as well', () => {
+    const own = policies({ requireVerifiedEmail: true });
+    assert.deepEqual(
+      evaluateRealmAccess(
+        session({ policies: own, assurance: assurance({ isVerified: false }) }),
+      ),
+      { allowed: false, error: 'REALM_ACCESS_DENIED' },
+    );
+  });
+
+  it('returns the requested realm refusal first when both realms refuse', () => {
+    const own = policies({ requireTwoFa: true });
+    const home = policies({ requireVerifiedEmail: true });
+    assert.deepEqual(
+      evaluateRealmAccess(
+        session({
+          policies: own,
+          homePolicies: home,
+          assurance: assurance({ hasTwoFA: false, isVerified: false }),
+        }),
+      ),
+      { allowed: false, error: 'TWO_FA_REQUIRED_FOR_REALM' },
+    );
+  });
+
+  it('keeps the guest policy of the requested realm ahead of the home policies', () => {
+    const closed = policies({
+      guests: { allowed: false, allowedHomeRealms: [], directSignIn: true },
+    });
+    assert.deepEqual(
+      evaluateRealmAccess(session({ policies: closed, homePolicies: null })),
+      {
+        allowed: false,
+        error: 'GUESTS_NOT_ALLOWED',
+      },
+    );
+  });
+
+  it('fails closed when the home realm policies could not be resolved', () => {
+    assert.deepEqual(evaluateRealmAccess(session({ homePolicies: null })), {
+      allowed: false,
+      error: 'REALM_ACCESS_DENIED',
+    });
+  });
+
+  it('does not read the home policies of a global user entering as a guest', () => {
+    assert.deepEqual(
+      evaluateRealmAccess(session({ userHomeRealm: null, homePolicies: null })),
+      { allowed: true },
+    );
+  });
+
+  it('does not apply home policies on the home realm itself', () => {
+    // the home realm's own policies are the requested ones: the separate home slot is unused
+    const home = policies({ requireTwoFa: true });
+    assert.deepEqual(
+      evaluateRealmAccess(
+        access({
+          requestedRealm: B,
+          userHomeRealm: B,
+          policies: policies(),
+          homePolicies: home,
+          assurance: assurance({ hasTwoFA: false }),
+        }),
+      ),
+      { allowed: true },
+    );
   });
 });
 

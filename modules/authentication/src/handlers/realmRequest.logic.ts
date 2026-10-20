@@ -3,9 +3,11 @@ import { errors } from '../errors.js';
 import {
   EffectiveAuthSettings,
   evaluateRealmAccess,
+  REALM_OAUTH_PROVIDERS,
   RealmPolicies,
   withHomeScope,
 } from '../utils/realm.logic.js';
+import { isGlobalOAuthAvailable } from './oauth2/utils/oauthSettings.logic.js';
 
 /*
  * Pure request-level realm rules shared by the login and registration handlers (no
@@ -88,13 +90,22 @@ export function isHomeRealm(
 
 /**
  * Whether a strategy is enabled in the global module config. Keys are the strategy
- * names ('local', 'username', 'magicLink', 'phone', 'metamask', 'biometric').
+ * names ('local', 'username', 'magicLink', 'phone', 'metamask', 'biometric') or
+ * `oauth.<provider>`, which is available when the provider is enabled with complete
+ * credentials (the rule the OAuth handlers use, see isGlobalOAuthAvailable).
  * Unknown keys throw, so a typo cannot silently read as disabled.
  */
 export function isGlobalStrategyEnabled(
   config: Record<string, any> | null | undefined,
   strategyKey: string,
 ): boolean {
+  if (strategyKey.startsWith('oauth.')) {
+    const provider = strategyKey.slice('oauth.'.length);
+    if (!(REALM_OAUTH_PROVIDERS as readonly string[]).includes(provider)) {
+      throw new Error(`Unknown strategy: ${strategyKey}`);
+    }
+    return isGlobalOAuthAvailable(provider, config?.[provider]);
+  }
   switch (strategyKey) {
     case 'local':
       return config?.local?.enabled === true;
@@ -130,6 +141,7 @@ export function anonymousRealmDenial(
     userHomeRealm: realmId,
     membershipType: null,
     policies,
+    homePolicies: null,
     assurance: { authorized: true, hasTwoFA: false, isVerified: false, clientId },
   });
   return result.allowed ? null : result.error;
@@ -168,4 +180,39 @@ export function decideGuestPrincipal<
   if (matches.length === 0) return { outcome: 'none' };
   if (matches.length === 1) return { outcome: 'one', user: matches[0] };
   return { outcome: 'many', count: matches.length };
+}
+
+/** Result of the guest gate (see decideGuestSignIn). `ok: false` reads as "not found". */
+export type GuestSignInGate = { ok: true } | { ok: false };
+
+/**
+ * Whether a principal that is a guest of realm R may sign in at R with a strategy. Every
+ * condition must hold, and a refusal is answered like an unknown identifier by the caller:
+ *  - direct sign-in is on at R;
+ *  - the strategy is enabled at R;
+ *  - the strategy is enabled at the guest's home realm (the global config for a global home).
+ *    `homeStrategyEnabled` is null when the home realm is missing or inactive.
+ */
+export function decideGuestSignIn(params: {
+  directSignIn: boolean;
+  strategyAtRealm: boolean;
+  homeStrategyEnabled: boolean | null;
+}): GuestSignInGate {
+  const ok =
+    params.directSignIn && params.strategyAtRealm && params.homeStrategyEnabled === true;
+  return ok ? { ok: true } : { ok: false };
+}
+
+/**
+ * The `verificationRequired` of a password check (`authenticateChecks`) at a realm. A home
+ * principal meets its realm's rule. A guest also meets its home realm's rule, so the stricter
+ * of the two applies.
+ */
+export function passwordVerificationRequired(params: {
+  via: 'home' | 'guest';
+  realmRequired: boolean;
+  homeRequired: boolean;
+}): boolean {
+  if (params.via === 'home') return params.realmRequired;
+  return params.realmRequired || params.homeRequired;
 }

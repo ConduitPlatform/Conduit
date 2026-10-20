@@ -6,10 +6,12 @@ import { buildEffectiveSettings, defaultRealmSettings } from '../utils/realm.log
 import {
   anonymousRealmDenial,
   decideGuestPrincipal,
+  decideGuestSignIn,
   isGlobalStrategyEnabled,
   isHomeRealm,
   isInviteRequired,
   isStrategyEnabled,
+  passwordVerificationRequired,
   reconcileInvitationRealm,
   scopeUserQuery,
 } from './realmRequest.logic.js';
@@ -198,7 +200,127 @@ describe('isGlobalStrategyEnabled (assertGlobalStrategyAvailable decision)', () 
   });
 
   it('throws for an unknown strategy', () => {
-    assert.throws(() => isGlobalStrategyEnabled(on, 'oauth.google'), /Unknown strategy/);
+    assert.throws(() => isGlobalStrategyEnabled(on, 'nope'), /Unknown strategy/);
+    assert.throws(() => isGlobalStrategyEnabled(on, 'oauth'), /Unknown strategy/);
+    assert.throws(
+      () => isGlobalStrategyEnabled(on, 'oauth.notAProvider'),
+      /Unknown strategy/,
+    );
+  });
+
+  describe('oauth.<provider> (global config)', () => {
+    const google = { enabled: true, clientId: 'id', clientSecret: 'secret' };
+
+    it('is on when the provider is enabled with complete credentials', () => {
+      assert.equal(isGlobalStrategyEnabled({ google }, 'oauth.google'), true);
+    });
+
+    it('is off when the provider is disabled, even with credentials', () => {
+      assert.equal(
+        isGlobalStrategyEnabled(
+          { google: { ...google, enabled: false } },
+          'oauth.google',
+        ),
+        false,
+      );
+    });
+
+    it('is off when enabled without a client secret', () => {
+      assert.equal(
+        isGlobalStrategyEnabled(
+          { google: { enabled: true, clientId: 'id', clientSecret: '' } },
+          'oauth.google',
+        ),
+        false,
+      );
+    });
+
+    it('is off without provider config', () => {
+      assert.equal(isGlobalStrategyEnabled({}, 'oauth.google'), false);
+      assert.equal(isGlobalStrategyEnabled(undefined, 'oauth.google'), false);
+    });
+
+    it('needs the private key triple for apple', () => {
+      const apple = {
+        enabled: true,
+        clientId: 'id',
+        privateKey: 'k',
+        teamId: 't',
+        keyId: 'x',
+      };
+      assert.equal(isGlobalStrategyEnabled({ apple }, 'oauth.apple'), true);
+      assert.equal(
+        isGlobalStrategyEnabled({ apple: { ...apple, keyId: undefined } }, 'oauth.apple'),
+        false,
+      );
+    });
+  });
+});
+
+describe('decideGuestSignIn', () => {
+  const open = { directSignIn: true, strategyAtRealm: true, homeStrategyEnabled: true };
+
+  it('admits a guest when every condition holds', () => {
+    assert.deepEqual(decideGuestSignIn(open), { ok: true });
+  });
+
+  it('refuses when direct sign-in is off', () => {
+    assert.deepEqual(decideGuestSignIn({ ...open, directSignIn: false }), { ok: false });
+  });
+
+  it('refuses when the strategy is off at the requested realm', () => {
+    assert.deepEqual(decideGuestSignIn({ ...open, strategyAtRealm: false }), {
+      ok: false,
+    });
+  });
+
+  it('refuses when the strategy is off at the home realm', () => {
+    assert.deepEqual(decideGuestSignIn({ ...open, homeStrategyEnabled: false }), {
+      ok: false,
+    });
+  });
+
+  it('refuses when the home realm is missing or inactive (null)', () => {
+    assert.deepEqual(decideGuestSignIn({ ...open, homeStrategyEnabled: null }), {
+      ok: false,
+    });
+  });
+});
+
+describe('passwordVerificationRequired', () => {
+  it('uses the realm rule for a home account', () => {
+    assert.equal(
+      passwordVerificationRequired({
+        via: 'home',
+        realmRequired: false,
+        homeRequired: true,
+      }),
+      false,
+    );
+    assert.equal(
+      passwordVerificationRequired({
+        via: 'home',
+        realmRequired: true,
+        homeRequired: false,
+      }),
+      true,
+    );
+  });
+
+  it('applies the stricter of the realm and home rules to a guest', () => {
+    const cases: [boolean, boolean, boolean][] = [
+      [false, false, false],
+      [true, false, true],
+      [false, true, true],
+      [true, true, true],
+    ];
+    for (const [realmRequired, homeRequired, expected] of cases) {
+      assert.equal(
+        passwordVerificationRequired({ via: 'guest', realmRequired, homeRequired }),
+        expected,
+        `realm=${realmRequired} home=${homeRequired}`,
+      );
+    }
   });
 });
 

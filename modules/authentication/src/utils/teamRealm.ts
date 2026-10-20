@@ -149,13 +149,16 @@ export async function claimHomeRealm(
   userId: string,
   realmId: string,
 ): Promise<'claimed' | 'already' | 'lost'> {
-  // a new home account of the realm: its identifiers must be free there (isolated mode)
-  const candidate = await User.getInstance().findOne(
-    { _id: userId },
-    { readPreference: 'primary' },
-  );
-  if (!candidate) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
-  await assertRealmPrincipalsFree(realmId, [candidate]);
+  // a new home account of the realm: its identifiers must be free there (isolated mode only,
+  // the shared-mode check is a no-op, so the candidate is not read)
+  if (identityMode() === 'isolated') {
+    const candidate = await User.getInstance().findOne(
+      { _id: userId },
+      { readPreference: 'primary' },
+    );
+    if (!candidate) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+    await assertRealmPrincipalsFree(realmId, [candidate]);
+  }
   const result = await User.getInstance().updateMany(
     withHomeScope({ _id: userId }, null),
     { homeRealm: realmId },
