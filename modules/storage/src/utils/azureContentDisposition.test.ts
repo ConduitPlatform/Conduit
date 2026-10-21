@@ -11,7 +11,7 @@ describe('constructAzureContentDisposition', () => {
     );
   });
 
-  it('sends a Latin-1 filename without filename*', () => {
+  it('sends a printable ASCII filename without filename*', () => {
     assert.equal(
       constructAzureContentDisposition('blob-id', {
         download: false,
@@ -22,22 +22,34 @@ describe('constructAzureContentDisposition', () => {
     assert.equal(
       constructAzureContentDisposition('blob-id', {
         download: true,
-        fileName: 'café.pdf',
+        fileName: 'report (1).pdf',
       }),
-      'attachment; filename="café.pdf"',
+      'attachment; filename="report (1).pdf"',
     );
   });
 
-  it('strips quotes and control characters before checking Latin-1', () => {
+  it('strips quotes, backslashes, and control characters', () => {
     assert.equal(
       constructAzureContentDisposition('blob-id', {
         fileName: 'say "hi".jpg\r\n',
       }),
       'inline; filename="say hi.jpg"',
     );
+    assert.equal(
+      constructAzureContentDisposition('blob-id', { fileName: 'a\\b.jpg' }),
+      'inline; filename="ab.jpg"',
+    );
   });
 
-  it('omits the header when any character is outside Latin-1', () => {
+  it('omits the header when any character is outside printable ASCII', () => {
+    assert.equal(
+      constructAzureContentDisposition('blob-id', { fileName: 'café.pdf' }),
+      undefined,
+    );
+    assert.equal(
+      constructAzureContentDisposition('blob-id', { fileName: 'file\u0085.pdf' }),
+      undefined,
+    );
     assert.equal(
       constructAzureContentDisposition('blob-id', {
         download: true,

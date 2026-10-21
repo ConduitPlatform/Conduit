@@ -396,7 +396,8 @@ export const constructDispositionHeader = (
 };
 
 /**
- * Azure SAS `rscd` rejects RFC 5987 `filename*` and non-Latin-1 bytes.
+ * Azure SAS `rscd` rejects RFC 5987 `filename*`, and the SDK sends the value as
+ * UTF-8, so only printable ASCII reaches the browser unchanged.
  * Returns undefined when the override must be omitted so the read still succeeds.
  */
 export function constructAzureContentDisposition(
@@ -408,7 +409,7 @@ export function constructAzureContentDisposition(
   }
   const raw = options.fileName ?? fileName;
   const stripped = stripAzureDispositionUnsafe(raw);
-  if (stripped.length === 0 || !isLatin1(stripped)) {
+  if (stripped.length === 0 || !isPrintableAscii(stripped)) {
     return undefined;
   }
   const disposition = options.download ? 'attachment' : 'inline';
@@ -419,7 +420,7 @@ function stripAzureDispositionUnsafe(name: string): string {
   let stripped = '';
   for (const char of name) {
     const code = char.codePointAt(0)!;
-    if (code <= 0x1f || code === 0x7f || char === '"') {
+    if (code <= 0x1f || code === 0x7f || char === '"' || char === '\\') {
       continue;
     }
     stripped += char;
@@ -427,9 +428,10 @@ function stripAzureDispositionUnsafe(name: string): string {
   return stripped;
 }
 
-function isLatin1(name: string): boolean {
+function isPrintableAscii(name: string): boolean {
   for (const char of name) {
-    if (char.codePointAt(0)! > 0xff) {
+    const code = char.codePointAt(0)!;
+    if (code < 0x20 || code > 0x7e) {
       return false;
     }
   }
