@@ -7,7 +7,7 @@ import {
 } from '@azure/storage-blob';
 import fs from 'fs';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
-import { constructDispositionHeader, streamToBuffer } from '../../utils/index.js';
+import { constructAzureContentDisposition, streamToBuffer } from '../../utils/index.js';
 import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry.js';
 
 export class AzureStorage implements IStorageProvider {
@@ -129,8 +129,9 @@ export class AzureStorage implements IStorageProvider {
       expiresOn: new Date(SIGNED_URL_EXPIRY_DATE()),
       permissions: BlobSASPermissions.parse('r'),
     };
-    if (options) {
-      sasOptions.contentDisposition = constructDispositionHeader(fileName, options);
+    const contentDisposition = constructAzureContentDisposition(fileName, options);
+    if (contentDisposition) {
+      sasOptions.contentDisposition = contentDisposition;
     }
     return this.blobClient(fileName).generateSasUrl(sasOptions);
   }

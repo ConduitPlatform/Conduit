@@ -18,6 +18,14 @@ If both the container and file are public, `url` contains the direct provider/CD
 If the container is private and the file is public, `url` is left empty and Conduit signs a provider URL on demand through `uri`.
 Private files are not allowed in public containers.
 
+## Signed downloads
+
+Every signed read sets `Content-Disposition` from the file `alias`, then the object name. `download=true` sends `attachment`. Otherwise the disposition is `inline`.
+
+S3, Google Cloud, Aliyun, and local storage also send the RFC 5987 `filename*` parameter. Azure shared access signatures reject that parameter in `rscd`. When the display name is Latin-1 after control characters and quotes are removed, Azure receives `filename="..."`. When any character falls outside Latin-1, or nothing remains, Conduit omits `Content-Disposition` and the browser uses the blob name.
+
+`url` and `sourceUrl` are the direct provider or CDN address for a public file in a public container. Private files do not store those fields. Clients resolve a private file through `GET /storage/getFileUrl/:id`.
+
 ## Requirements ⚡
 
 - [Database](../database) module
