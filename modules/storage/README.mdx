@@ -11,6 +11,14 @@ Documents may have complex structures and subcollections and can be stored local
 - AWS S3 (or any other S3-compatible provider)
 - Alibaba Cloud (Aliyun)
 
+## Signed downloads
+
+Every signed read sets `Content-Disposition` from the file `alias`, then the object name. `download=true` sends `attachment`. Otherwise the disposition is `inline`.
+
+S3, Google Cloud, Aliyun, and local storage also send the RFC 5987 `filename*` parameter. Azure shared access signatures reject that parameter in `rscd`. When the display name is Latin-1 after control characters and quotes are removed, Azure receives `filename="..."`. When any character falls outside Latin-1, or nothing remains, Conduit omits `Content-Disposition` and the browser uses the blob name.
+
+Private files do not store `url` or `sourceUrl`. Clients resolve a private file through `GET /storage/getFileUrl/:id`.
+
 ## Requirements ⚡
 
 - [Database](../database) module

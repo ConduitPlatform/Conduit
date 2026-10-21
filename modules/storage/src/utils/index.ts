@@ -342,6 +342,47 @@ export const constructDispositionHeader = (
 };
 
 /**
+ * Azure SAS `rscd` rejects RFC 5987 `filename*` and non-Latin-1 bytes.
+ * Returns undefined when the override must be omitted so the read still succeeds.
+ */
+export function constructAzureContentDisposition(
+  fileName: string,
+  options?: UrlOptions,
+): string | undefined {
+  if (!options || (!options.download && !options.fileName)) {
+    return undefined;
+  }
+  const raw = options.fileName ?? fileName;
+  const stripped = stripAzureDispositionUnsafe(raw);
+  if (stripped.length === 0 || !isLatin1(stripped)) {
+    return undefined;
+  }
+  const disposition = options.download ? 'attachment' : 'inline';
+  return `${disposition}; filename="${stripped}"`;
+}
+
+function stripAzureDispositionUnsafe(name: string): string {
+  let stripped = '';
+  for (const char of name) {
+    const code = char.codePointAt(0)!;
+    if (code <= 0x1f || code === 0x7f || char === '"') {
+      continue;
+    }
+    stripped += char;
+  }
+  return stripped;
+}
+
+function isLatin1(name: string): boolean {
+  for (const char of name) {
+    if (char.codePointAt(0)! > 0xff) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
  * Replaces the storage host in a URL with the configured CDN host for the container.
  * @param url The original URL from the storage provider
  * @param container The container name
