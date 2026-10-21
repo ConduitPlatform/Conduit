@@ -32,6 +32,8 @@ import {
   TeamDeleteRequest,
   TeamDeleteResponse,
   UpdateTeamRequest,
+  UserChangeEmail,
+  UserChangeEmailResponse,
   UserChangePass,
   UserCreateByUsernameRequest,
   UserCreateRequest,
@@ -72,6 +74,7 @@ import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
+import { changeUserEmail } from './handlers/changeEmail.js';
 import { validateAppleClients } from './handlers/oauth2/utils/validateAppleClients.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -89,6 +92,7 @@ export default class Authentication extends ManagedModule<Config> {
       userCreateByUsername: this.userCreateByUsername.bind(this),
       anonymousUserCreate: this.anonymousUserCreate.bind(this),
       changePass: this.changePass.bind(this),
+      changeEmail: this.changeEmail.bind(this),
       userDelete: this.userDelete.bind(this),
       getTeam: this.getTeam.bind(this),
       createTeam: this.createTeam.bind(this),
@@ -671,6 +675,41 @@ export default class Authentication extends ManagedModule<Config> {
 
       return callback(null, { password });
     } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  async changeEmail(
+    call: GrpcRequest<UserChangeEmail>,
+    callback: GrpcCallback<UserChangeEmailResponse>,
+  ) {
+    try {
+      const result = await changeUserEmail(call.request, {
+        findUserById: id => models.User.getInstance().findOne({ _id: id }),
+        findUserByEmail: email => models.User.getInstance().findOne({ email }),
+        findOtherUserByEmail: (email, userId) =>
+          models.User.getInstance().findOne({ email, _id: { $ne: userId } }),
+        findOtherChangeEmailToken: (email, userId) =>
+          models.Token.getInstance().findOne({
+            tokenType: TokenType.CHANGE_EMAIL_TOKEN,
+            'data.email': email,
+            user: { $ne: userId },
+          } as Query<Token>),
+        deleteMailboxTokens: (userId, tokenTypes) =>
+          models.Token.getInstance().deleteMany({
+            user: userId,
+            tokenType: { $in: [...tokenTypes] },
+          }),
+        updateUser: (id, patch) => models.User.getInstance().findByIdAndUpdate(id, patch),
+        publish: user => {
+          this.grpcSdk.bus?.publish('authentication:update:user', JSON.stringify(user));
+        },
+      });
+      return callback(null, result);
+    } catch (e) {
+      if (e instanceof GrpcError) {
+        return callback({ code: e.code, message: e.message });
+      }
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
   }

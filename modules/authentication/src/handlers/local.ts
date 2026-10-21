@@ -678,11 +678,24 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     const redirectUri =
       token.data.customRedirectUri ?? config.local.verification.redirect_uri;
-    await Token.getInstance()
-      .deleteMany({ user: user._id, tokenType: TokenType.CHANGE_EMAIL_TOKEN })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
+    const removed = await Token.getInstance().deleteOne({
+      _id: token._id,
+      tokenType: TokenType.CHANGE_EMAIL_TOKEN,
+    });
+    if (!removed || removed.deletedCount === 0) {
+      throw new GrpcError(status.NOT_FOUND, 'Change email token does not exist');
+    }
+    const taken = await User.getInstance().findOne({
+      email: token.data.email,
+      _id: { $ne: user._id },
+    });
+    if (taken) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
+    }
+    await Token.getInstance().deleteMany({
+      user: user._id,
+      tokenType: TokenType.CHANGE_EMAIL_TOKEN,
+    });
     await User.getInstance().findByIdAndUpdate(user._id as string, {
       email: token.data.email,
     });
