@@ -74,7 +74,6 @@ import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
-import { changeEmailRpc } from './handlers/changeEmail.js';
 import { validateAppleClients } from './handlers/oauth2/utils/validateAppleClients.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -683,20 +682,28 @@ export default class Authentication extends ManagedModule<Config> {
     call: GrpcRequest<UserChangeEmail>,
     callback: GrpcCallback<UserChangeEmailResponse>,
   ) {
-    await changeEmailRpc(
-      call.request,
-      {
-        findUser: query => models.User.getInstance().findOne(query as Query<User>),
-        findToken: query => models.Token.getInstance().findOne(query as Query<Token>),
-        deleteTokens: query =>
-          models.Token.getInstance().deleteMany(query as Query<Token>),
-        updateUser: (id, patch) => models.User.getInstance().findByIdAndUpdate(id, patch),
-        publish: (event, payload) => {
-          this.grpcSdk.bus?.publish(event, payload);
-        },
-      },
-      callback,
-    );
+    const email = call.request.email.toLowerCase();
+    const newEmail = call.request.newEmail.trim().toLowerCase();
+    try {
+      const user = await models.User.getInstance().findOne({ email });
+      if (!user) {
+        return callback({ code: status.NOT_FOUND, message: 'User not found' });
+      }
+      if (newEmail.length === 0) {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Invalid email address provided',
+        });
+      }
+
+      await models.User.getInstance().findByIdAndUpdate(user._id, {
+        email: newEmail,
+      });
+
+      return callback(null, { message: 'ok' });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
   }
 
   async getTeam(call: GrpcRequest<GetTeamRequest>, callback: GrpcCallback<GrpcTeam>) {

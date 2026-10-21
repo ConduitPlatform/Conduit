@@ -27,10 +27,8 @@ message UserChangePass {
 }
 
 message UserChangeEmail {
-  optional string email = 1;
+  string email = 1;
   string newEmail = 2;
-  optional string userId = 3;
-  optional bool isVerified = 4;
 }
 
 message UserChangeEmailResponse {
