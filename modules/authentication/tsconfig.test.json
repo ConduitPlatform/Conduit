@@ -27,6 +27,8 @@
     "src/handlers/oauth2/utils/oauthMode.test.ts",
     "src/handlers/changeEmail.ts",
     "src/handlers/changeEmail.test.ts",
+    "src/handlers/verifyChangeEmail.ts",
+    "src/handlers/verifyChangeEmail.test.ts",
     "src/handlers/oauth2/interfaces/AppleProviderConfig.ts",
     "src/handlers/oauth2/interfaces/ProviderConfig.ts",
     "src/config/apple.config.ts",

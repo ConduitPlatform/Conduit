@@ -74,7 +74,7 @@ import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
-import { changeUserEmail } from './handlers/changeEmail.js';
+import { changeEmailRpc } from './handlers/changeEmail.js';
 import { validateAppleClients } from './handlers/oauth2/utils/validateAppleClients.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -683,35 +683,20 @@ export default class Authentication extends ManagedModule<Config> {
     call: GrpcRequest<UserChangeEmail>,
     callback: GrpcCallback<UserChangeEmailResponse>,
   ) {
-    try {
-      const result = await changeUserEmail(call.request, {
-        findUserById: id => models.User.getInstance().findOne({ _id: id }),
-        findUserByEmail: email => models.User.getInstance().findOne({ email }),
-        findOtherUserByEmail: (email, userId) =>
-          models.User.getInstance().findOne({ email, _id: { $ne: userId } }),
-        findOtherChangeEmailToken: (email, userId) =>
-          models.Token.getInstance().findOne({
-            tokenType: TokenType.CHANGE_EMAIL_TOKEN,
-            'data.email': email,
-            user: { $ne: userId },
-          } as Query<Token>),
-        deleteMailboxTokens: (userId, tokenTypes) =>
-          models.Token.getInstance().deleteMany({
-            user: userId,
-            tokenType: { $in: [...tokenTypes] },
-          }),
+    await changeEmailRpc(
+      call.request,
+      {
+        findUser: query => models.User.getInstance().findOne(query as Query<User>),
+        findToken: query => models.Token.getInstance().findOne(query as Query<Token>),
+        deleteTokens: query =>
+          models.Token.getInstance().deleteMany(query as Query<Token>),
         updateUser: (id, patch) => models.User.getInstance().findByIdAndUpdate(id, patch),
-        publish: user => {
-          this.grpcSdk.bus?.publish('authentication:update:user', JSON.stringify(user));
+        publish: (event, payload) => {
+          this.grpcSdk.bus?.publish(event, payload);
         },
-      });
-      return callback(null, result);
-    } catch (e) {
-      if (e instanceof GrpcError) {
-        return callback({ code: e.code, message: e.message });
-      }
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
-    }
+      },
+      callback,
+    );
   }
 
   async getTeam(call: GrpcRequest<GetTeamRequest>, callback: GrpcCallback<GrpcTeam>) {

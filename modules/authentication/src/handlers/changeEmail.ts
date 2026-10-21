@@ -28,15 +28,18 @@ export type ChangeEmailPatch = {
   isVerified?: boolean;
 };
 
-export type ChangeEmailStores = {
-  findUserById(id: string): Promise<ChangeEmailUser | null>;
-  findUserByEmail(email: string): Promise<ChangeEmailUser | null>;
-  findOtherUserByEmail(email: string, userId: string): Promise<ChangeEmailUser | null>;
-  findOtherChangeEmailToken(email: string, userId: string): Promise<unknown | null>;
-  deleteMailboxTokens(userId: string, tokenTypes: readonly string[]): Promise<void>;
+export type ChangeEmailDb = {
+  findUser(query: object): Promise<ChangeEmailUser | null>;
+  findToken(query: object): Promise<unknown | null>;
+  deleteTokens(query: object): Promise<unknown>;
   updateUser(id: string, patch: ChangeEmailPatch): Promise<ChangeEmailUser | null>;
-  publish(user: ChangeEmailUser): void;
+  publish(event: string, payload: string): void;
 };
+
+export type ChangeEmailCallback = (
+  error: { code: number; message: string } | null,
+  result?: { message: string },
+) => void;
 
 function present(value?: string): string | undefined {
   if (value == null || value.length === 0) return undefined;
@@ -50,7 +53,7 @@ function storedEmail(email?: string | null): string | undefined {
 
 export async function changeUserEmail(
   request: ChangeEmailRequest,
-  stores: ChangeEmailStores,
+  db: ChangeEmailDb,
 ): Promise<{ message: string }> {
   const email = present(request.email)?.toLowerCase();
   const userId = present(request.userId);
@@ -62,15 +65,15 @@ export async function changeUserEmail(
 
   let user: ChangeEmailUser | null;
   if (userId) {
-    user = await stores.findUserById(userId);
+    user = await db.findUser({ _id: userId });
     if (!user) {
       throw new GrpcError(status.NOT_FOUND, 'User not found');
     }
     if (email && storedEmail(user.email) !== email) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'email does not match user');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Email does not match user');
     }
   } else {
-    user = await stores.findUserByEmail(email!);
+    user = await db.findUser({ email });
     if (!user) {
       throw new GrpcError(status.NOT_FOUND, 'User not found');
     }
@@ -89,25 +92,49 @@ export async function changeUserEmail(
 
   AuthUtils.assertValidEmail(newEmail);
 
-  const duplicate = await stores.findOtherUserByEmail(newEmail, user._id);
+  const duplicate = await db.findUser({ email: newEmail, _id: { $ne: user._id } });
   if (duplicate) {
     throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
   }
-  const pending = await stores.findOtherChangeEmailToken(newEmail, user._id);
+  const pending = await db.findToken({
+    tokenType: TokenType.CHANGE_EMAIL_TOKEN,
+    'data.email': newEmail,
+    user: { $ne: user._id },
+  });
   if (pending) {
     throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
   }
 
-  await stores.deleteMailboxTokens(user._id, CHANGE_EMAIL_MAILBOX_TOKENS);
+  await db.deleteTokens({
+    user: user._id,
+    tokenType: { $in: [...CHANGE_EMAIL_MAILBOX_TOKENS] },
+  });
 
   const patch: ChangeEmailPatch = { email: newEmail };
   if (request.isVerified !== undefined) {
     patch.isVerified = request.isVerified;
   }
-  const updated = await stores.updateUser(user._id, patch);
+  const updated = await db.updateUser(user._id, patch);
   if (!updated) {
     throw new GrpcError(status.INTERNAL, 'Failed to update user');
   }
-  stores.publish(updated);
+  db.publish('authentication:update:user', JSON.stringify(updated));
   return { message: 'ok' };
+}
+
+export async function changeEmailRpc(
+  request: ChangeEmailRequest,
+  db: ChangeEmailDb,
+  callback: ChangeEmailCallback,
+): Promise<void> {
+  try {
+    const result = await changeUserEmail(request, db);
+    callback(null, result);
+  } catch (e) {
+    if (e instanceof GrpcError) {
+      callback({ code: e.code, message: e.message });
+      return;
+    }
+    callback({ code: status.INTERNAL, message: (e as Error).message });
+  }
 }
