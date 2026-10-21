@@ -26,6 +26,17 @@ message UserChangePass {
   optional string password = 2;
 }
 
+message UserChangeEmail {
+  optional string email = 1;
+  string newEmail = 2;
+  optional string userId = 3;
+  optional bool isVerified = 4;
+}
+
+message UserChangeEmailResponse {
+  string message = 1;
+}
+
 message UserDeleteRequest {
   string userId = 1;
 }
@@ -137,6 +148,7 @@ service Authentication {
   rpc UserModifyStatus(UserModifyStatusRequest) returns (UserModifyStatusResponse);
   rpc AnonymousUserCreate(AnonymousUserCreateRequest) returns (UserLoginResponse);
   rpc ChangePass(UserChangePass) returns (UserCreateResponse);
+  rpc ChangeEmail(UserChangeEmail) returns (UserChangeEmailResponse);
   rpc UserDelete(UserDeleteRequest) returns (UserDeleteResponse);
   rpc GetTeam(GetTeamRequest) returns (Team);
   rpc CreateTeam(CreateTeamRequest) returns (Team);
