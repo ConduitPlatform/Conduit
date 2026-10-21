@@ -246,8 +246,8 @@ importers:
         specifier: ^4.18.1
         version: 4.18.1
       moment:
-        specifier: ^2.30.1
-        version: 2.30.1
+        specifier: ^2.31.0
+        version: 2.31.0
       object-hash:
         specifier: ^3.0.0
         version: 3.0.0
@@ -339,6 +339,9 @@ importers:
       winston:
         specifier: ^3.19.0
         version: 3.19.0
+      winston-daily-rotate-file:
+        specifier: ^5.0.0
+        version: 5.0.0(winston@3.19.0)
       winston-loki:
         specifier: ^6.1.7
         version: 6.1.7
@@ -499,8 +502,8 @@ importers:
         specifier: ^4.18.1
         version: 4.18.1
       moment:
-        specifier: ^2.30.1
-        version: 2.30.1
+        specifier: ^2.31.0
+        version: 2.31.0
       uuid:
         specifier: '>=11.1.1'
         version: 14.0.2
@@ -581,8 +584,8 @@ importers:
         specifier: ^4.18.1
         version: 4.18.1
       moment:
-        specifier: ^2.30.1
-        version: 2.30.1
+        specifier: ^2.31.0
+        version: 2.31.0
       uuid:
         specifier: '>=11.1.1'
         version: 14.0.2
@@ -1121,8 +1124,8 @@ importers:
         specifier: ^4.18.1
         version: 4.18.1
       moment:
-        specifier: ^2.30.1
-        version: 2.30.1
+        specifier: ^2.31.0
+        version: 2.31.0
       swagger-ui-express:
         specifier: 5.0.1
         version: 5.0.1(express@5.2.1)
@@ -5192,6 +5195,9 @@ packages:
   file-entry-cache@11.1.5:
     resolution: {integrity: sha512-+PFTHITI08JIGhnNpGNI8T8inUpgZfk3GNEqfT9R2zZV2iFXg3CvqzSl/uEhs7TSGujYRELEANyDvS8Fj7+S7Q==}
 
+  file-stream-rotator@0.6.1:
+    resolution: {integrity: sha512-u+dBid4PvZw17PmDeRcNOtCP9CCK/9lRN2w+r1xIS7yOL9JFrIBKTvrYsxT4P0pGtThYTn++QS5ChHaUov3+zQ==}
+
   file-uri-to-path@1.0.0:
     resolution: {integrity: sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==}
 
@@ -6620,8 +6626,8 @@ packages:
   moment-timezone@0.5.48:
     resolution: {integrity: sha512-f22b8LV1gbTO2ms2j2z13MuPogNoh5UzxL3nzNAYKGraILnbGc9NEE6dyiiiLv46DGRb8A4kg8UKWLjPthxBHw==}
 
-  moment@2.30.1:
-    resolution: {integrity: sha512-uEmtNhbDOrWPFS+hdjFCBfy9f2YoyzRpwcl+DqpC6taX21FzsTLQVbMV/W7PzNSX6x/bhC1zA3c2UQ5NzH6how==}
+  moment@2.31.0:
+    resolution: {integrity: sha512-0acOTfMiWOheYS4eoWb80yYMb/JLvVv9SHbs2PehaDzfUG0Bw855SKyk0IKTnPGa5+U2bmi3W68l1+sGLX/pvw==}
 
   mongodb-connection-string-url@7.0.1:
     resolution: {integrity: sha512-h0AZ9A7IDVwwHyMxmdMXKy+9oNlF0zFoahHiX3vQ8e3KFcSP3VmsmfvtRSuLPxmyv2vjIDxqty8smTgie/SNRQ==}
@@ -8361,6 +8367,12 @@ packages:
   win-release@1.1.1:
     resolution: {integrity: sha512-iCRnKVvGxOQdsKhcQId2PXV1vV3J/sDPXKA4Oe9+Eti2nb2ESEsYHRYls/UjoUW3bIc5ZDO8dTH50A/5iVN+bw==}
     engines: {node: '>=0.10.0'}
+
+  winston-daily-rotate-file@5.0.0:
+    resolution: {integrity: sha512-JDjiXXkM5qvwY06733vf09I2wnMXpZEhxEVOSPenZMii+g7pcDcTBt2MRugnoi8BwVSuCT2jfRXBUy+n1Zz/Yw==}
+    engines: {node: '>=8'}
+    peerDependencies:
+      winston: ^3
 
   winston-loki@6.1.7:
     resolution: {integrity: sha512-QxwyQJezn3ZmDx1AsngecxwnZ8SoVuJ8hW4LtK5CA+9eyswgH4+AE93fY7t/Ub6s/zu4KDP1qB9Lxb8tO8vvAw==}
@@ -12784,6 +12796,10 @@ snapshots:
     dependencies:
       flat-cache: 6.1.23
 
+  file-stream-rotator@0.6.1:
+    dependencies:
+      moment: 2.31.0
+
   file-uri-to-path@1.0.0: {}
 
   fill-range@7.1.1:
@@ -14753,9 +14769,9 @@ snapshots:
 
   moment-timezone@0.5.48:
     dependencies:
-      moment: 2.30.1
+      moment: 2.31.0
 
-  moment@2.30.1: {}
+  moment@2.31.0: {}
 
   mongodb-connection-string-url@7.0.1:
     dependencies:
@@ -15762,7 +15778,7 @@ snapshots:
       dottie: 2.0.7
       inflection: 1.13.4
       lodash: 4.18.1
-      moment: 2.30.1
+      moment: 2.31.0
       moment-timezone: 0.5.48
       pg-connection-string: 2.14.0
       retry-as-promised: 7.1.1
@@ -16705,6 +16721,14 @@ snapshots:
   win-release@1.1.1:
     dependencies:
       semver: 5.7.2
+
+  winston-daily-rotate-file@5.0.0(winston@3.19.0):
+    dependencies:
+      file-stream-rotator: 0.6.1
+      object-hash: 3.0.0
+      triple-beam: 1.4.1
+      winston: 3.19.0
+      winston-transport: 4.9.0
 
   winston-loki@6.1.7:
     dependencies:

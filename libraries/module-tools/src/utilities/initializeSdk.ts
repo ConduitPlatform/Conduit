@@ -4,8 +4,7 @@ import {
   IConduitLogger,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitLogger, setupLoki } from '../logging/index.js';
-import winston from 'winston';
-import path from 'path';
+import { createFileLogTransports } from '../logging/fileTransports.js';
 import { ConduitMetrics } from '../metrics/index.js';
 import { clientMiddleware } from '../metrics/clientMiddleware.js';
 
@@ -17,17 +16,10 @@ export const initializeSdk = (
 ) => {
   let logger: IConduitLogger;
   try {
-    logger = new ConduitLogger([
-      new winston.transports.File({
-        filename: path.join(__dirname, '.logs/combined.log'),
-        level: 'info',
-      }),
-      new winston.transports.File({
-        filename: path.join(__dirname, '.logs/errors.log'),
-        level: 'error',
-      }),
-    ]);
-  } catch (e) {
+    const fileTransports = createFileLogTransports();
+    logger =
+      fileTransports.length > 0 ? new ConduitLogger(fileTransports) : new ConduitLogger();
+  } catch {
     logger = new ConduitLogger();
   }
   const grpcSdk = new ConduitGrpcSdk(

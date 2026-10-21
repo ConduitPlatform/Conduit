@@ -25,6 +25,7 @@ export const SHARED_BUNDLE_EXTERNALS = [
   'snappy',
   'uuid',
   'winston',
+  'winston-daily-rotate-file',
   'winston-loki',
 ] as const;
 

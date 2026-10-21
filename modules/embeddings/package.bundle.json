@@ -43,6 +43,7 @@
     "snappy": "7.4.1",
     "uuid": "14.0.2",
     "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0",
     "winston-loki": "^6.1.7",
     "bullmq": "^5.21.2"
   }
