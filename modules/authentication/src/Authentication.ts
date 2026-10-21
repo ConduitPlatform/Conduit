@@ -682,22 +682,23 @@ export default class Authentication extends ManagedModule<Config> {
     call: GrpcRequest<UserChangeEmail>,
     callback: GrpcCallback<UserChangeEmailResponse>,
   ) {
-    const email = call.request.email.toLowerCase();
+    const { userId } = call.request;
     const newEmail = call.request.newEmail.trim().toLowerCase();
     try {
-      const user = await models.User.getInstance().findOne({ email });
-      if (!user) {
-        return callback({ code: status.NOT_FOUND, message: 'User not found' });
-      }
       if (newEmail.length === 0) {
         return callback({
           code: status.INVALID_ARGUMENT,
           message: 'Invalid email address provided',
         });
       }
+      const user = await models.User.getInstance().findOne({ _id: userId });
+      if (!user) {
+        return callback({ code: status.NOT_FOUND, message: 'User not found' });
+      }
 
       await models.User.getInstance().findByIdAndUpdate(user._id, {
         email: newEmail,
+        isVerified: true,
       });
 
       return callback(null, { message: 'ok' });

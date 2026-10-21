@@ -64,8 +64,8 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     return this.client!.changePass({ email, password });
   }
 
-  changeEmail(email: string, newEmail: string): Promise<UserChangeEmailResponse> {
-    return this.client!.changeEmail({ email, newEmail });
+  changeEmail(userId: string, newEmail: string): Promise<UserChangeEmailResponse> {
+    return this.client!.changeEmail({ userId, newEmail });
   }
 
   getTeam(teamId: string): Promise<Team> {

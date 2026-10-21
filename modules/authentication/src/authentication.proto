@@ -27,7 +27,7 @@ message UserChangePass {
 }
 
 message UserChangeEmail {
-  string email = 1;
+  string userId = 1;
   string newEmail = 2;
 }
 
