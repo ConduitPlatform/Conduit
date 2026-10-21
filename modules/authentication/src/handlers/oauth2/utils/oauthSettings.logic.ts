@@ -1,4 +1,3 @@
-import { createHash } from 'crypto';
 import { filled } from '../../../utils/common.logic.js';
 
 /*
@@ -53,22 +52,19 @@ export function isGlobalOAuthAvailable(
 
 /**
  * Version of a credential set: changes whenever a credential the settings are built
- * from changes (secrets are hashed, never used as-is).
+ * from changes. It is an in-memory cache key only, compared for equality and never
+ * logged or stored.
  */
 export function oauthSettingsVersion(credentials: OAuthCredentials): string {
-  return createHash('sha256')
-    .update(
-      JSON.stringify([
-        credentials.clientId ?? '',
-        credentials.clientSecret ?? '',
-        credentials.redirect_uri ?? '',
-        credentials.accountLinking ?? null,
-        credentials.privateKey ?? '',
-        credentials.teamId ?? '',
-        credentials.keyId ?? '',
-      ]),
-    )
-    .digest('hex');
+  return JSON.stringify([
+    credentials.clientId ?? '',
+    credentials.clientSecret ?? '',
+    credentials.redirect_uri ?? '',
+    credentials.accountLinking ?? null,
+    credentials.privateKey ?? '',
+    credentials.teamId ?? '',
+    credentials.keyId ?? '',
+  ]);
 }
 
 // Bumped by invalidateOAuthSettingsCache(); every cache drops its entries on a change.
