@@ -971,6 +971,47 @@ export function applyOAuthSecretsUpdate(
   return result;
 }
 
+/**
+ * clientId and clientSecret are a pair: a realm that sets its own clientId takes the
+ * secret from the realm only (a missing one leaves the pair incomplete, it is never
+ * filled from global), and a realm that sets only a secret inherits both from global.
+ */
+function overlayClientCredentials(
+  global: Record<string, any>,
+  realm: RealmOAuthStrategy,
+): Pick<EffectiveOAuthSettings, 'clientId' | 'clientSecret'> {
+  const ownClientId = nonEmptyString(realm.clientId);
+  if (ownClientId) {
+    return {
+      clientId: ownClientId,
+      clientSecret: nonEmptyString(realm.clientSecret) ?? '',
+    };
+  }
+  return { clientId: global.clientId ?? '', clientSecret: global.clientSecret ?? '' };
+}
+
+/**
+ * Apple credentials are a set: a partially overridden set is meaningless, so the private
+ * key, team id and key id all come from the realm or all from global.
+ */
+function overlayAppleCredentials(
+  global: Record<string, any>,
+  realm: RealmOAuthStrategy,
+): Pick<EffectiveOAuthSettings, 'privateKey' | 'teamId' | 'keyId'> {
+  const own =
+    nonEmptyString(realm.privateKey) &&
+    nonEmptyString(realm.teamId) &&
+    nonEmptyString(realm.keyId);
+  if (own) {
+    return { privateKey: realm.privateKey, teamId: realm.teamId, keyId: realm.keyId };
+  }
+  return {
+    privateKey: global.privateKey ?? '',
+    teamId: global.teamId ?? '',
+    keyId: global.keyId ?? '',
+  };
+}
+
 function overlayOAuth(
   provider: RealmOAuthProviderKey,
   globalProvider: Record<string, any> | undefined,
@@ -978,17 +1019,10 @@ function overlayOAuth(
 ): EffectiveOAuthSettings {
   const global = globalProvider ?? {};
   const realm = realmProvider ?? { enabled: false };
-  // clientId and clientSecret are a pair: a realm that sets its own clientId takes the
-  // secret from the realm only (a missing one leaves the pair incomplete, it is never
-  // filled from global), and a realm that sets only a secret inherits both from global.
-  const ownClientId = nonEmptyString(realm.clientId);
   const effective: EffectiveOAuthSettings = {
     // enablement is explicit per realm, the global flag is never inherited
     enabled: realm.enabled === true,
-    clientId: ownClientId ?? global.clientId ?? '',
-    clientSecret: ownClientId
-      ? (nonEmptyString(realm.clientSecret) ?? '')
-      : (global.clientSecret ?? ''),
+    ...overlayClientCredentials(global, realm),
     redirect_uri: nonEmptyString(realm.redirect_uri) ?? global.redirect_uri ?? '',
     accountLinking:
       typeof realm.accountLinking === 'boolean'
@@ -996,15 +1030,7 @@ function overlayOAuth(
         : (global.accountLinking ?? true),
   };
   if (provider === 'apple') {
-    // Apple credentials are a set: a partially overridden set is meaningless, so the
-    // private key, team id and key id all come from the realm or all from global.
-    const own =
-      nonEmptyString(realm.privateKey) &&
-      nonEmptyString(realm.teamId) &&
-      nonEmptyString(realm.keyId);
-    effective.privateKey = own ? realm.privateKey : (global.privateKey ?? '');
-    effective.teamId = own ? realm.teamId : (global.teamId ?? '');
-    effective.keyId = own ? realm.keyId : (global.keyId ?? '');
+    Object.assign(effective, overlayAppleCredentials(global, realm));
   }
   return effective;
 }
@@ -1043,6 +1069,55 @@ export function withRealmFieldDefaults(settings: Indexable): Indexable {
   };
 }
 
+function enabledOf(strategy: { enabled?: boolean } | undefined): { enabled: boolean } {
+  return { enabled: strategy?.enabled === true };
+}
+
+function effectiveStrategies(
+  globalConfig: GlobalAuthConfig,
+  strategies: RealmStrategies,
+): EffectiveAuthSettings['strategies'] {
+  const oauth = {} as Record<RealmOAuthProviderKey, EffectiveOAuthSettings>;
+  for (const provider of REALM_OAUTH_PROVIDERS) {
+    oauth[provider] = overlayOAuth(
+      provider,
+      globalConfig?.[provider],
+      strategies.oauth?.[provider],
+    );
+  }
+  return {
+    local: {
+      enabled: strategies.local?.enabled === true,
+      verificationRequired:
+        typeof strategies.local?.verificationRequired === 'boolean'
+          ? strategies.local.verificationRequired
+          : (globalConfig?.local?.verification?.required ?? false),
+    },
+    username: enabledOf(strategies.username),
+    magicLink: enabledOf(strategies.magicLink),
+    phone: enabledOf(strategies.phone),
+    metamask: enabledOf(strategies.metamask),
+    biometric: enabledOf(strategies.biometric),
+    oauth,
+  };
+}
+
+function effectivePolicies(
+  policies: RealmPolicies,
+  defaults: RealmPolicies,
+): RealmPolicies {
+  return {
+    requireTwoFa: policies.requireTwoFa === true,
+    requireVerifiedEmail: policies.requireVerifiedEmail === true,
+    allowedClientIds: normalizeIdList(policies.allowedClientIds),
+    guests: {
+      allowed: policies.guests?.allowed ?? defaults.guests.allowed,
+      allowedHomeRealms: normalizeIdList(policies.guests?.allowedHomeRealms),
+      directSignIn: directSignInOf(policies.guests),
+    },
+  };
+}
+
 /**
  * Overlays a realm's settings on the global module config.
  *  - strategy enablement is explicit per realm (global `enabled` is not inherited);
@@ -1057,45 +1132,14 @@ export function buildEffectiveSettings(
   const defaults = defaultRealmSettings();
   const strategies = realmSettings.strategies ?? defaults.strategies;
   const policies = realmSettings.policies ?? defaults.policies;
-  const oauth = {} as Record<RealmOAuthProviderKey, EffectiveOAuthSettings>;
-  for (const provider of REALM_OAUTH_PROVIDERS) {
-    oauth[provider] = overlayOAuth(
-      provider,
-      globalConfig?.[provider],
-      strategies.oauth?.[provider],
-    );
-  }
   return {
-    strategies: {
-      local: {
-        enabled: strategies.local?.enabled === true,
-        verificationRequired:
-          typeof strategies.local?.verificationRequired === 'boolean'
-            ? strategies.local.verificationRequired
-            : (globalConfig?.local?.verification?.required ?? false),
-      },
-      username: { enabled: strategies.username?.enabled === true },
-      magicLink: { enabled: strategies.magicLink?.enabled === true },
-      phone: { enabled: strategies.phone?.enabled === true },
-      metamask: { enabled: strategies.metamask?.enabled === true },
-      biometric: { enabled: strategies.biometric?.enabled === true },
-      oauth,
-    },
+    strategies: effectiveStrategies(globalConfig, strategies),
     registration: {
       allowWithoutInvite:
         realmSettings.registration?.allowWithoutInvite ??
         defaults.registration.allowWithoutInvite,
     },
-    policies: {
-      requireTwoFa: policies.requireTwoFa === true,
-      requireVerifiedEmail: policies.requireVerifiedEmail === true,
-      allowedClientIds: normalizeIdList(policies.allowedClientIds),
-      guests: {
-        allowed: policies.guests?.allowed ?? defaults.policies.guests.allowed,
-        allowedHomeRealms: normalizeIdList(policies.guests?.allowedHomeRealms),
-        directSignIn: directSignInOf(policies.guests),
-      },
-    },
+    policies: effectivePolicies(policies, defaults.policies),
     linking: linkingFlagsOf(realmSettings.linking),
   };
 }

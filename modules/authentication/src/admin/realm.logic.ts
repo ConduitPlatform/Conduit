@@ -281,6 +281,73 @@ function sanitizeOAuth(oauth: unknown): Record_ {
   return result;
 }
 
+/** The boolean `flags` that are set on `record`, validated. */
+function readFlags(record: Record_, flags: readonly string[], path: string): Record_ {
+  const clean: Record_ = {};
+  for (const flag of flags) {
+    if (record[flag] !== undefined) {
+      clean[flag] = readBoolean(record[flag], `${path}.${flag}`);
+    }
+  }
+  return clean;
+}
+
+function sanitizeGuests(value: unknown): Record_ {
+  const guests = readRecord(value, 'policies.guests');
+  const clean = readFlags(guests, ['allowed', 'directSignIn'], 'policies.guests');
+  if (guests.allowedHomeRealms !== undefined) {
+    const realms = readStringList(
+      guests.allowedHomeRealms,
+      'policies.guests.allowedHomeRealms',
+    );
+    if (!realms.every(isRealmId)) {
+      fail('policies.guests.allowedHomeRealms must contain realm team ids');
+    }
+    clean.allowedHomeRealms = realms;
+  }
+  return clean;
+}
+
+function sanitizePolicies(value: unknown): Record_ {
+  const policies = readRecord(value, 'policies');
+  const clean = readFlags(policies, ['requireTwoFa', 'requireVerifiedEmail'], 'policies');
+  if (policies.allowedClientIds !== undefined) {
+    clean.allowedClientIds = readStringList(
+      policies.allowedClientIds,
+      'policies.allowedClientIds',
+    );
+  }
+  if (policies.guests !== undefined) clean.guests = sanitizeGuests(policies.guests);
+  return clean;
+}
+
+function sanitizeStrategyToggle(key: (typeof STRATEGY_TOGGLES)[number], value: unknown) {
+  const entry = readRecord(value, `strategies.${key}`);
+  const clean = readFlags(entry, ['enabled'], `strategies.${key}`);
+  if (key === 'local' && entry.verificationRequired !== undefined) {
+    // null = inherit the global verification setting again
+    clean.verificationRequired =
+      entry.verificationRequired === null
+        ? null
+        : readBoolean(
+            entry.verificationRequired,
+            'strategies.local.verificationRequired',
+          );
+  }
+  return clean;
+}
+
+function sanitizeStrategies(value: unknown): Record_ {
+  const strategies = readRecord(value, 'strategies');
+  const clean: Record_ = {};
+  for (const key of STRATEGY_TOGGLES) {
+    if (strategies[key] === undefined) continue;
+    clean[key] = sanitizeStrategyToggle(key, strategies[key]);
+  }
+  if (strategies.oauth !== undefined) clean.oauth = sanitizeOAuth(strategies.oauth);
+  return clean;
+}
+
 /**
  * Validates and whitelists the write body of POST/PATCH `/teams/:teamId/realm`
  * (`slug` and `force` are handled by the caller and ignored here). Wrong types throw
@@ -296,86 +363,15 @@ export function sanitizeRealmInput(body: unknown): RealmSettingsInput {
   if (input.active !== undefined) result.active = readBoolean(input.active, 'active');
   if (input.registration !== undefined) {
     const registration = readRecord(input.registration, 'registration');
-    result.registration = {};
-    if (registration.allowWithoutInvite !== undefined) {
-      result.registration.allowWithoutInvite = readBoolean(
-        registration.allowWithoutInvite,
-        'registration.allowWithoutInvite',
-      );
-    }
+    result.registration = readFlags(registration, ['allowWithoutInvite'], 'registration');
   }
-  if (input.policies !== undefined) {
-    const policies = readRecord(input.policies, 'policies');
-    const clean: Record_ = {};
-    for (const flag of ['requireTwoFa', 'requireVerifiedEmail'] as const) {
-      if (policies[flag] !== undefined) {
-        clean[flag] = readBoolean(policies[flag], `policies.${flag}`);
-      }
-    }
-    if (policies.allowedClientIds !== undefined) {
-      clean.allowedClientIds = readStringList(
-        policies.allowedClientIds,
-        'policies.allowedClientIds',
-      );
-    }
-    if (policies.guests !== undefined) {
-      const guests = readRecord(policies.guests, 'policies.guests');
-      clean.guests = {};
-      if (guests.allowed !== undefined) {
-        clean.guests.allowed = readBoolean(guests.allowed, 'policies.guests.allowed');
-      }
-      if (guests.directSignIn !== undefined) {
-        clean.guests.directSignIn = readBoolean(
-          guests.directSignIn,
-          'policies.guests.directSignIn',
-        );
-      }
-      if (guests.allowedHomeRealms !== undefined) {
-        const realms = readStringList(
-          guests.allowedHomeRealms,
-          'policies.guests.allowedHomeRealms',
-        );
-        if (!realms.every(isRealmId)) {
-          fail('policies.guests.allowedHomeRealms must contain realm team ids');
-        }
-        clean.guests.allowedHomeRealms = realms;
-      }
-    }
-    result.policies = clean;
-  }
+  if (input.policies !== undefined) result.policies = sanitizePolicies(input.policies);
   if (input.linking !== undefined) {
     const linking = readRecord(input.linking, 'linking');
-    const clean: Record_ = {};
-    for (const flag of ['inbound', 'outbound'] as const) {
-      if (linking[flag] !== undefined) {
-        clean[flag] = readBoolean(linking[flag], `linking.${flag}`);
-      }
-    }
-    result.linking = clean;
+    result.linking = readFlags(linking, ['inbound', 'outbound'], 'linking');
   }
   if (input.strategies !== undefined) {
-    const strategies = readRecord(input.strategies, 'strategies');
-    const clean: Record_ = {};
-    for (const key of STRATEGY_TOGGLES) {
-      if (strategies[key] === undefined) continue;
-      const entry = readRecord(strategies[key], `strategies.${key}`);
-      clean[key] = {};
-      if (entry.enabled !== undefined) {
-        clean[key].enabled = readBoolean(entry.enabled, `strategies.${key}.enabled`);
-      }
-      if (key === 'local' && entry.verificationRequired !== undefined) {
-        // null = inherit the global verification setting again
-        clean[key].verificationRequired =
-          entry.verificationRequired === null
-            ? null
-            : readBoolean(
-                entry.verificationRequired,
-                'strategies.local.verificationRequired',
-              );
-      }
-    }
-    if (strategies.oauth !== undefined) clean.oauth = sanitizeOAuth(strategies.oauth);
-    result.strategies = clean;
+    result.strategies = sanitizeStrategies(input.strategies);
   }
   return result as RealmSettingsInput;
 }

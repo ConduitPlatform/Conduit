@@ -138,6 +138,16 @@ import { ImportTally } from './utils/realmExport.logic.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+type TeamRealmMove = { oldRealmId: string | null; movedUserIds: string[] };
+
+type ImportedTeam = {
+  name: string;
+  parentTeamName?: string;
+  isDefault?: boolean;
+  realm?: unknown;
+  realmSettings?: unknown;
+};
+
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
   service = {
@@ -265,13 +275,20 @@ export default class Authentication extends ManagedModule<Config> {
     // every record is counted once, whatever step it fails in
     const tally = new ImportTally(result.teams);
     const teamModel = models.Team.getInstance(this.database);
-    const teams = (data.teams ?? []) as {
-      name: string;
-      parentTeamName?: string;
-      isDefault?: boolean;
-      realm?: unknown;
-      realmSettings?: unknown;
-    }[];
+    const teams = (data.teams ?? []) as ImportedTeam[];
+    await this.importTeams(teamModel, teams, tally);
+    await this.importTeamParents(teamModel, teams, tally);
+    // realms need the final team tree (a realm is top-level) and never import secrets
+    const realmsChanged = await importTeamRealms(this.grpcSdk, teams, tally);
+    if (realmsChanged) this.notifyRealmsImported();
+    return result;
+  }
+
+  private async importTeams(
+    teamModel: models.Team,
+    teams: ImportedTeam[],
+    tally: ImportTally,
+  ) {
     for (const [index, rec] of teams.entries()) {
       const name = rec.name;
       if (name == null || name === '') {
@@ -291,6 +308,13 @@ export default class Authentication extends ManagedModule<Config> {
         tally.failed(index, `${name}: ${(e as Error).message}`);
       }
     }
+  }
+
+  private async importTeamParents(
+    teamModel: models.Team,
+    teams: ImportedTeam[],
+    tally: ImportTally,
+  ) {
     for (const [index, rec] of teams.entries()) {
       if (!rec.parentTeamName) continue;
       try {
@@ -316,10 +340,6 @@ export default class Authentication extends ManagedModule<Config> {
         }
       }
     }
-    // realms need the final team tree (a realm is top-level) and never import secrets
-    const realmsChanged = await importTeamRealms(this.grpcSdk, teams, tally);
-    if (realmsChanged) this.notifyRealmsImported();
-    return result;
   }
 
   private notifyRealmsImported() {
@@ -1271,62 +1291,17 @@ export default class Authentication extends ManagedModule<Config> {
 
       // An empty newParentTeamId means "parent unchanged" in this RPC (a team cannot be
       // moved to the top level through it), so only a real re-parent touches realms.
-      let oldRealmId: string | null = null;
-      let movedUserIds: string[] = [];
+      let realmMove: TeamRealmMove = { oldRealmId: null, movedUserIds: [] };
       if (newParentTeamId) {
-        if (realmsEnabled()) {
-          // a realm stays top-level and never contains or sits inside another realm
-          await assertNoNestedRealm(teamId, newParentTeamId);
-          const oldRealm = await resolveTeamRealm(teamId);
-          if (oldRealm) {
-            // collected before the move: guests whose only relations in the old realm
-            // were on this subtree lose their guest membership afterwards
-            oldRealmId = String(oldRealm._id);
-            movedUserIds = await collectTeamUserIds(
-              this.grpcSdk,
-              await collectTeamSubtreeIds(teamId),
-            );
-          }
-        }
-        const newParentTeam = await models.Team.getInstance().findOne({
-          _id: newParentTeamId,
-        });
-        if (!newParentTeam) {
+        const moved = await this.reparentTeam(teamId, team.parentTeam, newParentTeamId);
+        if (!moved) {
           return callback({
             code: status.NOT_FOUND,
             message: 'New parent team not found',
           });
         }
-
-        const oldParentTeamId = team.parentTeam;
-
-        if (oldParentTeamId) {
-          try {
-            await this.grpcSdk.authorization!.deleteRelation({
-              subject: 'Team:' + oldParentTeamId,
-              relation: 'owner',
-              resource: 'Team:' + teamId,
-            });
-          } catch (e) {
-            ConduitGrpcSdk.Logger.warn(
-              `Failed to delete old parent relation: ${(e as Error).message}`,
-            );
-          }
-        }
-
-        await this.grpcSdk.authorization!.createRelation({
-          subject: 'Team:' + newParentTeamId,
-          relation: 'owner',
-          resource: 'Team:' + teamId,
-        });
-
+        realmMove = moved;
         updateFields.parentTeam = newParentTeamId;
-
-        ConduitGrpcSdk.Logger.info(
-          `Team ${teamId} parent switched from ${
-            oldParentTeamId ?? 'none'
-          } to ${newParentTeamId}`,
-        );
       }
 
       const updatedTeam = await models.Team.getInstance().findByIdAndUpdate(
@@ -1338,13 +1313,7 @@ export default class Authentication extends ManagedModule<Config> {
         return callback({ code: status.INTERNAL, message: 'Failed to update team' });
       }
 
-      if (oldRealmId) {
-        const newRealm = await resolveTeamRealm(teamId);
-        if (!newRealm || String(newRealm._id) !== oldRealmId) {
-          // the team left its realm: same cleanup as when a sub-team is deleted
-          await revokeOrphanedGuests(this.grpcSdk, oldRealmId, movedUserIds);
-        }
-      }
+      await this.revokeGuestsIfRealmLeft(teamId, realmMove);
 
       if (name) {
         ConduitGrpcSdk.Logger.info(`Team ${teamId} name updated to ${name}`);
@@ -1356,6 +1325,86 @@ export default class Authentication extends ManagedModule<Config> {
         code: e instanceof GrpcError ? e.code : status.INTERNAL,
         message: (e as Error).message,
       });
+    }
+  }
+
+  /** Moves a team under `newParentTeamId`. Null when the new parent does not exist. */
+  private async reparentTeam(
+    teamId: string,
+    oldParentTeamId: string | undefined,
+    newParentTeamId: string,
+  ): Promise<TeamRealmMove | null> {
+    const realmMove = await this.prepareTeamRealmMove(teamId, newParentTeamId);
+    const newParentTeam = await models.Team.getInstance().findOne({
+      _id: newParentTeamId,
+    });
+    if (!newParentTeam) return null;
+    await this.switchParentTeam(teamId, oldParentTeamId, newParentTeamId);
+    return realmMove;
+  }
+
+  /**
+   * Realm checks before a team moves under `newParentTeamId`. Returns the realm the team
+   * is in and, collected before the move, the users of its subtree: guests whose only
+   * relations in the old realm were on this subtree lose their guest membership afterwards.
+   */
+  private async prepareTeamRealmMove(
+    teamId: string,
+    newParentTeamId: string,
+  ): Promise<TeamRealmMove> {
+    if (!realmsEnabled()) return { oldRealmId: null, movedUserIds: [] };
+    // a realm stays top-level and never contains or sits inside another realm
+    await assertNoNestedRealm(teamId, newParentTeamId);
+    const oldRealm = await resolveTeamRealm(teamId);
+    if (!oldRealm) return { oldRealmId: null, movedUserIds: [] };
+    const movedUserIds = await collectTeamUserIds(
+      this.grpcSdk,
+      await collectTeamSubtreeIds(teamId),
+    );
+    return { oldRealmId: String(oldRealm._id), movedUserIds };
+  }
+
+  private async switchParentTeam(
+    teamId: string,
+    oldParentTeamId: string | undefined,
+    newParentTeamId: string,
+  ) {
+    if (oldParentTeamId) {
+      try {
+        await this.grpcSdk.authorization!.deleteRelation({
+          subject: 'Team:' + oldParentTeamId,
+          relation: 'owner',
+          resource: 'Team:' + teamId,
+        });
+      } catch (e) {
+        ConduitGrpcSdk.Logger.warn(
+          `Failed to delete old parent relation: ${(e as Error).message}`,
+        );
+      }
+    }
+
+    await this.grpcSdk.authorization!.createRelation({
+      subject: 'Team:' + newParentTeamId,
+      relation: 'owner',
+      resource: 'Team:' + teamId,
+    });
+
+    ConduitGrpcSdk.Logger.info(
+      `Team ${teamId} parent switched from ${
+        oldParentTeamId ?? 'none'
+      } to ${newParentTeamId}`,
+    );
+  }
+
+  private async revokeGuestsIfRealmLeft(
+    teamId: string,
+    { oldRealmId, movedUserIds }: TeamRealmMove,
+  ) {
+    if (!oldRealmId) return;
+    const newRealm = await resolveTeamRealm(teamId);
+    if (!newRealm || String(newRealm._id) !== oldRealmId) {
+      // the team left its realm: same cleanup as when a sub-team is deleted
+      await revokeOrphanedGuests(this.grpcSdk, oldRealmId, movedUserIds);
     }
   }
 

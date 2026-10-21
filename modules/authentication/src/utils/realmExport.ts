@@ -28,6 +28,7 @@ import {
   parseImportedRealm,
   realmsDisabledSkipMessage,
   topLevelTeamQuery,
+  TrustedHomeRealmsDecision,
 } from './realmExport.logic.js';
 
 /**
@@ -173,6 +174,109 @@ async function updateExistingRealm(
 }
 
 /**
+ * The team a record that asks for a realm is applied to, or null when the record is not
+ * a realm (or the realms feature is off: reported on `tally` as skipped).
+ */
+async function prepareImportedRealm(
+  rec: Indexable,
+  index: number,
+  name: string,
+  tally: ImportTally,
+): Promise<PreparedRealm | null> {
+  const parsed = parseImportedRealm(rec);
+  if (!parsed.enabled) return null;
+  if (!realmsEnabled()) {
+    // flag off = no realm data is written, same as the admin routes
+    tally.skipped(realmsDisabledSkipMessage(name));
+    return null;
+  }
+  const team = await Team.getInstance().findOne(topLevelTeamQuery(name), {
+    readPreference: 'primary',
+  });
+  if (!team) throw new Error('no top-level team with this name (realms are top-level)');
+  return { index, name, team, parsed };
+}
+
+async function prepareImportedRealms(
+  records: Indexable[],
+  tally: ImportTally,
+): Promise<PreparedRealm[]> {
+  const prepared: PreparedRealm[] = [];
+  for (let index = 0; index < records.length; index++) {
+    const rec = records[index];
+    const name = rec.name as string;
+    if (!name) continue;
+    try {
+      const item = await prepareImportedRealm(rec, index, name, tally);
+      if (item) prepared.push(item);
+    } catch (e) {
+      tally.failed(index, `${name}: realm: ${(e as Error).message}`);
+    }
+  }
+  return prepared;
+}
+
+/**
+ * Writes one prepared realm: overwrites an existing realm or promotes the team. Returns
+ * the trusted home realms decision it was written with.
+ */
+async function writeImportedRealm(
+  grpcSdk: ConduitGrpcSdk,
+  { team, parsed }: PreparedRealm,
+  idBySlug: ReadonlyMap<string, string>,
+): Promise<TrustedHomeRealmsDecision | null> {
+  const teamId = String(team._id);
+  const isRealm = team.realm?.enabled === true;
+  const stored = isRealm
+    ? await RealmSettings.getInstance().findOne(
+        { team: teamId },
+        { select: '+oauthSecrets', readPreference: 'primary' },
+      )
+    : null;
+  const decision = decideTrustedHomeRealms({
+    slugs: parsed.allowedHomeRealmSlugs,
+    unresolved: parsed.unresolvedHomeRealms,
+    idBySlug,
+    storedIds: stored
+      ? normalizeIdList(stored.policies?.guests?.allowedHomeRealms)
+      : null,
+  });
+  const built = buildImportedSettings({
+    input: parsed.input,
+    existingSecrets: stored?.oauthSecrets,
+  });
+  const settings = applyTrustedHomeRealms(built.settings, decision);
+
+  if (isRealm) {
+    await updateExistingRealm(team, parsed.slug, stored, {
+      settings,
+      oauthSecrets: built.oauthSecrets,
+    });
+  } else {
+    assertTeamPromotable(team);
+    await promoteTeamToRealm(
+      grpcSdk,
+      team,
+      { slug: parsed.slug, settings, oauthSecrets: built.oauthSecrets },
+      { notify: false },
+    );
+  }
+  return decision;
+}
+
+function missingTrustedRealmsMessage(
+  name: string,
+  decision: TrustedHomeRealmsDecision,
+): string {
+  return (
+    `${name}: realm: trusted home realms not found: ${decision.missing.join(', ')}` +
+    (decision.disallowGuests
+      ? ' (guests are disabled until they are set)'
+      : ' (kept the stored list)')
+  );
+}
+
+/**
  * Applies the `realm` / `realmSettings` of exported team records on teams that already
  * exist (by name, with their parents set). Realms are top-level, so the team is looked up
  * by name on the top level. Never imports secrets (the ones stored are kept).
@@ -194,29 +298,7 @@ export async function importTeamRealms(
   records: Indexable[],
   tally: ImportTally,
 ): Promise<boolean> {
-  const prepared: PreparedRealm[] = [];
-  for (let index = 0; index < records.length; index++) {
-    const rec = records[index];
-    const name = rec.name as string;
-    if (!name) continue;
-    try {
-      const parsed = parseImportedRealm(rec);
-      if (!parsed.enabled) continue;
-      if (!realmsEnabled()) {
-        // flag off = no realm data is written, same as the admin routes
-        tally.skipped(realmsDisabledSkipMessage(name));
-        continue;
-      }
-      const team = await Team.getInstance().findOne(topLevelTeamQuery(name), {
-        readPreference: 'primary',
-      });
-      if (!team)
-        throw new Error('no top-level team with this name (realms are top-level)');
-      prepared.push({ index, name, team, parsed });
-    } catch (e) {
-      tally.failed(index, `${name}: realm: ${(e as Error).message}`);
-    }
-  }
+  const prepared = await prepareImportedRealms(records, tally);
   if (prepared.length === 0) return false;
 
   let idBySlug: Map<string, string>;
@@ -231,56 +313,15 @@ export async function importTeamRealms(
   }
 
   let changed = false;
-  for (const { index, name, team, parsed } of prepared) {
+  for (const item of prepared) {
     try {
-      const teamId = String(team._id);
-      const isRealm = team.realm?.enabled === true;
-      const stored = isRealm
-        ? await RealmSettings.getInstance().findOne(
-            { team: teamId },
-            { select: '+oauthSecrets', readPreference: 'primary' },
-          )
-        : null;
-      const decision = decideTrustedHomeRealms({
-        slugs: parsed.allowedHomeRealmSlugs,
-        unresolved: parsed.unresolvedHomeRealms,
-        idBySlug,
-        storedIds: stored
-          ? normalizeIdList(stored.policies?.guests?.allowedHomeRealms)
-          : null,
-      });
-      const built = buildImportedSettings({
-        input: parsed.input,
-        existingSecrets: stored?.oauthSecrets,
-      });
-      const settings = applyTrustedHomeRealms(built.settings, decision);
-
-      if (isRealm) {
-        await updateExistingRealm(team, parsed.slug, stored, {
-          settings,
-          oauthSecrets: built.oauthSecrets,
-        });
-      } else {
-        assertTeamPromotable(team);
-        await promoteTeamToRealm(
-          grpcSdk,
-          team,
-          { slug: parsed.slug, settings, oauthSecrets: built.oauthSecrets },
-          { notify: false },
-        );
-      }
+      const decision = await writeImportedRealm(grpcSdk, item, idBySlug);
       changed = true;
       if (decision && decision.missing.length > 0) {
-        tally.failed(
-          index,
-          `${name}: realm: trusted home realms not found: ${decision.missing.join(', ')}` +
-            (decision.disallowGuests
-              ? ' (guests are disabled until they are set)'
-              : ' (kept the stored list)'),
-        );
+        tally.failed(item.index, missingTrustedRealmsMessage(item.name, decision));
       }
     } catch (e) {
-      tally.failed(index, `${name}: realm: ${(e as Error).message}`);
+      tally.failed(item.index, `${item.name}: realm: ${(e as Error).message}`);
     }
   }
   if (changed) invalidateRealmCache();

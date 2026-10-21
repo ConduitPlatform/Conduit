@@ -42,6 +42,71 @@ function identifierOf(query: Record<string, unknown>): IdentifierQuery {
 // Cap on the memberships loaded to resolve the `realm` filter next to other filters.
 const MAX_MEMBERSHIP_FILTER = 1000;
 
+/** The user query of the getUsers filters, except `realm`. */
+function userFilterQuery(params: Indexable): Indexable {
+  const { isActive, isAnonymous, provider, search, homeRealm } = params;
+  let query: Indexable = {};
+  if (!isNil(isActive)) {
+    query.active = isActive;
+  }
+  if (!isNil(isAnonymous)) {
+    query.isAnonymous = isAnonymous;
+  }
+  if (!isNil(provider)) {
+    if (provider === 'local') {
+      query['hashedPassword'] = { $exists: true, $ne: null };
+    } else {
+      query[provider] = { $exists: true, $ne: null };
+    }
+  }
+  if (!isNil(search)) {
+    if (search.match(/^[a-fA-F0-9]{24}$/)) {
+      query = { _id: search };
+    } else {
+      const emailIdentifier = escapeStringRegexp(search);
+      query['email'] = { $regex: `.*${emailIdentifier}.*`, $options: 'i' };
+    }
+  }
+  if (!isNil(homeRealm)) {
+    // 'global' = users without a home realm, otherwise a realm team id
+    query = withHomeScope(query, homeRealm === 'global' ? null : homeRealm);
+  }
+  return query;
+}
+
+/** A page of the members (home or guest) of a realm, in membership order. */
+async function pageRealmMembers(realm: string, skip?: number, limit?: number) {
+  const memberships = await RealmMembership.getInstance().findMany(
+    { realm },
+    { skip, limit, sort: { _id: 1 } },
+  );
+  const memberIds = memberships.map(membership => String(membership.user));
+  const found = memberIds.length
+    ? await User.getInstance().findMany({ _id: { $in: memberIds } })
+    : [];
+  const byId = new Map(found.map(user => [String(user._id), user]));
+  const users = memberIds.flatMap(id => byId.get(id) ?? []);
+  const count = await RealmMembership.getInstance().countDocuments({ realm });
+  return { users, count };
+}
+
+/**
+ * Narrows `query` to the members of a realm. The member ids are resolved first: only the
+ * first MAX_MEMBERSHIP_FILTER memberships of the realm are considered.
+ */
+async function restrictToRealmMembers(query: Indexable, realm: string): Promise<void> {
+  const memberships = await RealmMembership.getInstance().findMany(
+    { realm },
+    { limit: MAX_MEMBERSHIP_FILTER, sort: { _id: 1 } },
+  );
+  const memberIds = memberships.map(membership => String(membership.user));
+  if (typeof query._id === 'string') {
+    if (!memberIds.includes(query._id)) query._id = { $in: [] };
+  } else {
+    query._id = { $in: memberIds };
+  }
+}
+
 export class UserAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
@@ -77,67 +142,18 @@ export class UserAdmin {
   }
 
   async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { isActive, isAnonymous, provider, search, sort, homeRealm, realm } =
-      call.request.params;
+    const { sort, realm } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
-    let query: Indexable = {};
-    if (!isNil(isActive)) {
-      query.active = isActive;
-    }
-    if (!isNil(isAnonymous)) {
-      query.isAnonymous = isAnonymous;
-    }
-    if (!isNil(provider)) {
-      if (provider === 'local') {
-        query['hashedPassword'] = { $exists: true, $ne: null };
-      } else {
-        query[provider] = { $exists: true, $ne: null };
-      }
-    }
-    if (!isNil(search)) {
-      if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        query = { _id: search };
-      } else {
-        const emailIdentifier = escapeStringRegexp(search);
-        query['email'] = { $regex: `.*${emailIdentifier}.*`, $options: 'i' };
-      }
-    }
-
-    if (!isNil(homeRealm)) {
-      // 'global' = users without a home realm, otherwise a realm team id
-      query = withHomeScope(query, homeRealm === 'global' ? null : homeRealm);
-    }
+    const query = userFilterQuery(call.request.params);
     if (!isNil(realm)) {
       // users that are members (home or guest) of the realm
       if (Object.keys(query).length === 0 && isNil(sort)) {
         // the realm is the only filter: page the memberships, then load those users
-        const memberships = await RealmMembership.getInstance().findMany(
-          { realm },
-          { skip, limit, sort: { _id: 1 } },
-        );
-        const memberIds = memberships.map(membership => String(membership.user));
-        const found = memberIds.length
-          ? await User.getInstance().findMany({ _id: { $in: memberIds } })
-          : [];
-        const byId = new Map(found.map(user => [String(user._id), user]));
-        const users = memberIds.flatMap(id => byId.get(id) ?? []);
-        const count = await RealmMembership.getInstance().countDocuments({ realm });
-        return { users, count };
+        return pageRealmMembers(realm, skip, limit);
       }
-      // Combined with other filters the member ids are resolved first: only the first
-      // MAX_MEMBERSHIP_FILTER memberships of the realm are considered.
-      const memberships = await RealmMembership.getInstance().findMany(
-        { realm },
-        { limit: MAX_MEMBERSHIP_FILTER, sort: { _id: 1 } },
-      );
-      const memberIds = memberships.map(membership => String(membership.user));
-      if (typeof query._id === 'string') {
-        if (!memberIds.includes(query._id)) query._id = { $in: [] };
-      } else {
-        query._id = { $in: memberIds };
-      }
+      await restrictToRealmMembers(query, realm);
     }
 
     const users: User[] = await User.getInstance().findMany(query, {

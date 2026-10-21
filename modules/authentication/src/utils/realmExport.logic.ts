@@ -135,6 +135,69 @@ export type ImportedRealm =
       unresolvedHomeRealms: string[];
     };
 
+type ImportedHomeRealms = {
+  allowedHomeRealmSlugs: string[] | undefined;
+  unresolvedHomeRealms: string[];
+};
+
+/** Splits `allowedHomeRealmSlugs` into valid slugs and `unresolved:<id>` entries. */
+function readHomeRealmSlugs(slugs: unknown): ImportedHomeRealms {
+  if (!Array.isArray(slugs)) {
+    invalid('realmSettings.policies.guests.allowedHomeRealmSlugs must be an array');
+  }
+  const named: unknown[] = [];
+  const unresolvedHomeRealms: string[] = [];
+  for (const entry of slugs) {
+    if (typeof entry === 'string' && entry.startsWith(UNRESOLVED_REALM_PREFIX)) {
+      unresolvedHomeRealms.push(entry);
+    } else {
+      named.push(entry);
+    }
+  }
+  const allowedHomeRealmSlugs = Array.from(
+    new Set(named.map(slug => assertValidSlug(slug))),
+  );
+  return { allowedHomeRealmSlugs, unresolvedHomeRealms };
+}
+
+function sanitizeImportedPolicies(
+  value: unknown,
+): { policies: Indexable } & ImportedHomeRealms {
+  if (!isRecord(value)) invalid('realmSettings.policies must be an object');
+  const { guests, ...rest } = value;
+  const policies: Indexable = { ...rest };
+  let homeRealms: ImportedHomeRealms = {
+    allowedHomeRealmSlugs: undefined,
+    unresolvedHomeRealms: [],
+  };
+  if (guests !== undefined) {
+    if (!isRecord(guests)) invalid('realmSettings.policies.guests must be an object');
+    // team ids do not travel between environments: only slugs are imported
+    const { allowedHomeRealms: _ids, allowedHomeRealmSlugs: slugs, ...others } = guests;
+    policies.guests = others;
+    if (slugs !== undefined) homeRealms = readHomeRealmSlugs(slugs);
+  }
+  return { policies, ...homeRealms };
+}
+
+function sanitizeImportedStrategies(value: unknown): Indexable {
+  if (!isRecord(value)) invalid('realmSettings.strategies must be an object');
+  const { oauth, ...toggles } = value;
+  const strategies: Indexable = { ...toggles };
+  if (oauth !== undefined) {
+    if (!isRecord(oauth)) invalid('realmSettings.strategies.oauth must be an object');
+    const cleanOauth: Indexable = {};
+    for (const [provider, entry] of Object.entries(oauth)) {
+      if (!isRecord(entry)) invalid(`strategies.oauth.${provider} must be an object`);
+      const clean: Indexable = { ...entry };
+      for (const field of SECRET_AND_FLAG_FIELDS) delete clean[field];
+      cleanOauth[provider] = clean;
+    }
+    strategies.oauth = cleanOauth;
+  }
+  return strategies;
+}
+
 /** Whitelists the settings keys and drops every secret and read-only flag. */
 function sanitizeImportedSettings(settings: Indexable): {
   input: Indexable;
@@ -142,8 +205,10 @@ function sanitizeImportedSettings(settings: Indexable): {
   unresolvedHomeRealms: string[];
 } {
   const input: Indexable = {};
-  let allowedHomeRealmSlugs: string[] | undefined;
-  const unresolvedHomeRealms: string[] = [];
+  let homeRealms: ImportedHomeRealms = {
+    allowedHomeRealmSlugs: undefined,
+    unresolvedHomeRealms: [],
+  };
   if (settings.active !== undefined) input.active = settings.active;
   if (settings.registration !== undefined) input.registration = settings.registration;
   if (settings.linking !== undefined) {
@@ -151,50 +216,14 @@ function sanitizeImportedSettings(settings: Indexable): {
     input.linking = settings.linking;
   }
   if (settings.policies !== undefined) {
-    if (!isRecord(settings.policies)) invalid('realmSettings.policies must be an object');
-    const { guests, ...policies } = settings.policies;
-    input.policies = { ...policies };
-    if (guests !== undefined) {
-      if (!isRecord(guests)) invalid('realmSettings.policies.guests must be an object');
-      // team ids do not travel between environments: only slugs are imported
-      const { allowedHomeRealms: _ids, allowedHomeRealmSlugs: slugs, ...rest } = guests;
-      input.policies.guests = rest;
-      if (slugs !== undefined) {
-        if (!Array.isArray(slugs)) {
-          invalid('realmSettings.policies.guests.allowedHomeRealmSlugs must be an array');
-        }
-        const named: unknown[] = [];
-        for (const entry of slugs) {
-          if (typeof entry === 'string' && entry.startsWith(UNRESOLVED_REALM_PREFIX)) {
-            unresolvedHomeRealms.push(entry);
-          } else {
-            named.push(entry);
-          }
-        }
-        allowedHomeRealmSlugs = Array.from(
-          new Set(named.map(slug => assertValidSlug(slug))),
-        );
-      }
-    }
+    const { policies, ...trusted } = sanitizeImportedPolicies(settings.policies);
+    input.policies = policies;
+    homeRealms = trusted;
   }
   if (settings.strategies !== undefined) {
-    if (!isRecord(settings.strategies))
-      invalid('realmSettings.strategies must be an object');
-    const { oauth, ...toggles } = settings.strategies;
-    input.strategies = { ...toggles };
-    if (oauth !== undefined) {
-      if (!isRecord(oauth)) invalid('realmSettings.strategies.oauth must be an object');
-      const cleanOauth: Indexable = {};
-      for (const [provider, entry] of Object.entries(oauth)) {
-        if (!isRecord(entry)) invalid(`strategies.oauth.${provider} must be an object`);
-        const clean: Indexable = { ...entry };
-        for (const field of SECRET_AND_FLAG_FIELDS) delete clean[field];
-        cleanOauth[provider] = clean;
-      }
-      input.strategies.oauth = cleanOauth;
-    }
+    input.strategies = sanitizeImportedStrategies(settings.strategies);
   }
-  return { input, allowedHomeRealmSlugs, unresolvedHomeRealms };
+  return { input, ...homeRealms };
 }
 
 /**

@@ -55,6 +55,20 @@ import {
   discoverWithPhone,
 } from './realmDiscovery.js';
 
+function pendingPhoneTokenQuery(phone: string) {
+  return {
+    tokenType: {
+      $in: [
+        TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
+        TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN,
+      ],
+    },
+    data: {
+      phone,
+    },
+  };
+}
+
 export class PhoneHandlers implements IAuthenticationStrategy {
   private sms: SMS;
   private initialized: boolean = false;
@@ -244,82 +258,96 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       );
     }
     if (!discovering && !user) {
-      const teams = ConfigController.getInstance().config.teams;
-      if ((teams.enabled || realmCtx) && invitationToken) {
-        // an invitation into a realm must agree with the realm being registered at
-        await resolveInvitationRealm(realmCtx, invitationToken);
-      }
-      if (
-        isInviteRequired(realmCtx?.effective.registration, teams) &&
-        !foundInvitationToken
-      ) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'Registration requires valid invitation',
-        );
-      }
+      await this.assertPhoneRegistrationAllowed(
+        realmCtx,
+        invitationToken,
+        foundInvitationToken,
+      );
+    }
+    await this.clearPendingPhoneTokens(phone);
 
-      if ((teams.enabled || realmCtx) && call.request.params.invitationToken) {
-        const valid = await TeamsHandler.getInstance().inviteValidation(
-          call.request.params.invitationToken,
-        );
-        if (!valid) {
-          throw new GrpcError(status.PERMISSION_DENIED, 'Invalid invitation token');
-        }
+    const token = await this.sendPhoneCode(phone, {
+      user,
+      discovering,
+      realmCtx,
+      clientId,
+      invitationToken,
+    });
+    return {
+      token: token.token,
+    };
+  }
+
+  private async assertPhoneRegistrationAllowed(
+    realmCtx: RealmContext | null,
+    invitationToken: string | undefined,
+    foundInvitationToken: Token | null | undefined,
+  ) {
+    const teams = ConfigController.getInstance().config.teams;
+    if ((teams.enabled || realmCtx) && invitationToken) {
+      // an invitation into a realm must agree with the realm being registered at
+      await resolveInvitationRealm(realmCtx, invitationToken);
+    }
+    if (
+      isInviteRequired(realmCtx?.effective.registration, teams) &&
+      !foundInvitationToken
+    ) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Registration requires valid invitation',
+      );
+    }
+
+    if ((teams.enabled || realmCtx) && invitationToken) {
+      const valid = await TeamsHandler.getInstance().inviteValidation(invitationToken);
+      if (!valid) {
+        throw new GrpcError(status.PERMISSION_DENIED, 'Invalid invitation token');
       }
     }
+  }
+
+  private async clearPendingPhoneTokens(phone: string) {
     const existingToken = await Token.getInstance().findOne(
-      {
-        tokenType: {
-          $in: [
-            TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
-            TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN,
-          ],
-        },
-        data: {
-          phone,
-        },
-      },
+      pendingPhoneTokenQuery(phone),
       { readPreference: 'primary' },
     );
     if (existingToken) {
       AuthUtils.checkResendThreshold(existingToken);
-      await Token.getInstance().deleteMany({
-        tokenType: {
-          $in: [
-            TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
-            TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN,
-          ],
-        },
-        data: {
-          phone,
-        },
-      });
+      await Token.getInstance().deleteMany(pendingPhoneTokenQuery(phone));
     }
+  }
 
+  private async sendPhoneCode(
+    phone: string,
+    options: {
+      user: User | null;
+      discovering: boolean;
+      realmCtx: RealmContext | null;
+      clientId: string | undefined;
+      invitationToken: string | undefined;
+    },
+  ): Promise<Token> {
+    const { user, discovering, realmCtx } = options;
     const verificationSid = await AuthUtils.sendVerificationCode(this.sms!, phone);
     if (verificationSid === '') {
       throw new GrpcError(status.INTERNAL, 'Could not send verification code');
     }
-    const token = await Token.getInstance().create({
+    return Token.getInstance().create({
       tokenType:
         isNil(user) && !discovering
           ? TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN
           : TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
       user: user ? user._id : undefined,
       data: {
-        clientId,
+        clientId: options.clientId,
         phone,
         verification: verificationSid,
-        invitationToken,
+        invitationToken: options.invitationToken,
         ...(realmCtx ? { realm: realmCtx.team.realm!.slug } : {}),
         ...(discovering ? { discover: true } : {}),
       },
       token: uuid(),
     });
-    return {
-      token: token.token,
-    };
   }
 
   private async handlePhoneRegistration(
