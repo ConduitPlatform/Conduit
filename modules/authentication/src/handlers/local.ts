@@ -16,7 +16,6 @@ import {
   Email,
   GrpcError,
   ParsedRouterRequest,
-  Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import * as templates from '../templates/index.js';
@@ -35,7 +34,6 @@ import {
 import { createHash } from 'crypto';
 import { authenticateChecks, changePassword } from './utils.js';
 import { errors } from '../errors.js';
-import { commitVerifiedEmailChange } from './verifyChangeEmail.js';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -664,24 +662,31 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async verifyChangeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    return commitVerifiedEmailChange(
-      call.request.params.verificationToken,
-      ConfigController.getInstance().config.local.verification.redirect_uri,
+    const verificationToken = call.request.params.verificationToken;
+    const config = ConfigController.getInstance().config;
+    const token: Token | null = await Token.getInstance().findOne(
       {
-        findToken: async (query, options) => {
-          const found = await Token.getInstance().findOne(query as Query<Token>, options);
-          if (!found) return null;
-          const owner = found.user;
-          if (owner == null) return { _id: found._id, data: found.data, user: null };
-          const userId = typeof owner === 'string' ? owner : owner._id;
-          return { _id: found._id, data: found.data, user: { _id: userId } };
-        },
-        deleteToken: query => Token.getInstance().deleteOne(query as Query<Token>),
-        deleteTokens: query => Token.getInstance().deleteMany(query as Query<Token>),
-        findUser: query => User.getInstance().findOne(query as Query<User>),
-        updateUser: (id, patch) => User.getInstance().findByIdAndUpdate(id, patch),
+        tokenType: TokenType.CHANGE_EMAIL_TOKEN,
+        token: verificationToken,
       },
+      { populate: ['user'], readPreference: 'primary' },
     );
+    if (isNil(token)) {
+      throw new GrpcError(status.NOT_FOUND, 'Change email token does not exist');
+    }
+    const user: User = token.user as User;
+    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    const redirectUri =
+      token.data.customRedirectUri ?? config.local.verification.redirect_uri;
+    await Token.getInstance()
+      .deleteMany({ user: user._id, tokenType: TokenType.CHANGE_EMAIL_TOKEN })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
+    await User.getInstance().findByIdAndUpdate(user._id as string, {
+      email: token.data.email,
+    });
+    return redirectUri ? { redirect: redirectUri } : 'Email changed successfully';
   }
 
   async resendVerificationEmail(
