@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.17.0-alpha.8](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.7...v0.17.0-alpha.8) (2026-10-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **authentication:** return 401 when a refresh token cannot renew (#1630)
+
+### Features
+
+* **authentication:** add ChangeEmail gRPC RPC ([#1654](https://github.com/ConduitPlatform/Conduit/issues/1654)) ([c964a1b](https://github.com/ConduitPlatform/Conduit/commit/c964a1ba6f2a9fb1bb4abcca71f19b3208ca2515))
+* **chat:** add DeleteMessage gRPC RPC ([#1621](https://github.com/ConduitPlatform/Conduit/issues/1621)) ([368a96b](https://github.com/ConduitPlatform/Conduit/commit/368a96bc509c9d6052e48ee567462e7c260443e4))
+* **database:** add Compatible indexes for Mongo and SQL dialects ([#1613](https://github.com/ConduitPlatform/Conduit/issues/1613)) ([aac1d31](https://github.com/ConduitPlatform/Conduit/commit/aac1d311304dfb12e97e4f67afbed998650d2638))
+* **database:** add Postgres live updates via pgoutput ([#1602](https://github.com/ConduitPlatform/Conduit/issues/1602)) ([cd65fba](https://github.com/ConduitPlatform/Conduit/commit/cd65fba2ef9149b8350ffe8416f3f6e8ebf919a2)), closes [#1607](https://github.com/ConduitPlatform/Conduit/issues/1607)
+* **database:** stream live document updates over admin sockets ([#1601](https://github.com/ConduitPlatform/Conduit/issues/1601)) ([6b8d83b](https://github.com/ConduitPlatform/Conduit/commit/6b8d83b494ef97088f6e1ab64be0c5093539cf5d)), closes [#1605](https://github.com/ConduitPlatform/Conduit/issues/1605) [#1604](https://github.com/ConduitPlatform/Conduit/issues/1604) [#1604](https://github.com/ConduitPlatform/Conduit/issues/1604)
+* **router:** add ReBAC-protected event-to-socket relays ([#1600](https://github.com/ConduitPlatform/Conduit/issues/1600)) ([153e367](https://github.com/ConduitPlatform/Conduit/commit/153e3676bc9315c97dfebc9ef0a58e70c959f55c)), closes [#1604](https://github.com/ConduitPlatform/Conduit/issues/1604) [#1604](https://github.com/ConduitPlatform/Conduit/issues/1604)
+
+
+### Bug Fixes
+
+* **authentication:** return 401 when a refresh token cannot renew ([#1630](https://github.com/ConduitPlatform/Conduit/issues/1630)) ([b7c9f35](https://github.com/ConduitPlatform/Conduit/commit/b7c9f35a087e2cbf43e98716db716e534ee51b3c))
+* **ci:** compile sqlite3 before embeddings database tests ([#1640](https://github.com/ConduitPlatform/Conduit/issues/1640)) ([2d29859](https://github.com/ConduitPlatform/Conduit/commit/2d298596bad32ebc422893cab4ada33512590fd8))
+* **embeddings:** fail closed on client vector search authorization ([#1642](https://github.com/ConduitPlatform/Conduit/issues/1642)) ([29168d1](https://github.com/ConduitPlatform/Conduit/commit/29168d154948a0735caf07f291eb4689847cd359))
+* **hermes:** wrap array results in graphql queries ([#1627](https://github.com/ConduitPlatform/Conduit/issues/1627)) ([7d69366](https://github.com/ConduitPlatform/Conduit/commit/7d69366890597c239317d0ca4fc3f4189555c17f))
+* **module-tools:** roll file logs for 3 days ([#1647](https://github.com/ConduitPlatform/Conduit/issues/1647)) ([c8fb194](https://github.com/ConduitPlatform/Conduit/commit/c8fb1941ad68613a627708f6becc930b1a91db5e))
+
 ## [0.17.0-alpha.7](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.6...v0.17.0-alpha.7) (2026-09-18)
 
 
