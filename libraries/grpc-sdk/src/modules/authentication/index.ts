@@ -10,6 +10,7 @@ import {
   UserModifyStatusResponse,
   InvitationDeleteResponse,
   InviteUserToTeamResponse,
+  UserChangeEmailResponse,
 } from '../../protoUtils/index.js';
 import { Indexable } from '../../interfaces/index.js';
 
@@ -61,6 +62,10 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
 
   changePass(email: string, password?: string): Promise<UserCreateResponse> {
     return this.client!.changePass({ email, password });
+  }
+
+  changeEmail(userId: string, newEmail: string): Promise<UserChangeEmailResponse> {
+    return this.client!.changeEmail({ userId, newEmail });
   }
 
   getTeam(teamId: string): Promise<Team> {
