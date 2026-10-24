@@ -42,6 +42,8 @@ import {
   UnsetTeamRealmRequest,
   UnsetTeamRealmResponse,
   UpdateTeamRequest,
+  UserChangeEmail,
+  UserChangeEmailResponse,
   UserChangePass,
   UserCreateByUsernameRequest,
   UserCreateRequest,
@@ -160,6 +162,7 @@ export default class Authentication extends ManagedModule<Config> {
       userCreateByUsername: this.userCreateByUsername.bind(this),
       anonymousUserCreate: this.anonymousUserCreate.bind(this),
       changePass: this.changePass.bind(this),
+      changeEmail: this.changeEmail.bind(this),
       userDelete: this.userDelete.bind(this),
       getTeam: this.getTeam.bind(this),
       createTeam: this.createTeam.bind(this),
@@ -1003,6 +1006,35 @@ export default class Authentication extends ManagedModule<Config> {
       return callback(null, { password });
     } catch (e) {
       return callback(toCallbackError(e));
+    }
+  }
+
+  async changeEmail(
+    call: GrpcRequest<UserChangeEmail>,
+    callback: GrpcCallback<UserChangeEmailResponse>,
+  ) {
+    const { userId } = call.request;
+    const newEmail = call.request.newEmail.trim().toLowerCase();
+    try {
+      if (newEmail.length === 0) {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Invalid email address provided',
+        });
+      }
+      const user = await models.User.getInstance().findOne({ _id: userId });
+      if (!user) {
+        return callback({ code: status.NOT_FOUND, message: 'User not found' });
+      }
+
+      await models.User.getInstance().findByIdAndUpdate(user._id, {
+        email: newEmail,
+        isVerified: true,
+      });
+
+      return callback(null, { message: 'ok' });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
   }
 

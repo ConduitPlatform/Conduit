@@ -36,6 +36,15 @@ message UserChangePass {
   optional string realm = 3;
 }
 
+message UserChangeEmail {
+  string userId = 1;
+  string newEmail = 2;
+}
+
+message UserChangeEmailResponse {
+  string message = 1;
+}
+
 message UserDeleteRequest {
   string userId = 1;
 }
@@ -201,6 +210,7 @@ service Authentication {
   rpc UserModifyStatus(UserModifyStatusRequest) returns (UserModifyStatusResponse);
   rpc AnonymousUserCreate(AnonymousUserCreateRequest) returns (UserLoginResponse);
   rpc ChangePass(UserChangePass) returns (UserCreateResponse);
+  rpc ChangeEmail(UserChangeEmail) returns (UserChangeEmailResponse);
   rpc UserDelete(UserDeleteRequest) returns (UserDeleteResponse);
   rpc GetTeam(GetTeamRequest) returns (Team);
   rpc CreateTeam(CreateTeamRequest) returns (Team);
