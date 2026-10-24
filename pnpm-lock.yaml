@@ -739,8 +739,8 @@ importers:
         specifier: ^4.0.6
         version: 4.0.6
       handlebars:
-        specifier: ^4.7.9
-        version: 4.7.9
+        specifier: ^4.7.10
+        version: 4.7.10
       ioredis:
         specifier: 5.11.1
         version: 5.11.1
@@ -761,7 +761,7 @@ importers:
         version: 9.0.6
       nodemailer-mailgun-transport:
         specifier: ^2.1.5
-        version: 2.1.5(handlebars@4.7.9)(lodash@4.18.1)(underscore@1.13.8)
+        version: 2.1.5(handlebars@4.7.10)(lodash@4.18.1)(underscore@1.13.8)
       nodemailer-mandrill-transport:
         specifier: ^1.2.0
         version: 1.2.0
@@ -5527,6 +5527,11 @@ packages:
     resolution: {integrity: sha512-LWZ3Vr8BG7DHE3TzPYFqkhjNRw4vYgFSsv2nfMuHklAlOfiy54/EwiDQuQfFVLxENCVv20wpbjfTayooQHrEhQ==}
     engines: {node: '>=18.18.0'}
 
+  handlebars@4.7.10:
+    resolution: {integrity: sha512-P5VJMVM7qgBn6vjXMw8WG9uVI+ncf2pi72j4de4yz5ZULLj2RGqLYaKOYGsgyrViQ0tePOVlN1tDCCXXtFqXKg==}
+    engines: {node: '>=0.4.7'}
+    hasBin: true
+
   handlebars@4.7.9:
     resolution: {integrity: sha512-4E71E0rpOaQuJR2A3xDZ+GM1HyWYv1clR58tC8emQNeQe3RH7MAzSbat+V0wG78LQBo6m6bzSG/L4pBuCsgnUQ==}
     engines: {node: '>=0.4.7'}
@@ -7294,8 +7299,8 @@ packages:
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
 
-  react-is@19.3.0:
-    resolution: {integrity: sha512-UpMYezM4v5/18F28aC66AEsjXIgE02kyEMH6yLdgLXu/UTfa1Ntwck/nNLrbqJsEXW7gPb0coNO9FQse9WTovA==}
+  react-is@19.3.1:
+    resolution: {integrity: sha512-RRieF6IyxQBkcK6pP8xOHprLTPW6QjRkbGdImtqNme+/hYVwCZkLQLdlZGOhUqXwkS9IEynaGvPJtv6XB/cz0Q==}
 
   read-pkg-up@3.0.0:
     resolution: {integrity: sha512-YFzFrVvpC6frF1sz8psoHDBGF7fLPc+llq/8NB43oagqWkx8ar5zYtsTORtOjw9W2RHLpWP+zTWwBvf1bCmcSw==}
@@ -12084,11 +12089,11 @@ snapshots:
 
   consola@3.4.2: {}
 
-  consolidate@0.15.1(handlebars@4.7.9)(lodash@4.18.1)(underscore@1.13.8):
+  consolidate@0.15.1(handlebars@4.7.10)(lodash@4.18.1)(underscore@1.13.8):
     dependencies:
       bluebird: 3.7.2
     optionalDependencies:
-      handlebars: 4.7.9
+      handlebars: 4.7.10
       lodash: 4.18.1
       underscore: 1.13.8
 
@@ -12171,7 +12176,7 @@ snapshots:
     dependencies:
       conventional-commits-filter: 2.0.7
       dateformat: 3.0.3
-      handlebars: 4.7.9
+      handlebars: 4.7.10
       json-stringify-safe: 5.0.1
       lodash: 4.18.1
       meow: 8.1.2
@@ -13247,6 +13252,15 @@ snapshots:
     optional: true
 
   guess-json-indent@3.0.1: {}
+
+  handlebars@4.7.10:
+    dependencies:
+      minimist: 1.2.8
+      neo-async: 2.6.2
+      source-map: 0.6.1
+      wordwrap: 1.0.0
+    optionalDependencies:
+      uglify-js: 3.19.3
 
   handlebars@4.7.9:
     dependencies:
@@ -14972,9 +14986,9 @@ snapshots:
 
   node-releases@2.0.57: {}
 
-  nodemailer-mailgun-transport@2.1.5(handlebars@4.7.9)(lodash@4.18.1)(underscore@1.13.8):
+  nodemailer-mailgun-transport@2.1.5(handlebars@4.7.10)(lodash@4.18.1)(underscore@1.13.8):
     dependencies:
-      consolidate: 0.15.1(handlebars@4.7.9)(lodash@4.18.1)(underscore@1.13.8)
+      consolidate: 0.15.1(handlebars@4.7.10)(lodash@4.18.1)(underscore@1.13.8)
       form-data: 4.0.6
       mailgun.js: 8.2.2
     transitivePeerDependencies:
@@ -15358,12 +15372,12 @@ snapshots:
       '@jest/schemas': 30.4.1
       ansi-styles: 5.2.0
       react-is-18: react-is@18.3.1
-      react-is-19: react-is@19.3.0
+      react-is-19: react-is@19.3.1
 
   pretty-format@30.5.1:
     dependencies:
       '@jest/react-is-18': react-is@18.3.1
-      '@jest/react-is-19': react-is@19.3.0
+      '@jest/react-is-19': react-is@19.3.1
       '@jest/schemas': 30.5.0
       ansi-styles: 5.2.0
 
@@ -15462,7 +15476,7 @@ snapshots:
 
   react-is@18.3.1: {}
 
-  react-is@19.3.0: {}
+  react-is@19.3.1: {}
 
   read-pkg-up@3.0.0:
     dependencies:
