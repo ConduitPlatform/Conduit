@@ -160,7 +160,7 @@ export class AmazonSesProvider extends EmailProviderClass {
     return info.messageId;
   }
 
-  sendEmail(mailOptions: AmazonSesEmailOptions) {
+  sendEmail(mailOptions: AmazonSesEmailOptions): Promise<SentMessageInfo> | undefined {
     if (mailOptions.template && mailOptions.templateData) {
       const command = new SendEmailCommand({
         FromEmailAddress: mailOptions.from as string,
@@ -172,10 +172,17 @@ export class AmazonSesProvider extends EmailProviderClass {
           },
         },
       });
-
-      return this._amazonsSesSdk.send(command);
-    } else {
-      return this._transport?.sendMail(mailOptions);
+      const from = typeof mailOptions.from === 'string' ? mailOptions.from : '';
+      const to = typeof mailOptions.to === 'string' ? mailOptions.to : '';
+      return this._amazonsSesSdk.send(command).then(output => ({
+        messageId: output.MessageId ?? '',
+        response: output.MessageId,
+        envelope: {
+          from: from.length > 0 ? from : false,
+          to: to.length > 0 ? [to] : [],
+        },
+      }));
     }
+    return this._transport?.sendMail(mailOptions);
   }
 }
