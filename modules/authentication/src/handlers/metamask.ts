@@ -9,17 +9,35 @@ import {
   Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { User } from '../models/index.js';
+import { RealmMembership, User } from '../models/index.js';
 import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import {
   ConduitString,
   ConfigController,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { Config } from '../config/index.js';
 import { ALT_STRATEGY_AUTH } from '../constants/index.js';
+import { errors } from '../errors.js';
+import {
+  identifierQuery,
+  identityMode,
+  realmPrincipalClash,
+  realmsEnabled,
+} from '../utils/realm.js';
+import {
+  assertGlobalStrategyAvailable,
+  assertStrategyEnabledForRealm,
+  grantHomeMembership,
+  homeRealmFields,
+  realmIdOf,
+  realmParam,
+  resolveRealmFromCall,
+  scopedUserQuery,
+} from './realmRequest.js';
 import {
   bytesToHex,
   ecrecover,
@@ -38,7 +56,13 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
         action: ConduitRouteActions.POST,
         description:
           'Returns a nonce for the user to sign using their wallet. If no user exists with the provided public address, a new user will be created.',
-        bodyParams: { ethPublicAddress: ConduitString.Required },
+        bodyParams: { ethPublicAddress: ConduitString.Required, realm: realmParam },
+        errors: [
+          errors.INVITATION_REQUIRED,
+          errors.REALM_NOT_FOUND,
+          errors.REALMS_DISABLED,
+          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+        ],
         rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('MetamaskNonce', {
@@ -55,7 +79,13 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
         bodyParams: {
           ethPublicAddress: ConduitString.Required,
           signature: ConduitString.Required,
+          realm: realmParam,
         },
+        errors: [
+          errors.REALM_NOT_FOUND,
+          errors.REALMS_DISABLED,
+          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+        ],
         rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('MetamaskAuthentication', {
@@ -79,21 +109,57 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
   async getNonce(call: ParsedRouterRequest) {
     const { ethPublicAddress } = call.request.params;
     const normalizedEthPublicAddress = ethPublicAddress.toLowerCase();
+    const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('metamask');
+    assertStrategyEnabledForRealm(realmCtx, 'metamask');
 
-    const existingUser: User | null = await User.getInstance().findOne({
-      'metamask.ethPublicAddress': normalizedEthPublicAddress,
-    } as Query<User>);
+    const existingUser: User | null = await User.getInstance().findOne(
+      scopedUserQuery(
+        { 'metamask.ethPublicAddress': normalizedEthPublicAddress },
+        realmCtx,
+      ) as Query<User>,
+    );
 
     if (existingUser) {
       return { nonce: existingUser.metamask!.nonce };
     }
 
+    // a nonce request registers the wallet, a wallet cannot present an invitation
+    if (realmCtx && !realmCtx.effective.registration.allowWithoutInvite) {
+      throw new ModuleError(errors.INVITATION_REQUIRED);
+    }
+
     const nonce = uuid();
+    // Shared mode only: addresses are unique across realms. A wallet that already belongs to
+    // a user of another realm gets a throw-away nonce and nothing is created: addresses are
+    // public, so this reveals nothing, and `authenticate` then fails through the normal "No
+    // user found" path because the scoped lookup does not find the user. In isolated mode
+    // the scoped miss above creates the placeholder in the request realm, as for a new address.
+    if ((realmCtx || realmsEnabled()) && identityMode() === 'shared') {
+      const otherRealmUser = await User.getInstance().findOne({
+        'metamask.ethPublicAddress': normalizedEthPublicAddress,
+      } as Query<User>);
+      if (otherRealmUser) return { nonce };
+    }
+    // isolated mode: a linked guest of the realm holding the wallet is the same principal
+    // there, so nothing is created either (the same answer as above)
+    if (
+      realmCtx &&
+      (await realmPrincipalClash(realmIdOf(realmCtx), [
+        identifierQuery('metamask', normalizedEthPublicAddress),
+      ]))
+    ) {
+      return { nonce };
+    }
+
+    // The realm membership and role are granted by the first successful `authenticate`,
+    // once the wallet is proven: an unproven address must not own a membership.
     await User.getInstance().create({
       metamask: {
         ethPublicAddress: normalizedEthPublicAddress,
         nonce,
       },
+      ...homeRealmFields(realmCtx),
     });
 
     return { nonce };
@@ -109,9 +175,16 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     }
 
-    const user = await User.getInstance().findOne({
-      'metamask.ethPublicAddress': normalizedEthPublicAddress,
-    } as Query<User>);
+    const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('metamask');
+    assertStrategyEnabledForRealm(realmCtx, 'metamask');
+
+    const user = await User.getInstance().findOne(
+      scopedUserQuery(
+        { 'metamask.ethPublicAddress': normalizedEthPublicAddress },
+        realmCtx,
+      ) as Query<User>,
+    );
 
     if (isNil(user)) {
       throw new GrpcError(
@@ -157,11 +230,23 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
       'metamask.nonce': uuid(),
     } as Query<User>);
 
+    if (realmCtx) {
+      // the scoped lookup guarantees realmCtx is the user's home realm
+      const hasMembership = await RealmMembership.getInstance().findOne({
+        user: String(user._id),
+        realm: String(realmCtx.team._id),
+      });
+      if (!hasMembership) {
+        await grantHomeMembership(this.grpcSdk, user, realmCtx);
+      }
+    }
+
     const config = ConfigController.getInstance().config;
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: context.clientId,
       config,
+      realm: realmIdOf(realmCtx),
     });
   }
 }

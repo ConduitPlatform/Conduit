@@ -4,9 +4,12 @@ import {
   GrpcCallback,
   GrpcError,
   GrpcRequest,
+  GrpcResponse,
   HealthCheckStatus,
   Indexable,
   Query,
+  SetConfigRequest,
+  SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isEmpty, isNil } from 'lodash-es';
@@ -17,20 +20,27 @@ import { AuthenticationRoutes } from './routes/index.js';
 import * as models from './models/index.js';
 import { Token, User } from './models/index.js';
 import { AuthUtils } from './utils/index.js';
-import { TokenType } from './constants/index.js';
+import { purgeExpiredLinkProofs } from './handlers/realmDiscovery.js';
+import { REALM_UPDATE_EVENT, TokenType } from './constants/index.js';
 import { v4 as uuid } from 'uuid';
 import {
   AnonymousUserCreateRequest,
   CreateTeamRequest,
+  GetRealmSettingsRequest,
   GetTeamRequest,
   InvitationDeleteRequest,
   InvitationDeleteResponse,
   InviteUserToTeamRequest,
   InviteUserToTeamResponse,
   ModifyTeamMembersRequest,
+  RealmMembershipRequest,
+  RealmResponse,
+  SetTeamRealmRequest,
   Team as GrpcTeam,
   TeamDeleteRequest,
   TeamDeleteResponse,
+  UnsetTeamRealmRequest,
+  UnsetTeamRealmResponse,
   UpdateTeamRequest,
   UserChangeEmail,
   UserChangeEmailResponse,
@@ -58,6 +68,7 @@ import {
   convictConfigParser,
   createParsedRouterRequest,
   ManagedModule,
+  ModuleError,
   sanitizeDocumentsForExport,
   type ExportableResource,
   type ExportResult,
@@ -75,9 +86,69 @@ import { handleAuthentication } from './routes/middleware.js';
 import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
 import { validateAppleClients } from './handlers/oauth2/utils/validateAppleClients.js';
+import {
+  assertAnonymousRealmAllowed,
+  assertAnonymousUserInRealm,
+  grantHomeMembership,
+  homeRealmFields,
+  realmIdOf,
+  resolveRealmFromSlug,
+  rollbackUserOnFailure,
+  scopedUserQuery,
+} from './handlers/realmRequest.js';
+import {
+  assertNoNestedRealm,
+  accountLinkOffered,
+  countIdentifierCollisions,
+  deleteUserRealmMemberships,
+  getRealmSlugById,
+  identityMode,
+  identityModeConfigError,
+  identityModeRevertBlockedMessage,
+  invalidateRealmCache,
+  isGlobalRealmScope,
+  isIdentityModeRevertTransition,
+  isRealmsDisableTransition,
+  realmsDisableBlockedMessage,
+  realmsEnabled,
+  resolveTeamRealm,
+  identifierQuery,
+  realmPrincipalClash,
+  uniqueIdentifierQuery,
+} from './utils/realm.js';
+import {
+  collectTeamSubtreeIds,
+  collectTeamUserIds,
+  revokeOrphanedGuests,
+} from './utils/teamRealm.js';
+import { RealmsAdmin } from './admin/realm.js';
+import { errors } from './errors.js';
+import {
+  assertTeamId,
+  assertUserId,
+  buildSetRealmParams,
+  assertGrantMembershipAllowed,
+  parseMembershipType,
+  parseOptionalMembershipType,
+  toCallbackError,
+  toGrpcTeam,
+  toRealmResponse,
+} from './utils/realmGrpc.logic.js';
+import { buildTeamRealmExports, importTeamRealms } from './utils/realmExport.js';
+import { ImportTally } from './utils/realmExport.logic.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+type TeamRealmMove = { oldRealmId: string | null; movedUserIds: string[] };
+
+type ImportedTeam = {
+  name: string;
+  parentTeamName?: string;
+  isDefault?: boolean;
+  realm?: unknown;
+  realmSettings?: unknown;
+};
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -102,6 +173,11 @@ export default class Authentication extends ManagedModule<Config> {
       invitationDelete: this.invitationDelete.bind(this),
       inviteUserToTeam: this.inviteUserToTeam.bind(this),
       updateTeam: this.updateTeam.bind(this),
+      setTeamRealm: this.setTeamRealm.bind(this),
+      getRealmSettings: this.getRealmSettings.bind(this),
+      unsetTeamRealm: this.unsetTeamRealm.bind(this),
+      grantRealmMembership: this.grantRealmMembership.bind(this),
+      revokeRealmMembership: this.revokeRealmMembership.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -111,6 +187,7 @@ export default class Authentication extends ManagedModule<Config> {
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
   private tokenCleanupInterval: ReturnType<typeof setInterval> | null = null;
   private monitorsActive = false;
+  private realmBusSubscribed = false;
   private _authzUserResourceDispose: (() => void) | null = null;
 
   constructor(peerManifestRoot?: string) {
@@ -130,6 +207,7 @@ export default class Authentication extends ManagedModule<Config> {
     this.database = this.grpcSdk.database!;
     TokenProvider.getInstance(this.grpcSdk);
     await this.registerSchemas();
+    this.subscribeToRealmUpdates();
     await runMigrations(this.grpcSdk);
     for (const model of Object.values(models)) {
       const modelInstance = model.getInstance();
@@ -147,7 +225,15 @@ export default class Authentication extends ManagedModule<Config> {
     return [
       {
         type: 'teams',
-        description: 'Team structure (name, parent, isDefault)',
+        description:
+          'Team structure (name, parent, isDefault, realm and realm settings). ' +
+          'Realm import: the file is the source of truth for the realms it enables ' +
+          '(a realm team without realmSettings is reset to the defaults); a file with ' +
+          'realm.enabled false leaves a realm that exists in the database alone ' +
+          '(demote it explicitly). Secrets are never exported or imported. Trusted home ' +
+          'realms are exported as slugs, or unresolved:<id> when the id is no enabled ' +
+          'realm; an unresolved entry fails closed on import (the stored list is kept, ' +
+          'or guests are disabled for a new realm) and is reported per team.',
         priority: 35,
       },
     ];
@@ -171,9 +257,11 @@ export default class Authentication extends ManagedModule<Config> {
     const parentNameById = new Map(
       (parentTeams as Indexable[]).map((p: Indexable) => [p._id, p.name]),
     );
+    const realmExports = await buildTeamRealmExports(teams);
     const forExport = teams.map(t => {
       const { _id, parentTeam, createdAt, updatedAt, ...rest } = t;
-      const out = { ...rest };
+      // realm marker and non-secret settings (secrets export as null)
+      const out = { ...rest, ...realmExports.get(String(_id)) };
       if (parentTeam && parentNameById.has(parentTeam)) {
         (out as Indexable).parentTeamName = parentNameById.get(parentTeam);
       }
@@ -187,34 +275,50 @@ export default class Authentication extends ManagedModule<Config> {
     const result: ImportResult = {
       teams: { created: 0, updated: 0, failed: 0, errors: [] },
     };
+    // every record is counted once, whatever step it fails in
+    const tally = new ImportTally(result.teams);
     const teamModel = models.Team.getInstance(this.database);
-    const teams = (data.teams ?? []) as {
-      name: string;
-      parentTeamName?: string;
-      isDefault?: boolean;
-    }[];
-    for (const rec of teams) {
+    const teams = (data.teams ?? []) as ImportedTeam[];
+    await this.importTeams(teamModel, teams, tally);
+    await this.importTeamParents(teamModel, teams, tally);
+    // realms need the final team tree (a realm is top-level) and never import secrets
+    const realmsChanged = await importTeamRealms(this.grpcSdk, teams, tally);
+    if (realmsChanged) this.notifyRealmsImported();
+    return result;
+  }
+
+  private async importTeams(
+    teamModel: models.Team,
+    teams: ImportedTeam[],
+    tally: ImportTally,
+  ) {
+    for (const [index, rec] of teams.entries()) {
       const name = rec.name;
       if (name == null || name === '') {
-        result.teams.failed += 1;
-        result.teams.errors.push('Missing name');
+        tally.failed(index, 'Missing name');
         continue;
       }
       try {
         const existing = await teamModel.findOne({ name });
         if (existing) {
           await teamModel.updateOne({ name }, { isDefault: rec.isDefault ?? false });
-          result.teams.updated += 1;
+          tally.updated(index);
         } else {
           await teamModel.create({ name, isDefault: rec.isDefault ?? false });
-          result.teams.created += 1;
+          tally.created(index);
         }
       } catch (e) {
-        result.teams.failed += 1;
-        result.teams.errors.push(`${name}: ${(e as Error).message}`);
+        tally.failed(index, `${name}: ${(e as Error).message}`);
       }
     }
-    for (const rec of teams) {
+  }
+
+  private async importTeamParents(
+    teamModel: models.Team,
+    teams: ImportedTeam[],
+    tally: ImportTally,
+  ) {
+    for (const [index, rec] of teams.entries()) {
       if (!rec.parentTeamName) continue;
       try {
         const parent = await teamModel.findOne(
@@ -222,16 +326,90 @@ export default class Authentication extends ManagedModule<Config> {
           { readPreference: 'primary' },
         );
         if (parent) {
+          const child = await teamModel.findOne({ name: rec.name });
+          if (child) {
+            // a realm stays top-level and never contains or sits inside another realm
+            await assertNoNestedRealm(String(child._id), String(parent._id));
+          }
           await teamModel.updateOne(
             { name: rec.name },
             { parentTeam: (parent as Indexable)._id },
           );
         }
-      } catch (_) {
-        // ignore
+      } catch (e) {
+        // a missing parent is ignored (as before); a realm that would nest is reported
+        if (e instanceof ModuleError) {
+          tally.failed(index, `${rec.name}: parent: ${(e as Error).message}`);
+        }
       }
     }
-    return result;
+  }
+
+  private notifyRealmsImported() {
+    invalidateRealmCache();
+    this.grpcSdk.bus?.publish(REALM_UPDATE_EVENT, JSON.stringify({ import: true }));
+    if (ConfigController.getInstance().config?.active) this.refreshAppRoutes();
+  }
+
+  /**
+   * Refuses config updates that would leave the realm data in an unsafe state, checked here
+   * and not in `preConfig`, which also runs for config updates received from the bus and for
+   * the startup reconciliation, where a throw would not reach the caller of the update:
+   *  - an identity mode that is not `shared` or `isolated` (INVALID_ARGUMENT): checked here
+   *    so the refusal reaches the caller (preConfig also refuses it, for the other paths);
+   *  - switching the realms feature off while enabled realm teams exist (the "flag off = no
+   *    realm data" invariant): demote them first;
+   *  - returning the identity mode from isolated to shared while an identifier is held by
+   *    more than one account (identifiers would become ambiguous). The computed mode decides,
+   *    so switching realms or teams off while isolated is checked the same way.
+   * The database is only queried on those transitions.
+   */
+  async setConfig(
+    call: GrpcRequest<SetConfigRequest>,
+    callback: GrpcResponse<SetConfigResponse>,
+  ) {
+    let incomingTeams: Config['teams'] | undefined;
+    try {
+      incomingTeams = JSON.parse(call.request.newConfig)?.teams;
+    } catch {
+      // malformed JSON is reported by the base implementation
+    }
+    const modeError = identityModeConfigError(incomingTeams?.realms?.identityMode);
+    if (modeError) {
+      return callback({ code: status.INVALID_ARGUMENT, message: modeError });
+    }
+    const previousTeams = ConfigController.getInstance().config?.teams;
+    if (isIdentityModeRevertTransition(previousTeams, incomingTeams)) {
+      try {
+        const collisions = await countIdentifierCollisions();
+        const blocked = identityModeRevertBlockedMessage(collisions.total);
+        if (blocked) {
+          return callback({ code: status.FAILED_PRECONDITION, message: blocked });
+        }
+      } catch (e) {
+        return callback({
+          code: status.INTERNAL,
+          message: `Could not verify identifier uniqueness: ${(e as Error).message}`,
+        });
+      }
+    }
+    if (isRealmsDisableTransition(previousTeams, incomingTeams)) {
+      try {
+        const enabledRealmsQuery: Indexable = { 'realm.enabled': true };
+        const enabledRealms =
+          await models.Team.getInstance().countDocuments(enabledRealmsQuery);
+        const blocked = realmsDisableBlockedMessage(enabledRealms);
+        if (blocked) {
+          return callback({ code: status.FAILED_PRECONDITION, message: blocked });
+        }
+      } catch (e) {
+        return callback({
+          code: status.INTERNAL,
+          message: `Could not verify that no enabled realms exist: ${(e as Error).message}`,
+        });
+      }
+    }
+    return super.setConfig(call, callback);
   }
 
   async preConfig(config: Config) {
@@ -279,11 +457,18 @@ export default class Authentication extends ManagedModule<Config> {
       validateAppleClients(config.apple.clients);
     }
 
+    const modeError = identityModeConfigError(config.teams?.realms?.identityMode);
+    if (modeError) throw new GrpcError(status.INVALID_ARGUMENT, modeError);
+
     return config;
   }
 
   async onConfig() {
     const config = ConfigController.getInstance().config;
+    // realm contexts embed the global config (inherited OAuth credentials, local
+    // verification...), so any config change, a credential rotation included, must
+    // rebuild them (this also drops the per-realm OAuth settings)
+    invalidateRealmCache();
     await this.ensureSharedAccessTokenJwtSecret(config);
     if (config.redirectUris.allowAny && process.env.NODE_ENV === 'production') {
       ConduitGrpcSdk.Logger.warn(
@@ -299,7 +484,9 @@ export default class Authentication extends ManagedModule<Config> {
       if (shouldSendVerificationEmail && !this.grpcSdk.isAvailable('email')) {
         await this.grpcSdk.refreshModules(true);
       }
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, () =>
+        this.refreshAppRoutes(),
+      );
       this.refreshAppRoutes();
       this.initMonitors();
       this.startTokenCleanup();
@@ -362,6 +549,20 @@ export default class Authentication extends ManagedModule<Config> {
     });
   }
 
+  /**
+   * Realm settings live in the database. Every realm write publishes this event (the bus
+   * skips the publisher, which refreshes itself): replicas clear their realm cache and
+   * re-register routes, since a realm may now enable or disable a provider.
+   */
+  private subscribeToRealmUpdates() {
+    if (this.realmBusSubscribed || !this.grpcSdk.bus) return;
+    this.realmBusSubscribed = true;
+    this.grpcSdk.bus.subscribe(REALM_UPDATE_EVENT, () => {
+      invalidateRealmCache();
+      if (ConfigController.getInstance().config?.active) this.refreshAppRoutes();
+    });
+  }
+
   initMonitors() {
     if (this.monitorsActive) return;
     this.monitorsActive = true;
@@ -405,7 +606,7 @@ export default class Authentication extends ManagedModule<Config> {
     call: GrpcRequest<UserLoginRequest>,
     callback: GrpcCallback<UserLoginResponse>,
   ) {
-    const { userId, clientId } = call.request;
+    const { userId, clientId, realm } = call.request;
     const user = await models.User.getInstance(this.database).findOne({ _id: userId });
     if (!user) {
       return callback({
@@ -422,10 +623,18 @@ export default class Authentication extends ManagedModule<Config> {
     const config = ConfigController.getInstance().config;
 
     try {
+      // internal trusted path: the session lives in the requested realm, defaulting to
+      // the user's own home realm (token issuance still checks the user's access)
+      const realmCtx = await resolveRealmFromSlug(realm);
       const tokens = await TokenProvider.getInstance().provideUserTokensInternal({
         user,
         clientId,
         config,
+        realm: realmCtx
+          ? String(realmCtx.team._id)
+          : user.homeRealm
+            ? String(user.homeRealm)
+            : null,
       });
 
       return callback(null, {
@@ -433,6 +642,7 @@ export default class Authentication extends ManagedModule<Config> {
         refreshToken: tokens.refreshToken ?? undefined,
       });
     } catch (e) {
+      if (e instanceof GrpcError) return callback(toCallbackError(e));
       return callback({
         code: status.INTERNAL,
         message: 'Failed to login',
@@ -465,8 +675,20 @@ export default class Authentication extends ManagedModule<Config> {
     }
 
     try {
-      let user = await models.User.getInstance().findOne({ email });
-      if (user) {
+      const realmCtx = await resolveRealmFromSlug(call.request.realm);
+      let user = await models.User.getInstance().findOne(
+        uniqueIdentifierQuery({ email }, realmIdOf(realmCtx)),
+      );
+      // a linked guest of the realm holding the address is a principal there too
+      const guestHolder = await realmPrincipalClash(realmIdOf(realmCtx), [
+        identifierQuery('email', email),
+      ]);
+      if (user || guestHolder) {
+        // shared mode: the address belongs to an account of another realm, which may be
+        // connected to this realm instead (the error carries the conduit code)
+        if (user && (await accountLinkOffered(realmCtx, user))) {
+          throw new ModuleError(errors.ACCOUNT_LINK_AVAILABLE);
+        }
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
       AuthUtils.assertValidEmail(email);
@@ -478,7 +700,15 @@ export default class Authentication extends ManagedModule<Config> {
           hashedPassword,
           isVerified: !verify,
           ...userData,
+          ...homeRealmFields(realmCtx),
         });
+        if (realmCtx) {
+          // a realm user is never left without its membership
+          const createdUser = user;
+          await rollbackUserOnFailure(this.grpcSdk, createdUser, () =>
+            grantHomeMembership(this.grpcSdk, createdUser, realmCtx),
+          );
+        }
       } else {
         const config = ConfigController.getInstance().config;
         if (!config.anonymousUsers.enabled) {
@@ -486,6 +716,14 @@ export default class Authentication extends ManagedModule<Config> {
             code: status.FAILED_PRECONDITION,
             message: 'Anonymous users configuration is disabled',
           });
+        }
+        if (realmCtx) {
+          // the anonymous user keeps its home realm on conversion
+          const anonymousUser = await models.User.getInstance().findOne({
+            _id: anonymousUserId,
+            isAnonymous: true,
+          });
+          if (anonymousUser) assertAnonymousUserInRealm(anonymousUser, realmCtx);
         }
         user = await models.User.getInstance().findByIdAndUpdate(anonymousUserId, {
           email,
@@ -528,7 +766,7 @@ export default class Authentication extends ManagedModule<Config> {
           'Failed to send verification email.' + ' Email service not online!',
         );
       }
-      if (!anonymousUserId) {
+      if (!anonymousUserId && !realmCtx) {
         await TeamsHandler.getInstance()
           .addUserToDefault(user)
           .catch(err => {
@@ -554,9 +792,23 @@ export default class Authentication extends ManagedModule<Config> {
     if (isNil(password) || password.length === 0) {
       password = AuthUtils.randomToken(8);
     }
+    let realmCtx;
     try {
-      let user = await models.User.getInstance().findOne({ username });
-      if (user) {
+      realmCtx = await resolveRealmFromSlug(call.request.realm);
+    } catch (e) {
+      if (e instanceof GrpcError) {
+        return callback({ code: e.code, message: e.message });
+      }
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+    try {
+      let user = await models.User.getInstance().findOne(
+        uniqueIdentifierQuery({ username }, realmIdOf(realmCtx)),
+      );
+      const guestHolder = await realmPrincipalClash(realmIdOf(realmCtx), [
+        identifierQuery('username', username),
+      ]);
+      if (user || guestHolder) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
       const hashedPassword = await AuthUtils.hashPassword(password);
@@ -566,12 +818,21 @@ export default class Authentication extends ManagedModule<Config> {
           username,
           hashedPassword,
           isVerified: true,
+          ...homeRealmFields(realmCtx),
         });
-        await TeamsHandler.getInstance()
-          .addUserToDefault(user)
-          .catch(err => {
-            ConduitGrpcSdk.Logger.error(err);
-          });
+        if (realmCtx) {
+          // a realm user is never left without its membership
+          const createdUser = user;
+          await rollbackUserOnFailure(this.grpcSdk, createdUser, () =>
+            grantHomeMembership(this.grpcSdk, createdUser, realmCtx),
+          );
+        } else {
+          await TeamsHandler.getInstance()
+            .addUserToDefault(user)
+            .catch(err => {
+              ConduitGrpcSdk.Logger.error(err);
+            });
+        }
       } else {
         const config = ConfigController.getInstance().config;
         if (!config.anonymousUsers.enabled) {
@@ -579,6 +840,14 @@ export default class Authentication extends ManagedModule<Config> {
             code: status.FAILED_PRECONDITION,
             message: 'Anonymous users configuration is disabled',
           });
+        }
+        if (realmCtx) {
+          // the anonymous user keeps its home realm on conversion
+          const anonymousUser = await models.User.getInstance().findOne({
+            _id: anonymousUserId,
+            isAnonymous: true,
+          });
+          if (anonymousUser) assertAnonymousUserInRealm(anonymousUser, realmCtx);
         }
         user = await models.User.getInstance().findByIdAndUpdate(anonymousUserId, {
           username,
@@ -611,28 +880,60 @@ export default class Authentication extends ManagedModule<Config> {
       });
     }
     const { clientId } = call.request;
+    let realmCtx;
+    try {
+      realmCtx = await resolveRealmFromSlug(call.request.realm);
+    } catch (e) {
+      if (e instanceof GrpcError) {
+        return callback({ code: e.code, message: e.message });
+      }
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
     const email = `${uuid()}@anonymous.com`;
-    const anonymousUser = await User.getInstance().create({
-      email,
-      isAnonymous: true,
-      isVerified: false,
-    });
-    await TeamsHandler.getInstance()
-      .addUserToDefault(anonymousUser)
-      .catch(err => {
-        ConduitGrpcSdk.Logger.error(err);
+    try {
+      // refused by the realm policies (2FA, verified email, client pinning): fail before
+      // a user is created
+      assertAnonymousRealmAllowed(realmCtx, clientId);
+      const anonymousUser = await User.getInstance().create({
+        email,
+        isAnonymous: true,
+        isVerified: false,
+        ...homeRealmFields(realmCtx),
       });
-    const tokens = await TokenProvider.getInstance().provideUserTokensInternal({
-      user: anonymousUser,
-      clientId: clientId,
-      config,
-      isRefresh: false,
-    });
+      // any failure from here on must not leave the new anonymous user behind
+      const tokens = await rollbackUserOnFailure(
+        this.grpcSdk,
+        anonymousUser,
+        async () => {
+          if (realmCtx) {
+            await grantHomeMembership(this.grpcSdk, anonymousUser, realmCtx);
+          } else {
+            await TeamsHandler.getInstance()
+              .addUserToDefault(anonymousUser)
+              .catch(err => {
+                ConduitGrpcSdk.Logger.error(err);
+              });
+          }
+          return TokenProvider.getInstance().provideUserTokensInternal({
+            user: anonymousUser,
+            clientId: clientId,
+            config,
+            isRefresh: false,
+            realm: realmCtx ? String(realmCtx.team._id) : null,
+          });
+        },
+      );
 
-    return callback(null, {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken ?? undefined,
-    });
+      return callback(null, {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken ?? undefined,
+      });
+    } catch (e) {
+      if (e instanceof GrpcError) {
+        return callback({ code: e.code, message: e.message });
+      }
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
   }
 
   // produces login credentials for a user without them having to login
@@ -643,6 +944,12 @@ export default class Authentication extends ManagedModule<Config> {
     const { userId } = call.request;
     try {
       await models.User.getInstance().deleteOne({ _id: userId });
+      // no membership row or session may outlive its user
+      await deleteUserRealmMemberships(userId);
+      await Promise.all([
+        models.AccessToken.getInstance().deleteMany({ user: userId }),
+        models.RefreshToken.getInstance().deleteMany({ user: userId }),
+      ]);
       return callback(null, {
         message: 'ok',
       });
@@ -662,7 +969,31 @@ export default class Authentication extends ManagedModule<Config> {
       password = AuthUtils.randomToken(8);
     }
     try {
-      const user = await models.User.getInstance().findOne({ email });
+      // a realm scopes the lookup to that realm's accounts; `realm: 'global'` scopes it to the
+      // accounts without a home realm. Without a realm, shared mode looks the (unique) email
+      // up as before; isolated mode refuses an email held by several accounts, since the
+      // password would otherwise go to an arbitrary one
+      const globalScope = isGlobalRealmScope(call.request.realm);
+      const realmCtx = globalScope
+        ? null
+        : await resolveRealmFromSlug(call.request.realm);
+      let user: User | null;
+      if (globalScope || realmCtx) {
+        user = await models.User.getInstance().findOne(
+          scopedUserQuery({ email }, realmCtx),
+        );
+      } else if (identityMode() === 'isolated') {
+        const holders = await models.User.getInstance().findMany({ email }, { limit: 2 });
+        if (holders.length > 1) {
+          return callback({
+            code: status.FAILED_PRECONDITION,
+            message: 'email is held by more than one account; pass realm',
+          });
+        }
+        user = holders[0] ?? null;
+      } else {
+        user = await models.User.getInstance().findOne({ email });
+      }
       if (!user) {
         return callback({ code: status.NOT_FOUND, message: 'User not found' });
       }
@@ -674,7 +1005,7 @@ export default class Authentication extends ManagedModule<Config> {
 
       return callback(null, { password });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(toCallbackError(e));
     }
   }
 
@@ -715,14 +1046,9 @@ export default class Authentication extends ManagedModule<Config> {
       if (!team) {
         return callback({ code: status.NOT_FOUND, message: 'Team not found' });
       }
-      return callback(null, {
-        id: team._id,
-        name: team.name,
-        parentTeam: team.parentTeam,
-        isDefault: team.isDefault,
-      });
+      return callback(null, toGrpcTeam(team));
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(toCallbackError(e));
     }
   }
 
@@ -735,14 +1061,9 @@ export default class Authentication extends ManagedModule<Config> {
       const team = (await new TeamsAdmin(this.grpcSdk).createTeam(
         request,
       )) as models.Team;
-      return callback(null, {
-        id: team._id,
-        name: team.name,
-        parentTeam: team.parentTeam,
-        isDefault: team.isDefault,
-      });
+      return callback(null, toGrpcTeam(team));
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(toCallbackError(e));
     }
   }
 
@@ -814,6 +1135,8 @@ export default class Authentication extends ManagedModule<Config> {
     const accessToken = call.request.accessToken;
     const path = call.request.path ?? '';
     let userId: string | undefined = undefined;
+    let realmId: string | null = null;
+    let homeRealmId: string | null = null;
     const accessStatus = await handleAuthentication(
       {},
       { authorization: `Bearer ${accessToken}` },
@@ -821,7 +1144,10 @@ export default class Authentication extends ManagedModule<Config> {
       path,
     )
       .then(r => {
-        userId = (r.user as models.User)._id;
+        const user = r.user as models.User;
+        userId = user._id;
+        realmId = r.realm ?? null;
+        homeRealmId = user.homeRealm ? String(user.homeRealm) : null;
         return ValidateAccessTokenResponse_Status.AUTHENTICATED;
       })
       .catch(err => {
@@ -837,7 +1163,28 @@ export default class Authentication extends ManagedModule<Config> {
             return ValidateAccessTokenResponse_Status.UNAUTHENTICATED;
         }
       });
-    return callback(null, { status: accessStatus, userId });
+    // realm and home realm are exposed as slugs (absent for global sessions and users)
+    // (a failed lookup must not turn an authenticated answer into an error)
+    let realm: string | undefined;
+    let homeRealm: string | undefined;
+    if (
+      accessStatus === ValidateAccessTokenResponse_Status.AUTHENTICATED &&
+      realmsEnabled()
+    ) {
+      try {
+        [realm, homeRealm] = await Promise.all([
+          getRealmSlugById(realmId),
+          getRealmSlugById(homeRealmId),
+        ]);
+      } catch (e) {
+        ConduitGrpcSdk.Logger.warn(
+          `Failed to resolve realm slugs for access token validation: ${(e as Error).message}`,
+        );
+        realm = undefined;
+        homeRealm = undefined;
+      }
+    }
+    return callback(null, { status: accessStatus, userId, realm, homeRealm });
   }
 
   async userModifyStatus(
@@ -974,46 +1321,19 @@ export default class Authentication extends ManagedModule<Config> {
         ...(name && { name }),
       };
 
+      // An empty newParentTeamId means "parent unchanged" in this RPC (a team cannot be
+      // moved to the top level through it), so only a real re-parent touches realms.
+      let realmMove: TeamRealmMove = { oldRealmId: null, movedUserIds: [] };
       if (newParentTeamId) {
-        const newParentTeam = await models.Team.getInstance().findOne({
-          _id: newParentTeamId,
-        });
-        if (!newParentTeam) {
+        const moved = await this.reparentTeam(teamId, team.parentTeam, newParentTeamId);
+        if (!moved) {
           return callback({
             code: status.NOT_FOUND,
             message: 'New parent team not found',
           });
         }
-
-        const oldParentTeamId = team.parentTeam;
-
-        if (oldParentTeamId) {
-          try {
-            await this.grpcSdk.authorization!.deleteRelation({
-              subject: 'Team:' + oldParentTeamId,
-              relation: 'owner',
-              resource: 'Team:' + teamId,
-            });
-          } catch (e) {
-            ConduitGrpcSdk.Logger.warn(
-              `Failed to delete old parent relation: ${(e as Error).message}`,
-            );
-          }
-        }
-
-        await this.grpcSdk.authorization!.createRelation({
-          subject: 'Team:' + newParentTeamId,
-          relation: 'owner',
-          resource: 'Team:' + teamId,
-        });
-
+        realmMove = moved;
         updateFields.parentTeam = newParentTeamId;
-
-        ConduitGrpcSdk.Logger.info(
-          `Team ${teamId} parent switched from ${
-            oldParentTeamId ?? 'none'
-          } to ${newParentTeamId}`,
-        );
       }
 
       const updatedTeam = await models.Team.getInstance().findByIdAndUpdate(
@@ -1025,18 +1345,225 @@ export default class Authentication extends ManagedModule<Config> {
         return callback({ code: status.INTERNAL, message: 'Failed to update team' });
       }
 
+      await this.revokeGuestsIfRealmLeft(teamId, realmMove);
+
       if (name) {
         ConduitGrpcSdk.Logger.info(`Team ${teamId} name updated to ${name}`);
       }
 
+      return callback(null, toGrpcTeam(updatedTeam));
+    } catch (e) {
+      return callback({
+        code: e instanceof GrpcError ? e.code : status.INTERNAL,
+        message: (e as Error).message,
+      });
+    }
+  }
+
+  /** Moves a team under `newParentTeamId`. Null when the new parent does not exist. */
+  private async reparentTeam(
+    teamId: string,
+    oldParentTeamId: string | undefined,
+    newParentTeamId: string,
+  ): Promise<TeamRealmMove | null> {
+    const realmMove = await this.prepareTeamRealmMove(teamId, newParentTeamId);
+    const newParentTeam = await models.Team.getInstance().findOne({
+      _id: newParentTeamId,
+    });
+    if (!newParentTeam) return null;
+    await this.switchParentTeam(teamId, oldParentTeamId, newParentTeamId);
+    return realmMove;
+  }
+
+  /**
+   * Realm checks before a team moves under `newParentTeamId`. Returns the realm the team
+   * is in and, collected before the move, the users of its subtree: guests whose only
+   * relations in the old realm were on this subtree lose their guest membership afterwards.
+   */
+  private async prepareTeamRealmMove(
+    teamId: string,
+    newParentTeamId: string,
+  ): Promise<TeamRealmMove> {
+    if (!realmsEnabled()) return { oldRealmId: null, movedUserIds: [] };
+    // a realm stays top-level and never contains or sits inside another realm
+    await assertNoNestedRealm(teamId, newParentTeamId);
+    const oldRealm = await resolveTeamRealm(teamId);
+    if (!oldRealm) return { oldRealmId: null, movedUserIds: [] };
+    const movedUserIds = await collectTeamUserIds(
+      this.grpcSdk,
+      await collectTeamSubtreeIds(teamId),
+    );
+    return { oldRealmId: String(oldRealm._id), movedUserIds };
+  }
+
+  private async switchParentTeam(
+    teamId: string,
+    oldParentTeamId: string | undefined,
+    newParentTeamId: string,
+  ) {
+    if (oldParentTeamId) {
+      try {
+        await this.grpcSdk.authorization!.deleteRelation({
+          subject: 'Team:' + oldParentTeamId,
+          relation: 'owner',
+          resource: 'Team:' + teamId,
+        });
+      } catch (e) {
+        ConduitGrpcSdk.Logger.warn(
+          `Failed to delete old parent relation: ${(e as Error).message}`,
+        );
+      }
+    }
+
+    await this.grpcSdk.authorization!.createRelation({
+      subject: 'Team:' + newParentTeamId,
+      relation: 'owner',
+      resource: 'Team:' + teamId,
+    });
+
+    ConduitGrpcSdk.Logger.info(
+      `Team ${teamId} parent switched from ${
+        oldParentTeamId ?? 'none'
+      } to ${newParentTeamId}`,
+    );
+  }
+
+  private async revokeGuestsIfRealmLeft(
+    teamId: string,
+    { oldRealmId, movedUserIds }: TeamRealmMove,
+  ) {
+    if (!oldRealmId) return;
+    const newRealm = await resolveTeamRealm(teamId);
+    if (!newRealm || String(newRealm._id) !== oldRealmId) {
+      // the team left its realm: same cleanup as when a sub-team is deleted
+      await revokeOrphanedGuests(this.grpcSdk, oldRealmId, movedUserIds);
+    }
+  }
+
+  private realmsAdmin() {
+    return new RealmsAdmin(this.grpcSdk, () => this.refreshAppRoutes());
+  }
+
+  async setTeamRealm(
+    call: GrpcRequest<SetTeamRealmRequest>,
+    callback: GrpcCallback<RealmResponse>,
+  ) {
+    try {
+      const params = buildSetRealmParams(call.request);
+      const teamId = params.teamId as string;
+      const team = await models.Team.getInstance().findOne({ _id: teamId });
+      if (!team) {
+        return callback({ code: status.NOT_FOUND, message: 'Team not found' });
+      }
+      const request = createParsedRouterRequest(params, { teamId }, undefined, params);
+      const admin = this.realmsAdmin();
+      // an existing realm is updated, anything else is promoted
+      const realm = team.realm?.enabled
+        ? await admin.updateRealm(request)
+        : await admin.promote(request);
+      return callback(
+        null,
+        toRealmResponse(realm as Parameters<typeof toRealmResponse>[0]),
+      );
+    } catch (e) {
+      return callback(toCallbackError(e));
+    }
+  }
+
+  async getRealmSettings(
+    call: GrpcRequest<GetRealmSettingsRequest>,
+    callback: GrpcCallback<RealmResponse>,
+  ) {
+    try {
+      const teamId = assertTeamId(call.request.teamId);
+      const request = createParsedRouterRequest({ teamId }, { teamId });
+      const realm = await this.realmsAdmin().getRealm(request);
+      return callback(
+        null,
+        toRealmResponse(realm as Parameters<typeof toRealmResponse>[0]),
+      );
+    } catch (e) {
+      return callback(toCallbackError(e));
+    }
+  }
+
+  async unsetTeamRealm(
+    call: GrpcRequest<UnsetTeamRealmRequest>,
+    callback: GrpcCallback<UnsetTeamRealmResponse>,
+  ) {
+    try {
+      const teamId = assertTeamId(call.request.teamId);
+      const force = call.request.force === true;
+      const request = createParsedRouterRequest({ teamId, force }, { teamId }, { force });
+      const result = (await this.realmsAdmin().demoteRealm(request)) as {
+        message: string;
+        blockedUsers: number;
+      };
       return callback(null, {
-        id: updatedTeam._id,
-        name: updatedTeam.name,
-        parentTeam: updatedTeam.parentTeam,
-        isDefault: updatedTeam.isDefault,
+        message: result.message,
+        blockedUsers: result.blockedUsers,
       });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(toCallbackError(e));
+    }
+  }
+
+  async grantRealmMembership(
+    call: GrpcRequest<RealmMembershipRequest>,
+    callback: GrpcCallback<Empty>,
+  ) {
+    try {
+      const teamId = assertTeamId(call.request.teamId);
+      const userId = assertUserId(call.request.userId);
+      const type = parseMembershipType(call.request.type);
+      const force = call.request.force === true;
+      const user = await models.User.getInstance().findOne({ _id: userId });
+      if (!user) {
+        return callback({ code: status.NOT_FOUND, message: 'User not found' });
+      }
+      assertGrantMembershipAllowed({
+        type,
+        realmTeamId: teamId,
+        userHomeRealm: user.homeRealm,
+        force,
+      });
+      const admin = this.realmsAdmin();
+      if (type === 'guest') {
+        const params = { teamId, userIds: [userId] };
+        await admin.addGuests(
+          createParsedRouterRequest(params, { teamId }, undefined, { userIds: [userId] }),
+        );
+      } else {
+        // a home membership is the user's home realm
+        const params = { id: userId, realmTeamId: teamId, force };
+        await admin.moveUserHomeRealm(
+          createParsedRouterRequest(params, { id: userId }, undefined, {
+            realmTeamId: teamId,
+            force,
+          }),
+        );
+      }
+      return callback(null, {});
+    } catch (e) {
+      return callback(toCallbackError(e));
+    }
+  }
+
+  async revokeRealmMembership(
+    call: GrpcRequest<RealmMembershipRequest>,
+    callback: GrpcCallback<Empty>,
+  ) {
+    try {
+      const teamId = assertTeamId(call.request.teamId);
+      const userId = assertUserId(call.request.userId);
+      parseOptionalMembershipType(call.request.type);
+      // guests only: removing a home user is refused (HOME_USER_REMOVAL)
+      await this.realmsAdmin().removeGuest(
+        createParsedRouterRequest({ teamId, userId }, { teamId, userId }),
+      );
+      return callback(null, {});
+    } catch (e) {
+      return callback(toCallbackError(e));
     }
   }
 
@@ -1049,6 +1576,7 @@ export default class Authentication extends ManagedModule<Config> {
         });
         await AuthUtils.cleanupExpiredUsers();
         await AuthUtils.reconcileLoggedInUsersMetric();
+        await purgeExpiredLinkProofs();
       } catch (e) {
         ConduitGrpcSdk.Logger.error(`Token cleanup failed: ${(e as Error).message}`);
       }

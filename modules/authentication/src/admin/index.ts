@@ -6,6 +6,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitBoolean,
+  ConduitDate,
   ConduitNumber,
   ConduitString,
   ConfigController,
@@ -14,20 +15,24 @@ import {
 } from '@conduitplatform/module-tools';
 import { UserAdmin } from './user.js';
 import { TeamsAdmin } from './team.js';
+import { RealmsAdmin } from './realm.js';
 import { User } from '../models/index.js';
 import { Config } from '../config/index.js';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
   private readonly teamsAdmin: TeamsAdmin;
+  private readonly realmsAdmin: RealmsAdmin;
   private readonly routingManager: RoutingManager;
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
+    onRealmChange?: () => void,
   ) {
     this.userAdmin = new UserAdmin(this.grpcSdk);
     this.teamsAdmin = new TeamsAdmin(this.grpcSdk);
+    this.realmsAdmin = new RealmsAdmin(this.grpcSdk, onRealmChange);
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
@@ -47,6 +52,8 @@ export class AdminHandlers {
           isActive: ConduitBoolean.Optional,
           isAnonymous: ConduitBoolean.Optional,
           provider: ConduitString.Optional,
+          homeRealm: ConduitString.Optional,
+          realm: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('GetUsers', {
@@ -64,6 +71,7 @@ export class AdminHandlers {
           email: ConduitString.OptionalWith({ format: 'email' }),
           username: ConduitString.Optional,
           password: ConduitString.RequiredWith({ minLength: 8 }),
+          homeRealm: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition(User.name),
@@ -138,6 +146,35 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
+        path: '/users/:id/realms',
+        action: ConduitRouteActions.GET,
+        description: `Returns the home realm and the guest realms of a user. Each guest realm carries when the user was linked into it.`,
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('UserAdminRealms', {
+        home: {
+          type: {
+            _id: ConduitString.Required,
+            name: ConduitString.Required,
+            slug: ConduitString.Required,
+          },
+          required: false,
+        },
+        guests: [
+          {
+            _id: ConduitString.Required,
+            name: ConduitString.Required,
+            slug: ConduitString.Required,
+            createdAt: ConduitDate.Required,
+          },
+        ],
+      }),
+      this.userAdmin.getUserRealms.bind(this.userAdmin),
+    );
+    this.routingManager.route(
+      {
         path: '/users/toggle',
         action: ConduitRouteActions.POST,
         description: `Blocks/unblocks queried users.`,
@@ -155,6 +192,7 @@ export class AdminHandlers {
       config.teams.enabled && this.grpcSdk.isAvailable('authorization');
     if (teamsActivated) {
       this.teamsAdmin.declareRoutes(this.routingManager);
+      this.realmsAdmin.declareRoutes(this.routingManager);
     }
 
     return this.routingManager.registerRoutes().catch((err: Error) => {

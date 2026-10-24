@@ -26,6 +26,7 @@ import { TeamsHandler } from '../team.js';
 import {
   assertOAuthRegistrationAllowed,
   OAUTH_MODE_PARAM,
+  OAUTH_ROUTE_ERRORS,
   redirectOnRegistrationNotAllowed,
   resolveOAuthMode,
   type OAuthMode,
@@ -34,9 +35,11 @@ import {
 import { IAuthenticationStrategy } from '../../interfaces/index.js';
 import { TokenType } from '../../constants/index.js';
 import {
+  ConduitBoolean,
   ConduitJson,
   ConduitString,
   ConfigController,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import {
@@ -47,7 +50,56 @@ import {
 import { AuthUtils } from '../../utils/index.js';
 import { assertEmailAllowed } from '../../utils/emailRestrictions.js';
 import { errors } from '../../errors.js';
+import {
+  assertAnonymousUserInRealm,
+  assertStrategyEnabledForRealm,
+  grantHomeMembershipForRegistration,
+  homeRealmFields,
+  isInviteRequired,
+  realmIdOf,
+  realmParam,
+  resolveInvitationRealm,
+  resolveRealmFromSlug,
+  resolveSignInPrincipal,
+  rollbackUserOnFailure,
+} from '../realmRequest.js';
+import {
+  accountLinkOffered,
+  assertIdentifierFreeForUser,
+  assertRealmPrincipalFree,
+  identifierQuery,
+  IdentifierKind,
+  IdentifierQuery,
+  identityMode,
+  RealmContext,
+  realmsEnabled,
+  RealmOAuthProviderKey,
+  resolveRealmById,
+} from '../../utils/realm.js';
+import { anyRealmEnables } from '../../utils/strategyRealms.js';
+import {
+  assertDiscoveryAllowed,
+  DISCOVERY_RESPONSE_FIELDS,
+  discoverWithOAuth,
+  discoveryRedirectUrl,
+} from '../realmDiscovery.js';
+import {
+  hasCompleteOAuthCredentials,
+  isGlobalOAuthAvailable,
+  OAuthSettingsCache,
+  pickCallbackRedirect,
+  settingsForRealm,
+  stateRealmRef,
+} from './utils/oauthSettings.logic.js';
 
+/**
+ * Base of the OAuth2 providers.
+ *
+ * Realms override the credentials (`clientId`, `clientSecret`, `redirect_uri`,
+ * `accountLinking`) per provider, nothing else: the static provider parameters, the PKCE
+ * `codeVerifier` and, for Microsoft, the `tenantId` baked into the endpoint URLs are
+ * global per handler and shared by every realm.
+ */
 export abstract class OAuth2<
   T,
   S extends OAuth2Settings,
@@ -57,7 +109,8 @@ export abstract class OAuth2<
   mapScopes: { [key: string]: string };
   defaultScopes: string[];
   protected settings: S;
-  private readonly providerName: string;
+  protected readonly providerName: string;
+  private readonly realmSettings = new OAuthSettingsCache<S>();
 
   protected constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
     this.providerName = providerName;
@@ -68,25 +121,70 @@ export abstract class OAuth2<
 
   async validate(): Promise<boolean> {
     const authConfig = ConfigController.getInstance().config;
-    if (!authConfig[this.providerName].enabled) {
-      ConduitGrpcSdk.Logger.log(`${this.providerName} authentication not available`);
-      return (this.initialized = false);
+    if (isGlobalOAuthAvailable(this.providerName, authConfig[this.providerName])) {
+      ConduitGrpcSdk.Logger.log(`${this.providerName} authentication is available`);
+      return (this.initialized = true);
     }
-    if (
-      !authConfig[this.providerName] ||
-      !authConfig[this.providerName].clientId ||
-      !authConfig[this.providerName].clientSecret
-    ) {
-      ConduitGrpcSdk.Logger.log(`${this.providerName} authentication not available`);
-      return (this.initialized = false);
+    // not available globally: still initialised when a realm enables it, the request
+    // paths check the credentials of the realm they resolve
+    if (await anyRealmEnables(`oauth.${this.providerName}`)) {
+      ConduitGrpcSdk.Logger.log(
+        `${this.providerName} authentication is available for realms`,
+      );
+      return (this.initialized = true);
     }
-    ConduitGrpcSdk.Logger.log(`${this.providerName} authentication is available`);
-    return (this.initialized = true);
+    ConduitGrpcSdk.Logger.log(`${this.providerName} authentication not available`);
+    return (this.initialized = false);
   }
 
-  protected resolveOAuthClientId(_call: ParsedRouterRequest): string {
+  /**
+   * The OAuth settings a request runs with: the handler's own (global) settings, or for
+   * a realm the same provider parameters with the realm's effective credentials
+   * (`clientId`, `clientSecret`, `redirect_uri` -> `finalRedirect`, `accountLinking`).
+   * Cached per realm and credential version; see `invalidateOAuthSettingsCache`.
+   */
+  protected getSettingsFor(ctx: RealmContext | null): S {
+    return settingsForRealm({
+      globalSettings: this.settings,
+      realm: ctx
+        ? {
+            id: String(ctx.team._id),
+            effective:
+              ctx.effective.strategies.oauth[this.providerName as RealmOAuthProviderKey],
+          }
+        : null,
+      cache: this.realmSettings,
+      build: effective => this.buildRealmSettings(effective),
+      // fail closed: a realm without an entry for this provider must never fall back to
+      // the global credentials
+      missing: () => new ModuleError(errors.STRATEGY_NOT_AVAILABLE_FOR_REALM),
+    });
+  }
+
+  /** The global settings (static provider params, PKCE verifier) with realm credentials. */
+  protected buildRealmSettings(effective: {
+    clientId: string;
+    clientSecret: string;
+    redirect_uri: string;
+    accountLinking: boolean;
+  }): S {
+    const settings: S = Object.assign(
+      Object.create(Object.getPrototypeOf(this.settings)),
+      this.settings,
+    );
+    settings.clientId = effective.clientId;
+    settings.clientSecret = effective.clientSecret;
+    settings.finalRedirect = effective.redirect_uri;
+    settings.accountLinking = effective.accountLinking;
+    return settings;
+  }
+
+  protected resolveOAuthClientId(
+    _call: ParsedRouterRequest,
+    realmCtx: RealmContext | null = null,
+  ): string {
     void _call;
-    return this.settings.clientId;
+    return this.getSettingsFor(realmCtx).clientId;
   }
 
   protected getOAuthStateExtras(_call: ParsedRouterRequest): Record<string, unknown> {
@@ -94,15 +192,115 @@ export abstract class OAuth2<
     return {};
   }
 
+  /**
+   * Resolves the realm a request names and checks that it enables this provider. No
+   * slug means global.
+   */
+  protected async resolveRealmContext(slug: unknown): Promise<RealmContext | null> {
+    return this.checkRealmContext(await resolveRealmFromSlug(slug));
+  }
+
+  /**
+   * Resolves the realm a state token was created for (callback). By team id when the
+   * token has one, so a slug rename mid-flow does not break the flow; tokens created
+   * before the id was stored fall back to the slug.
+   */
+  protected async resolveStateRealm(
+    data: Record<string, unknown> | null | undefined,
+  ): Promise<RealmContext | null> {
+    const ref = stateRealmRef(data);
+    if (!ref) return this.checkRealmContext(null);
+    if ('slug' in ref) return this.resolveRealmContext(ref.slug);
+    if (!realmsEnabled()) throw new ModuleError(errors.REALMS_DISABLED);
+    return this.checkRealmContext(await resolveRealmById(ref.id));
+  }
+
+  /** Checks that the realm (or global, for null) can run this provider. */
+  protected checkRealmContext(realmCtx: RealmContext | null): RealmContext | null {
+    assertStrategyEnabledForRealm(realmCtx, `oauth.${this.providerName}`);
+    if (realmCtx) {
+      // enabled by the realm, but neither the realm nor the global config can sign in
+      const effective =
+        realmCtx.effective.strategies.oauth[this.providerName as RealmOAuthProviderKey];
+      if (!hasCompleteOAuthCredentials(this.providerName, effective)) {
+        throw new ModuleError(errors.STRATEGY_NOT_AVAILABLE_FOR_REALM);
+      }
+    } else if (
+      !isGlobalOAuthAvailable(
+        this.providerName,
+        ConfigController.getInstance().config[this.providerName],
+      )
+    ) {
+      // the routes exist because a realm enables the provider: global calls are refused
+      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
+    }
+    return realmCtx;
+  }
+
+  /**
+   * Where a callback that fails on realm resolution sends the browser: the validated
+   * `customRedirectUri` of the flow, else the realm's own `redirect_uri` (the realm is
+   * looked up without validating the provider), else the global `finalRedirect`.
+   */
+  protected async callbackFallbackRedirect(
+    data: Record<string, unknown> | null | undefined,
+  ): Promise<string | undefined> {
+    let custom: string | undefined;
+    try {
+      custom = AuthUtils.validateRedirectUri(data?.customRedirectUri as string);
+    } catch {
+      custom = undefined;
+    }
+    let realmRedirect: string | undefined;
+    const ref = stateRealmRef(data);
+    if (ref) {
+      try {
+        const ctx =
+          'slug' in ref
+            ? await resolveRealmFromSlug(ref.slug)
+            : realmsEnabled()
+              ? await resolveRealmById(ref.id)
+              : null;
+        realmRedirect =
+          ctx?.effective.strategies.oauth[this.providerName as RealmOAuthProviderKey]
+            ?.redirect_uri;
+      } catch {
+        realmRedirect = undefined;
+      }
+    }
+    return pickCallbackRedirect([custom, realmRedirect, this.settings.finalRedirect]);
+  }
+
+  /**
+   * A realm failure at the callback: the state token is spent and the error is sent to
+   * the app as a `conduitCode` redirect when it is one the redirect flow reports
+   * (STRATEGY_NOT_AVAILABLE_FOR_REALM, REALM_ACCESS_DENIED...), otherwise it is thrown.
+   */
+  protected async failCallback(
+    err: unknown,
+    stateToken: Token,
+  ): Promise<{ redirect: string }> {
+    await Token.getInstance()
+      .deleteOne(stateToken)
+      .catch(() => undefined);
+    return redirectOnRegistrationNotAllowed(
+      err,
+      await this.callbackFallbackRedirect(stateToken.data),
+    );
+  }
+
   async initNative(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const { anonymousUser } = call.request.context;
+    const discover = this.discoveryRequested(call);
+    const realmCtx = await this.resolveRealmContext(call.request.params?.realm);
+    const settings = this.getSettingsFor(realmCtx);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
 
     // returns part of regular redirect options for native usage
     const queryOptions: Partial<RedirectOptions> = {
-      client_id: this.resolveOAuthClientId(call),
-      redirect_uri: conduitUrl + this.settings.callbackUrl,
+      client_id: this.resolveOAuthClientId(call, realmCtx),
+      redirect_uri: conduitUrl + settings.callbackUrl,
       scope: this.constructScopes(scopes),
     };
     const stateToken = await Token.getInstance()
@@ -117,6 +315,10 @@ export abstract class OAuth2<
           customRedirectUri: call.request.params.redirectUri,
           anonymousUserId: anonymousUser?._id,
           mode: resolveOAuthMode(call.request.params?.mode),
+          ...(realmCtx
+            ? { realm: realmCtx.team.realm!.slug, realmId: realmIdOf(realmCtx) }
+            : {}),
+          ...(discover ? { discover: true } : {}),
           ...this.getOAuthStateExtras(call),
         },
       })
@@ -135,30 +337,33 @@ export abstract class OAuth2<
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const { anonymousUser } = call.request.context;
+    const discover = this.discoveryRequested(call);
+    const realmCtx = await this.resolveRealmContext(call.request.params?.realm);
+    const settings = this.getSettingsFor(realmCtx);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     let codeChallenge;
-    if (!isNil(this.settings.codeChallengeMethod)) {
+    if (!isNil(settings.codeChallengeMethod)) {
       codeChallenge = createHash('sha256')
-        .update(this.settings.codeVerifier!)
+        .update(settings.codeVerifier!)
         .digest('base64')
         .replace(/=/g, '')
         .replace(/\+/g, '-')
         .replace(/\//g, '_');
     }
     const queryOptions: RedirectOptions = {
-      client_id: this.resolveOAuthClientId(call),
-      redirect_uri: conduitUrl + this.settings.callbackUrl,
-      response_type: this.settings.responseType,
-      response_mode: this.settings.responseMode,
+      client_id: this.resolveOAuthClientId(call, realmCtx),
+      redirect_uri: conduitUrl + settings.callbackUrl,
+      response_type: settings.responseType,
+      response_mode: settings.responseMode,
       scope: this.constructScopes(scopes),
       ...(codeChallenge !== undefined && { code_challenge: codeChallenge }),
-      ...(this.settings.codeChallengeMethod !== undefined && {
-        code_challenge_method: this.settings.codeChallengeMethod,
+      ...(settings.codeChallengeMethod !== undefined && {
+        code_challenge_method: settings.codeChallengeMethod,
       }),
     };
-    const baseUrl = this.settings.authorizeUrl.endsWith('?')
-      ? this.settings.authorizeUrl.slice(0, -1)
-      : this.settings.authorizeUrl;
+    const baseUrl = settings.authorizeUrl.endsWith('?')
+      ? settings.authorizeUrl.slice(0, -1)
+      : settings.authorizeUrl;
     const stateToken = await Token.getInstance()
       .create({
         tokenType: TokenType.STATE_TOKEN,
@@ -172,6 +377,10 @@ export abstract class OAuth2<
           customRedirectUri: call.request.params.redirectUri,
           anonymousUserId: anonymousUser?._id,
           mode: resolveOAuthMode(call.request.params?.mode),
+          ...(realmCtx
+            ? { realm: realmCtx.team.realm!.slug, realmId: realmIdOf(realmCtx) }
+            : {}),
+          ...(discover ? { discover: true } : {}),
           ...this.getOAuthStateExtras(call),
         },
       })
@@ -192,23 +401,31 @@ export abstract class OAuth2<
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
     const stateToken = await validateStateToken(params.state);
+    // the realm the flow was started for, re-validated at the callback
+    let realmCtx: RealmContext | null;
+    try {
+      realmCtx = await this.resolveStateRealm(stateToken.data);
+    } catch (err) {
+      return this.failCallback(err, stateToken);
+    }
+    const settings = this.getSettingsFor(realmCtx);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     const config = ConfigController.getInstance().config;
     const myParams: AuthParams = {
-      client_id: this.settings.clientId,
-      client_secret: this.settings.clientSecret,
+      client_id: settings.clientId,
+      client_secret: settings.clientSecret,
       code: params.code,
-      redirect_uri: `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
+      redirect_uri: `${conduitUrl}/hook/authentication/${settings.providerName}`,
     };
 
-    if (this.settings.hasOwnProperty('grantType')) {
-      myParams['grant_type'] = this.settings.grantType;
+    if (settings.hasOwnProperty('grantType')) {
+      myParams['grant_type'] = settings.grantType;
     }
-    if (!isNil(this.settings.codeChallengeMethod)) {
-      myParams['code_verifier'] = this.settings.codeVerifier;
+    if (!isNil(settings.codeChallengeMethod)) {
+      myParams['code_verifier'] = settings.codeVerifier;
     }
 
-    const providerOptions = this.makeRequest(myParams);
+    const providerOptions = this.makeRequest(myParams, settings);
     const providerResponse: { data: { access_token: string } } = await axios(
       providerOptions,
     ).catch(err => {
@@ -223,6 +440,7 @@ export abstract class OAuth2<
       accessToken: access_token,
       clientId,
       scope: scope,
+      providerClientId: settings.clientId,
     }).catch(err => {
       ConduitGrpcSdk.Logger.error(JSON.stringify(err.response.data));
       throw new GrpcError(status.INTERNAL, err.message);
@@ -231,50 +449,58 @@ export abstract class OAuth2<
     await Token.getInstance().deleteOne(stateToken);
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
-      this.settings.finalRedirect;
-    let user: User;
+      settings.finalRedirect;
+    if (stateToken.data.discover === true) {
+      return this.discoveryRedirect(payload, redirectUri, clientId);
+    }
     try {
-      user = await this.createOrUpdateUser(
+      const user = await this.createOrUpdateUser(
         payload,
         stateToken.data.invitationToken,
         stateToken.data.anonymousUserId,
         resolveOAuthMode(stateToken.data.mode),
+        realmCtx,
+      );
+      return await TokenProvider.getInstance().provideUserTokens(
+        {
+          user,
+          clientId,
+          config,
+          realm: realmIdOf(realmCtx),
+        },
+        redirectUri,
       );
     } catch (err) {
       return redirectOnRegistrationNotAllowed(err, redirectUri);
     }
-
-    return TokenProvider.getInstance().provideUserTokens(
-      {
-        user,
-        clientId,
-        config,
-      },
-      redirectUri,
-    );
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
+    const realmCtx = await this.resolveRealmContext(call.request.params?.realm);
+    const settings = this.getSettingsFor(realmCtx);
     const scopes = this.constructScopes(
       call.request.params?.scopes ?? this.defaultScopes,
     );
     const payload = await this.connectWithProvider({
       accessToken: call.request.params['access_token'],
-      clientId: this.settings.clientId,
+      clientId: settings.clientId,
       scope: scopes,
+      providerClientId: settings.clientId,
     });
     const user = await this.createOrUpdateUser(
       payload,
       call.request.params.invitationToken,
       call.request.context.anonymousUser?._id,
       resolveOAuthMode(call.request.params?.mode),
+      realmCtx,
     );
     const config = ConfigController.getInstance().config;
     return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: call.request.context.clientId,
       config,
+      realm: realmIdOf(realmCtx),
     });
   }
 
@@ -283,19 +509,58 @@ export abstract class OAuth2<
     invitationToken?: string,
     anonymousUserId?: string,
     mode: OAuthMode = 'both',
+    realmCtx: RealmContext | null = null,
   ): Promise<User> {
     let user: User | null = null;
+    const providerKey = `oauth.${this.providerName}`;
     if (payload.hasOwnProperty('email') && !isNil(payload.email)) {
-      user = await User.getInstance().findOne({
-        email: payload.email,
-      });
+      // the realm's own account, or its linked guest with direct sign-in
+      user =
+        (await resolveSignInPrincipal(realmCtx, { email: payload.email }, providerKey))
+          ?.user ?? null;
+      // isolated mode: the address may belong to another realm's account, so the request
+      // realm gets its own account (the lookup above already missed)
+      if (isNil(user) && (realmCtx || realmsEnabled()) && identityMode() === 'shared') {
+        // email is unique across realms: the address belongs to a user of another one, which
+        // the realm may take in as a guest when it accepts linked accounts
+        const otherRealmUser = await User.getInstance().findOne({
+          email: payload.email,
+        });
+        if (otherRealmUser) {
+          throw new ModuleError(
+            (await accountLinkOffered(realmCtx, otherRealmUser))
+              ? errors.ACCOUNT_LINK_AVAILABLE
+              : errors.REALM_ACCESS_DENIED,
+          );
+        }
+      }
     } else if (
       payload.hasOwnProperty('id') &&
       (!payload.hasOwnProperty('email') || isNil(payload.email))
     ) {
-      user = await User.getInstance().findOne({
-        [this.providerName + '.id']: payload.id,
-      });
+      user =
+        (
+          await resolveSignInPrincipal(
+            realmCtx,
+            { [this.providerName + '.id']: payload.id },
+            providerKey,
+          )
+        )?.user ?? null;
+      // isolated mode: as for email, the request realm gets its own account
+      if (isNil(user) && (realmCtx || realmsEnabled()) && identityMode() === 'shared') {
+        // provider identities are unique across realms: the id belongs to a user of
+        // another one, which the realm may take in as a guest (see the email branch)
+        const otherRealmUser = await User.getInstance().findOne({
+          [this.providerName + '.id']: payload.id,
+        });
+        if (otherRealmUser) {
+          throw new ModuleError(
+            (await accountLinkOffered(realmCtx, otherRealmUser))
+              ? errors.ACCOUNT_LINK_AVAILABLE
+              : errors.REALM_ACCESS_DENIED,
+          );
+        }
+      }
     } else {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -315,10 +580,26 @@ export abstract class OAuth2<
 
     if (!isNil(user)) {
       if (!user!.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
-      if (!this.settings.accountLinking) {
+      const accountLinking = realmCtx
+        ? (realmCtx.effective.strategies.oauth[this.providerName as RealmOAuthProviderKey]
+            ?.accountLinking ?? this.settings.accountLinking)
+        : this.settings.accountLinking;
+      if (!accountLinking) {
         throw new GrpcError(
           status.PERMISSION_DENIED,
           'User with this email already exists',
+        );
+      }
+      // the provider account may be linked only once per scope: the user's home realm and
+      // each realm it is a guest of (the user's own id does not count)
+      if (!isNil(payload.id) && payload.id !== '') {
+        await assertIdentifierFreeForUser(
+          user,
+          identifierQuery(
+            `oauth.${this.providerName}` as IdentifierKind,
+            String(payload.id),
+          ),
+          'This provider account is already linked to another account',
         );
       }
 
@@ -337,7 +618,25 @@ export abstract class OAuth2<
       if (payload.email) {
         assertEmailAllowed(payload.email);
       }
+      if (realmCtx) {
+        // a linked guest of the realm holding the email or the provider id is a principal
+        // there too, even when direct sign-in is off. Only identifiers the payload carries.
+        const identifiers: IdentifierQuery[] = [];
+        if (payload.email) identifiers.push(identifierQuery('email', payload.email));
+        if (!isNil(payload.id) && payload.id !== '') {
+          identifiers.push(
+            identifierQuery(
+              `oauth.${this.providerName}` as IdentifierKind,
+              String(payload.id),
+            ),
+          );
+        }
+        await assertRealmPrincipalFree(realmIdOf(realmCtx), identifiers, {
+          conflict: 'USER_EXISTS',
+        });
+      }
       if (anonymousUser) {
+        assertAnonymousUserInRealm(anonymousUser, realmCtx);
         return (await User.getInstance().findByIdAndUpdate(anonymousUser._id, {
           email: payload.email,
           [this.providerName]: payload,
@@ -347,13 +646,12 @@ export abstract class OAuth2<
       }
       const teams = ConfigController.getInstance().config.teams;
       if (
-        teams.enabled &&
-        !teams.allowRegistrationWithoutInvite &&
+        isInviteRequired(realmCtx?.effective.registration, teams) &&
         isNil(invitationToken)
       ) {
         throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
       }
-      if (teams.enabled && invitationToken) {
+      if ((teams.enabled || realmCtx) && invitationToken) {
         const valid = await TeamsHandler.getInstance().inviteValidation(
           invitationToken,
           payload.email,
@@ -361,19 +659,35 @@ export abstract class OAuth2<
         if (!valid) {
           throw new GrpcError(status.PERMISSION_DENIED, 'Invalid invitation token');
         }
+        // an invitation into a realm must agree with the realm being registered at
+        await resolveInvitationRealm(realmCtx, invitationToken);
       }
       user = await User.getInstance().create({
         email: payload.email,
         [this.providerName]: payload,
         isVerified: true,
+        ...homeRealmFields(realmCtx),
       });
+      if (realmCtx) {
+        // an invitation into the realm creates the team relation itself, otherwise the
+        // user becomes a plain member of the realm team
+        const createdUser = user;
+        await rollbackUserOnFailure(this.grpcSdk, createdUser, () =>
+          grantHomeMembershipForRegistration(
+            this.grpcSdk,
+            createdUser,
+            realmCtx,
+            invitationToken,
+          ),
+        );
+      }
       if (invitationToken) {
         await TeamsHandler.getInstance()
           .addUserToTeam(user, invitationToken)
           .catch(err => {
             ConduitGrpcSdk.Logger.error(err);
           });
-      } else {
+      } else if (!realmCtx) {
         await TeamsHandler.getInstance()
           .addUserToDefault(user)
           .catch(err => {
@@ -382,6 +696,42 @@ export abstract class OAuth2<
       }
     }
     return user!;
+  }
+
+  /**
+   * Whether the init call asks for a discovery login (`discover=true`), checked against the
+   * realm and invitation params of the same call. Discovery runs on the global provider only.
+   */
+  protected discoveryRequested(call: ParsedRouterRequest): boolean {
+    const params = call.request.params ?? {};
+    const discover = params.discover === true;
+    assertDiscoveryAllowed({
+      discover,
+      realm: params.realm,
+      invitationToken: params.invitationToken,
+    });
+    return discover;
+  }
+
+  /**
+   * The answer of an OAuth discovery login as a redirect to the flow's redirect URI, with the
+   * realms and the proof token in the fragment (see discoveryRedirectUrl). The proof is bound to
+   * `clientId`, the client that started the flow. An email-only match follows the provider's
+   * account linking setting (see discoverWithOAuth).
+   */
+  protected async discoveryRedirect(
+    payload: { id?: unknown; email?: unknown },
+    redirectUri: string | undefined,
+    clientId: string,
+  ): Promise<{ redirect: string }> {
+    if (!redirectUri) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'No redirect URI for the discovery');
+    }
+    const answer = await discoverWithOAuth(this.providerName, payload, {
+      clientId,
+      globalAccountLinking: this.settings.accountLinking,
+    });
+    return { redirect: discoveryRedirectUrl(redirectUri, answer) };
   }
 
   declareRoutes(routingManager: RoutingManager) {
@@ -432,12 +782,13 @@ export abstract class OAuth2<
             state: ConduitString.Required,
             user: ConduitJson.Optional,
           },
-          errors: [errors.REGISTRATION_NOT_ALLOWED],
+          errors: OAUTH_ROUTE_ERRORS,
           rateLimit: OAUTH_NATIVE_COMPLETE,
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
           accessToken: ConduitString.Optional,
           refreshToken: ConduitString.Optional,
+          ...DISCOVERY_RESPONSE_FIELDS,
         }),
         this.nativeAuthorize.bind(this),
       );
@@ -453,12 +804,13 @@ export abstract class OAuth2<
             code: ConduitString.Required,
             state: ConduitString.Required,
           },
-          errors: [errors.REGISTRATION_NOT_ALLOWED],
+          errors: OAUTH_ROUTE_ERRORS,
           rateLimit: OAUTH_CALLBACK,
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
           accessToken: ConduitString.Optional,
           refreshToken: ConduitString.Optional,
+          ...DISCOVERY_RESPONSE_FIELDS,
         }),
         this.authorize.bind(this),
       );
@@ -472,12 +824,13 @@ export abstract class OAuth2<
             code: ConduitString.Required,
             state: ConduitString.Required,
           },
-          errors: [errors.REGISTRATION_NOT_ALLOWED],
+          errors: OAUTH_ROUTE_ERRORS,
           rateLimit: OAUTH_CALLBACK,
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
           accessToken: ConduitString.Optional,
           refreshToken: ConduitString.Optional,
+          ...DISCOVERY_RESPONSE_FIELDS,
         }),
         this.authorize.bind(this),
       );
@@ -491,6 +844,8 @@ export abstract class OAuth2<
       captchaToken: ConduitString.Optional,
       redirectUri: ConduitString.Optional,
       mode: OAUTH_MODE_PARAM,
+      realm: realmParam,
+      discover: ConduitBoolean.Optional,
     };
   }
 
@@ -500,13 +855,15 @@ export abstract class OAuth2<
       invitationToken: ConduitString.Optional,
       captchaToken: ConduitString.Optional,
       mode: OAUTH_MODE_PARAM,
+      realm: realmParam,
+      discover: ConduitBoolean.Optional,
     };
   }
 
-  makeRequest(data: AuthParams): OAuthRequest {
+  makeRequest(data: AuthParams, settings: OAuth2Settings = this.settings): OAuthRequest {
     return {
-      method: this.settings.accessTokenMethod,
-      url: this.settings.tokenUrl,
+      method: settings.accessTokenMethod,
+      url: settings.tokenUrl,
       params: { ...data },
       headers: {
         Accept: 'application/json',

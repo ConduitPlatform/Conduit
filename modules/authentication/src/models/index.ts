@@ -7,3 +7,5 @@ export * from './Team.schema.js';
 export * from './TwoFactorBackUpCodes.schema.js';
 export * from './BiometricToken.schema.js';
 export * from './Client.model.js';
+export * from './RealmSettings.schema.js';
+export * from './RealmMembership.schema.js';

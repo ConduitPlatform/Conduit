@@ -19,6 +19,17 @@ import { ALT_STRATEGY_AUTH, TokenType } from '../constants/index.js';
 import { AuthUtils } from '../utils/index.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
+import { errors } from '../errors.js';
+import {
+  assertGlobalStrategyAvailable,
+  assertStrategyEnabledForRealm,
+  isHomeRealm,
+  realmIdOf,
+  realmParam,
+  resolveRealmFromCall,
+  resolveRealmFromSlug,
+} from './realmRequest.js';
+import { realmsEnabled } from '../utils/realm.js';
 import { v4 as uuid } from 'uuid';
 import crypto from 'crypto';
 import { BiometricToken } from '../models/BiometricToken.schema.js';
@@ -54,7 +65,13 @@ export class BiometricHandlers implements IAuthenticationStrategy {
         description: `Issues a one-time challenge to sign for biometric login.`,
         bodyParams: {
           keyId: ConduitString.Required,
+          realm: realmParam,
         },
+        errors: [
+          errors.REALM_NOT_FOUND,
+          errors.REALMS_DISABLED,
+          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+        ],
         rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('BiometricsChallengeResponse', {
@@ -121,6 +138,9 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     if (!clientId) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
+    const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('biometric');
+    assertStrategyEnabledForRealm(realmCtx, 'biometric');
     const key = await BiometricToken.getInstance().findOne(
       { _id: keyId },
       { readPreference: 'primary' },
@@ -132,6 +152,16 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.UNAVAILABLE, BIOMETRIC_CHALLENGE_UNAVAILABLE);
     }
     const userId = typeof key.user === 'string' ? key.user : key.user._id;
+    // the key must belong to a user of the realm the challenge is requested for
+    if (realmCtx || realmsEnabled()) {
+      const keyOwner = await User.getInstance().findOne(
+        { _id: userId },
+        { readPreference: 'primary' },
+      );
+      if (!keyOwner || !isHomeRealm(keyOwner.homeRealm, realmIdOf(realmCtx))) {
+        throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+      }
+    }
     const scopedQuery = {
       tokenType: TokenType.LOGIN_BIOMETRICS_TOKEN,
       'data.keyId': keyId,
@@ -156,6 +186,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
             clientId,
             challenge: nextChallenge,
             keyId,
+            ...(realmCtx ? { realm: realmCtx.team.realm!.slug } : {}),
           },
           token: uuid(),
         }),
@@ -207,10 +238,22 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     ) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
+    // the realm comes from the challenge; a key owner from another home realm looks
+    // like any other invalid signature
+    const realmCtx = await resolveRealmFromSlug(existingToken.data.realm);
+    if (!realmCtx) assertGlobalStrategyAvailable('biometric');
+    assertStrategyEnabledForRealm(realmCtx, 'biometric');
+    if (
+      (realmCtx || realmsEnabled()) &&
+      !isHomeRealm((key.user as User).homeRealm, realmIdOf(realmCtx))
+    ) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+    }
     return TokenProvider.getInstance().provideUserTokens({
       user: key.user as User,
       clientId: tokenClientId,
       config,
+      realm: realmIdOf(realmCtx),
     });
   }
 

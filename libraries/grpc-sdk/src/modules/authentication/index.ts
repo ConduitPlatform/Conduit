@@ -10,6 +10,8 @@ import {
   UserModifyStatusResponse,
   InvitationDeleteResponse,
   InviteUserToTeamResponse,
+  RealmResponse,
+  UnsetTeamRealmResponse,
   UserChangeEmailResponse,
 } from '../../protoUtils/index.js';
 import { Indexable } from '../../interfaces/index.js';
@@ -24,8 +26,17 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     this.initializeClient(AuthenticationDefinition);
   }
 
-  userLogin(userId: string, clientId: string): Promise<UserLoginResponse> {
-    return this.client!.userLogin({ userId, clientId });
+  /**
+   * Issues tokens for a user without a login. Trusted path: it runs no login strategy
+   * and satisfies a realm's `requireTwoFa` policy without a 2FA step. `realm` (slug)
+   * defaults to the user's home realm.
+   */
+  userLogin(
+    userId: string,
+    clientId: string,
+    realm?: string,
+  ): Promise<UserLoginResponse> {
+    return this.client!.userLogin({ userId, clientId, realm });
   }
 
   userDelete(userId: string): Promise<UserDeleteResponse> {
@@ -38,6 +49,7 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     password?: string,
     anonymousId?: string,
     userData?: Indexable,
+    realm?: string,
   ): Promise<UserCreateResponse> {
     return this.client!.userCreate({
       email,
@@ -45,6 +57,7 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
       password,
       anonymousId,
       userData: JSON.stringify(userData),
+      realm,
     });
   }
 
@@ -52,16 +65,26 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     username: string,
     password?: string,
     anonymousId?: string,
+    realm?: string,
   ): Promise<UserCreateResponse> {
-    return this.client!.userCreateByUsername({ username, password, anonymousId });
+    return this.client!.userCreateByUsername({ username, password, anonymousId, realm });
   }
 
-  anonymousUserCreate(clientId: string): Promise<UserLoginResponse> {
-    return this.client!.anonymousUserCreate({ clientId });
+  anonymousUserCreate(clientId: string, realm?: string): Promise<UserLoginResponse> {
+    return this.client!.anonymousUserCreate({ clientId, realm });
   }
 
-  changePass(email: string, password?: string): Promise<UserCreateResponse> {
-    return this.client!.changePass({ email, password });
+  /**
+   * Sets a new password. `realm` picks the account when the email is held by several accounts
+   * (isolated identity mode): a realm slug picks that realm's account, `'global'` picks the
+   * account without a home realm. Without it such an email is refused with FAILED_PRECONDITION.
+   */
+  changePass(
+    email: string,
+    password?: string,
+    realm?: string,
+  ): Promise<UserCreateResponse> {
+    return this.client!.changePass({ email, password, realm });
   }
 
   changeEmail(userId: string, newEmail: string): Promise<UserChangeEmailResponse> {
@@ -123,5 +146,63 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
 
   updateTeam(teamId: string, name?: string, newParentTeamId?: string): Promise<Team> {
     return this.client!.updateTeam({ teamId, name, newParentTeamId });
+  }
+
+  /**
+   * Turns a top-level team into a realm, or updates the settings of an existing realm.
+   * `settings` is the realm settings body (strategies, policies, registration, active);
+   * it may carry OAuth secrets (write-only). Changing the slug of an existing realm
+   * needs `force`.
+   * Errors keep their gRPC code; module errors (REALM_SLUG_TAKEN, REALM_NESTED,
+   * GUESTS_NOT_ALLOWED...) carry a JSON string message (`{"conduitCode", "message"}`),
+   * so key on `conduitCode`.
+   */
+  setTeamRealm(
+    teamId: string,
+    slug: string,
+    settings?: Indexable,
+    force: boolean = false,
+  ): Promise<RealmResponse> {
+    return this.client!.setTeamRealm({
+      teamId,
+      slug,
+      settingsJson: settings === undefined ? undefined : JSON.stringify(settings),
+      force,
+    });
+  }
+
+  /** The team, its masked realm settings (`settingsJson`, no secrets) and user counts. */
+  getRealmSettings(teamId: string): Promise<RealmResponse> {
+    return this.client!.getRealmSettings({ teamId });
+  }
+
+  /** Demotes a realm. Refused while home users exist unless `force`, which blocks them. */
+  unsetTeamRealm(
+    teamId: string,
+    force: boolean = false,
+  ): Promise<UnsetTeamRealmResponse> {
+    return this.client!.unsetTeamRealm({ teamId, force });
+  }
+
+  /**
+   * `home` makes the realm the user's home realm, `guest` adds a guest membership.
+   * Fails with FAILED_PRECONDITION when `home` would replace a different home realm
+   * (unless `force`, which moves the user and revokes all their tokens) and when `guest`
+   * is requested for a user whose home realm is this realm.
+   * Errors keep their gRPC code; module errors carry a JSON string message
+   * (`{"conduitCode", "message"}`), so key on `conduitCode`.
+   */
+  grantRealmMembership(
+    teamId: string,
+    userId: string,
+    type: 'home' | 'guest',
+    force: boolean = false,
+  ) {
+    return this.client!.grantRealmMembership({ teamId, userId, type, force });
+  }
+
+  /** Removes a guest membership (home users are moved, not removed). */
+  revokeRealmMembership(teamId: string, userId: string) {
+    return this.client!.revokeRealmMembership({ teamId, userId, type: '', force: false });
   }
 }

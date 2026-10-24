@@ -7,11 +7,11 @@ import {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { User } from '../models/index.js';
 import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import {
+  ConduitBoolean,
   ConduitString,
   ConfigController,
   RoutingManager,
@@ -19,6 +19,20 @@ import {
 import { authenticateChecks, changePassword } from './utils.js';
 import { Config } from '../config/index.js';
 import { ALT_STRATEGY_AUTH } from '../constants/index.js';
+import { errors } from '../errors.js';
+import {
+  assertDiscoveryAllowed,
+  DISCOVERY_RESPONSE_FIELDS,
+  discoverWithPassword,
+} from './realmDiscovery.js';
+import {
+  assertGlobalStrategyAvailable,
+  loginVerificationOverride,
+  realmIdOf,
+  realmParam,
+  resolveRealmFromCall,
+  resolveSignInPrincipal,
+} from './realmRequest.js';
 
 export class UsernameHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -32,21 +46,29 @@ export class UsernameHandlers implements IAuthenticationStrategy {
         path: '/username',
         action: ConduitRouteActions.POST,
         description: `Login endpoint that can be used to authenticate.
-         Tokens are returned according to configuration.`,
+         Tokens are returned according to configuration. With discover (and the realm discovery login enabled) it lists the realms of the accounts that accept the credentials instead, and opens no session.`,
         bodyParams: {
           username: ConduitString.Required,
           password: ConduitString.Required,
           captchaToken: ConduitString.Optional,
+          realm: realmParam,
+          discover: ConduitBoolean.Optional,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.login
             ? ['captchaMiddleware']
             : undefined,
+        errors: [
+          errors.REALM_NOT_FOUND,
+          errors.REALMS_DISABLED,
+          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+        ],
         rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('LoginResponse', {
         accessToken: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
+        ...DISCOVERY_RESPONSE_FIELDS,
       }),
       this.authenticate.bind(this),
     );
@@ -86,25 +108,42 @@ export class UsernameHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     }
 
+    assertDiscoveryAllowed({
+      discover: call.request.params.discover === true,
+      realm: call.request.params.realm,
+    });
+    if (call.request.params.discover === true) {
+      return discoverWithPassword({
+        identifier: { username },
+        password,
+        strategyKey: 'username',
+        clientId: context.clientId,
+      });
+    }
+
     const clientId = context.clientId;
     const config = ConfigController.getInstance().config;
+    const realmCtx = await resolveRealmFromCall(call);
+    if (!realmCtx) assertGlobalStrategyAvailable('username');
 
-    const user: User | null = await User.getInstance().findOne(
-      { username },
-      {
-        select: '+hashedPassword',
-      },
-    );
-
-    if (isNil(user)) {
+    const principal = await resolveSignInPrincipal(realmCtx, { username }, 'username', {
+      select: '+hashedPassword',
+    });
+    if (isNil(principal)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
     }
 
-    await authenticateChecks(password, config, user);
+    await authenticateChecks(
+      password,
+      config,
+      principal.user,
+      loginVerificationOverride(realmCtx, principal, config.local.verification.required),
+    );
     return TokenProvider.getInstance().provideUserTokens({
-      user,
+      user: principal.user,
       clientId,
       config,
+      realm: realmIdOf(realmCtx),
     });
   }
 }

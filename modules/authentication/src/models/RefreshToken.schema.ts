@@ -1,4 +1,9 @@
-import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  CompatibleIndexType,
+  ConduitModel,
+  DatabaseProvider,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 import { User, AccessToken } from './index.js';
 
@@ -18,6 +23,11 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: false,
   },
+  // realm team id the session is in; absent = global session
+  realm: {
+    type: TYPE.ObjectId,
+    required: false,
+  },
   token: {
     type: TYPE.String,
     required: true,
@@ -33,8 +43,15 @@ const schema: ConduitModel = {
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
+// non-unique: realm sweeps (demote, guest removal) delete tokens by realm
 const modelOptions = {
   timestamps: true,
+  indexes: [
+    {
+      fields: ['realm'],
+      types: [CompatibleIndexType.Ascending],
+    },
+  ],
   conduit: {
     permissions: {
       extendable: true,
@@ -51,6 +68,7 @@ export class RefreshToken extends ConduitActiveSchema<RefreshToken> {
   _id: string;
   user: string | User;
   clientId: string;
+  realm?: string;
   token: string;
   accessToken: string | AccessToken;
   expiresOn: Date;

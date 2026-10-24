@@ -1,4 +1,5 @@
 import {
+  CompatibleIndexType,
   ConduitModel,
   DatabaseProvider,
   Indexable,
@@ -120,13 +121,25 @@ const schema: ConduitModel = {
     type: TYPE.Boolean,
     required: false,
   },
+  // realm team id the user authenticates at; null/absent = global user
+  homeRealm: {
+    type: TYPE.ObjectId,
+    required: false,
+  },
   twoFaMethod: TYPE.String,
   phoneNumber: TYPE.String,
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
+// non-unique: scoped user lookups and realm member counts filter on the home realm
 const modelOptions = {
   timestamps: true,
+  indexes: [
+    {
+      fields: ['homeRealm'],
+      types: [CompatibleIndexType.Ascending],
+    },
+  ],
   conduit: {
     permissions: {
       extendable: true,
@@ -158,6 +171,7 @@ export class User extends ConduitActiveSchema<User> {
   twoFaMethod: string;
   phoneNumber?: string;
   isAnonymous?: boolean;
+  homeRealm?: string | null;
   createdAt: Date;
   updatedAt: Date;
 

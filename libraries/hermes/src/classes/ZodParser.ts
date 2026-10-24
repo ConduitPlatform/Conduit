@@ -24,6 +24,22 @@ export interface ZodParseResult {
   [fieldName: string]: z.ZodTypeAny;
 }
 
+/**
+ * Boolean parsing for query/url params (coercion mode). `z.coerce.boolean()` treats every
+ * non-empty string as true (so `?force=false` would be true). Accepted strings:
+ * `'true'`/`'1'` -> true, `'false'`/`'0'`/`''` -> false (case-insensitive, trimmed);
+ * real booleans pass through; anything else fails validation.
+ */
+export function strictBooleanFromString(): z.ZodTypeAny {
+  return z.preprocess(val => {
+    if (typeof val !== 'string') return val;
+    const normalized = val.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'false' || normalized === '0' || normalized === '') return false;
+    return val;
+  }, z.boolean());
+}
+
 export class ZodParser {
   private result: ZodParseResult = {};
   private useCoercion = false;
@@ -182,7 +198,7 @@ export class ZodParser {
       case TYPE.Number:
         return this.useCoercion ? z.coerce.number() : z.number();
       case TYPE.Boolean:
-        return this.useCoercion ? z.coerce.boolean() : z.boolean();
+        return this.useCoercion ? strictBooleanFromString() : z.boolean();
       case TYPE.Date:
         return z.string().datetime({ offset: true });
       case TYPE.ObjectId:

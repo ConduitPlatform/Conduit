@@ -9,38 +9,151 @@ import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/index.js';
 import { assertEmailAllowed } from '../utils/emailRestrictions.js';
 import { isNil } from 'lodash-es';
-import { User } from '../models/index.js';
+import { RealmMembership, Team, User } from '../models/index.js';
+import { toRealmRef } from '../handlers/realm.logic.js';
 import escapeStringRegexp from 'escape-string-regexp';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
+import {
+  grantHomeMembership,
+  homeRealmFields,
+  realmIdOf,
+} from '../handlers/realmRequest.js';
+import {
+  assertIdentifierFreeForUser,
+  assertRealmPrincipalFree,
+  deleteUserRealmMemberships,
+  identifierQuery,
+  identifierTakenForUser,
+  IdentifierQuery,
+  realmsEnabled,
+  resolveRealmById,
+  uniqueIdentifierQuery,
+  withHomeScope,
+} from '../utils/realm.js';
+
+/** The identifier of a validated `{ email }` or `{ username }` query. */
+function identifierOf(query: Record<string, unknown>): IdentifierQuery {
+  return 'email' in query
+    ? identifierQuery('email', String(query.email))
+    : identifierQuery('username', String(query.username));
+}
+
+// Cap on the memberships loaded to resolve the `realm` filter next to other filters.
+const MAX_MEMBERSHIP_FILTER = 1000;
+
+/** The user query of the getUsers filters, except `realm`. */
+function userFilterQuery(params: Indexable): Indexable {
+  const { isActive, isAnonymous, provider, search, homeRealm } = params;
+  let query: Indexable = {};
+  if (!isNil(isActive)) {
+    query.active = isActive;
+  }
+  if (!isNil(isAnonymous)) {
+    query.isAnonymous = isAnonymous;
+  }
+  if (!isNil(provider)) {
+    if (provider === 'local') {
+      query['hashedPassword'] = { $exists: true, $ne: null };
+    } else {
+      query[provider] = { $exists: true, $ne: null };
+    }
+  }
+  if (!isNil(search)) {
+    if (search.match(/^[a-fA-F0-9]{24}$/)) {
+      query = { _id: search };
+    } else {
+      const emailIdentifier = escapeStringRegexp(search);
+      query['email'] = { $regex: `.*${emailIdentifier}.*`, $options: 'i' };
+    }
+  }
+  if (!isNil(homeRealm)) {
+    // 'global' = users without a home realm, otherwise a realm team id
+    query = withHomeScope(query, homeRealm === 'global' ? null : homeRealm);
+  }
+  return query;
+}
+
+/** A page of the members (home or guest) of a realm, in membership order. */
+async function pageRealmMembers(realm: string, skip?: number, limit?: number) {
+  const memberships = await RealmMembership.getInstance().findMany(
+    { realm },
+    { skip, limit, sort: { _id: 1 } },
+  );
+  const memberIds = memberships.map(membership => String(membership.user));
+  const found = memberIds.length
+    ? await User.getInstance().findMany({ _id: { $in: memberIds } })
+    : [];
+  const byId = new Map(found.map(user => [String(user._id), user]));
+  const users = memberIds.flatMap(id => byId.get(id) ?? []);
+  const count = await RealmMembership.getInstance().countDocuments({ realm });
+  return { users, count };
+}
+
+/**
+ * Narrows `query` to the members of a realm. The member ids are resolved first: only the
+ * first MAX_MEMBERSHIP_FILTER memberships of the realm are considered.
+ */
+async function restrictToRealmMembers(query: Indexable, realm: string): Promise<void> {
+  const memberships = await RealmMembership.getInstance().findMany(
+    { realm },
+    { limit: MAX_MEMBERSHIP_FILTER, sort: { _id: 1 } },
+  );
+  const memberIds = memberships.map(membership => String(membership.user));
+  if (typeof query._id === 'string') {
+    if (!memberIds.includes(query._id)) query._id = { $in: [] };
+  } else {
+    query._id = { $in: memberIds };
+  }
+}
 
 export class UserAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
+  /**
+   * The home realm and the guest realms of a user. A guest realm carries the time the user was
+   * linked into it. A realm whose team no longer exists is left out.
+   */
+  async getUserRealms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
+    const user = await User.getInstance().findOne({ _id: id });
+    if (!user) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+    const homeId = user.homeRealm ? String(user.homeRealm) : null;
+    const memberships = await RealmMembership.getInstance().findMany(
+      { user: String(user._id), membershipType: 'guest' },
+      { sort: { _id: 1 } },
+    );
+    const realmIds = [
+      ...new Set([homeId, ...memberships.map(membership => String(membership.realm))]),
+    ].filter((realmId): realmId is string => !!realmId);
+    const teams = realmIds.length
+      ? await Team.getInstance().findMany({ _id: { $in: realmIds } })
+      : [];
+    const byId = new Map(teams.map(team => [String(team._id), team]));
+    const homeTeam = homeId ? byId.get(homeId) : undefined;
+    const home = homeTeam ? toRealmRef(homeTeam) : null;
+    const guests = memberships.flatMap(membership => {
+      const realmId = String(membership.realm);
+      const team = byId.get(realmId);
+      if (!team || realmId === homeId) return [];
+      return [{ ...toRealmRef(team), createdAt: membership.createdAt }];
+    });
+    return { home, guests };
+  }
+
   async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { isActive, isAnonymous, provider, search, sort } = call.request.params;
+    const { sort, realm } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
-    let query: Indexable = {};
-    if (!isNil(isActive)) {
-      query.active = isActive;
-    }
-    if (!isNil(isAnonymous)) {
-      query.isAnonymous = isAnonymous;
-    }
-    if (!isNil(provider)) {
-      if (provider === 'local') {
-        query['hashedPassword'] = { $exists: true, $ne: null };
-      } else {
-        query[provider] = { $exists: true, $ne: null };
+    const query = userFilterQuery(call.request.params);
+    if (!isNil(realm)) {
+      // users that are members (home or guest) of the realm
+      if (Object.keys(query).length === 0 && isNil(sort)) {
+        // the realm is the only filter: page the memberships, then load those users
+        return pageRealmMembers(realm, skip, limit);
       }
-    }
-    if (!isNil(search)) {
-      if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        query = { _id: search };
-      } else {
-        const emailIdentifier = escapeStringRegexp(search);
-        query['email'] = { $regex: `.*${emailIdentifier}.*`, $options: 'i' };
-      }
+      await restrictToRealmMembers(query, realm);
     }
 
     const users: User[] = await User.getInstance().findMany(query, {
@@ -54,13 +167,28 @@ export class UserAdmin {
   }
 
   async createUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { email, username, password } = call.request.params;
+    const { email, username, password, homeRealm } = call.request.params;
 
     const query = AuthUtils.validateAndNormalizeIdentifier(email, username);
+    let realmCtx = null;
+    if (!isNil(homeRealm) && homeRealm !== '') {
+      if (!realmsEnabled()) throw new ModuleError(errors.REALMS_DISABLED);
+      realmCtx = await resolveRealmById(String(homeRealm));
+    }
 
-    let user: User | null = await User.getInstance().findOne(query);
+    // isolated mode: the identifier only has to be free under the new user's home realm
+    let user: User | null = await User.getInstance().findOne(
+      uniqueIdentifierQuery(query, realmIdOf(realmCtx)),
+    );
     if (!isNil(user)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
+    }
+
+    if (realmCtx) {
+      // a linked guest of the realm holding one of the identifiers is a principal there too
+      await assertRealmPrincipalFree(realmIdOf(realmCtx), [identifierOf(query)], {
+        conflict: 'USER_EXISTS',
+      });
     }
 
     const hashedPassword = await AuthUtils.hashPassword(password);
@@ -68,7 +196,19 @@ export class UserAdmin {
       ...query,
       hashedPassword,
       isVerified: true,
+      ...homeRealmFields(realmCtx),
     });
+    try {
+      await grantHomeMembership(this.grpcSdk, user, realmCtx);
+    } catch (err) {
+      // never leave a realm user without its membership
+      await User.getInstance()
+        .deleteOne({ _id: user._id })
+        .catch(deleteErr => {
+          ConduitGrpcSdk.Logger.error(deleteErr as Error);
+        });
+      throw err;
+    }
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
     delete user.hashedPassword;
     return { user };
@@ -88,11 +228,19 @@ export class UserAdmin {
       );
     }
     if (user.email !== email) {
-      const duplicateEmail: User | null = await User.getInstance().findOne({ email });
-      if (!isNil(duplicateEmail)) {
+      // isolated mode: scoped to the target user's home realm and to the realms the user is
+      // linked into as a guest
+      if (await identifierTakenForUser(user, identifierQuery('email', email))) {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Email already exists');
       }
       assertEmailAllowed(email);
+    }
+    if (!isNil(phoneNumber) && phoneNumber !== '' && phoneNumber !== user.phoneNumber) {
+      await assertIdentifierFreeForUser(
+        user,
+        identifierQuery('phoneNumber', phoneNumber),
+        'Phone number already exists',
+      );
     }
     let twoFaMethod: string | undefined;
     if (hasTwoFA) {
@@ -119,6 +267,7 @@ export class UserAdmin {
       throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
     const res = await User.getInstance().deleteOne({ _id: call.request.params.id });
+    await deleteUserRealmMemberships(String(user._id));
     await this.grpcSdk.authorization!.deleteAllRelations({
       resource: 'User:' + user._id,
     });
@@ -143,6 +292,7 @@ export class UserAdmin {
     }
 
     const res = await User.getInstance().deleteMany({ _id: { $in: ids } });
+    await deleteUserRealmMemberships(users.map(u => String(u._id)));
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
     return 'Users were deleted';
   }

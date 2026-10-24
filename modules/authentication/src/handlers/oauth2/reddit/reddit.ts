@@ -31,14 +31,14 @@ export class RedditHandlers extends OAuth2<RedditUser, OAuth2Settings> {
     };
   }
 
-  makeRequest(data: AuthParams) {
+  makeRequest(data: AuthParams, settings: OAuth2Settings = this.settings) {
     return {
-      method: this.settings.accessTokenMethod,
-      url: this.settings.tokenUrl,
+      method: settings.accessTokenMethod,
+      url: settings.tokenUrl,
       data: `grant_type=${data.grant_type}&code=${data.code}&redirect_uri=${data.redirect_uri}`,
       headers: {
         authorization: `Basic ${Buffer.from(
-          this.settings.clientId + ':' + this.settings.clientSecret,
+          settings.clientId + ':' + settings.clientSecret,
         ).toString('base64')}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },

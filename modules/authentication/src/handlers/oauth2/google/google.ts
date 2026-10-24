@@ -17,8 +17,8 @@ import {
   Payload,
   ProviderConfig,
 } from '../interfaces/index.js';
-import { OAUTH_MODE_PARAM } from '../utils/index.js';
-import { errors } from '../../../errors.js';
+import { OAUTH_MODE_PARAM, OAUTH_ROUTE_ERRORS } from '../utils/index.js';
+import { realmParam } from '../../realmRequest.js';
 
 // todo migrate to use native method properly
 export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
@@ -73,9 +73,10 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
           captchaToken: ConduitString.Optional,
           scopes: [ConduitString.Optional],
           mode: OAUTH_MODE_PARAM,
+          realm: realmParam,
         },
         middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
-        errors: [errors.REGISTRATION_NOT_ALLOWED],
+        errors: OAUTH_ROUTE_ERRORS,
         rateLimit: OAUTH_NATIVE_COMPLETE,
       },
       new ConduitRouteReturnDefinition('GoogleResponse', {

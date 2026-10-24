@@ -12,6 +12,7 @@ import { AccessToken, Client, User } from '../models/index.js';
 import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
+import { realmsEnabled } from '../utils/realm.js';
 import getToken = AuthUtils.getToken;
 
 /*
@@ -78,7 +79,12 @@ export async function handleAuthentication(
   if (!accessToken.user || !(accessToken.user as User).active) {
     throw new GrpcError(status.PERMISSION_DENIED, 'User is blocked or deleted');
   }
-  return { user: accessToken.user, jwtPayload: payload };
+  return {
+    user: accessToken.user,
+    jwtPayload: payload,
+    // realm the session is in (team id), null for global sessions and with the flag off
+    realm: realmsEnabled() && accessToken.realm ? String(accessToken.realm) : null,
+  };
 }
 
 function handleTokenRefresh(context: Indexable, headers: Headers, cookies: Cookies) {

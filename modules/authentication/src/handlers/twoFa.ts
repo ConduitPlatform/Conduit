@@ -17,6 +17,8 @@ import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { Token, TwoFactorBackUpCodes, TwoFactorSecret, User } from '../models/index.js';
 import { AuthUtils } from '../utils/index.js';
+import { sessionRealmId } from './realmRequest.js';
+import { assertIdentifierFreeForUser, identifierQuery } from '../utils/realm.js';
 import { TokenType, TWO_FA_CHALLENGE } from '../constants/index.js';
 import * as node2fa from '@conduitplatform/node-2fa';
 import { v4 as uuid } from 'uuid';
@@ -230,7 +232,12 @@ export class TwoFa implements IAuthenticationStrategy {
     const context = call.request.context;
     const clientId = context.clientId;
     const { code } = call.request.params;
-    return this.verifyAuthentication(context.user, code, clientId);
+    return this.verifyAuthentication(
+      context.user,
+      code,
+      clientId,
+      sessionRealmId(context),
+    );
   }
 
   verifyCode(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -332,6 +339,7 @@ export class TwoFa implements IAuthenticationStrategy {
     user: User,
     code: string,
     clientId: string,
+    realm: string | null = null,
   ): Promise<{ userId?: string; accessToken?: string; refreshToken?: string }> {
     const twoFaMethod = normalizeTwoFaMethod(user.twoFaMethod);
     if (twoFaMethod === 'sms') {
@@ -364,9 +372,10 @@ export class TwoFa implements IAuthenticationStrategy {
         clientId,
         config,
         twoFaPass: true,
+        realm,
       });
     } else if (user.twoFaMethod == 'authenticator') {
-      return this.verifyAuthenticatorCodeForLogin(clientId, user, code);
+      return this.verifyAuthenticatorCodeForLogin(clientId, user, code, realm);
     } else {
       throw new GrpcError(status.FAILED_PRECONDITION, 'Method not valid');
     }
@@ -421,6 +430,15 @@ export class TwoFa implements IAuthenticationStrategy {
     if (!verified.verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
     }
+    const phoneNumber = verificationRecord.data?.phoneNumber;
+    if (typeof phoneNumber === 'string' && phoneNumber !== '') {
+      // the number becomes the login identifier of the user: it must be free in its scope
+      await assertIdentifierFreeForUser(
+        user,
+        identifierQuery('phoneNumber', phoneNumber),
+        'Phone number already exists',
+      );
+    }
     const consumed = await Token.getInstance().deleteOne({
       _id: verificationRecord._id,
       user: user._id,
@@ -460,6 +478,7 @@ export class TwoFa implements IAuthenticationStrategy {
   async recoverTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user, clientId } = call.request.context;
     const { code } = call.request.params;
+    const realm = sessionRealmId(call.request.context);
     const reg = /^\d{8}$/;
     if (!reg.test(code)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Incorrect code format');
@@ -496,6 +515,7 @@ export class TwoFa implements IAuthenticationStrategy {
       clientId,
       config,
       twoFaPass: true,
+      realm,
     });
 
     result.message = `You have ${codeSet.codes.length} back up codes left`;
@@ -571,6 +591,7 @@ export class TwoFa implements IAuthenticationStrategy {
     clientId: string,
     user: User,
     code: string,
+    realm: string | null = null,
   ): Promise<{ userId?: string; accessToken?: string; refreshToken?: string }> {
     const secret = await TwoFactorSecret.getInstance().findOne(
       {
@@ -590,6 +611,7 @@ export class TwoFa implements IAuthenticationStrategy {
       clientId,
       config,
       twoFaPass: true,
+      realm,
     });
   }
 

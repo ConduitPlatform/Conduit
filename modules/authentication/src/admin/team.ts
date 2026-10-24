@@ -9,10 +9,20 @@ import {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { errors } from '../errors.js';
 import { Team, Token, User } from '../models/index.js';
 import { isNil } from 'lodash-es';
 import escapeStringRegexp from 'escape-string-regexp';
 import { AuthUtils } from '../utils/index.js';
+import {
+  addUserToTeamWithRealm,
+  assertTeamDeletable,
+  assertTeamMembersRemovable,
+  assertUsersCanJoinTeam,
+  decorateMembershipType,
+  deleteTeamAndDetachChildren,
+  revokeOrphanedGuests,
+} from '../utils/teamRealm.js';
 import { TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
 import {
@@ -38,6 +48,7 @@ export class TeamsAdmin {
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
           parentTeam: ConduitObjectId.Optional,
+          realm: ConduitBoolean.Optional,
           populate: [ConduitString.Optional],
         },
         name: 'GetTeams',
@@ -115,6 +126,7 @@ export class TeamsAdmin {
             required: true,
           },
         },
+        errors: [errors.GUESTS_NOT_ALLOWED],
         name: 'AddTeamMembers',
         description: 'Add members to a team',
       },
@@ -134,6 +146,7 @@ export class TeamsAdmin {
             required: true,
           },
         },
+        errors: [errors.HOME_USER_REMOVAL],
         name: 'RemoveTeamMembers',
         description: 'Remove members from a team',
       },
@@ -246,7 +259,7 @@ export class TeamsAdmin {
   }
 
   async getTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { search, sort, parentTeam, populate } = call.request.params;
+    const { search, sort, parentTeam, populate, realm } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
@@ -263,6 +276,10 @@ export class TeamsAdmin {
       query['parentTeam'] = parentTeam;
     } else {
       query['$or'] = [{ parentTeam: null }, { parentTeam: { $exists: false } }];
+    }
+    if (!isNil(realm)) {
+      // strict: only a real `true` selects realm teams
+      query['realm.enabled'] = realm === true ? true : { $ne: true };
     }
 
     const teams: Team[] = await Team.getInstance().findMany(query, {
@@ -343,15 +360,22 @@ export class TeamsAdmin {
 
   async updateTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { teamId, name, isDefault } = call.request.params;
-    if (isDefault) {
-      const found = await Team.getInstance().findOne({ isDefault: true });
-      if (found && found._id !== teamId) {
-        throw new GrpcError(status.ALREADY_EXISTS, 'There already is a default team');
-      }
-    }
     const found = await Team.getInstance().findOne({ _id: teamId });
     if (!found) {
       throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+    }
+    if (isDefault === true && found.realm?.enabled === true) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'A realm cannot be the default team: new users would be added to the realm. ' +
+          'Demote the realm first.',
+      );
+    }
+    if (isDefault) {
+      const defaultTeam = await Team.getInstance().findOne({ isDefault: true });
+      if (defaultTeam && defaultTeam._id !== teamId) {
+        throw new GrpcError(status.ALREADY_EXISTS, 'There already is a default team');
+      }
     }
     if (found.name !== name) {
       const duplicateName = await Team.getInstance().findOne({
@@ -383,13 +407,8 @@ export class TeamsAdmin {
     if (team.isDefault) {
       throw new GrpcError(status.FAILED_PRECONDITION, 'Default team cannot be deleted');
     }
-    await Team.getInstance().deleteOne({ _id: teamId });
-    await this.grpcSdk.authorization!.deleteAllRelations({ resource: 'Team:' + teamId });
-    await this.grpcSdk.authorization!.deleteAllRelations({ subject: 'Team:' + teamId });
-    await Team.getInstance().updateMany(
-      { parentTeam: teamId },
-      { parentTeam: undefined },
-    );
+    assertTeamDeletable(team);
+    await deleteTeamAndDetachChildren(this.grpcSdk, team);
     return 'Team deleted';
   }
 
@@ -412,11 +431,14 @@ export class TeamsAdmin {
     if (!users || users.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
+    // a team inside a realm: refuse unwanted guests before anything is written
+    await assertUsersCanJoinTeam(String(team._id), users, 'admin');
     for (const user of users) {
-      await this.grpcSdk.authorization!.createRelation({
-        subject: 'User:' + user._id,
-        resource: 'Team:' + team._id,
-        relation: 'member',
+      await addUserToTeamWithRealm(this.grpcSdk, {
+        teamId: String(team._id),
+        userId: String(user._id),
+        role: 'member',
+        mode: 'admin',
       });
     }
     return 'Users added to team';
@@ -433,12 +455,21 @@ export class TeamsAdmin {
     if (!users || users.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'Users does not exist');
     }
+    await assertTeamMembersRemovable(
+      team,
+      users.map(user => String(user._id)),
+    );
     for (const user of users) {
       await this.grpcSdk.authorization!.deleteAllRelations({
         subject: 'User:' + user._id,
         resource: 'Team:' + teamId,
       });
     }
+    await revokeOrphanedGuests(
+      this.grpcSdk,
+      teamId,
+      users.map(user => String(user._id)),
+    );
 
     return 'Users removed from team';
   }
@@ -464,6 +495,7 @@ export class TeamsAdmin {
       limit,
       sort,
     });
+    await decorateMembershipType(members, teamId);
     return { members: members, count };
   }
 

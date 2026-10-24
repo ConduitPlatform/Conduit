@@ -23,6 +23,9 @@ import { TeamsHandler } from '../handlers/team.js';
 import { BiometricHandlers } from '../handlers/biometric.js';
 import { UsernameHandlers } from '../handlers/username.js';
 import { MetamaskHandlers } from '../handlers/metamask.js';
+import { RealmHandlers } from '../handlers/realm.js';
+import { realmsEnabled } from '../utils/realm.js';
+import { activeOrRealmEnabled } from '../utils/strategyRealms.js';
 
 type OAuthHandler = typeof oauth2;
 
@@ -36,6 +39,7 @@ export class AuthenticationRoutes {
   private readonly biometricHandlers: BiometricHandlers;
   private readonly usernameHandlers: UsernameHandlers;
   private readonly metamaskHandlers: MetamaskHandlers;
+  private readonly realmHandlers: RealmHandlers;
 
   constructor(
     readonly server: GrpcServer,
@@ -50,6 +54,7 @@ export class AuthenticationRoutes {
     this.biometricHandlers = new BiometricHandlers(this.grpcSdk);
     this.usernameHandlers = new UsernameHandlers(this.grpcSdk);
     this.metamaskHandlers = new MetamaskHandlers(this.grpcSdk);
+    this.realmHandlers = new RealmHandlers(this.grpcSdk);
   }
 
   async registerRoutes() {
@@ -57,6 +62,11 @@ export class AuthenticationRoutes {
     this._routingManager.clear();
     let enabled = false;
 
+    // A strategy's routes exist when it is enabled globally or by any active realm
+    // (realms enable strategies on their own; calls without a realm are still checked
+    // by the handlers). OAuth, local, magic link and phone fold the realm check into
+    // their own `validate()` (so e.g. a missing email transport still disables magic
+    // link); the others are OR-ed with realm enablement here.
     const phoneActive = await this.phoneHandlers
       .validate()
       .catch(e => ConduitGrpcSdk.Logger.error(e));
@@ -67,7 +77,8 @@ export class AuthenticationRoutes {
 
     const biometricActive = await this.biometricHandlers
       .validate()
-      .catch(e => ConduitGrpcSdk.Logger.error(e));
+      .catch(e => ConduitGrpcSdk.Logger.error(e))
+      .then(active => activeOrRealmEnabled(active, 'biometric'));
 
     if (biometricActive) {
       await this.biometricHandlers.declareRoutes(this._routingManager);
@@ -79,7 +90,7 @@ export class AuthenticationRoutes {
     if (magicLinkActive) {
       await this.magicLinkHandlers.declareRoutes(this._routingManager);
     }
-    let authActive = await this.localHandlers
+    const authActive = await this.localHandlers
       .validate()
       .catch(e => ConduitGrpcSdk.Logger.error(e));
     if (authActive) {
@@ -124,16 +135,23 @@ export class AuthenticationRoutes {
 
     const usernameActive = await this.usernameHandlers
       .validate()
-      .catch(e => ConduitGrpcSdk.Logger.error(e));
+      .catch(e => ConduitGrpcSdk.Logger.error(e))
+      .then(active => activeOrRealmEnabled(active, 'username'));
     if (usernameActive) {
       await this.usernameHandlers.declareRoutes(this._routingManager);
       enabled = true;
     }
 
-    const metamaskActive = await this.metamaskHandlers.validate();
+    const metamaskActive = await this.metamaskHandlers
+      .validate()
+      .then(active => activeOrRealmEnabled(active, 'metamask'));
     if (metamaskActive) {
       await this.metamaskHandlers.declareRoutes(this._routingManager);
       enabled = true;
+    }
+
+    if (enabled && realmsEnabled()) {
+      this.realmHandlers.declareRoutes(this._routingManager);
     }
 
     if (enabled) {
