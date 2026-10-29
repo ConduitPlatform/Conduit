@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { status } from '@grpc/grpc-js';
+import { Types } from 'mongoose';
 import {
   buildMutationEventChunks,
   collectBoundedMutationIds,
@@ -32,6 +33,11 @@ describe('mutation event helpers', () => {
       'a',
       'b',
     ]);
+  });
+
+  it('collects ids from lean Mongo docs whose _id is an ObjectId', () => {
+    const id = new Types.ObjectId();
+    expect(collectDocumentIds([{ _id: id }])).toEqual([id.toString()]);
   });
 
   it('does not treat a Mongo updateMany result as document ids', () => {
