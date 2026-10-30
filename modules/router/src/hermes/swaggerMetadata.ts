@@ -20,12 +20,19 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
             description:
               'A security client id, retrievable through [POST] /security/client',
           },
-          clientSecret: {
-            name: 'clientSecret',
+          'x-conduit-timestamp': {
+            name: 'x-conduit-timestamp',
             type: 'apiKey',
             in: 'header',
             description:
-              'A security client secret, retrievable through [POST] /security/client',
+              'Unix time in milliseconds. The router rejects the request when this is more than 5 minutes from the server clock.',
+          },
+          'x-conduit-signature': {
+            name: 'x-conduit-signature',
+            type: 'apiKey',
+            in: 'header',
+            description:
+              'Hex HMAC-SHA256 of the timestamp, method, path and query, and the SHA-256 of the raw body, keyed with the client secret.',
           },
         }
       : {}),
@@ -41,7 +48,8 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
     ? [
         {
           clientId: [],
-          clientSecret: [],
+          'x-conduit-timestamp': [],
+          'x-conduit-signature': [],
         },
       ]
     : [],

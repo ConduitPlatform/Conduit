@@ -9,8 +9,9 @@ import {
 import { ConfigController } from '@conduitplatform/module-tools';
 import { Client } from '../../../models/index.js';
 import { validateClient } from '../../utils/index.js';
-import { ValidationInterface } from '../../interfaces/ValidationInterface.js';
 import { ConduitRequest } from '@conduitplatform/hermes';
+
+const CLIENT_CACHE_TTL_MS = 100000;
 
 export class ClientValidator {
   database: DatabaseProvider;
@@ -32,88 +33,102 @@ export class ClientValidator {
 
   async middleware(req: ConduitRequest, res: Response, next: NextFunction) {
     if (isNil(req.conduit)) req.conduit = {};
-    const { clientid, clientsecret } = req.headers;
-    // Exclude webhooks, admin calls and http pings
+
+    const finish = (error?: unknown) => {
+      delete req.headers.clientsecret;
+      delete req.headers['x-conduit-signature'];
+      if (error) {
+        next(error);
+        return;
+      }
+      next();
+    };
+
     if (req.path.indexOf('/hook') === 0 || ['/', '/ready'].includes(req.path)) {
-      return next();
+      return finish();
     }
 
-    // check gql explorer and swagger access
     if (
       (req.url === '/graphql' ||
         req.url.startsWith('/swagger') ||
         req.url.startsWith('/reference')) &&
       req.method === 'GET'
     ) {
-      // disabled swagger and gql explorer access on production
       const isProd = await this.isProd();
-      if (isProd) return next(ConduitError.unauthorized());
-      return next();
+      if (isProd) return finish(ConduitError.unauthorized());
+      return finish();
     }
 
     const securityConfig = ConfigController.getInstance().config.security;
     if (!securityConfig.clientValidation) {
       req.conduit!.clientId = 'anonymous-client';
-      delete req.headers.clientsecret;
       delete req.headers.clientid;
-      return next();
+      return finish();
     }
 
-    if (isNil(clientid)) {
-      return next(ConduitError.unauthorized());
+    const clientid = req.headers.clientid;
+    if (isNil(clientid) || Array.isArray(clientid)) {
+      return finish(ConduitError.unauthorized());
     }
 
-    const key = await this.grpcSdk.state!.getKey(clientid as string);
-    if (key) {
-      const [_clientsecret, _platform, _domain] = key.split(',');
-      const validPlatform = await validateClient(
-        req,
-        {
-          clientSecret: _clientsecret,
-          platform: _platform,
-          domain: _domain,
-        },
-        true,
-      );
+    if (!isNil(req.headers.clientsecret)) {
+      return finish(ConduitError.unauthorized());
+    }
+
+    const key = await this.grpcSdk.state!.getKey(clientid);
+    const cached = key ? cachedClient(key) : null;
+    if (cached) {
+      const validPlatform = await validateClient(req, cached);
       if (validPlatform) {
         req.conduit!.clientId = clientid;
-        return next();
+        return finish();
       }
-      // if not valid allow the execution to continue,
-      // for the possibility of a secret refresh
     }
-    Client.getInstance()
-      .findOne({ clientId: clientid as string }, {
-        select: 'clientSecret platform domain',
+
+    try {
+      const client = await Client.getInstance().findOne({ clientId: clientid }, {
+        select: '+clientSecret platform domain',
         readPreference: 'primary',
-      } satisfies FindOneOptions)
-      .then(async client => {
-        if (isNil(client)) {
-          return {
-            validated: false,
-          };
-        }
-        return {
-          validated: await validateClient(req, client, false),
-          client: client,
-        };
-      })
-      .then((valid: ValidationInterface) => {
-        if (!valid.validated) {
-          throw ConduitError.unauthorized();
-        }
-        delete req.headers.clientsecret;
-        req.conduit!.clientId = clientid;
-        // expiry to force key refresh in redis so that keys can be revoked without redis restart
-        this.grpcSdk.state!.setKey(
-          `${clientid}`,
-          `${clientsecret},${valid.client!.platform},${valid.client!.domain}`,
-          100000,
-        );
-        next();
-      })
-      .catch(() => {
-        next(ConduitError.unauthorized());
-      });
+      } satisfies FindOneOptions);
+      if (isNil(client) || !(await validateClient(req, client))) {
+        return finish(ConduitError.unauthorized());
+      }
+      req.conduit!.clientId = clientid;
+      void this.grpcSdk
+        .state!.setKey(
+          clientid,
+          JSON.stringify({
+            c: client.clientSecret,
+            p: client.platform,
+            d: client.domain ?? '',
+          }),
+          CLIENT_CACHE_TTL_MS,
+        )
+        ?.catch(() => undefined);
+      return finish();
+    } catch {
+      return finish(ConduitError.unauthorized());
+    }
+  }
+}
+
+function cachedClient(raw: string): {
+  clientSecret: string;
+  platform: string;
+  domain?: string;
+} | null {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    const record = parsed as Record<string, unknown>;
+    if (typeof record.c !== 'string' || typeof record.p !== 'string') return null;
+    if (record.d !== undefined && typeof record.d !== 'string') return null;
+    return {
+      clientSecret: record.c,
+      platform: record.p,
+      domain: typeof record.d === 'string' ? record.d : '',
+    };
+  } catch {
+    return null;
   }
 }
