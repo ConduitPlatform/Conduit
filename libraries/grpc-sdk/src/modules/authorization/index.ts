@@ -13,6 +13,8 @@ import {
   Resource,
   ResourceAccessListRequest,
   ResourceAccessListResponse,
+  SubjectPermissionsRequest,
+  SubjectPermissionsResponse,
 } from '../../protoUtils/index.js';
 import { Empty } from '../../protoUtils/google/protobuf/empty.js';
 
@@ -64,6 +66,12 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
 
   can(data: PermissionCheck): Promise<Decision> {
     return this.client!.can(data);
+  }
+
+  getSubjectPermissions(
+    data: SubjectPermissionsRequest,
+  ): Promise<SubjectPermissionsResponse> {
+    return this.client!.getSubjectPermissions(data);
   }
 
   grantPermission(data: PermissionRequest): Promise<unknown> {

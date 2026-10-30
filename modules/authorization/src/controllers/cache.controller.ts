@@ -18,6 +18,36 @@ function cacheKey(globalVer: string, subjectVer: string, computedTuple: string) 
   return `ruleCache:${globalVer}:${subjectVer}:${computedTuple}`;
 }
 
+export type SubjectPermissionInventoryEntry = {
+  action: string;
+  direct: boolean;
+  inherited: boolean;
+  implicit: boolean;
+  allowed: boolean;
+};
+
+function inventoryCacheKey(
+  globalVer: string,
+  subjectVer: string,
+  subject: string,
+  resource: string,
+  actionPrefix: string,
+) {
+  return `ruleCache:${globalVer}:${subjectVer}:inventory:${subject}@${resource}?${actionPrefix}`;
+}
+
+function isInventoryEntry(value: unknown): value is SubjectPermissionInventoryEntry {
+  if (!value || typeof value !== 'object') return false;
+  const entry = value as Record<string, unknown>;
+  return (
+    typeof entry.action === 'string' &&
+    typeof entry.direct === 'boolean' &&
+    typeof entry.inherited === 'boolean' &&
+    typeof entry.implicit === 'boolean' &&
+    typeof entry.allowed === 'boolean'
+  );
+}
+
 export namespace RuleCache {
   export async function storeResolution(
     grpcSdk: ConduitGrpcSdk,
@@ -49,6 +79,43 @@ export namespace RuleCache {
         }
         return null;
       });
+  }
+
+  export async function storeInventory(
+    grpcSdk: ConduitGrpcSdk,
+    subject: string,
+    resource: string,
+    actionPrefix: string,
+    permissions: SubjectPermissionInventoryEntry[],
+  ) {
+    const globalVer = await getGlobalVersion(grpcSdk);
+    const subjectVer = await getSubjectVersion(grpcSdk, subject);
+    await grpcSdk.state!.setKey(
+      inventoryCacheKey(globalVer, subjectVer, subject, resource, actionPrefix),
+      JSON.stringify(permissions),
+      RULE_CACHE_TTL_MS,
+    );
+  }
+
+  export async function findInventory(
+    grpcSdk: ConduitGrpcSdk,
+    subject: string,
+    resource: string,
+    actionPrefix: string,
+  ): Promise<SubjectPermissionInventoryEntry[] | null> {
+    const globalVer = await getGlobalVersion(grpcSdk);
+    const subjectVer = await getSubjectVersion(grpcSdk, subject);
+    const value = await grpcSdk.state!.getKey(
+      inventoryCacheKey(globalVer, subjectVer, subject, resource, actionPrefix),
+    );
+    if (isNil(value)) return null;
+    try {
+      const parsed: unknown = JSON.parse(value);
+      if (!Array.isArray(parsed) || !parsed.every(isInventoryEntry)) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
   }
 
   /** Invalidate cached decisions for one subject (e.g. User:x) after permission/relation changes affecting them. */
