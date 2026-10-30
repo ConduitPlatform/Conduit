@@ -259,6 +259,72 @@ export class IndexController {
     });
   }
 
+  async findInheritedActions(subject: string, resource: string, actions: string[]) {
+    const inherited = new Set<string>();
+    if (actions.length === 0) return inherited;
+
+    const actionByIndexedSubject = new Map(
+      actions.map(action => [`${resource}#${action}`, action]),
+    );
+    const objectIndexes = await ObjectIndex.getInstance().findMany({
+      subject: { $in: [...actionByIndexedSubject.keys()] },
+    });
+    const entitiesByAction = new Map<string, string[]>();
+    for (const index of objectIndexes) {
+      const action = actionByIndexedSubject.get(index.subject);
+      if (!action) continue;
+      if (index.entity === '*') {
+        inherited.add(action);
+        continue;
+      }
+      const entities = entitiesByAction.get(action) ?? [];
+      entities.push(index.entity);
+      entitiesByAction.set(action, entities);
+    }
+
+    const candidateEntities = this.uniqueEntities([...entitiesByAction.values()].flat());
+    if (candidateEntities.length === 0) return inherited;
+
+    const actorIndexes = await this.findActorIndexesByEntities(
+      subject,
+      candidateEntities,
+    );
+    const actorEntities = new Set(actorIndexes.map(index => index.entity));
+    for (const [action, entities] of entitiesByAction) {
+      if (entities.some(entity => actorEntities.has(entity))) {
+        inherited.add(action);
+      }
+    }
+    return inherited;
+  }
+
+  private async findActorIndexesByEntities(subject: string, entities: string[]) {
+    const uniqueEntities = this.uniqueEntities(entities);
+    if (!uniqueEntities.length) return [];
+    if (uniqueEntities.length <= IndexController.ENTITY_CHUNK_SIZE) {
+      return ActorIndex.getInstance().findMany({
+        subject,
+        entity: { $in: uniqueEntities },
+      });
+    }
+
+    const chunks = this.chunkArray(uniqueEntities, IndexController.ENTITY_CHUNK_SIZE);
+    const merged = [];
+    const seen = new Set<string>();
+    for (const chunk of chunks) {
+      const chunkResults = await ActorIndex.getInstance().findMany({
+        subject,
+        entity: { $in: chunk },
+      });
+      for (const result of chunkResults) {
+        if (seen.has(result.entity)) continue;
+        seen.add(result.entity);
+        merged.push(result);
+      }
+    }
+    return merged;
+  }
+
   async findIndex(subject: string, action: string, object: string) {
     const objectSubject = `${object}#${action}`;
     const wildcardIndex = await ObjectIndex.getInstance().findOne({
