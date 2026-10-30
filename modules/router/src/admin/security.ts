@@ -6,9 +6,14 @@ import {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { randomBytes } from 'crypto';
-import bcrypt from 'bcrypt';
+import { ConfigController } from '@conduitplatform/module-tools';
 import { Client } from '../models/index.js';
 import { isNil } from 'lodash-es';
+import {
+  clientSecretKeyBytes,
+  encryptClientSecret,
+  isAcceptableClientDomain,
+} from '../security/clientValidation.logic.js';
 
 export class SecurityAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -37,8 +42,8 @@ export class SecurityAdmin {
       }
     }
     const clientId = randomBytes(15).toString('hex');
-    const clientSecret = randomBytes(64).toString('hex');
-    const hash = await bcrypt.hash(clientSecret, 10);
+    const clientSecret = randomBytes(32).toString('base64url');
+    const encryptedSecret = encryptClientSecret(clientSecret, encryptionKey());
     if (!alias) {
       alias = `${platform.toLowerCase()}:${
         platform === 'WEB' ? `${domain}:${clientId}` : clientId
@@ -49,7 +54,7 @@ export class SecurityAdmin {
     }
     const client = await Client.getInstance().create({
       clientId,
-      clientSecret: hash,
+      clientSecret: encryptedSecret,
       platform,
       domain,
       alias,
@@ -62,9 +67,14 @@ export class SecurityAdmin {
   }
 
   async deleteSecurityClient(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const id = call.request.params!.id;
+    const existing = await Client.getInstance().findOne({ _id: id });
     await Client.getInstance().deleteOne({
-      _id: call.request.params!.id,
+      _id: id,
     });
+    if (existing?.clientId) {
+      await this.grpcSdk.state!.clearKey(existing.clientId);
+    }
     ConduitGrpcSdk.Metrics?.decrement('security_clients_total');
     return { message: 'Client deleted' };
   }
@@ -118,21 +128,13 @@ export class SecurityAdmin {
         400,
         'Platform WEB requires domain name',
       );
-    if (domain.replace(/[^*]/g, '').length > 1) {
-      throw new ConduitError(
-        'INVALID_ARGUMENTS',
-        400,
-        `Domain must not contain more than one '*' character`,
-      );
-    }
-    const domainPattern = new RegExp(
-      '^(?!-)[A-Za-z0-9-]+([\\-\\.]{1}[a-z0-9]+)*\\.[A-Za-z]{2,6}$',
-    );
-    let comparedDomain = domain;
-    if (domain.includes('*')) {
-      comparedDomain = comparedDomain.split('*.')[1];
-    }
-    if (!domainPattern.test(comparedDomain) && domain !== '*')
+    if (!isAcceptableClientDomain(domain))
       throw new ConduitError('INVALID_ARGUMENTS', 400, 'Invalid domain argument');
   }
+}
+
+function encryptionKey() {
+  return clientSecretKeyBytes(
+    ConfigController.getInstance().config.security.clientSecretEncryptionKey,
+  );
 }

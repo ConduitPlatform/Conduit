@@ -24,6 +24,23 @@ provide a way for Conduit modules to register application routes.
 |  `CLIENT_HTTP_PORT`  | Port to be used by application REST and GrahpQL APIs |  False   |  `3000` |
 | `CLIENT_SOCKET_PORT` | DPort to be used by application WebSockets API       |  False   |  `3001` |
 
+Module settings that are not process environment variables live in the convict schema (`src/config/config.ts`). Production sets them through the Admin API, `PATCH /config/router`, the same route Core registers for every module. `security.clientSecretEncryptionKey` is marked sensitive, so a later read of the config returns `[REDACTED]`.
+
+`security.clientSecretEncryptionKey` is standard base64 for exactly 32 bytes (44 characters, ending in `=`). Generate it with `node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('base64'))"` and send:
+
+```json
+{
+  "config": {
+    "security": {
+      "clientValidation": true,
+      "clientSecretEncryptionKey": "<base64 of 32 bytes>"
+    }
+  }
+}
+```
+
+There is no environment variable for this field. The router validates the schema when it registers. A missing value, a value that is not this base64 form, or a value that decodes to anything other than 32 bytes stops startup.
+
 ## Usage
 
 The router, as all modules in Conduit, communicates through the [gRPC-sdk](../../libraries/grpc-sdk).

@@ -22,6 +22,7 @@
     "src/event-relays/compile.ts",
     "src/event-relays/rebacCache.ts",
     "src/event-relays/subscriptions.ts",
-    "src/event-relays/*.test.ts"
+    "src/event-relays/*.test.ts",
+    "src/security/clientValidation.logic.test.ts"
   ]
 }

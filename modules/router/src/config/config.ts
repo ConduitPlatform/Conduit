@@ -1,3 +1,5 @@
+import { assertClientSecretEncryptionKey } from '../security/clientValidation.logic.js';
+
 export default {
   hostUrl: {
     // set initial value with __DEFAULT_HOST_URL, defaults to http://localhost:(CLIENT_HTTP_PORT ?? 3000)
@@ -67,6 +69,14 @@ export default {
     clientValidation: {
       format: 'Boolean',
       default: false,
+    },
+    clientSecretEncryptionKey: {
+      doc: 'Base64 encoding of the 32-byte key used to encrypt security client secrets at rest. Set with PATCH /config/router. Startup fails unless the value decodes to exactly 32 bytes.',
+      format: (value: string) => {
+        assertClientSecretEncryptionKey(value);
+      },
+      default: '',
+      sensitive: true,
     },
   },
   rateLimit: {

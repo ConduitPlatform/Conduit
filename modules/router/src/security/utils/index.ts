@@ -1,6 +1,18 @@
 import { Request } from 'express';
-import bcrypt from 'bcrypt';
 import { PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
+import { ConduitRequest } from '@conduitplatform/hermes';
+import {
+  buildSignedPayload,
+  clientSecretKeyBytes,
+  decryptClientSecret,
+  domainAllowsHost,
+  hmacSha256Hex,
+  parseUnixMillis,
+  requestHostname,
+  signaturesMatch,
+  timestampWithinWindow,
+} from '../clientValidation.logic.js';
 
 export async function validateClient(
   req: Request,
@@ -9,24 +21,43 @@ export async function validateClient(
     domain?: string;
     clientSecret: string;
   },
-  fromRedis: boolean,
 ) {
-  let match;
   if (client.platform === PlatformTypesEnum.WEB && client.domain) {
     if (client.domain === '*') return true;
-    const isRegex = client.domain.includes('*');
-    const sendDomain = req.get('origin') ?? req.hostname;
-    if (isRegex) {
-      const [_, regex] = client.domain.split('*.');
-      match = sendDomain.endsWith(regex); // check if the regex matches with the hostname
-    } else {
-      match = client.domain === sendDomain;
-    }
-    return match;
+    const host = requestHostname(req.get('origin') ?? undefined, req.hostname);
+    return domainAllowsHost(client.domain, host);
   }
-  const clientsecret: string = req.headers.clientsecret as string;
-  if (fromRedis) {
-    return clientsecret === client.clientSecret;
+  return verifySignedRequest(req, client.clientSecret);
+}
+
+function verifySignedRequest(req: Request, ciphertext: string): boolean {
+  const signatureHeader = req.headers['x-conduit-signature'];
+  const timestampHeader = req.headers['x-conduit-timestamp'];
+  if (typeof signatureHeader !== 'string' || typeof timestampHeader !== 'string') {
+    return false;
   }
-  return await bcrypt.compare(clientsecret, client.clientSecret);
+  if (!/^[0-9a-f]{64}$/i.test(signatureHeader)) {
+    return false;
+  }
+  const timestamp = parseUnixMillis(timestampHeader);
+  if (timestamp === null || !timestampWithinWindow(timestamp, Date.now())) {
+    return false;
+  }
+  let secret: string;
+  try {
+    const key = clientSecretKeyBytes(
+      ConfigController.getInstance().config.security.clientSecretEncryptionKey,
+    );
+    secret = decryptClientSecret(ciphertext, key);
+  } catch {
+    return false;
+  }
+  const conduitReq = req as ConduitRequest;
+  const payload = buildSignedPayload({
+    timestamp: timestampHeader,
+    method: req.method,
+    pathAndQuery: req.originalUrl,
+    rawBody: conduitReq.rawBody,
+  });
+  return signaturesMatch(signatureHeader, hmacSha256Hex(secret, payload));
 }
