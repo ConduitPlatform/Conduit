@@ -30,7 +30,7 @@ import {
   timestampWithinWindow,
 } from './clientValidation.logic.js';
 
-const KEY = '0123456789abcdef0123456789abcdef';
+const KEY = Buffer.alloc(32, 7).toString('base64');
 const EMPTY_BODY_SHA256 =
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
@@ -505,6 +505,17 @@ describe('security client handlers', () => {
     const shortKey = convict(routerConfig);
     shortKey.set('security.clientSecretEncryptionKey', 'short-key');
     assert.throws(() => shortKey.validate({ allowed: 'warn' }), /32 bytes/);
+
+    const rawUtf8 = convict(routerConfig);
+    rawUtf8.set('security.clientSecretEncryptionKey', '0123456789abcdef0123456789abcdef');
+    assert.throws(() => rawUtf8.validate({ allowed: 'warn' }), /32 bytes/);
+
+    const sixteen = convict(routerConfig);
+    sixteen.set(
+      'security.clientSecretEncryptionKey',
+      Buffer.alloc(16, 7).toString('base64'),
+    );
+    assert.throws(() => sixteen.validate({ allowed: 'warn' }), /32 bytes/);
 
     const present = convict(routerConfig);
     present.set('security.clientSecretEncryptionKey', KEY);

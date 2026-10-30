@@ -12,18 +12,28 @@ export const CLIENT_SIGNATURE_WINDOW_MS = 5 * 60 * 1000;
 
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
+const CLIENT_SECRET_KEY_B64 = /^[A-Za-z0-9+/]{43}=$/;
 const DNS_HOSTNAME =
   /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
 
+function decodedClientSecretKey(value: string): Buffer | null {
+  if (!CLIENT_SECRET_KEY_B64.test(value)) return null;
+  const decoded = Buffer.from(value, 'base64');
+  if (decoded.length !== 32 || decoded.toString('base64') !== value) return null;
+  return decoded;
+}
+
 export function assertClientSecretEncryptionKey(value: unknown): asserts value is string {
-  if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') !== 32) {
-    throw new Error('security.clientSecretEncryptionKey must be 32 bytes');
+  if (typeof value !== 'string' || decodedClientSecretKey(value) === null) {
+    throw new Error(
+      'security.clientSecretEncryptionKey must be base64 for exactly 32 bytes',
+    );
   }
 }
 
 export function clientSecretKeyBytes(value: string): Buffer {
   assertClientSecretEncryptionKey(value);
-  return Buffer.from(value, 'utf8');
+  return decodedClientSecretKey(value)!;
 }
 
 export function encryptClientSecret(plaintext: string, key: Buffer): string {

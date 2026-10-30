@@ -71,7 +71,7 @@ export default {
       default: false,
     },
     clientSecretEncryptionKey: {
-      doc: '32-byte key used to encrypt security client secrets at rest.',
+      doc: 'Base64 encoding of the 32-byte key used to encrypt security client secrets at rest. Set with PATCH /config/router. Startup fails unless the value decodes to exactly 32 bytes.',
       format: (value: string) => {
         assertClientSecretEncryptionKey(value);
       },
