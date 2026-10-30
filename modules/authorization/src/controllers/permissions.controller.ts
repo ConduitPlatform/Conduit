@@ -1,17 +1,45 @@
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import {
   checkPermissionTuple,
-  checkRelation,
   computePermissionTuple,
   escapeRegex,
   getPostgresAccessListQuery,
   getSQLAccessListQuery,
 } from '../utils/index.js';
 import { IndexController } from './index.controller.js';
-import { RuleCache } from './cache.controller.js';
+import { RuleCache, type SubjectPermissionInventoryEntry } from './cache.controller.js';
 import { isEmpty, isNil } from 'lodash-es';
-import { Permission } from '../models/index.js';
+import { Permission, ResourceDefinition } from '../models/index.js';
 import { createHash } from 'crypto';
+
+const ACTION_PREFIX_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
+
+function actionPrefixOrEmpty(actionPrefix?: string) {
+  if (actionPrefix === undefined || actionPrefix === '') return '';
+  if (!ACTION_PREFIX_PATTERN.test(actionPrefix)) {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      'Action prefix must start with a letter and contain only letters, numbers, and underscores',
+    );
+  }
+  return actionPrefix;
+}
+
+function assertResourceIdentifier(value: string, label: 'Subject' | 'Resource') {
+  const separator = value.indexOf(':');
+  const resourceType = separator > 0 ? value.slice(0, separator) : '';
+  if (
+    separator <= 0 ||
+    separator === value.length - 1 ||
+    !ACTION_PREFIX_PATTERN.test(resourceType)
+  ) {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      `${label} must be a valid resource identifier`,
+    );
+  }
+}
 
 export class PermissionsController {
   private static _instance: PermissionsController;
@@ -30,8 +58,7 @@ export class PermissionsController {
   }
 
   async grantPermission(subject: string, action: string, resource: string) {
-    // action is not a relation but still validates the input
-    checkRelation(subject, action, resource);
+    checkPermissionTuple(subject, action, resource);
     const computedTuple = computePermissionTuple(subject, action, resource);
     await Permission.getInstance().create({
       subject,
@@ -47,8 +74,7 @@ export class PermissionsController {
   }
 
   async removePermission(subject: string, action: string, resource: string) {
-    // action is not a relation but still validates the input
-    checkRelation(subject, action, resource);
+    checkPermissionTuple(subject, action, resource);
     const computedTuple = computePermissionTuple(subject, action, resource);
     const permission = await Permission.getInstance().findOne({
       computedTuple,
@@ -58,6 +84,92 @@ export class PermissionsController {
     }
     await Permission.getInstance().deleteOne({ _id: permission._id });
     await RuleCache.invalidateSubject(this.grpcSdk, subject);
+  }
+
+  async getSubjectPermissions(
+    subject: string,
+    resource: string,
+    actionPrefix?: string,
+  ): Promise<SubjectPermissionInventoryEntry[]> {
+    const started = Date.now();
+    try {
+      const prefix = actionPrefixOrEmpty(actionPrefix);
+      assertResourceIdentifier(subject, 'Subject');
+      assertResourceIdentifier(resource, 'Resource');
+      const cached = await RuleCache.findInventory(
+        this.grpcSdk,
+        subject,
+        resource,
+        prefix,
+      );
+      if (cached) {
+        ConduitGrpcSdk.Metrics?.increment('authorization_rule_cache_hit_total');
+        return cached;
+      }
+      ConduitGrpcSdk.Metrics?.increment('authorization_rule_cache_miss_total');
+      const permissions = await this.loadSubjectPermissions(subject, resource, prefix);
+      await RuleCache.storeInventory(
+        this.grpcSdk,
+        subject,
+        resource,
+        prefix,
+        permissions,
+      );
+      return permissions;
+    } finally {
+      ConduitGrpcSdk.Metrics?.observe(
+        'authorization_subject_permissions_duration_ms',
+        Date.now() - started,
+      );
+    }
+  }
+
+  private async loadSubjectPermissions(
+    subject: string,
+    resource: string,
+    prefix: string,
+  ): Promise<SubjectPermissionInventoryEntry[]> {
+    const resourceType = resource.slice(0, resource.indexOf(':'));
+    const definition = await ResourceDefinition.getInstance().findOne({
+      name: resourceType,
+    });
+    if (!definition) {
+      throw new GrpcError(status.NOT_FOUND, 'Resource definition not found');
+    }
+    const actions = Object.keys(definition.permissions ?? {})
+      .filter(action => prefix === '' || action.startsWith(prefix))
+      .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+    if (actions.length === 0) return [];
+    const [directActions, inheritedActions] = await Promise.all([
+      this.findDirectActions(subject, resource, actions),
+      this.indexController.findInheritedActions(subject, resource, actions),
+    ]);
+    const implicit = subject === resource;
+    return actions.map(action => {
+      const direct = directActions.has(action);
+      const inherited = inheritedActions.has(action);
+      return {
+        action,
+        direct,
+        inherited,
+        implicit,
+        allowed: direct || inherited || implicit,
+      };
+    });
+  }
+
+  private async findDirectActions(subject: string, resource: string, actions: string[]) {
+    if (actions.length === 0) return new Set<string>();
+    type DirectPermission = Pick<Permission, 'permission'>;
+    const rows = (await Permission.getInstance().findMany(
+      {
+        subject,
+        resource,
+        permission: { $in: actions },
+      },
+      { select: 'permission' },
+    )) as DirectPermission[];
+    return new Set(rows.map(row => row.permission));
   }
 
   async can(subject: string, action: string, object: string) {

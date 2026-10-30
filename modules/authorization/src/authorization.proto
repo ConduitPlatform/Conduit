@@ -102,6 +102,24 @@ message Decision {
   bool allow = 1;
 }
 
+message SubjectPermissionsRequest {
+  string subject = 1;
+  string resource = 2;
+  optional string actionPrefix = 3;
+}
+
+message SubjectPermission {
+  string action = 1;
+  bool direct = 2;
+  bool inherited = 3;
+  bool implicit = 4;
+  bool allowed = 5;
+}
+
+message SubjectPermissionsResponse {
+  repeated SubjectPermission permissions = 1;
+}
+
 service Authorization {
   rpc DefineResource(Resource) returns (ResourceModificationAcknowledgement);
   rpc DeleteResource(DeleteResourceRequest) returns (google.protobuf.Empty);
@@ -114,6 +132,7 @@ service Authorization {
   rpc DeleteAllRelations(DeleteAllRelationsRequest) returns (google.protobuf.Empty);
   rpc FindRelation(FindRelationRequest) returns (FindRelationResponse);
   rpc Can(PermissionCheck) returns (Decision);
+  rpc GetSubjectPermissions(SubjectPermissionsRequest) returns (SubjectPermissionsResponse);
   rpc GetAllowedResources(AllowedResourcesRequest) returns (AllowedResourcesResponse);
   rpc CreateResourceAccessList(ResourceAccessListRequest) returns (ResourceAccessListResponse);
 }

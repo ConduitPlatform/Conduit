@@ -25,8 +25,10 @@ export const checkPermissionTuple = (subject: string, action: string, object: st
   if (!object.includes(':')) {
     throw new Error('Object must be a valid resource identifier');
   }
-  if (!/^[a-zA-Z]+$/.test(action)) {
-    throw new Error('Relation must be a plain string');
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(action)) {
+    throw new Error(
+      'Action must start with a letter and contain only letters, numbers, and underscores',
+    );
   }
 };
 
