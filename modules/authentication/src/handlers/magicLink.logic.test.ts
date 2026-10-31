@@ -82,10 +82,6 @@ function issue(store: ReturnType<typeof createStore>, token: string, now: number
   });
 }
 
-/**
- * Same consume used by POST /magic-link/:magicToken and GET /hook/magic-link/:verificationToken.
- * `path` only labels which route issued the session.
- */
 function redeem(
   store: ReturnType<typeof createStore>,
   magicToken: string,

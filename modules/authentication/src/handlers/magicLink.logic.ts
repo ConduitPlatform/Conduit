@@ -2,17 +2,6 @@ import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { TokenType } from '../constants/TokenType.js';
 
-/*
- * Issue and redeem for a magic link. Database calls are injected so the sequence can be
- * tested without Mongo. POST /magic-link/:magicToken and GET /hook/magic-link/:verificationToken
- * both redeem through redeemMagicLink, which deletes the token before issueSession.
- */
-
-export function magicLinkExpiresAt(now: number, ttlMs: number): Date {
-  return new Date(now + ttlMs);
-}
-
-/** Missing or past expiresAt is expired. The Mongo TTL index removes the document at that time. */
 export function magicLinkExpired(
   expiresAt: Date | string | null | undefined,
   now: number,
@@ -43,7 +32,7 @@ export async function issueMagicLinkToken<T>(args: {
     user: args.userId,
     token: args.token,
     data: args.data,
-    expiresAt: magicLinkExpiresAt(args.now ?? Date.now(), args.ttlMs),
+    expiresAt: new Date((args.now ?? Date.now()) + args.ttlMs),
   });
 }
 
