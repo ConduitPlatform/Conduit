@@ -21,10 +21,10 @@ export default {
     issuer: {
       doc: 'Issuer shown in authenticator apps when a user enables TOTP. Used as the otpauth label prefix and issuer parameter.',
       format: 'String',
-      default: 'conduit',
+      default: 'Conduit',
     },
     allowedIssuers: {
-      doc: 'Client-supplied issuer names the 2FA enable route may accept. An empty list ignores client names and uses the configured issuer.',
+      doc: 'Issuer names a client may request on the 2FA enable route. Any other requested issuer is rejected, so an empty list rejects every client-supplied issuer.',
       format: 'Array',
       children: {
         format: 'String',

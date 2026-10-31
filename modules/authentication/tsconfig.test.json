@@ -26,6 +26,7 @@
     "src/config/config.ts",
     "src/handlers/totpIssuer.ts",
     "src/handlers/totpIssuer.test.ts",
+    "src/handlers/twoFa.issuer.test.ts",
     "src/handlers/realmRequest.logic.ts",
     "src/handlers/realmRequest.logic.test.ts",
     "src/handlers/realm.logic.ts",

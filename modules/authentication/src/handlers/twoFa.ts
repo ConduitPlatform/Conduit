@@ -118,7 +118,7 @@ export class TwoFa implements IAuthenticationStrategy {
         action: ConduitRouteActions.UPDATE,
         description: `Enables a phone or qr based 2FA method for a user and 
                 requires their phone number in case of phone 2FA.
-                Authenticator setup accepts an optional issuer when that name is allowlisted.`,
+                Authenticator setup accepts an optional issuer from twoFa.allowedIssuers.`,
         middlewares: authRouteMiddlewares,
         bodyParams: {
           method: ConduitString.Required,
