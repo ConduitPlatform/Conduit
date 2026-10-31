@@ -33,8 +33,12 @@ import {
   RoutingManager,
   ModuleError,
 } from '@conduitplatform/module-tools';
-import { createHash } from 'crypto';
 import { authenticateChecks, changePassword } from './utils.js';
+import {
+  consumeEmailVerificationCode,
+  EMAIL_CODE_TTL_MS,
+  emailCodeKeys,
+} from './verificationCode.logic.js';
 import { errors } from '../errors.js';
 import {
   assertAnonymousRealmAllowed,
@@ -801,12 +805,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(verificationTokenDoc)) {
       throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
     }
-    const emailHash = createHash('sha256').update(email).digest('hex');
-    const otp = await this.grpcSdk.state!.getKey(emailHash);
-    if (!otp || otp !== code) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid verification code');
-    }
-    await this.grpcSdk.state!.clearKey(emailHash);
+    await consumeEmailVerificationCode(
+      (...args) => this.grpcSdk.state!.consumeKeyIfMatches(...args),
+      email,
+      code,
+    );
     await User.getInstance().findByIdAndUpdate(foundUser._id, { isVerified: true });
     await Token.getInstance().deleteOne({ _id: verificationTokenDoc._id });
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(foundUser));
@@ -1035,7 +1038,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       });
     } else {
       const otp = AuthUtils.generateOtp();
-      const emailHash = createHash('sha256').update(user.email).digest('hex');
+      const { codeKey, attemptsKey } = emailCodeKeys(user.email);
       await this.emailModule.sendEmail('EmailVerificationWithCode', {
         email: user.email,
         variables: {
@@ -1043,7 +1046,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
           user: safeUser,
         },
       });
-      await this.grpcSdk.state!.setKey(emailHash, otp, 2 * 60 * 1000);
+      await this.grpcSdk.state!.clearKey(attemptsKey);
+      await this.grpcSdk.state!.setKey(codeKey, otp, EMAIL_CODE_TTL_MS);
     }
   }
 }

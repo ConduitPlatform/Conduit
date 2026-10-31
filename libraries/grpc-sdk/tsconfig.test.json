@@ -7,5 +7,10 @@
     "sourceMap": false,
     "types": ["node"]
   },
-  "include": ["src/utilities/EventBus.ts", "src/utilities/EventBus.test.ts"]
+  "include": [
+    "src/utilities/EventBus.ts",
+    "src/utilities/EventBus.test.ts",
+    "src/utilities/StateManager.ts",
+    "src/utilities/StateManager.test.ts"
+  ]
 }

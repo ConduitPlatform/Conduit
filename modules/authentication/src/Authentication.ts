@@ -87,6 +87,10 @@ import { fileURLToPath } from 'node:url';
 import { TeamsHandler } from './handlers/team.js';
 import { validateAppleClients } from './handlers/oauth2/utils/validateAppleClients.js';
 import {
+  expiredMagicLinksQuery,
+  magicLinkExpiryError,
+} from './handlers/magicLink.logic.js';
+import {
   assertAnonymousRealmAllowed,
   assertAnonymousUserInRealm,
   grantHomeMembership,
@@ -357,6 +361,7 @@ export default class Authentication extends ManagedModule<Config> {
    * the startup reconciliation, where a throw would not reach the caller of the update:
    *  - an identity mode that is not `shared` or `isolated` (INVALID_ARGUMENT): checked here
    *    so the refusal reaches the caller (preConfig also refuses it, for the other paths);
+   *    the same goes for a magic_link.expiry_period outside 1 ms to one day;
    *  - switching the realms feature off while enabled realm teams exist (the "flag off = no
    *    realm data" invariant): demote them first;
    *  - returning the identity mode from isolated to shared while an identifier is held by
@@ -368,15 +373,18 @@ export default class Authentication extends ManagedModule<Config> {
     call: GrpcRequest<SetConfigRequest>,
     callback: GrpcResponse<SetConfigResponse>,
   ) {
-    let incomingTeams: Config['teams'] | undefined;
+    let incoming: Partial<Config> | undefined;
     try {
-      incomingTeams = JSON.parse(call.request.newConfig)?.teams;
+      incoming = JSON.parse(call.request.newConfig);
     } catch {
       // malformed JSON is reported by the base implementation
     }
-    const modeError = identityModeConfigError(incomingTeams?.realms?.identityMode);
-    if (modeError) {
-      return callback({ code: status.INVALID_ARGUMENT, message: modeError });
+    const incomingTeams = incoming?.teams;
+    const configError =
+      identityModeConfigError(incomingTeams?.realms?.identityMode) ??
+      magicLinkExpiryError(incoming?.magic_link?.expiry_period);
+    if (configError) {
+      return callback({ code: status.INVALID_ARGUMENT, message: configError });
     }
     const previousTeams = ConfigController.getInstance().config?.teams;
     if (isIdentityModeRevertTransition(previousTeams, incomingTeams)) {
@@ -459,6 +467,8 @@ export default class Authentication extends ManagedModule<Config> {
 
     const modeError = identityModeConfigError(config.teams?.realms?.identityMode);
     if (modeError) throw new GrpcError(status.INVALID_ARGUMENT, modeError);
+    const expiryError = magicLinkExpiryError(config.magic_link?.expiry_period);
+    if (expiryError) throw new GrpcError(status.INVALID_ARGUMENT, expiryError);
 
     return config;
   }
@@ -1577,6 +1587,7 @@ export default class Authentication extends ManagedModule<Config> {
         await AuthUtils.cleanupExpiredUsers();
         await AuthUtils.reconcileLoggedInUsersMetric();
         await purgeExpiredLinkProofs();
+        await models.Token.getInstance().deleteMany(expiredMagicLinksQuery(new Date()));
       } catch (e) {
         ConduitGrpcSdk.Logger.error(`Token cleanup failed: ${(e as Error).message}`);
       }
