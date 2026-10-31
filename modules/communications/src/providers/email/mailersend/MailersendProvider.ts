@@ -60,7 +60,7 @@ export class MailersendProvider extends EmailProviderClass {
     return info.headers['x-message-id'];
   }
 
-  async sendEmail(mailOptions: Mail.Options) {
+  async sendEmail(mailOptions: Mail.Options): Promise<SentMessageInfo> {
     const emailParams = new EmailParams()
       .setFrom(new Sender(mailOptions.from as string))
       .setTo([new Recipient(mailOptions.to as string)])
@@ -76,6 +76,26 @@ export class MailersendProvider extends EmailProviderClass {
       );
     }
 
-    return await this._mailersendSdk.email.send(emailParams);
+    const response = await this._mailersendSdk.email.send(emailParams);
+    const rawId = response.headers?.['x-message-id'];
+    const messageId =
+      typeof rawId === 'string'
+        ? rawId
+        : Array.isArray(rawId)
+          ? String(rawId[0] ?? '')
+          : '';
+    const from = typeof mailOptions.from === 'string' ? mailOptions.from : '';
+    const to = typeof mailOptions.to === 'string' ? mailOptions.to : '';
+    return {
+      messageId,
+      response: String(response.statusCode),
+      headers: response.headers,
+      body: response.body,
+      statusCode: response.statusCode,
+      envelope: {
+        from: from.length > 0 ? from : false,
+        to: to.length > 0 ? [to] : [],
+      },
+    };
   }
 }

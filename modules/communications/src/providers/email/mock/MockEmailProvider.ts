@@ -15,14 +15,17 @@ const EXTERNAL_TEMPLATES_UNSUPPORTED =
   'Mock provider does not support external templates';
 
 function formatRecipients(to: Mail.Options['to']): string {
-  if (!to) return '';
+  if (to == null || to === '') return '';
   if (typeof to === 'string') return to;
   if (Array.isArray(to)) {
     return to
-      .map(recipient => (typeof recipient === 'string' ? recipient : recipient.address))
+      .map(recipient => formatRecipients(recipient))
+      .filter(recipient => recipient.length > 0)
       .join(', ');
   }
-  return to.address;
+  if (typeof to.address === 'string' && to.address.length > 0) return to.address;
+  if (to.group) return formatRecipients(to.group);
+  return '';
 }
 
 export class MockEmailProvider extends EmailProviderClass {
@@ -35,9 +38,17 @@ export class MockEmailProvider extends EmailProviderClass {
     ConduitGrpcSdk.Logger.log(
       `[MOCK EMAIL] To: ${formatRecipients(mailOptions.to)} | Subject: ${mailOptions.subject ?? ''}`,
     );
+    const from = formatRecipients(mailOptions.from);
+    const to = formatRecipients(mailOptions.to)
+      .split(', ')
+      .filter(address => address.length > 0);
     return Promise.resolve({
       messageId,
       response: 'OK (mock)',
+      envelope: {
+        from: from || false,
+        to,
+      },
     });
   }
 

@@ -439,7 +439,7 @@ export default class Communications extends ManagedModule<Config> {
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
-    return callback(null, { sentMessageInfo });
+    return callback(null, { sentMessageInfo: JSON.stringify(sentMessageInfo) });
   }
 
   async resendEmail(
@@ -452,7 +452,7 @@ export default class Communications extends ManagedModule<Config> {
       .catch((e: Error) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
-    return callback(null, { sentMessageInfo });
+    return callback(null, { sentMessageInfo: JSON.stringify(sentMessageInfo) });
   }
 
   async getEmailStatus(
