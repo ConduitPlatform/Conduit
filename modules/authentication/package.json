@@ -10,26 +10,12 @@
   },
   "conduit": {
     "peers": {
-      "await": [
-        "database"
-      ],
+      "await": ["database"],
       "watch": [
-        {
-          "module": "email",
-          "edge": "rising"
-        },
-        {
-          "module": "authorization",
-          "edge": "rising"
-        },
-        {
-          "module": "sms",
-          "edge": "rising"
-        },
-        {
-          "module": "router",
-          "edge": "rising"
-        }
+        { "module": "email", "edge": "rising" },
+        { "module": "authorization", "edge": "rising" },
+        { "module": "sms", "edge": "rising" },
+        { "module": "router", "edge": "rising" }
       ]
     }
   },
