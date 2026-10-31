@@ -32,6 +32,23 @@ export async function isLockContention(error: unknown): Promise<boolean> {
   );
 }
 
+const CONSUME_KEY_IF_MATCHES_SCRIPT = `
+local stored = redis.call('GET', KEYS[1])
+if not stored then return 0 end
+if stored == ARGV[1] then
+  redis.call('DEL', KEYS[1], KEYS[2])
+  return 1
+end
+local attempts = redis.call('INCR', KEYS[2])
+if attempts >= tonumber(ARGV[2]) then
+  redis.call('DEL', KEYS[1], KEYS[2])
+elseif attempts == 1 then
+  local ttl = redis.call('PTTL', KEYS[1])
+  if ttl > 0 then redis.call('PEXPIRE', KEYS[2], ttl) end
+end
+return 0
+`;
+
 export class StateManager {
   private readonly redisClient: Redis | Cluster;
   private readonly redLock: Redlock;
@@ -140,6 +157,28 @@ export class StateManager {
 
   getKey(keyName: string) {
     return this.redisClient.get(keyName);
+  }
+
+  /**
+   * Deletes keyName and resolves true when it holds value. A mismatch is counted in
+   * attemptsKey (expiring with keyName), and the maxAttempts-th mismatch deletes keyName.
+   * Both keys must share a hash tag for Redis Cluster.
+   */
+  async consumeKeyIfMatches(
+    keyName: string,
+    attemptsKey: string,
+    value: string,
+    maxAttempts: number,
+  ): Promise<boolean> {
+    const result = await this.redisClient.eval(
+      CONSUME_KEY_IF_MATCHES_SCRIPT,
+      2,
+      keyName,
+      attemptsKey,
+      value,
+      maxAttempts,
+    );
+    return result === 1;
   }
 
   incr(keyName: string) {
