@@ -23,6 +23,7 @@ import { TokenType, TWO_FA_CHALLENGE } from '../constants/index.js';
 import * as node2fa from '@conduitplatform/node-2fa';
 import { v4 as uuid } from 'uuid';
 import { TokenProvider } from './tokenProvider.js';
+import { resolveTotpIssuer } from './totpIssuer.js';
 import { Config } from '../config/index.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { randomInt } from 'crypto';
@@ -116,11 +117,13 @@ export class TwoFa implements IAuthenticationStrategy {
         path: '/twoFa/enable',
         action: ConduitRouteActions.UPDATE,
         description: `Enables a phone or qr based 2FA method for a user and 
-                requires their phone number in case of phone 2FA.`,
+                requires their phone number in case of phone 2FA.
+                Authenticator setup accepts an optional issuer when that name is allowlisted.`,
         middlewares: authRouteMiddlewares,
         bodyParams: {
           method: ConduitString.Required,
           phoneNumber: ConduitString.Optional,
+          issuer: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('EnableTwoFaResponse', 'String'),
@@ -210,7 +213,7 @@ export class TwoFa implements IAuthenticationStrategy {
         'Re-login required to enter sudo mode',
       );
     }
-    const { method, phoneNumber } = call.request.params;
+    const { method, phoneNumber, issuer } = call.request.params;
     const context = call.request.context;
     const user = context.user;
     if (user.hasTwoFA) {
@@ -222,7 +225,7 @@ export class TwoFa implements IAuthenticationStrategy {
       method === 'authenticator' &&
       ConfigController.getInstance().config.twoFa.methods.authenticator
     ) {
-      return this.enableAuthenticator2Fa(user);
+      return this.enableAuthenticator2Fa(user, issuer);
     } else {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Method not valid');
     }
@@ -565,10 +568,13 @@ export class TwoFa implements IAuthenticationStrategy {
     return 'Verification code sent';
   }
 
-  private async enableAuthenticator2Fa(user: User): Promise<string> {
+  private async enableAuthenticator2Fa(
+    user: User,
+    requestedIssuer?: string,
+  ): Promise<string> {
+    const { issuer, allowedIssuers } = ConfigController.getInstance().config.twoFa;
     const secret = await node2fa.generateSecret({
-      //to do: add logic for app name insertion
-      name: 'Conduit',
+      name: resolveTotpIssuer({ issuer, allowedIssuers }, requestedIssuer),
       // add another string when mail is not available
       account: user.email ?? `conduit-${user._id}`,
     });

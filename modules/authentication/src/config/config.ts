@@ -18,6 +18,19 @@ export default {
         default: true,
       },
     },
+    issuer: {
+      doc: 'Issuer shown in authenticator apps when a user enables TOTP. Used as the otpauth label prefix and issuer parameter.',
+      format: 'String',
+      default: 'conduit',
+    },
+    allowedIssuers: {
+      doc: 'Client-supplied issuer names the 2FA enable route may accept. An empty list ignores client names and uses the configured issuer.',
+      format: 'Array',
+      children: {
+        format: 'String',
+      },
+      default: [],
+    },
     backUpCodes: {
       enabled: {
         format: 'Boolean',
