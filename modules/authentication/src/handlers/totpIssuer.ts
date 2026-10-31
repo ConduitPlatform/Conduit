@@ -6,23 +6,11 @@ export interface TotpIssuerSettings {
   allowedIssuers?: readonly string[];
 }
 
-function isControlCharacter(codePoint: number): boolean {
-  return codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f);
-}
-
 export function sanitizeTotpIssuer(value: string): string {
-  let cleaned = '';
-  for (const char of value) {
-    if (char === ':') {
-      continue;
-    }
-    const codePoint = char.codePointAt(0);
-    if (codePoint !== undefined && isControlCharacter(codePoint)) {
-      continue;
-    }
-    cleaned += char;
-  }
-  return cleaned.trim().slice(0, TOTP_ISSUER_MAX_LENGTH);
+  return value
+    .replace(/[:\u0000-\u001f\u007f-\u009f]/g, '')
+    .trim()
+    .slice(0, TOTP_ISSUER_MAX_LENGTH);
 }
 
 export function resolveTotpIssuer(

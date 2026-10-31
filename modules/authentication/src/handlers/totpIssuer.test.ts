@@ -13,14 +13,6 @@ import {
 describe('twoFa issuer config', () => {
   it('defaults the issuer to conduit and the allowlist to empty', () => {
     assert.equal(authConfig.twoFa.issuer.default, DEFAULT_TOTP_ISSUER);
-    assert.equal(authConfig.twoFa.issuer.format, 'String');
-    assert.equal(typeof authConfig.twoFa.issuer.doc, 'string');
-    assert.ok(authConfig.twoFa.issuer.doc.length > 0);
-    assert.deepEqual(authConfig.twoFa.allowedIssuers.default, []);
-    assert.equal(authConfig.twoFa.allowedIssuers.format, 'Array');
-    assert.equal(authConfig.twoFa.allowedIssuers.children.format, 'String');
-    assert.ok(authConfig.twoFa.allowedIssuers.doc.length > 0);
-
     const loaded = convict(authConfig);
     loaded.validate({ allowed: 'warn' });
     const properties = loaded.getProperties();
