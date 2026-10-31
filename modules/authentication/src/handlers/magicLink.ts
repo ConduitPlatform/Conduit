@@ -27,6 +27,7 @@ import { TokenProvider } from './tokenProvider.js';
 import { MagicLinkTemplate as magicLinkTemplate } from '../templates/index.js';
 import { AuthUtils } from '../utils/index.js';
 import { errors } from '../errors.js';
+import { issueMagicLinkToken, redeemMagicLink } from './magicLink.logic.js';
 import {
   admitPrincipal,
   assertGlobalStrategyAvailable,
@@ -139,15 +140,17 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (user.isAnonymous) throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
 
-    const token: Token = await Token.getInstance().create({
-      tokenType: TokenType.MAGIC_LINK,
-      user: user._id,
+    const token: Token = await issueMagicLinkToken({
+      userId: user._id,
+      token: uuid(),
       data: {
         clientId,
         ...(redirectUri !== undefined ? { redirectUri } : {}),
         ...(realmCtx ? { realm: realmCtx.team.realm!.slug } : {}),
       },
-      token: uuid(),
+      ttlMs: ConfigController.getInstance().config.magic_link.expiry_period,
+      deleteMany: query => Token.getInstance().deleteMany(query),
+      create: doc => Token.getInstance().create(doc),
     });
 
     await this.sendMagicLinkMail(user, token);
@@ -157,71 +160,74 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   async verifyLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { verificationToken } = call.request.urlParams;
     const config = ConfigController.getInstance().config;
-    const { user, data, realmCtx } = await this.redeemMagicToken(verificationToken);
-    const redirectUri =
-      AuthUtils.validateRedirectUri(data.redirectUri) ??
-      config.magic_link.redirect_uri.replace(/\/$/, '');
-    return TokenProvider.getInstance().provideUserTokens(
-      {
-        user,
-        clientId: data.clientId,
-        config,
-        realm: realmIdOf(realmCtx),
-      },
-      redirectUri,
-    );
+    return this.redeemMagicToken(verificationToken, (user, data, realmCtx) => {
+      const redirectUri =
+        AuthUtils.validateRedirectUri(data.redirectUri) ??
+        config.magic_link.redirect_uri.replace(/\/$/, '');
+      return TokenProvider.getInstance().provideUserTokens(
+        {
+          user,
+          clientId: data.clientId,
+          config,
+          realm: realmIdOf(realmCtx),
+        },
+        redirectUri,
+      );
+    });
   }
 
   private async exchangeMagicToken(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
     const { magicToken } = call.request.urlParams;
-    const { user, data, realmCtx } = await this.redeemMagicToken(magicToken);
     const config = ConfigController.getInstance().config;
-    return TokenProvider.getInstance().provideUserTokens({
-      user,
-      clientId: data.clientId,
-      config,
-      realm: realmIdOf(realmCtx),
-    });
+    return this.redeemMagicToken(magicToken, (user, data, realmCtx) =>
+      TokenProvider.getInstance().provideUserTokens({
+        user,
+        clientId: data.clientId,
+        config,
+        realm: realmIdOf(realmCtx),
+      }),
+    );
   }
 
-  private async redeemMagicToken(magicToken: string): Promise<{
-    user: User;
-    data: Token['data'] & { clientId: Client['clientId'] };
-    realmCtx: RealmContext | null;
-  }> {
-    const token: Token | null = await Token.getInstance().findOne(
-      {
-        tokenType: TokenType.MAGIC_LINK,
-        token: magicToken,
+  private redeemMagicToken<T>(
+    magicToken: string,
+    issueSession: (
+      user: User,
+      data: Token['data'] & { clientId: Client['clientId'] },
+      realmCtx: RealmContext | null,
+    ) => Promise<T>,
+  ): Promise<T> {
+    return redeemMagicLink({
+      magicToken,
+      findToken: token =>
+        Token.getInstance().findOne(
+          {
+            tokenType: TokenType.MAGIC_LINK,
+            token,
+          },
+          { readPreference: 'primary' },
+        ),
+      deleteOne: query => Token.getInstance().deleteOne(query),
+      loadUser: token =>
+        User.getInstance().findOne({
+          _id: token.user! as string,
+        }),
+      resolveRealm: async token => {
+        // the realm the link was requested for, re-validated at redemption
+        const realmCtx = await resolveRealmFromSlug(token.data?.realm);
+        if (!realmCtx) assertGlobalStrategyAvailable('magicLink');
+        return realmCtx;
       },
-      { readPreference: 'primary' },
-    );
-    if (isNil(token)) {
-      throw new GrpcError(status.NOT_FOUND, 'Magic link token does not exist');
-    }
-    const user: User | null = await User.getInstance().findOne({
-      _id: token.user! as string,
+      admit: async (user, realmCtx) => {
+        // a link requested while the guest could sign in is refused once direct sign-in is off
+        // (or a strategy is off at the realm or the home realm), with the not-found answer
+        const admitted = await admitPrincipal(realmCtx, user, 'magicLink');
+        return admitted != null;
+      },
+      issueSession: (token, user, realmCtx) => issueSession(user, token.data, realmCtx),
     });
-    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
-    // the realm the link was requested for, re-validated at redemption
-    const realmCtx = await resolveRealmFromSlug(token.data?.realm);
-    if (!realmCtx) assertGlobalStrategyAvailable('magicLink');
-    // a link requested while the guest could sign in is refused once direct sign-in is off
-    // (or a strategy is off at the realm or the home realm), with the not-found answer
-    const admitted = await admitPrincipal(realmCtx, user, 'magicLink');
-    if (!admitted) throw new GrpcError(status.NOT_FOUND, 'User not found');
-    await Token.getInstance()
-      .deleteMany({ user: token.user, tokenType: TokenType.MAGIC_LINK })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
-    return {
-      user,
-      data: token.data,
-      realmCtx,
-    };
   }
 
   private async sendMagicLinkMail(user: User, token: Token) {

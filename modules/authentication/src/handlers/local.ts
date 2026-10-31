@@ -35,6 +35,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { createHash } from 'crypto';
 import { authenticateChecks, changePassword } from './utils.js';
+import { consumeEmailVerificationCode } from './verificationCode.logic.js';
 import { errors } from '../errors.js';
 import {
   assertAnonymousRealmAllowed,
@@ -802,11 +803,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
     }
     const emailHash = createHash('sha256').update(email).digest('hex');
-    const otp = await this.grpcSdk.state!.getKey(emailHash);
-    if (!otp || otp !== code) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid verification code');
-    }
-    await this.grpcSdk.state!.clearKey(emailHash);
+    await consumeEmailVerificationCode(
+      key => this.grpcSdk.state!.getDelKey(key),
+      emailHash,
+      code,
+    );
     await User.getInstance().findByIdAndUpdate(foundUser._id, { isVerified: true });
     await Token.getInstance().deleteOne({ _id: verificationTokenDoc._id });
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(foundUser));

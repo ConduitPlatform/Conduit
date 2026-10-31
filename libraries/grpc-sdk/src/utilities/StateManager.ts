@@ -142,6 +142,11 @@ export class StateManager {
     return this.redisClient.get(keyName);
   }
 
+  /** Redis GETDEL: returns the value and removes the key in one command. */
+  getDelKey(keyName: string) {
+    return this.redisClient.getdel(keyName);
+  }
+
   incr(keyName: string) {
     return this.redisClient.incr(keyName);
   }

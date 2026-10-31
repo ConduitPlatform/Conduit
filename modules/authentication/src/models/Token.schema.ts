@@ -20,11 +20,24 @@ const schema: ConduitModel = {
   data: {
     type: TYPE.JSON,
   },
+  expiresAt: {
+    type: TYPE.Date,
+    required: false,
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
+// Mongo deletes a document when expiresAt is reached. Postgres skips this index.
 const modelOptions = {
   timestamps: true,
+  indexes: [
+    {
+      fields: ['expiresAt'],
+      options: {
+        expireAfterSeconds: 0,
+      },
+    },
+  ],
   conduit: {
     permissions: {
       extendable: true,
@@ -43,6 +56,7 @@ export class Token extends ConduitActiveSchema<Token> {
   user?: string | User;
   token: string;
   data?: any;
+  expiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 
