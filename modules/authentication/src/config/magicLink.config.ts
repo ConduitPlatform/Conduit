@@ -18,7 +18,7 @@ export default {
       optional: true,
     },
     expiry_period: {
-      doc: 'How long a magic link token stays valid, in milliseconds',
+      doc: 'How long a magic link token stays valid, in milliseconds (at most one day)',
       format: 'Number',
       default: MAGIC_LINK_TTL_MS,
     },

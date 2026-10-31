@@ -11,13 +11,35 @@ export function magicLinkExpired(
   return Number.isNaN(time) || time <= now;
 }
 
-export async function issueMagicLinkToken<T>(args: {
+export const MAGIC_LINK_MAX_TTL_MS = 24 * 60 * 60 * 1000;
+
+export function magicLinkExpiryError(value: unknown): string | null {
+  if (value === undefined) return null;
+  const valid =
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= MAGIC_LINK_MAX_TTL_MS;
+  if (valid) return null;
+  return `magic_link.expiry_period must be a whole number of milliseconds from 1 to ${MAGIC_LINK_MAX_TTL_MS}`;
+}
+
+/** Expired magic-link tokens, and those issued before tokens carried an expiry. */
+export function expiredMagicLinksQuery(now: Date) {
+  return {
+    tokenType: TokenType.MAGIC_LINK,
+    $or: [{ expiresAt: { $lte: now } }, { expiresAt: { $exists: false } }],
+  };
+}
+
+export async function issueMagicLinkToken<
+  T extends { _id: string; createdAt: Date },
+>(args: {
   userId: string;
   token: string;
   data: any;
   ttlMs: number;
   now?: number;
-  deleteMany: (query: { user: string; tokenType: string }) => Promise<unknown>;
   create: (doc: {
     tokenType: string;
     user: string;
@@ -25,15 +47,30 @@ export async function issueMagicLinkToken<T>(args: {
     data: any;
     expiresAt: Date;
   }) => Promise<T>;
+  deliver: (token: T) => Promise<unknown>;
+  deleteMany: (query: {
+    user: string;
+    tokenType: string;
+    _id: { $ne: string };
+    createdAt: { $lt: Date };
+  }) => Promise<unknown>;
 }): Promise<T> {
-  await args.deleteMany({ user: args.userId, tokenType: TokenType.MAGIC_LINK });
-  return args.create({
+  const created = await args.create({
     tokenType: TokenType.MAGIC_LINK,
     user: args.userId,
     token: args.token,
     data: args.data,
     expiresAt: new Date((args.now ?? Date.now()) + args.ttlMs),
   });
+  await args.deliver(created);
+  // only older tokens: two concurrent requests must not delete each other's link
+  await args.deleteMany({
+    user: args.userId,
+    tokenType: TokenType.MAGIC_LINK,
+    _id: { $ne: created._id },
+    createdAt: { $lt: created.createdAt },
+  });
+  return created;
 }
 
 export async function redeemMagicLink<

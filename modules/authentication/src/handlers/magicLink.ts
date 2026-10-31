@@ -140,7 +140,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (user.isAnonymous) throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
 
-    const token: Token = await issueMagicLinkToken({
+    await issueMagicLinkToken({
       userId: user._id,
       token: uuid(),
       data: {
@@ -149,11 +149,10 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
         ...(realmCtx ? { realm: realmCtx.team.realm!.slug } : {}),
       },
       ttlMs: ConfigController.getInstance().config.magic_link.expiry_period,
-      deleteMany: query => Token.getInstance().deleteMany(query),
       create: doc => Token.getInstance().create(doc),
+      deliver: token => this.sendMagicLinkMail(user, token),
+      deleteMany: query => Token.getInstance().deleteMany(query),
     });
-
-    await this.sendMagicLinkMail(user, token);
     return 'token sent';
   }
 
