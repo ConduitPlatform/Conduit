@@ -149,7 +149,15 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
         ...(realmCtx ? { realm: realmCtx.team.realm!.slug } : {}),
       },
       ttlMs: ConfigController.getInstance().config.magic_link.expiry_period,
-      create: doc => Token.getInstance().create(doc),
+      // older links are matched by the stored createdAt, which MySQL keeps to the second
+      create: async doc => {
+        const created = await Token.getInstance().create(doc);
+        const stored = await Token.getInstance().findOne(
+          { _id: created._id },
+          { readPreference: 'primary' },
+        );
+        return stored ?? created;
+      },
       deliver: token => this.sendMagicLinkMail(user, token),
       deleteMany: query => Token.getInstance().deleteMany(query),
     });

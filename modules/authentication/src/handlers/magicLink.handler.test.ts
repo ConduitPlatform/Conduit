@@ -35,6 +35,8 @@ function matches(doc: Doc, query: Doc): boolean {
   });
 }
 
+let secondPrecision = false;
+
 function createDatabase() {
   const tables: Record<string, Doc[]> = { Token: [], User: [] };
   let nextId = 0;
@@ -50,7 +52,10 @@ function createDatabase() {
       nextId += 1;
       const now = new Date(1_600_000_000_000 + nextId);
       const row = { _id: `${name}-${nextId}`, createdAt: now, updatedAt: now, ...doc };
-      table(name).push(row);
+      const stored = secondPrecision
+        ? { ...row, createdAt: new Date(Math.floor(now.getTime() / 1000) * 1000) }
+        : row;
+      table(name).push(stored);
       return row;
     },
     async deleteOne(name: string, query: Doc) {
@@ -149,6 +154,7 @@ describe('MagicLinkHandlers', () => {
     sentLinks.length = 0;
     failSession = false;
     failMail = false;
+    secondPrecision = false;
   });
 
   afterEach(() => {
@@ -212,6 +218,18 @@ describe('MagicLinkHandlers', () => {
     assert.equal(magicLinks().length, 1);
     assert.equal(sentLinks.length, 2);
     assert.ok(sentLinks[1].endsWith(magicLinks()[0].token));
+  });
+
+  it('keeps a working link after concurrent requests when createdAt is stored to the second', async () => {
+    secondPrecision = true;
+    const handlers = createHandlers();
+    await Promise.all([
+      handlers.sendMagicLink(sendCall('user@example.com')),
+      handlers.sendMagicLink(sendCall('user@example.com')),
+    ]);
+    assert.equal(magicLinks().length, 2);
+    await verify(handlers, sentLinks[1].split('/').pop()!);
+    assert.equal(sessions.length, 1);
   });
 
   it('keeps the previous link when the new mail cannot be sent', async () => {
