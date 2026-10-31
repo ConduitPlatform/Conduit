@@ -51,7 +51,7 @@
     "swagger-ui-express": "5.0.1",
     "uuid": "^14.0.2",
     "winston": "^3.19.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.6"
   },
   "peerDependencies": {
     "socket.io-adapter": "^2.5.8"

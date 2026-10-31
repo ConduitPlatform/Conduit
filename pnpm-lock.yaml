@@ -187,10 +187,10 @@ importers:
         version: 0.8.1
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
-        version: 1.29.0(zod@4.4.3)
+        version: 1.29.0(zod@4.6.6)
       '@scalar/api-reference':
         specifier: ^1.60.0
-        version: 1.60.0(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)
+        version: 1.60.0(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.6.6)
       '@scalar/express-api-reference':
         specifier: ^0.10.18
         version: 0.10.18
@@ -273,8 +273,8 @@ importers:
         specifier: ^3.19.0
         version: 3.19.0
       zod:
-        specifier: ^4.4.3
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/cookie-parser':
         specifier: ^1.4.10
@@ -7294,8 +7294,8 @@ packages:
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
 
-  react-is@19.3.0:
-    resolution: {integrity: sha512-UpMYezM4v5/18F28aC66AEsjXIgE02kyEMH6yLdgLXu/UTfa1Ntwck/nNLrbqJsEXW7gPb0coNO9FQse9WTovA==}
+  react-is@19.3.1:
+    resolution: {integrity: sha512-RRieF6IyxQBkcK6pP8xOHprLTPW6QjRkbGdImtqNme+/hYVwCZkLQLdlZGOhUqXwkS9IEynaGvPJtv6XB/cz0Q==}
 
   read-pkg-up@3.0.0:
     resolution: {integrity: sha512-YFzFrVvpC6frF1sz8psoHDBGF7fLPc+llq/8NB43oagqWkx8ar5zYtsTORtOjw9W2RHLpWP+zTWwBvf1bCmcSw==}
@@ -8510,36 +8510,36 @@ packages:
     peerDependencies:
       zod: ^3.25.28 || ^4
 
-  zod@4.4.3:
-    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+  zod@4.6.6:
+    resolution: {integrity: sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
 
-  '@ai-sdk/gateway@3.0.13(zod@4.4.3)':
+  '@ai-sdk/gateway@3.0.13(zod@4.6.6)':
     dependencies:
       '@ai-sdk/provider': 3.0.2
-      '@ai-sdk/provider-utils': 4.0.5(zod@4.4.3)
+      '@ai-sdk/provider-utils': 4.0.5(zod@4.6.6)
       '@vercel/oidc': 3.1.0
-      zod: 4.4.3
+      zod: 4.6.6
 
-  '@ai-sdk/provider-utils@4.0.5(zod@4.4.3)':
+  '@ai-sdk/provider-utils@4.0.5(zod@4.6.6)':
     dependencies:
       '@ai-sdk/provider': 3.0.2
       '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.1.0
-      zod: 4.4.3
+      zod: 4.6.6
 
   '@ai-sdk/provider@3.0.2':
     dependencies:
       json-schema: 0.4.0
 
-  '@ai-sdk/vue@3.0.33(vue@3.5.38(typescript@6.0.3))(zod@4.4.3)':
+  '@ai-sdk/vue@3.0.33(vue@3.5.38(typescript@6.0.3))(zod@4.6.6)':
     dependencies:
-      '@ai-sdk/provider-utils': 4.0.5(zod@4.4.3)
-      ai: 6.0.33(zod@4.4.3)
+      '@ai-sdk/provider-utils': 4.0.5(zod@4.6.6)
+      ai: 6.0.33(zod@4.6.6)
       swrv: 1.2.0(vue@3.5.38(typescript@6.0.3))
       vue: 3.5.38(typescript@6.0.3)
     transitivePeerDependencies:
@@ -10234,7 +10234,7 @@ snapshots:
 
   '@marijn/find-cluster-break@1.0.2': {}
 
-  '@modelcontextprotocol/sdk@1.29.0(zod@4.4.3)':
+  '@modelcontextprotocol/sdk@1.29.0(zod@4.6.6)':
     dependencies:
       '@hono/node-server': 2.0.5(hono@4.12.26)
       ajv: 8.20.0
@@ -10251,8 +10251,8 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 4.4.3
-      zod-to-json-schema: 3.25.2(zod@4.4.3)
+      zod: 4.6.6
+      zod-to-json-schema: 3.25.2(zod@4.6.6)
     transitivePeerDependencies:
       - supports-color
 
@@ -10526,9 +10526,9 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.62.0':
     optional: true
 
-  '@scalar/agent-chat@0.12.11(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)':
+  '@scalar/agent-chat@0.12.11(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.6.6)':
     dependencies:
-      '@ai-sdk/vue': 3.0.33(vue@3.5.38(typescript@6.0.3))(zod@4.4.3)
+      '@ai-sdk/vue': 3.0.33(vue@3.5.38(typescript@6.0.3))(zod@4.6.6)
       '@scalar/api-client': 3.10.4(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)
       '@scalar/components': 0.27.2(tailwindcss@4.3.1)(typescript@6.0.3)
       '@scalar/helpers': 0.8.2
@@ -10542,7 +10542,7 @@ snapshots:
       '@scalar/validation': 0.6.0
       '@scalar/workspace-store': 0.54.4(typescript@6.0.3)
       '@vueuse/core': 13.9.0(vue@3.5.38(typescript@6.0.3))
-      ai: 6.0.33(zod@4.4.3)
+      ai: 6.0.33(zod@4.6.6)
       js-base64: 3.7.8
       neverpanic: 0.0.8
       truncate-json: 3.0.1
@@ -10596,7 +10596,7 @@ snapshots:
       set-cookie-parser: 3.1.0
       vue: 3.5.38(typescript@6.0.3)
       yaml: 2.9.0
-      zod: 4.4.3
+      zod: 4.6.6
     transitivePeerDependencies:
       - '@vue/composition-api'
       - async-validator
@@ -10613,10 +10613,10 @@ snapshots:
       - typescript
       - universal-cookie
 
-  '@scalar/api-reference@1.60.0(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)':
+  '@scalar/api-reference@1.60.0(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.6.6)':
     dependencies:
       '@headlessui/vue': 1.7.23(vue@3.5.38(typescript@6.0.3))
-      '@scalar/agent-chat': 0.12.11(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.4.3)
+      '@scalar/agent-chat': 0.12.11(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)(zod@4.6.6)
       '@scalar/api-client': 3.10.4(axios@1.18.0(debug@4.4.3))(tailwindcss@4.3.1)(typescript@6.0.3)
       '@scalar/code-highlight': 0.3.6
       '@scalar/components': 0.27.2(tailwindcss@4.3.1)(typescript@6.0.3)
@@ -10788,14 +10788,14 @@ snapshots:
       '@scalar/helpers': 0.8.2
       nanoid: 5.1.11
       type-fest: 5.7.0
-      zod: 4.4.3
+      zod: 4.6.6
 
   '@scalar/types@0.19.0':
     dependencies:
       '@scalar/helpers': 0.11.3
       nanoid: 5.1.16
       type-fest: 5.10.0
-      zod: 4.4.3
+      zod: 4.6.6
 
   '@scalar/use-codemirror@0.14.12(typescript@6.0.3)':
     dependencies:
@@ -11582,13 +11582,13 @@ snapshots:
     dependencies:
       humanize-ms: 1.2.1
 
-  ai@6.0.33(zod@4.4.3):
+  ai@6.0.33(zod@4.6.6):
     dependencies:
-      '@ai-sdk/gateway': 3.0.13(zod@4.4.3)
+      '@ai-sdk/gateway': 3.0.13(zod@4.6.6)
       '@ai-sdk/provider': 3.0.2
-      '@ai-sdk/provider-utils': 4.0.5(zod@4.4.3)
+      '@ai-sdk/provider-utils': 4.0.5(zod@4.6.6)
       '@opentelemetry/api': 1.9.0
-      zod: 4.4.3
+      zod: 4.6.6
 
   ajv-formats@3.0.1(ajv@8.20.0):
     optionalDependencies:
@@ -15358,12 +15358,12 @@ snapshots:
       '@jest/schemas': 30.4.1
       ansi-styles: 5.2.0
       react-is-18: react-is@18.3.1
-      react-is-19: react-is@19.3.0
+      react-is-19: react-is@19.3.1
 
   pretty-format@30.5.1:
     dependencies:
       '@jest/react-is-18': react-is@18.3.1
-      '@jest/react-is-19': react-is@19.3.0
+      '@jest/react-is-19': react-is@19.3.1
       '@jest/schemas': 30.5.0
       ansi-styles: 5.2.0
 
@@ -15462,7 +15462,7 @@ snapshots:
 
   react-is@18.3.1: {}
 
-  react-is@19.3.0: {}
+  react-is@19.3.1: {}
 
   read-pkg-up@3.0.0:
     dependencies:
@@ -16873,10 +16873,10 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  zod-to-json-schema@3.25.2(zod@4.4.3):
+  zod-to-json-schema@3.25.2(zod@4.6.6):
     dependencies:
-      zod: 4.4.3
+      zod: 4.6.6
 
-  zod@4.4.3: {}
+  zod@4.6.6: {}
 
   zwitch@2.0.4: {}
