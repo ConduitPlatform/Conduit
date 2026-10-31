@@ -37,7 +37,7 @@
     "abort-controller-x": "^0.5.0",
     "convict": "^6.2.5",
     "express": "^5.2.1",
-    "fast-jwt": "^6.2.4",
+    "fast-jwt": "^6.3.4",
     "fs-extra": "^11.3.5",
     "ioredis": "^5.11.1",
     "lodash": "^4.18.1",
