@@ -12,8 +12,9 @@ export interface TotpIssuerSettings {
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 
 function stripUnsafe(value: string): string {
-  // ':' separates the otpauth label; Cc are control and Cf are bidi/zero-width characters
-  return value.replace(/[:\p{Cc}\p{Cf}]/gu, '').trim();
+  // ':' separates the otpauth label; Cc are control and Cf are bidi/zero-width characters,
+  // except the joiners (ZWNJ, ZWJ) that emoji sequences and some scripts need
+  return value.replace(/(?![\u200c\u200d])[:\p{Cc}\p{Cf}]/gu, '').trim();
 }
 
 function graphemeCount(value: string): number {
@@ -60,9 +61,9 @@ export function resolveTotpIssuer(
   if (!requestedIssuer) {
     return sanitizeTotpIssuer(settings.issuer ?? '') || DEFAULT_TOTP_ISSUER;
   }
-  const requested = sanitizeTotpIssuer(requestedIssuer);
+  const requested = stripUnsafe(requestedIssuer);
   const allowed = (settings.allowedIssuers ?? []).map(sanitizeTotpIssuer);
-  if (!requested || !allowed.includes(requested)) {
+  if (issuerError('issuer', requestedIssuer) || !allowed.includes(requested)) {
     throw new GrpcError(status.INVALID_ARGUMENT, 'Issuer is not allowed');
   }
   return requested;

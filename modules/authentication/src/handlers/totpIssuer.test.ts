@@ -67,7 +67,7 @@ describe('twoFa issuer config', () => {
       /must be a list/,
     );
     assert.equal(
-      totpIssuerConfigError({ allowedIssuers: ['🇬🇷'.repeat(TOTP_ISSUER_MAX_LENGTH)] }),
+      totpIssuerConfigError({ allowedIssuers: ['👨‍👩‍👧'.repeat(TOTP_ISSUER_MAX_LENGTH)] }),
       null,
     );
   });
@@ -121,6 +121,12 @@ describe('resolveTotpIssuer', () => {
       () => resolveTotpIssuer({ allowedIssuers: ['Acme'] }, ':\n'),
       notAllowed,
     );
+    const longest = 'A'.repeat(TOTP_ISSUER_MAX_LENGTH);
+    assert.equal(resolveTotpIssuer({ allowedIssuers: [longest] }, longest), longest);
+    assert.throws(
+      () => resolveTotpIssuer({ allowedIssuers: [longest] }, `${longest}B`),
+      notAllowed,
+    );
   });
 });
 
@@ -133,7 +139,12 @@ describe('sanitizeTotpIssuer', () => {
 
   it('strips bidi and zero-width characters', () => {
     assert.equal(sanitizeTotpIssuer('\u202eemcA\u202c'), 'emcA');
-    assert.equal(sanitizeTotpIssuer('Ac\u200bme\u200d\u2066\ufeff'), 'Acme');
+    assert.equal(sanitizeTotpIssuer('Ac\u200bme\u2066\ufeff\u{e0041}'), 'Acme');
+  });
+
+  it('keeps the joiners used by emoji sequences and scripts', () => {
+    assert.equal(sanitizeTotpIssuer('Team 👨‍👩‍👧'), 'Team 👨‍👩‍👧');
+    assert.equal(sanitizeTotpIssuer('می\u200cخواهم'), 'می\u200cخواهم');
   });
 
   it('keeps non-ASCII letters', () => {
