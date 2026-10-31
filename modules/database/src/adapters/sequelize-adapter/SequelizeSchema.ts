@@ -486,17 +486,18 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     if (isNil(parsedFilter)) {
       return { deletedCount: 0 };
     }
-    return this.model
-      .findAll({
-        where: parsedFilter,
-        include: includeRelations(this, parsingResult.requiredRelations, []),
-      })
-      .then(docs => {
-        return Promise.all(docs.map(doc => doc.destroy({ returning: true })));
-      })
-      .then(r => {
-        return { deletedCount: r.length };
-      });
+    const docs = await this.model.findAll({
+      where: parsedFilter,
+      include: includeRelations(this, parsingResult.requiredRelations, []),
+    });
+    if (docs.length === 0) {
+      return { deletedCount: 0 };
+    }
+    const pk = this.model.primaryKeyAttribute;
+    const deletedCount = await this.model.destroy({
+      where: { [pk]: docs.map(doc => doc.get(pk)) },
+    });
+    return { deletedCount };
   }
 
   async deleteOne(
@@ -520,17 +521,16 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     if (isNil(parsedFilter)) {
       return { deletedCount: 0 };
     }
-    return this.model
-      .findOne({
-        where: parsedFilter!,
-        include: includeRelations(this, parsingResult.requiredRelations, []),
-      })
-      .then(doc => {
-        return doc?.destroy({ returning: true });
-      })
-      .then(r => {
-        return { deletedCount: r ? 1 : 0 };
-      });
+    const doc = await this.model.findOne({
+      where: parsedFilter!,
+      include: includeRelations(this, parsingResult.requiredRelations, []),
+    });
+    if (!doc) {
+      return { deletedCount: 0 };
+    }
+    const pk = this.model.primaryKeyAttribute;
+    const deletedCount = await this.model.destroy({ where: { [pk]: doc.get(pk) } });
+    return { deletedCount };
   }
 
   async countDocuments(
