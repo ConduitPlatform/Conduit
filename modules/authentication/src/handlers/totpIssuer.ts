@@ -31,7 +31,7 @@ export function sanitizeTotpIssuer(value: string): string {
 function issuerError(path: string, value: unknown): string | null {
   if (typeof value !== 'string') return `${path} must be a string`;
   const cleaned = stripUnsafe(value);
-  if (!cleaned) return `${path} must not be empty`;
+  if (!cleaned.replace(/[\u200c\u200d]/g, '')) return `${path} must not be empty`;
   if (graphemeCount(cleaned) > TOTP_ISSUER_MAX_LENGTH) {
     return `${path} must be at most ${TOTP_ISSUER_MAX_LENGTH} characters`;
   }

@@ -49,6 +49,10 @@ describe('twoFa issuer config', () => {
   it('rejects empty, non-string and over-long issuers', () => {
     const long = 'A'.repeat(TOTP_ISSUER_MAX_LENGTH + 1);
     assert.match(totpIssuerConfigError({ issuer: ' :\u200b ' }) ?? '', /twoFa\.issuer/);
+    assert.match(
+      totpIssuerConfigError({ issuer: '\u200d\u200c' }) ?? '',
+      /must not be empty/,
+    );
     assert.match(totpIssuerConfigError({ issuer: long }) ?? '', /at most 64/);
     assert.match(
       totpIssuerConfigError({ allowedIssuers: ['Acme', ''] }) ?? '',
