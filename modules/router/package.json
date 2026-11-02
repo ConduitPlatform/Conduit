@@ -35,7 +35,6 @@
     "@grpc/grpc-js": "^1.14.5",
     "@grpc/proto-loader": "^0.8.1",
     "axios": "^1.18.0",
-    "bcrypt": "^6.0.0",
     "convict": "^6.2.5",
     "cors": "^2.8.6",
     "deep-object-diff": "^1.1.9",
@@ -57,7 +56,6 @@
   ],
   "devDependencies": {
     "@conduitplatform/service-bundle": "workspace:*",
-    "@types/bcrypt": "^6.0.0",
     "@types/convict": "^6.1.6",
     "@types/cors": "^2.8.19",
     "@types/express": "~5.0.6",

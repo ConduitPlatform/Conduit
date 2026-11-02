@@ -115,11 +115,15 @@ export class SecurityAdmin {
       this.validateDomain(domain);
     }
 
+    const clientId = client.clientId;
     client = await Client.getInstance().findByIdAndUpdate(client._id, {
       domain: client.platform === PlatformTypesEnum.WEB ? domain : undefined,
       alias,
       notes,
     });
+    if (clientId) {
+      await this.grpcSdk.state!.clearKey(clientId);
+    }
     return { ...client };
   }
 

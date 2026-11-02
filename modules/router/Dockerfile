@@ -9,7 +9,6 @@ COPY --from=conduit-base /app/modules/router/package.bundle-lock.json /app/modul
 RUN apk update && \
     apk add --no-cache --virtual .gyp python3 make g++ && \
     npm ci --omit=dev --ignore-scripts && \
-    npm rebuild bcrypt && \
     npm cache clean --force && \
     apk del .gyp
 

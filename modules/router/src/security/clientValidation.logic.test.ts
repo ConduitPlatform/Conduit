@@ -659,6 +659,20 @@ describe('security client handlers', () => {
     });
   });
 
+  it('clears the redis key on update', async () => {
+    findOneResult = {
+      _id: 'mongo-id',
+      clientId: 'cid-1',
+      platform: PlatformTypesEnum.ANDROID,
+      alias: 'alias-1',
+    };
+    const admin = new SecurityAdmin({ state } as unknown as ConduitGrpcSdk);
+    await admin.updateSecurityClient({
+      request: { params: { id: 'mongo-id', alias: 'alias-1' } },
+    } as unknown as ParsedRouterRequest);
+    assert.deepEqual(cleared, ['cid-1']);
+  });
+
   it('clears the redis key on delete', async () => {
     findOneResult = { _id: 'mongo-id', clientId: 'cid-1' };
     const admin = new SecurityAdmin({ state } as unknown as ConduitGrpcSdk);

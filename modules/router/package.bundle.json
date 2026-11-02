@@ -46,7 +46,6 @@
     "@scalar/api-reference": "^1.60.0",
     "@scalar/express-api-reference": "^0.10.14",
     "@socket.io/redis-streams-adapter": "^0.3.1",
-    "bcrypt": "^6.0.0",
     "body-parser": "^2.3.0",
     "cookie-parser": "~1.4.7",
     "cors": "^2.8.6",

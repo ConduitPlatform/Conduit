@@ -1090,9 +1090,6 @@ importers:
       axios:
         specifier: ^1.18.0
         version: 1.18.0(debug@4.4.3)
-      bcrypt:
-        specifier: ^6.0.0
-        version: 6.0.0
       convict:
         specifier: ^6.2.5
         version: 6.2.5
@@ -1133,9 +1130,6 @@ importers:
       '@conduitplatform/service-bundle':
         specifier: workspace:*
         version: link:../../libraries/service-bundle
-      '@types/bcrypt':
-        specifier: ^6.0.0
-        version: 6.0.0
       '@types/convict':
         specifier: ^6.1.6
         version: 6.1.6
