@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   CreateRelationsRequest,
   DatabaseProvider,
-  GrpcError,
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
@@ -327,25 +326,13 @@ export default class Authorization extends ManagedModule<Config> {
     call: GrpcRequest<SubjectPermissionsRequest>,
     callback: GrpcResponse<SubjectPermissionsResponse>,
   ) {
-    try {
-      const { subject, resource, actionPrefix } = call.request;
-      const permissions = await this.permissionsController.getSubjectPermissions(
-        subject,
-        resource,
-        actionPrefix,
-      );
-      callback(null, { permissions });
-    } catch (error) {
-      if (error instanceof GrpcError) {
-        callback({ code: error.code, message: error.message });
-        return;
-      }
-      ConduitGrpcSdk.Logger.error(error as Error);
-      callback({
-        code: status.INTERNAL,
-        message: 'Could not list subject permissions',
-      });
-    }
+    const { subject, resource, actionPrefix } = call.request;
+    const permissions = await this.permissionsController.getSubjectPermissions(
+      subject,
+      resource,
+      actionPrefix,
+    );
+    callback(null, { permissions });
   }
 
   async can(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {

@@ -1,11 +1,14 @@
 import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
+  assertDistinctResources,
   checkPermissionTuple,
   computePermissionTuple,
   escapeRegex,
   getPostgresAccessListQuery,
   getSQLAccessListQuery,
+  hasResourceIdentifier,
+  PERMISSION_ACTION_PATTERN,
 } from '../utils/index.js';
 import { IndexController } from './index.controller.js';
 import { RuleCache, type SubjectPermissionInventoryEntry } from './cache.controller.js';
@@ -13,11 +16,9 @@ import { isEmpty, isNil } from 'lodash-es';
 import { Permission, ResourceDefinition } from '../models/index.js';
 import { createHash } from 'crypto';
 
-const ACTION_PREFIX_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
-
 function actionPrefixOrEmpty(actionPrefix?: string) {
   if (actionPrefix === undefined || actionPrefix === '') return '';
-  if (!ACTION_PREFIX_PATTERN.test(actionPrefix)) {
+  if (!PERMISSION_ACTION_PATTERN.test(actionPrefix)) {
     throw new GrpcError(
       status.INVALID_ARGUMENT,
       'Action prefix must start with a letter and contain only letters, numbers, and underscores',
@@ -27,13 +28,7 @@ function actionPrefixOrEmpty(actionPrefix?: string) {
 }
 
 function assertResourceIdentifier(value: string, label: 'Subject' | 'Resource') {
-  const separator = value.indexOf(':');
-  const resourceType = separator > 0 ? value.slice(0, separator) : '';
-  if (
-    separator <= 0 ||
-    separator === value.length - 1 ||
-    !ACTION_PREFIX_PATTERN.test(resourceType)
-  ) {
+  if (!hasResourceIdentifier(value)) {
     throw new GrpcError(
       status.INVALID_ARGUMENT,
       `${label} must be a valid resource identifier`,
@@ -59,6 +54,7 @@ export class PermissionsController {
 
   async grantPermission(subject: string, action: string, resource: string) {
     checkPermissionTuple(subject, action, resource);
+    assertDistinctResources(subject, resource);
     const computedTuple = computePermissionTuple(subject, action, resource);
     await Permission.getInstance().create({
       subject,
@@ -75,6 +71,7 @@ export class PermissionsController {
 
   async removePermission(subject: string, action: string, resource: string) {
     checkPermissionTuple(subject, action, resource);
+    assertDistinctResources(subject, resource);
     const computedTuple = computePermissionTuple(subject, action, resource);
     const permission = await Permission.getInstance().findOne({
       computedTuple,
@@ -102,9 +99,9 @@ export class PermissionsController {
         resource,
         prefix,
       );
-      if (cached) {
+      if (cached.value) {
         ConduitGrpcSdk.Metrics?.increment('authorization_rule_cache_hit_total');
-        return cached;
+        return cached.value;
       }
       ConduitGrpcSdk.Metrics?.increment('authorization_rule_cache_miss_total');
       const permissions = await this.loadSubjectPermissions(subject, resource, prefix);
@@ -114,6 +111,7 @@ export class PermissionsController {
         resource,
         prefix,
         permissions,
+        cached.versions,
       );
       return permissions;
     } finally {
@@ -178,30 +176,28 @@ export class PermissionsController {
       checkPermissionTuple(subject, action, object);
       const computedTuple = computePermissionTuple(subject, action, object);
       const cachedResponse = await RuleCache.findResolution(this.grpcSdk, computedTuple);
-      if (!isNil(cachedResponse)) {
+      if (!isNil(cachedResponse.value)) {
         ConduitGrpcSdk.Metrics?.increment('authorization_rule_cache_hit_total');
-        return cachedResponse;
+        return cachedResponse.value;
       }
       ConduitGrpcSdk.Metrics?.increment('authorization_rule_cache_miss_total');
       // if the actor is the object itself, all permissions are provided
-      if (subject === object) {
-        await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
-        return true;
+      let allowed = subject === object;
+      if (!allowed) {
+        const permission = await Permission.getInstance().findOne({ computedTuple });
+        allowed = !!permission;
       }
-
-      const permission = await Permission.getInstance().findOne({
+      if (!allowed) {
+        allowed =
+          (await this.indexController.findIndex(subject, action, object)) ?? false;
+      }
+      await RuleCache.storeResolution(
+        this.grpcSdk,
         computedTuple,
-      });
-      if (permission) {
-        await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
-        return true;
-      }
-
-      const index = await this.indexController.findIndex(subject, action, object);
-
-      await RuleCache.storeResolution(this.grpcSdk, computedTuple, index ?? false);
-
-      return index ?? false;
+        allowed,
+        cachedResponse.versions,
+      );
+      return allowed;
     } finally {
       ConduitGrpcSdk.Metrics?.observe(
         'authorization_can_duration_ms',
@@ -239,9 +235,10 @@ export class PermissionsController {
     skip: number,
     limit: number,
   ) {
-    const computedTuple = `${subject}#${action}@${objectType}`;
     const permission = await Permission.getInstance().findMany({
-      computedTuple: { $like: `${computedTuple}%` },
+      subject,
+      permission: action,
+      resourceType: objectType,
     });
     const directIds = [
       ...new Set(permission.map(perm => perm.resource.split(':')[1]).filter(Boolean)),
@@ -392,18 +389,11 @@ export class PermissionsController {
             dbType === 'PostgreSQL'
               ? getPostgresAccessListQuery(
                   objectTypeCollection,
-                  computedTuple,
                   subject,
                   objectType,
                   action,
                 )
-              : getSQLAccessListQuery(
-                  objectTypeCollection,
-                  computedTuple,
-                  subject,
-                  objectType,
-                  action,
-                ),
+              : getSQLAccessListQuery(objectTypeCollection, subject, objectType, action),
         },
       );
       return viewName;

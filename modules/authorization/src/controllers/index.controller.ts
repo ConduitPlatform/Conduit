@@ -7,7 +7,6 @@ import {
 } from '../models/index.js';
 import { constructObjectIndex, escapeRegex } from '../utils/index.js';
 import { QueueController } from './queue.controller.js';
-import { RuleCache } from './cache.controller.js';
 
 export class IndexController {
   private static _instance: IndexController;
@@ -40,40 +39,48 @@ export class IndexController {
     return resourceId;
   }
 
-  private async findObjectIndexesByEntities(
-    baseQuery: Record<string, unknown>,
+  private async findChunkedByEntities<T>(
     entities: string[],
+    fetchChunk: (entities: string[]) => Promise<T[]>,
+    identity: (item: T) => string,
   ) {
     const uniqueEntities = this.uniqueEntities(entities);
-    if (!uniqueEntities.length) {
-      return [];
-    }
-
+    if (!uniqueEntities.length) return [];
     if (uniqueEntities.length <= IndexController.ENTITY_CHUNK_SIZE) {
-      return ObjectIndex.getInstance().findMany({
-        ...baseQuery,
-        entity: { $in: uniqueEntities },
-      });
+      return fetchChunk(uniqueEntities);
     }
 
-    const chunks = this.chunkArray(uniqueEntities, IndexController.ENTITY_CHUNK_SIZE);
-    const merged = [];
+    const merged: T[] = [];
     const seen = new Set<string>();
-    for (const chunk of chunks) {
-      const chunkResults = await ObjectIndex.getInstance().findMany({
-        ...baseQuery,
-        entity: { $in: chunk },
-      });
+    for (const chunk of this.chunkArray(
+      uniqueEntities,
+      IndexController.ENTITY_CHUNK_SIZE,
+    )) {
+      const chunkResults = await fetchChunk(chunk);
       for (const result of chunkResults) {
-        const key = `${result.subject}|${result.entity}|${(
-          result.inheritanceTree ?? []
-        ).join(',')}`;
+        const key = identity(result);
         if (seen.has(key)) continue;
         seen.add(key);
         merged.push(result);
       }
     }
     return merged;
+  }
+
+  private findObjectIndexesByEntities(
+    baseQuery: Record<string, unknown>,
+    entities: string[],
+  ) {
+    return this.findChunkedByEntities(
+      entities,
+      chunk =>
+        ObjectIndex.getInstance().findMany({
+          ...baseQuery,
+          entity: { $in: chunk },
+        }),
+      result =>
+        `${result.subject}|${result.entity}|${(result.inheritanceTree ?? []).join(',')}`,
+    );
   }
 
   static getInstance(grpcSdk?: ConduitGrpcSdk) {
@@ -121,7 +128,6 @@ export class IndexController {
         })),
       );
     }
-    await RuleCache.invalidateGlobal(this.grpcSdk);
   }
 
   async createOrUpdateObject(subject: string, entity: string) {
@@ -298,31 +304,16 @@ export class IndexController {
     return inherited;
   }
 
-  private async findActorIndexesByEntities(subject: string, entities: string[]) {
-    const uniqueEntities = this.uniqueEntities(entities);
-    if (!uniqueEntities.length) return [];
-    if (uniqueEntities.length <= IndexController.ENTITY_CHUNK_SIZE) {
-      return ActorIndex.getInstance().findMany({
-        subject,
-        entity: { $in: uniqueEntities },
-      });
-    }
-
-    const chunks = this.chunkArray(uniqueEntities, IndexController.ENTITY_CHUNK_SIZE);
-    const merged = [];
-    const seen = new Set<string>();
-    for (const chunk of chunks) {
-      const chunkResults = await ActorIndex.getInstance().findMany({
-        subject,
-        entity: { $in: chunk },
-      });
-      for (const result of chunkResults) {
-        if (seen.has(result.entity)) continue;
-        seen.add(result.entity);
-        merged.push(result);
-      }
-    }
-    return merged;
+  private findActorIndexesByEntities(subject: string, entities: string[]) {
+    return this.findChunkedByEntities(
+      entities,
+      chunk =>
+        ActorIndex.getInstance().findMany({
+          subject,
+          entity: { $in: chunk },
+        }),
+      result => result.entity,
+    );
   }
 
   async findIndex(subject: string, action: string, object: string) {

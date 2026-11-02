@@ -189,7 +189,6 @@ export class RelationsController {
         { resourceType: name },
       ],
     });
-    await RuleCache.invalidateGlobal(this.grpcSdk);
   }
 
   async getRelation(subject: string, relation: string, object: string) {

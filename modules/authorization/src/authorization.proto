@@ -102,6 +102,14 @@ message Decision {
   bool allow = 1;
 }
 
+// Lists actions declared on the resource definition. A direct grant for an
+// undeclared action can still pass Can and is omitted here.
+// actionPrefix is a literal prefix: "overview" also matches "overviewer".
+// Prefer a separator such as "overview_" for a snake_case group.
+// Results stay cached for about 60s. Grant, revoke, and relation changes for
+// this subject drop the entry, as do resource create, update, and delete.
+// Inherited access through an intermediate subject can lag until that TTL,
+// the same as Can.
 message SubjectPermissionsRequest {
   string subject = 1;
   string resource = 2;

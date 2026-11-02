@@ -1,5 +1,7 @@
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ResourceDefinition } from '../models/index.js';
+import { assertPermissionAction } from '../utils/index.js';
+import { RuleCache } from './cache.controller.js';
 import { IndexController } from './index.controller.js';
 import { RelationsController } from './relations.controller.js';
 import { cloneDeep, isEqual, isNil } from 'lodash-es';
@@ -38,6 +40,7 @@ export class ResourceController {
       ...resource,
       version: resource.version ?? 0,
     });
+    await RuleCache.invalidateGlobal(this.grpcSdk);
     this.grpcSdk.bus?.publish('authorization:create:resource', JSON.stringify(res));
     return { resourceDefinition: res, status: 'processed' };
   }
@@ -84,6 +87,9 @@ export class ResourceController {
     const perms = resource.permissions;
     const relations = resource.relations;
     for (const perm of Object.keys(perms)) {
+      if (!perm.includes('->')) {
+        assertPermissionAction(perm);
+      }
       if (!Array.isArray(perms[perm])) {
         throw new Error('Permissions must be an array');
       }
@@ -137,6 +143,7 @@ export class ResourceController {
       resourceDefinition._id,
       resource,
     ))!;
+    await RuleCache.invalidateGlobal(this.grpcSdk);
     this.grpcSdk.bus?.publish('authorization:update:resource', JSON.stringify(res));
     return { resourceDefinition: res, status: 'processed' };
   }
@@ -146,7 +153,9 @@ export class ResourceController {
     if (!resourceDefinition) throw new Error('Resource not found');
     await this.relationsController.removeResource(name);
     await this.indexController.removeResource(name);
-    return await ResourceDefinition.getInstance().deleteOne({ name });
+    const deleted = await ResourceDefinition.getInstance().deleteOne({ name });
+    await RuleCache.invalidateGlobal(this.grpcSdk);
+    return deleted;
   }
 
   async findResourceDefinition(name: string) {

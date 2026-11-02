@@ -88,6 +88,11 @@ describe('subject permission inventory', () => {
   });
 
   it('returns every declared action in stable order from one direct and one inherited lookup', async () => {
+    permissionFindMany.mockResolvedValue([
+      { permission: 'read' },
+      { permission: 'secret' },
+    ]);
+
     const result = await controller.getSubjectPermissions('User:1', 'Team:admin');
 
     expect(result.map(entry => entry.action)).toEqual([
@@ -96,7 +101,11 @@ describe('subject permission inventory', () => {
       'read',
       'trips_read',
     ]);
-    expect(result.every(entry => entry.allowed === false)).toBe(true);
+    expect(result.find(entry => entry.action === 'read')).toMatchObject({
+      direct: true,
+      allowed: true,
+    });
+    expect(result.map(entry => entry.action)).not.toContain('secret');
     expect(permissionFindMany).toHaveBeenCalledTimes(1);
     expect(permissionFindMany).toHaveBeenCalledWith(
       {
@@ -203,15 +212,23 @@ describe('subject permission inventory', () => {
   });
 
   it('ignores a corrupt cache entry and loads the inventory again', async () => {
-    await RuleCache.storeInventory(grpcSdk, 'User:1', 'Team:admin', '', [
-      {
-        action: 'read',
-        direct: true,
-        inherited: false,
-        implicit: false,
-        allowed: true,
-      },
-    ]);
+    const cached = await RuleCache.findInventory(grpcSdk, 'User:1', 'Team:admin', '');
+    await RuleCache.storeInventory(
+      grpcSdk,
+      'User:1',
+      'Team:admin',
+      '',
+      [
+        {
+          action: 'read',
+          direct: true,
+          inherited: false,
+          implicit: false,
+          allowed: true,
+        },
+      ],
+      cached.versions,
+    );
     for (const key of state.values.keys()) {
       if (key.includes(':inventory:')) state.values.set(key, '{');
     }
@@ -247,17 +264,49 @@ describe('subject permission inventory', () => {
     ).rejects.toMatchObject({
       code: status.INVALID_ARGUMENT,
     });
-    await expect(
-      controller.getSubjectPermissions('User:1', 'Team:'),
-    ).rejects.toMatchObject({
-      code: status.INVALID_ARGUMENT,
-    });
+    await expect(controller.getSubjectPermissions('foo-bar:1', 'Team:')).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ action: 'read' })]),
+    );
     await expect(
       controller.getSubjectPermissions('User:1', 'Team:admin', 'overview-'),
     ).rejects.toMatchObject({
       code: status.INVALID_ARGUMENT,
     });
-    expect(definitionFindOne).not.toHaveBeenCalled();
+    expect(definitionFindOne).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not cache an inventory under a version bumped while it was loading', async () => {
+    definitionFindOne.mockImplementation(async () => {
+      await RuleCache.invalidateSubject(grpcSdk, 'User:1');
+      return { name: 'Team', permissions: { ...TEAM_PERMISSIONS } };
+    });
+
+    await controller.getSubjectPermissions('User:1', 'Team:admin');
+    definitionFindOne.mockResolvedValue({
+      name: 'Team',
+      permissions: { ...TEAM_PERMISSIONS },
+    });
+    await controller.getSubjectPermissions('User:1', 'Team:admin');
+
+    expect(definitionFindOne).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not cache a can() decision under a version bumped while it was loading', async () => {
+    const findIndex = jest
+      .spyOn(IndexController.getInstance(), 'findIndex')
+      .mockResolvedValue(false);
+    permissionFindOne.mockImplementation(async () => {
+      await RuleCache.invalidateSubject(grpcSdk, 'User:1');
+      return { _id: 'perm-1' };
+    });
+
+    await expect(controller.can('User:1', 'read', 'Team:admin')).resolves.toBe(true);
+
+    permissionFindOne.mockReset();
+    permissionFindOne.mockResolvedValue(null);
+    await expect(controller.can('User:1', 'read', 'Team:admin')).resolves.toBe(false);
+    expect(permissionFindOne).toHaveBeenCalledTimes(1);
+    expect(findIndex).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -319,5 +368,40 @@ describe('permission action names', () => {
     await expect(controller.can('User:1', 'overview_read', 'Team:admin')).resolves.toBe(
       true,
     );
+  });
+
+  it('rejects a grant or revoke where the subject is the resource', async () => {
+    await expect(controller.grantPermission('User:1', 'read', 'User:1')).rejects.toThrow(
+      'Subject and object must be different',
+    );
+    expect(permissionCreate).not.toHaveBeenCalled();
+
+    await expect(controller.removePermission('User:1', 'read', 'User:1')).rejects.toThrow(
+      'Subject and object must be different',
+    );
+    expect(permissionFindOne).not.toHaveBeenCalled();
+  });
+
+  it('loads direct resources by subject, action, and resource type', async () => {
+    const permissionFindMany =
+      jest.fn<(query: Record<string, unknown>) => Promise<unknown[]>>();
+    permissionFindMany.mockResolvedValue([]);
+    jest.spyOn(Permission, 'getInstance').mockReturnValue({
+      create: permissionCreate,
+      findOne: permissionFindOne,
+      deleteOne: permissionDeleteOne,
+      findMany: permissionFindMany,
+    } as unknown as Permission);
+    jest
+      .spyOn(IndexController.getInstance(), 'findGeneralIndexAllResourceIds')
+      .mockResolvedValue([]);
+
+    await controller.findPermissions('User:1', 'trips_read', 'Team', 0, 10);
+
+    expect(permissionFindMany).toHaveBeenCalledWith({
+      subject: 'User:1',
+      permission: 'trips_read',
+      resourceType: 'Team',
+    });
   });
 });

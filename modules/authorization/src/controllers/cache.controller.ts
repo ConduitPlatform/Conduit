@@ -4,7 +4,7 @@ import { isNil } from 'lodash-es';
 const RULE_CACHE_TTL_MS = 60000;
 /** Version keys are bumped on invalidation; TTL prevents unbounded Redis growth for inactive subjects. */
 const RULE_CACHE_SUBJECT_VER_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-/** Bumps invalidate all cached `can()` resolutions (e.g. resource delete, reindex). */
+/** Bumps invalidate every cached decision after a resource definition change. */
 const RULE_CACHE_GLOBAL_VERSION_KEY = 'ruleCache:globalVer';
 const RULE_CACHE_SUBJECT_VER_PREFIX = 'ruleCache:subjVer:';
 
@@ -36,6 +36,28 @@ function inventoryCacheKey(
   return `ruleCache:${globalVer}:${subjectVer}:inventory:${subject}@${resource}?${actionPrefix}`;
 }
 
+/** Versions read before a lookup. Stores must reuse them so a newer invalidation is not overwritten. */
+export type RuleCacheVersions = {
+  globalVer: string;
+  subjectVer: string;
+};
+
+export type CachedRule<T> = {
+  value: T | null;
+  versions: RuleCacheVersions;
+};
+
+function parseInventory(stored: string | null) {
+  if (isNil(stored)) return null;
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    if (!Array.isArray(parsed) || !parsed.every(isInventoryEntry)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 function isInventoryEntry(value: unknown): value is SubjectPermissionInventoryEntry {
   if (!value || typeof value !== 'object') return false;
   const entry = value as Record<string, unknown>;
@@ -53,12 +75,10 @@ export namespace RuleCache {
     grpcSdk: ConduitGrpcSdk,
     computedTuple: string,
     decision: boolean,
+    versions: RuleCacheVersions,
   ) {
-    const globalVer = await getGlobalVersion(grpcSdk);
-    const subject = extractSubjectFromTuple(computedTuple);
-    const subjectVer = await getSubjectVersion(grpcSdk, subject);
     await grpcSdk.state!.setKey(
-      cacheKey(globalVer, subjectVer, computedTuple),
+      cacheKey(versions.globalVer, versions.subjectVer, computedTuple),
       Boolean(decision).toString(),
       RULE_CACHE_TTL_MS,
     );
@@ -67,18 +87,15 @@ export namespace RuleCache {
   export async function findResolution(
     grpcSdk: ConduitGrpcSdk,
     computedTuple: string,
-  ): Promise<boolean | null> {
-    const globalVer = await getGlobalVersion(grpcSdk);
-    const subject = extractSubjectFromTuple(computedTuple);
-    const subjectVer = await getSubjectVersion(grpcSdk, subject);
-    return grpcSdk
-      .state!.getKey(cacheKey(globalVer, subjectVer, computedTuple))
-      .then((value: string | null) => {
-        if (!isNil(value)) {
-          return value === 'true';
-        }
-        return null;
-      });
+  ): Promise<CachedRule<boolean>> {
+    const versions = await readVersions(grpcSdk, extractSubjectFromTuple(computedTuple));
+    const stored = await grpcSdk.state!.getKey(
+      cacheKey(versions.globalVer, versions.subjectVer, computedTuple),
+    );
+    return {
+      value: isNil(stored) ? null : stored === 'true',
+      versions,
+    };
   }
 
   export async function storeInventory(
@@ -87,11 +104,16 @@ export namespace RuleCache {
     resource: string,
     actionPrefix: string,
     permissions: SubjectPermissionInventoryEntry[],
+    versions: RuleCacheVersions,
   ) {
-    const globalVer = await getGlobalVersion(grpcSdk);
-    const subjectVer = await getSubjectVersion(grpcSdk, subject);
     await grpcSdk.state!.setKey(
-      inventoryCacheKey(globalVer, subjectVer, subject, resource, actionPrefix),
+      inventoryCacheKey(
+        versions.globalVer,
+        versions.subjectVer,
+        subject,
+        resource,
+        actionPrefix,
+      ),
       JSON.stringify(permissions),
       RULE_CACHE_TTL_MS,
     );
@@ -102,20 +124,18 @@ export namespace RuleCache {
     subject: string,
     resource: string,
     actionPrefix: string,
-  ): Promise<SubjectPermissionInventoryEntry[] | null> {
-    const globalVer = await getGlobalVersion(grpcSdk);
-    const subjectVer = await getSubjectVersion(grpcSdk, subject);
-    const value = await grpcSdk.state!.getKey(
-      inventoryCacheKey(globalVer, subjectVer, subject, resource, actionPrefix),
+  ): Promise<CachedRule<SubjectPermissionInventoryEntry[]>> {
+    const versions = await readVersions(grpcSdk, subject);
+    const stored = await grpcSdk.state!.getKey(
+      inventoryCacheKey(
+        versions.globalVer,
+        versions.subjectVer,
+        subject,
+        resource,
+        actionPrefix,
+      ),
     );
-    if (isNil(value)) return null;
-    try {
-      const parsed: unknown = JSON.parse(value);
-      if (!Array.isArray(parsed) || !parsed.every(isInventoryEntry)) return null;
-      return parsed;
-    } catch {
-      return null;
-    }
+    return { value: parseInventory(stored), versions };
   }
 
   /** Invalidate cached decisions for one subject (e.g. User:x) after permission/relation changes affecting them. */
@@ -127,7 +147,7 @@ export namespace RuleCache {
     );
   }
 
-  /** Invalidate all subjects (resource teardown, reindex, etc.). */
+  /** Invalidate all subjects after a resource definition is created, updated, or deleted. */
   export async function invalidateGlobal(grpcSdk: ConduitGrpcSdk) {
     await grpcSdk.state!.setKey(RULE_CACHE_GLOBAL_VERSION_KEY, Date.now().toString());
   }
@@ -135,6 +155,15 @@ export namespace RuleCache {
   /** @deprecated Prefer invalidateSubject / invalidateGlobal */
   export async function invalidate(grpcSdk: ConduitGrpcSdk) {
     await invalidateGlobal(grpcSdk);
+  }
+
+  async function readVersions(
+    grpcSdk: ConduitGrpcSdk,
+    subject: string,
+  ): Promise<RuleCacheVersions> {
+    const globalVer = await getGlobalVersion(grpcSdk);
+    const subjectVer = await getSubjectVersion(grpcSdk, subject);
+    return { globalVer, subjectVer };
   }
 
   async function getGlobalVersion(grpcSdk: ConduitGrpcSdk) {
