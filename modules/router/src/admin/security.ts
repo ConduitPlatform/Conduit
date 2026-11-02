@@ -11,8 +11,10 @@ import { Client } from '../models/index.js';
 import { isNil } from 'lodash-es';
 import {
   clientSecretKeyBytes,
+  clientSecretKeyError,
   encryptClientSecret,
   isAcceptableClientDomain,
+  resolveClientSecretEncryptionKey,
 } from '../security/clientValidation.logic.js';
 
 export class SecurityAdmin {
@@ -134,7 +136,16 @@ export class SecurityAdmin {
 }
 
 function encryptionKey() {
-  return clientSecretKeyBytes(
+  const resolved = resolveClientSecretEncryptionKey(
     ConfigController.getInstance().config.security.clientSecretEncryptionKey,
   );
+  const message = clientSecretKeyError(resolved);
+  if (resolved === '' || message) {
+    throw new ConduitError(
+      'INVALID_ARGUMENTS',
+      400,
+      message ?? 'security.clientSecretEncryptionKey must be base64 for exactly 32 bytes',
+    );
+  }
+  return clientSecretKeyBytes(resolved);
 }

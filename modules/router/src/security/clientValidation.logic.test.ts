@@ -15,9 +15,13 @@ import { Client } from '../models/index.js';
 import { SecurityAdmin } from '../admin/security.js';
 import { ClientValidator } from './handlers/client-validation/index.js';
 import {
+  blankUnstoredRedactedKey,
   buildSignedPayload,
   CLIENT_SIGNATURE_WINDOW_MS,
   clientSecretKeyBytes,
+  clientSecretKeyError,
+  clientSecretKeyPatchError,
+  clientValidationKeyWarning,
   decryptClientSecret,
   domainAllowsHost,
   encryptClientSecret,
@@ -25,6 +29,7 @@ import {
   hostnameFromOrigin,
   isAcceptableClientDomain,
   requestHostname,
+  resolveClientSecretEncryptionKey,
   sha256Hex,
   signaturesMatch,
   timestampWithinWindow,
@@ -264,6 +269,68 @@ describe('client validation rules', () => {
     const blob = encryptClientSecret(secret, key);
     assert.equal(decryptClientSecret(blob, key), secret);
     assert.notEqual(blob, secret);
+    const other = clientSecretKeyBytes(Buffer.alloc(32, 9).toString('base64'));
+    assert.throws(() => decryptClientSecret(blob, other));
+  });
+
+  it('reads the encryption key from the environment without storing it', () => {
+    const stored = 'stored-key-value';
+    const previous = process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+    try {
+      process.env.CLIENT_SECRET_ENCRYPTION_KEY = 'env-key-value';
+      assert.equal(resolveClientSecretEncryptionKey(stored), 'env-key-value');
+      assert.equal(stored, 'stored-key-value');
+      process.env.CLIENT_SECRET_ENCRYPTION_KEY = '';
+      assert.equal(resolveClientSecretEncryptionKey(stored), stored);
+      delete process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+      assert.equal(resolveClientSecretEncryptionKey(stored), stored);
+    } finally {
+      if (previous === undefined) delete process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+      else process.env.CLIENT_SECRET_ENCRYPTION_KEY = previous;
+    }
+  });
+
+  it('blanks an unstored redacted encryption key and leaves any other value', () => {
+    assert.equal(blankUnstoredRedactedKey('[REDACTED]', ''), '');
+    assert.equal(blankUnstoredRedactedKey('[REDACTED]', '[REDACTED]'), '');
+    assert.equal(blankUnstoredRedactedKey('[REDACTED]', KEY), '[REDACTED]');
+    assert.equal(blankUnstoredRedactedKey(KEY, ''), KEY);
+  });
+
+  it('does not throw when validation is on and the encryption key is empty', () => {
+    const previous = process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+    delete process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+    try {
+      assert.equal(
+        clientValidationKeyWarning(true, ''),
+        'Client validation is on but the encryption key is not set. Non-web clients will be rejected.',
+      );
+      assert.equal(
+        clientValidationKeyWarning(true, 'short-key'),
+        'Client validation is on but the encryption key is not 32-byte base64. Non-web clients will be rejected.',
+      );
+      assert.equal(clientValidationKeyWarning(true, KEY), null);
+      assert.equal(clientValidationKeyWarning(false, ''), null);
+      const emptyWarning = clientValidationKeyWarning(true, '') ?? '';
+      assert.equal(emptyWarning.includes(KEY), false);
+    } finally {
+      if (previous === undefined) delete process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+      else process.env.CLIENT_SECRET_ENCRYPTION_KEY = previous;
+    }
+  });
+
+  it('reports a bad encryption key and allows an empty one while validation is on or off', () => {
+    const message =
+      'security.clientSecretEncryptionKey must be base64 for exactly 32 bytes';
+    assert.equal(clientSecretKeyError(''), null);
+    assert.equal(clientSecretKeyError('short-key'), message);
+    assert.equal(clientSecretKeyError('0123456789abcdef0123456789abcdef'), message);
+    assert.equal(clientSecretKeyError(Buffer.alloc(16, 7).toString('base64')), message);
+    assert.equal(clientSecretKeyError('[REDACTED]'), message);
+    assert.equal(clientSecretKeyError(KEY), null);
+    assert.equal(clientSecretKeyPatchError(''), null);
+    assert.equal(clientSecretKeyPatchError('[REDACTED]'), null);
+    assert.equal(clientSecretKeyPatchError('short-key'), message);
   });
 });
 
@@ -498,28 +565,61 @@ describe('security client handlers', () => {
     assert.deepEqual(cleared, ['cid-1']);
   });
 
-  it('does not validate router config when the encryption key is missing or not 32 bytes', () => {
+  it('accepts an empty encryption key in router config and keeps the field sensitive', () => {
     const missing = convict(routerConfig);
-    assert.throws(() => missing.validate({ allowed: 'warn' }), /32 bytes/);
+    assert.doesNotThrow(() => missing.validate({ allowed: 'warn' }));
+    assert.equal(missing.get('security.clientSecretEncryptionKey'), '');
+    assert.equal(missing.get('security.clientValidation'), false);
 
     const shortKey = convict(routerConfig);
     shortKey.set('security.clientSecretEncryptionKey', 'short-key');
-    assert.throws(() => shortKey.validate({ allowed: 'warn' }), /32 bytes/);
-
-    const rawUtf8 = convict(routerConfig);
-    rawUtf8.set('security.clientSecretEncryptionKey', '0123456789abcdef0123456789abcdef');
-    assert.throws(() => rawUtf8.validate({ allowed: 'warn' }), /32 bytes/);
-
-    const sixteen = convict(routerConfig);
-    sixteen.set(
-      'security.clientSecretEncryptionKey',
-      Buffer.alloc(16, 7).toString('base64'),
-    );
-    assert.throws(() => sixteen.validate({ allowed: 'warn' }), /32 bytes/);
+    shortKey.set('security.clientValidation', false);
+    assert.doesNotThrow(() => shortKey.validate({ allowed: 'warn' }));
 
     const present = convict(routerConfig);
     present.set('security.clientSecretEncryptionKey', KEY);
+    present.set('security.clientValidation', true);
     assert.doesNotThrow(() => present.validate({ allowed: 'warn' }));
     assert.equal(routerConfig.security.clientSecretEncryptionKey.sensitive, true);
+    assert.equal(
+      (routerConfig.security.clientSignaturePathPrefix as { sensitive?: boolean })
+        .sensitive,
+      undefined,
+    );
+    assert.equal(missing.get('security.clientSignaturePathPrefix'), '');
+  });
+
+  it('rejects create when the encryption key is empty or not 32 bytes', async () => {
+    const admin = new SecurityAdmin({ state } as unknown as ConduitGrpcSdk);
+    ConfigController.getInstance().config.security.clientSecretEncryptionKey = '';
+    await assert.rejects(
+      () =>
+        admin.createSecurityClient({
+          request: { params: { platform: PlatformTypesEnum.ANDROID } },
+        } as unknown as ParsedRouterRequest),
+      (err: unknown) => {
+        const error = err as { status?: number; message?: string };
+        assert.equal(error.status, 400);
+        assert.match(error.message ?? '', /clientSecretEncryptionKey/);
+        return true;
+      },
+    );
+    assert.equal(created, undefined);
+
+    ConfigController.getInstance().config.security.clientSecretEncryptionKey =
+      'short-key';
+    await assert.rejects(
+      () =>
+        admin.createSecurityClient({
+          request: { params: { platform: PlatformTypesEnum.ANDROID } },
+        } as unknown as ParsedRouterRequest),
+      (err: unknown) => {
+        const error = err as { status?: number; message?: string };
+        assert.equal(error.status, 400);
+        assert.match(error.message ?? '', /clientSecretEncryptionKey/);
+        return true;
+      },
+    );
+    assert.equal(created, undefined);
   });
 });

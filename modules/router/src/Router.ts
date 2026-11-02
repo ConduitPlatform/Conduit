@@ -7,6 +7,9 @@ import {
   GrpcCallback,
   GrpcError,
   GrpcRequest,
+  GrpcResponse,
+  SetConfigRequest,
+  SetConfigResponse,
   HealthCheckStatus,
   Indexable,
   UntypedArray,
@@ -39,6 +42,11 @@ import {
 import * as adminRoutes from './admin/routes/index.js';
 import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import {
+  blankUnstoredRedactedKey,
+  clientSecretKeyPatchError,
+  clientValidationKeyWarning,
+} from './security/clientValidation.logic.js';
 import { fileURLToPath } from 'node:url';
 import {
   createEventRelayPusher,
@@ -142,11 +150,61 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         process.env.__DEFAULT_HOST_URL ??
         `http://localhost:${process.env['CLIENT_HTTP_PORT'] ?? '3000'}`;
     }
+    const storedKey = config.security.clientSecretEncryptionKey;
+    if (storedKey === '[REDACTED]') {
+      config.security.clientSecretEncryptionKey = blankUnstoredRedactedKey(
+        storedKey,
+        storedKey,
+      );
+    }
     return config;
+  }
+
+  async setConfig(
+    call: GrpcRequest<SetConfigRequest>,
+    callback: GrpcResponse<SetConfigResponse>,
+  ) {
+    let parsed: { security?: { clientSecretEncryptionKey?: unknown } };
+    try {
+      parsed = JSON.parse(call.request.newConfig);
+    } catch {
+      return super.setConfig(call, callback);
+    }
+    const security = parsed?.security;
+    if (
+      security &&
+      Object.prototype.hasOwnProperty.call(security, 'clientSecretEncryptionKey') &&
+      typeof security.clientSecretEncryptionKey === 'string'
+    ) {
+      const incoming = security.clientSecretEncryptionKey;
+      const stored =
+        ConfigController.getInstance().config?.security?.clientSecretEncryptionKey ?? '';
+      if (incoming === '[REDACTED]') {
+        const blanked = blankUnstoredRedactedKey(incoming, stored);
+        if (blanked !== incoming) {
+          security.clientSecretEncryptionKey = blanked;
+          call.request.newConfig = JSON.stringify(parsed);
+        }
+      } else {
+        const message = clientSecretKeyPatchError(incoming);
+        if (message) {
+          callback({ code: status.INVALID_ARGUMENT, message });
+          return;
+        }
+      }
+    }
+    return super.setConfig(call, callback);
   }
 
   async onConfig() {
     const config = ConfigController.getInstance().config;
+    const keyWarning = clientValidationKeyWarning(
+      config.security.clientValidation,
+      config.security.clientSecretEncryptionKey,
+    );
+    if (keyWarning) {
+      ConduitGrpcSdk.Logger.warn(keyWarning);
+    }
     const shouldRebindSocketGlobals =
       config.transports.sockets &&
       this.socketsPreviouslyStopped &&

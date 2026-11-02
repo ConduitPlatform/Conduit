@@ -16,6 +16,9 @@ const CLIENT_SECRET_KEY_B64 = /^[A-Za-z0-9+/]{43}=$/;
 const DNS_HOSTNAME =
   /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
 
+const CLIENT_SECRET_KEY_ERROR =
+  'security.clientSecretEncryptionKey must be base64 for exactly 32 bytes';
+
 function decodedClientSecretKey(value: string): Buffer | null {
   if (!CLIENT_SECRET_KEY_B64.test(value)) return null;
   const decoded = Buffer.from(value, 'base64');
@@ -25,10 +28,43 @@ function decodedClientSecretKey(value: string): Buffer | null {
 
 export function assertClientSecretEncryptionKey(value: unknown): asserts value is string {
   if (typeof value !== 'string' || decodedClientSecretKey(value) === null) {
-    throw new Error(
-      'security.clientSecretEncryptionKey must be base64 for exactly 32 bytes',
-    );
+    throw new Error(CLIENT_SECRET_KEY_ERROR);
   }
+}
+
+export function resolveClientSecretEncryptionKey(stored: string): string {
+  const fromEnv = process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+  if (typeof fromEnv === 'string' && fromEnv !== '') return fromEnv;
+  return stored;
+}
+
+export function clientSecretKeyError(value: string): string | null {
+  if (value === '') return null;
+  if (decodedClientSecretKey(value) === null) return CLIENT_SECRET_KEY_ERROR;
+  return null;
+}
+
+export function blankUnstoredRedactedKey(incoming: string, stored: string): string {
+  if (incoming === '[REDACTED]' && (stored === '' || stored === '[REDACTED]')) {
+    return '';
+  }
+  return incoming;
+}
+
+export function clientSecretKeyPatchError(incoming: string): string | null {
+  if (incoming === '' || incoming === '[REDACTED]') return null;
+  return clientSecretKeyError(incoming);
+}
+
+export function clientValidationKeyWarning(
+  clientValidation: boolean,
+  storedKey: string,
+): string | null {
+  if (!clientValidation) return null;
+  const resolved = resolveClientSecretEncryptionKey(storedKey);
+  if (resolved !== '' && clientSecretKeyError(resolved) === null) return null;
+  const miss = resolved === '' ? 'not set' : 'not 32-byte base64';
+  return `Client validation is on but the encryption key is ${miss}. Non-web clients will be rejected.`;
 }
 
 export function clientSecretKeyBytes(value: string): Buffer {
