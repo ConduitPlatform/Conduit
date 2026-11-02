@@ -24,22 +24,74 @@ provide a way for Conduit modules to register application routes.
 |  `CLIENT_HTTP_PORT`  | Port to be used by application REST and GrahpQL APIs |  False   |  `3000` |
 | `CLIENT_SOCKET_PORT` | DPort to be used by application WebSockets API       |  False   |  `3001` |
 
-Module settings that are not process environment variables live in the convict schema (`src/config/config.ts`). Production sets them through the Admin API, `PATCH /config/router`, the same route Core registers for every module. `security.clientSecretEncryptionKey` is marked sensitive, so a later read of the config returns `[REDACTED]`.
+Module settings that are not process environment variables live in the convict schema (`src/config/config.ts`). Production sets them through the Admin API, `PATCH /config/router`, the same route Core registers for every module.
 
-`security.clientSecretEncryptionKey` is standard base64 for exactly 32 bytes (44 characters, ending in `=`). Generate it with `node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('base64'))"` and send:
+`security.clientSecretEncryptionKey` is standard base64 of 32 bytes (44 characters, ending in `=`). Generate it with `node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('base64'))"`. `CLIENT_SECRET_ENCRYPTION_KEY` is read when a client is created or a signature is checked. It is not written into the stored config. If that environment variable is a non-empty string, it wins over the stored value, so a PATCH made while the variable is set does not change what verification uses and is not a rotation.
 
 ```json
 {
   "config": {
     "security": {
       "clientValidation": true,
-      "clientSecretEncryptionKey": "<base64 of 32 bytes>"
+      "clientSecretEncryptionKey": "<base64 of 32 bytes>",
+      "clientSignaturePathPrefix": "/api"
     }
   }
 }
 ```
 
-There is no environment variable for this field. The router validates the schema when it registers. A missing value, a value that is not this base64 form, or a value that decodes to anything other than 32 bytes stops startup.
+A later GET returns `[REDACTED]` for the key. Sending `[REDACTED]` back keeps the stored key when a real key is already stored. When nothing is stored, `[REDACTED]` is treated as empty and is not saved. An empty key does not stop startup. With validation on and no usable key, the process logs a warning and non-web clients get 401. Web clients still use the origin check.
+
+The HMAC key is the 43-character `base64url` secret from `POST /router/security/client`, used as UTF-8. It is not base64-decoded. It is not the encryption key. Payload lines, joined by `\n`: timestamp string, method uppercased, signed path, hex SHA-256 of the body.
+
+The HTTP signed path is `clientSignaturePathPrefix` plus the path and query the router sees (`originalUrl`). Example: the client calls `/api/users?limit=1`, the proxy strips `/api`, the prefix is `/api`, the router sees `/users?limit=1`, and the signed path is `/api/users?limit=1`. The prefix is stored exactly as sent. `/api/` plus `/users` is `/api//users` and will not match. The body hash is the buffer `captureRequestRawBody` stores. `express.json`, `urlencoded`, and `raw` call `verify` after body-parser inflates `Content-Encoding`. Hash those bytes. No body hashes the empty buffer `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+
+Sockets: only the handshake is checked. Follow-up requests that carry `sid` are not checked again, so a long-poll can run longer than 5 minutes. The signed path is `req.path` with no query. For the server's `path: '/realtime'`, that value is `/realtime/` (plus the prefix if set). That is the engine path, not the socket.io namespace (`/events/` or `/database/`). Method is `GET`. Body hash is the empty-body hash. A failed handshake is engine.io HTTP 400. REST signature failures stay HTTP 401.
+
+Reconnects are new handshakes. The client must build a new timestamp and signature before each attempt. `extraHeaders` stay fixed until the process replaces them. Example (Node, default polling then upgrade):
+
+```javascript
+import { io } from 'socket.io-client';
+import { createHmac, createHash } from 'node:crypto';
+
+const secret = process.env.CLIENT_SECRET; // 43-character secret, UTF-8, not base64-decoded
+const prefix = ''; // security.clientSignaturePathPrefix
+const signedPath = `${prefix}/realtime/`;
+
+function authHeaders() {
+  const timestamp = Date.now().toString();
+  const bodyHash = createHash('sha256').update(Buffer.alloc(0)).digest('hex');
+  const payload = [timestamp, 'GET', signedPath, bodyHash].join('\n');
+  const signature = createHmac('sha256', secret).update(payload, 'utf8').digest('hex');
+  return {
+    clientid: process.env.CLIENT_ID,
+    'x-conduit-timestamp': timestamp,
+    'x-conduit-signature': signature,
+  };
+}
+
+const socket = io(`${process.env.SOCKET_URL}/events/`, {
+  path: '/realtime',
+  extraHeaders: authHeaders(),
+});
+
+socket.io.on('reconnect_attempt', () => {
+  socket.io.opts.extraHeaders = authHeaders();
+});
+```
+
+A client that retries a failed HTTP request must sign it again. The first signature is consumed for 5 minutes even when the application returned an error after the signature matched.
+
+Changing `clientSecretEncryptionKey` makes every stored secret fail decryption. Every non-web client must be recreated. There is no rotation. Web clients keep working on origin. Existing bcrypt secrets cannot be verified. Recreate those clients.
+
+With validation on, these cannot sign a fresh request, and there is no second credential:
+
+- MCP at `/mcp` (Express client middleware runs before the `/mcp` handler)
+- Swagger "try it" (the scheme is already the three signature headers; the UI cannot compute the HMAC)
+- Postman and other fixed-header collections
+- Uptime monitors
+
+Still exempt, unchanged: paths starting with `/hook`, `/`, `/ready`, and `GET` `/graphql`, `/swagger`, and `/reference` when not in production. A fake `sid` is dropped by Engine.IO after the client middleware and never becomes a namespace connection or a REST route.
 
 ## Usage
 
