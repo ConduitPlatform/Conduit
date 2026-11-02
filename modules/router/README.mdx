@@ -46,7 +46,7 @@ The HMAC key is the 43-character `base64url` secret from `POST /router/security/
 
 The HTTP signed path is `clientSignaturePathPrefix` plus the path and query the router sees (`originalUrl`). Example: the client calls `/api/users?limit=1`, the proxy strips `/api`, the prefix is `/api`, the router sees `/users?limit=1`, and the signed path is `/api/users?limit=1`. The prefix is stored exactly as sent. `/api/` plus `/users` is `/api//users` and will not match. The body hash is the buffer `captureRequestRawBody` stores. `express.json`, `urlencoded`, and `raw` call `verify` after body-parser inflates `Content-Encoding`. Hash those bytes. No body hashes the empty buffer `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
 
-Sockets: only the handshake is checked. Follow-up requests that carry `sid` are not checked again, so a long-poll can run longer than 5 minutes. The signed path is `req.path` with no query. For the server's `path: '/realtime'`, that value is `/realtime/` (plus the prefix if set). That is the engine path, not the socket.io namespace (`/events/` or `/database/`). Method is `GET`. Body hash is the empty-body hash. A failed handshake is engine.io HTTP 400. REST signature failures stay HTTP 401.
+Sockets: only the handshake is checked. Follow-up requests that carry `sid` are not checked again, so a long-poll can run longer than 3 minutes. The signed path is `req.path` with no query. For the server's `path: '/realtime'`, that value is `/realtime/` (plus the prefix if set). That is the engine path, not the socket.io namespace (`/events/` or `/database/`). Method is `GET`. Body hash is the empty-body hash. A failed handshake is engine.io HTTP 400. REST signature failures stay HTTP 401.
 
 Reconnects are new handshakes. The client must build a new timestamp and signature before each attempt. `extraHeaders` stay fixed until the process replaces them. Example (Node, default polling then upgrade):
 
@@ -80,7 +80,7 @@ socket.io.on('reconnect_attempt', () => {
 });
 ```
 
-A client that retries a failed HTTP request must sign it again. The first signature is consumed for 5 minutes even when the application returned an error after the signature matched.
+A client that retries a failed HTTP request must sign it again. The first signature is consumed for 3 minutes even when the application returned an error after the signature matched.
 
 Changing `clientSecretEncryptionKey` makes every stored secret fail decryption. Every non-web client must be recreated. There is no rotation. Web clients keep working on origin. Existing bcrypt secrets cannot be verified. Recreate those clients.
 

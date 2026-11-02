@@ -8,7 +8,7 @@ import {
 } from 'node:crypto';
 import { isIP } from 'node:net';
 
-export const CLIENT_SIGNATURE_WINDOW_MS = 5 * 60 * 1000;
+export const CLIENT_SIGNATURE_WINDOW_MS = 3 * 60 * 1000;
 
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;

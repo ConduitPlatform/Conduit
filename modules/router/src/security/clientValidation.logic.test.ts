@@ -289,7 +289,7 @@ describe('client validation rules', () => {
     assert.equal(sha256Hex(Buffer.alloc(0)), EMPTY_BODY_SHA256);
   });
 
-  it('rejects a timestamp outside five minutes in either direction', () => {
+  it('rejects a timestamp outside three minutes in either direction', () => {
     const now = 1_700_000_000_000;
     assert.equal(timestampWithinWindow(now, now), true);
     assert.equal(timestampWithinWindow(now - CLIENT_SIGNATURE_WINDOW_MS, now), true);
@@ -473,7 +473,7 @@ describe('security client handlers', () => {
     assert.equal(cacheWrites[0]!.value.includes(plaintext), false);
   });
 
-  it('accepts a replay inside five minutes and rejects an older one', async () => {
+  it('accepts a replay inside three minutes and rejects an older one', async () => {
     findOneResult = {
       clientSecret: ciphertext,
       platform: PlatformTypesEnum.ANDROID,
