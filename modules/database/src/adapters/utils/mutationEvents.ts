@@ -103,6 +103,8 @@ function extractId(value: unknown): string | undefined {
   }
   if (typeof value !== 'object') return undefined;
   const record = value as Record<string, unknown>;
+  // a mongoose ObjectId exposes `_id` as itself
+  if (record._id === value) return String(value);
   if (record._id !== undefined) return extractId(record._id);
   if (record.id !== undefined) return extractId(record.id);
   return undefined;
