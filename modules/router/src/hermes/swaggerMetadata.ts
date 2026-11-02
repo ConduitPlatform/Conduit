@@ -25,7 +25,7 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
             type: 'apiKey',
             in: 'header',
             description:
-              'Unix time in milliseconds. The router rejects the request when this is more than 5 minutes from the server clock.',
+              'Unix time in milliseconds. The router rejects the request when this is more than 3 minutes from the server clock.',
           },
           'x-conduit-signature': {
             name: 'x-conduit-signature',
