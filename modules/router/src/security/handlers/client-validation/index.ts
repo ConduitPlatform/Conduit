@@ -4,12 +4,14 @@ import {
   ConduitGrpcSdk,
   ConduitError,
   DatabaseProvider,
+  PlatformTypesEnum,
   type FindOneOptions,
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
+import { ConduitRequest, isSocketHandshake } from '@conduitplatform/hermes';
 import { Client } from '../../../models/index.js';
 import { validateClient } from '../../utils/index.js';
-import { ConduitRequest } from '@conduitplatform/hermes';
+import { CLIENT_SIGNATURE_WINDOW_MS } from '../../clientValidation.logic.js';
 
 const CLIENT_CACHE_TTL_MS = 100000;
 
@@ -66,34 +68,87 @@ export class ClientValidator {
       return finish();
     }
 
+    if (!isSocketHandshake(req) && req.originalUrl == null && requestQueryHasSid(req)) {
+      return finish();
+    }
+
     const clientid = req.headers.clientid;
     if (isNil(clientid) || Array.isArray(clientid)) {
       return finish(ConduitError.unauthorized());
     }
 
-    if (!isNil(req.headers.clientsecret)) {
-      return finish(ConduitError.unauthorized());
-    }
-
-    const key = await this.grpcSdk.state!.getKey(clientid);
-    const cached = key ? cachedClient(key) : null;
-    if (cached) {
-      const validPlatform = await validateClient(req, cached);
-      if (validPlatform) {
-        req.conduit!.clientId = clientid;
-        return finish();
-      }
-    }
-
+    let redisUnavailable = false;
     try {
+      let cached: ReturnType<typeof cachedClient> = null;
+      try {
+        const key = await this.grpcSdk.state!.getKey(clientid);
+        cached = key ? cachedClient(key) : null;
+      } catch (err) {
+        redisUnavailable = true;
+        throw err;
+      }
+
+      if (cached) {
+        const cachedResult = await this.acceptKnownClient(req, cached, clientid, false);
+        if (cachedResult === 'ok') return finish();
+        if (cachedResult === 'reject') return finish(ConduitError.unauthorized());
+      }
+
       const client = await Client.getInstance().findOne({ clientId: clientid }, {
         select: '+clientSecret platform domain',
         readPreference: 'primary',
       } satisfies FindOneOptions);
-      if (isNil(client) || !(await validateClient(req, client))) {
+      if (isNil(client)) {
+        ConduitGrpcSdk.Logger.warn(
+          `Client signature rejected: unknown client ${clientid}`,
+        );
         return finish(ConduitError.unauthorized());
       }
-      req.conduit!.clientId = clientid;
+      const loadedResult = await this.acceptKnownClient(req, client, clientid, true);
+      if (loadedResult === 'ok') return finish();
+      return finish(ConduitError.unauthorized());
+    } catch (err) {
+      if (
+        redisUnavailable ||
+        (err as { redisUnavailable?: boolean } | undefined)?.redisUnavailable
+      ) {
+        ConduitGrpcSdk.Logger.warn('Client signature rejected: Redis is unavailable');
+      }
+      return finish(ConduitError.unauthorized());
+    }
+  }
+
+  private async acceptKnownClient(
+    req: ConduitRequest,
+    client: { platform: string; domain?: string; clientSecret: string },
+    clientid: string,
+    writeCache: boolean,
+  ): Promise<'ok' | 'reject' | 'fallthrough'> {
+    if (client.platform !== PlatformTypesEnum.WEB && !isNil(req.headers.clientsecret)) {
+      return 'reject';
+    }
+    if (!(await validateClient(req, client, clientid))) {
+      return writeCache ? 'reject' : 'fallthrough';
+    }
+    if (client.platform !== PlatformTypesEnum.WEB) {
+      const signature = req.headers['x-conduit-signature'];
+      if (typeof signature !== 'string') return 'reject';
+      let stored: boolean;
+      try {
+        stored = await this.grpcSdk.state!.setIfAbsent(
+          `client-sig:${clientid}:${signature}`,
+          '1',
+          CLIENT_SIGNATURE_WINDOW_MS,
+        );
+      } catch (err) {
+        const wrapped = err instanceof Error ? err : new Error('Redis is unavailable');
+        (wrapped as Error & { redisUnavailable?: boolean }).redisUnavailable = true;
+        throw wrapped;
+      }
+      if (!stored) return 'reject';
+    }
+    req.conduit!.clientId = clientid;
+    if (writeCache) {
       void this.grpcSdk
         .state!.setKey(
           clientid,
@@ -105,11 +160,19 @@ export class ClientValidator {
           CLIENT_CACHE_TTL_MS,
         )
         ?.catch(() => undefined);
-      return finish();
-    } catch {
-      return finish(ConduitError.unauthorized());
     }
+    return 'ok';
   }
+}
+
+function requestQueryHasSid(req: { url?: string; originalUrl?: string }): boolean {
+  for (const raw of [req.url, req.originalUrl]) {
+    if (!raw) continue;
+    const queryIndex = raw.indexOf('?');
+    if (queryIndex === -1) continue;
+    if (new URLSearchParams(raw.slice(queryIndex + 1)).has('sid')) return true;
+  }
+  return false;
 }
 
 function cachedClient(raw: string): {
