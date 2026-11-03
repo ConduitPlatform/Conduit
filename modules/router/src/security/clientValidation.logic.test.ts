@@ -13,7 +13,10 @@ import { Response } from 'express';
 import routerConfig from '../config/config.js';
 import { Client } from '../models/index.js';
 import { SecurityAdmin } from '../admin/security.js';
-import { ClientValidator } from './handlers/client-validation/index.js';
+import {
+  ClientValidator,
+  resetClientRejectionWarnings,
+} from './handlers/client-validation/index.js';
 import {
   blankUnstoredRedactedKey,
   buildSignedPayload,
@@ -26,11 +29,13 @@ import {
   domainAllowsHost,
   encryptClientSecret,
   hmacSha256Hex,
+  hostFromHeader,
   hostnameFromOrigin,
   isAcceptableClientDomain,
   requestHostname,
   resolveClientSecretEncryptionKey,
   sha256Hex,
+  signatureReplayTtlMs,
   signaturesMatch,
   timestampWithinWindow,
 } from './clientValidation.logic.js';
@@ -45,6 +50,7 @@ let findOneResult: unknown = null;
 let created: Record<string, unknown> | undefined;
 const findOneCalls: FindCall[] = [];
 const redis = new Map<string, string>();
+const redisExpiresAt = new Map<string, number>();
 const cacheWrites: { key: string; value: string; expiry?: number }[] = [];
 const cleared: string[] = [];
 const setIfAbsentCalls: { key: string; value: string; expiry?: number }[] = [];
@@ -52,25 +58,42 @@ let getKeyError: Error | null = null;
 let setIfAbsentError: Error | null = null;
 let previousEncryptionKey: string | undefined;
 
+function forgetExpired(key: string) {
+  const expiresAt = redisExpiresAt.get(key);
+  if (expiresAt !== undefined && Date.now() >= expiresAt) {
+    redis.delete(key);
+    redisExpiresAt.delete(key);
+  }
+}
+
+function rememberKey(key: string, value: string, expiry?: number) {
+  redis.set(key, value);
+  if (typeof expiry === 'number') redisExpiresAt.set(key, Date.now() + expiry);
+  else redisExpiresAt.delete(key);
+}
+
 const state = {
   getKey(key: string) {
     if (getKeyError) return Promise.reject(getKeyError);
+    forgetExpired(key);
     return Promise.resolve(redis.has(key) ? redis.get(key) : null);
   },
   setKey(key: string, value: string, expiry?: number) {
-    redis.set(key, value);
+    rememberKey(key, value, expiry);
     cacheWrites.push({ key, value, expiry });
     return Promise.resolve('OK');
   },
   setIfAbsent(key: string, value: string, expiry?: number) {
     setIfAbsentCalls.push({ key, value, expiry });
     if (setIfAbsentError) return Promise.reject(setIfAbsentError);
+    forgetExpired(key);
     if (redis.has(key)) return Promise.resolve(false);
-    redis.set(key, value);
+    rememberKey(key, value, expiry);
     return Promise.resolve(true);
   },
   clearKey(key: string) {
     redis.delete(key);
+    redisExpiresAt.delete(key);
     cleared.push(key);
     return Promise.resolve(1);
   },
@@ -244,6 +267,10 @@ describe('client validation rules', () => {
     assert.equal(hostnameFromOrigin('https://app.example.com:8443'), 'app.example.com');
     assert.equal(hostnameFromOrigin('http://localhost:3000'), 'localhost');
     assert.equal(requestHostname(undefined, 'App.Example.com'), 'app.example.com');
+    assert.equal(hostFromHeader('app.example.com:3000'), 'app.example.com');
+    assert.equal(hostFromHeader('App.Example.com'), 'app.example.com');
+    assert.equal(hostFromHeader('[::1]:3000'), '::1');
+    assert.equal(hostFromHeader(undefined), '');
     assert.equal(domainAllowsHost('app.example.com', 'app.example.com'), true);
     assert.equal(
       domainAllowsHost('app.example.com', 'app.example.com'.toUpperCase()),
@@ -296,6 +323,12 @@ describe('client validation rules', () => {
     assert.equal(timestampWithinWindow(now + CLIENT_SIGNATURE_WINDOW_MS, now), true);
     assert.equal(timestampWithinWindow(now - CLIENT_SIGNATURE_WINDOW_MS - 1, now), false);
     assert.equal(timestampWithinWindow(now + CLIENT_SIGNATURE_WINDOW_MS + 1, now), false);
+    assert.equal(
+      signatureReplayTtlMs(now + 170_000, now),
+      170_000 + CLIENT_SIGNATURE_WINDOW_MS,
+    );
+    assert.equal(signatureReplayTtlMs(now - CLIENT_SIGNATURE_WINDOW_MS, now), 1);
+    assert.equal(signatureReplayTtlMs(now - CLIENT_SIGNATURE_WINDOW_MS - 50_000, now), 1);
   });
 
   it('breaks the signature when the body, path, or method changes', () => {
@@ -416,7 +449,9 @@ describe('security client handlers', () => {
     created = undefined;
     findOneCalls.length = 0;
     redis.clear();
+    redisExpiresAt.clear();
     cacheWrites.length = 0;
+    resetClientRejectionWarnings();
     cleared.length = 0;
     setIfAbsentCalls.length = 0;
     getKeyError = null;
@@ -490,7 +525,10 @@ describe('security client handlers', () => {
     assert.equal(setIfAbsentCalls.length, 2);
     assert.equal(setIfAbsentCalls[0]?.key, `client-sig:cid-1:${signature}`);
     assert.equal(setIfAbsentCalls[0]?.value, '1');
-    assert.equal(setIfAbsentCalls[0]?.expiry, CLIENT_SIGNATURE_WINDOW_MS);
+    const replayTtl = signatureReplayTtlMs(Number(recent), Number(recent) + 60_000);
+    const storedTtl = setIfAbsentCalls[0]?.expiry ?? 0;
+    assert.equal(storedTtl <= replayTtl, true);
+    assert.equal(storedTtl >= replayTtl - 5_000, true);
     assert.equal(setIfAbsentCalls[1]?.key, `client-sig:cid-1:${signature}`);
 
     const callsAfterReplay = setIfAbsentCalls.length;
@@ -500,6 +538,59 @@ describe('security client handlers', () => {
     );
     assert.deepEqual(errorShape(staleError), unauthorized);
     assert.equal(setIfAbsentCalls.length, callsAfterReplay);
+  });
+
+  it('keeps a signature rejected until its timestamp leaves the window', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const start = 1_700_000_000_000;
+    let now = start;
+    const originalNow = Date.now;
+    Date.now = () => now;
+    try {
+      const timestamp = String(start + 2 * 60 * 1000 + 50 * 1000);
+      assert.equal(
+        await runMiddleware(signedRequest({ secret: plaintext, timestamp })),
+        undefined,
+      );
+      assert.equal(
+        setIfAbsentCalls[0]?.expiry,
+        2 * 60 * 1000 + 50 * 1000 + CLIENT_SIGNATURE_WINDOW_MS,
+      );
+      assert.deepEqual(
+        errorShape(await runMiddleware(signedRequest({ secret: plaintext, timestamp }))),
+        unauthorized,
+      );
+      now += 3 * 60 * 1000 + 1000;
+      assert.deepEqual(
+        errorShape(await runMiddleware(signedRequest({ secret: plaintext, timestamp }))),
+        unauthorized,
+      );
+    } finally {
+      Date.now = originalNow;
+    }
+  });
+
+  it('does not store a timestamp that is already three minutes and one second old', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const past = String(Date.now() - CLIENT_SIGNATURE_WINDOW_MS - 1000);
+    const storedBefore = setIfAbsentCalls.length;
+    assert.deepEqual(
+      errorShape(
+        await runMiddleware(signedRequest({ secret: plaintext, timestamp: past })),
+      ),
+      unauthorized,
+    );
+    assert.equal(setIfAbsentCalls.length, storedBefore);
+    assert.equal(
+      [...redis.keys()].some(key => key.startsWith('client-sig:')),
+      false,
+    );
   });
 
   it('rejects a future timestamp, a wrong signature, and a short signature', async () => {
@@ -606,6 +697,8 @@ describe('security client handlers', () => {
     });
     assert.equal(await runMiddleware(fromOrigin), undefined);
 
+    redis.clear();
+    redisExpiresAt.clear();
     findOneCalls.length = 0;
     findOneResult = {
       clientSecret: ciphertext,
@@ -619,17 +712,98 @@ describe('security client handlers', () => {
     });
     assert.equal(await runMiddleware(bareHost), undefined);
 
+    redis.clear();
+    redisExpiresAt.clear();
     findOneResult = {
       clientSecret: ciphertext,
       platform: PlatformTypesEnum.WEB,
       domain: 'localhost',
     };
     const local = requestOf({
-      headers: { clientid: 'cid-1' },
-      hostname: 'localhost',
+      headers: { clientid: 'cid-1', host: 'localhost' },
       originalUrl: '/database/orders',
     });
     assert.equal(await runMiddleware(local), undefined);
+  });
+
+  it('matches a web handshake from raw origin and host headers', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.WEB,
+      domain: 'app.example.com',
+    };
+    const handshake = {
+      headers: {
+        clientid: 'cid-1',
+        origin: 'https://app.example.com',
+        host: 'app.example.com:3000',
+      },
+      method: 'GET',
+      path: '/realtime/',
+      url: '/realtime/?EIO=4&transport=polling',
+      conduit: {},
+    };
+    assert.equal('get' in handshake, false);
+    assert.equal('hostname' in handshake, false);
+    assert.equal(await runMiddleware(handshake as unknown as ConduitRequest), undefined);
+
+    const rejected = {
+      headers: {
+        clientid: 'cid-1',
+        origin: 'https://other.example.com',
+        host: 'app.example.com:3000',
+      },
+      method: 'GET',
+      path: '/realtime/',
+      url: '/realtime/?EIO=4&transport=polling',
+      conduit: {},
+    };
+    assert.equal('get' in rejected, false);
+    assert.deepEqual(
+      errorShape(await runMiddleware(rejected as unknown as ConduitRequest)),
+      unauthorized,
+    );
+  });
+
+  it('rejects a cached bad signature without reading the database', async () => {
+    redis.set(
+      'cid-1',
+      JSON.stringify({ c: ciphertext, p: PlatformTypesEnum.ANDROID, d: '' }),
+    );
+    const req = signedRequest({ secret: plaintext, signature: 'b'.repeat(64) });
+    const warnings = await withWarnings(async () => {
+      assert.deepEqual(errorShape(await runMiddleware(req)), unauthorized);
+    });
+    assert.equal(findOneCalls.length, 0);
+    assert.equal(warnings.filter(line => line.includes('bad signature')).length, 1);
+    assertNoSecrets(warnings, 'b'.repeat(64));
+  });
+
+  it('logs one rejection warning per client id inside one minute', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const rejected = (clientId: string) =>
+      signedRequest({
+        secret: plaintext,
+        signature: 'c'.repeat(64),
+        extraHeaders: { clientid: clientId },
+      });
+    const first = await withWarnings(async () => {
+      assert.deepEqual(errorShape(await runMiddleware(rejected('cid-1'))), unauthorized);
+    });
+    const second = await withWarnings(async () => {
+      assert.deepEqual(errorShape(await runMiddleware(rejected('cid-1'))), unauthorized);
+    });
+    const other = await withWarnings(async () => {
+      assert.deepEqual(errorShape(await runMiddleware(rejected('cid-2'))), unauthorized);
+    });
+    assert.equal(first.filter(line => line.includes('bad signature')).length, 1);
+    assert.equal(second.length, 0);
+    assert.equal(other.filter(line => line.includes('bad signature')).length, 1);
+    assertNoSecrets(first, 'c'.repeat(64));
+    assertNoSecrets(other, 'c'.repeat(64));
   });
 
   it('stores a 43 character secret encrypted and returns the plaintext once', async () => {
@@ -795,6 +969,7 @@ describe('security client handlers', () => {
 
     getKeyError = null;
     findOneCalls.length = 0;
+    resetClientRejectionWarnings();
     setIfAbsentError = new Error('redis down');
     const setWarnings = await withWarnings(async () => {
       const again = signedRequest({ secret: plaintext });
@@ -815,6 +990,7 @@ describe('security client handlers', () => {
     };
     const wrong = signedRequest({ secret: plaintext });
     wrong.headers['x-conduit-signature'] = 'b'.repeat(64);
+    resetClientRejectionWarnings();
     const badSignature = await withWarnings(async () => {
       assert.deepEqual(errorShape(await runMiddleware(wrong)), unauthorized);
     });
@@ -825,6 +1001,7 @@ describe('security client handlers', () => {
     assertNoSecrets(badSignature, 'b'.repeat(64));
 
     const future = String(Date.now() + CLIENT_SIGNATURE_WINDOW_MS + 10_000);
+    resetClientRejectionWarnings();
     const drift = await withWarnings(async () => {
       assert.deepEqual(
         errorShape(
@@ -847,6 +1024,7 @@ describe('security client handlers', () => {
       clientSecret: '$2b$10$not-a-real-bcrypt-hash-value',
       platform: PlatformTypesEnum.ANDROID,
     };
+    resetClientRejectionWarnings();
     const bcryptWarnings = await withWarnings(async () => {
       assert.deepEqual(
         errorShape(await runMiddleware(signedRequest({ secret: plaintext }))),
@@ -869,6 +1047,7 @@ describe('security client handlers', () => {
       clientSecret: ciphertext,
       platform: PlatformTypesEnum.ANDROID,
     };
+    resetClientRejectionWarnings();
     const wrongKey = await withWarnings(async () => {
       assert.deepEqual(
         errorShape(await runMiddleware(signedRequest({ secret: plaintext }))),
@@ -882,6 +1061,7 @@ describe('security client handlers', () => {
     assertNoSecrets(wrongKey);
 
     findOneResult = null;
+    resetClientRejectionWarnings();
     const unknown = await withWarnings(async () => {
       assert.deepEqual(
         errorShape(await runMiddleware(signedRequest({ secret: plaintext }))),

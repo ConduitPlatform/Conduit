@@ -9,12 +9,19 @@ import {
   decryptClientSecret,
   domainAllowsHost,
   hmacSha256Hex,
+  hostFromHeader,
   parseUnixMillis,
   requestHostname,
   resolveClientSecretEncryptionKey,
   signaturesMatch,
   timestampWithinWindow,
 } from '../clientValidation.logic.js';
+
+type RejectionWarn = (message: string) => void;
+
+const logRejection: RejectionWarn = message => {
+  ConduitGrpcSdk.Logger.warn(message);
+};
 
 export async function validateClient(
   req: Request,
@@ -24,19 +31,24 @@ export async function validateClient(
     clientSecret: string;
   },
   clientId?: string,
+  warn: RejectionWarn = logRejection,
 ) {
   if (client.platform === PlatformTypesEnum.WEB && client.domain) {
     if (client.domain === '*') return true;
-    const host = requestHostname(req.get('origin') ?? undefined, req.hostname);
+    const host = requestHostname(
+      headerText(req.headers.origin),
+      hostFromHeader(headerText(req.headers.host)),
+    );
     return domainAllowsHost(client.domain, host);
   }
-  return verifySignedRequest(req, client.clientSecret, clientId);
+  return verifySignedRequest(req, client.clientSecret, clientId, warn);
 }
 
 function verifySignedRequest(
   req: Request,
   ciphertext: string,
-  clientId?: string,
+  clientId: string | undefined,
+  warn: RejectionWarn,
 ): boolean {
   const signatureHeader = req.headers['x-conduit-signature'];
   const timestampHeader = req.headers['x-conduit-timestamp'];
@@ -49,7 +61,7 @@ function verifySignedRequest(
   const timestamp = parseUnixMillis(timestampHeader);
   if (timestamp === null || !timestampWithinWindow(timestamp, Date.now())) {
     const who = clientId ? ` for client ${clientId}` : '';
-    ConduitGrpcSdk.Logger.warn(`Client signature rejected: clock drift${who}`);
+    warn(`Client signature rejected: clock drift${who}`);
     return false;
   }
   if (
@@ -57,7 +69,7 @@ function verifySignedRequest(
     ciphertext.startsWith('$2b$') ||
     ciphertext.startsWith('$2y$')
   ) {
-    ConduitGrpcSdk.Logger.warn(
+    warn(
       'Client signature rejected: this client is an old bcrypt secret and must be recreated',
     );
     return false;
@@ -68,14 +80,12 @@ function verifySignedRequest(
       ConfigController.getInstance().config.security.clientSecretEncryptionKey,
     );
     if (resolved === '' || clientSecretKeyError(resolved)) {
-      ConduitGrpcSdk.Logger.warn(
-        'Client signature rejected: decrypt failure / wrong key',
-      );
+      warn('Client signature rejected: decrypt failure / wrong key');
       return false;
     }
     secret = decryptClientSecret(ciphertext, clientSecretKeyBytes(resolved));
   } catch {
-    ConduitGrpcSdk.Logger.warn('Client signature rejected: decrypt failure / wrong key');
+    warn('Client signature rejected: decrypt failure / wrong key');
     return false;
   }
   const conduitReq = req as ConduitRequest;
@@ -91,8 +101,12 @@ function verifySignedRequest(
     rawBody: conduitReq.rawBody,
   });
   if (!signaturesMatch(signatureHeader, hmacSha256Hex(secret, payload))) {
-    ConduitGrpcSdk.Logger.warn('Client signature rejected: bad signature');
+    warn('Client signature rejected: bad signature');
     return false;
   }
   return true;
+}
+
+function headerText(value: string | string[] | undefined): string | undefined {
+  return typeof value === 'string' ? value : undefined;
 }

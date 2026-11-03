@@ -11,9 +11,25 @@ import { ConfigController } from '@conduitplatform/module-tools';
 import { ConduitRequest, isSocketHandshake } from '@conduitplatform/hermes';
 import { Client } from '../../../models/index.js';
 import { validateClient } from '../../utils/index.js';
-import { CLIENT_SIGNATURE_WINDOW_MS } from '../../clientValidation.logic.js';
+import { parseUnixMillis, signatureReplayTtlMs } from '../../clientValidation.logic.js';
 
 const CLIENT_CACHE_TTL_MS = 100000;
+const REJECTION_WARNING_INTERVAL_MS = 60 * 1000;
+const lastRejectionWarningAt = new Map<string, number>();
+
+export function resetClientRejectionWarnings(): void {
+  lastRejectionWarningAt.clear();
+}
+
+function warnClientRejection(clientId: string, message: string): void {
+  const now = Date.now();
+  const previous = lastRejectionWarningAt.get(clientId);
+  if (previous !== undefined && now - previous < REJECTION_WARNING_INTERVAL_MS) {
+    return;
+  }
+  lastRejectionWarningAt.set(clientId, now);
+  ConduitGrpcSdk.Logger.warn(message);
+}
 
 export class ClientValidator {
   database: DatabaseProvider;
@@ -76,6 +92,7 @@ export class ClientValidator {
     if (isNil(clientid) || Array.isArray(clientid)) {
       return finish(ConduitError.unauthorized());
     }
+    const warn = (message: string) => warnClientRejection(clientid, message);
 
     let redisUnavailable = false;
     try {
@@ -89,9 +106,15 @@ export class ClientValidator {
       }
 
       if (cached) {
-        const cachedResult = await this.acceptKnownClient(req, cached, clientid, false);
+        const cachedResult = await this.acceptKnownClient(
+          req,
+          cached,
+          clientid,
+          false,
+          warn,
+        );
         if (cachedResult === 'ok') return finish();
-        if (cachedResult === 'reject') return finish(ConduitError.unauthorized());
+        return finish(ConduitError.unauthorized());
       }
 
       const client = await Client.getInstance().findOne({ clientId: clientid }, {
@@ -99,12 +122,16 @@ export class ClientValidator {
         readPreference: 'primary',
       } satisfies FindOneOptions);
       if (isNil(client)) {
-        ConduitGrpcSdk.Logger.warn(
-          `Client signature rejected: unknown client ${clientid}`,
-        );
+        warn(`Client signature rejected: unknown client ${clientid}`);
         return finish(ConduitError.unauthorized());
       }
-      const loadedResult = await this.acceptKnownClient(req, client, clientid, true);
+      const loadedResult = await this.acceptKnownClient(
+        req,
+        client,
+        clientid,
+        true,
+        warn,
+      );
       if (loadedResult === 'ok') return finish();
       return finish(ConduitError.unauthorized());
     } catch (err) {
@@ -112,7 +139,7 @@ export class ClientValidator {
         redisUnavailable ||
         (err as { redisUnavailable?: boolean } | undefined)?.redisUnavailable
       ) {
-        ConduitGrpcSdk.Logger.warn('Client signature rejected: Redis is unavailable');
+        warn('Client signature rejected: Redis is unavailable');
       }
       return finish(ConduitError.unauthorized());
     }
@@ -123,22 +150,27 @@ export class ClientValidator {
     client: { platform: string; domain?: string; clientSecret: string },
     clientid: string,
     writeCache: boolean,
-  ): Promise<'ok' | 'reject' | 'fallthrough'> {
+    warn: (message: string) => void,
+  ): Promise<'ok' | 'reject'> {
     if (client.platform !== PlatformTypesEnum.WEB && !isNil(req.headers.clientsecret)) {
       return 'reject';
     }
-    if (!(await validateClient(req, client, clientid))) {
-      return writeCache ? 'reject' : 'fallthrough';
+    if (!(await validateClient(req, client, clientid, warn))) {
+      return 'reject';
     }
     if (client.platform !== PlatformTypesEnum.WEB) {
       const signature = req.headers['x-conduit-signature'];
       if (typeof signature !== 'string') return 'reject';
+      const timestampHeader = req.headers['x-conduit-timestamp'];
+      const timestampMs =
+        typeof timestampHeader === 'string' ? parseUnixMillis(timestampHeader) : null;
+      if (timestampMs === null) return 'reject';
       let stored: boolean;
       try {
         stored = await this.grpcSdk.state!.setIfAbsent(
           `client-sig:${clientid}:${signature}`,
           '1',
-          CLIENT_SIGNATURE_WINDOW_MS,
+          signatureReplayTtlMs(timestampMs, Date.now()),
         );
       } catch (err) {
         const wrapped = err instanceof Error ? err : new Error('Redis is unavailable');

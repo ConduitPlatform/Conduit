@@ -118,6 +118,13 @@ export function requestHostname(
   return fallbackHostname.trim().toLowerCase();
 }
 
+export function hostFromHeader(hostHeader: string | undefined): string {
+  if (!hostHeader) return '';
+  const trimmed = hostHeader.trim();
+  if (!trimmed) return '';
+  return comparableHost(trimmed);
+}
+
 export function domainAllowsHost(storedDomain: string, host: string): boolean {
   const domain = storedDomain.trim().toLowerCase();
   const hostname = host.trim().toLowerCase();
@@ -185,6 +192,11 @@ export function parseUnixMillis(value: string): number | null {
 export function timestampWithinWindow(timestampMs: number, nowMs: number): boolean {
   if (!Number.isFinite(timestampMs) || !Number.isFinite(nowMs)) return false;
   return Math.abs(nowMs - timestampMs) <= CLIENT_SIGNATURE_WINDOW_MS;
+}
+
+export function signatureReplayTtlMs(timestampMs: number, nowMs: number): number {
+  const remaining = timestampMs + CLIENT_SIGNATURE_WINDOW_MS - nowMs;
+  return remaining < 1 ? 1 : remaining;
 }
 
 export function signaturesMatch(provided: string, expected: string): boolean {
