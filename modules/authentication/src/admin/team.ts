@@ -14,6 +14,7 @@ import { Team, Token, User } from '../models/index.js';
 import { isNil } from 'lodash-es';
 import escapeStringRegexp from 'escape-string-regexp';
 import { AuthUtils } from '../utils/index.js';
+import { invalidateTeamClaims } from '../utils/teamClaims.js';
 import {
   addUserToTeamWithRealm,
   assertTeamDeletable,
@@ -337,23 +338,28 @@ export class TeamsAdmin {
       throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
     }
     await AuthUtils.validateMembers(members);
-    for (const member of members) {
-      const relation = await this.grpcSdk.authorization!.findRelation({
-        subject: 'User:' + member,
-        resource: 'Team:' + team._id,
-      });
-      if (!relation || relation.relations.length === 0) {
-        continue;
+    try {
+      for (const member of members) {
+        const relation = await this.grpcSdk.authorization!.findRelation({
+          subject: 'User:' + member,
+          resource: 'Team:' + team._id,
+        });
+        if (!relation || relation.relations.length === 0) {
+          continue;
+        }
+        await this.grpcSdk.authorization!.deleteAllRelations({
+          subject: 'User:' + member,
+          resource: 'Team:' + team._id,
+        });
+        await this.grpcSdk.authorization!.createRelation({
+          subject: 'User:' + member,
+          resource: 'Team:' + team._id,
+          relation: role,
+        });
       }
-      await this.grpcSdk.authorization!.deleteAllRelations({
-        subject: 'User:' + member,
-        resource: 'Team:' + team._id,
-      });
-      await this.grpcSdk.authorization!.createRelation({
-        subject: 'User:' + member,
-        resource: 'Team:' + team._id,
-        relation: role,
-      });
+    } finally {
+      // roles are token claims: drop the cached ones (also after a partial failure)
+      await invalidateTeamClaims(members.map(String));
     }
     return 'Ok';
   }
@@ -459,11 +465,15 @@ export class TeamsAdmin {
       team,
       users.map(user => String(user._id)),
     );
-    for (const user of users) {
-      await this.grpcSdk.authorization!.deleteAllRelations({
-        subject: 'User:' + user._id,
-        resource: 'Team:' + teamId,
-      });
+    try {
+      for (const user of users) {
+        await this.grpcSdk.authorization!.deleteAllRelations({
+          subject: 'User:' + user._id,
+          resource: 'Team:' + teamId,
+        });
+      }
+    } finally {
+      await invalidateTeamClaims(users.map(user => String(user._id)));
     }
     await revokeOrphanedGuests(
       this.grpcSdk,

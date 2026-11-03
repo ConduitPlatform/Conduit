@@ -8,14 +8,10 @@ import {
 import { ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { errors } from '../errors.js';
-import {
-  AccessToken,
-  RealmMembership,
-  RealmSettings,
-  RefreshToken,
-  Team,
-  User,
-} from '../models/index.js';
+import { RealmMembership, RealmSettings, Team, User } from '../models/index.js';
+import { deleteSessionTokens } from './sessionRevocation.js';
+import { invalidateUsers } from './sessionServices.js';
+import { invalidateTeamClaims } from './teamClaims.js';
 import {
   assertGuestAllowed,
   assertRealmPrincipalsFree,
@@ -130,11 +126,7 @@ export async function assertUsersCanJoinTeam(
 /** Deletes the user's sessions that are not bound to a realm (global sessions). */
 export async function revokeRealmlessTokens(userIds: string[]): Promise<void> {
   if (userIds.length === 0) return;
-  const query = realmlessTokenQuery(userIds);
-  await Promise.all([
-    AccessToken.getInstance().deleteMany(query),
-    RefreshToken.getInstance().deleteMany(query),
-  ]);
+  await deleteSessionTokens(realmlessTokenQuery(userIds), 'moved into a realm');
 }
 
 /**
@@ -215,6 +207,10 @@ export async function addUserToTeamWithRealm(
   } catch (e) {
     await runRollback(rollback);
     throw e;
+  } finally {
+    // the home realm and the memberships may have changed even when a later step failed
+    await invalidateTeamClaims([userId]);
+    await invalidateUsers([userId]);
   }
 }
 
@@ -390,14 +386,21 @@ export async function deleteTeamAndDetachChildren(
 ): Promise<void> {
   const teamId = String(team._id);
   const parentId = team.parentTeam ? String(team.parentTeam) : null;
-  // collected up front: the relations are gone once the team is deleted
-  const memberIds =
-    parentId && realmsEnabled() ? await collectTeamUserIds(grpcSdk, [teamId]) : [];
+  // collected up front: the relations are gone once the team is deleted (their cached
+  // team claims go with them)
+  const needsGuestCheck = !!parentId && realmsEnabled();
+  // (a failed lookup only costs the claims their early invalidation, unless the guest
+  // cleanup below needs the ids)
+  const allMemberIds = needsGuestCheck
+    ? await collectTeamUserIds(grpcSdk, [teamId])
+    : await collectTeamUserIds(grpcSdk, [teamId]).catch(() => [] as string[]);
+  const memberIds = needsGuestCheck ? allMemberIds : [];
   const children = await Team.getInstance().findMany({ parentTeam: teamId });
 
   await Team.getInstance().deleteOne({ _id: teamId });
   await grpcSdk.authorization!.deleteAllRelations({ resource: 'Team:' + teamId });
   await grpcSdk.authorization!.deleteAllRelations({ subject: 'Team:' + teamId });
+  await invalidateTeamClaims(allMemberIds);
   if (children.length > 0) {
     // null (not undefined, which an update drops) puts them on the top level
     await Team.getInstance().updateMany({ parentTeam: teamId }, {

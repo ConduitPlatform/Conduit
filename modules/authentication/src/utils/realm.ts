@@ -2,14 +2,7 @@ import { ConduitGrpcSdk, GrpcError, Indexable } from '@conduitplatform/grpc-sdk'
 import { ConfigController, ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { errors } from '../errors.js';
-import {
-  AccessToken,
-  RealmMembership,
-  RealmSettings,
-  RefreshToken,
-  Team,
-  User,
-} from '../models/index.js';
+import { RealmMembership, RealmSettings, Team, User } from '../models/index.js';
 import {
   assertGuestAllowed,
   BoundedTtlCache,
@@ -20,7 +13,9 @@ import {
   computeRealmsEnabled,
   createIdentifierCollisionCounter,
   EffectiveAuthSettings,
+  EffectiveRefreshPolicy,
   evaluateRealmAccess,
+  globalRefreshPolicy,
   findBatchPrincipalClashes,
   findPrincipalClash,
   hasNestedRealmViolation,
@@ -42,6 +37,9 @@ import {
   uniquenessQuery,
 } from './realm.logic.js';
 import { invalidateOAuthSettingsCache } from '../handlers/oauth2/utils/oauthSettings.logic.js';
+import { deleteSessionTokens } from './sessionRevocation.js';
+import { invalidateUsers } from './sessionServices.js';
+import { invalidateTeamClaims } from './teamClaims.js';
 
 export * from './realm.logic.js';
 
@@ -363,6 +361,23 @@ async function findRealmContextById(realmId: string): Promise<RealmContext | nul
   return contextById.get(id) ?? (await loadContext({ _id: id }));
 }
 
+/**
+ * Refresh token policy for a token issued in `realmId` (a realm team id; null/empty =
+ * global): the realm's tightened policy, or the global config when the session is global,
+ * realms are off, or the realm no longer resolves (inactive or deleted: the global
+ * policy is the ceiling anyway).
+ */
+export async function resolveRefreshPolicyForRealm(
+  realmId: string | null | undefined,
+  globalConfig: Indexable,
+): Promise<EffectiveRefreshPolicy> {
+  if (realmId && realmsEnabled()) {
+    const context = await findRealmContextById(String(realmId));
+    if (context) return context.effective.policies.session.refreshTokens;
+  }
+  return globalRefreshPolicy(globalConfig);
+}
+
 /** Same as resolveRealm, by realm team id. Throws REALM_NOT_FOUND. */
 export async function resolveRealmById(realmId: string): Promise<RealmContext> {
   const context = await findRealmContextById(realmId);
@@ -524,7 +539,9 @@ export async function grantRealmMembership(
       relation: role,
       resource: 'Team:' + realmTeamId,
     });
+    await invalidateTeamClaims([userId]);
   }
+  await invalidateUsers([userId]);
   return membership;
 }
 
@@ -552,10 +569,10 @@ export async function revokeRealmMembership(
     throw new ModuleError(errors.HOME_USER_REMOVAL);
   }
   await RealmMembership.getInstance().deleteMany({ user: userId, realm: realmTeamId });
-  await Promise.all([
-    AccessToken.getInstance().deleteMany({ user: userId, realm: realmTeamId }),
-    RefreshToken.getInstance().deleteMany({ user: userId, realm: realmTeamId }),
-  ]);
+  await deleteSessionTokens(
+    { user: userId, realm: realmTeamId },
+    'realm membership revoked',
+  );
   if (params.removeRelations) {
     try {
       await grpcSdk.authorization!.deleteAllRelations({
@@ -565,7 +582,9 @@ export async function revokeRealmMembership(
     } catch {
       // authorization throws when no relation exists
     }
+    await invalidateTeamClaims([userId]);
   }
+  await invalidateUsers([userId]);
 }
 
 /**

@@ -76,6 +76,17 @@ const schema: ConduitModel = {
       allowedHomeRealms: { type: [TYPE.ObjectId], default: [] },
       directSignIn: enabledFlag(true),
     },
+    // Session policy. `null` = inherit the global config; a realm can only tighten it.
+    // Leaves are plain optional scalars without defaults (a `default` would be applied
+    // as an override), and are always written explicitly (`null` included): nested
+    // objects are flattened columns on SQL, so a deleted key would keep the old value.
+    session: {
+      refreshTokens: {
+        expiryPeriod: { type: TYPE.Number, required: false },
+        extendable: { type: TYPE.Boolean, required: false },
+        maxLifetime: { type: TYPE.Number, required: false },
+      },
+    },
   },
   // account linking: inbound accounts from other realms may connect here (off by default),
   // outbound accounts of this realm may connect elsewhere (on by default)

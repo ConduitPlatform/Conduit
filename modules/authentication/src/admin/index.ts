@@ -16,6 +16,7 @@ import {
 import { UserAdmin } from './user.js';
 import { TeamsAdmin } from './team.js';
 import { RealmsAdmin } from './realm.js';
+import { SigningKeysAdmin, SigningKeysAdminDeps } from './signingKeys.js';
 import { User } from '../models/index.js';
 import { Config } from '../config/index.js';
 
@@ -23,16 +24,19 @@ export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
   private readonly teamsAdmin: TeamsAdmin;
   private readonly realmsAdmin: RealmsAdmin;
+  private readonly signingKeysAdmin: SigningKeysAdmin;
   private readonly routingManager: RoutingManager;
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     onRealmChange?: () => void,
+    signingKeysDeps?: SigningKeysAdminDeps,
   ) {
     this.userAdmin = new UserAdmin(this.grpcSdk);
     this.teamsAdmin = new TeamsAdmin(this.grpcSdk);
     this.realmsAdmin = new RealmsAdmin(this.grpcSdk, onRealmChange);
+    this.signingKeysAdmin = new SigningKeysAdmin(signingKeysDeps);
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
@@ -186,6 +190,8 @@ export class AdminHandlers {
       new ConduitRouteReturnDefinition('ToggleUsers', 'String'),
       this.userAdmin.toggleUsers.bind(this.userAdmin),
     );
+
+    this.signingKeysAdmin.declareRoutes(this.routingManager);
 
     const config: Config = ConfigController.getInstance().config;
     const teamsActivated =
