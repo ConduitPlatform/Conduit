@@ -2,6 +2,8 @@ import express, { Express, NextFunction, Request, Response, Router } from 'expre
 import { RestController } from './Rest/index.js';
 import { GraphQLController } from './GraphQl/GraphQL.js';
 import { SocketController } from './Socket/Socket.js';
+import type { SocketRecoveryCheck } from './Socket/recoveryCheck.js';
+import type { LocalMiddlewareHandler } from './Router.js';
 import {
   MCP_CONSTANTS,
   MCPConfig,
@@ -52,6 +54,8 @@ export class ConduitRoutingController {
   private readonly _socketMiddlewares: Array<
     (req: ConduitRequest, res: Response, next: NextFunction) => void
   > = [];
+  private _socketRecoveryCheck?: SocketRecoveryCheck;
+  private readonly _localMiddlewares: Map<string, LocalMiddlewareHandler> = new Map();
   private readonly _socketRouteMiddlewares: Array<{
     middleware: ConduitMiddleware;
     moduleUrl: string;
@@ -137,11 +141,13 @@ export class ConduitRoutingController {
       this.getSwaggerMetadata,
       this.metrics,
     );
+    this.replayLocalMiddlewares(this._restRouter);
   }
 
   initGraphQL() {
     if (this._graphQLRouter) return;
     this._graphQLRouter = new GraphQLController(this.grpcSdk, this.metrics);
+    this.replayLocalMiddlewares(this._graphQLRouter);
   }
 
   initSockets() {
@@ -152,6 +158,8 @@ export class ConduitRoutingController {
       this.expressApp,
       this.metrics,
     );
+    this.replayLocalMiddlewares(this._socketRouter);
+    this._socketRouter.setSocketRecoveryCheck(this._socketRecoveryCheck);
     for (const middleware of this._socketMiddlewares) {
       this._socketRouter.registerGlobalMiddleware(middleware);
     }
@@ -183,6 +191,7 @@ export class ConduitRoutingController {
     };
 
     this._mcpRouter = new MCPController(this.grpcSdk, fullConfig, this.metrics);
+    this.replayLocalMiddlewares(this._mcpRouter);
 
     // Set up Admin API swagger provider (from this server's REST router)
     // This provides the swagger doc for the Admin API that MCP tools correspond to
@@ -266,6 +275,37 @@ export class ConduitRoutingController {
     this._socketRouteMiddlewares.push({ middleware, moduleUrl });
     this._socketRouter?.registerMiddleware(middleware, moduleUrl);
     this._mcpRouter?.registerMiddleware(middleware, moduleUrl);
+  }
+
+  /** Registers an in-process middleware on every transport; overrides gRPC middlewares of the same name. */
+  registerLocalMiddleware(name: string, handler: LocalMiddlewareHandler) {
+    this._localMiddlewares.set(name, handler);
+    this._restRouter?.registerLocalMiddleware(name, handler);
+    this._graphQLRouter?.registerLocalMiddleware(name, handler);
+    this._socketRouter?.registerLocalMiddleware(name, handler);
+    this._mcpRouter?.registerLocalMiddleware(name, handler);
+  }
+
+  unregisterLocalMiddleware(name: string) {
+    this._localMiddlewares.delete(name);
+    this._restRouter?.unregisterLocalMiddleware(name);
+    this._graphQLRouter?.unregisterLocalMiddleware(name);
+    this._socketRouter?.unregisterLocalMiddleware(name);
+    this._mcpRouter?.unregisterLocalMiddleware(name);
+  }
+
+  /** Re-authentication hook for sockets recovered via Socket.IO connection state recovery. */
+  setSocketRecoveryCheck(check?: SocketRecoveryCheck) {
+    this._socketRecoveryCheck = check;
+    this._socketRouter?.setSocketRecoveryCheck(check);
+  }
+
+  private replayLocalMiddlewares(router: {
+    registerLocalMiddleware(name: string, handler: LocalMiddlewareHandler): void;
+  }) {
+    for (const [name, handler] of this._localMiddlewares) {
+      router.registerLocalMiddleware(name, handler);
+    }
   }
 
   patchRouteMiddlewares(patch: MiddlewarePatch) {
@@ -493,6 +533,9 @@ export class ConduitRoutingController {
 
 export { isSocketHandshake } from './Socket/isSocketHandshake.js';
 export { resolveEngineNamespacePath } from './Socket/resolveEngineNamespacePath.js';
+export type { LocalMiddlewareHandler } from './Router.js';
+export { guardRecoveredSocket } from './Socket/recoveryCheck.js';
+export type { SocketRecoveryCheck } from './Socket/recoveryCheck.js';
 export * from './interfaces/index.js';
 export * from './types/index.js';
 export * from './classes/index.js';
