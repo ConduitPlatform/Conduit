@@ -250,6 +250,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         this.service.functions,
       );
     }
+    RoutingManager.grpcSdk = this.grpcSdk;
     RoutingManager.ClientController = new RoutingController();
     RoutingManager.AdminController = new RoutingController();
     await this.addHealthCheckService();

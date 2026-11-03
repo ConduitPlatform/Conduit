@@ -6,3 +6,5 @@ export * from './conduitPeers.js';
 export * from './convictConfigParser.js';
 export * from './redactSensitiveConfig.js';
 export * from './reconcileModuleConfig.js';
+export * from './accessTokenVerifier.js';
+export * from './accessTokenVerifier.logic.js';

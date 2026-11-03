@@ -102,6 +102,17 @@ export class RouteBuilder {
     return this;
   }
 
+  /**
+   * Whether module-tools hydrates `context.user` from `context.userId` on routes with
+   * `authMiddleware` / `authMiddleware?` (default true).
+   * @deprecated The default flips to false in the next major; call
+   * `grpcSdk.authentication.getUser(userId)` explicitly instead.
+   */
+  hydrateUser(hydrate: boolean): RouteBuilder {
+    this._options.hydrateUser = hydrate;
+    return this;
+  }
+
   return(name: string, fields: ConduitReturn): RouteBuilder {
     this._returns = new ConduitRouteReturnDefinition(name, fields);
     return this;

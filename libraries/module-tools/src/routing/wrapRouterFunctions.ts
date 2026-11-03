@@ -9,6 +9,7 @@ import {
   UnparsedSocketResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { hydrateContextUser, shouldHydrateUser, UserHydrator } from './hydrateUser.js';
 import { Status } from '@grpc/grpc-js/build/src/constants.js';
 
 export type RouterRequestHandler = (
@@ -164,6 +165,7 @@ function parseResponseData(
 export function wrapRouterGrpcFunction(
   fun: RequestHandlers | SocketRequestHandlers,
   routerType: string,
+  hydration?: { options: Indexable; hydrator: UserHydrator },
 ): (call: Indexable, callback: any) => void {
   return (call: any, callback: any) => {
     const requestReceive = Date.now();
@@ -200,17 +202,29 @@ export function wrapRouterGrpcFunction(
     }
 
     const responded = { did: false };
-    fun(call, r => {
-      parseResponseData(
-        r,
-        routerRequest,
-        requestReceive,
-        call,
-        callback,
-        responded,
-        routerType,
-      );
-    })
+    const invoke = () =>
+      fun(call, r => {
+        parseResponseData(
+          r,
+          routerRequest,
+          requestReceive,
+          call,
+          callback,
+          responded,
+          routerType,
+        );
+      });
+    // Session-mode requests already carry context.user, so this is a no-op for them.
+    const needsHydration =
+      hydration && shouldHydrateUser(hydration.options, call.request.context);
+    (needsHydration
+      ? hydrateContextUser(
+          hydration!.options,
+          call.request.context,
+          hydration!.hydrator,
+        ).then(invoke)
+      : invoke()
+    )
       .then(r =>
         parseResponseData(
           r,
