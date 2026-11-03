@@ -15,6 +15,9 @@ import {
   UserChangeEmailResponse,
 } from '../../protoUtils/index.js';
 import { Indexable } from '../../interfaces/index.js';
+import type { UserCache } from '../../utilities/UserCache.js';
+import { GrpcError } from '../../types/index.js';
+import { status } from '@grpc/grpc-js';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
   constructor(
@@ -24,6 +27,47 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
   ) {
     super(moduleName, 'authentication', url, grpcToken);
     this.initializeClient(AuthenticationDefinition);
+  }
+
+  private userCacheProvider?: () => UserCache | undefined;
+
+  /**
+   * Attaches a cache (or a lazy provider of one, resolved on every `getUser` call so that
+   * no Redis connection is opened until it is needed) that `getUser` reads through.
+   */
+  attachUserCache(cache: UserCache | (() => UserCache | undefined) | undefined) {
+    this.userCacheProvider =
+      typeof cache === 'function' ? cache : cache ? () => cache : undefined;
+  }
+
+  hasUserCache(): boolean {
+    return this.userCacheProvider !== undefined;
+  }
+
+  /**
+   * Fetches a user document (never includes `hashedPassword`), reading through the
+   * attached user cache (5 s TTL, see UserCache) when there is one. Cache problems never
+   * fail or delay the call beyond the cache's own timeout; the cache write is fire-and-forget.
+   *
+   * The server answers gRPC NOT_FOUND for an unknown id and this method rejects with that
+   * error (an empty response is also turned into a `GrpcError` NOT_FOUND).
+   */
+  async getUser(userId: string): Promise<Indexable> {
+    let cache: UserCache | undefined;
+    try {
+      cache = this.userCacheProvider?.();
+    } catch {
+      cache = undefined;
+    }
+    const cached = await cache?.get(userId);
+    if (cached) return cached;
+    const res = await this.client!.getUser({ userId });
+    if (!res?.user) {
+      throw new GrpcError(status.NOT_FOUND, 'User not found');
+    }
+    const user = JSON.parse(res.user) as Indexable;
+    void cache?.set(userId, user);
+    return user;
   }
 
   /**

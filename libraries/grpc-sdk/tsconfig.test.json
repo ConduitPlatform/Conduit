@@ -11,6 +11,14 @@
     "src/utilities/EventBus.ts",
     "src/utilities/EventBus.test.ts",
     "src/utilities/StateManager.ts",
-    "src/utilities/StateManager.test.ts"
+    "src/utilities/StateManager.test.ts",
+    "src/utilities/UserCache.ts",
+    "src/utilities/UserCache.test.ts",
+    "src/utilities/SessionRegistry.ts",
+    "src/utilities/SessionRegistry.test.ts",
+    "src/utilities/FakeRedis.testutil.ts",
+    "src/utilities/redisHelpers.ts",
+    "src/modules/authentication/index.ts",
+    "src/modules/authentication/getUser.test.ts"
   ]
 }
