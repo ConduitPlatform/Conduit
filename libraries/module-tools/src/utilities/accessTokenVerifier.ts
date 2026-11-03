@@ -238,46 +238,43 @@ export class AccessTokenVerifier {
   }
 
   /**
-   * Applies an authentication module config object (full config). Invalid input is ignored
-   * and the previous state is kept; invalid keys are logged once.
+   * Validates and normalizes the signing keys. Returns undefined when no signing block is
+   * configured, null when the public key is invalid (the caller keeps the previous state).
    */
-  applyConfig(config: unknown): void {
-    if (!isConfigWithAccessTokens(config)) return;
-    const tokens = config.accessTokens;
-    const before = this.fingerprint();
-    const s = tokens.signing;
-    let signing: AccessTokenSigningKeys | undefined;
-    if (s && typeof s.kid === 'string' && s.kid && s.publicKey) {
-      if (!AccessTokenVerifier.validPem(s.publicKey)) {
-        this.warnOnce('publicKey', 'invalid signing public key, keeping previous state');
-        return;
-      }
-      let previousPublicKey: string | undefined;
-      if (s.previousPublicKey) {
-        if (AccessTokenVerifier.validPem(s.previousPublicKey)) {
-          previousPublicKey = s.previousPublicKey;
-        } else {
-          this.warnOnce('previousPublicKey', 'invalid previous public key, ignoring it');
-        }
-      }
-      signing = {
-        kid: s.kid,
-        publicKey: s.publicKey,
-        previousKid: previousPublicKey ? s.previousKid || undefined : undefined,
-        previousPublicKey,
-        previousRetiredAt: Number(s.previousRetiredAt ?? 0),
-      };
+  private normalizeSigning(
+    s: AccessTokenSigningKeys | undefined,
+  ): AccessTokenSigningKeys | undefined | null {
+    if (!(s && typeof s.kid === 'string' && s.kid && s.publicKey)) return undefined;
+    if (!AccessTokenVerifier.validPem(s.publicKey)) {
+      this.warnOnce('publicKey', 'invalid signing public key, keeping previous state');
+      return null;
     }
-    const version = Number(tokens.tokenVersion ?? 0);
+    const previousPublicKey = this.validPreviousKey(s.previousPublicKey);
+    return {
+      kid: s.kid,
+      publicKey: s.publicKey,
+      previousKid: previousPublicKey ? s.previousKid || undefined : undefined,
+      previousPublicKey,
+      previousRetiredAt: Number(s.previousRetiredAt ?? 0),
+    };
+  }
+
+  private validPreviousKey(pem: string | undefined): string | undefined {
+    if (!pem) return undefined;
+    if (AccessTokenVerifier.validPem(pem)) return pem;
+    this.warnOnce('previousPublicKey', 'invalid previous public key, ignoring it');
+    return undefined;
+  }
+
+  private parseTokenVersion(raw: unknown): number {
+    const version = Number(raw ?? 0);
     if (Number.isNaN(version)) {
       this.warnOnce('tokenVersion', 'invalid tokenVersion, all tokens will be rejected');
     }
-    this._mode = tokens.mode === 'jwt' ? 'jwt' : 'session';
-    this._tokenVersion = version; // NaN never equals a claim's tv: fails closed
-    this._strictRevocation = tokens.strictRevocation === true;
-    this._signing = signing;
-    this._loaded = true;
-    if (this.fingerprint() === before) return;
+    return version;
+  }
+
+  private notifyListeners(): void {
     const state = this.state;
     for (const listener of [...this._listeners]) {
       try {
@@ -288,6 +285,25 @@ export class AccessTokenVerifier {
         );
       }
     }
+  }
+
+  /**
+   * Applies an authentication module config object (full config). Invalid input is ignored
+   * and the previous state is kept; invalid keys are logged once.
+   */
+  applyConfig(config: unknown): void {
+    if (!isConfigWithAccessTokens(config)) return;
+    const tokens = config.accessTokens;
+    const before = this.fingerprint();
+    const signing = this.normalizeSigning(tokens.signing);
+    if (signing === null) return;
+    const version = this.parseTokenVersion(tokens.tokenVersion);
+    this._mode = tokens.mode === 'jwt' ? 'jwt' : 'session';
+    this._tokenVersion = version; // NaN never equals a claim's tv: fails closed
+    this._strictRevocation = tokens.strictRevocation === true;
+    this._signing = signing;
+    this._loaded = true;
+    if (this.fingerprint() !== before) this.notifyListeners();
   }
 
   /**
