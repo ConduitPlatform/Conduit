@@ -38,7 +38,17 @@ import {
 } from './protoTypes/router.js';
 import * as adminRoutes from './admin/routes/index.js';
 import metricsSchema from './metrics/index.js';
-import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import {
+  AccessTokenVerifier,
+  ConfigController,
+  ManagedModule,
+} from '@conduitplatform/module-tools';
+import {
+  createAuthModeToggle,
+  createSocketRecoveryCheck,
+  jwtAuthenticate,
+  throttledLogger,
+} from './security/jwtAuthMiddleware.logic.js';
 import { fileURLToPath } from 'node:url';
 import {
   createEventRelayPusher,
@@ -62,6 +72,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   };
   protected metricsSchema = metricsSchema;
   private _internalRouter: ConduitRoutingController;
+  private _unsubscribeAuthMode?: () => void;
   private _security: SecurityModule;
   private adminRouter: AdminHandlers;
   private readonly _routes: string[];
@@ -114,6 +125,26 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       },
       true,
     );
+    await this.setupJwtAuthentication();
+  }
+
+  private async setupJwtAuthentication() {
+    const throttled = throttledLogger(ConduitGrpcSdk.Logger);
+    const registry = this.grpcSdk.sessionRegistry;
+    const verifier = AccessTokenVerifier.getInstance(this.grpcSdk);
+    const deps = { verifier, registry, logger: throttled };
+    this._internalRouter.setSocketRecoveryCheck(
+      createSocketRecoveryCheck(registry, throttled),
+    );
+    const apply = createAuthModeToggle(
+      this._internalRouter,
+      params => jwtAuthenticate(deps, params),
+      ConduitGrpcSdk.Logger,
+    );
+    this._unsubscribeAuthMode?.();
+    this._unsubscribeAuthMode = verifier.onChange(apply);
+    await verifier.start();
+    apply(verifier.state);
   }
 
   async onRegister() {

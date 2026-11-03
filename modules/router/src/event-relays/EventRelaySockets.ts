@@ -1,10 +1,8 @@
 import { status } from '@grpc/grpc-js';
 import { ConduitGrpcSdk, GrpcError, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitSocket, ConduitSocketEvent } from '@conduitplatform/hermes';
-import {
-  EVENTS_NAMESPACE,
-  MAX_SUBSCRIBE_PER_MINUTE,
-} from './constants.js';
+import { EVENTS_NAMESPACE, MAX_SUBSCRIBE_PER_MINUTE } from './constants.js';
+import { contextUserId } from './userId.js';
 import { EventRelayManager } from './EventRelayManager.js';
 import { eventRelayRoom } from './rooms.js';
 import { validateResourceId } from './validation.js';
@@ -37,7 +35,7 @@ export function createEventsSocket(
   events.set('disconnect', {
     name: 'disconnect',
     handler: async request => {
-      const userId = request.context?.user?._id as string | undefined;
+      const userId = contextUserId(request.context);
       releaseSocketSubscriptions(request.socketId, userId);
       subscribeTimestamps.delete(request.socketId);
       return { event: 'leave-room', rooms: [] };
@@ -49,7 +47,7 @@ export function createEventsSocket(
     params: [TYPE.String, TYPE.String],
     handler: async request => {
       assertSubscribeRateLimit(request.socketId);
-      const userId = request.context?.user?._id as string | undefined;
+      const userId = contextUserId(request.context);
       if (!userId) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Authentication required');
       }
@@ -57,13 +55,12 @@ export function createEventsSocket(
       const validatedResourceId = validateResourceId(resourceId);
       const room = await authorizeOrThrow(grpcSdk, manager, userId, relayId, resourceId);
       try {
-        trackSubscription(
-          request.socketId,
-          userId,
+        trackSubscription(request.socketId, userId, String(relayId), validatedResourceId);
+        persistRelaySubscriptionOnContext(
+          request.context,
           String(relayId),
           validatedResourceId,
         );
-        persistRelaySubscriptionOnContext(request.context, String(relayId), validatedResourceId);
       } catch (err) {
         throw new GrpcError(
           status.RESOURCE_EXHAUSTED,
@@ -78,7 +75,7 @@ export function createEventsSocket(
     name: 'unsubscribe',
     params: [TYPE.String, TYPE.String],
     handler: async request => {
-      const userId = request.context?.user?._id as string | undefined;
+      const userId = contextUserId(request.context);
       const [relayId, resourceId] = request.params ?? [];
       if (typeof relayId !== 'string' || relayId.trim() === '') {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Relay ID is required');
