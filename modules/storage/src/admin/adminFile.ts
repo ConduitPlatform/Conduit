@@ -16,6 +16,7 @@ import {
   _updateFileUploadUrl,
   applyCdnHost,
   deepPathHandler,
+  dispositionFileName,
   normalizeFolderPath,
   storeNewFile,
   validateName,
@@ -211,7 +212,7 @@ export class AdminFileHandlers {
       }
       const options: UrlOptions = {
         download: call.request.params.download ?? false,
-        fileName: found.alias ?? found.name,
+        fileName: dispositionFileName(found),
       };
       const rawUrl = await this.storageProvider
         .container(found.container)

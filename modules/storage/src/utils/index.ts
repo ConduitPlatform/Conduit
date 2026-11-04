@@ -1,10 +1,5 @@
 import { GetUserCommand, IAMClient } from '@aws-sdk/client-iam';
-import {
-  IFileParams,
-  IStorageProvider,
-  StorageConfig,
-  UrlOptions,
-} from '../interfaces/index.js';
+import { IFileParams, IStorageProvider, StorageConfig } from '../interfaces/index.js';
 import { isNil } from 'lodash-es';
 import path from 'path';
 import { File, _StorageContainer } from '../models/index.js';
@@ -326,20 +321,7 @@ export async function validateName(
   }
 }
 
-export const constructDispositionHeader = (
-  fileName: string,
-  options?: UrlOptions,
-): string | undefined => {
-  if (!options || (!options.download && !options.fileName)) {
-    return undefined;
-  }
-  const disposition = options.download ? 'attachment' : 'inline';
-  const _fileName = `; filename="${options.fileName ?? fileName}"`;
-  const _fileNameUtf8 = `; filename*=UTF-8''${encodeURIComponent(
-    options.fileName ?? fileName,
-  )}`;
-  return `${disposition}${_fileName}${_fileNameUtf8}`;
-};
+export { constructDispositionHeader, dispositionFileName } from './disposition.js';
 
 /**
  * Replaces the storage host in a URL with the configured CDN host for the container.
