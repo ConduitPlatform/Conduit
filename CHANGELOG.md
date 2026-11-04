@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.32](https://github.com/ConduitPlatform/Conduit/compare/v0.16.31...v0.16.32) (2026-11-04)
+
+
+### Bug Fixes
+
+* **storage:** ASCII-fallback quoted Content-Disposition filenames ([#1668](https://github.com/ConduitPlatform/Conduit/issues/1668)) ([481048a](https://github.com/ConduitPlatform/Conduit/commit/481048a99994333fca68cd6b576fa9f36b126ee9))
+
 ### [0.16.31](https://github.com/ConduitPlatform/Conduit/compare/v0.16.30...v0.16.31) (2026-09-28)
 
 
