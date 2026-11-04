@@ -6,7 +6,14 @@ import {
   Messaging,
   MulticastMessage,
 } from 'firebase-admin/messaging';
-import { cert, initializeApp, ServiceAccount } from 'firebase-admin/app';
+import {
+  cert,
+  deleteApp,
+  getApps,
+  initializeApp,
+  ServiceAccount,
+} from 'firebase-admin/app';
+import { normalizePrivateKey } from './utils/normalizePrivateKey.js';
 import { NotificationToken } from '../../models/index.js';
 import { IFirebaseSettings } from '../../interfaces/index.js';
 import {
@@ -30,10 +37,16 @@ export class FirebaseProvider extends BaseNotificationProvider<IFirebaseSettings
   updateProvider(settings: IFirebaseSettings) {
     const serviceAccount: ServiceAccount = {
       projectId: settings.projectId,
-      privateKey: settings.privateKey.replace(/\\n/g, '\n'),
+      privateKey: normalizePrivateKey(settings.privateKey),
       clientEmail: settings.clientEmail,
     };
     try {
+      // initializeApp() returns an already registered app with the same name as-is,
+      // ignoring the new credential, so drop it first to apply updated settings.
+      const existingApp = getApps().find(app => app.name === serviceAccount.projectId);
+      if (existingApp) {
+        deleteApp(existingApp).catch(() => undefined);
+      }
       this.fcm = getMessaging(
         initializeApp(
           {
@@ -45,7 +58,9 @@ export class FirebaseProvider extends BaseNotificationProvider<IFirebaseSettings
       this._initialized = true;
     } catch (e) {
       this._initialized = false;
-      ConduitGrpcSdk.Logger.error('Failed to initialize Firebase: method 2');
+      ConduitGrpcSdk.Logger.error(
+        `Failed to initialize Firebase: ${(e as Error)?.message ?? e}`,
+      );
     }
   }
 
