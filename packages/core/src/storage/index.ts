@@ -10,6 +10,11 @@ export type ConfigVersionMeta = { version: number; explicit: boolean };
 export class ConfigStorage {
   toBeReconciled: string[] = [];
   reconciling: boolean = false;
+  private resolveDbSync!: () => void;
+  /** Settles once the initial database -> Redis config sync has run (or failed). */
+  readonly dbSynced: Promise<void> = new Promise(resolve => {
+    this.resolveDbSync = resolve;
+  });
 
   constructor(
     private readonly core: any,
@@ -29,7 +34,25 @@ export class ConfigStorage {
       .catch(() => {
         this.changeState(false);
         ConduitGrpcSdk.Logger.error('Reconciliation with db failed!');
-      });
+      })
+      .finally(() => this.resolveDbSync());
+  }
+
+  /**
+   * Once the database is up, wait (bounded) for the initial DB -> Redis sync so module
+   * config reads don't observe a Redis that has not been populated from the DB yet
+   * (e.g. a fresh/flushed Redis after an upgrade).
+   */
+  async waitForDbSync(timeoutMs = 30_000) {
+    if (!this.grpcSdk.isAvailable('database')) return;
+    let timer: NodeJS.Timeout | undefined;
+    await Promise.race([
+      this.dbSynced,
+      new Promise<void>(resolve => {
+        timer = setTimeout(resolve, timeoutMs);
+      }),
+    ]);
+    clearTimeout(timer);
   }
 
   highAvailability() {
