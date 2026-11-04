@@ -24,6 +24,15 @@ import {
 import { socketUserId } from './socketPushUtils.js';
 import { resolveEngineNamespacePath } from './resolveEngineNamespacePath.js';
 import {
+  createEventBucket,
+  DEFAULT_SOCKET_SETTINGS,
+  MAX_TIMER_DELAY_MS,
+  msUntilTokenExpiry,
+  normalizeSocketSettings,
+  SocketSettings,
+} from './socketLimits.js';
+import { userRoom } from './socketUserRooms.js';
+import {
   filterRemoteSocketsByUserAndRooms,
   isEngineSocketBackpressured,
 } from './socketPushUtils.js';
@@ -35,6 +44,7 @@ export class SocketController extends ConduitRouter {
   private _registeredNamespaces: Map<string, ConduitSocket>;
   private readonly redisClient: Redis | Cluster;
   private recoveryCheck?: SocketRecoveryCheck;
+  private settings: SocketSettings;
   private globalMiddlewares: ((
     req: Request,
     res: Response,
@@ -50,8 +60,10 @@ export class SocketController extends ConduitRouter {
         name: string;
       };
     },
+    settings: SocketSettings = DEFAULT_SOCKET_SETTINGS,
   ) {
     super(grpcSdk);
+    this.settings = normalizeSocketSettings(settings);
     this.httpServer = createServer(expressApp);
     this.options = {
       path: '/realtime',
@@ -59,7 +71,7 @@ export class SocketController extends ConduitRouter {
         origin: '*',
         methods: ['GET', 'POST'],
       },
-      maxHttpBufferSize: 1e6,
+      maxHttpBufferSize: this.settings.maxHttpBufferSize,
       connectionStateRecovery: {
         // the backup duration of the sessions and the packets
         maxDisconnectionDuration: 2 * 60 * 1000,
@@ -116,6 +128,22 @@ export class SocketController extends ConduitRouter {
     });
   }
 
+  /**
+   * Applies new socket settings. The rate limit and token-expiry switch take effect
+   * for connected sockets; the message size limit applies to new connections.
+   */
+  applySettings(settings: Partial<SocketSettings>) {
+    this.settings = normalizeSocketSettings(settings);
+    const engine = this.io.engine as unknown as {
+      opts: { maxHttpBufferSize?: number };
+      ws?: { options?: { maxPayload?: number } };
+    };
+    engine.opts.maxHttpBufferSize = this.settings.maxHttpBufferSize;
+    if (engine.ws?.options) {
+      engine.ws.options.maxPayload = this.settings.maxHttpBufferSize;
+    }
+  }
+
   registerGlobalMiddleware(
     middleware: (req: Request, res: Response, next: NextFunction) => void,
   ) {
@@ -170,6 +198,13 @@ export class SocketController extends ConduitRouter {
       // Socket.IO skips middlewares for recovered sockets, so every event (including
       // ones buffered by the client while offline) waits on this gate. Order is preserved.
       const gate = createSocketGate(socket, this.recoveryCheck);
+      const userId = socketUserId(socket.data);
+      if (userId) {
+        socket.join(userRoom(userId));
+      }
+      const clearExpiryTimer = this.scheduleTokenExpiryDisconnect(socket);
+      const allowEvent = createEventBucket(() => this.settings.eventRateLimit);
+      let rateLimitNotified = false;
 
       if (socket.recovered) {
         const recoveredRooms = [...socket.rooms].filter(
@@ -206,6 +241,17 @@ export class SocketController extends ConduitRouter {
       }
 
       socket.onAny((event, ...args) => {
+        if (!allowEvent()) {
+          if (!rateLimitNotified) {
+            rateLimitNotified = true;
+            socket.emit(
+              'conduit_error',
+              new ConduitError('RESOURCE_EXHAUSTED', 429, 'Too many socket events'),
+            );
+          }
+          return;
+        }
+        rateLimitNotified = false;
         void runWhenAllowed(gate, socket, () =>
           conduitSocket
             .executeRequest({
@@ -223,6 +269,7 @@ export class SocketController extends ConduitRouter {
       });
 
       socket.on('disconnect', (reason: string) => {
+        clearExpiryTimer();
         conduitSocket
           .executeRequest({
             event: 'disconnect',
@@ -441,8 +488,14 @@ export class SocketController extends ConduitRouter {
     localOnly: boolean = false,
     rooms: string[] = [],
   ): Promise<RemoteSocket<any, any>[]> {
-    const nsp = this.io.of(namespace);
-    const sockets = localOnly ? await nsp.local.fetchSockets() : await nsp.fetchSockets();
+    if (!userIds || userIds.length === 0) return [];
+    // Only the receivers' sockets are fetched (via their user rooms) instead of
+    // every socket in the namespace across all nodes.
+    const target = this.io.of(namespace).in(userIds.map(userRoom));
+    const sockets = localOnly
+      ? await target.local.fetchSockets()
+      : await target.fetchSockets();
+    const byId = new Map(sockets.map(socket => [socket.id, socket]));
     return filterRemoteSocketsByUserAndRooms(
       sockets.map(socket => ({
         id: socket.id,
@@ -451,7 +504,32 @@ export class SocketController extends ConduitRouter {
       })),
       userIds,
       rooms,
-    ).map(filtered => sockets.find(s => s.id === filtered.id)!);
+    ).map(filtered => byId.get(filtered.id)!);
+  }
+
+  /**
+   * Disconnects the socket when its access token (`jwtPayload.exp`) expires, so a
+   * long-lived connection can't outlive its token. The setting is checked when the
+   * timer fires, so toggling it applies to connected sockets. Returns a function that
+   * clears the timer. No-op for contexts without an expiry.
+   */
+  private scheduleTokenExpiryDisconnect(socket: Socket): () => void {
+    const remaining = msUntilTokenExpiry(socket.data);
+    if (remaining === undefined) return () => {};
+    const expire = () => {
+      if (!socket.connected || !this.settings.disconnectOnTokenExpiry) return;
+      socket.emit(
+        'conduit_error',
+        new ConduitError('UNAUTHENTICATED', 401, 'Token is expired'),
+      );
+      socket.disconnect(true);
+    };
+    if (remaining > MAX_TIMER_DELAY_MS) return () => {};
+    // Always via a timer (0 when already expired, e.g. a recovered socket) so the
+    // connect handler has registered its disconnect listener first.
+    const timer = setTimeout(expire, Math.max(remaining, 0));
+    timer.unref?.();
+    return () => clearTimeout(timer);
   }
 
   protected _refreshRouter(): void {
