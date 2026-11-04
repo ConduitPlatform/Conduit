@@ -439,7 +439,10 @@ export class ChatRoutes {
 
   async connect(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
-    const rooms = await ChatRoom.getInstance().findMany({ participants: user._id });
+    const rooms = await ChatRoom.getInstance().findMany({
+      participants: user._id,
+      deleted: false,
+    });
     return { event: 'join-room', rooms: rooms.map((room: ChatRoom) => room._id) };
   }
 
@@ -449,6 +452,7 @@ export class ChatRoutes {
     const rooms = await ChatRoom.getInstance().findMany({
       _id: roomId,
       participants: user._id,
+      deleted: false,
     });
     if (!rooms || rooms.length === 0) {
       throw new GrpcError(
