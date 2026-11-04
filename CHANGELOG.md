@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.33](https://github.com/ConduitPlatform/Conduit/compare/v0.16.32...v0.16.33) (2026-11-04)
+
+
+### Bug Fixes
+
+* **hermes:** targeted socket pushes, single global middleware chain, opt-in event rate limit ([#1670](https://github.com/ConduitPlatform/Conduit/issues/1670)) ([ee93cbc](https://github.com/ConduitPlatform/Conduit/commit/ee93cbc0ca718631097910f75cc5cc6bab46b121))
+
 ### [0.16.32](https://github.com/ConduitPlatform/Conduit/compare/v0.16.31...v0.16.32) (2026-11-04)
 
 
