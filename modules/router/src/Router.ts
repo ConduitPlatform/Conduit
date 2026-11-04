@@ -50,6 +50,7 @@ import {
   throttledLogger,
 } from './security/jwtAuthMiddleware.logic.js';
 import { fileURLToPath } from 'node:url';
+import { socketSettingsFromConfig } from './config/socketSettings.js';
 import {
   createEventRelayPusher,
   createEventsSocket,
@@ -196,6 +197,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       this._internalRouter.stopRest();
     }
     if (config.transports.sockets) {
+      this._internalRouter.setSocketSettings(socketSettingsFromConfig(config));
       this._internalRouter.initSockets();
       await this.eventRelayManager.start();
       atLeastOne = true;

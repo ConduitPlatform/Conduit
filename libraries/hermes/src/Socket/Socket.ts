@@ -25,13 +25,11 @@ import { socketUserId } from './socketPushUtils.js';
 import { resolveEngineNamespacePath } from './resolveEngineNamespacePath.js';
 import {
   createEventBucket,
-  DEFAULT_SOCKET_EVENT_RATE_LIMIT,
+  DEFAULT_SOCKET_SETTINGS,
   MAX_TIMER_DELAY_MS,
   msUntilTokenExpiry,
-  readDisconnectOnTokenExpiry,
-  readMaxHttpBufferSize,
-  readSocketEventRateLimit,
-  SocketEventRateLimit,
+  normalizeSocketSettings,
+  SocketSettings,
 } from './socketLimits.js';
 import { userRoom } from './socketUserRooms.js';
 import {
@@ -46,11 +44,7 @@ export class SocketController extends ConduitRouter {
   private _registeredNamespaces: Map<string, ConduitSocket>;
   private readonly redisClient: Redis | Cluster;
   private recoveryCheck?: SocketRecoveryCheck;
-  private readonly eventRateLimit?: SocketEventRateLimit = readSocketEventRateLimit(
-    process.env,
-    DEFAULT_SOCKET_EVENT_RATE_LIMIT,
-  );
-  private readonly disconnectOnTokenExpiry = readDisconnectOnTokenExpiry();
+  private settings: SocketSettings;
   private globalMiddlewares: ((
     req: Request,
     res: Response,
@@ -66,8 +60,10 @@ export class SocketController extends ConduitRouter {
         name: string;
       };
     },
+    settings: SocketSettings = DEFAULT_SOCKET_SETTINGS,
   ) {
     super(grpcSdk);
+    this.settings = normalizeSocketSettings(settings);
     this.httpServer = createServer(expressApp);
     this.options = {
       path: '/realtime',
@@ -75,7 +71,7 @@ export class SocketController extends ConduitRouter {
         origin: '*',
         methods: ['GET', 'POST'],
       },
-      maxHttpBufferSize: readMaxHttpBufferSize(),
+      maxHttpBufferSize: this.settings.maxHttpBufferSize,
       connectionStateRecovery: {
         // the backup duration of the sessions and the packets
         maxDisconnectionDuration: 2 * 60 * 1000,
@@ -130,6 +126,22 @@ export class SocketController extends ConduitRouter {
       };
       run();
     });
+  }
+
+  /**
+   * Applies new socket settings. The rate limit and token-expiry switch take effect
+   * for connected sockets; the message size limit applies to new connections.
+   */
+  applySettings(settings: Partial<SocketSettings>) {
+    this.settings = normalizeSocketSettings(settings);
+    const engine = this.io.engine as unknown as {
+      opts: { maxHttpBufferSize?: number };
+      ws?: { options?: { maxPayload?: number } };
+    };
+    engine.opts.maxHttpBufferSize = this.settings.maxHttpBufferSize;
+    if (engine.ws?.options) {
+      engine.ws.options.maxPayload = this.settings.maxHttpBufferSize;
+    }
   }
 
   registerGlobalMiddleware(
@@ -191,9 +203,7 @@ export class SocketController extends ConduitRouter {
         socket.join(userRoom(userId));
       }
       const clearExpiryTimer = this.scheduleTokenExpiryDisconnect(socket);
-      const allowEvent = this.eventRateLimit
-        ? createEventBucket(this.eventRateLimit)
-        : undefined;
+      const allowEvent = createEventBucket(() => this.settings.eventRateLimit);
       let rateLimitNotified = false;
 
       if (socket.recovered) {
@@ -231,7 +241,7 @@ export class SocketController extends ConduitRouter {
       }
 
       socket.onAny((event, ...args) => {
-        if (allowEvent && !allowEvent()) {
+        if (!allowEvent()) {
           if (!rateLimitNotified) {
             rateLimitNotified = true;
             socket.emit(
@@ -499,16 +509,15 @@ export class SocketController extends ConduitRouter {
 
   /**
    * Disconnects the socket when its access token (`jwtPayload.exp`) expires, so a
-   * long-lived connection can't outlive its token. Returns a function that clears
-   * the timer. No-op for contexts without an expiry or when disabled via
-   * `SOCKET_DISCONNECT_ON_TOKEN_EXPIRY=false`.
+   * long-lived connection can't outlive its token. The setting is checked when the
+   * timer fires, so toggling it applies to connected sockets. Returns a function that
+   * clears the timer. No-op for contexts without an expiry.
    */
   private scheduleTokenExpiryDisconnect(socket: Socket): () => void {
-    if (!this.disconnectOnTokenExpiry) return () => {};
     const remaining = msUntilTokenExpiry(socket.data);
     if (remaining === undefined) return () => {};
     const expire = () => {
-      if (!socket.connected) return;
+      if (!socket.connected || !this.settings.disconnectOnTokenExpiry) return;
       socket.emit(
         'conduit_error',
         new ConduitError('UNAUTHENTICATED', 401, 'Token is expired'),

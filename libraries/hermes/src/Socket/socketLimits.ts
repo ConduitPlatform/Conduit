@@ -5,55 +5,71 @@ export type SocketEventRateLimit = {
   perSecond: number;
 };
 
-export const DEFAULT_MAX_HTTP_BUFFER_SIZE = 1e6;
-
-/** Default per-socket limit: generous for chat and typing indicators, stops floods. */
-export const DEFAULT_SOCKET_EVENT_RATE_LIMIT: SocketEventRateLimit = {
-  burst: 100,
-  perSecond: 30,
+/** Runtime socket settings. The Router supplies these from its config. */
+export type SocketSettings = {
+  /** Max size in bytes of a single inbound message. */
+  maxHttpBufferSize: number;
+  /** Per-socket event rate limit; undefined means no limit. */
+  eventRateLimit?: SocketEventRateLimit;
+  /** Disconnect sockets when their access token (`jwtPayload.exp`) expires. */
+  disconnectOnTokenExpiry: boolean;
 };
 
-function readNonNegativeNumber(value: string | undefined): number | undefined {
-  if (value === undefined || value.trim() === '') return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
-}
-
 /**
- * Per-socket event rate limit from `SOCKET_EVENT_RATE_LIMIT_BURST` and
- * `SOCKET_EVENT_RATE_LIMIT_PER_SECOND`, falling back to `defaults` for unset ones.
- * Returns undefined (no limit) when either resolves to 0 or is missing.
+ * Library defaults keep Socket.IO's previous behaviour (no rate limit, no expiry
+ * disconnect), so socket servers that don't pass settings, such as Admin, are unchanged.
  */
-export function readSocketEventRateLimit(
-  env: NodeJS.ProcessEnv = process.env,
-  defaults?: SocketEventRateLimit,
-): SocketEventRateLimit | undefined {
-  const burst = readNonNegativeNumber(env.SOCKET_EVENT_RATE_LIMIT_BURST) ?? defaults?.burst;
-  const perSecond =
-    readNonNegativeNumber(env.SOCKET_EVENT_RATE_LIMIT_PER_SECOND) ?? defaults?.perSecond;
-  if (!burst || !perSecond) return undefined;
-  return { burst, perSecond };
+export const DEFAULT_SOCKET_SETTINGS: SocketSettings = {
+  maxHttpBufferSize: 1e6,
+  eventRateLimit: undefined,
+  disconnectOnTokenExpiry: false,
+};
+
+function positive(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? value
+    : undefined;
 }
 
-/** Max inbound message size from `SOCKET_MAX_HTTP_BUFFER_SIZE` (bytes). */
-export function readMaxHttpBufferSize(env: NodeJS.ProcessEnv = process.env): number {
-  const value = readNonNegativeNumber(env.SOCKET_MAX_HTTP_BUFFER_SIZE);
-  return value && value > 0 ? value : DEFAULT_MAX_HTTP_BUFFER_SIZE;
+/** Fills invalid or missing values from DEFAULT_SOCKET_SETTINGS. */
+export function normalizeSocketSettings(
+  settings?: Partial<SocketSettings> | null,
+): SocketSettings {
+  const burst = positive(settings?.eventRateLimit?.burst);
+  const perSecond = positive(settings?.eventRateLimit?.perSecond);
+  return {
+    maxHttpBufferSize:
+      positive(settings?.maxHttpBufferSize) ?? DEFAULT_SOCKET_SETTINGS.maxHttpBufferSize,
+    eventRateLimit: burst && perSecond ? { burst, perSecond } : undefined,
+    disconnectOnTokenExpiry:
+      typeof settings?.disconnectOnTokenExpiry === 'boolean'
+        ? settings.disconnectOnTokenExpiry
+        : DEFAULT_SOCKET_SETTINGS.disconnectOnTokenExpiry,
+  };
 }
 
 /**
- * Token bucket for one socket. Returns a function that consumes one token and
- * reports whether the event is allowed.
+ * Token bucket for one socket. `getLimit` is read on every event so config changes
+ * apply to connected sockets; an undefined limit allows everything.
  */
 export function createEventBucket(
-  limit: SocketEventRateLimit,
+  getLimit: () => SocketEventRateLimit | undefined,
   now: () => number = Date.now,
 ): () => boolean {
-  let tokens = limit.burst;
+  let tokens: number | undefined;
   let last = now();
   return () => {
+    const limit = getLimit();
     const current = now();
-    tokens = Math.min(limit.burst, tokens + ((current - last) / 1000) * limit.perSecond);
+    if (!limit) {
+      tokens = undefined;
+      last = current;
+      return true;
+    }
+    tokens = Math.min(
+      limit.burst,
+      (tokens ?? limit.burst) + ((current - last) / 1000) * limit.perSecond,
+    );
     last = current;
     if (tokens < 1) return false;
     tokens -= 1;
@@ -72,11 +88,6 @@ export function msUntilTokenExpiry(
   const exp = data?.jwtPayload?.exp;
   if (typeof exp !== 'number' || !Number.isFinite(exp)) return undefined;
   return exp * 1000 - now;
-}
-
-/** Disconnect on token expiry unless `SOCKET_DISCONNECT_ON_TOKEN_EXPIRY=false`. */
-export function readDisconnectOnTokenExpiry(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env.SOCKET_DISCONNECT_ON_TOKEN_EXPIRY?.trim().toLowerCase() !== 'false';
 }
 
 /** setTimeout's maximum delay; longer delays fire immediately. */

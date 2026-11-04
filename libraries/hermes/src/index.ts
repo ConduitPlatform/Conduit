@@ -2,6 +2,11 @@ import express, { Express, NextFunction, Request, Response, Router } from 'expre
 import { RestController } from './Rest/index.js';
 import { GraphQLController } from './GraphQl/GraphQL.js';
 import { SocketController } from './Socket/Socket.js';
+import {
+  DEFAULT_SOCKET_SETTINGS,
+  normalizeSocketSettings,
+  SocketSettings,
+} from './Socket/socketLimits.js';
 import type { SocketRecoveryCheck } from './Socket/recoveryCheck.js';
 import type { LocalMiddlewareHandler } from './Router.js';
 import {
@@ -55,6 +60,7 @@ export class ConduitRoutingController {
     (req: ConduitRequest, res: Response, next: NextFunction) => void
   > = [];
   private _socketRecoveryCheck?: SocketRecoveryCheck;
+  private _socketSettings: SocketSettings = DEFAULT_SOCKET_SETTINGS;
   private readonly _localMiddlewares: Map<string, LocalMiddlewareHandler> = new Map();
   private readonly _socketRouteMiddlewares: Array<{
     middleware: ConduitMiddleware;
@@ -157,6 +163,7 @@ export class ConduitRoutingController {
       this.grpcSdk,
       this.expressApp,
       this.metrics,
+      this._socketSettings,
     );
     this.replayLocalMiddlewares(this._socketRouter);
     this._socketRouter.setSocketRecoveryCheck(this._socketRecoveryCheck);
@@ -292,6 +299,15 @@ export class ConduitRoutingController {
     this._graphQLRouter?.unregisterLocalMiddleware(name);
     this._socketRouter?.unregisterLocalMiddleware(name);
     this._mcpRouter?.unregisterLocalMiddleware(name);
+  }
+
+  /**
+   * Socket limits (message size, event rate limit, token-expiry disconnect). Stored
+   * for the next initSockets and applied to the running socket server, if any.
+   */
+  setSocketSettings(settings: Partial<SocketSettings>) {
+    this._socketSettings = normalizeSocketSettings(settings);
+    this._socketRouter?.applySettings(this._socketSettings);
   }
 
   /** Re-authentication hook for sockets recovered via Socket.IO connection state recovery. */
@@ -536,6 +552,11 @@ export { resolveEngineNamespacePath } from './Socket/resolveEngineNamespacePath.
 export type { LocalMiddlewareHandler } from './Router.js';
 export { guardRecoveredSocket } from './Socket/recoveryCheck.js';
 export type { SocketRecoveryCheck } from './Socket/recoveryCheck.js';
+export {
+  DEFAULT_SOCKET_SETTINGS,
+  normalizeSocketSettings,
+} from './Socket/socketLimits.js';
+export type { SocketEventRateLimit, SocketSettings } from './Socket/socketLimits.js';
 export * from './interfaces/index.js';
 export * from './types/index.js';
 export * from './classes/index.js';
