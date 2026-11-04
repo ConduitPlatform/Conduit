@@ -380,6 +380,34 @@ export async function validateName(
   }
 }
 
+function toPrintableAscii(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\x20-\x7E]|["\\]/g, '_');
+}
+
+function asciiDispositionFilename(name: string): string {
+  const extension = path.extname(name);
+  const baseName = extension ? name.slice(0, -extension.length) : name;
+  const asciiBase = toPrintableAscii(baseName);
+  const asciiExtension = toPrintableAscii(extension);
+  if (asciiBase.length > 0) {
+    return `${asciiBase}${asciiExtension}`;
+  }
+  if (baseName.length === 0) {
+    return asciiExtension.length > 0 ? asciiExtension : 'file';
+  }
+  return `file${asciiExtension}`;
+}
+
+function encodeRfc5987(value: string): string {
+  return encodeURIComponent(value).replace(
+    /['()*]/g,
+    char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+}
+
 export const constructDispositionHeader = (
   fileName: string,
   options?: UrlOptions,
@@ -388,11 +416,10 @@ export const constructDispositionHeader = (
     return undefined;
   }
   const disposition = options.download ? 'attachment' : 'inline';
-  const _fileName = `; filename="${options.fileName ?? fileName}"`;
-  const _fileNameUtf8 = `; filename*=UTF-8''${encodeURIComponent(
-    options.fileName ?? fileName,
-  )}`;
-  return `${disposition}${_fileName}${_fileNameUtf8}`;
+  const displayName = options.fileName ?? fileName;
+  const quotedName = asciiDispositionFilename(displayName);
+  const encodedName = encodeRfc5987(displayName);
+  return `${disposition}; filename="${quotedName}"; filename*=UTF-8''${encodedName}`;
 };
 
 /**
@@ -458,10 +485,12 @@ export async function sanitizeFilesForResponse(files: File[]): Promise<File[]> {
   }
 
   const containerNames = [...new Set(files.map(file => file.container))];
-  const containers = await _StorageContainer.getInstance().findMany(
-    { name: { $in: containerNames } },
-    { select: 'name isPublic', readPreference: 'primary' },
-  );
+  const containers = await _StorageContainer
+    .getInstance()
+    .findMany(
+      { name: { $in: containerNames } },
+      { select: 'name isPublic', readPreference: 'primary' },
+    );
   const containerIsPublic = new Map(
     containers.map(container => [container.name, container.isPublic ?? false]),
   );

@@ -183,10 +183,6 @@ export class LocalStorage implements IStorageProvider {
         res.setHeader('Content-Type', getMimeType(filePath));
         const download = url.searchParams.get('download') === 'true';
         const fileNameParam = url.searchParams.get('fileName') ?? undefined;
-        if (fileNameParam && /["\r\n]/.test(fileNameParam)) {
-          res.writeHead(400);
-          return res.end('Bad request');
-        }
         const baseName = relativePath.split('/').pop() ?? relativePath;
         const disposition = constructDispositionHeader(baseName, {
           download,
