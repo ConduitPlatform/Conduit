@@ -12,9 +12,9 @@ import { fileURLToPath } from 'node:url';
 
 import AppConfigSchema, { Config } from './config/index.js';
 import {
-  collectLegacyModulesFound,
   getDefaultCommunicationsConfig,
   LEGACY_MODULE_CONFIG_KEYS,
+  legacyConfigsSafeToRemove,
   mergeLegacyChannelConfigs,
   type LegacyModuleConfigs,
 } from './config/legacyConfigMigration.js';
@@ -135,7 +135,7 @@ export default class Communications extends ManagedModule<Config> {
   private smsService: SmsService;
   private orchestratorService: OrchestratorService;
   private templateService: CommunicationTemplateService;
-  private legacyModulesPendingCleanup: string[] = [];
+  private legacyConfigs: LegacyModuleConfigs = {};
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
 
   // Provider instances
@@ -156,14 +156,9 @@ export default class Communications extends ManagedModule<Config> {
   }
 
   async preConfig(config: Config) {
-    const hasLegacyKeys = await Promise.all(
-      LEGACY_MODULE_CONFIG_KEYS.map(key =>
-        this.grpcSdk.state!.getKey(`moduleConfigs.${key}`),
-      ),
-    ).then(keys => keys.some(Boolean));
-
-    if (hasLegacyKeys) {
-      config = await this.mergeLegacyModuleConfigs(config);
+    this.legacyConfigs = await this.fetchLegacyModuleConfigs();
+    if (Object.keys(this.legacyConfigs).length > 0) {
+      config = this.mergeLegacyModuleConfigs(config);
     }
     if (isNil(config.email) || isNil(config.pushNotifications) || isNil(config.sms)) {
       throw new Error('Invalid configuration given');
@@ -171,27 +166,26 @@ export default class Communications extends ManagedModule<Config> {
     return config;
   }
 
-  private async mergeLegacyModuleConfigs(config: Config): Promise<Config> {
+  /**
+   * Reads the configs of the pre-0.17 email, pushNotifications and sms modules through
+   * core (which serves them from the DB-synced store) rather than Redis directly, so a
+   * Redis that has not been repopulated yet doesn't hide them.
+   */
+  private async fetchLegacyModuleConfigs(): Promise<LegacyModuleConfigs> {
     const legacyConfigs: LegacyModuleConfigs = {};
-
     for (const key of LEGACY_MODULE_CONFIG_KEYS) {
-      const stateKey = await this.grpcSdk.state!.getKey(`moduleConfigs.${key}`);
-      if (!stateKey) continue;
-
-      const moduleConfig = await this.grpcSdk.config.get(key);
+      const moduleConfig = await this.grpcSdk.config.get(key).catch(() => null);
       if (moduleConfig && Object.keys(moduleConfig).length > 0) {
         legacyConfigs[key] = moduleConfig;
       }
     }
+    return legacyConfigs;
+  }
 
-    const legacyModulesFound = collectLegacyModulesFound(legacyConfigs);
-    if (legacyModulesFound.length > 0) {
-      this.legacyModulesPendingCleanup = legacyModulesFound;
-    }
-
+  private mergeLegacyModuleConfigs(config: Config): Config {
     const { config: mergedConfig, migratedChannels } = mergeLegacyChannelConfigs(
       config,
-      legacyConfigs,
+      this.legacyConfigs,
       getDefaultCommunicationsConfig(),
     );
 
@@ -204,19 +198,33 @@ export default class Communications extends ManagedModule<Config> {
     return mergedConfig;
   }
 
+  private async cleanupLegacyModuleConfigs(config: Config) {
+    const found = Object.keys(this.legacyConfigs);
+    if (found.length === 0) return;
+    const removable = legacyConfigsSafeToRemove(config, this.legacyConfigs);
+    for (const name of removable) {
+      await this.grpcSdk.config.delete(name);
+      delete this.legacyConfigs[name as keyof LegacyModuleConfigs];
+    }
+    if (removable.length > 0) {
+      ConduitGrpcSdk.Logger.log(
+        `Removed legacy module configuration: ${removable.join(', ')}`,
+      );
+    }
+    const kept = found.filter(name => !removable.includes(name));
+    if (kept.length > 0) {
+      ConduitGrpcSdk.Logger.warn(
+        `Kept legacy module configuration for ${kept.join(', ')}: the matching ` +
+          'communications channel is configured differently and disabled. Enable the ' +
+          'channel to keep its current settings, or reset it to defaults to migrate.',
+      );
+    }
+  }
+
   async onConfig() {
     const config = ConfigController.getInstance().config as Config;
 
-    if (this.legacyModulesPendingCleanup.length > 0) {
-      const modulesToRemove = [...this.legacyModulesPendingCleanup];
-      for (const name of modulesToRemove) {
-        await this.grpcSdk.config.delete(name);
-      }
-      ConduitGrpcSdk.Logger.log(
-        `Removed legacy module configuration: ${modulesToRemove.join(', ')}`,
-      );
-      this.legacyModulesPendingCleanup = [];
-    }
+    await this.cleanupLegacyModuleConfigs(config);
 
     if (!this.isRunning) {
       await this.initServices();
