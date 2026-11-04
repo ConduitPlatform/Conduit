@@ -104,6 +104,23 @@ export type StoredRealmStrategies = Omit<RealmStrategies, 'oauth'> & {
   oauth: Partial<Record<RealmOAuthProviderKey, RealmOAuthPublicStrategy>>;
 };
 
+/**
+ * Refresh token policy of a realm. `null` = inherit the global value. Realms can only
+ * tighten the global policy (see `effectiveRefreshPolicy`).
+ */
+export type RealmRefreshTokenPolicy = {
+  expiryPeriod: number | null;
+  extendable: boolean | null;
+  maxLifetime: number | null;
+};
+
+/** The refresh token policy that applies to a session, global config and realm combined. */
+export type EffectiveRefreshPolicy = {
+  expiryPeriod: number;
+  extendable: boolean;
+  maxLifetime: number;
+};
+
 export type RealmPolicies = {
   requireTwoFa: boolean;
   requireVerifiedEmail: boolean;
@@ -117,6 +134,7 @@ export type RealmPolicies = {
      */
     directSignIn: boolean;
   };
+  session: { refreshTokens: RealmRefreshTokenPolicy };
 };
 
 /**
@@ -153,8 +171,9 @@ export type MaskedRealmStrategies = Omit<RealmStrategies, 'oauth'> & {
   oauth: Partial<Record<RealmOAuthProviderKey, MaskedRealmOAuthStrategy>>;
 };
 
-export type PartialRealmPolicies = Partial<Omit<RealmPolicies, 'guests'>> & {
+export type PartialRealmPolicies = Partial<Omit<RealmPolicies, 'guests' | 'session'>> & {
   guests?: Partial<RealmPolicies['guests']>;
+  session?: { refreshTokens?: Partial<RealmRefreshTokenPolicy> };
 };
 
 /** Contract write body (POST/PATCH `/teams/:teamId/realm`) minus `slug` and `force`. */
@@ -212,7 +231,9 @@ export type EffectiveAuthSettings = {
     oauth: Record<RealmOAuthProviderKey, EffectiveOAuthSettings>;
   };
   registration: { allowWithoutInvite: boolean };
-  policies: RealmPolicies;
+  policies: Omit<RealmPolicies, 'session'> & {
+    session: { refreshTokens: EffectiveRefreshPolicy };
+  };
   linking: RealmLinking;
 };
 
@@ -729,8 +750,66 @@ export function defaultRealmSettings(): RealmSettingsData {
       requireVerifiedEmail: false,
       allowedClientIds: [],
       guests: { allowed: true, allowedHomeRealms: [], directSignIn: true },
+      session: { refreshTokens: nullRefreshPolicy() },
     },
     linking: { inbound: false, outbound: true },
+  };
+}
+
+/** Every refresh policy leaf unset (inherit), as explicit nulls (SQL-portable). */
+export function nullRefreshPolicy(): RealmRefreshTokenPolicy {
+  return { expiryPeriod: null, extendable: null, maxLifetime: null };
+}
+
+/** Stored refresh policy with every leaf present; missing or malformed leaves are null. */
+export function refreshPolicyOf(
+  stored: Partial<Record<keyof RealmRefreshTokenPolicy, unknown>> | null | undefined,
+): RealmRefreshTokenPolicy {
+  const positive = (v: unknown) =>
+    typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null;
+  return {
+    expiryPeriod: positive(stored?.expiryPeriod),
+    extendable: typeof stored?.extendable === 'boolean' ? stored.extendable : null,
+    maxLifetime: positive(stored?.maxLifetime),
+  };
+}
+
+/**
+ * Refresh token policy of a session: a realm can only tighten the global policy.
+ * expiryPeriod and maxLifetime are the smaller of the two, extendable needs both. A null
+ * realm leaf inherits the global value.
+ */
+export function effectiveRefreshPolicy(
+  global: EffectiveRefreshPolicy,
+  realm: Partial<RealmRefreshTokenPolicy> | null | undefined,
+): EffectiveRefreshPolicy {
+  const expiryPeriod = Math.min(
+    global.expiryPeriod,
+    realm?.expiryPeriod ?? global.expiryPeriod,
+  );
+  const maxLifetime = Math.min(
+    global.maxLifetime,
+    realm?.maxLifetime ?? global.maxLifetime,
+  );
+  return {
+    expiryPeriod,
+    extendable: global.extendable && (realm?.extendable ?? true),
+    maxLifetime,
+  };
+}
+
+/** The global refresh policy as read from the module config. */
+export function globalRefreshPolicy(config: GlobalAuthConfig): EffectiveRefreshPolicy {
+  const refresh = config?.refreshTokens ?? {};
+  const expiryPeriod = refresh.expiryPeriod as number;
+  return {
+    expiryPeriod,
+    extendable: refresh.extendable !== false,
+    // never below the expiry period (see clampRefreshMaxLifetime)
+    maxLifetime:
+      typeof refresh.maxLifetime === 'number'
+        ? Math.max(refresh.maxLifetime, expiryPeriod)
+        : expiryPeriod,
   };
 }
 
@@ -1065,6 +1144,7 @@ export function withRealmFieldDefaults(settings: Indexable): Indexable {
     policies: {
       ...policies,
       guests: { ...policies.guests, directSignIn: directSignInOf(policies.guests) },
+      session: { refreshTokens: refreshPolicyOf(policies.session?.refreshTokens) },
     },
   };
 }
@@ -1105,8 +1185,15 @@ function effectiveStrategies(
 function effectivePolicies(
   policies: RealmPolicies,
   defaults: RealmPolicies,
-): RealmPolicies {
+  globalConfig: GlobalAuthConfig,
+): EffectiveAuthSettings['policies'] {
   return {
+    session: {
+      refreshTokens: effectiveRefreshPolicy(
+        globalRefreshPolicy(globalConfig),
+        refreshPolicyOf(policies.session?.refreshTokens),
+      ),
+    },
     requireTwoFa: policies.requireTwoFa === true,
     requireVerifiedEmail: policies.requireVerifiedEmail === true,
     allowedClientIds: normalizeIdList(policies.allowedClientIds),
@@ -1139,7 +1226,7 @@ export function buildEffectiveSettings(
         realmSettings.registration?.allowWithoutInvite ??
         defaults.registration.allowWithoutInvite,
     },
-    policies: effectivePolicies(policies, defaults.policies),
+    policies: effectivePolicies(policies, defaults.policies, globalConfig),
     linking: linkingFlagsOf(realmSettings.linking),
   };
 }

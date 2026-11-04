@@ -23,6 +23,12 @@ const schema: ConduitModel = {
     type: TYPE.ObjectId,
     required: false,
   },
+  // id of the session (RefreshToken) this token belongs to; set on every mint that has
+  // a refresh row and on sudo tokens, so logging out through any of them ends the session
+  session: {
+    type: TYPE.ObjectId,
+    required: false,
+  },
   token: {
     type: TYPE.String,
     required: true,
@@ -60,6 +66,7 @@ export class AccessToken extends ConduitActiveSchema<AccessToken> {
   user: string | User;
   clientId: string;
   realm?: string;
+  session?: string;
   token: string;
   expiresOn: Date;
   createdAt: Date;

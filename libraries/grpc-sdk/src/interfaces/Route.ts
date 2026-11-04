@@ -106,6 +106,16 @@ export interface ConduitRouteOptions {
    * by security middleware are excluded.
    */
   captureRawHeaders?: boolean;
+  /**
+   * Whether module-tools hydrates context.user from the user id of a verified access token.
+   * Defaults to true.
+   *
+   * DEPRECATION: the default-true behavior is deprecated. The default flips to false in the
+   * next major version; modules will call grpcSdk.authentication.getUser explicitly. Set
+   * this to false now on routes that do not need context.user, and call getUser yourself
+   * on those that do.
+   */
+  hydrateUser?: boolean;
 }
 
 export interface ConduitRouteObject {

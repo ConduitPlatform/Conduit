@@ -11,13 +11,18 @@ import {
   ConduitRouteActions,
   ConduitRouteObject,
   ConduitRouteOptions,
+  ConduitGrpcSdk,
+  GrpcError,
   ConduitRouteReturnDefinition,
   ConduitSocketOptions,
+  Indexable,
   EventsProtoDescription,
   Router,
   SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import { GrpcServer } from '../classes/index.js';
+import { createUserHydrator, UserHydrator, UserResolver } from './hydrateUser.js';
 import { RoutingController } from './RoutingController.js';
 
 export class RoutingManager {
@@ -26,6 +31,32 @@ export class RoutingManager {
   } = {};
   static ClientController: RoutingController;
   static AdminController: RoutingController;
+  /** Set by ManagedModule; used to hydrate context.user on client routes. */
+  static grpcSdk?: ConduitGrpcSdk;
+  private static userResolver?: UserResolver;
+  private static warnedNoResolver = false;
+
+  /**
+   * Overrides how users are fetched for hydration (default: grpcSdk.authentication.getUser).
+   * Intended for the module that owns the users: the authentication module has no gRPC
+   * client to itself and will register a local resolver here.
+   */
+  static setUserResolver(resolver: UserResolver | undefined) {
+    RoutingManager.userResolver = resolver;
+  }
+
+  private static resolveUser(): UserResolver | undefined {
+    if (RoutingManager.userResolver) return RoutingManager.userResolver;
+    const sdk = RoutingManager.grpcSdk;
+    if (!sdk) return undefined;
+    return async (userId: string) => {
+      const auth = sdk.authentication;
+      if (!auth) {
+        throw new GrpcError(status.UNAVAILABLE, 'authentication module unavailable');
+      }
+      return auth.getUser(userId);
+    };
+  }
 
   private _routeHandlers: {
     [key: string]: RequestHandlers | SocketRequestHandlers;
@@ -119,9 +150,38 @@ export class RoutingManager {
 
   async registerRoutes() {
     if (Object.keys(this._routeHandlers).length === 0) return;
+    const hydrations: { [name: string]: { options: Indexable; hydrator: UserHydrator } } =
+      {};
+    if (!this.isAdmin) {
+      for (const [name, route] of Object.entries(this._moduleRoutes)) {
+        const options = (route as ConduitRouteObject).options as Indexable;
+        const hydrator = createUserHydrator(options, RoutingManager.resolveUser);
+        if (!hydrator) continue;
+        // A socket route is keyed by its first event; every event handler hydrates.
+        const names =
+          'events' in route
+            ? Object.keys(JSON.parse((route as SocketProtoDescription).events || '{}'))
+            : [name];
+        for (const n of names) hydrations[n] = { options, hydrator };
+        if (
+          !RoutingManager.grpcSdk &&
+          !RoutingManager.userResolver &&
+          !RoutingManager.warnedNoResolver
+        ) {
+          RoutingManager.warnedNoResolver = true;
+          ConduitGrpcSdk.Logger.warn(
+            'User hydration is needed but RoutingManager.grpcSdk is not set; hydration will fail',
+          );
+        }
+      }
+    }
     const modifiedFunctions: {
       [name: string]: (call: any, callback: any) => void;
-    } = wrapFunctionsAsync(this._routeHandlers, this.isAdmin ? 'admin' : 'client');
+    } = wrapFunctionsAsync(
+      this._routeHandlers,
+      this.isAdmin ? 'admin' : 'client',
+      hydrations,
+    );
     if (this.isAdmin) {
       RoutingManager.AdminController.setRoutes(modifiedFunctions);
     } else {

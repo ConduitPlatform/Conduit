@@ -489,6 +489,9 @@ importers:
       escape-string-regexp:
         specifier: ^5.0.0
         version: 5.0.0
+      fast-jwt:
+        specifier: ^6.2.4
+        version: 6.2.4
       ioredis:
         specifier: 5.11.1
         version: 5.11.1
@@ -625,7 +628,7 @@ importers:
         version: 6.1.3
       ts-jest:
         specifier: 29.4.12
-        version: 29.4.12(@babel/core@7.29.7)(@jest/transform@30.5.2)(@jest/types@30.5.1)(babel-jest@30.5.2(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.5.1)(jest@30.3.0(@types/node@24.13.6)(ts-node@10.9.2(@types/node@24.13.6)(typescript@6.0.3)))(typescript@6.0.3)
+        version: 29.4.12(@babel/core@7.29.7)(@jest/transform@30.5.2)(@jest/types@30.5.1)(babel-jest@30.5.2(@babel/core@7.29.7))(jest-util@30.5.1)(jest@30.3.0(@types/node@24.13.6)(ts-node@10.9.2(@types/node@24.13.6)(typescript@6.0.3)))(typescript@6.0.3)
       ts-proto:
         specifier: ^2.12.4
         version: 2.12.4
@@ -3285,6 +3288,7 @@ packages:
   '@smithy/core@3.26.0':
     resolution: {integrity: sha512-mLUktFAn+Pa2agl1J7VgtYNFWCX8/b4GMJSK1hCu4YCvtBfM6F8Os3EP4ry+DFFlXOf3wyvlgXhuUdFoy52D3g==}
     engines: {node: '>=18.0.0'}
+    deprecated: Deprecated due to a bug in custom logger data redaction. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/credential-provider-imds@4.4.2':
     resolution: {integrity: sha512-18UMDMyrAbDcpmL1gLUA7ww0fRTcdCrSjSJOi2Sbld+tVjwD/pW+OAwjlScFLR7vvBnhZrIPQ7kVuTf1mnJLug==}
@@ -16995,7 +16999,7 @@ snapshots:
 
   ts-interface-checker@0.1.13: {}
 
-  ts-jest@29.4.12(@babel/core@7.29.7)(@jest/transform@30.5.2)(@jest/types@30.5.1)(babel-jest@30.5.2(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.5.1)(jest@30.3.0(@types/node@24.13.6)(ts-node@10.9.2(@types/node@24.13.6)(typescript@6.0.3)))(typescript@6.0.3):
+  ts-jest@29.4.12(@babel/core@7.29.7)(@jest/transform@30.5.2)(@jest/types@30.5.1)(babel-jest@30.5.2(@babel/core@7.29.7))(jest-util@30.5.1)(jest@30.3.0(@types/node@24.13.6)(ts-node@10.9.2(@types/node@24.13.6)(typescript@6.0.3)))(typescript@6.0.3):
     dependencies:
       bs-logger: 0.2.6
       fast-json-stable-stringify: 2.1.0
@@ -17013,7 +17017,6 @@ snapshots:
       '@jest/transform': 30.5.2
       '@jest/types': 30.5.1
       babel-jest: 30.5.2(@babel/core@7.29.7)
-      esbuild: 0.28.1
       jest-util: 30.5.1
 
   ts-jest@29.4.13(@babel/core@7.29.7)(@jest/transform@30.5.2)(@jest/types@30.5.1)(babel-jest@30.5.2(@babel/core@7.29.7))(jest-util@30.5.1)(jest@30.5.2(@types/node@24.13.6)(ts-node@10.9.2(@types/node@24.13.6)(typescript@6.0.3)))(typescript@6.0.3):

@@ -288,6 +288,9 @@ describe('defaultRealmSettings', () => {
       requireVerifiedEmail: false,
       allowedClientIds: [],
       guests: { allowed: true, allowedHomeRealms: [], directSignIn: true },
+      session: {
+        refreshTokens: { expiryPeriod: null, extendable: null, maxLifetime: null },
+      },
     });
   });
 

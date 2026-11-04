@@ -22,6 +22,7 @@ import { errors } from '../errors.js';
 import { RealmMembership, Token, User } from '../models/index.js';
 import { hasConduitCode } from '../utils/common.logic.js';
 import { collectTeamSubtreeIds } from '../utils/teamRealm.js';
+import { invalidateTeamClaims } from '../utils/teamClaims.js';
 import {
   evaluateLinkEligibility,
   getRealmSlugById,
@@ -502,6 +503,7 @@ export class RealmHandlers {
         // authorization throws when no relation exists
       }
     }
+    await invalidateTeamClaims([userId]);
     return 'OK';
   }
 

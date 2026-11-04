@@ -13,3 +13,4 @@ export * from './ConduitRouteReturn.js';
 export * from './ConduitSchemaExtension.js';
 export * from './IConduitLogger.js';
 export * from './IConduitMetrics.js';
+export * from './AccessTokenClaims.js';

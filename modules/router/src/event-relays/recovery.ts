@@ -12,7 +12,12 @@ import {
   subscriptionsForRecoveredRooms,
   trackSubscription,
 } from './subscriptions.js';
-import { relaySubscriptionsFromContext, persistRelaySubscriptionOnContext, removeRelaySubscriptionFromContext } from './relaySocketData.js';
+import { contextUserId } from './userId.js';
+import {
+  relaySubscriptionsFromContext,
+  persistRelaySubscriptionOnContext,
+  removeRelaySubscriptionFromContext,
+} from './relaySocketData.js';
 
 type RelayAuthorizationSdk = Parameters<typeof authorizeRelaySubscription>[0];
 
@@ -21,13 +26,13 @@ export async function reauthorizeRecoveredSubscriptions(
   manager: RelayLookup,
   request: {
     socketId: string;
-    context?: { user?: { _id?: string } } & Record<string, unknown>;
+    context?: { userId?: string; user?: { _id?: string } } & Record<string, unknown>;
     recoveredRooms?: string[];
   },
 ): Promise<
   { event: 'join-room'; rooms: string[] } | { event: 'leave-room'; rooms: string[] }
 > {
-  const userId = request.context?.user?._id as string | undefined;
+  const userId = contextUserId(request.context);
   if (!userId) {
     return { event: 'leave-room', rooms: [] };
   }
@@ -62,10 +67,7 @@ export async function reauthorizeRecoveredSubscriptions(
         persistRelaySubscriptionOnContext(request.context, sub.relayId, sub.resourceId);
         continue;
       }
-      if (
-        mapped.code === status.PERMISSION_DENIED ||
-        mapped.code === status.NOT_FOUND
-      ) {
+      if (mapped.code === status.PERMISSION_DENIED || mapped.code === status.NOT_FOUND) {
         removeSubscription(request.socketId, userId, sub.relayId, sub.resourceId);
         removeRelaySubscriptionFromContext(request.context, sub.relayId, sub.resourceId);
         leaveRooms.push(room);

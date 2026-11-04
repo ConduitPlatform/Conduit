@@ -21,6 +21,8 @@ import {
   RedisManager,
   sleep,
   StateManager,
+  UserCache,
+  SessionRegistry,
 } from './utilities/index.js';
 import {
   addMiddleware,
@@ -80,6 +82,8 @@ class ConduitGrpcSdk {
   private _dynamicModules: { [key: string]: CompatServiceDefinition } = {};
   private _eventBus?: EventBus;
   private _stateManager?: StateManager;
+  private _userCache?: UserCache;
+  private _sessionRegistry?: SessionRegistry;
   private lastSearch: number = Date.now();
   private readonly urlRemap?: UrlRemap;
   private readonly _serviceHealthStatusGetter: () => HealthCheckStatus;
@@ -187,6 +191,22 @@ class ConduitGrpcSdk {
       ConduitGrpcSdk.Logger.warn('State Manager not initialized');
       return null;
     }
+  }
+
+  /** Redis-backed user cache. Throws when Redis is not initialized. */
+  get userCache(): UserCache {
+    if (!this._userCache) {
+      this._userCache = new UserCache(this.redisManager);
+    }
+    return this._userCache;
+  }
+
+  /** Redis-backed session registry. Throws when Redis is not initialized. */
+  get sessionRegistry(): SessionRegistry {
+    if (!this._sessionRegistry) {
+      this._sessionRegistry = new SessionRegistry(this.redisManager);
+    }
+    return this._sessionRegistry;
   }
 
   get core(): Core {
@@ -646,6 +666,11 @@ class ConduitGrpcSdk {
         moduleUrl,
         this._grpcToken,
       );
+      if (moduleName === 'authentication') {
+        (this._modules[moduleName] as Authentication).attachUserCache(() =>
+          this._redisManager ? this.userCache : undefined,
+        );
+      }
     } else if (this._dynamicModules[moduleName]) {
       ConduitGrpcSdk.Logger.info(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new ConduitModule(
@@ -817,6 +842,14 @@ export { ConduitGrpcSdk };
 export type { CountDocumentsOptions } from './modules/database/index.js';
 export type { FindManyOptions, FindOneOptions } from './modules/database/types.js';
 export * from './interfaces/index.js';
+export {
+  UserCache,
+  SessionRegistry,
+  USER_CACHE_PREFIX,
+  USER_CACHE_TTL_MS,
+  SESSION_REGISTRY_PREFIX,
+} from './utilities/index.js';
+export type { SessionRegistryData } from './utilities/SessionRegistry.js';
 export * from './classes/index.js';
 export * from './modules/index.js';
 export * from './constants/index.js';

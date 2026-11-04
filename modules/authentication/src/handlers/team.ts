@@ -26,6 +26,7 @@ import { TeamInviteTemplate } from '../templates/index.js';
 import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/index.js';
 import { assertEmailAllowed } from '../utils/emailRestrictions.js';
+import { invalidateTeamClaims } from '../utils/teamClaims.js';
 import {
   addUserToTeamWithRealm,
   assertInviteeAllowed,
@@ -217,6 +218,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       relation: 'member',
       resource: 'Team:' + team._id,
     });
+    await invalidateTeamClaims([String(user._id)]);
   }
 
   createUserInvitation(invite: {
@@ -307,6 +309,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         relation: 'owner',
         resource: 'Team:' + team._id,
       });
+      await invalidateTeamClaims([String(user._id)]);
     }
 
     return team;
@@ -406,31 +409,35 @@ export class TeamsHandler implements IAuthenticationStrategy {
     await assertTeamMembersRemovable(targetTeam, members.map(String));
     let deletionError = false;
     const removedMembers: string[] = [];
-    for (const member of members) {
-      const relation = await this.grpcSdk.authorization!.findRelation({
-        subject: 'User:' + member,
-        resource: 'Team:' + teamId,
-      });
-      if (!relation || relation.relations.length === 0) {
-        continue;
-      }
-      const memberRole = relation.relations[0].relation;
-      if (memberRole === 'owner') {
-        const allowed = await this.grpcSdk.authorization!.can({
-          subject: 'User:' + user._id,
-          actions: ['deleteOwners'],
+    try {
+      for (const member of members) {
+        const relation = await this.grpcSdk.authorization!.findRelation({
+          subject: 'User:' + member,
           resource: 'Team:' + teamId,
         });
-        if (!allowed.allow) {
-          deletionError = true;
+        if (!relation || relation.relations.length === 0) {
           continue;
         }
+        const memberRole = relation.relations[0].relation;
+        if (memberRole === 'owner') {
+          const allowed = await this.grpcSdk.authorization!.can({
+            subject: 'User:' + user._id,
+            actions: ['deleteOwners'],
+            resource: 'Team:' + teamId,
+          });
+          if (!allowed.allow) {
+            deletionError = true;
+            continue;
+          }
+        }
+        await this.grpcSdk.authorization!.deleteAllRelations({
+          subject: 'User:' + member,
+          resource: 'Team:' + teamId,
+        });
+        removedMembers.push(String(member));
       }
-      await this.grpcSdk.authorization!.deleteAllRelations({
-        subject: 'User:' + member,
-        resource: 'Team:' + teamId,
-      });
-      removedMembers.push(String(member));
+    } finally {
+      await invalidateTeamClaims(removedMembers);
     }
     await revokeOrphanedGuests(this.grpcSdk, teamId, removedMembers);
     if (deletionError) {
@@ -826,23 +833,28 @@ export class TeamsHandler implements IAuthenticationStrategy {
       );
     }
 
-    for (const member of members) {
-      const relation = await this.grpcSdk.authorization!.findRelation({
-        subject: 'User:' + member,
-        resource: 'Team:' + teamId,
-      });
-      if (!relation || relation.relations.length === 0) {
-        continue;
+    try {
+      for (const member of members) {
+        const relation = await this.grpcSdk.authorization!.findRelation({
+          subject: 'User:' + member,
+          resource: 'Team:' + teamId,
+        });
+        if (!relation || relation.relations.length === 0) {
+          continue;
+        }
+        await this.grpcSdk.authorization!.deleteAllRelations({
+          subject: 'User:' + member,
+          resource: 'Team:' + teamId,
+        });
+        await this.grpcSdk.authorization!.createRelation({
+          subject: 'User:' + member,
+          resource: 'Team:' + teamId,
+          relation: role,
+        });
       }
-      await this.grpcSdk.authorization!.deleteAllRelations({
-        subject: 'User:' + member,
-        resource: 'Team:' + teamId,
-      });
-      await this.grpcSdk.authorization!.createRelation({
-        subject: 'User:' + member,
-        resource: 'Team:' + teamId,
-        relation: role,
-      });
+    } finally {
+      // roles are token claims: drop the cached ones (also after a partial failure)
+      await invalidateTeamClaims(members.map(String));
     }
     return 'ok';
   }

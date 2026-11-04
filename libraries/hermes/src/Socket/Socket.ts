@@ -16,6 +16,12 @@ import {
 import ObjectHash from 'object-hash';
 import { ConduitError, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { buildSocketMiddlewareParams } from './buildSocketMiddlewareParams.js';
+import {
+  createSocketGate,
+  runWhenAllowed,
+  SocketRecoveryCheck,
+} from './recoveryCheck.js';
+import { socketUserId } from './socketPushUtils.js';
 import { resolveEngineNamespacePath } from './resolveEngineNamespacePath.js';
 import {
   filterRemoteSocketsByUserAndRooms,
@@ -28,6 +34,7 @@ export class SocketController extends ConduitRouter {
   private readonly options: Partial<ServerOptions>;
   private _registeredNamespaces: Map<string, ConduitSocket>;
   private readonly redisClient: Redis | Cluster;
+  private recoveryCheck?: SocketRecoveryCheck;
   private globalMiddlewares: ((
     req: Request,
     res: Response,
@@ -115,6 +122,15 @@ export class SocketController extends ConduitRouter {
     this.globalMiddlewares.push(middleware);
   }
 
+  /**
+   * Sets a check run against `socket.data` for every recovered socket (Socket.IO skips
+   * middlewares on connection state recovery). Resolving false or throwing disconnects
+   * the socket without invoking the module's recovered handler.
+   */
+  setSocketRecoveryCheck(check?: SocketRecoveryCheck) {
+    this.recoveryCheck = check;
+  }
+
   registerConduitSocket(conduitSocket: ConduitSocket) {
     const namespace = conduitSocket.input.path;
     if (this._registeredNamespaces.has(namespace)) {
@@ -151,25 +167,30 @@ export class SocketController extends ConduitRouter {
     });
 
     this.io.of(namespace).on('connect', socket => {
+      // Socket.IO skips middlewares for recovered sockets, so every event (including
+      // ones buffered by the client while offline) waits on this gate. Order is preserved.
+      const gate = createSocketGate(socket, this.recoveryCheck);
+
       if (socket.recovered) {
         const recoveredRooms = [...socket.rooms].filter(
           room => room.startsWith('er:') || room.startsWith('database:'),
         );
-        const recovered = conduitSocket.executeRecovered({
-          event: 'recovered',
-          socketId: socket.id,
-          context: socket.data,
-          params: recoveredRooms,
-          recoveredRooms,
-        });
-        if (recovered) {
-          recovered
+        void runWhenAllowed(gate, socket, () => {
+          const recovered = conduitSocket.executeRecovered({
+            event: 'recovered',
+            socketId: socket.id,
+            context: socket.data,
+            params: recoveredRooms,
+            recoveredRooms,
+          });
+          if (!recovered) return;
+          return recovered
             .then(res => this.handleResponse(res, socket, namespace))
             .catch(e => {
               ConduitGrpcSdk.Logger.error(e);
               socket.emit('conduit_error', e);
             });
-        }
+        });
       } else {
         conduitSocket
           .executeRequest({
@@ -185,18 +206,20 @@ export class SocketController extends ConduitRouter {
       }
 
       socket.onAny((event, ...args) => {
-        conduitSocket
-          .executeRequest({
-            event,
-            socketId: socket.id,
-            params: args,
-            context: socket.data,
-          })
-          .then(res => this.handleResponse(res, socket, namespace))
-          .catch(e => {
-            ConduitGrpcSdk.Logger.error(e);
-            socket.emit('conduit_error', e);
-          });
+        void runWhenAllowed(gate, socket, () =>
+          conduitSocket
+            .executeRequest({
+              event,
+              socketId: socket.id,
+              params: args,
+              context: socket.data,
+            })
+            .then(res => this.handleResponse(res, socket, namespace))
+            .catch(e => {
+              ConduitGrpcSdk.Logger.error(e);
+              socket.emit('conduit_error', e);
+            }),
+        );
       });
 
       socket.on('disconnect', (reason: string) => {
@@ -288,7 +311,7 @@ export class SocketController extends ConduitRouter {
     const sockets = await this.io.of(namespace).in(room).local.fetchSockets();
     const userIds = new Set<string>();
     for (const socket of sockets) {
-      const userId = socket.data?.user?._id;
+      const userId = socketUserId(socket.data);
       if (typeof userId === 'string' && userId.length > 0) {
         userIds.add(userId);
       }

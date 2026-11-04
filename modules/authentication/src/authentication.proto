@@ -94,6 +94,15 @@ message ModifyTeamMembersRequest {
   repeated string memberIds = 2;
 }
 
+message GetUserRequest {
+  string userId = 1;
+}
+
+message GetUserResponse {
+  // user document as JSON, hashedPassword never included
+  string user = 1;
+}
+
 message ValidateAccessTokenRequest {
   string accessToken = 1;
   optional string path = 2;
@@ -217,6 +226,7 @@ service Authentication {
   rpc TeamDelete(TeamDeleteRequest) returns (TeamDeleteResponse);
   rpc AddTeamMembers(ModifyTeamMembersRequest) returns (google.protobuf.Empty);
   rpc RemoveTeamMembers(ModifyTeamMembersRequest) returns (google.protobuf.Empty);
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
   rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
   rpc InvitationDelete(InvitationDeleteRequest) returns (InvitationDeleteResponse);
   rpc InviteUserToTeam(InviteUserToTeamRequest) returns (InviteUserToTeamResponse);

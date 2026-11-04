@@ -1,8 +1,15 @@
 export const WRITE_BUFFER_PACKET_HIGH_WATER = 64;
 
+type SocketData = { userId?: string; user?: { _id?: string } };
+
+/** Resolves the authenticated user id from socket data (JWT mode sets `userId`, legacy sets `user`). */
+export function socketUserId(data?: SocketData | null): string | undefined {
+  return data?.userId ?? data?.user?._id;
+}
+
 type SocketLike = {
   id: string;
-  data?: { user?: { _id?: string } };
+  data?: SocketData;
   rooms: Set<string>;
 };
 
@@ -14,10 +21,11 @@ export function filterRemoteSocketsByUserAndRooms(
   const userIdSet = new Set(userIds);
   const roomSet = rooms.length > 0 ? new Set(rooms) : null;
   return sockets.filter(socket => {
-    if (!socket.data?.user?._id) {
+    const userId = socketUserId(socket.data);
+    if (!userId) {
       return false;
     }
-    if (!userIdSet.has(socket.data.user._id)) {
+    if (!userIdSet.has(userId)) {
       return false;
     }
     if (roomSet) {
