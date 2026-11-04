@@ -172,15 +172,18 @@ export default class ConfigManager {
   }
 
   getGrpc(call: GrpcRequest<{ key: string }>, callback: GrpcResponse<{ data: string }>) {
-    this.get(call.request.key).then(r => {
-      if (!r) {
-        return callback({
-          code: status.INTERNAL,
-          message: 'Config for module not set!',
-        });
-      }
-      callback(null, { data: JSON.stringify(r) });
-    });
+    this._configStorage
+      .waitForDbSync()
+      .then(() => this.get(call.request.key))
+      .then(r => {
+        if (!r) {
+          return callback({
+            code: status.INTERNAL,
+            message: 'Config for module not set!',
+          });
+        }
+        callback(null, { data: JSON.stringify(r) });
+      });
   }
 
   async get(moduleName: string) {
@@ -240,6 +243,7 @@ export default class ConfigManager {
     let config = JSON.parse(call.request.config);
     const configSchema = JSON.parse(call.request.schema);
     parseConfigSchema(configSchema);
+    await this._configStorage.waitForDbSync();
     if (call.request.override) {
       await this.set(moduleName, config);
     } else {
