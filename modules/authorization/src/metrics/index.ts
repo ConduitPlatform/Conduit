@@ -37,6 +37,14 @@ export default {
       buckets: [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000],
     },
   },
+  authzSubjectPermissionsDuration: {
+    type: MetricType.Histogram,
+    config: {
+      name: 'authorization_subject_permissions_duration_ms',
+      help: 'Wall time for PermissionsController.getSubjectPermissions() including cache and DB',
+      buckets: [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000],
+    },
+  },
   authzAccessListDuration: {
     type: MetricType.Histogram,
     config: {
@@ -49,14 +57,14 @@ export default {
     type: MetricType.Counter,
     config: {
       name: 'authorization_rule_cache_hit_total',
-      help: 'can() decisions served from rule cache',
+      help: 'Authorization decisions served from the rule cache',
     },
   },
   authzRuleCacheMiss: {
     type: MetricType.Counter,
     config: {
       name: 'authorization_rule_cache_miss_total',
-      help: 'can() decisions computed after cache miss',
+      help: 'Authorization decisions computed after a rule-cache miss',
     },
   },
 };

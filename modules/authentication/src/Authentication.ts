@@ -28,6 +28,8 @@ import {
   CreateTeamRequest,
   GetRealmSettingsRequest,
   GetTeamRequest,
+  GetUserRequest,
+  GetUserResponse,
   InvitationDeleteRequest,
   InvitationDeleteResponse,
   InviteUserToTeamRequest,
@@ -63,12 +65,14 @@ import { runMigrations } from './migrations/index.js';
 import metricsSchema from './metrics/index.js';
 import { TokenProvider } from './handlers/tokenProvider.js';
 import {
+  AccessTokenVerifier,
   ConduitActiveSchema,
   ConfigController,
   convictConfigParser,
   createParsedRouterRequest,
   ManagedModule,
   ModuleError,
+  RoutingManager,
   sanitizeDocumentsForExport,
   type ExportableResource,
   type ExportResult,
@@ -80,6 +84,16 @@ import {
   type PersistedConfigRead,
 } from './utils/jwtSecret.js';
 import { reconcileSharedAccessTokenJwtSecret } from './utils/jwtSecretReconciler.js';
+import { reconcileSharedSigningKeys } from './utils/signingReconciler.js';
+import { configureSessionServicesFromSdk } from './utils/sessionServices.js';
+import { deleteSessionTokens, purgeAllSessionTokens } from './utils/sessionRevocation.js';
+import { getUserHandler, resolveUserById } from './utils/userResolver.js';
+import { invalidateTeamClaims } from './utils/teamClaims.js';
+import {
+  clampRefreshMaxLifetime,
+  prepareSessionConfigUpdate,
+  sessionModeConfigError,
+} from './utils/sessionConfig.logic.js';
 import { TeamsAdmin } from './admin/team.js';
 import { User as UserAuthz } from './authz/index.js';
 import { handleAuthentication } from './routes/middleware.js';
@@ -173,6 +187,7 @@ export default class Authentication extends ManagedModule<Config> {
       createTeam: this.createTeam.bind(this),
       teamDelete: this.teamDelete.bind(this),
       validateAccessToken: this.validateAccessToken.bind(this),
+      getUser: this.getUser.bind(this),
       addTeamMembers: this.addTeamMembers.bind(this),
       removeTeamMembers: this.removeTeamMembers.bind(this),
       invitationDelete: this.invitationDelete.bind(this),
@@ -211,6 +226,10 @@ export default class Authentication extends ManagedModule<Config> {
     );
     this.database = this.grpcSdk.database!;
     TokenProvider.getInstance(this.grpcSdk);
+    // session registry, user cache and team claim cache (lazy: Redis may not be up yet)
+    configureSessionServicesFromSdk(this.grpcSdk);
+    // this module owns the users: hydrate them locally instead of through its own rpc
+    RoutingManager.setUserResolver(resolveUserById);
     await this.registerSchemas();
     this.subscribeToRealmUpdates();
     await runMigrations(this.grpcSdk);
@@ -363,7 +382,9 @@ export default class Authentication extends ManagedModule<Config> {
    *  - an identity mode that is not `shared` or `isolated` (INVALID_ARGUMENT): checked here
    *    so the refusal reaches the caller (preConfig also refuses it, for the other paths);
    *    the same goes for a magic_link.expiry_period outside 1 ms to one day and for an
-   *    empty or over-long twoFa issuer or allowedIssuers entry;
+   *    empty or over-long twoFa issuer or allowedIssuers entry; and for an invalid session
+   *    configuration (jwt mode access expiry outside 60 s to 5 min, refresh maxLifetime
+   *    below the refresh expiryPeriod), validated against the config the update results in;
    *  - switching the realms feature off while enabled realm teams exist (the "flag off = no
    *    realm data" invariant): demote them first;
    *  - returning the identity mode from isolated to shared while an identifier is held by
@@ -382,14 +403,24 @@ export default class Authentication extends ManagedModule<Config> {
       // malformed JSON is reported by the base implementation
     }
     const incomingTeams = incoming?.teams;
+    const currentConfig = ConfigController.getInstance().config;
+    const sessionUpdate = incoming
+      ? prepareSessionConfigUpdate(currentConfig, incoming)
+      : { error: null, incoming };
     const configError =
       identityModeConfigError(incomingTeams?.realms?.identityMode) ??
       magicLinkExpiryError(incoming?.magic_link?.expiry_period) ??
+      sessionUpdate.error ??
       totpIssuerConfigError(incoming?.twoFa);
     if (configError) {
       return callback({ code: status.INVALID_ARGUMENT, message: configError });
     }
-    const previousTeams = ConfigController.getInstance().config?.teams;
+    // server-managed fields (tokenVersion, signing) and the keypair minted on a switch to
+    // jwt mode are applied to the update before it is merged
+    if (incoming && sessionUpdate.incoming !== incoming) {
+      call.request.newConfig = JSON.stringify(sessionUpdate.incoming);
+    }
+    const previousTeams = currentConfig?.teams;
     if (isIdentityModeRevertTransition(previousTeams, incomingTeams)) {
       try {
         const collisions = await countIdentifierCollisions();
@@ -420,7 +451,46 @@ export default class Authentication extends ManagedModule<Config> {
         });
       }
     }
-    return super.setConfig(call, callback);
+    const previousMode = currentConfig?.accessTokens?.mode ?? 'session';
+    // sessions created from here on belong to the new mode and survive the purge
+    const switchAt = new Date();
+    let nextMode: string | undefined;
+    await super.setConfig(call, (error, response) => {
+      if (!error) {
+        try {
+          // the config the update resulted in (the applied one may still be queued)
+          nextMode = JSON.parse(response?.updatedConfig ?? '{}')?.accessTokens?.mode;
+        } catch {
+          nextMode = undefined;
+        }
+      }
+      return callback(error, response);
+    });
+    if (nextMode && nextMode !== previousMode) {
+      await this.invalidateSessionsOnModeSwitch(previousMode, nextMode, switchAt);
+    }
+  }
+
+  /**
+   * A mode switch (tokenVersion was bumped by prepareSessionConfigUpdate, which already
+   * rejects every token of the old mode) also drops the old mode's server state: all
+   * access and refresh token rows go in batches and their sessions are revoked in the
+   * registry. Everybody has to log in again. Failures are logged: the switch itself stands.
+   */
+  private async invalidateSessionsOnModeSwitch(from: string, to: string, switchAt: Date) {
+    try {
+      const sessions = await purgeAllSessionTokens(
+        `mode switch ${from} -> ${to}`,
+        switchAt,
+      );
+      ConduitGrpcSdk.Logger.info(
+        `Access token mode switched from ${from} to ${to}: ${sessions} session(s) revoked`,
+      );
+    } catch (e) {
+      ConduitGrpcSdk.Logger.error(
+        `Failed to invalidate sessions after the access token mode switch: ${(e as Error).message}`,
+      );
+    }
   }
 
   async preConfig(config: Config) {
@@ -474,6 +544,17 @@ export default class Authentication extends ManagedModule<Config> {
     if (expiryError) throw new GrpcError(status.INVALID_ARGUMENT, expiryError);
     const issuerError = totpIssuerConfigError(config.twoFa);
     if (issuerError) throw new GrpcError(status.INVALID_ARGUMENT, issuerError);
+    // an install whose refresh expiryPeriod exceeds the (new) 30 day default maxLifetime
+    // must keep starting: raise the cap instead of rejecting
+    const clamp = clampRefreshMaxLifetime(config.refreshTokens);
+    if (clamp.clamped) {
+      ConduitGrpcSdk.Logger.warn(
+        `refreshTokens.maxLifetime is below refreshTokens.expiryPeriod; using ${clamp.maxLifetime} ms`,
+      );
+      config.refreshTokens.maxLifetime = clamp.maxLifetime!;
+    }
+    const sessionError = sessionModeConfigError(config);
+    if (sessionError) throw new GrpcError(status.INVALID_ARGUMENT, sessionError);
 
     return config;
   }
@@ -485,6 +566,12 @@ export default class Authentication extends ManagedModule<Config> {
     // rebuild them (this also drops the per-realm OAuth settings)
     invalidateRealmCache();
     await this.ensureSharedAccessTokenJwtSecret(config);
+    await this.ensureSharedSigningKeys(config);
+    // this module's own verifier (jwt mode middleware, validateAccessToken) follows the
+    // applied config: other modules get it through the config bus
+    AccessTokenVerifier.getInstance(this.grpcSdk).applyConfig(
+      ConfigController.getInstance().config,
+    );
     if (config.redirectUris.allowAny && process.env.NODE_ENV === 'production') {
       ConduitGrpcSdk.Logger.warn(
         `Config option redirectUris.allowAny shouldn't be used in production!`,
@@ -499,8 +586,30 @@ export default class Authentication extends ManagedModule<Config> {
       if (shouldSendVerificationEmail && !this.grpcSdk.isAvailable('email')) {
         await this.grpcSdk.refreshModules(true);
       }
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, () =>
-        this.refreshAppRoutes(),
+      this.adminRouter = new AdminHandlers(
+        this.grpcServer,
+        this.grpcSdk,
+        () => this.refreshAppRoutes(),
+        {
+          getConfig: () => ConfigController.getInstance().config,
+          readPersisted: async () => {
+            const read = await this.readPersistedAuthenticationConfig();
+            return read.ok ? read.config : null;
+          },
+          persist: next => this.persistConfigOverride(next),
+          syncConfig: next => {
+            if (this.config) this.config.load(next);
+            ConfigController.getInstance().config = next;
+            // the rotating replica verifies its own new kid right away
+            AccessTokenVerifier.getInstance(this.grpcSdk).applyConfig(next);
+          },
+          publish: json =>
+            this.grpcSdk.bus?.publish('authentication:config:update', json),
+          withLock: (resource, ttl, fn) => {
+            if (!this.grpcSdk.state) throw new Error('State manager is not initialized');
+            return this.grpcSdk.state.withLock(resource, ttl, fn);
+          },
+        },
       );
       this.refreshAppRoutes();
       this.initMonitors();
@@ -545,16 +654,42 @@ export default class Authentication extends ManagedModule<Config> {
         }
         ConfigController.getInstance().config = next;
       },
-      persistOverride: async next => {
-        if (!this.config) {
-          throw new Error('Authentication config schema is not initialized');
+      persistOverride: next => this.persistConfigOverride(next),
+      withLock: (resource, ttl, fn) => {
+        if (!this.grpcSdk.state) {
+          throw new Error('State manager is not initialized');
         }
-        await this.grpcSdk.config.configure(
-          next,
-          convictConfigParser(this.config.getSchema()),
-          true,
-        );
+        return this.grpcSdk.state.withLock(resource, ttl, fn);
       },
+    });
+  }
+
+  private async persistConfigOverride(next: Config) {
+    if (!this.config) {
+      throw new Error('Authentication config schema is not initialized');
+    }
+    await this.grpcSdk.config.configure(
+      next,
+      convictConfigParser(this.config.getSchema()),
+      true,
+    );
+  }
+
+  /**
+   * jwt mode: replicas must share one Ed25519 keypair (same adopt / mint-under-lock /
+   * verify pattern as the jwtSecret). A no-op in session mode.
+   */
+  private async ensureSharedSigningKeys(config: Config) {
+    await reconcileSharedSigningKeys(config, {
+      configInitialized: this.configInitialized,
+      readPersisted: () => this.readPersistedAuthenticationConfig(),
+      syncConfig: next => {
+        if (this.config) {
+          this.config.load(next);
+        }
+        ConfigController.getInstance().config = next;
+      },
+      persistOverride: next => this.persistConfigOverride(next),
       withLock: (resource, ttl, fn) => {
         if (!this.grpcSdk.state) {
           throw new Error('State manager is not initialized');
@@ -961,10 +1096,8 @@ export default class Authentication extends ManagedModule<Config> {
       await models.User.getInstance().deleteOne({ _id: userId });
       // no membership row or session may outlive its user
       await deleteUserRealmMemberships(userId);
-      await Promise.all([
-        models.AccessToken.getInstance().deleteMany({ user: userId }),
-        models.RefreshToken.getInstance().deleteMany({ user: userId }),
-      ]);
+      await deleteSessionTokens({ user: userId }, 'user deleted');
+      await invalidateTeamClaims([userId]);
       return callback(null, {
         message: 'ok',
       });
@@ -1166,6 +1299,11 @@ export default class Authentication extends ManagedModule<Config> {
         return ValidateAccessTokenResponse_Status.AUTHENTICATED;
       })
       .catch(err => {
+        if (err.code === status.UNAVAILABLE) {
+          ConduitGrpcSdk.Logger.warn(
+            `Access token validation could not check revocation: ${err.message}`,
+          );
+        }
         switch (err.code as status) {
           case status.PERMISSION_DENIED:
             return ValidateAccessTokenResponse_Status.USER_BLOCKED;
@@ -1200,6 +1338,18 @@ export default class Authentication extends ManagedModule<Config> {
       }
     }
     return callback(null, { status: accessStatus, userId, realm, homeRealm });
+  }
+
+  /**
+   * The user document as JSON (never hashedPassword or another select:false field),
+   * read through the user cache. NOT_FOUND for an unknown id. Called by other modules
+   * (and by module-tools hydration) in jwt mode, where the router only knows the user id.
+   */
+  async getUser(
+    call: GrpcRequest<GetUserRequest>,
+    callback: GrpcCallback<GetUserResponse>,
+  ) {
+    return getUserHandler(call, callback);
   }
 
   async userModifyStatus(
@@ -1586,9 +1736,10 @@ export default class Authentication extends ManagedModule<Config> {
     if (this.tokenCleanupInterval) return;
     const cleanup = async () => {
       try {
-        await models.AccessToken.getInstance().deleteMany({
-          expiresOn: { $lte: new Date() },
-        });
+        const now = new Date();
+        await models.AccessToken.getInstance().deleteMany({ expiresOn: { $lte: now } });
+        // expired sessions: their registry entries ended with them (same ttl)
+        await models.RefreshToken.getInstance().deleteMany({ expiresOn: { $lte: now } });
         await AuthUtils.cleanupExpiredUsers();
         await AuthUtils.reconcileLoggedInUsersMetric();
         await purgeExpiredLinkProofs();

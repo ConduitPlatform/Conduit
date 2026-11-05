@@ -80,6 +80,35 @@ export default {
       default: '',
     },
   },
+  sockets: {
+    maxHttpBufferSize: {
+      format: 'Number',
+      default: 1000000,
+      doc: 'Maximum size in bytes of a single message a socket client may send. Applies to new connections.',
+    },
+    rateLimit: {
+      enabled: {
+        format: 'Boolean',
+        default: true,
+        doc: 'Limit how many events each socket may send.',
+      },
+      burst: {
+        format: 'Number',
+        default: 100,
+        doc: 'Events a socket may send in a burst.',
+      },
+      eventsPerSecond: {
+        format: 'Number',
+        default: 30,
+        doc: 'Sustained events per second once the burst is spent.',
+      },
+    },
+    disconnectOnTokenExpiry: {
+      format: 'Boolean',
+      default: true,
+      doc: 'Disconnect sockets when their access token expires. Clients must refresh the token and reconnect.',
+    },
+  },
   rateLimit: {
     maxRequests: {
       format: 'Number',

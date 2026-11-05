@@ -23,6 +23,8 @@
     "src/event-relays/rebacCache.ts",
     "src/event-relays/subscriptions.ts",
     "src/event-relays/*.test.ts",
-    "src/security/clientValidation.logic.test.ts"
+    "src/security/clientValidation.logic.test.ts",
+    "src/security/jwtAuthMiddleware.logic.ts",
+    "src/security/jwtAuthMiddleware.logic.test.ts"
   ]
 }

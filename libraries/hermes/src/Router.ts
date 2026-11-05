@@ -14,11 +14,16 @@ import { ConduitMiddleware, MiddlewarePatch } from './interfaces/index.js';
 import { ConduitRoute } from './classes/index.js';
 import ObjectHash from 'object-hash';
 
+export type LocalMiddlewareHandler = (
+  params: ConduitRouteParameters,
+) => Promise<Record<string, unknown> | void>;
+
 export abstract class ConduitRouter {
   protected _expressRouter?: Router;
   protected _middlewares?: { [field: string]: ConduitMiddleware };
   protected _registeredRoutes: Map<string, ConduitRoute>;
   private _middlewareOwners: Map<string, string>;
+  private _localMiddlewares: Map<string, LocalMiddlewareHandler> = new Map();
   private _refreshTimeout: NodeJS.Timeout | null = null;
 
   protected constructor(private readonly grpcSdk: ConduitGrpcSdk) {
@@ -41,6 +46,7 @@ export abstract class ConduitRouter {
       delete this._middlewares;
     }
     this._registeredRoutes.clear();
+    this._localMiddlewares.clear();
   }
 
   protected abstract _refreshRouter(): void;
@@ -92,11 +98,42 @@ export abstract class ConduitRouter {
     this._middlewareOwners.set(middleware.name, moduleUrl);
   }
 
+  /**
+   * Registers an in-process middleware. It takes precedence over a gRPC-registered
+   * middleware of the same name. Synchronous throws are treated like rejections
+   * (swallowed for the optional `name?` form). A returned object is shallow-cloned
+   * before being merged into `params.context`, so a handler may safely return a cached
+   * object. A local-only name has no owner and cannot be injected into a route via
+   * `filterMiddlewaresPatch` (it throws NOT_FOUND, as that only knows gRPC-registered
+   * middlewares); local middlewares must be named in the route's own middleware list.
+   */
+  registerLocalMiddleware(name: string, handler: LocalMiddlewareHandler) {
+    this._localMiddlewares.set(name, handler);
+  }
+
+  unregisterLocalMiddleware(name: string) {
+    this._localMiddlewares.delete(name);
+  }
+
   async checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]) {
     let primaryPromise = Promise.resolve();
     middlewares?.forEach(m => {
       const middleware = m.split('?')[0];
-      if (!this._middlewares?.hasOwnProperty(middleware)) {
+      const local = this._localMiddlewares.get(middleware);
+      if (local) {
+        primaryPromise = primaryPromise.then(() =>
+          Promise.resolve()
+            .then(() => local(params))
+            .then(result => {
+              if (result && typeof result === 'object') {
+                Object.assign(params.context as Record<string, unknown>, { ...result });
+              }
+            })
+            .catch((err: Error) => {
+              if (!m.includes('?')) throw err;
+            }),
+        );
+      } else if (!this._middlewares?.hasOwnProperty(middleware)) {
         primaryPromise = Promise.reject('Middleware does not exist');
       } else {
         primaryPromise = primaryPromise.then(() => {

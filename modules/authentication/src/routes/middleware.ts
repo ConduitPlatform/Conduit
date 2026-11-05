@@ -6,20 +6,23 @@ import {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { ConfigController } from '@conduitplatform/module-tools';
+import { AccessTokenVerifier, ConfigController } from '@conduitplatform/module-tools';
 import { AuthUtils } from '../utils/index.js';
 import { AccessToken, Client, User } from '../models/index.js';
 import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
 import { realmsEnabled } from '../utils/realm.js';
+import { authenticateJwt, JwtAuthenticationDeps } from './jwtAuthentication.logic.js';
+import { getConfiguredSdk, getSessionRegistry } from '../utils/sessionServices.js';
+import { resolveUserById } from '../utils/userResolver.js';
 import getToken = AuthUtils.getToken;
 
 /*
  * Expects access token in 'Authorization' header or 'accessToken' cookie
  *
- * Exception: '/authentication/renew' (token renewal)
- * Expects refresh token in 'Authorization' header or 'refreshToken' cookie
+ * Exception: routes using `refreshAuthMiddleware` (/renew, /renew/extend)
+ * Expect the refresh token in 'Authorization' header or 'refreshToken' cookie
  *
  * Headers are bearer-formatted (eg: 'Bearer your-token-str')
  */
@@ -31,11 +34,33 @@ export async function authMiddleware(
   const headers = call.request.headers;
   const cookies = call.request.cookies;
 
-  if (call.request.path === '/authentication/renew') {
-    return handleTokenRefresh(context, headers, cookies);
-  }
-
   return handleAuthentication(context, headers, cookies, call.request.path);
+}
+
+export async function refreshAuthMiddleware(
+  call: ParsedRouterRequest,
+): Promise<UnparsedRouterResponse> {
+  return handleTokenRefresh(
+    call.request.context,
+    call.request.headers,
+    call.request.cookies,
+  );
+}
+
+/** The collaborators of the jwt branch: this module's own verifier, registry and users. */
+export function defaultJwtAuthenticationDeps(): JwtAuthenticationDeps {
+  return {
+    verifier: AccessTokenVerifier.getInstance(getConfiguredSdk()),
+    registry: {
+      exists: async sid => {
+        const registry = getSessionRegistry();
+        if (!registry) throw new Error('Session registry unavailable');
+        return registry.exists(sid);
+      },
+    },
+    resolveUser: resolveUserById,
+    realmsEnabled,
+  };
 }
 
 export async function handleAuthentication(
@@ -43,8 +68,16 @@ export async function handleAuthentication(
   headers: Headers,
   cookies: Cookies,
   path: string,
+  jwtDeps?: JwtAuthenticationDeps,
 ) {
   const token = getToken(headers, cookies, 'access');
+  if (ConfigController.getInstance().config.accessTokens.mode === 'jwt') {
+    return authenticateJwt(jwtDeps ?? defaultJwtAuthenticationDeps(), {
+      token,
+      clientId: context.clientId,
+      path,
+    });
+  }
   const payload: string | JwtPayload | null = AuthUtils.verify(
     token,
     ConfigController.getInstance().config.accessTokens.jwtSecret,
@@ -84,6 +117,8 @@ export async function handleAuthentication(
     jwtPayload: payload,
     // realm the session is in (team id), null for global sessions and with the flag off
     realm: realmsEnabled() && accessToken.realm ? String(accessToken.realm) : null,
+    // the session (refresh token) this access token belongs to, when linked
+    sessionId: accessToken.session ? String(accessToken.session) : undefined,
   };
 }
 

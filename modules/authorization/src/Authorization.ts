@@ -26,6 +26,8 @@ import {
   ResourceAccessListRequest,
   ResourceModificationAcknowledgement,
   ResourceModificationAcknowledgement_Status,
+  SubjectPermissionsRequest,
+  SubjectPermissionsResponse,
 } from './protoTypes/authorization.js';
 import {
   IndexController,
@@ -69,6 +71,7 @@ export default class Authorization extends ManagedModule<Config> {
       findRelation: this.findRelation.bind(this),
       getAllowedResources: this.getAllowedResources.bind(this),
       can: this.can.bind(this),
+      getSubjectPermissions: this.getSubjectPermissions.bind(this),
       createResourceAccessList: this.createResourceAccessList.bind(this),
     },
   };
@@ -317,6 +320,19 @@ export default class Authorization extends ManagedModule<Config> {
       requestedViewName,
     );
     callback(null, { viewName });
+  }
+
+  async getSubjectPermissions(
+    call: GrpcRequest<SubjectPermissionsRequest>,
+    callback: GrpcResponse<SubjectPermissionsResponse>,
+  ) {
+    const { subject, resource, actionPrefix } = call.request;
+    const permissions = await this.permissionsController.getSubjectPermissions(
+      subject,
+      resource,
+      actionPrefix,
+    );
+    callback(null, { permissions });
   }
 
   async can(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {

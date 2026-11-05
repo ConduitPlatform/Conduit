@@ -16,6 +16,7 @@ import {
   REALM_OAUTH_PROVIDERS,
   RealmOAuthSecrets,
   RealmPolicies,
+  refreshPolicyOf,
   RealmSettingsInput,
   splitRealmSettingsInput,
   StoredRealmSettingsData,
@@ -308,6 +309,61 @@ function sanitizeGuests(value: unknown): Record_ {
   return clean;
 }
 
+function readPositiveNumber(value: unknown, path: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    fail(`${path} must be a positive number`);
+  }
+  return value;
+}
+
+/** `null` clears a leaf (inherit the global value); otherwise the leaf is validated. */
+function sanitizeSession(value: unknown): Record_ {
+  const session = readRecord(value, 'policies.session');
+  const clean: Record_ = {};
+  if (session.refreshTokens !== undefined) {
+    const refresh = readRecord(session.refreshTokens, 'policies.session.refreshTokens');
+    const path = 'policies.session.refreshTokens';
+    const out: Record_ = {};
+    for (const field of ['expiryPeriod', 'maxLifetime'] as const) {
+      if (refresh[field] === undefined) continue;
+      out[field] =
+        refresh[field] === null
+          ? null
+          : readPositiveNumber(refresh[field], `${path}.${field}`);
+    }
+    if (refresh.extendable !== undefined) {
+      out.extendable =
+        refresh.extendable === null
+          ? null
+          : readBoolean(refresh.extendable, `${path}.extendable`);
+    }
+    if (
+      typeof out.expiryPeriod === 'number' &&
+      typeof out.maxLifetime === 'number' &&
+      out.maxLifetime < out.expiryPeriod
+    ) {
+      fail(`${path}.maxLifetime must be greater than or equal to expiryPeriod`);
+    }
+    clean.refreshTokens = out;
+  }
+  return clean;
+}
+
+/**
+ * Refresh policy of the merged settings: maxLifetime must not be below expiryPeriod when
+ * both are set (a patch may set only one of them).
+ */
+export function assertRefreshPolicyConsistent(policies: {
+  session?: { refreshTokens?: { expiryPeriod?: unknown; maxLifetime?: unknown } };
+}): void {
+  const { expiryPeriod, maxLifetime } = refreshPolicyOf(policies.session?.refreshTokens);
+  if (expiryPeriod !== null && maxLifetime !== null && maxLifetime < expiryPeriod) {
+    fail(
+      'policies.session.refreshTokens.maxLifetime must be greater than or equal to expiryPeriod',
+    );
+  }
+}
+
 function sanitizePolicies(value: unknown): Record_ {
   const policies = readRecord(value, 'policies');
   const clean = readFlags(policies, ['requireTwoFa', 'requireVerifiedEmail'], 'policies');
@@ -318,6 +374,7 @@ function sanitizePolicies(value: unknown): Record_ {
     );
   }
   if (policies.guests !== undefined) clean.guests = sanitizeGuests(policies.guests);
+  if (policies.session !== undefined) clean.session = sanitizeSession(policies.session);
   return clean;
 }
 
@@ -423,6 +480,7 @@ export function pickSettingsFields(stored: Indexable): RealmSettingsFields {
         allowedHomeRealms: normalizeIdList(policies.guests?.allowedHomeRealms),
         directSignIn: directSignInOf(policies.guests),
       },
+      session: { refreshTokens: refreshPolicyOf(policies.session?.refreshTokens) },
     },
     linking: linkingFlagsOf(stored.linking),
   };
@@ -505,6 +563,7 @@ export function buildRealmSettingsWrite(params: {
   );
   const settings = deepMergeClearing(pickSettingsFields(params.base), patch);
   settings.strategies.oauth = settings.strategies.oauth ?? {};
+  assertRefreshPolicyConsistent(settings.policies);
   // a provider entry that was never switched on stays off (the toggle is explicit)
   for (const entry of Object.values(settings.strategies.oauth) as Indexable[]) {
     if (entry && typeof entry === 'object' && entry.enabled === undefined) {

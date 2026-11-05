@@ -33,6 +33,7 @@ import { status } from '@grpc/grpc-js';
 import { isEqual, isNil } from 'lodash-es';
 import ObjectHash from 'object-hash';
 import { DATABASE_SYSTEM_SCHEMA_NAME_SET } from '../models/systemSchemas.js';
+import { migratingComms } from '../permissions/index.js';
 
 export abstract class DatabaseAdapter<T extends Schema> {
   registeredSchemas: Map<string, ConduitDatabaseSchema>;
@@ -377,6 +378,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
     );
     if (model && model.parentSchema) return false;
     if (model && model.ownerModule === schema.ownerModule) {
+      return true;
+    } else if (model && migratingComms(model.ownerModule, schema.ownerModule)) {
+      // Legacy (<= 0.16) email/sms/push-notifications schema being claimed by
+      // communications. The coms migration normally reassigns these on database
+      // startup, but it is skipped on replicas (e.g. during rolling upgrades), so
+      // allow the takeover here; storing the schema updates its ownerModule.
       return true;
     } else if (model) {
       return false;

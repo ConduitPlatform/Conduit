@@ -26,12 +26,20 @@ function hasLegacyConfig(
   return !!config && Object.keys(config).length > 0;
 }
 
-export function collectLegacyModulesFound(legacyConfigs: LegacyModuleConfigs): string[] {
-  return LEGACY_MODULE_CONFIG_KEYS.filter(key => hasLegacyConfig(legacyConfigs[key]));
-}
+type ChannelConfig = { active?: boolean };
 
-function shouldMigrateChannel(current: unknown, defaults: unknown): boolean {
-  return isEqual(current, defaults);
+/**
+ * A legacy channel config is taken over when the communications channel was never
+ * configured (still at defaults), or when it is disabled while the legacy module was
+ * enabled. An enabled communications channel is never overwritten.
+ */
+function shouldMigrateChannel(
+  current: ChannelConfig,
+  defaults: ChannelConfig,
+  legacy: Record<string, unknown>,
+): boolean {
+  if (isEqual(current, defaults)) return true;
+  return !current.active && legacy.active === true;
 }
 
 function mergeEmailConfig(
@@ -79,6 +87,12 @@ function mergeSmsConfig(
   };
 }
 
+const CHANNEL_MERGERS = {
+  email: mergeEmailConfig,
+  pushNotifications: mergePushConfig,
+  sms: mergeSmsConfig,
+} as const;
+
 export function mergeLegacyChannelConfigs(
   currentConfig: Config,
   legacyConfigs: LegacyModuleConfigs,
@@ -87,32 +101,40 @@ export function mergeLegacyChannelConfigs(
   const config = { ...currentConfig };
   const migratedChannels: string[] = [];
 
-  if (
-    hasLegacyConfig(legacyConfigs.email) &&
-    shouldMigrateChannel(currentConfig.email, defaults.email)
-  ) {
-    config.email = mergeEmailConfig(currentConfig.email, legacyConfigs.email);
-    migratedChannels.push('email');
-  }
-
-  if (
-    hasLegacyConfig(legacyConfigs.pushNotifications) &&
-    shouldMigrateChannel(currentConfig.pushNotifications, defaults.pushNotifications)
-  ) {
-    config.pushNotifications = mergePushConfig(
-      currentConfig.pushNotifications,
-      legacyConfigs.pushNotifications,
-    );
-    migratedChannels.push('pushNotifications');
-  }
-
-  if (
-    hasLegacyConfig(legacyConfigs.sms) &&
-    shouldMigrateChannel(currentConfig.sms, defaults.sms)
-  ) {
-    config.sms = mergeSmsConfig(currentConfig.sms, legacyConfigs.sms);
-    migratedChannels.push('sms');
+  for (const key of LEGACY_MODULE_CONFIG_KEYS) {
+    const legacy = legacyConfigs[key];
+    if (!hasLegacyConfig(legacy)) continue;
+    if (!shouldMigrateChannel(currentConfig[key], defaults[key], legacy)) continue;
+    const merge = CHANNEL_MERGERS[key] as (
+      current: Config[typeof key],
+      legacy: Record<string, unknown>,
+    ) => Config[typeof key];
+    (config as Record<string, unknown>)[key] = merge(currentConfig[key], legacy);
+    migratedChannels.push(key);
   }
 
   return { config, migratedChannels };
+}
+
+/**
+ * Legacy module configs that can be deleted without losing settings: those already
+ * reflected in the communications config, or whose communications channel is enabled
+ * (and therefore authoritative). Anything else is kept so it can still be migrated.
+ */
+export function legacyConfigsSafeToRemove(
+  config: Config,
+  legacyConfigs: LegacyModuleConfigs,
+): string[] {
+  return LEGACY_MODULE_CONFIG_KEYS.filter(key => {
+    const legacy = legacyConfigs[key];
+    if (!hasLegacyConfig(legacy)) return false;
+    const current = config[key];
+    if (!current) return false;
+    if (current.active) return true;
+    const merge = CHANNEL_MERGERS[key] as (
+      current: Config[typeof key],
+      legacy: Record<string, unknown>,
+    ) => Config[typeof key];
+    return isEqual(merge(current, legacy), current);
+  });
 }

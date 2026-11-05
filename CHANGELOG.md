@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.17.0-alpha.9](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.8...v0.17.0-alpha.9) (2026-11-04)
+
+
+### Features
+
+* **authentication:** add authentication realms with isolated identities and account linking ([#1651](https://github.com/ConduitPlatform/Conduit/issues/1651)) ([ca6b4b9](https://github.com/ConduitPlatform/Conduit/commit/ca6b4b9f128d66eeef7c18f6a7cc078a6ee807c3))
+* **authentication:** make TOTP issuer configurable ([#1662](https://github.com/ConduitPlatform/Conduit/issues/1662)) ([9254f50](https://github.com/ConduitPlatform/Conduit/commit/9254f508f98bf9eacb0bd89d1ca16bffca90ec24))
+* **authorization:** list direct and inherited subject permissions ([#1661](https://github.com/ConduitPlatform/Conduit/issues/1661)) ([24d74c0](https://github.com/ConduitPlatform/Conduit/commit/24d74c0bc87b5b15920c81d16ae55790245c98c0))
+* JWT session mode with non-rotating refresh tokens, strict revocation and realm session policies ([#1667](https://github.com/ConduitPlatform/Conduit/issues/1667)) ([9fb9480](https://github.com/ConduitPlatform/Conduit/commit/9fb9480750badb6cf1af869424e2946178fae5e3))
+
+
+### Bug Fixes
+
+* **database:** stop infinite recursion collecting ObjectId mutation ids ([#1658](https://github.com/ConduitPlatform/Conduit/issues/1658)) ([68e9807](https://github.com/ConduitPlatform/Conduit/commit/68e98074326d4374f58d1adda547fa1b83b5e701))
+* **storage:** ascii fallback for quoted content-disposition filenames ([#1669](https://github.com/ConduitPlatform/Conduit/issues/1669)) ([5b3d09f](https://github.com/ConduitPlatform/Conduit/commit/5b3d09fe1c99a3c95c979fb15347197057e8ea64))
+
 ## [0.17.0-alpha.8](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.7...v0.17.0-alpha.8) (2026-10-22)
 
 

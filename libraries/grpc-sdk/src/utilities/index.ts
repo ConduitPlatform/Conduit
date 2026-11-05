@@ -4,3 +4,5 @@ export * from './EventBus.js';
 export * from './RedisManager.js';
 export * from './StateManager.js';
 export * from './GrpcSdkContext.js';
+export * from './UserCache.js';
+export * from './SessionRegistry.js';

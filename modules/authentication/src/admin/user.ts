@@ -14,6 +14,8 @@ import { toRealmRef } from '../handlers/realm.logic.js';
 import escapeStringRegexp from 'escape-string-regexp';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
+import { TokenProvider } from '../handlers/tokenProvider.js';
+import { invalidateTeamClaims } from '../utils/teamClaims.js';
 import {
   grantHomeMembership,
   homeRealmFields,
@@ -272,6 +274,10 @@ export class UserAdmin {
       resource: 'User:' + user._id,
     });
     await this.grpcSdk.authorization!.deleteAllRelations({ subject: 'User:' + user._id });
+    await invalidateTeamClaims([String(user._id)]);
+    // no session may outlive its user
+    await TokenProvider.getInstance().deleteUserTokens({ user: String(user._id) });
+    TokenProvider.getInstance().trackLoggedOutUserMetric(String(user._id));
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
     return 'User was deleted';
   }
@@ -292,7 +298,12 @@ export class UserAdmin {
     }
 
     const res = await User.getInstance().deleteMany({ _id: { $in: ids } });
-    await deleteUserRealmMemberships(users.map(u => String(u._id)));
+    const deletedIds = users.map(u => String(u._id));
+    await deleteUserRealmMemberships(deletedIds);
+    await invalidateTeamClaims(deletedIds);
+    // no session may outlive its user
+    await TokenProvider.getInstance().deleteUserTokens({ user: { $in: deletedIds } });
+    deletedIds.forEach(id => TokenProvider.getInstance().trackLoggedOutUserMetric(id));
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
     return 'Users were deleted';
   }
@@ -308,6 +319,11 @@ export class UserAdmin {
       throw new GrpcError(status.INVALID_ARGUMENT, 'User is already blocked');
     }
     user = await User.getInstance().findByIdAndUpdate(user._id, { active: false });
+    // a blocked user's sessions end (same as the userModifyStatus rpc)
+    await TokenProvider.getInstance().deleteUserTokens({
+      user: String(call.request.params.id),
+    });
+    TokenProvider.getInstance().trackLoggedOutUserMetric(String(call.request.params.id));
     this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(user));
     return 'User was blocked';
   }
@@ -342,6 +358,9 @@ export class UserAdmin {
     }
     await User.getInstance().updateMany({ _id: { $in: ids } }, { active: block });
     if (block) {
+      const blockedIds = users.map(u => String(u._id));
+      await TokenProvider.getInstance().deleteUserTokens({ user: { $in: blockedIds } });
+      blockedIds.forEach(id => TokenProvider.getInstance().trackLoggedOutUserMetric(id));
       this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(users));
       return 'Users were blocked';
     } else {

@@ -22,14 +22,9 @@ import escapeStringRegexp from 'escape-string-regexp';
 import { isNil } from 'lodash-es';
 import { REALM_UPDATE_EVENT } from '../constants/index.js';
 import { errors } from '../errors.js';
-import {
-  AccessToken,
-  RealmMembership,
-  RealmSettings,
-  RefreshToken,
-  Team,
-  User,
-} from '../models/index.js';
+import { RealmMembership, RealmSettings, Team, User } from '../models/index.js';
+import { deleteSessionTokens } from '../utils/sessionRevocation.js';
+import { invalidateTeamClaims } from '../utils/teamClaims.js';
 import {
   assertNoNestedRealm,
   assertRealmPrincipalsFree,
@@ -502,6 +497,7 @@ export class RealmsAdmin {
         // authorization throws when no relation exists
       }
     }
+    await invalidateTeamClaims([userId]);
   }
 
   /** Ids of the users whose id, email or username matches the search text (capped). */
@@ -717,10 +713,7 @@ export class RealmsAdmin {
         }
         for (const batch of chunk(homeUserIds)) {
           await User.getInstance().updateMany({ _id: { $in: batch } }, { active: false });
-          await Promise.all([
-            AccessToken.getInstance().deleteMany({ user: { $in: batch } }),
-            RefreshToken.getInstance().deleteMany({ user: { $in: batch } }),
-          ]);
+          await deleteSessionTokens({ user: { $in: batch } }, 'realm demotion');
         }
         blockedUsers = homeUserIds.length;
       },
@@ -740,10 +733,7 @@ export class RealmsAdmin {
       publish: async () => this.notifyRealmChange(teamId),
       // last: the realm no longer resolves, so no session can be minted after the sweep
       sweepRealmTokens: async () => {
-        await Promise.all([
-          AccessToken.getInstance().deleteMany({ realm: teamId }),
-          RefreshToken.getInstance().deleteMany({ realm: teamId }),
-        ]);
+        await deleteSessionTokens({ realm: teamId }, 'realm demotion');
       },
     };
     for (const step of DEMOTE_STEPS) await steps[step]();
@@ -872,10 +862,7 @@ export class RealmsAdmin {
       }
     }
     if (force === true) {
-      await Promise.all([
-        AccessToken.getInstance().deleteMany({ user: String(user._id) }),
-        RefreshToken.getInstance().deleteMany({ user: String(user._id) }),
-      ]);
+      await deleteSessionTokens({ user: String(user._id) }, 'home realm move');
     }
     invalidateRealmCache();
     return (await User.getInstance().findOne({ _id: id }))!;

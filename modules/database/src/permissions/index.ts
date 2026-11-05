@@ -1,7 +1,12 @@
 import { DeclaredSchemaExtension, Schema } from '../interfaces/index.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 
-function migratingComms(owner: string, caller: string) {
+/**
+ * Schemas owned by the legacy (<= 0.16) email, sms and push-notifications modules
+ * are taken over by the communications module.
+ */
+export function migratingComms(owner: string | undefined, caller: string | undefined) {
+  if (!owner || !caller) return false;
   return (
     ['pushNotifications', 'email', 'sms'].includes(owner) && caller === 'communications'
   );

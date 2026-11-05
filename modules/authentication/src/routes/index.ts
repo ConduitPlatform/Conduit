@@ -14,6 +14,7 @@ import { TwoFa } from '../handlers/twoFa.js';
 import {
   checkAnonymousMiddleware,
   authMiddleware,
+  refreshAuthMiddleware,
   captchaMiddleware,
   denyAnonymousMiddleware,
 } from './middleware.js';
@@ -159,6 +160,10 @@ export class AuthenticationRoutes {
       this._routingManager.middleware(
         { path: '/', name: 'authMiddleware' },
         authMiddleware,
+      );
+      this._routingManager.middleware(
+        { path: '/', name: 'refreshAuthMiddleware' },
+        refreshAuthMiddleware,
       );
       this._routingManager.middleware(
         { path: '/', name: 'captchaMiddleware' },

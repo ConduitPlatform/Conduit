@@ -1,0 +1,56 @@
+name: Authorization tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'modules/authorization/**'
+      - 'libraries/grpc-sdk/**'
+      - 'libraries/module-tools/**'
+      - '.github/workflows/authorization-test.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'modules/authorization/**'
+      - 'libraries/grpc-sdk/**'
+      - 'libraries/module-tools/**'
+      - '.github/workflows/authorization-test.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    name: Authorization unit tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.5.0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '29.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build grpc-sdk and module-tools
+        run: >
+          pnpm exec turbo run build
+          --filter=@conduitplatform/grpc-sdk
+          --filter=@conduitplatform/module-tools
+
+      - name: Run authorization tests
+        run: pnpm --filter @conduitplatform/authorization test

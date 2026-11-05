@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist-test",
+    "rootDir": "./src",
+    "declaration": false,
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": [
+    "src/config/config.ts",
+    "src/config/legacyConfigMigration.ts",
+    "src/config/legacyConfigMigration.test.ts",
+    "src/providers/push/utils/normalizePrivateKey.ts",
+    "src/providers/push/utils/normalizePrivateKey.test.ts"
+  ],
+  "exclude": []
+}

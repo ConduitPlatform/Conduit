@@ -13,6 +13,8 @@ import {
   Resource,
   ResourceAccessListRequest,
   ResourceAccessListResponse,
+  SubjectPermissionsRequest,
+  SubjectPermissionsResponse,
 } from '../../protoUtils/index.js';
 import { Empty } from '../../protoUtils/google/protobuf/empty.js';
 
@@ -64,6 +66,19 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
 
   can(data: PermissionCheck): Promise<Decision> {
     return this.client!.can(data);
+  }
+
+  /**
+   * Lists actions declared on the resource definition.
+   * A direct grant for an undeclared action can still pass `can()` and is omitted.
+   * `actionPrefix` is literal (`overview` also matches `overviewer`; prefer `overview_`).
+   * Subject and resource-definition changes drop the ~60s cache immediately.
+   * Inherited access through an intermediate subject can lag until the TTL, as with `can()`.
+   */
+  getSubjectPermissions(
+    data: SubjectPermissionsRequest,
+  ): Promise<SubjectPermissionsResponse> {
+    return this.client!.getSubjectPermissions(data);
   }
 
   grantPermission(data: PermissionRequest): Promise<unknown> {
