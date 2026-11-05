@@ -15,7 +15,8 @@ export class QueueController {
   private connectionQueue: Queue;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.redisConnection = this.grpcSdk.redisManager.getClient();
+    // BullMQ rejects ioredis keyPrefix: unprefixed client + BullMQ's own prefix
+    this.redisConnection = this.grpcSdk.redisManager.getUnprefixedClient();
     this.authorizationQueue = this.initializeRelationIndexQueue();
     this.connectionQueue = this.initializeConnectionQueue();
   }
@@ -31,12 +32,14 @@ export class QueueController {
   initializeRelationIndexQueue() {
     return new Queue('authorization-index-queue', {
       connection: this.redisConnection,
+      prefix: this.grpcSdk.redisManager.bullMQPrefix,
     });
   }
 
   initializeConnectionQueue() {
     return new Queue('authorization-connection-queue', {
       connection: this.redisConnection,
+      prefix: this.grpcSdk.redisManager.bullMQPrefix,
     });
   }
 
@@ -47,6 +50,7 @@ export class QueueController {
       {
         concurrency: 5,
         connection: this.redisConnection,
+        prefix: this.grpcSdk.redisManager.bullMQPrefix,
         // autorun: true,
       },
     );
@@ -74,6 +78,7 @@ export class QueueController {
       {
         concurrency: 5,
         connection: this.redisConnection,
+        prefix: this.grpcSdk.redisManager.bullMQPrefix,
         removeOnComplete: {
           age: 3600,
           count: 1000,

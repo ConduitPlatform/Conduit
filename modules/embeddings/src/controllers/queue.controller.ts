@@ -73,11 +73,17 @@ type WorkerLike = {
 
 export interface QueueControllerDependencies {
   createConnection?: () => RedisConnection;
-  Queue?: new (name: string, opts: { connection: RedisConnection }) => QueueLike;
+  Queue?: new (
+    name: string,
+    opts: { connection: RedisConnection; prefix: string },
+  ) => QueueLike;
   Worker?: new (
     name: string,
     processor: (job: WorkerJob) => Promise<void>,
-    opts: { connection: RedisConnection; concurrency: number } & Record<string, unknown>,
+    opts: { connection: RedisConnection; prefix: string; concurrency: number } & Record<
+      string,
+      unknown
+    >,
   ) => WorkerLike;
 }
 
@@ -87,6 +93,8 @@ export class QueueController {
   private readonly QueueImpl: NonNullable<QueueControllerDependencies['Queue']>;
   private readonly WorkerImpl: NonNullable<QueueControllerDependencies['Worker']>;
   private readonly queueConnection: RedisConnection;
+  /** BullMQ key prefix, under the deployment-wide Redis prefix */
+  private readonly bullPrefix: string;
   private readonly embeddingQueue: QueueLike;
   private readonly backfillQueue: QueueLike;
   private worker?: WorkerLike;
@@ -106,8 +114,10 @@ export class QueueController {
     private readonly grpcSdk: ConduitGrpcSdk,
     deps: QueueControllerDependencies = {},
   ) {
+    // BullMQ rejects ioredis keyPrefix: unprefixed client + BullMQ's own prefix
     this.createConnection =
-      deps.createConnection ?? (() => this.grpcSdk.redisManager.getClient());
+      deps.createConnection ?? (() => this.grpcSdk.redisManager.getUnprefixedClient());
+    this.bullPrefix = this.grpcSdk.redisManager.bullMQPrefix;
     this.QueueImpl =
       deps.Queue ??
       (Queue as unknown as NonNullable<QueueControllerDependencies['Queue']>);
@@ -117,9 +127,11 @@ export class QueueController {
     this.queueConnection = this.createConnection();
     this.embeddingQueue = new this.QueueImpl('embeddings-generation-queue', {
       connection: this.queueConnection,
+      prefix: this.bullPrefix,
     });
     this.backfillQueue = new this.QueueImpl('embeddings-backfill-queue', {
       connection: this.queueConnection,
+      prefix: this.bullPrefix,
     });
   }
 
@@ -177,6 +189,7 @@ export class QueueController {
       {
         concurrency,
         connection: this.workerConnection,
+        prefix: this.bullPrefix,
         removeOnComplete: { age: 3600, count: 1000 },
         removeOnFail: { age: 24 * 3600 },
       },
@@ -212,6 +225,7 @@ export class QueueController {
       {
         concurrency,
         connection: this.backfillWorkerConnection,
+        prefix: this.bullPrefix,
         removeOnComplete: { age: 3600, count: 1000 },
         removeOnFail: { age: 24 * 3600 },
       },

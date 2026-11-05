@@ -12,7 +12,7 @@ mock.getter(ConduitGrpcSdk, 'Logger', () => fakeLogger);
 const redis = new Redis({ lazyConnect: true, enableOfflineQueue: false });
 redis.on('error', () => {});
 const grpcSdk = {
-  redisManager: { getClient: () => redis },
+  redisManager: { getClient: () => redis, getUnprefixedClient: () => redis, prefix: '' },
   bus: { subscribe: () => {} },
   waitForExistence: () => new Promise<void>(() => {}),
 } as unknown as ConduitGrpcSdk;

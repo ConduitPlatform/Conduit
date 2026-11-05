@@ -10,6 +10,7 @@ import {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import type { Cluster, Redis } from 'ioredis';
 import { ConduitMiddleware, MiddlewarePatch } from './interfaces/index.js';
 import { ConduitRoute } from './classes/index.js';
 import ObjectHash from 'object-hash';
@@ -25,6 +26,7 @@ export abstract class ConduitRouter {
   private _middlewareOwners: Map<string, string>;
   private _localMiddlewares: Map<string, LocalMiddlewareHandler> = new Map();
   private _refreshTimeout: NodeJS.Timeout | null = null;
+  private _rateLimitRedis?: Redis | Cluster;
 
   protected constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this._registeredRoutes = new Map();
@@ -164,7 +166,8 @@ export abstract class ConduitRouter {
     if (!route.rateLimit) return;
     const { maxRequests, resetInterval } = route.rateLimit;
     const key = `limiter:route:${route.action}:${route.path}:${ip}`;
-    const redis = this.grpcSdk.redisManager.getClient();
+    // one lazily created client: getClient() opens a new connection on every call
+    const redis = (this._rateLimitRedis ??= this.grpcSdk.redisManager.getClient());
     let requests: number;
     try {
       const count = await redis.incr(key);

@@ -80,18 +80,22 @@ export class SocketController extends ConduitRouter {
       },
     };
     this.io = new IOServer(this.httpServer, this.options);
-    this.redisClient = grpcSdk.redisManager.getClient();
+    // The adapter mixes keys (stream, session keys) with pub/sub channels, which
+    // ioredis' keyPrefix does not cover, so it gets an unprefixed client and every
+    // name is placed under the deployment prefix explicitly.
+    this.redisClient = grpcSdk.redisManager.getUnprefixedClient();
+    const redisPrefix = grpcSdk.redisManager.prefix;
     // Admin (e.g. :3031) and Router (e.g. :3001) are separate Socket.IO
     // servers that share Redis. The adapter defaults would put both on the
     // same stream, so a database change pushed to admin *and* router is
     // delivered twice to every socket in those rooms.
-    const adapterKey = `socket.io:${this.port}`;
+    const adapterKey = `${redisPrefix}socket.io:${this.port}`;
     this.io.adapter(
       createAdapter(this.redisClient, {
         onlyPlaintext: true,
         streamName: adapterKey,
         channelPrefix: adapterKey,
-        sessionKeyPrefix: `sio:session:${this.port}:`,
+        sessionKeyPrefix: `${redisPrefix}sio:session:${this.port}:`,
       }),
     );
     this.httpServer.listen(this.port);

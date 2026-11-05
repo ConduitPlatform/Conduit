@@ -9,7 +9,8 @@ export class QueueController {
   private viewCleanupWorker?: Worker;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.redisConnection = this.grpcSdk.redisManager.getClient();
+    // BullMQ rejects ioredis keyPrefix: unprefixed client + BullMQ's own prefix
+    this.redisConnection = this.grpcSdk.redisManager.getUnprefixedClient();
     this.viewCleanupQueue = this.createQueue('view-cleanup-queue');
   }
 
@@ -27,6 +28,7 @@ export class QueueController {
   private createQueue(name: string): Queue {
     return new Queue(name, {
       connection: this.redisConnection,
+      prefix: this.grpcSdk.redisManager.bullMQPrefix,
     });
   }
 
@@ -43,6 +45,7 @@ export class QueueController {
       removeOnComplete: { age: 3600, count: 1000 },
       removeOnFail: { age: 24 * 3600 },
       connection: this.redisConnection,
+      prefix: this.grpcSdk.redisManager.bullMQPrefix,
     });
     this.setupWorkerEventHandlers(this.viewCleanupWorker);
     return this.viewCleanupWorker;
