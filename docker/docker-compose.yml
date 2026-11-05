@@ -42,7 +42,6 @@ services:
     environment:
       REDIS_HOST: 'conduit-redis'
       REDIS_PORT: '${REDIS_PORT:-6379}'
-      # Optional per-deployment namespace for keys and pub/sub channels on a shared Redis
       REDIS_KEY_PREFIX: '${REDIS_KEY_PREFIX:-}'
       MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
       ADMIN_HTTP_PORT: '${ADMIN_HTTP_PORT:-3030}'
@@ -191,7 +190,7 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
 
-#  # Optional Services
+  #  # Optional Services
   chat:
     container_name: 'conduit-chat'
     image: 'docker.io/conduitplatform/chat:${IMAGE_TAG}'

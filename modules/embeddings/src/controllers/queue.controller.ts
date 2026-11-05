@@ -93,7 +93,6 @@ export class QueueController {
   private readonly QueueImpl: NonNullable<QueueControllerDependencies['Queue']>;
   private readonly WorkerImpl: NonNullable<QueueControllerDependencies['Worker']>;
   private readonly queueConnection: RedisConnection;
-  /** BullMQ key prefix, under the deployment-wide Redis prefix */
   private readonly bullPrefix: string;
   private readonly embeddingQueue: QueueLike;
   private readonly backfillQueue: QueueLike;
@@ -114,7 +113,6 @@ export class QueueController {
     private readonly grpcSdk: ConduitGrpcSdk,
     deps: QueueControllerDependencies = {},
   ) {
-    // BullMQ rejects ioredis keyPrefix: unprefixed client + BullMQ's own prefix
     this.createConnection =
       deps.createConnection ?? (() => this.grpcSdk.redisManager.getUnprefixedClient());
     this.bullPrefix = this.grpcSdk.redisManager.bullMQPrefix;

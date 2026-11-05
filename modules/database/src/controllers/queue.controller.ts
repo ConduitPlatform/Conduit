@@ -9,7 +9,6 @@ export class QueueController {
   private viewCleanupWorker?: Worker;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    // BullMQ rejects ioredis keyPrefix: unprefixed client + BullMQ's own prefix
     this.redisConnection = this.grpcSdk.redisManager.getUnprefixedClient();
     this.viewCleanupQueue = this.createQueue('view-cleanup-queue');
   }

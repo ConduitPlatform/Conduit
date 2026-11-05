@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
 import { Cluster, Redis } from 'ioredis';
-import { getRedisKeyPrefix, RedisManager, withRedisKeyPrefix } from './RedisManager.js';
+import { RedisManager, withRedisKeyPrefix } from './RedisManager.js';
 
 const clients: (Redis | Cluster)[] = [];
 function track<T extends Redis | Cluster>(client: T): T {
@@ -39,7 +39,6 @@ describe('RedisManager key prefix', () => {
     assert.equal(m.prefix, 'tenant-a:');
     assert.equal(kp(track(m.getClient())), 'tenant-a:');
     assert.equal(kp(track(m.getClient({ keyPrefix: 'bus_' }))), 'tenant-a:bus_');
-    // the global prefix is not left in the shared connection options
     assert.equal((m.redisConnection as { keyPrefix?: string }).keyPrefix, undefined);
   });
 
@@ -51,38 +50,29 @@ describe('RedisManager key prefix', () => {
     assert.equal(kp(track(m.getClient())), 'tenant-a:');
   });
 
-  it('accepts a top-level keyPrefix in cluster details', () => {
-    const m = new RedisManager({
-      nodes: [{ host: '127.0.0.1', port: 1 }],
-      options: { lazyConnect: true },
-      keyPrefix: 'tenant-b:',
-    });
-    assert.equal(m.prefix, 'tenant-b:');
-  });
-
   it('gives BullMQ an unprefixed client and the prefix through its own option', () => {
     for (const m of [standalone('tenant-a:'), cluster('tenant-a:')]) {
-      const { connection, prefix } = m.getBullMQOptions();
-      track(connection);
-      assert.equal(kp(connection), '');
-      assert.equal(prefix, 'tenant-a:bull');
       assert.equal(kp(track(m.getUnprefixedClient())), '');
+      assert.equal(m.bullMQPrefix, 'tenant-a:bull');
     }
   });
 
-  it('withRedisKeyPrefix / getRedisKeyPrefix round-trip', () => {
+  it('withRedisKeyPrefix sets the prefix RedisManager reads', () => {
     assert.deepEqual(withRedisKeyPrefix({ host: 'h' }, undefined), { host: 'h' });
     assert.deepEqual(withRedisKeyPrefix({ host: 'h' }, ''), { host: 'h' });
-    const s = withRedisKeyPrefix({ host: 'h', keyPrefix: 'old:' }, 'new:');
-    assert.equal(getRedisKeyPrefix(s), 'new:');
+    const s = withRedisKeyPrefix(
+      { host: 'h', keyPrefix: 'old:', lazyConnect: true },
+      'new:',
+    );
+    assert.equal(new RedisManager(s).prefix, 'new:');
     const c = withRedisKeyPrefix(
-      { nodes: [{ host: 'h', port: 1 }], options: {}, keyPrefix: 'old:' },
+      { nodes: [{ host: 'h', port: 1 }], options: {} },
       'new:',
     );
     assert.deepEqual(c, {
       nodes: [{ host: 'h', port: 1 }],
       options: { keyPrefix: 'new:' },
     });
-    assert.equal(getRedisKeyPrefix(c), 'new:');
+    assert.equal(new RedisManager(c).prefix, 'new:');
   });
 });

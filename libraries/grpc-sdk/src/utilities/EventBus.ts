@@ -18,14 +18,14 @@ export class EventBus {
   private _signature: string;
   private _anonymousSubscriberSeq = 0;
   private _shuttingDown = false;
-  /** deployment prefix: ioredis keyPrefix does not apply to pub/sub channels */
+  /** ioredis keyPrefix does not apply to pub/sub channels */
   private readonly _channelPrefix: string;
 
   constructor(redisManager: RedisManager) {
     this._channelCallbacks = new Map();
     this._subscriberChannels = new Map();
     this._redisSubscribedChannels = new Set();
-    this._channelPrefix = redisManager.prefix ?? '';
+    this._channelPrefix = redisManager.prefix;
     this._clientSubscriber = redisManager.getClient({ keyPrefix: 'bus_' });
     this._clientPublisher = redisManager.getClient({ keyPrefix: 'bus_' });
     this._signature = crypto.randomBytes(20).toString('hex');

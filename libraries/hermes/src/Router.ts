@@ -166,7 +166,7 @@ export abstract class ConduitRouter {
     if (!route.rateLimit) return;
     const { maxRequests, resetInterval } = route.rateLimit;
     const key = `limiter:route:${route.action}:${route.path}:${ip}`;
-    // one lazily created client: getClient() opens a new connection on every call
+    // getClient() opens a new connection per call
     const redis = (this._rateLimitRedis ??= this.grpcSdk.redisManager.getClient());
     let requests: number;
     try {

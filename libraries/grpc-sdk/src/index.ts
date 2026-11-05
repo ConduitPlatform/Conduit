@@ -603,8 +603,7 @@ class ConduitGrpcSdk {
     }
     return promise
       .then(() => {
-        // Deployment-wide key/channel prefix. Core serves these details to modules
-        // that don't configure Redis themselves, so the prefix travels with them.
+        // Stored in the details Core serves, so modules inherit the prefix.
         this._redisDetails = withRedisKeyPrefix(
           this._redisDetails!,
           process.env.REDIS_KEY_PREFIX,

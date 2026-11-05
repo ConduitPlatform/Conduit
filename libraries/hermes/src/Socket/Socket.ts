@@ -80,9 +80,8 @@ export class SocketController extends ConduitRouter {
       },
     };
     this.io = new IOServer(this.httpServer, this.options);
-    // The adapter mixes keys (stream, session keys) with pub/sub channels, which
-    // ioredis' keyPrefix does not cover, so it gets an unprefixed client and every
-    // name is placed under the deployment prefix explicitly.
+    // The adapter also uses pub/sub channels, which keyPrefix doesn't cover,
+    // so all of its names carry the deployment prefix explicitly.
     this.redisClient = grpcSdk.redisManager.getUnprefixedClient();
     const redisPrefix = grpcSdk.redisManager.prefix;
     // Admin (e.g. :3031) and Router (e.g. :3001) are separate Socket.IO
