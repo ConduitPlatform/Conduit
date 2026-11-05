@@ -28,7 +28,6 @@ export class CronQueueController {
   private compiledFunctions = new Map<string, CompiledUserFunction>();
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    // BullMQ rejects ioredis keyPrefix: unprefixed client + BullMQ's own prefix
     this.redisConnection = this.grpcSdk.redisManager.getUnprefixedClient();
     this.cronQueue = new Queue(CRON_QUEUE_NAME, {
       connection: this.redisConnection,

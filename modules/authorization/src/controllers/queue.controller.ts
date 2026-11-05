@@ -16,7 +16,6 @@ export class QueueController {
   private connectionQueue: Queue;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    // BullMQ rejects ioredis keyPrefix: unprefixed client + BullMQ's own prefix
     this.redisConnection = this.grpcSdk.redisManager.getUnprefixedClient();
     this.authorizationQueue = this.initializeRelationIndexQueue();
     this.connectionQueue = this.initializeConnectionQueue();

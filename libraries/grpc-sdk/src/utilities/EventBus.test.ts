@@ -49,6 +49,7 @@ function createBus() {
   const sub = new FakeRedis();
   const pub = new FakeRedis();
   const manager = {
+    prefix: '',
     getClient: () => sub,
   };
   const bus = new EventBus(manager as never);
@@ -161,7 +162,6 @@ describe('EventBus', () => {
   });
 
   describe('deployment prefix', () => {
-    /** in-memory pub/sub server: channels are matched verbatim, as Redis does */
     class Broker {
       clients = new Set<BrokerClient>();
       published: string[] = [];
@@ -185,9 +185,9 @@ describe('EventBus', () => {
         this.broker.publish(channel, message);
       }
     }
-    function busOn(broker: Broker, prefix?: string) {
+    function busOn(broker: Broker, prefix = '') {
       const manager = {
-        ...(prefix !== undefined ? { prefix } : {}),
+        prefix,
         getClient: (options?: { keyPrefix?: string }) => {
           assert.equal(options?.keyPrefix, 'bus_');
           return new BrokerClient(broker);
@@ -222,7 +222,7 @@ describe('EventBus', () => {
       await legacy.subscribeAck('config', m => seen.legacy.push(m));
       busOn(broker, 'tenant-a:').publish('config', 'for-a');
       busOn(broker, 'tenant-b:').publish('config', 'for-b');
-      busOn(broker, '').publish('config', 'for-legacy');
+      busOn(broker).publish('config', 'for-legacy');
       assert.deepEqual(seen, { a: ['for-a'], b: ['for-b'], legacy: ['for-legacy'] });
       assert.deepEqual(broker.published, [
         'tenant-a:config',

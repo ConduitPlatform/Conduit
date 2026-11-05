@@ -12,7 +12,7 @@ Before submitting your contribution, please make sure to take a moment and read 
 
 ## Issue Reporting Guidelines 🐛
 
-- When you are creating a bug report, please include as many details as possible. 
+- When you are creating a bug report, please include as many details as possible.
 
 - Before creating issue reports, perform a cursory search to see if the problem has already been reported. If it has and the issue is still open, add a comment to the existing issue instead of opening a new one.
 
@@ -25,18 +25,19 @@ Before submitting your contribution, please make sure to take a moment and read 
 - It's OK to have multiple small commits as you work on the PR - GitHub will automatically squash it before merging.
 
 - If adding a new feature:
-    - Add accompanying test case.
-    - Provide a convincing reason to add this feature. Ideally, you should open a suggestion issue first and have it approved before working on it.
+  - Add accompanying test case.
+  - Provide a convincing reason to add this feature. Ideally, you should open a suggestion issue first and have it approved before working on it.
 
 - If fixing a bug:
-    - If you are resolving a reported issue, add `(fix #xxx)` (#xxx is the issue id) in your PR title for a better release log, e.g. `update entities encoding/decoding (fix #389)`.
-    - Provide a detailed description of the bug in the PR and the steps to reproduce it.
+  - If you are resolving a reported issue, add `(fix #xxx)` (#xxx is the issue id) in your PR title for a better release log, e.g. `update entities encoding/decoding (fix #389)`.
+  - Provide a detailed description of the bug in the PR and the steps to reproduce it.
 
 - **DO NOT** change `.gitignore`.
 
 ## Development Setup 🔨
 
 ### Requirements:
+
 - Node.js >=24
 - [pnpm](https://pnpm.io/installation) 10.9.x (same major/minor as root `package.json` `packageManager`). Install via Corepack, npm global, or another supported method; match Node in `.nvmrc` (24+)
 - [protoc](https://grpc.io/docs/protoc-installation)
@@ -46,7 +47,7 @@ Before submitting your contribution, please make sure to take a moment and read 
 
 After cloning the repo, run:
 
-``` bash
+```bash
 pnpm install --frozen-lockfile
 turbo run build
 REDIS_HOST=localhost REDIS_PORT=6379 pnpm --filter @conduitplatform/core start
@@ -55,7 +56,7 @@ CONDUIT_SERVER=0.0.0.0:55152 SERVICE_URL=0.0.0.0:55165 DB_CONN_URI=mongodb://loc
 
 Then repeat the following step for every additional module you wish to bring online, specifying any additional env vars. Replace the filter segment with the package name for that module (the folder name under `modules/`, e.g. `chat`, `router`, `storage` — not the literal word `MODULE`).
 
-``` bash
+```bash
 CONDUIT_SERVER=0.0.0.0:55152 SERVICE_URL=0.0.0.0:PORT pnpm --filter @conduitplatform/chat start
 ```
 
@@ -66,13 +67,13 @@ You may look up supported envs and configuration options for your modules in the
 Core reads its Redis connection from the environment and serves it to modules over gRPC, so modules
 only need these variables if they should connect differently from Core.
 
-| Variable | Description |
-| --- | --- |
-| `REDIS_HOST`, `REDIS_PORT` | Standalone Redis address |
-| `REDIS_DB` | Database index (default `0`) |
-| `REDIS_USERNAME`, `REDIS_PASSWORD` | Redis ACL credentials |
-| `REDIS_CONFIG` | JSON ioredis options, or `{ "nodes": [...], "options": {...} }` for Redis Cluster. Takes precedence over `REDIS_HOST`/`REDIS_PORT` |
-| `REDIS_KEY_PREFIX` | Deployment-wide namespace for every Redis key **and** pub/sub channel (e.g. `tenant-a:`). Overrides a `keyPrefix` given in `REDIS_CONFIG` (standalone `keyPrefix`, cluster `options.keyPrefix` or top-level `keyPrefix`). Empty/unset keeps the un-namespaced layout |
+| Variable                           | Description                                                                                                                                                                                                 |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REDIS_HOST`, `REDIS_PORT`         | Standalone Redis address                                                                                                                                                                                    |
+| `REDIS_DB`                         | Database index (default `0`)                                                                                                                                                                                |
+| `REDIS_USERNAME`, `REDIS_PASSWORD` | Redis ACL credentials                                                                                                                                                                                       |
+| `REDIS_CONFIG`                     | JSON ioredis options, or `{ "nodes": [...], "options": {...} }` for Redis Cluster. Takes precedence over `REDIS_HOST`/`REDIS_PORT`                                                                          |
+| `REDIS_KEY_PREFIX`                 | Deployment-wide namespace for every Redis key **and** pub/sub channel (e.g. `tenant-a:`). Overrides a `keyPrefix` in `REDIS_CONFIG` (`options.keyPrefix` for cluster). Unset keeps the un-namespaced layout |
 
 The prefix is used verbatim (no separator is added), so end it with a delimiter such as `:` to keep
 deployments like `a` and `ab` from overlapping. It is composed with Conduit's internal prefixes
@@ -83,7 +84,7 @@ published as `<prefix><channel>`.
 This lets several Conduit deployments share one Redis, each with its own ACL user restricted to its
 namespace:
 
-``` bash
+```bash
 redis-cli ACL SETUSER tenant-a on '>s3cret' resetchannels '~tenant-a:*' '&tenant-a:*' +@all
 REDIS_KEY_PREFIX=tenant-a: REDIS_USERNAME=tenant-a REDIS_PASSWORD=s3cret \
 REDIS_HOST=localhost REDIS_PORT=6379 pnpm --filter @conduitplatform/core start
@@ -101,7 +102,7 @@ Commit messages should follow the [commit message convention](https://github.com
 
 ### Commonly Used Commands
 
-``` bash
+```bash
 # Building Everything
 turbo run build
 
@@ -119,29 +120,29 @@ You may find additional scripts in the `scripts` section of the `package.json` f
 
 ## Project Structure 📍
 
-- **`packages`**: contains *core modules* built into the "Core" package
-    - `admin`: provides administrative APIs (using `Hermes`)
-    - `commons`: SDK for *core module* intracommunication
-    - `core`: entrypoint, handles module configuration and service discovery
+- **`packages`**: contains _core modules_ built into the "Core" package
+  - `admin`: provides administrative APIs (using `Hermes`)
+  - `commons`: SDK for _core module_ intracommunication
+  - `core`: entrypoint, handles module configuration and service discovery
 
-- **`modules`**: contains *non-core modules*
-    - `authentication`: provides user authentication
-    - `authorization`: resource authorization based on Google Zanzibar
-    - `chat`: chat room functionality
-    - `database`: database engine (MongoDB, PostgreSQL), CMS, CRUD/functional endpoint generation
-    - `embeddings`: opt-in text-to-vector generation and semantic search (disabled by default; not in standalone v1)
-    - `email`: email sending with templates support
-    - `forms`: form generation and submission
-    - `push-notifications`: provides support for push notifications
-    - `router`: provides application APIs (using `Hermes`)
-    - `sms`: provides support for SMS communication
-    - `storage`: consistent storage
+- **`modules`**: contains _non-core modules_
+  - `authentication`: provides user authentication
+  - `authorization`: resource authorization based on Google Zanzibar
+  - `chat`: chat room functionality
+  - `database`: database engine (MongoDB, PostgreSQL), CMS, CRUD/functional endpoint generation
+  - `embeddings`: opt-in text-to-vector generation and semantic search (disabled by default; not in standalone v1)
+  - `email`: email sending with templates support
+  - `forms`: form generation and submission
+  - `push-notifications`: provides support for push notifications
+  - `router`: provides application APIs (using `Hermes`)
+  - `sms`: provides support for SMS communication
+  - `storage`: consistent storage
 
 - **`libraries`**: contains shared libraries
-    - `grpc-sdk`: SDK for gRPC communication used by Core and modules
-    - `hermes`: handles REST (+Swagger), GraphQL and WebSockets API generation
-    - `node-2fa`: internal fork of [`node-2fa`](https://github.com/jeremyscalpello/node-2fa)
-    - `testing-tools`: utilities for Conduit tests
+  - `grpc-sdk`: SDK for gRPC communication used by Core and modules
+  - `hermes`: handles REST (+Swagger), GraphQL and WebSockets API generation
+  - `node-2fa`: internal fork of [`node-2fa`](https://github.com/jeremyscalpello/node-2fa)
+  - `testing-tools`: utilities for Conduit tests
 
 - **`scripts`**: contains build-related utility scripts
 
@@ -152,7 +153,7 @@ You may find additional scripts in the `scripts` section of the `package.json` f
 ## License ✍️
 
 By contributing to Conduit & Conduit Platform repositories, you agree that your contributions will be licensed under the license specified in the repository you are contributing to.
-    
+
 ## Credits 🎉
 
 Thank you to all the awesome people who have already contributed to Conduit!
