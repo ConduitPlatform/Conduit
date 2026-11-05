@@ -19,6 +19,7 @@ import {
   EventBus,
   getJsonEnv,
   RedisManager,
+  withRedisKeyPrefix,
   sleep,
   StateManager,
   UserCache,
@@ -602,6 +603,12 @@ class ConduitGrpcSdk {
     }
     return promise
       .then(() => {
+        // Deployment-wide key/channel prefix. Core serves these details to modules
+        // that don't configure Redis themselves, so the prefix travels with them.
+        this._redisDetails = withRedisKeyPrefix(
+          this._redisDetails!,
+          process.env.REDIS_KEY_PREFIX,
+        );
         if (this._redisDetails!.hasOwnProperty('nodes')) {
           this._redisManager = new RedisManager(this._redisDetails);
         } else {

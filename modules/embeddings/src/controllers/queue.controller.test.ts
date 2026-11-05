@@ -66,15 +66,17 @@ class FakeWorker {
   closed = false;
   concurrency: number;
   name: string;
+  prefix?: string;
   handlers: Record<string, (...args: unknown[]) => void> = {};
 
   constructor(
     name: string,
     _processor: (job: { data: unknown }) => Promise<void>,
-    opts: { concurrency: number },
+    opts: { concurrency: number; prefix?: string },
   ) {
     this.name = name;
     this.concurrency = opts.concurrency;
+    this.prefix = opts.prefix;
     FakeWorker.instances.push(this);
   }
 
@@ -109,7 +111,8 @@ function createController(
 function fakeSdk() {
   return {
     redisManager: {
-      getClient: () => ({ quit: async () => 'OK' }),
+      getUnprefixedClient: () => ({ quit: async () => 'OK' }),
+      bullMQPrefix: 'tenant-a:bull',
     },
   } as unknown as ConduitGrpcSdk;
 }
@@ -131,6 +134,23 @@ function withMetrics() {
 }
 
 describe('embedding queue worker lifecycle', () => {
+  it('passes the deployment BullMQ prefix to queues and workers', async () => {
+    FakeWorker.instances = [];
+    const prefixes: string[] = [];
+    const controller = new QueueController(fakeSdk(), {
+      Queue: class {
+        constructor(_name: string, opts: { prefix: string }) {
+          prefixes.push(opts.prefix);
+          return new FakeQueue();
+        }
+      } as never,
+      Worker: FakeWorker as never,
+    });
+    await controller.ensureWorker(async () => {}, 1);
+    assert.deepEqual(prefixes, ['tenant-a:bull', 'tenant-a:bull']);
+    assert.equal(FakeWorker.instances.at(-1)?.prefix, 'tenant-a:bull');
+  });
+
   it('keeps a single worker, recreates on concurrency change, and closes idempotently', async () => {
     FakeWorker.instances = [];
     const { controller } = createController();
