@@ -30,15 +30,13 @@ export class QueueController {
 
   initializeRelationIndexQueue() {
     return new Queue('authorization-index-queue', {
-      connection: this.redisConnection,
-      prefix: this.grpcSdk.redisManager.bullMQPrefix,
+      ...this.grpcSdk.redisManager.bullMQOptions(this.redisConnection),
     });
   }
 
   initializeConnectionQueue() {
     return new Queue('authorization-connection-queue', {
-      connection: this.redisConnection,
-      prefix: this.grpcSdk.redisManager.bullMQPrefix,
+      ...this.grpcSdk.redisManager.bullMQOptions(this.redisConnection),
     });
   }
 
@@ -48,8 +46,7 @@ export class QueueController {
       createConstructRelationIndexProcessor(this.grpcSdk),
       {
         concurrency: 5,
-        connection: this.redisConnection,
-        prefix: this.grpcSdk.redisManager.bullMQPrefix,
+        ...this.grpcSdk.redisManager.bullMQOptions(this.redisConnection),
         // autorun: true,
       },
     );
@@ -76,8 +73,7 @@ export class QueueController {
       createProcessPossibleConnectionsProcessor(),
       {
         concurrency: 5,
-        connection: this.redisConnection,
-        prefix: this.grpcSdk.redisManager.bullMQPrefix,
+        ...this.grpcSdk.redisManager.bullMQOptions(this.redisConnection),
         removeOnComplete: {
           age: 3600,
           count: 1000,
