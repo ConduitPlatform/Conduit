@@ -12,6 +12,7 @@
     "src/utilities/EventBus.test.ts",
     "src/utilities/StateManager.ts",
     "src/utilities/StateManager.test.ts",
+    "src/utilities/RedisManager.ts",
     "src/utilities/UserCache.ts",
     "src/utilities/UserCache.test.ts",
     "src/utilities/SessionRegistry.ts",

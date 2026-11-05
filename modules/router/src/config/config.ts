@@ -68,6 +68,17 @@ export default {
       format: 'Boolean',
       default: false,
     },
+    clientSecretEncryptionKey: {
+      doc: 'Standard base64 of exactly 32 bytes. Empty is allowed. Set with CLIENT_SECRET_ENCRYPTION_KEY (read at use, not stored) or PATCH /config/router. Changing it makes every stored secret undecryptable. There is no rotation.',
+      format: 'String',
+      default: '',
+      sensitive: true,
+    },
+    clientSignaturePathPrefix: {
+      doc: 'Prepended to the path the router verifies. A proxy that strips /api is fixed by /api.',
+      format: 'String',
+      default: '',
+    },
   },
   sockets: {
     maxHttpBufferSize: {

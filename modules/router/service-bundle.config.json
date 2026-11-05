@@ -8,7 +8,6 @@
     "@scalar/api-reference",
     "@scalar/express-api-reference",
     "@socket.io/redis-streams-adapter",
-    "bcrypt",
     "body-parser",
     "cookie-parser",
     "cors",
