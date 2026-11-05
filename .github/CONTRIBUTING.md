@@ -75,9 +75,9 @@ only need these variables if they should connect differently from Core.
 | `REDIS_CONFIG`                     | JSON ioredis options, or `{ "nodes": [...], "options": {...} }` for Redis Cluster. Takes precedence over `REDIS_HOST`/`REDIS_PORT`                                                                          |
 | `REDIS_KEY_PREFIX`                 | Deployment-wide namespace for every Redis key **and** pub/sub channel (e.g. `tenant-a:`). Overrides a `keyPrefix` in `REDIS_CONFIG` (`options.keyPrefix` for cluster). Unset keeps the un-namespaced layout |
 
-The prefix is used verbatim (no separator is added), so end it with a delimiter such as `:` to keep
-deployments like `a` and `ab` from overlapping. It is composed with Conduit's internal prefixes
-(`<prefix>bus_…`, `<prefix><module>_…`), BullMQ queues live under `<prefix>bull:…`, Socket.IO adapter
+A `:` is appended if the prefix doesn't end with one, so deployments like `a` and `ab` can't
+overlap. It is composed with Conduit's internal prefixes
+(`<prefix>bus_…`, `<prefix><module>_…`), BullMQ queues live under `<prefix>bull:…` (`{<prefix>bull}:…` on Redis Cluster), Socket.IO adapter
 streams/sessions under `<prefix>socket.io:…`/`<prefix>sio:session:…`, and EventBus channels are
 published as `<prefix><channel>`.
 
@@ -92,7 +92,8 @@ REDIS_HOST=localhost REDIS_PORT=6379 pnpm --filter @conduitplatform/core start
 
 Tighten `+@all` to the command categories you allow (e.g. `-@admin -@dangerous`) as needed.
 Changing the prefix of an existing deployment starts it with an empty namespace: sessions, caches,
-locks and queued jobs stored under the old layout are not migrated. Every Core and module instance
+locks and queued jobs stored under the old layout are not migrated, and during a rolling deploy old and
+new pods don't share Socket.IO broadcasts or session recovery. Every Core and module instance
 of a deployment must run a grpc-sdk version that supports the prefix before it is enabled, and a
 module that sets its own `REDIS_*` variables (instead of inheriting Core's) needs `REDIS_KEY_PREFIX` too.
 

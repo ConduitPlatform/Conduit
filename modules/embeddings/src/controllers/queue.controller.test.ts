@@ -112,7 +112,7 @@ function fakeSdk() {
   return {
     redisManager: {
       getUnprefixedClient: () => ({ quit: async () => 'OK' }),
-      bullMQPrefix: 'tenant-a:bull',
+      bullMQOptions: (connection: unknown) => ({ connection, prefix: 'tenant-a:bull' }),
     },
   } as unknown as ConduitGrpcSdk;
 }

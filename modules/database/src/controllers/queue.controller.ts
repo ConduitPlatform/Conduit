@@ -26,8 +26,7 @@ export class QueueController {
 
   private createQueue(name: string): Queue {
     return new Queue(name, {
-      connection: this.redisConnection,
-      prefix: this.grpcSdk.redisManager.bullMQPrefix,
+      ...this.grpcSdk.redisManager.bullMQOptions(this.redisConnection),
     });
   }
 
@@ -43,8 +42,7 @@ export class QueueController {
       concurrency: 1,
       removeOnComplete: { age: 3600, count: 1000 },
       removeOnFail: { age: 24 * 3600 },
-      connection: this.redisConnection,
-      prefix: this.grpcSdk.redisManager.bullMQPrefix,
+      ...this.grpcSdk.redisManager.bullMQOptions(this.redisConnection),
     });
     this.setupWorkerEventHandlers(this.viewCleanupWorker);
     return this.viewCleanupWorker;

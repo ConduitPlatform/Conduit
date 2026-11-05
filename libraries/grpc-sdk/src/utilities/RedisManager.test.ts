@@ -31,7 +31,8 @@ describe('RedisManager key prefix', () => {
     assert.equal(m.prefix, '');
     assert.equal(kp(track(m.getClient())), '');
     assert.equal(kp(track(m.getClient({ keyPrefix: 'bus_' }))), 'bus_');
-    assert.equal(m.bullMQPrefix, 'bull');
+    const conn = track(m.getUnprefixedClient());
+    assert.equal(m.bullMQOptions(conn).prefix, 'bull');
   });
 
   it('composes global and per-client prefixes (standalone)', () => {
@@ -51,10 +52,31 @@ describe('RedisManager key prefix', () => {
   });
 
   it('gives BullMQ an unprefixed client and the prefix through its own option', () => {
-    for (const m of [standalone('tenant-a:'), cluster('tenant-a:')]) {
-      assert.equal(kp(track(m.getUnprefixedClient())), '');
-      assert.equal(m.bullMQPrefix, 'tenant-a:bull');
-    }
+    const m = standalone('tenant-a:');
+    const conn = track(m.getUnprefixedClient());
+    assert.equal(kp(conn), '');
+    assert.deepEqual(m.bullMQOptions(conn), {
+      connection: conn,
+      prefix: 'tenant-a:bull',
+    });
+  });
+
+  it('hash-tags the BullMQ prefix on a cluster', () => {
+    const conn = track(cluster('tenant-a:').getUnprefixedClient());
+    assert.equal(cluster('tenant-a:').bullMQOptions(conn).prefix, '{tenant-a:bull}');
+    assert.equal(cluster().bullMQOptions(conn).prefix, '{bull}');
+  });
+
+  it('appends a separator to a prefix without one', () => {
+    assert.equal(standalone('app').prefix, 'app:');
+    assert.equal(cluster('app').prefix, 'app:');
+    assert.equal(standalone('app:').prefix, 'app:');
+  });
+
+  it('passes caller options and maxRetriesPerRequest to cluster nodes', () => {
+    const c = track(cluster('tenant-a:').getClient({ connectionName: 'x' })) as Cluster;
+    assert.equal(c.options.redisOptions?.connectionName, 'x');
+    assert.equal(c.options.redisOptions?.maxRetriesPerRequest, null);
   });
 
   it('withRedisKeyPrefix sets the prefix RedisManager reads', () => {

@@ -95,7 +95,6 @@ export class QueueController {
   private readonly QueueImpl: NonNullable<QueueControllerDependencies['Queue']>;
   private readonly WorkerImpl: NonNullable<QueueControllerDependencies['Worker']>;
   private readonly queueConnection: RedisConnection;
-  private readonly bullPrefix: string;
   private readonly embeddingQueue: QueueLike;
   private readonly backfillQueue: QueueLike;
   private worker?: WorkerLike;
@@ -117,7 +116,6 @@ export class QueueController {
   ) {
     this.createConnection =
       deps.createConnection ?? (() => this.grpcSdk.redisManager.getUnprefixedClient());
-    this.bullPrefix = this.grpcSdk.redisManager.bullMQPrefix;
     this.QueueImpl =
       deps.Queue ??
       (Queue as unknown as NonNullable<QueueControllerDependencies['Queue']>);
@@ -126,12 +124,10 @@ export class QueueController {
       (Worker as unknown as NonNullable<QueueControllerDependencies['Worker']>);
     this.queueConnection = this.createConnection();
     this.embeddingQueue = new this.QueueImpl('embeddings-generation-queue', {
-      connection: this.queueConnection,
-      prefix: this.bullPrefix,
+      ...this.grpcSdk.redisManager.bullMQOptions(this.queueConnection),
     });
     this.backfillQueue = new this.QueueImpl('embeddings-backfill-queue', {
-      connection: this.queueConnection,
-      prefix: this.bullPrefix,
+      ...this.grpcSdk.redisManager.bullMQOptions(this.queueConnection),
     });
   }
 
@@ -188,8 +184,7 @@ export class QueueController {
       },
       {
         concurrency,
-        connection: this.workerConnection,
-        prefix: this.bullPrefix,
+        ...this.grpcSdk.redisManager.bullMQOptions(this.workerConnection),
         removeOnComplete: { age: 3600, count: 1000 },
         removeOnFail: { age: 24 * 3600 },
       },
@@ -224,8 +219,7 @@ export class QueueController {
       },
       {
         concurrency,
-        connection: this.backfillWorkerConnection,
-        prefix: this.bullPrefix,
+        ...this.grpcSdk.redisManager.bullMQOptions(this.backfillWorkerConnection),
         removeOnComplete: { age: 3600, count: 1000 },
         removeOnFail: { age: 24 * 3600 },
       },
