@@ -83,11 +83,21 @@ export default async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
   }
   // deduplicate obj array, deduplicate by subject and entity while also comparing inheritanceTree.
   // Different trees should not be considered duplicate indexes.
-  const keys = obj.map(i => `${i.subject}#${i.entity}${i.inheritanceTree!.join('')}`);
-  const unique = obj.filter(
-    (i, index) =>
-      keys.indexOf(`${i.subject}#${i.entity}${i.inheritanceTree!.join('')}`) === index,
-  );
+  // The same index can come from both the connection pass (no entityPermission) and the
+  // role pass (entityPermission set). Keep the entityPermission: the child-propagation
+  // step below finds rows by it, so dropping it leaves later parent links unable to
+  // propagate to this object.
+  const uniqueByKey = new Map<string, Partial<ObjectIndex>>();
+  for (const index of obj) {
+    const key = `${index.subject}#${index.entity}${index.inheritanceTree!.join('')}`;
+    const existing = uniqueByKey.get(key);
+    if (!existing) {
+      uniqueByKey.set(key, index);
+    } else if (!existing.entityPermission && index.entityPermission) {
+      existing.entityPermission = index.entityPermission;
+    }
+  }
+  const unique = [...uniqueByKey.values()];
 
   const indexes = await ObjectIndex.getInstance().findMany({
     $and: [
