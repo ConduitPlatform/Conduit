@@ -135,7 +135,11 @@ export class EventBus {
 
   publish(channelName: string, message: string) {
     message = message + `CND_Signature:${this._signature}`;
-    this._clientPublisher.publish(this.redisChannel(channelName), message);
+    this._clientPublisher
+      .publish(this.redisChannel(channelName), message)
+      .catch((err: Error) => {
+        getLogger().error(`EventBus publish failed for ${channelName}: ${err.message}`);
+      });
   }
 
   private redisChannel(channelName: string): string {

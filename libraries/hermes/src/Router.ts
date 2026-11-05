@@ -49,6 +49,8 @@ export abstract class ConduitRouter {
     }
     this._registeredRoutes.clear();
     this._localMiddlewares.clear();
+    void this._rateLimitRedis?.quit();
+    this._rateLimitRedis = undefined;
   }
 
   protected abstract _refreshRouter(): void;

@@ -35,6 +35,12 @@ describe('RedisManager key prefix', () => {
     assert.equal(m.bullMQOptions(conn).prefix, 'bull');
   });
 
+  it('applies per-client prefixes on a cluster even without a global prefix', () => {
+    const m = cluster();
+    assert.equal(m.prefix, '');
+    assert.equal(kp(track(m.getClient({ keyPrefix: 'database_' }))), 'database_');
+  });
+
   it('composes global and per-client prefixes (standalone)', () => {
     const m = standalone('tenant-a:');
     assert.equal(m.prefix, 'tenant-a:');

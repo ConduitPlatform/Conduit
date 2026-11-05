@@ -67,13 +67,13 @@ You may look up supported envs and configuration options for your modules in the
 Core reads its Redis connection from the environment and serves it to modules over gRPC, so modules
 only need these variables if they should connect differently from Core.
 
-| Variable                           | Description                                                                                                                                                                                                 |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `REDIS_HOST`, `REDIS_PORT`         | Standalone Redis address                                                                                                                                                                                    |
-| `REDIS_DB`                         | Database index (default `0`)                                                                                                                                                                                |
-| `REDIS_USERNAME`, `REDIS_PASSWORD` | Redis ACL credentials                                                                                                                                                                                       |
-| `REDIS_CONFIG`                     | JSON ioredis options, or `{ "nodes": [...], "options": {...} }` for Redis Cluster. Takes precedence over `REDIS_HOST`/`REDIS_PORT`                                                                          |
-| `REDIS_KEY_PREFIX`                 | Deployment-wide namespace for every Redis key **and** pub/sub channel (e.g. `tenant-a:`). Overrides a `keyPrefix` in `REDIS_CONFIG` (`options.keyPrefix` for cluster). Unset keeps the un-namespaced layout |
+| Variable                           | Description                                                                                                                                                                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REDIS_HOST`, `REDIS_PORT`         | Standalone Redis address                                                                                                                                                                                                        |
+| `REDIS_DB`                         | Database index (default `0`)                                                                                                                                                                                                    |
+| `REDIS_USERNAME`, `REDIS_PASSWORD` | Redis ACL credentials. Ignored when `REDIS_CONFIG` is set: put them in it instead (`options.redisOptions` for cluster)                                                                                                          |
+| `REDIS_CONFIG`                     | JSON ioredis options, or `{ "nodes": [...], "options": {...} }` for Redis Cluster. Takes precedence over `REDIS_HOST`/`REDIS_PORT`                                                                                              |
+| `REDIS_KEY_PREFIX`                 | Deployment-wide namespace for every Redis key **and** pub/sub channel (e.g. `tenant-a:`). Overrides a `keyPrefix` in `REDIS_CONFIG` (`options.keyPrefix` for cluster). Unset keeps the un-namespaced layout on standalone Redis |
 
 A `:` is appended if the prefix doesn't end with one, so deployments like `a` and `ab` can't
 overlap. It is composed with Conduit's internal prefixes
@@ -85,17 +85,32 @@ This lets several Conduit deployments share one Redis, each with its own ACL use
 namespace:
 
 ```bash
-redis-cli ACL SETUSER tenant-a on '>s3cret' resetchannels '~tenant-a:*' '&tenant-a:*' +@all
+redis-cli ACL SETUSER tenant-a on '>s3cret' resetchannels '~tenant-a:*' '&tenant-a:*' +@all -@dangerous +info
 REDIS_KEY_PREFIX=tenant-a: REDIS_USERNAME=tenant-a REDIS_PASSWORD=s3cret \
 REDIS_HOST=localhost REDIS_PORT=6379 pnpm --filter @conduitplatform/core start
 ```
 
-Tighten `+@all` to the command categories you allow (e.g. `-@admin -@dangerous`) as needed.
-Changing the prefix of an existing deployment starts it with an empty namespace: sessions, caches,
-locks and queued jobs stored under the old layout are not migrated, and during a rolling deploy old and
-new pods don't share Socket.IO broadcasts or session recovery. Every Core and module instance
-of a deployment must run a grpc-sdk version that supports the prefix before it is enabled, and a
-module that sets its own `REDIS_*` variables (instead of inheriting Core's) needs `REDIS_KEY_PREFIX` too.
+`-@dangerous` is required for isolation: with plain `+@all` a tenant can still run `ACL SETUSER`,
+`MONITOR`, `CONFIG SET` or `FLUSHALL`. It also removes `INFO`, which BullMQ and ioredis need, hence
+`+info`.
+
+**Upgrading:**
+
+- Every Core and module instance of a deployment must run a grpc-sdk with prefix support before the
+  prefix is enabled. Modules that set their own `REDIS_*` variables need `REDIS_KEY_PREFIX` too.
+- Enabling or changing the prefix needs a stop/start of Core and all modules, not a rolling deploy:
+  modules build their Redis clients and EventBus once at startup. The deployment starts with an empty
+  namespace; sessions, caches, locks and queued jobs under the old layout are not migrated.
+- On Redis Cluster, per-client prefixes (`bus_`, `<module>_`, `auth_metrics_`) are now applied even
+  without `REDIS_KEY_PREFIX`, which renames those keys. Upgrade cluster deployments with a stop/start
+  too, or old and new pods hold separate locks (e.g. two realtime change-stream leaders).
+
+**Custom code using `redisManager`:**
+
+- ioredis doesn't prefix `SCAN`/`KEYS`/`PSUBSCRIBE` patterns, but returned key names include the
+  prefix: match on `${redisManager.prefix}doc:*` and strip the prefix yourself.
+- `duplicate()` keeps the `keyPrefix`, so a duplicated prefixed client still can't be given to BullMQ.
+  Use `getUnprefixedClient()` with `bullMQOptions()`.
 
 ### Committing Changes
 

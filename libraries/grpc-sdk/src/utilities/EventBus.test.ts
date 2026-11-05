@@ -8,6 +8,7 @@ class FakeRedis {
   handlers: Record<string, Listener[]> = {};
   subscribed = new Set<string>();
   failNext = new Set<string>();
+  publishError?: Error;
 
   on(event: string, listener: Listener) {
     this.handlers[event] = this.handlers[event] ?? [];
@@ -32,6 +33,7 @@ class FakeRedis {
   publish(channel: string, message: string) {
     void channel;
     void message;
+    return this.publishError ? Promise.reject(this.publishError) : Promise.resolve(1);
   }
 
   quit() {}
@@ -53,7 +55,7 @@ function createBus() {
   const bus = new EventBus(manager as never);
   (bus as unknown as { _clientSubscriber: FakeRedis })._clientSubscriber = sub;
   (bus as unknown as { _clientPublisher: FakeRedis })._clientPublisher = pub;
-  return { bus, sub };
+  return { bus, sub, pub };
 }
 
 describe('EventBus', () => {
@@ -123,6 +125,18 @@ describe('EventBus', () => {
     assert.equal(count, 1);
   });
 
+  it('does not leave a rejected publish unhandled', async () => {
+    const { bus, pub } = createBus();
+    pub.publishError = new Error('NOPERM');
+    const unhandled: unknown[] = [];
+    const onUnhandled = (e: unknown) => unhandled.push(e);
+    process.on('unhandledRejection', onUnhandled);
+    bus.publish('config', 'x');
+    await new Promise(resolve => setImmediate(resolve));
+    process.off('unhandledRejection', onUnhandled);
+    assert.deepEqual(unhandled, []);
+  });
+
   describe('deployment prefix', () => {
     class Broker {
       clients = new Set<BrokerClient>();
@@ -145,6 +159,7 @@ describe('EventBus', () => {
       }
       override publish(channel: string, message: string) {
         this.broker.publish(channel, message);
+        return Promise.resolve(1);
       }
     }
     function busOn(broker: Broker, prefix = '') {
