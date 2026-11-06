@@ -8,6 +8,7 @@ class FakeRedis {
   handlers: Record<string, Listener[]> = {};
   subscribed = new Set<string>();
   failNext = new Set<string>();
+  publishError?: Error;
 
   on(event: string, listener: Listener) {
     this.handlers[event] = this.handlers[event] ?? [];
@@ -32,6 +33,7 @@ class FakeRedis {
   publish(channel: string, message: string) {
     void channel;
     void message;
+    return this.publishError ? Promise.reject(this.publishError) : Promise.resolve(1);
   }
 
   quit() {}
@@ -47,12 +49,13 @@ function createBus() {
   const sub = new FakeRedis();
   const pub = new FakeRedis();
   const manager = {
+    prefix: '',
     getClient: () => sub,
   };
   const bus = new EventBus(manager as never);
   (bus as unknown as { _clientSubscriber: FakeRedis })._clientSubscriber = sub;
   (bus as unknown as { _clientPublisher: FakeRedis })._clientPublisher = pub;
-  return { bus, sub };
+  return { bus, sub, pub };
 }
 
 describe('EventBus', () => {
@@ -120,5 +123,98 @@ describe('EventBus', () => {
     );
     sub.emitMessage('chan', 'x');
     assert.equal(count, 1);
+  });
+
+  it('does not leave a rejected publish unhandled', async () => {
+    const { bus, pub } = createBus();
+    pub.publishError = new Error('NOPERM');
+    const unhandled: unknown[] = [];
+    const onUnhandled = (e: unknown) => unhandled.push(e);
+    process.on('unhandledRejection', onUnhandled);
+    bus.publish('config', 'x');
+    await new Promise(resolve => setImmediate(resolve));
+    process.off('unhandledRejection', onUnhandled);
+    assert.deepEqual(unhandled, []);
+  });
+
+  describe('deployment prefix', () => {
+    class Broker {
+      clients = new Set<BrokerClient>();
+      published: string[] = [];
+      publish(channel: string, message: string) {
+        this.published.push(channel);
+        for (const c of this.clients) {
+          if (c.subscribed.has(channel)) c.emitMessage(channel, message);
+        }
+      }
+    }
+    class BrokerClient extends FakeRedis {
+      constructor(readonly broker: Broker) {
+        super();
+        broker.clients.add(this);
+      }
+      override unsubscribe(channel: string, cb?: () => void) {
+        this.subscribed.delete(channel);
+        cb?.();
+      }
+      override publish(channel: string, message: string) {
+        this.broker.publish(channel, message);
+        return Promise.resolve(1);
+      }
+    }
+    function busOn(broker: Broker, prefix = '') {
+      const manager = {
+        prefix,
+        getClient: (options?: { keyPrefix?: string }) => {
+          assert.equal(options?.keyPrefix, 'bus_');
+          return new BrokerClient(broker);
+        },
+      };
+      return new EventBus(manager as never);
+    }
+
+    it('prefixes subscribe/publish/unsubscribe channels and strips it on dispatch', async () => {
+      const broker = new Broker();
+      const a1 = busOn(broker, 'tenant-a:');
+      const a2 = busOn(broker, 'tenant-a:');
+      const got: string[] = [];
+      await a1.subscribeAck('admin:config:update', m => got.push(m), 'sub');
+      const subClient = [...broker.clients].find(c => c.subscribed.size > 0)!;
+      assert.deepEqual([...subClient.subscribed], ['tenant-a:admin:config:update']);
+      a2.publish('admin:config:update', '{"x":1}');
+      assert.deepEqual(broker.published, ['tenant-a:admin:config:update']);
+      assert.deepEqual(got, ['{"x":1}']);
+      a1.unsubscribe('sub');
+      assert.equal(subClient.subscribed.size, 0);
+    });
+
+    it('isolates deployments with different prefixes on the same Redis', async () => {
+      const broker = new Broker();
+      const a = busOn(broker, 'tenant-a:');
+      const b = busOn(broker, 'tenant-b:');
+      const legacy = busOn(broker);
+      const seen: Record<string, string[]> = { a: [], b: [], legacy: [] };
+      await a.subscribeAck('config', m => seen.a.push(m));
+      await b.subscribeAck('config', m => seen.b.push(m));
+      await legacy.subscribeAck('config', m => seen.legacy.push(m));
+      busOn(broker, 'tenant-a:').publish('config', 'for-a');
+      busOn(broker, 'tenant-b:').publish('config', 'for-b');
+      busOn(broker).publish('config', 'for-legacy');
+      assert.deepEqual(seen, { a: ['for-a'], b: ['for-b'], legacy: ['for-legacy'] });
+      assert.deepEqual(broker.published, [
+        'tenant-a:config',
+        'tenant-b:config',
+        'config',
+      ]);
+    });
+
+    it('ignores messages on channels outside its prefix', () => {
+      const broker = new Broker();
+      const a = busOn(broker, 'tenant-a:');
+      let count = 0;
+      a.subscribe('config', () => (count += 1));
+      for (const c of broker.clients) c.emitMessage('config', 'x');
+      assert.equal(count, 0);
+    });
   });
 });

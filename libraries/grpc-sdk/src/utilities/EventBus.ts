@@ -18,11 +18,14 @@ export class EventBus {
   private _signature: string;
   private _anonymousSubscriberSeq = 0;
   private _shuttingDown = false;
+  /** ioredis keyPrefix does not apply to pub/sub channels */
+  private readonly _channelPrefix: string;
 
   constructor(redisManager: RedisManager) {
     this._channelCallbacks = new Map();
     this._subscriberChannels = new Map();
     this._redisSubscribedChannels = new Set();
+    this._channelPrefix = redisManager.prefix;
     this._clientSubscriber = redisManager.getClient({ keyPrefix: 'bus_' });
     this._clientPublisher = redisManager.getClient({ keyPrefix: 'bus_' });
     this._signature = crypto.randomBytes(20).toString('hex');
@@ -30,7 +33,8 @@ export class EventBus {
       getLogger().log('The Bus is in the station...hehe');
     });
     this._clientSubscriber.on('message', (channel: string, message: string) => {
-      this.dispatch(channel, message);
+      if (!channel.startsWith(this._channelPrefix)) return;
+      this.dispatch(channel.slice(this._channelPrefix.length), message);
     });
     process.on('exit', () => {
       this.quit();
@@ -55,7 +59,7 @@ export class EventBus {
     if (callbacks && callbacks.size === 0) {
       this._channelCallbacks.delete(channelName);
       if (this._redisSubscribedChannels.delete(channelName)) {
-        this._clientSubscriber.unsubscribe(channelName, () => {});
+        this._clientSubscriber.unsubscribe(this.redisChannel(channelName), () => {});
       }
     }
   }
@@ -104,7 +108,7 @@ export class EventBus {
     let inFlight = this._subscribeInFlight.get(channelName);
     if (!inFlight) {
       inFlight = new Promise<void>((resolve, reject) => {
-        this._clientSubscriber.subscribe(channelName, err => {
+        this._clientSubscriber.subscribe(this.redisChannel(channelName), err => {
           if (err) {
             reject(err);
             return;
@@ -131,7 +135,15 @@ export class EventBus {
 
   publish(channelName: string, message: string) {
     message = message + `CND_Signature:${this._signature}`;
-    this._clientPublisher.publish(channelName, message);
+    this._clientPublisher
+      .publish(this.redisChannel(channelName), message)
+      .catch((err: Error) => {
+        getLogger().error(`EventBus publish failed for ${channelName}: ${err.message}`);
+      });
+  }
+
+  private redisChannel(channelName: string): string {
+    return this._channelPrefix + channelName;
   }
 
   private removeChannelCallbacks(channelName: string): void {
