@@ -35,9 +35,15 @@ export class RedisManager {
   constructor(redisDetails?: RedisDetails) {
     let keyPrefix: string;
     if (isCluster(redisDetails)) {
-      const { keyPrefix: p = '', ...options } = redisDetails.options ?? {};
-      keyPrefix = p;
-      this.redisConnection = { ...redisDetails, options };
+      const { keyPrefix: p, redisOptions, ...options } = redisDetails.options ?? {};
+      // ioredis Cluster copies redisOptions.keyPrefix into keyPrefix when that is unset,
+      // which would prefix the "unprefixed" clients
+      const { keyPrefix: nodePrefix, ...nodeOptions } = redisOptions ?? {};
+      keyPrefix = p || nodePrefix || '';
+      this.redisConnection = {
+        ...redisDetails,
+        options: { ...options, ...(redisOptions ? { redisOptions: nodeOptions } : {}) },
+      };
     } else {
       const { keyPrefix: p = '', ...options } = redisDetails ?? {};
       keyPrefix = p;
@@ -58,10 +64,10 @@ export class RedisManager {
 
   /** Queue/Worker options placing BullMQ keys under the deployment prefix. */
   bullMQOptions(connection: Redis | Cluster) {
-    // Cluster needs a hash tag so all of a queue's keys share a slot
-    const prefix = isCluster(this.redisConnection)
-      ? `{${this.prefix}bull}`
-      : `${this.prefix}bull`;
+    // A cluster needs a hash tag to keep a queue's keys in one slot. Use the
+    // deployment's own tag if it has one; else add one after the prefix (ACL match).
+    const needsTag = isCluster(this.redisConnection) && !/\{[^}]+\}/.test(this.prefix);
+    const prefix = `${this.prefix}${needsTag ? '{bull}' : 'bull'}`;
     return { connection, prefix };
   }
 

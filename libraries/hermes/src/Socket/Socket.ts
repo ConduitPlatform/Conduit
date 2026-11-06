@@ -569,6 +569,6 @@ export class SocketController extends ConduitRouter {
     super.shutDown();
     this.io.close();
     this.httpServer.close();
-    this.redisClient.quit();
+    this.redisClient.quit().catch(() => this.redisClient.disconnect());
   }
 }
