@@ -79,6 +79,10 @@ describe('RedisManager key prefix', () => {
     assert.equal(bull(cluster('tenant-a:')), 'tenant-a:{bull}');
     assert.equal(bull(cluster()), '{bull}');
     assert.equal(bull(standalone('{tenant-a}')), '{tenant-a}:bull');
+    assert.equal(bull(cluster('a{b}c')), 'a{b}c:bull');
+    assert.equal(bull(standalone('{}')), '{}:bull');
+    assert.throws(() => cluster('{}'), /empty hash tag/);
+    assert.throws(() => cluster('a{}{b}'), /empty hash tag/);
   });
 
   it('treats redisOptions.keyPrefix on a cluster as the deployment prefix', () => {

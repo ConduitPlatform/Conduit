@@ -67,13 +67,13 @@ You may look up supported envs and configuration options for your modules in the
 Core reads its Redis connection from the environment and serves it to modules over gRPC, so modules
 only need these variables if they should connect differently from Core.
 
-| Variable                           | Description                                                                                                                                                                                                                     |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `REDIS_HOST`, `REDIS_PORT`         | Standalone Redis address                                                                                                                                                                                                        |
-| `REDIS_DB`                         | Database index (default `0`)                                                                                                                                                                                                    |
-| `REDIS_USERNAME`, `REDIS_PASSWORD` | Redis ACL credentials. Ignored when `REDIS_CONFIG` is set: put them in it instead (`options.redisOptions` for cluster)                                                                                                          |
-| `REDIS_CONFIG`                     | JSON ioredis options, or `{ "nodes": [...], "options": {...} }` for Redis Cluster. Takes precedence over `REDIS_HOST`/`REDIS_PORT`                                                                                              |
-| `REDIS_KEY_PREFIX`                 | Deployment-wide namespace for every Redis key **and** pub/sub channel (e.g. `tenant-a:`). Overrides a `keyPrefix` in `REDIS_CONFIG` (`options.keyPrefix` for cluster). Unset keeps the un-namespaced layout on standalone Redis |
+| Variable                           | Description                                                                                                                                                                                                                                                                               |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REDIS_HOST`, `REDIS_PORT`         | Standalone Redis address                                                                                                                                                                                                                                                                  |
+| `REDIS_DB`                         | Database index (default `0`)                                                                                                                                                                                                                                                              |
+| `REDIS_USERNAME`, `REDIS_PASSWORD` | Redis ACL credentials. Ignored when `REDIS_CONFIG` is set: put them in it instead (`options.redisOptions` for cluster)                                                                                                                                                                    |
+| `REDIS_CONFIG`                     | JSON ioredis options, or `{ "nodes": [...], "options": {...} }` for Redis Cluster. Takes precedence over `REDIS_HOST`/`REDIS_PORT`                                                                                                                                                        |
+| `REDIS_KEY_PREFIX`                 | Deployment-wide namespace for every Redis key **and** pub/sub channel (e.g. `tenant-a:`). Overrides a `keyPrefix` in `REDIS_CONFIG` (`options.keyPrefix` for cluster, with `options.redisOptions.keyPrefix` read as a fallback). Unset keeps the un-namespaced layout on standalone Redis |
 
 A `:` is appended if the prefix doesn't end with one, so deployments like `a` and `ab` can't
 overlap. It is composed with Conduit's internal prefixes
@@ -92,8 +92,10 @@ REDIS_HOST=localhost REDIS_PORT=6379 pnpm --filter @conduitplatform/core start
 
 On Redis Cluster, give the prefix a hash tag, e.g. `REDIS_KEY_PREFIX={tenant-a}:` with ACL
 `~{tenant-a}:* &{tenant-a}:*`. All of a deployment's keys then share one slot, so deployments spread
-across nodes and multi-key scripts work (a deployment must fit on one node). Standalone Redis ignores
-the braces.
+across nodes (a deployment must fit on one node). Create the ACL user on every cluster node, as ACLs
+aren't propagated. An unbraced or missing prefix still works (BullMQ falls back to `{bull}`), but all
+such deployments' BullMQ keys then share one slot and node. Empty tags (`{}`) are rejected. Standalone
+Redis ignores the braces.
 
 `-@dangerous` is required for isolation: with plain `+@all` a tenant can still run `ACL SETUSER`,
 `MONITOR`, `CONFIG SET` or `FLUSHALL`. It also removes `INFO`, which BullMQ and ioredis need, hence

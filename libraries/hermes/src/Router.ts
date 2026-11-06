@@ -52,7 +52,7 @@ export abstract class ConduitRouter {
     this._localMiddlewares.clear();
     const client = this._rateLimitRedis;
     this._rateLimitRedis = undefined;
-    client?.quit().catch(() => client.disconnect());
+    client?.disconnect();
   }
 
   protected abstract _refreshRouter(): void;
