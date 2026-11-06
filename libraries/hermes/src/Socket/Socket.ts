@@ -550,6 +550,11 @@ export class SocketController extends ConduitRouter {
     super.shutDown();
     this.io.close();
     this.httpServer.close();
-    this.redisClient.quit().catch(() => this.redisClient.disconnect());
+    const client = this.redisClient;
+    // graceful quit, bounded: quit() never settles while Redis is down
+    const timeout = new Promise(resolve => setTimeout(resolve, 1000).unref());
+    Promise.race([client.quit(), timeout])
+      .catch(() => {})
+      .finally(() => client.disconnect());
   }
 }

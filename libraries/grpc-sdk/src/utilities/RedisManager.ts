@@ -51,6 +51,10 @@ export class RedisManager {
     }
     // a separator keeps prefixes like 'app' and 'app2' from overlapping
     this.prefix = keyPrefix && !keyPrefix.endsWith(':') ? `${keyPrefix}:` : keyPrefix;
+    // Redis hashes the whole key when the first {} pair is empty, which no appended tag can fix
+    if (isCluster(this.redisConnection) && this.hashTag() === '') {
+      throw new Error(`Invalid Redis key prefix '${this.prefix}': empty hash tag`);
+    }
   }
 
   getClient(options?: RedisOptions): Redis | Cluster {
@@ -66,9 +70,16 @@ export class RedisManager {
   bullMQOptions(connection: Redis | Cluster) {
     // A cluster needs a hash tag to keep a queue's keys in one slot. Use the
     // deployment's own tag if it has one; else add one after the prefix (ACL match).
-    const needsTag = isCluster(this.redisConnection) && !/\{[^}]+\}/.test(this.prefix);
+    const needsTag = isCluster(this.redisConnection) && this.hashTag() === undefined;
     const prefix = `${this.prefix}${needsTag ? '{bull}' : 'bull'}`;
     return { connection, prefix };
+  }
+
+  /** The hash tag Redis would use: undefined if there is none, '' if the first pair is empty. */
+  private hashTag(): string | undefined {
+    const i = this.prefix.indexOf('{');
+    const j = i < 0 ? -1 : this.prefix.indexOf('}', i + 1);
+    return j < 0 ? undefined : this.prefix.slice(i + 1, j);
   }
 
   private createClient(options: RedisOptions | undefined, keyPrefix: string) {
