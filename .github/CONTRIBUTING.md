@@ -77,7 +77,7 @@ only need these variables if they should connect differently from Core.
 
 A `:` is appended if the prefix doesn't end with one, so deployments like `a` and `ab` can't
 overlap. It is composed with Conduit's internal prefixes
-(`<prefix>bus_…`, `<prefix><module>_…`), BullMQ queues live under `<prefix>bull:…` (`{<prefix>bull}:…` on Redis Cluster), Socket.IO adapter
+(`<prefix>bus_…`, `<prefix><module>_…`), BullMQ queues live under `<prefix>bull:…` (`<prefix>{bull}:…` on Redis Cluster if the prefix has no hash tag), Socket.IO adapter
 streams/sessions under `<prefix>socket.io:…`/`<prefix>sio:session:…`, and EventBus channels are
 published as `<prefix><channel>`.
 
@@ -89,6 +89,11 @@ redis-cli ACL SETUSER tenant-a on '>s3cret' resetchannels '~tenant-a:*' '&tenant
 REDIS_KEY_PREFIX=tenant-a: REDIS_USERNAME=tenant-a REDIS_PASSWORD=s3cret \
 REDIS_HOST=localhost REDIS_PORT=6379 pnpm --filter @conduitplatform/core start
 ```
+
+On Redis Cluster, give the prefix a hash tag, e.g. `REDIS_KEY_PREFIX={tenant-a}:` with ACL
+`~{tenant-a}:* &{tenant-a}:*`. All of a deployment's keys then share one slot, so deployments spread
+across nodes and multi-key scripts work (a deployment must fit on one node). Standalone Redis ignores
+the braces.
 
 `-@dangerous` is required for isolation: with plain `+@all` a tenant can still run `ACL SETUSER`,
 `MONITOR`, `CONFIG SET` or `FLUSHALL`. It also removes `INFO`, which BullMQ and ioredis need, hence

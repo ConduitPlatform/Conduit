@@ -67,10 +67,34 @@ describe('RedisManager key prefix', () => {
     });
   });
 
-  it('hash-tags the BullMQ prefix on a cluster', () => {
-    const conn = track(cluster('tenant-a:').getUnprefixedClient());
-    assert.equal(cluster('tenant-a:').bullMQOptions(conn).prefix, '{tenant-a:bull}');
-    assert.equal(cluster().bullMQOptions(conn).prefix, '{bull}');
+  it('keeps BullMQ keys in one slot on a cluster and under the prefix', () => {
+    const bull = (m: RedisManager) => {
+      const prefix = m.bullMQOptions(track(m.getUnprefixedClient())).prefix;
+      assert.ok(prefix.startsWith(m.prefix));
+      return prefix;
+    };
+    const braced = cluster('{tenant-a}');
+    assert.equal(braced.prefix, '{tenant-a}:');
+    assert.equal(bull(braced), '{tenant-a}:bull');
+    assert.equal(bull(cluster('tenant-a:')), 'tenant-a:{bull}');
+    assert.equal(bull(cluster()), '{bull}');
+    assert.equal(bull(standalone('{tenant-a}')), '{tenant-a}:bull');
+  });
+
+  it('treats redisOptions.keyPrefix on a cluster as the deployment prefix', () => {
+    const redisOptions = { keyPrefix: 'tenant-a:' };
+    const m = new RedisManager({
+      nodes: [{ host: '127.0.0.1', port: 1 }],
+      options: { lazyConnect: true, redisOptions },
+    });
+    assert.equal(m.prefix, 'tenant-a:');
+    assert.equal(kp(track(m.getUnprefixedClient())), '');
+    assert.equal(kp(track(m.getClient())), 'tenant-a:');
+    const both = new RedisManager({
+      nodes: [{ host: '127.0.0.1', port: 1 }],
+      options: { lazyConnect: true, keyPrefix: 'wins:', redisOptions },
+    });
+    assert.equal(both.prefix, 'wins:');
   });
 
   it('appends a separator to a prefix without one', () => {
