@@ -996,7 +996,7 @@ describe('reconcileStoredCdnConfig', () => {
         fileQuery = { query, options };
         return [{ _id: 'file-00', url: SOURCE, sourceUrl: SOURCE }];
       },
-      updateOne: async (
+      compareAndSet: async (
         filter: Record<string, unknown>,
         patch: Record<string, unknown>,
         options?: Record<string, unknown>,
@@ -1015,7 +1015,7 @@ describe('reconcileStoredCdnConfig', () => {
         states.push({ ...doc });
         return { ...doc };
       },
-      updateOne: async (
+      compareAndSet: async (
         filter: { container: string; fence: number },
         patch: Partial<CdnStateRecord>,
       ) => {
@@ -1041,6 +1041,9 @@ describe('reconcileStoredCdnConfig', () => {
             _ttl: number,
             fn: (signal: AbortSignal) => Promise<unknown>,
           ) => fn(new AbortController().signal),
+        },
+        database: {
+          guardedUpdateCapability: async () => undefined,
         },
       } as unknown as Parameters<typeof reconcileStoredCdnConfig>[0]);
     } finally {
@@ -1068,6 +1071,208 @@ describe('reconcileStoredCdnConfig', () => {
     assert.equal(fileQuery?.query.isPublic, true);
     assert.equal(states[0]!.status, 'complete');
     assert.equal(states[0]!.appliedHost, CDN_HOST);
+  });
+
+  it('does not write files or complete when guarded updates are unavailable', async () => {
+    const calls: string[] = [];
+    File.getInstance = (() => ({
+      findMany: async () => {
+        calls.push('find');
+        return [{ _id: 'file-00', url: SOURCE, sourceUrl: SOURCE }];
+      },
+      updateOne: async () => {
+        calls.push('updateOne');
+        return { url: CDN_URL };
+      },
+      compareAndSet: async () => {
+        calls.push('compareAndSet');
+        return { url: CDN_URL };
+      },
+    })) as unknown as typeof File.getInstance;
+    _StorageCdnState.getInstance = (() => ({
+      findMany: async () => [],
+      findOne: async () => null,
+      create: async () => {
+        calls.push('createState');
+        return {
+          container: 'media',
+          status: 'complete',
+          fence: 1,
+          appliedHost: CDN_HOST,
+        };
+      },
+      updateOne: async () => {
+        calls.push('stateUpdate');
+        return { status: 'complete', appliedHost: CDN_HOST };
+      },
+      compareAndSet: async () => {
+        calls.push('stateCompare');
+        return { status: 'complete', appliedHost: CDN_HOST };
+      },
+    })) as unknown as typeof _StorageCdnState.getInstance;
+
+    const previous = ConfigController.getInstance().config;
+    ConfigController.getInstance().config = {
+      ...previous,
+      cdnConfiguration: { media: CDN_HOST },
+    };
+    try {
+      for (const database of [
+        {
+          guardedUpdateCapability: async () => {
+            throw new Error('UNIMPLEMENTED');
+          },
+        },
+        {},
+      ]) {
+        calls.length = 0;
+        await assert.rejects(
+          () =>
+            reconcileStoredCdnConfig({
+              state: {
+                usingLock: async (
+                  _resource: string,
+                  _ttl: number,
+                  fn: (signal: AbortSignal) => Promise<unknown>,
+                ) => fn(new AbortController().signal),
+              },
+              database,
+            } as unknown as Parameters<typeof reconcileStoredCdnConfig>[0]),
+          /requires guarded updates/,
+        );
+        assert.deepEqual(calls, []);
+      }
+    } finally {
+      ConfigController.getInstance().config = previous;
+    }
+  });
+
+  it('does not fall back to updateOne when compareAndSet is rejected', async () => {
+    const calls: string[] = [];
+    const states: CdnStateRecord[] = [];
+    File.getInstance = (() => ({
+      findMany: async () => [{ _id: 'file-00', url: SOURCE, sourceUrl: SOURCE }],
+      updateOne: async () => {
+        calls.push('updateOne');
+        return { url: CDN_URL };
+      },
+      compareAndSet: async () => {
+        calls.push('compareAndSet');
+        throw new Error('UNIMPLEMENTED');
+      },
+    })) as unknown as typeof File.getInstance;
+    _StorageCdnState.getInstance = (() => ({
+      findMany: async () => states.map(doc => ({ ...doc })),
+      findOne: async (query: { container: string }) =>
+        states.find(doc => doc.container === query.container) ?? null,
+      create: async (doc: CdnStateRecord) => {
+        states.push({ ...doc });
+        return { ...doc };
+      },
+      updateOne: async () => {
+        calls.push('stateUpdate');
+        return { status: 'complete', appliedHost: CDN_HOST };
+      },
+      compareAndSet: async () => {
+        calls.push('stateCompare');
+        throw new Error('UNIMPLEMENTED');
+      },
+    })) as unknown as typeof _StorageCdnState.getInstance;
+
+    const previous = ConfigController.getInstance().config;
+    ConfigController.getInstance().config = {
+      ...previous,
+      cdnConfiguration: { media: CDN_HOST },
+    };
+    try {
+      await assert.rejects(
+        () =>
+          reconcileStoredCdnConfig({
+            state: {
+              usingLock: async (
+                _resource: string,
+                _ttl: number,
+                fn: (signal: AbortSignal) => Promise<unknown>,
+              ) => fn(new AbortController().signal),
+            },
+            database: {
+              guardedUpdateCapability: async () => undefined,
+            },
+          } as unknown as Parameters<typeof reconcileStoredCdnConfig>[0]),
+        /UNIMPLEMENTED/,
+      );
+    } finally {
+      ConfigController.getInstance().config = previous;
+    }
+    assert.equal(calls.includes('updateOne'), false);
+    assert.equal(calls.includes('stateUpdate'), false);
+    assert.equal(calls.includes('compareAndSet'), true);
+    assert.equal(states[0]?.status, 'pending');
+    assert.equal(states[0]?.appliedHost, undefined);
+  });
+
+  it('does not complete an already-correct file when compareAndSet is rejected', async () => {
+    const calls: string[] = [];
+    const states: CdnStateRecord[] = [];
+    File.getInstance = (() => ({
+      findMany: async () => [{ _id: 'file-00', url: CDN_URL, sourceUrl: SOURCE }],
+      updateOne: async () => {
+        calls.push('updateOne');
+        return { url: CDN_URL };
+      },
+      compareAndSet: async () => {
+        calls.push('fileCompare');
+        return { url: CDN_URL };
+      },
+    })) as unknown as typeof File.getInstance;
+    _StorageCdnState.getInstance = (() => ({
+      findMany: async () => states.map(doc => ({ ...doc })),
+      findOne: async (query: { container: string }) =>
+        states.find(doc => doc.container === query.container) ?? null,
+      create: async (doc: CdnStateRecord) => {
+        states.push({ ...doc });
+        return { ...doc };
+      },
+      updateOne: async () => {
+        calls.push('stateUpdate');
+        return { status: 'complete', appliedHost: CDN_HOST };
+      },
+      compareAndSet: async () => {
+        calls.push('stateCompare');
+        throw new Error('UNIMPLEMENTED');
+      },
+    })) as unknown as typeof _StorageCdnState.getInstance;
+
+    const previous = ConfigController.getInstance().config;
+    ConfigController.getInstance().config = {
+      ...previous,
+      cdnConfiguration: { media: CDN_HOST },
+    };
+    try {
+      await assert.rejects(
+        () =>
+          reconcileStoredCdnConfig({
+            state: {
+              usingLock: async (
+                _resource: string,
+                _ttl: number,
+                fn: (signal: AbortSignal) => Promise<unknown>,
+              ) => fn(new AbortController().signal),
+            },
+            database: {
+              guardedUpdateCapability: async () => undefined,
+            },
+          } as unknown as Parameters<typeof reconcileStoredCdnConfig>[0]),
+        /UNIMPLEMENTED/,
+      );
+    } finally {
+      ConfigController.getInstance().config = previous;
+    }
+    assert.equal(calls.includes('updateOne'), false);
+    assert.equal(calls.includes('fileCompare'), false);
+    assert.equal(calls.includes('stateUpdate'), false);
+    assert.equal(calls.includes('stateCompare'), true);
+    assert.equal(states[0]?.status, 'pending');
   });
 
   it('fails before scanning when state locks are unavailable', async () => {

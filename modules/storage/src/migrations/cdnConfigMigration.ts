@@ -432,10 +432,33 @@ export async function reconcileCdnConfiguration(
   }
 }
 
+/**
+ * compareAndSet is a database RPC an older service does not implement.
+ * The call fails before any file write. There is no updateOne fallback:
+ * unknown fields on updateOne would be dropped and the write would be unguarded.
+ */
+export async function assertGuardedUpdateCapability(
+  database: { guardedUpdateCapability(): Promise<unknown> } | null,
+): Promise<void> {
+  if (!database?.guardedUpdateCapability) {
+    throw new Error(
+      'CDN reconciliation requires guarded updates from the database service',
+    );
+  }
+  try {
+    await database.guardedUpdateCapability();
+  } catch (error) {
+    throw new Error(
+      `CDN reconciliation requires guarded updates from the database service: ${(error as Error).message}`,
+    );
+  }
+}
+
 export async function reconcileStoredCdnConfig(grpcSdk: ConduitGrpcSdk): Promise<void> {
   if (!grpcSdk.state) {
     throw new Error('CDN reconciliation requires state locks');
   }
+  await assertGuardedUpdateCapability(grpcSdk.database);
   const files = File.getInstance();
   const states = _StorageCdnState.getInstance();
   await reconcileCdnConfiguration({
@@ -445,12 +468,12 @@ export async function reconcileStoredCdnConfig(grpcSdk: ConduitGrpcSdk): Promise
     findState: container => states.findOne({ container }, { readPreference: 'primary' }),
     createState: doc => states.create(doc),
     updateState: (filter, patch) =>
-      missingDocumentAsNull(states.updateOne(filter, patch)),
+      missingDocumentAsNull(states.compareAndSet(filter, patch)),
     findFiles: (query, options) => files.findMany(query, options),
     updateFileUrl: (id, observedUrl, nextUrl, container, fence) =>
-      files.updateOne(
+      files.compareAndSet(
         fileUrlPredicate(id, observedUrl) as unknown as Parameters<
-          typeof files.updateOne
+          typeof files.compareAndSet
         >[0],
         { url: nextUrl },
         {

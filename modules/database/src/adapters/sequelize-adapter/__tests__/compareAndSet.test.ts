@@ -1,13 +1,22 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import { DataTypes, Sequelize, Transaction } from 'sequelize';
 import { ConduitGrpcSdk, UpdateManyRequest } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema.js';
 import { SequelizeAdapter } from '../index.js';
 import { ConduitDatabaseSchema } from '../../../interfaces/index.js';
-import { supportedSqlDialect } from '../utils/sqlTransaction.js';
+import {
+  supportedSqlDialect,
+  type SupportedSqlDialect,
+} from '../utils/sqlTransaction.js';
+
+type SqlTarget = {
+  name: string;
+  dialect: SupportedSqlDialect;
+  open: (logged: string[]) => Promise<Sequelize>;
+};
 
 const SOURCE = 'https://account.blob.core.windows.net/media/object?sig=keep';
 
@@ -61,17 +70,322 @@ function createSchema(
   );
 }
 
-describe('SQL compareAndSet', () => {
-  let directory: string;
-  let sequelize: Sequelize;
-  let files: SequelizeSchema;
-  let states: SequelizeSchema;
-  const logged: string[] = [];
+function registerSqlCompareAndSet(target: SqlTarget) {
+  describe(`SQL compareAndSet (${target.name})`, () => {
+    let sequelize: Sequelize | undefined;
+    let files: SequelizeSchema;
+    let states: SequelizeSchema;
+    const logged: string[] = [];
 
-  beforeEach(async () => {
-    directory = mkdtempSync(join(tmpdir(), 'cdn-cas-'));
-    logged.length = 0;
-    sequelize = new Sequelize({
+    beforeEach(async () => {
+      logged.length = 0;
+      const connection = await target.open(logged);
+      sequelize = connection;
+      files = createSchema(
+        connection,
+        'cdn_files',
+        { url: { type: 'String' }, sourceUrl: { type: 'String' } },
+        { url: { type: DataTypes.STRING }, sourceUrl: { type: DataTypes.STRING } },
+      );
+      states = createSchema(
+        sequelize,
+        'cdn_states',
+        {
+          container: { type: 'String' },
+          fence: { type: 'Number' },
+          status: { type: 'String' },
+        },
+        {
+          container: { type: DataTypes.STRING },
+          fence: { type: DataTypes.INTEGER },
+          status: { type: DataTypes.STRING },
+        },
+      );
+      await files.sync();
+      await states.sync();
+    });
+
+    afterEach(async () => {
+      const storage = sequelize?.options.storage;
+      if (sequelize) {
+        await sequelize.drop({ cascade: true });
+        await sequelize.close();
+      }
+      if (typeof storage === 'string' && storage !== ':memory:') {
+        rmSync(dirname(storage), { recursive: true, force: true });
+      }
+    });
+
+    async function seed(url = 'https://origin.example/a') {
+      const file = await files.create({ url, sourceUrl: SOURCE });
+      const state = await states.create({
+        container: 'media',
+        fence: 2,
+        status: 'complete',
+      });
+      const storedFile = await untilVisible(files, { _id: file._id as string });
+      const storedState = await untilVisible(states, { container: 'media' });
+      return { file: storedFile, state: storedState, id: file._id as string };
+    }
+
+    it('refuses an unknown SQL dialect', () => {
+      expect(() => supportedSqlDialect('mssql')).toThrow(
+        /does not support SQL dialect mssql/,
+      );
+    });
+
+    it('round-trips the guard fields on UpdateManyRequest', () => {
+      const encoded = UpdateManyRequest.encode({
+        schemaName: 'File',
+        filterQuery: '{"_id":"file-00","url":"A"}',
+        query: '{"url":"B"}',
+        populate: [],
+        guardSchema: '_StorageCdnState',
+        guardFilter: '{"container":"media","fence":1}',
+      }).finish();
+      const decoded = UpdateManyRequest.decode(encoded);
+      expect(decoded.guardSchema).toBe('_StorageCdnState');
+      expect(decoded.guardFilter).toBe('{"container":"media","fence":1}');
+      expect(decoded.filterQuery).toContain('"url":"A"');
+    });
+
+    it('keeps the url predicate in the compareAndSet UPDATE and rejects a stale url', async () => {
+      const { id } = await seed('A');
+      logged.length = 0;
+      await files.compareAndSet(
+        { _id: id, url: 'A' },
+        { url: 'B' },
+        { schema: states, filter: { container: 'media', fence: 2 } },
+      );
+      const update = logged.find(
+        line => /update/i.test(line) && /cdn_files/i.test(line) && /where/i.test(line),
+      );
+      expect(update).toBeDefined();
+      expect(update).toMatch(/url/i);
+      expect(update).toMatch(/_id/i);
+
+      await expect(
+        files.compareAndSet(
+          { _id: id, url: 'A' },
+          { url: 'C' },
+          { schema: states, filter: { container: 'media', fence: 2 } },
+        ),
+      ).resolves.toBeNull();
+      await expect(files.findOne({ _id: id })).resolves.toMatchObject({
+        url: 'B',
+        sourceUrl: SOURCE,
+      });
+    });
+
+    it('plain updateOne still updates the located row', async () => {
+      const { id } = await seed('A');
+      const updated = await files.updateOne({ _id: id }, { url: 'B' });
+      expect(updated.url).toBe('B');
+      expect(updated.sourceUrl).toBe(SOURCE);
+    });
+
+    it('lets only one of two overlapping compareAndSet predicates succeed', async () => {
+      const { id } = await seed('A');
+      const results = await Promise.all([
+        files.compareAndSet(
+          { _id: id, url: 'A' },
+          { url: 'B' },
+          { schema: states, filter: { container: 'media', fence: 2 } },
+        ),
+        files.compareAndSet(
+          { _id: id, url: 'A' },
+          { url: 'C' },
+          { schema: states, filter: { container: 'media', fence: 2 } },
+        ),
+      ]);
+      const applied = results.filter(result => result);
+      expect(applied).toHaveLength(1);
+      const row = await files.findOne({ _id: id });
+      expect(['B', 'C']).toContain(row.url);
+      expect(row.sourceUrl).toBe(SOURCE);
+    });
+
+    it('still applies $inc through the operator path', async () => {
+      await states.create({ container: 'media', fence: 1, status: 'pending' });
+      await untilVisible(states, { container: 'media' });
+      const updated = await states.updateOne(
+        { container: 'media' },
+        { $inc: { fence: 1 } },
+      );
+      expect(updated.fence).toBe(2);
+    });
+
+    it('updates a changed url under the current fence and leaves sourceUrl', async () => {
+      const { id } = await seed('A');
+      const written = await files.compareAndSet(
+        { _id: id, url: 'A' },
+        { url: 'B' },
+        { schema: states, filter: { container: 'media', fence: 2 } },
+      );
+      expect(written.url).toBe('B');
+      expect(written.sourceUrl).toBe(SOURCE);
+      await expect(states.findOne({ container: 'media' })).resolves.toMatchObject({
+        fence: 2,
+        status: 'complete',
+      });
+    });
+
+    it('returns no match for a stale fence or a stale url and does not change timestamps', async () => {
+      const { id, file, state } = await seed('A');
+      const missedFence = await files.compareAndSet(
+        { _id: id, url: 'A' },
+        { url: 'B' },
+        { schema: states, filter: { container: 'media', fence: 1 } },
+      );
+      expect(missedFence).toBeNull();
+      const afterFence = await files.findOne({ _id: id });
+      const afterState = await states.findOne({ container: 'media' });
+      expect(afterFence.url).toBe('A');
+      expect(stamp(afterFence.updatedAt)).toBe(stamp(file.updatedAt));
+      expect(stamp(afterState.updatedAt)).toBe(stamp(state.updatedAt));
+
+      const missedUrl = await files.compareAndSet(
+        { _id: id, url: 'B' },
+        { url: 'C' },
+        { schema: states, filter: { container: 'media', fence: 2 } },
+      );
+      expect(missedUrl).toBeNull();
+      const afterUrl = await files.findOne({ _id: id });
+      const stateAfterUrl = await states.findOne({ container: 'media' });
+      expect(afterUrl.url).toBe('A');
+      expect(stamp(afterUrl.updatedAt)).toBe(stamp(file.updatedAt));
+      expect(stamp(stateAfterUrl.updatedAt)).toBe(stamp(state.updatedAt));
+    });
+
+    it('rejects A→B after a newer owner skipped A, including a config rollback to A', async () => {
+      const { id, file, state } = await seed('A');
+      const stale = await files.compareAndSet(
+        { _id: id, url: 'A' },
+        { url: 'B' },
+        { schema: states, filter: { container: 'media', fence: 1 } },
+      );
+      expect(stale).toBeNull();
+      const stored = await files.findOne({ _id: id });
+      const storedState = await states.findOne({ container: 'media' });
+      expect(stored.url).toBe('A');
+      expect(stored.sourceUrl).toBe(SOURCE);
+      expect(stamp(stored.updatedAt)).toBe(stamp(file.updatedAt));
+      expect(storedState.fence).toBe(2);
+      expect(storedState.status).toBe('complete');
+      expect(stamp(storedState.updatedAt)).toBe(stamp(state.updatedAt));
+    });
+
+    it('does not record completion while a stale guarded write can still change the file', async () => {
+      const created = await files.create({ url: 'A', sourceUrl: SOURCE });
+      await states.create({ container: 'media', fence: 1, status: 'pending' });
+      const id = created._id as string;
+      await untilVisible(files, { _id: id });
+      await untilVisible(states, { container: 'media' });
+      const holder =
+        target.dialect === 'sqlite'
+          ? await sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE })
+          : await sequelize.transaction({
+              isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
+            });
+      if (target.dialect !== 'sqlite') {
+        await states.model.findOne({
+          where: { container: 'media' },
+          transaction: holder,
+          lock: Transaction.LOCK.UPDATE,
+        });
+      }
+      const stale = files.compareAndSet(
+        { _id: id, url: 'A' },
+        { url: 'B' },
+        { schema: states, filter: { container: 'media', fence: 1 } },
+      );
+      const claim = states.compareAndSet(
+        { container: 'media', fence: 1 },
+        { fence: 2, status: 'pending' },
+      );
+      const staleRace = await Promise.race([
+        stale.then(value => ({ settled: true as const, value })),
+        new Promise<{ settled: false }>(resolve =>
+          setTimeout(() => resolve({ settled: false }), 400),
+        ),
+      ]);
+      const claimRace = await Promise.race([
+        claim.then(value => ({ settled: true as const, value })),
+        new Promise<{ settled: false }>(resolve =>
+          setTimeout(() => resolve({ settled: false }), 400),
+        ),
+      ]);
+      expect(staleRace.settled).toBe(false);
+      expect(claimRace.settled).toBe(false);
+      await expect(states.findOne({ container: 'media' })).resolves.toMatchObject({
+        status: 'pending',
+        fence: 1,
+      });
+      await expect(files.findOne({ _id: id })).resolves.toMatchObject({ url: 'A' });
+
+      await holder.commit();
+      const staleResult = await stale;
+      const claimResult = await claim;
+      let url = (await files.findOne({ _id: id })).url as string;
+      expect(claimResult.fence).toBe(2);
+      if (staleResult) {
+        expect(url).toBe('B');
+        const corrected = await files.compareAndSet(
+          { _id: id, url: 'B' },
+          { url: 'A' },
+          { schema: states, filter: { container: 'media', fence: 2 } },
+        );
+        expect(corrected.url).toBe('A');
+        url = corrected.url;
+      } else {
+        expect(url).toBe('A');
+      }
+      await expect(states.findOne({ container: 'media' })).resolves.toMatchObject({
+        status: 'pending',
+      });
+      const completed = await states.compareAndSet(
+        { container: 'media', fence: 2 },
+        { status: 'complete' },
+      );
+      expect(completed.status).toBe('complete');
+      const late = await files.compareAndSet(
+        { _id: id, url: 'A' },
+        { url: 'B' },
+        { schema: states, filter: { container: 'media', fence: 1 } },
+      );
+      expect(late).toBeNull();
+      expect(url).toBe('A');
+      await expect(files.findOne({ _id: id })).resolves.toMatchObject({
+        url: 'A',
+        sourceUrl: SOURCE,
+      });
+      await expect(states.findOne({ container: 'media' })).resolves.toMatchObject({
+        status: 'complete',
+        fence: 2,
+      });
+    });
+  });
+}
+
+function serverTarget(name: SupportedSqlDialect, url: string): SqlTarget {
+  return {
+    name,
+    dialect: name,
+    open: async logged =>
+      new Sequelize(url, {
+        dialect: name,
+        logging: sql => logged.push(sql),
+        pool: { max: 5, min: 0, acquire: 10_000 },
+      }),
+  };
+}
+
+registerSqlCompareAndSet({
+  name: 'sqlite',
+  dialect: 'sqlite',
+  open: async logged => {
+    const directory = mkdtempSync(join(tmpdir(), 'cdn-cas-'));
+    const sequelize = new Sequelize({
       dialect: 'sqlite',
       storage: join(directory, 'cas.sqlite'),
       logging: sql => logged.push(sql),
@@ -85,245 +399,11 @@ describe('SQL compareAndSet', () => {
         db.run('PRAGMA busy_timeout = 8000', err => (err ? reject(err) : resolve()));
       });
     });
-    files = createSchema(
-      sequelize,
-      'cdn_files',
-      { url: { type: 'String' }, sourceUrl: { type: 'String' } },
-      { url: { type: DataTypes.STRING }, sourceUrl: { type: DataTypes.STRING } },
-    );
-    states = createSchema(
-      sequelize,
-      'cdn_states',
-      {
-        container: { type: 'String' },
-        fence: { type: 'Number' },
-        status: { type: 'String' },
-      },
-      {
-        container: { type: DataTypes.STRING },
-        fence: { type: DataTypes.INTEGER },
-        status: { type: DataTypes.STRING },
-      },
-    );
-    await files.sync();
-    await states.sync();
-  });
-
-  afterEach(async () => {
-    if (sequelize) await sequelize.close();
-    if (directory) rmSync(directory, { recursive: true, force: true });
-  });
-
-  async function seed(url = 'https://origin.example/a') {
-    const file = await files.create({ url, sourceUrl: SOURCE });
-    const state = await states.create({
-      container: 'media',
-      fence: 2,
-      status: 'complete',
-    });
-    const storedFile = await untilVisible(files, { _id: file._id as string });
-    const storedState = await untilVisible(states, { container: 'media' });
-    return { file: storedFile, state: storedState, id: file._id as string };
-  }
-
-  it('refuses an unknown SQL dialect', () => {
-    expect(() => supportedSqlDialect('mssql')).toThrow(
-      /does not support SQL dialect mssql/,
-    );
-  });
-
-  it('round-trips the guard fields on UpdateManyRequest', () => {
-    const encoded = UpdateManyRequest.encode({
-      schemaName: 'File',
-      filterQuery: '{"_id":"file-00","url":"A"}',
-      query: '{"url":"B"}',
-      populate: [],
-      guardSchema: '_StorageCdnState',
-      guardFilter: '{"container":"media","fence":1}',
-    }).finish();
-    const decoded = UpdateManyRequest.decode(encoded);
-    expect(decoded.guardSchema).toBe('_StorageCdnState');
-    expect(decoded.guardFilter).toBe('{"container":"media","fence":1}');
-    expect(decoded.filterQuery).toContain('"url":"A"');
-  });
-
-  it('keeps the url predicate in the UPDATE and rejects a stale url', async () => {
-    const { id } = await seed('A');
-    logged.length = 0;
-    await files.updateOne({ _id: id, url: 'A' }, { url: 'B' });
-    const update = logged.find(line => /update/i.test(line) && /where/i.test(line));
-    expect(update).toBeDefined();
-    expect(update).toMatch(/url/i);
-    expect(update).toMatch(/_id/i);
-
-    await expect(files.updateOne({ _id: id, url: 'A' }, { url: 'C' })).rejects.toThrow(
-      'Document not found',
-    );
-    await expect(files.findOne({ _id: id })).resolves.toMatchObject({
-      url: 'B',
-      sourceUrl: SOURCE,
-    });
-  });
-
-  it('lets only one of two overlapping url predicates succeed', async () => {
-    const { id } = await seed('A');
-    const results = await Promise.allSettled([
-      files.updateOne({ _id: id, url: 'A' }, { url: 'B' }),
-      files.updateOne({ _id: id, url: 'A' }, { url: 'C' }),
-    ]);
-    const applied = results.filter(result => result.status === 'fulfilled');
-    const rejected = results.filter(result => result.status === 'rejected');
-    expect(applied).toHaveLength(1);
-    expect(rejected).toHaveLength(1);
-    expect(String((rejected[0] as PromiseRejectedResult).reason)).toContain(
-      'Document not found',
-    );
-    const row = await files.findOne({ _id: id });
-    expect(['B', 'C']).toContain(row.url);
-    expect(row.sourceUrl).toBe(SOURCE);
-  });
-
-  it('still applies $inc through the operator path', async () => {
-    await states.create({ container: 'media', fence: 1, status: 'pending' });
-    await untilVisible(states, { container: 'media' });
-    const updated = await states.updateOne(
-      { container: 'media' },
-      { $inc: { fence: 1 } },
-    );
-    expect(updated.fence).toBe(2);
-  });
-
-  it('updates a changed url under the current fence and leaves sourceUrl', async () => {
-    const { id } = await seed('A');
-    const written = await files.compareAndSet(
-      { _id: id, url: 'A' },
-      { url: 'B' },
-      { schema: states, filter: { container: 'media', fence: 2 } },
-    );
-    expect(written.url).toBe('B');
-    expect(written.sourceUrl).toBe(SOURCE);
-    await expect(states.findOne({ container: 'media' })).resolves.toMatchObject({
-      fence: 2,
-      status: 'complete',
-    });
-  });
-
-  it('returns no match for a stale fence or a stale url and does not change timestamps', async () => {
-    const { id, file, state } = await seed('A');
-    const missedFence = await files.compareAndSet(
-      { _id: id, url: 'A' },
-      { url: 'B' },
-      { schema: states, filter: { container: 'media', fence: 1 } },
-    );
-    expect(missedFence).toBeNull();
-    const afterFence = await files.findOne({ _id: id });
-    const afterState = await states.findOne({ container: 'media' });
-    expect(afterFence.url).toBe('A');
-    expect(stamp(afterFence.updatedAt)).toBe(stamp(file.updatedAt));
-    expect(stamp(afterState.updatedAt)).toBe(stamp(state.updatedAt));
-
-    const missedUrl = await files.compareAndSet(
-      { _id: id, url: 'B' },
-      { url: 'C' },
-      { schema: states, filter: { container: 'media', fence: 2 } },
-    );
-    expect(missedUrl).toBeNull();
-    const afterUrl = await files.findOne({ _id: id });
-    const stateAfterUrl = await states.findOne({ container: 'media' });
-    expect(afterUrl.url).toBe('A');
-    expect(stamp(afterUrl.updatedAt)).toBe(stamp(file.updatedAt));
-    expect(stamp(stateAfterUrl.updatedAt)).toBe(stamp(state.updatedAt));
-  });
-
-  it('rejects A→B after a newer owner skipped A, including a config rollback to A', async () => {
-    const { id, file, state } = await seed('A');
-    const stale = await files.compareAndSet(
-      { _id: id, url: 'A' },
-      { url: 'B' },
-      { schema: states, filter: { container: 'media', fence: 1 } },
-    );
-    expect(stale).toBeNull();
-    const stored = await files.findOne({ _id: id });
-    const storedState = await states.findOne({ container: 'media' });
-    expect(stored.url).toBe('A');
-    expect(stored.sourceUrl).toBe(SOURCE);
-    expect(stamp(stored.updatedAt)).toBe(stamp(file.updatedAt));
-    expect(storedState.fence).toBe(2);
-    expect(storedState.status).toBe('complete');
-    expect(stamp(storedState.updatedAt)).toBe(stamp(state.updatedAt));
-  });
-
-  it('does not record completion while a stale guarded write can still change the file', async () => {
-    const created = await files.create({ url: 'A', sourceUrl: SOURCE });
-    await states.create({ container: 'media', fence: 1, status: 'pending' });
-    const id = created._id as string;
-    await untilVisible(files, { _id: id });
-    await untilVisible(states, { container: 'media' });
-    const holder = await sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
-    const stale = files.compareAndSet(
-      { _id: id, url: 'A' },
-      { url: 'B' },
-      { schema: states, filter: { container: 'media', fence: 1 } },
-    );
-    const claim = states.updateOne(
-      { container: 'media', fence: 1 },
-      { fence: 2, status: 'pending' },
-    );
-    const staleRace = await Promise.race([
-      stale.then(value => ({ settled: true as const, value })),
-      new Promise<{ settled: false }>(resolve =>
-        setTimeout(() => resolve({ settled: false }), 400),
-      ),
-    ]);
-    const claimRace = await Promise.race([
-      claim.then(value => ({ settled: true as const, value })),
-      new Promise<{ settled: false }>(resolve =>
-        setTimeout(() => resolve({ settled: false }), 400),
-      ),
-    ]);
-    expect(staleRace.settled).toBe(false);
-    expect(claimRace.settled).toBe(false);
-    await expect(states.findOne({ container: 'media' })).resolves.toMatchObject({
-      status: 'pending',
-      fence: 1,
-    });
-    await expect(files.findOne({ _id: id })).resolves.toMatchObject({ url: 'A' });
-
-    await holder.commit();
-    const staleResult = await stale;
-    const claimResult = await claim;
-    let url = (await files.findOne({ _id: id })).url as string;
-    expect(claimResult.fence).toBe(2);
-    if (staleResult) {
-      expect(url).toBe('B');
-      const corrected = await files.compareAndSet(
-        { _id: id, url: 'B' },
-        { url: 'A' },
-        { schema: states, filter: { container: 'media', fence: 2 } },
-      );
-      expect(corrected.url).toBe('A');
-      url = corrected.url;
-    } else {
-      expect(url).toBe('A');
-    }
-    await expect(states.findOne({ container: 'media' })).resolves.toMatchObject({
-      status: 'pending',
-    });
-    await states.updateOne({ container: 'media', fence: 2 }, { status: 'complete' });
-    const late = await files.compareAndSet(
-      { _id: id, url: 'A' },
-      { url: 'B' },
-      { schema: states, filter: { container: 'media', fence: 1 } },
-    );
-    expect(late).toBeNull();
-    expect(url).toBe('A');
-    await expect(files.findOne({ _id: id })).resolves.toMatchObject({
-      url: 'A',
-      sourceUrl: SOURCE,
-    });
-    await expect(states.findOne({ container: 'media' })).resolves.toMatchObject({
-      status: 'complete',
-      fence: 2,
-    });
-  });
+    return sequelize;
+  },
 });
+
+for (const dialect of ['postgres', 'mysql', 'mariadb'] as const) {
+  const url = process.env[`CDN_CAS_${dialect.toUpperCase()}_URL`];
+  if (url) registerSqlCompareAndSet(serverTarget(dialect, url));
+}
