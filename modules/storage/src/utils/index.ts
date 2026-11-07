@@ -506,14 +506,7 @@ export async function sanitizeFilesForResponse(files: File[]): Promise<File[]> {
     containers.map(container => [container.name, container.isPublic ?? false]),
   );
 
-  return files.map(file => {
-    const stripped = stripPrivateContainerUrls(
-      file,
-      containerIsPublic.get(file.container) ?? false,
-    );
-    if (!Object.prototype.hasOwnProperty.call(stripped, 'cdnFence')) return stripped;
-    const copy = { ...stripped };
-    delete copy.cdnFence;
-    return copy as typeof stripped;
-  });
+  return files.map(file =>
+    stripPrivateContainerUrls(file, containerIsPublic.get(file.container) ?? false),
+  );
 }

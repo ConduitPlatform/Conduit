@@ -26,6 +26,7 @@ allowBuilds:
   core-js: true
   esbuild: true
   keccak: true
+  mongodb-memory-server: true
   msgpackr-extract: true
   protobufjs: true
   secp256k1: true

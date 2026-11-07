@@ -30,12 +30,6 @@ const schema: ConduitModel = {
   url: TYPE.String,
   uri: TYPE.String,
   sourceUrl: TYPE.String,
-  // Generation that last accepted this file's public url. Older writers lose
-  // the compare-and-set. Absent until the first reconciliation touches the file.
-  cdnFence: {
-    type: TYPE.Number,
-    required: false,
-  },
   mimeType: TYPE.String,
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -66,7 +60,6 @@ export class File extends ConduitActiveSchema<File> {
   url?: string;
   uri?: string;
   sourceUrl?: string;
-  cdnFence?: number;
   mimeType!: string;
   createdAt!: Date;
   updatedAt!: Date;
