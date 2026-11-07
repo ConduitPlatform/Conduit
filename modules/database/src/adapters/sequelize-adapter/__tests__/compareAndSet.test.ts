@@ -11,6 +11,22 @@ import { supportedSqlDialect } from '../utils/sqlTransaction.js';
 
 const SOURCE = 'https://account.blob.core.windows.net/media/object?sig=keep';
 
+/**
+ * create() starts commit() and returns before that commit finishes. Another
+ * pooled connection can miss the row until then.
+ */
+async function untilVisible(schema: SequelizeSchema, query: Record<string, unknown>) {
+  const deadline = Date.now() + 2_000;
+  for (;;) {
+    const row = await schema.findOne(query);
+    if (row) return row;
+    if (Date.now() >= deadline) {
+      throw new Error(`row not visible: ${JSON.stringify(query)}`);
+    }
+    await new Promise(resolve => setTimeout(resolve, 5));
+  }
+}
+
 function stamp(value: unknown): number {
   if (value instanceof Date) return value.getTime();
   if (typeof value === 'string' || typeof value === 'number')
@@ -105,8 +121,8 @@ describe('SQL compareAndSet', () => {
       fence: 2,
       status: 'complete',
     });
-    const storedFile = await files.findOne({ _id: file._id });
-    const storedState = await states.findOne({ container: 'media' });
+    const storedFile = await untilVisible(files, { _id: file._id as string });
+    const storedState = await untilVisible(states, { container: 'media' });
     return { file: storedFile, state: storedState, id: file._id as string };
   }
 
@@ -169,6 +185,7 @@ describe('SQL compareAndSet', () => {
 
   it('still applies $inc through the operator path', async () => {
     await states.create({ container: 'media', fence: 1, status: 'pending' });
+    await untilVisible(states, { container: 'media' });
     const updated = await states.updateOne(
       { container: 'media' },
       { $inc: { fence: 1 } },
@@ -240,6 +257,8 @@ describe('SQL compareAndSet', () => {
     const created = await files.create({ url: 'A', sourceUrl: SOURCE });
     await states.create({ container: 'media', fence: 1, status: 'pending' });
     const id = created._id as string;
+    await untilVisible(files, { _id: id });
+    await untilVisible(states, { container: 'media' });
     const holder = await sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     const stale = files.compareAndSet(
       { _id: id, url: 'A' },
