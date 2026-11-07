@@ -147,7 +147,7 @@ export default class Storage extends ManagedModule<Config> {
         {}) as CdnConfiguration;
       if (!cdnConfigsAreEqual(this.previousCdnConfig, currentCdnConfig)) {
         await migrateCdnConfigChanges(this.grpcSdk, this.previousCdnConfig);
-        // Deep copy to store as previous
+        // Keep the previous snapshot when migration throws so the next startup retries.
         this.previousCdnConfig = { ...currentCdnConfig };
       }
       this.adminRouter = new AdminRoutes(

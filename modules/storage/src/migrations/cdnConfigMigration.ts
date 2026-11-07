@@ -86,40 +86,55 @@ export async function migrateCdnConfigChanges(
     } container(s): ${changedContainers.join(', ')}`,
   );
 
-  // Update URLs for files in changed containers
+  // Update URLs for files in changed containers. sourceUrl is the provider URL;
+  // the stored url may already be CDN-hosted and cannot recover the original host.
+  let totalUpdated = 0;
+  let totalSkippedUnchanged = 0;
+  let totalSkippedMissingSourceUrl = 0;
+
   for (const container of changedContainers) {
+    let updated = 0;
+    let skippedUnchanged = 0;
+    let skippedMissingSourceUrl = 0;
     try {
-      // Find all public files in this container
-      const allFiles = await File.getInstance().findMany({
+      const publicFiles = await File.getInstance().findMany({
         container,
         isPublic: true,
       });
 
-      // Filter to only files with a sourceUrl
-      const files = allFiles.filter(f => f.sourceUrl);
-
-      if (files.length === 0) {
-        logger.log(`No public files to update in container "${container}"`);
-        continue;
-      }
-
-      logger.log(`Updating ${files.length} file(s) in container "${container}"`);
-
-      // Update each file's URL with the new CDN host
-      for (const file of files) {
+      for (const file of publicFiles) {
+        if (!file.sourceUrl) {
+          skippedMissingSourceUrl++;
+          continue;
+        }
         const newUrl = applyCdnHost(file.sourceUrl, container);
+        if (newUrl === file.url) {
+          skippedUnchanged++;
+          continue;
+        }
         await File.getInstance().findByIdAndUpdate(file._id, {
           url: newUrl,
         });
+        updated++;
       }
 
-      logger.log(`Successfully updated files in container "${container}"`);
+      totalUpdated += updated;
+      totalSkippedUnchanged += skippedUnchanged;
+      totalSkippedMissingSourceUrl += skippedMissingSourceUrl;
+      logger.log(
+        `Container "${container}": scanned ${publicFiles.length} public file(s), updated ${updated}, skipped ${skippedUnchanged} unchanged, skipped ${skippedMissingSourceUrl} without sourceUrl`,
+      );
     } catch (error) {
       logger.error(
-        `Failed to update files in container "${container}": ${(error as Error).message}`,
+        `CDN migration failed for container "${container}" after updating ${updated}, skipped ${skippedUnchanged} unchanged and ${skippedMissingSourceUrl} without sourceUrl: ${
+          (error as Error).message
+        }`,
       );
+      throw error;
     }
   }
 
-  logger.log('CDN configuration migration completed');
+  logger.log(
+    `CDN configuration migration completed: updated ${totalUpdated}, skipped ${totalSkippedUnchanged} unchanged, skipped ${totalSkippedMissingSourceUrl} without sourceUrl`,
+  );
 }

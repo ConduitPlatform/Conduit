@@ -6,6 +6,11 @@
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["src/utils/disposition.ts", "src/utils/disposition.test.ts"],
+  "include": [
+    "src/utils/disposition.ts",
+    "src/utils/disposition.test.ts",
+    "src/migrations/cdnConfigMigration.ts",
+    "src/migrations/cdnConfigMigration.test.ts"
+  ],
   "exclude": []
 }
