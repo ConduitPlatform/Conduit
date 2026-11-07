@@ -16,8 +16,10 @@ export type PopulateAuthzOptions = {
    */
   embeddingsJob?: boolean;
   /**
-   * When both are set, Database updates this document and the guard document
-   * in one transaction. A miss comes back as null. userId and scope are rejected.
+   * Honored only by compareAndSet. updateOne rejects them.
+   * compareAndSet is its own RPC, so an older database service fails the call
+   * instead of ignoring the fields and writing without the guard.
+   * A miss comes back as null. userId and scope are rejected.
    */
   guardSchema?: string;
   guardFilter?: { [key: string]: unknown };

@@ -717,31 +717,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       transaction?: Transaction;
     },
   ): Promise<any> {
-    const plain = this.plainFieldPatch(query);
-    const legacy =
-      !plain ||
-      Boolean(options?.userId) ||
-      Boolean(options?.scope) ||
-      Boolean(options?.populate?.length) ||
-      Boolean(options?.transaction);
-    if (legacy) {
-      return this.updateOneByLocatedId(filterQuery, query, options);
-    }
-    const transaction = await this.sequelize.transaction(
-      sqlTransactionOptions(supportedSqlDialect(this.sequelize.getDialect())),
-    );
-    try {
-      const written = await this.writeWhere(filterQuery, plain, transaction);
-      if (!written) {
-        await transaction.rollback();
-        throw new Error('Document not found');
-      }
-      await transaction.commit();
-      return written;
-    } catch (error) {
-      if (!(transaction as { finished?: string }).finished) await transaction.rollback();
-      throw error;
-    }
+    return this.updateOneByLocatedId(filterQuery, query, options);
   }
 
   async compareAndSet(
