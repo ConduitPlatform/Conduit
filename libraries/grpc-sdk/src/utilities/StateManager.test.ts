@@ -73,6 +73,20 @@ describe(
       assert.equal(await state.consumeKeyIfMatches(code, attempts, '123456', 5), false);
     });
 
+    it('renews the lease so work can outlive the initial ttl', async () => {
+      const ttl = 800;
+      let stolenDuringHold = false;
+      await state.usingLock('lease-renewal', ttl, async signal => {
+        await new Promise(resolve => setTimeout(resolve, ttl + 400));
+        assert.equal(signal.aborted, false);
+        stolenDuringHold = (await state.tryAcquireLock('lease-renewal', ttl)) !== null;
+      });
+      assert.equal(stolenDuringHold, false);
+      const after = await state.tryAcquireLock('lease-renewal', ttl);
+      assert.ok(after);
+      await after.release();
+    });
+
     it('does nothing for a missing key', async () => {
       assert.equal(await state.consumeKeyIfMatches(code, attempts, '123456', 5), false);
       assert.equal(await state.getKey(attempts), null);
