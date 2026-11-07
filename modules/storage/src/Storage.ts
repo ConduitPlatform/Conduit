@@ -18,11 +18,7 @@ import { isEmpty, isNil } from 'lodash-es';
 import { runMigrations } from './migrations/index.js';
 import { migratePublicContainers } from './migrations/publicContainerMigration.js';
 import { migrateFileUriReferences } from './migrations/fileUriMigration.js';
-import {
-  CdnConfiguration,
-  cdnConfigsAreEqual,
-  migrateCdnConfigChanges,
-} from './migrations/cdnConfigMigration.js';
+import { reconcileStoredCdnConfig } from './migrations/cdnConfigMigration.js';
 import {
   CreateFileByUrlRequest,
   CreateFileRequest,
@@ -86,7 +82,6 @@ export default class Storage extends ManagedModule<Config> {
   private storageParamAdapter: StorageParamAdapter;
   private publicContainerMigrationRan: boolean = false;
   private fileUriMigrationRan: boolean = false;
-  private previousCdnConfig: CdnConfiguration = {};
   private _storageAuthzResourceDispose: (() => void) | null = null;
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
 
@@ -278,18 +273,15 @@ export default class Storage extends ManagedModule<Config> {
         this.publicContainerMigrationRan = true;
         await migratePublicContainers(this.grpcSdk, this.storageProvider);
       }
+      // URI migration clears sourceUrl for files in private containers. CDN
+      // reconciliation runs after that and refuses to derive a provider URL from
+      // a CDN-hosted url. It is awaited here, so a thrown reconciliation leaves
+      // health unset and the process exits before SERVING.
       if (!this.fileUriMigrationRan) {
         await migrateFileUriReferences();
         this.fileUriMigrationRan = true;
       }
-      // Detect CDN config changes and run migration if needed (order-independent comparison)
-      const currentCdnConfig = (ConfigController.getInstance().config.cdnConfiguration ??
-        {}) as CdnConfiguration;
-      if (!cdnConfigsAreEqual(this.previousCdnConfig, currentCdnConfig)) {
-        await migrateCdnConfigChanges(this.grpcSdk, this.previousCdnConfig);
-        // Deep copy to store as previous
-        this.previousCdnConfig = { ...currentCdnConfig };
-      }
+      await reconcileStoredCdnConfig(this.grpcSdk);
       this.adminRouter = new AdminRoutes(
         this.grpcServer,
         this.grpcSdk,
