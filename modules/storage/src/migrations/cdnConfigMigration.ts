@@ -9,6 +9,7 @@ export const CDN_RECONCILIATION_LOCK = 'storage:cdn-reconciliation';
 export const CDN_RECONCILIATION_LOCK_TTL_MS = 10_000;
 export const CDN_RECONCILIATION_BATCH_SIZE = 200;
 const MAX_CONFIG_RETARGETS = 3;
+const MAX_RECONCILIATION_PASSES = 4;
 
 export type CdnReconciliationStatus = 'pending' | 'complete';
 
@@ -25,6 +26,7 @@ export type CdnFileRecord = {
   _id: string;
   url?: string;
   sourceUrl?: string;
+  cdnFence?: number;
 };
 
 export type CdnFileQueryOptions = {
@@ -45,7 +47,7 @@ export interface CdnReconciliationDeps {
     patch: Partial<CdnStateRecord>,
   ) => Promise<CdnStateRecord | null>;
   findFiles: (query: Indexable, options: CdnFileQueryOptions) => Promise<CdnFileRecord[]>;
-  updateFileUrl: (id: string, url: string) => Promise<unknown>;
+  updateFileUrl: (id: string, url: string, fence: number) => Promise<unknown>;
   usingLock: <T>(
     resource: string,
     ttl: number,
@@ -87,6 +89,19 @@ export function normalizedCdnHost(
 export function reconciledFileUrl(sourceUrl: string, cdnHost: string): string {
   if (!cdnHost) return sourceUrl;
   return replaceUrlHost(sourceUrl, cdnHost);
+}
+
+/**
+ * Database predicate for one file write. MongoDB matches a null field against
+ * missing values, so an unstamped file is still claimed. A newer fence does
+ * not match, and the adapter's findOneAndUpdate applies that check with the
+ * write. State fencing does not cover an RPC already in flight.
+ */
+export function fileUrlClaimFilter(id: string, fence: number) {
+  return {
+    _id: id,
+    $or: [{ cdnFence: null }, { cdnFence: { $lte: fence } }],
+  };
 }
 
 export function reconciliationContainers(
@@ -204,6 +219,42 @@ async function claimContainer(
   return { done: false, fence: 1, afterId: '', target: desired };
 }
 
+function configurationApplied(
+  config: CdnConfiguration,
+  states: CdnStateRecord[],
+): boolean {
+  return reconciliationContainers(config, states).every(container => {
+    const state = states.find(item => item.container === container);
+    if (!state) return false;
+    return isApplied(
+      assertStatus(state.status),
+      state.appliedHost,
+      normalizedCdnHost(config, container),
+    );
+  });
+}
+
+async function retargetContainer(
+  deps: CdnReconciliationDeps,
+  container: string,
+  fence: number,
+  live: string,
+  retargets: number,
+): Promise<{ desired: string; afterId: string; retargets: number }> {
+  const next = retargets + 1;
+  if (next > MAX_CONFIG_RETARGETS) {
+    throw new Error(
+      `CDN configuration for container ${container} changed during reconciliation`,
+    );
+  }
+  await commitState(deps, container, fence, {
+    status: 'pending',
+    targetHost: live,
+    checkpointId: '',
+  });
+  return { desired: live, afterId: '', retargets: next };
+}
+
 async function reconcileContainer(
   deps: CdnReconciliationDeps,
   signal: AbortSignal,
@@ -227,21 +278,15 @@ async function reconcileContainer(
 
   for (;;) {
     throwIfLeaseLost(signal);
-    const live = normalizedCdnHost(deps.readConfig(), container);
+    let live = normalizedCdnHost(deps.readConfig(), container);
     if (live !== desired) {
-      retargets += 1;
-      if (retargets > MAX_CONFIG_RETARGETS) {
-        throw new Error(
-          `CDN configuration for container ${container} changed during reconciliation`,
-        );
-      }
-      await commitState(deps, container, fence, {
-        status: 'pending',
-        targetHost: live,
-        checkpointId: '',
-      });
-      desired = live;
-      afterId = '';
+      ({ desired, afterId, retargets } = await retargetContainer(
+        deps,
+        container,
+        fence,
+        live,
+        retargets,
+      ));
       continue;
     }
 
@@ -251,7 +296,7 @@ async function reconcileContainer(
         skip: 0,
         limit: batchSize,
         sort: { _id: 1 },
-        select: '_id url sourceUrl',
+        select: '_id url sourceUrl cdnFence',
         readPreference: 'primary',
       },
     );
@@ -269,11 +314,31 @@ async function reconcileContainer(
       } catch {
         throw new Error(`CDN reconciliation cannot use sourceUrl for file ${file._id}`);
       }
-      if (nextUrl !== file.url) {
-        await deps.updateFileUrl(file._id, nextUrl);
-        updated += 1;
-        throwIfLeaseLost(signal);
+      const recordedFence = typeof file.cdnFence === 'number' ? file.cdnFence : undefined;
+      const previousUrl = file.url;
+      if (recordedFence !== undefined && recordedFence > fence) {
+        throw new Error(`CDN reconciliation lost file ${file._id} to a newer owner`);
       }
+      if (nextUrl === previousUrl && recordedFence === fence) continue;
+
+      const written = await deps.updateFileUrl(file._id, nextUrl, fence);
+      if (written == null) {
+        throw new Error(`CDN reconciliation lost file ${file._id} to a newer owner`);
+      }
+      if (nextUrl !== previousUrl) updated += 1;
+      throwIfLeaseLost(signal);
+    }
+
+    live = normalizedCdnHost(deps.readConfig(), container);
+    if (live !== desired) {
+      ({ desired, afterId, retargets } = await retargetContainer(
+        deps,
+        container,
+        fence,
+        live,
+        retargets,
+      ));
+      continue;
     }
 
     if (files.length < batchSize) {
@@ -284,6 +349,17 @@ async function reconcileContainer(
         checkpointId: '',
       });
       throwIfLeaseLost(signal);
+      live = normalizedCdnHost(deps.readConfig(), container);
+      if (live !== desired) {
+        ({ desired, afterId, retargets } = await retargetContainer(
+          deps,
+          container,
+          fence,
+          live,
+          retargets,
+        ));
+        continue;
+      }
       ConduitGrpcSdk.Logger?.log(
         `CDN reconciliation completed for container "${container}" (${updated} url update(s))`,
       );
@@ -304,13 +380,19 @@ async function reconcileUnderLock(
   deps: CdnReconciliationDeps,
   signal: AbortSignal,
 ): Promise<void> {
-  throwIfLeaseLost(signal);
-  const states = await deps.loadStates();
-  throwIfLeaseLost(signal);
-  const containers = reconciliationContainers(deps.readConfig(), states);
-  for (const container of containers) {
-    await reconcileContainer(deps, signal, container);
+  for (let pass = 0; pass < MAX_RECONCILIATION_PASSES; pass += 1) {
+    throwIfLeaseLost(signal);
+    const states = await deps.loadStates();
+    throwIfLeaseLost(signal);
+    const containers = reconciliationContainers(deps.readConfig(), states);
+    for (const container of containers) {
+      await reconcileContainer(deps, signal, container);
+    }
+    const freshStates = await deps.loadStates();
+    throwIfLeaseLost(signal);
+    if (configurationApplied(deps.readConfig(), freshStates)) return;
   }
+  throw new Error('CDN configuration changed during reconciliation');
 }
 
 export async function reconcileCdnConfiguration(
@@ -346,7 +428,8 @@ export async function reconcileStoredCdnConfig(grpcSdk: ConduitGrpcSdk): Promise
     createState: doc => states.create(doc),
     updateState: (filter, patch) => states.updateOne(filter, patch),
     findFiles: (query, options) => files.findMany(query, options),
-    updateFileUrl: (id, url) => files.findByIdAndUpdate(id, { url }),
+    updateFileUrl: (id, url, fence) =>
+      files.updateOne(fileUrlClaimFilter(id, fence), { url, cdnFence: fence }),
     usingLock: (resource, ttl, fn) => grpcSdk.state!.usingLock(resource, ttl, fn),
   });
 }

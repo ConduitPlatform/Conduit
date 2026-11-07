@@ -275,7 +275,8 @@ export default class Storage extends ManagedModule<Config> {
       }
       // URI migration clears sourceUrl for files in private containers. CDN
       // reconciliation runs after that and refuses to derive a provider URL from
-      // a CDN-hosted url. A thrown reconciliation leaves health unset.
+      // a CDN-hosted url. It is awaited here, so a thrown reconciliation leaves
+      // health unset and the process exits before SERVING.
       if (!this.fileUriMigrationRan) {
         await migrateFileUriReferences();
         this.fileUriMigrationRan = true;

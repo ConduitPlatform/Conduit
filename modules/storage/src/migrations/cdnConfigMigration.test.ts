@@ -7,7 +7,9 @@ import {
   type CdnConfiguration,
   type CdnReconciliationDeps,
   type CdnStateRecord,
+  CDN_RECONCILIATION_BATCH_SIZE,
   CDN_RECONCILIATION_LOCK,
+  fileUrlClaimFilter,
   publicFilesWithProviderSourceQuery,
   reconcileCdnConfiguration,
   reconciledFileUrl,
@@ -26,7 +28,12 @@ type StoredFile = {
   url?: string;
   sourceUrl?: string;
   uri?: string;
+  cdnFence?: number;
 };
+
+function claimAllows(file: StoredFile, fence: number) {
+  return file.cdnFence == null || file.cdnFence <= fence;
+}
 
 function matchesSourceClause(
   file: StoredFile,
@@ -120,13 +127,15 @@ function harness(options: {
       options.onFindFiles?.(query);
       return pageFiles(options.files, query, findOptions.limit);
     },
-    updateFileUrl: async (id, url) => {
+    updateFileUrl: async (id, url, fence) => {
       options.onUpdateFile?.(id, url);
       const file = options.files.find(candidate => candidate._id === id);
       if (!file) throw new Error(`missing file ${id}`);
+      if (!claimAllows(file, fence)) return null;
       fileWrites.push({ id, url });
       file.url = url;
-      return { _id: id, url };
+      file.cdnFence = fence;
+      return { _id: id, url, cdnFence: fence };
     },
     usingLock: options.usingLock ?? openLock(),
     batchSize: options.batchSize,
@@ -213,6 +222,7 @@ describe('reconcileCdnConfiguration', () => {
           isPublic: true,
           sourceUrl: SOURCE,
           url: CDN_URL,
+          cdnFence: 1,
         },
       ],
     });
@@ -221,6 +231,7 @@ describe('reconcileCdnConfiguration', () => {
 
     assert.deepEqual(env.fileWrites, [{ id: 'file-00', url: CDN_URL }]);
     assert.equal(env.files[1]!.url, CDN_URL);
+    assert.equal(env.files[1]!.cdnFence, 1);
     assert.equal(env.files[0]!.sourceUrl, SOURCE);
     assert.equal(env.state.docs[0]!.status, 'complete');
     assert.equal(env.state.docs[0]!.appliedHost, CDN_HOST);
@@ -628,6 +639,150 @@ describe('reconcileCdnConfiguration', () => {
     assert.notEqual(env.state.docs[0]!.status, 'complete');
   });
 
+  it('drops a delayed older file write after a newer owner finishes', async () => {
+    const nextHost = 'cdn.other.test';
+    const files: StoredFile[] = [
+      {
+        _id: 'file-00',
+        container: 'media',
+        isPublic: true,
+        sourceUrl: SOURCE,
+        url: reconciledFileUrl(SOURCE, nextHost),
+      },
+    ];
+    const state = memoryState();
+    let releaseDelayed!: () => void;
+    const delayed = new Promise<void>(resolve => {
+      releaseDelayed = resolve;
+    });
+    let notifyStarted!: () => void;
+    const started = new Promise<void>(resolve => {
+      notifyStarted = resolve;
+    });
+    const apply = (id: string, url: string, fence: number) => {
+      const file = files.find(candidate => candidate._id === id)!;
+      if (!claimAllows(file, fence)) return null;
+      file.url = url;
+      file.cdnFence = fence;
+      return { ...file };
+    };
+    const share = (env: ReturnType<typeof harness>) => {
+      env.deps.loadStates = () => state.loadStates();
+      env.deps.findState = container => state.findState(container);
+      env.deps.createState = doc => state.createState(doc);
+      env.deps.updateState = (filter, patch) => state.updateState(filter, patch);
+    };
+    const older = harness({ config: { media: CDN_HOST }, files });
+    share(older);
+    let olderFence = 0;
+    older.deps.updateFileUrl = async (id, url, fence) => {
+      olderFence = fence;
+      notifyStarted();
+      await delayed;
+      return apply(id, url, fence);
+    };
+    const newer = harness({ config: { media: nextHost }, files });
+    share(newer);
+    newer.deps.updateFileUrl = async (id, url, fence) => apply(id, url, fence);
+
+    const pending = reconcileCdnConfiguration(older.deps);
+    await started;
+    await reconcileCdnConfiguration(newer.deps);
+    releaseDelayed();
+
+    await assert.rejects(pending, /lost file file-00 to a newer owner/);
+    assert.equal(files[0]!.url, reconciledFileUrl(SOURCE, nextHost));
+    assert.equal(files[0]!.cdnFence! > olderFence, true);
+    assert.equal(files[0]!.sourceUrl, SOURCE);
+    assert.equal(state.docs[0]!.status, 'complete');
+    assert.equal(state.docs[0]!.appliedHost, nextHost);
+  });
+
+  it('does not finish on the previous host when config changes on the final page', async () => {
+    const nextHost = 'cdn.other.test';
+    let sawPreviousCompletion = false;
+    const state = memoryState();
+    const env = harness({
+      config: { media: CDN_HOST },
+      files: [
+        {
+          _id: 'file-00',
+          container: 'media',
+          isPublic: true,
+          sourceUrl: SOURCE,
+          url: SOURCE,
+        },
+      ],
+      updateState: async (filter, patch) => {
+        const updated = await state.updateState(filter, patch);
+        if (patch.status === 'complete' && patch.appliedHost === CDN_HOST) {
+          sawPreviousCompletion = true;
+        }
+        return updated;
+      },
+    });
+    env.deps.loadStates = () => state.loadStates();
+    env.deps.findState = container => state.findState(container);
+    env.deps.createState = doc => state.createState(doc);
+    env.deps.readConfig = () => ({
+      media: sawPreviousCompletion ? nextHost : CDN_HOST,
+    });
+
+    await reconcileCdnConfiguration(env.deps);
+
+    assert.equal(sawPreviousCompletion, true);
+    assert.equal(state.docs[0]!.status, 'complete');
+    assert.equal(state.docs[0]!.appliedHost, nextHost);
+    assert.equal(env.files[0]!.url, reconciledFileUrl(SOURCE, nextHost));
+    assert.equal(env.files[0]!.sourceUrl, SOURCE);
+  });
+
+  it('reconciles a container added while another container is in progress', async () => {
+    const config: CdnConfiguration = { media: CDN_HOST };
+    const env = harness({
+      config,
+      files: [
+        {
+          _id: 'file-media',
+          container: 'media',
+          isPublic: true,
+          sourceUrl: SOURCE,
+          url: SOURCE,
+        },
+        {
+          _id: 'file-archive',
+          container: 'archive',
+          isPublic: true,
+          sourceUrl: SOURCE,
+          url: SOURCE,
+        },
+      ],
+    });
+    env.deps.readConfig = () => config;
+    env.deps.updateFileUrl = async (id, url, fence) => {
+      if (id === 'file-media') config.archive = 'cdn.other.test';
+      const file = env.files.find(candidate => candidate._id === id)!;
+      if (!claimAllows(file, fence)) return null;
+      env.fileWrites.push({ id, url });
+      file.url = url;
+      file.cdnFence = fence;
+      return file;
+    };
+
+    await reconcileCdnConfiguration(env.deps);
+
+    const media = env.state.docs.find(doc => doc.container === 'media');
+    const archive = env.state.docs.find(doc => doc.container === 'archive');
+    assert.equal(media?.status, 'complete');
+    assert.equal(media?.appliedHost, CDN_HOST);
+    assert.equal(archive?.status, 'complete');
+    assert.equal(archive?.appliedHost, 'cdn.other.test');
+    assert.equal(
+      env.files.find(file => file._id === 'file-archive')!.url,
+      reconciledFileUrl(SOURCE, 'cdn.other.test'),
+    );
+  });
+
   it('runs URI migration before CDN reconciliation and leaves cleared sources untouched', async () => {
     const files: StoredFile[] = [
       {
@@ -712,13 +867,27 @@ describe('reconcileStoredCdnConfig', () => {
   });
 
   it('writes only the computed url through the file model', async () => {
-    const updates: Array<{ id: string; update: Record<string, unknown> }> = [];
+    const updates: Array<{
+      filter: Record<string, unknown>;
+      patch: Record<string, unknown>;
+    }> = [];
+    let fileQuery:
+      { query: Record<string, unknown>; options: Record<string, unknown> } | undefined;
     const states: CdnStateRecord[] = [];
     File.getInstance = (() => ({
-      findMany: async () => [{ _id: 'file-00', url: SOURCE, sourceUrl: SOURCE }],
-      findByIdAndUpdate: async (id: string, update: Record<string, unknown>) => {
-        updates.push({ id, update });
-        return { _id: id, ...update };
+      findMany: async (
+        query: Record<string, unknown>,
+        options: Record<string, unknown>,
+      ) => {
+        fileQuery = { query, options };
+        return [{ _id: 'file-00', url: SOURCE, sourceUrl: SOURCE }];
+      },
+      updateOne: async (
+        filter: Record<string, unknown>,
+        patch: Record<string, unknown>,
+      ) => {
+        updates.push({ filter, patch });
+        return { _id: 'file-00', ...patch };
       },
     })) as unknown as typeof File.getInstance;
     _StorageCdnState.getInstance = (() => ({
@@ -763,7 +932,21 @@ describe('reconcileStoredCdnConfig', () => {
       ConfigController.getInstance().config = previous;
     }
 
-    assert.deepEqual(updates, [{ id: 'file-00', update: { url: CDN_URL } }]);
+    assert.deepEqual(updates, [
+      {
+        filter: fileUrlClaimFilter('file-00', 1),
+        patch: { url: CDN_URL, cdnFence: 1 },
+      },
+    ]);
+    assert.deepEqual(fileQuery?.options, {
+      skip: 0,
+      limit: CDN_RECONCILIATION_BATCH_SIZE,
+      sort: { _id: 1 },
+      select: '_id url sourceUrl cdnFence',
+      readPreference: 'primary',
+    });
+    assert.equal(fileQuery?.query.container, 'media');
+    assert.equal(fileQuery?.query.isPublic, true);
     assert.equal(states[0]!.status, 'complete');
     assert.equal(states[0]!.appliedHost, CDN_HOST);
   });
@@ -783,5 +966,21 @@ describe('reconcileStoredCdnConfig', () => {
       /requires state locks/,
     );
     assert.equal(scanned, false);
+  });
+});
+
+describe('cdn state schema', () => {
+  it('requires one unique container field for the persisted host', () => {
+    const model = _StorageCdnState.getInstance({} as never);
+    try {
+      const container = model.fields.container as {
+        unique?: boolean;
+        required?: boolean;
+      };
+      assert.equal(container.required, true);
+      assert.equal(container.unique, true);
+    } finally {
+      (_StorageCdnState as unknown as { _instance?: unknown })._instance = undefined;
+    }
   });
 });
