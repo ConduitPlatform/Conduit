@@ -423,6 +423,18 @@ export const constructDispositionHeader = (
 };
 
 /**
+ * Replaces the authority of a URL without rebuilding the path or query.
+ * The first occurrence of `URL.host` is replaced, so a SAS query is preserved.
+ */
+export function replaceUrlHost(url: string, cdnHost: string): string {
+  const host = new URL(url).host;
+  if (!host) {
+    throw new TypeError('URL has no host');
+  }
+  return url.replace(host, cdnHost);
+}
+
+/**
  * Replaces the storage host in a URL with the configured CDN host for the container.
  * @param url The original URL from the storage provider
  * @param container The container name
@@ -438,8 +450,7 @@ export function applyCdnHost(
   if (!cdnHost) return url;
 
   try {
-    const urlObj = new URL(url);
-    return url.replace(urlObj.host, cdnHost);
+    return replaceUrlHost(url, cdnHost);
   } catch {
     // If URL parsing fails, return original URL
     return url;
