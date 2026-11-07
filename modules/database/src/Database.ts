@@ -813,6 +813,43 @@ export default class DatabaseModule extends ManagedModule<Config> {
         });
       }
 
+      const guardSchemaName = call.request.guardSchema;
+      if (guardSchemaName) {
+        if (!call.request.guardFilter) {
+          return callback({
+            code: status.INVALID_ARGUMENT,
+            message: 'guardFilter is required when guardSchema is set',
+          });
+        }
+        if (call.request.userId || call.request.scope) {
+          return callback({
+            code: status.INVALID_ARGUMENT,
+            message: 'a guarded update cannot take userId or scope',
+          });
+        }
+        const guardAdapter = this._activeAdapter.getSchemaModel(guardSchemaName);
+        if (!(await canModify(moduleName, guardAdapter.model))) {
+          return callback({
+            code: status.PERMISSION_DENIED,
+            message: `Module ${moduleName} is not authorized to modify ${guardSchemaName} entries!`,
+          });
+        }
+        const guarded = await schemaAdapter.model.compareAndSet(
+          call.request.filterQuery,
+          call.request.query,
+          { schema: guardAdapter.model, filter: call.request.guardFilter },
+        );
+        const guardedString = JSON.stringify(guarded);
+        if (guarded != null && shouldPublishMutationEvent(call.request.suppressEvent)) {
+          this.grpcSdk.bus?.publish(
+            mutationEventChannel(this.name, 'update', schemaName),
+            guardedString,
+          );
+        }
+        callback(null, { result: guardedString });
+        return;
+      }
+
       const result = await schemaAdapter.model.updateOne(
         call.request.filterQuery,
         call.request.query,

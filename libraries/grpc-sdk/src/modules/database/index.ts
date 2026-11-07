@@ -253,6 +253,9 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     options?: PopulateAuthzOptions,
   ) {
     const o = options ?? {};
+    if ((o.guardSchema && !o.guardFilter) || (!o.guardSchema && o.guardFilter)) {
+      throw new Error('guardSchema and guardFilter must be set together');
+    }
     const populateArray = toPopulateArray(o.populate);
     return this.client!.updateOne({
       schemaName,
@@ -262,6 +265,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       scope: o.scope,
       populate: populateArray,
       suppressEvent: o.suppressEvent,
+      guardSchema: o.guardSchema,
+      guardFilter: o.guardFilter
+        ? this.processQuery(o.guardFilter as Query<Record<string, unknown>>)
+        : undefined,
     }).then(res => {
       return JSON.parse(res.result);
     });

@@ -88,13 +88,11 @@ describe('sanitizeFileForResponse', () => {
         url: 'https://cdn.example/banner.png',
         sourceUrl: 'https://s3.example/banner.png',
         uri: '/storage/getFileUrl/file-2',
-        cdnFence: 3,
       } as never,
     ]);
 
     assert.equal(sanitized.url, 'https://cdn.example/banner.png');
     assert.equal(sanitized.sourceUrl, 'https://s3.example/banner.png');
-    assert.equal('cdnFence' in sanitized, false);
   });
 
   it('treats an unknown container as private when stripping urls', () => {

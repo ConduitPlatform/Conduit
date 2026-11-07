@@ -26,7 +26,6 @@ export type CdnFileRecord = {
   _id: string;
   url?: string;
   sourceUrl?: string;
-  cdnFence?: number;
 };
 
 export type CdnFileQueryOptions = {
@@ -47,7 +46,13 @@ export interface CdnReconciliationDeps {
     patch: Partial<CdnStateRecord>,
   ) => Promise<CdnStateRecord | null>;
   findFiles: (query: Indexable, options: CdnFileQueryOptions) => Promise<CdnFileRecord[]>;
-  updateFileUrl: (id: string, url: string, fence: number) => Promise<unknown>;
+  updateFileUrl: (
+    id: string,
+    observedUrl: string | null,
+    nextUrl: string,
+    container: string,
+    fence: number,
+  ) => Promise<unknown>;
   usingLock: <T>(
     resource: string,
     ttl: number,
@@ -91,17 +96,28 @@ export function reconciledFileUrl(sourceUrl: string, cdnHost: string): string {
   return replaceUrlHost(sourceUrl, cdnHost);
 }
 
+/** Predicate retained on the file UPDATE. The observed url is part of the write. */
+export function fileUrlPredicate(id: string, observedUrl: string | null) {
+  return { _id: id, url: observedUrl };
+}
+
 /**
- * Database predicate for one file write. MongoDB matches a null field against
- * missing values, so an unstamped file is still claimed. A newer fence does
- * not match, and the adapter's findOneAndUpdate applies that check with the
- * write. State fencing does not cover an RPC already in flight.
+ * State row that must be updated in the same transaction as a file url change.
+ * A newer owner increments fence before it reads files, including when it then
+ * skips a file whose url is already correct. An older fence does not match.
  */
-export function fileUrlClaimFilter(id: string, fence: number) {
-  return {
-    _id: id,
-    $or: [{ cdnFence: null }, { cdnFence: { $lte: fence } }],
-  };
+export function cdnStateFenceFilter(container: string, fence: number) {
+  return { container, fence };
+}
+
+async function missingDocumentAsNull<T>(write: Promise<T | null>): Promise<T | null> {
+  try {
+    return await write;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Document not found'))
+      return null;
+    throw error;
+  }
 }
 
 export function reconciliationContainers(
@@ -296,7 +312,7 @@ async function reconcileContainer(
         skip: 0,
         limit: batchSize,
         sort: { _id: 1 },
-        select: '_id url sourceUrl cdnFence',
+        select: '_id url sourceUrl',
         readPreference: 'primary',
       },
     );
@@ -314,18 +330,20 @@ async function reconcileContainer(
       } catch {
         throw new Error(`CDN reconciliation cannot use sourceUrl for file ${file._id}`);
       }
-      const recordedFence = typeof file.cdnFence === 'number' ? file.cdnFence : undefined;
-      const previousUrl = file.url;
-      if (recordedFence !== undefined && recordedFence > fence) {
-        throw new Error(`CDN reconciliation lost file ${file._id} to a newer owner`);
-      }
-      if (nextUrl === previousUrl && recordedFence === fence) continue;
+      const previousUrl = file.url ?? null;
+      if (nextUrl === previousUrl) continue;
 
-      const written = await deps.updateFileUrl(file._id, nextUrl, fence);
+      const written = await deps.updateFileUrl(
+        file._id,
+        previousUrl,
+        nextUrl,
+        container,
+        fence,
+      );
       if (written == null) {
         throw new Error(`CDN reconciliation lost file ${file._id} to a newer owner`);
       }
-      if (nextUrl !== previousUrl) updated += 1;
+      updated += 1;
       throwIfLeaseLost(signal);
     }
 
@@ -426,10 +444,20 @@ export async function reconcileStoredCdnConfig(grpcSdk: ConduitGrpcSdk): Promise
     loadStates: () => states.findMany({}, { readPreference: 'primary' }),
     findState: container => states.findOne({ container }, { readPreference: 'primary' }),
     createState: doc => states.create(doc),
-    updateState: (filter, patch) => states.updateOne(filter, patch),
+    updateState: (filter, patch) =>
+      missingDocumentAsNull(states.updateOne(filter, patch)),
     findFiles: (query, options) => files.findMany(query, options),
-    updateFileUrl: (id, url, fence) =>
-      files.updateOne(fileUrlClaimFilter(id, fence), { url, cdnFence: fence }),
+    updateFileUrl: (id, observedUrl, nextUrl, container, fence) =>
+      files.updateOne(
+        fileUrlPredicate(id, observedUrl) as unknown as Parameters<
+          typeof files.updateOne
+        >[0],
+        { url: nextUrl },
+        {
+          guardSchema: _StorageCdnState.name,
+          guardFilter: cdnStateFenceFilter(container, fence),
+        },
+      ),
     usingLock: (resource, ttl, fn) => grpcSdk.state!.usingLock(resource, ttl, fn),
   });
 }

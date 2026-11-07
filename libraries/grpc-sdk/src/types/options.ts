@@ -15,4 +15,10 @@ export type PopulateAuthzOptions = {
    * and restricts the write to embeddings-owned vector/hash fields.
    */
   embeddingsJob?: boolean;
+  /**
+   * When both are set, Database updates this document and the guard document
+   * in one transaction. A miss comes back as null. userId and scope are rejected.
+   */
+  guardSchema?: string;
+  guardFilter?: { [key: string]: unknown };
 } & AuthzOptions;
