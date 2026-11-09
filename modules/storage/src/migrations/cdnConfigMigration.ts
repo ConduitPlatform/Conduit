@@ -5,6 +5,10 @@ import { applyCdnHost } from '../utils/index.js';
 
 export type CdnConfiguration = Record<string, string>;
 
+const UPDATE_BATCH_SIZE = 50;
+
+type MigrationCounts = { updated: number; unchanged: number; missingSourceUrl: number };
+
 /**
  * Compares two CDN configurations and returns the list of containers
  * that have actually changed (added, removed, or value modified).
@@ -88,53 +92,60 @@ export async function migrateCdnConfigChanges(
 
   // Update URLs for files in changed containers. sourceUrl is the provider URL;
   // the stored url may already be CDN-hosted and cannot recover the original host.
-  let totalUpdated = 0;
-  let totalSkippedUnchanged = 0;
-  let totalSkippedMissingSourceUrl = 0;
+  const totals: MigrationCounts = { updated: 0, unchanged: 0, missingSourceUrl: 0 };
 
   for (const container of changedContainers) {
-    let updated = 0;
-    let skippedUnchanged = 0;
-    let skippedMissingSourceUrl = 0;
+    const counts: MigrationCounts = { updated: 0, unchanged: 0, missingSourceUrl: 0 };
     try {
-      const publicFiles = await File.getInstance().findMany({
-        container,
-        isPublic: true,
-      });
+      const publicFiles = await File.getInstance().findMany(
+        {
+          container,
+          isPublic: true,
+        },
+        '_id url sourceUrl',
+      );
 
+      const pending: { id: string; url: string | undefined }[] = [];
       for (const file of publicFiles) {
         if (!file.sourceUrl) {
-          skippedMissingSourceUrl++;
+          counts.missingSourceUrl++;
           continue;
         }
         const newUrl = applyCdnHost(file.sourceUrl, container);
         if (newUrl === file.url) {
-          skippedUnchanged++;
+          counts.unchanged++;
           continue;
         }
-        await File.getInstance().findByIdAndUpdate(file._id, {
-          url: newUrl,
-        });
-        updated++;
+        pending.push({ id: file._id, url: newUrl });
       }
 
-      totalUpdated += updated;
-      totalSkippedUnchanged += skippedUnchanged;
-      totalSkippedMissingSourceUrl += skippedMissingSourceUrl;
+      for (let i = 0; i < pending.length; i += UPDATE_BATCH_SIZE) {
+        const batch = pending.slice(i, i + UPDATE_BATCH_SIZE);
+        await Promise.all(
+          batch.map(({ id, url }) => File.getInstance().findByIdAndUpdate(id, { url })),
+        );
+        counts.updated += batch.length;
+      }
+
+      totals.updated += counts.updated;
+      totals.unchanged += counts.unchanged;
+      totals.missingSourceUrl += counts.missingSourceUrl;
       logger.log(
-        `Container "${container}": scanned ${publicFiles.length} public file(s), updated ${updated}, skipped ${skippedUnchanged} unchanged, skipped ${skippedMissingSourceUrl} without sourceUrl`,
+        `Container "${container}": scanned ${publicFiles.length} public file(s), updated ${counts.updated}, skipped ${counts.unchanged} unchanged, skipped ${counts.missingSourceUrl} without sourceUrl`,
       );
     } catch (error) {
       logger.error(
-        `CDN migration failed for container "${container}" after updating ${updated}, skipped ${skippedUnchanged} unchanged and ${skippedMissingSourceUrl} without sourceUrl: ${
-          (error as Error).message
-        }`,
+        `CDN migration failed for container "${container}" after updating ${
+          counts.updated
+        }, skipped ${counts.unchanged} unchanged and ${
+          counts.missingSourceUrl
+        } without sourceUrl: ${(error as Error).message}`,
       );
       throw error;
     }
   }
 
   logger.log(
-    `CDN configuration migration completed: updated ${totalUpdated}, skipped ${totalSkippedUnchanged} unchanged, skipped ${totalSkippedMissingSourceUrl} without sourceUrl`,
+    `CDN configuration migration completed: updated ${totals.updated}, skipped ${totals.unchanged} unchanged, skipped ${totals.missingSourceUrl} without sourceUrl`,
   );
 }
