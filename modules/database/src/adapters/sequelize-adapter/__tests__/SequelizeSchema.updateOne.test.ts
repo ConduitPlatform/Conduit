@@ -9,7 +9,7 @@ function createSchema(sequelize: Sequelize) {
   const originalSchema = {
     name: 'Doc',
     collectionName: 'docs',
-    fields: { url: { type: 'String' } },
+    fields: { url: { type: 'String' }, tags: { type: 'JSON' } },
     modelOptions: {},
   } as unknown as ConduitDatabaseSchema;
   return new SequelizeSchema(
@@ -17,7 +17,10 @@ function createSchema(sequelize: Sequelize) {
     sequelize,
     {
       collectionName: 'docs',
-      fields: { url: { type: DataTypes.STRING } },
+      fields: {
+        url: { type: DataTypes.STRING },
+        tags: { type: DataTypes.JSON, defaultValue: [] },
+      },
       modelOptions: {},
     },
     originalSchema,
@@ -92,5 +95,50 @@ describe('SequelizeSchema updateOne predicate', () => {
       schema.updateOne({ _id: doc._id, url: 'a' }, { url: 'b' }, { scope: 'team' }),
     ).rejects.toThrow('Document not found');
     expect((await schema.model.findByPk(doc._id)).url).toBe('other');
+  });
+
+  describe('with $push', () => {
+    /** Another writer changes the url between updateOne's read and its UPDATE. */
+    function raceOtherWriter(id: string) {
+      const original = schema.findOne.bind(schema);
+      schema.findOne = (async (...args: Parameters<typeof original>) => {
+        const found = await original(...args);
+        await schema.model.update({ url: 'other' }, { where: { _id: id } });
+        return found;
+      }) as typeof schema.findOne;
+    }
+
+    it('pushes nothing when a $push-only update has a stale predicate', async () => {
+      const doc = await schema.create({ url: 'a', tags: [] });
+      raceOtherWriter(doc._id);
+      await expect(
+        schema.updateOne({ _id: doc._id, url: 'a' }, { $push: { tags: 'x' } }),
+      ).rejects.toThrow('Document not found');
+      expect((await schema.model.findByPk(doc._id)).tags).toEqual([]);
+    });
+
+    it('applies nothing when a mixed $push and set has a stale predicate', async () => {
+      const doc = await schema.create({ url: 'a', tags: [] });
+      raceOtherWriter(doc._id);
+      await expect(
+        schema.updateOne({ _id: doc._id, url: 'a' }, {
+          $push: { tags: 'x' },
+          url: 'b',
+        } as any),
+      ).rejects.toThrow('Document not found');
+      const row = await schema.model.findByPk(doc._id);
+      expect(row.tags).toEqual([]);
+      expect(row.url).toBe('other');
+    });
+
+    it('applies both the push and the set when the predicate matches', async () => {
+      const doc = await schema.create({ url: 'a', tags: [] });
+      const updated = await schema.updateOne({ _id: doc._id, url: 'a' }, {
+        $push: { tags: 'x' },
+        url: 'b',
+      } as any);
+      expect(updated.url).toBe('b');
+      expect(updated.tags).toEqual(['x']);
+    });
   });
 });

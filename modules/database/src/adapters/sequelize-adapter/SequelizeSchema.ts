@@ -157,6 +157,16 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       return r._id;
     });
     try {
+      if (predicate) {
+        // Check (and lock, where the dialect supports it) the row before anything
+        // is written, so a stale predicate leaves no partial $push behind.
+        const matching = await this.model.findOne({
+          where: { [Op.and]: [{ _id: parsedId }, predicate] },
+          transaction: t,
+          lock: this.sequelize.getDialect() === 'sqlite' ? undefined : t.LOCK.UPDATE,
+        });
+        if (!matching) throw new Error('Document not found');
+      }
       const parentDoc = await this.model.findByPk(parsedId, {
         nest: true,
         transaction: t,
@@ -185,6 +195,9 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
           .then(doc => (doc ? doc.toJSON() : doc));
       }
 
+      // The row is already checked and locked when a predicate was given, and a
+      // $push may touch the fields it filters on, so the UPDATE then skips it.
+      const updatePredicate = parsedQuery.hasOwnProperty('$push') ? undefined : predicate;
       if (parsedQuery.hasOwnProperty('$push')) {
         const push = parsedQuery['$push'];
         for (const key in push) {
@@ -197,10 +210,12 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
               if (!modelName.endsWith('s')) {
                 modelName = modelName + 's';
               }
-              parentDoc[`add${modelName}`](push[key]['$each'], parentDoc._id);
+              await parentDoc[`add${modelName}`](push[key]['$each'], {
+                transaction: t,
+              });
             } else {
               const actualRel = key.charAt(0).toUpperCase() + key.slice(1);
-              parentDoc[`add${actualRel}Id`](push[key], parentDoc._id);
+              await parentDoc[`add${actualRel}Id`](push[key], { transaction: t });
             }
             continue;
           }
@@ -210,7 +225,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
             parentDoc[key] = [...parentDoc[key], push[key]];
           }
         }
-        await parentDoc.save();
+        await parentDoc.save({ transaction: t });
         delete parsedQuery['$push'];
       }
 
@@ -228,21 +243,21 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       const [affected] = await this.model.update(
         { ...parsedQuery },
         {
-          where: predicate
-            ? { [Op.and]: [{ _id: parsedId }, predicate] }
+          where: updatePredicate
+            ? { [Op.and]: [{ _id: parsedId }, updatePredicate] }
             : { _id: parsedId },
           transaction: t,
         },
       );
       if (
-        predicate &&
+        updatePredicate &&
         affected === 0 &&
         ['mysql', 'mariadb'].includes(this.sequelize.getDialect())
       ) {
         // MySQL/MariaDB report 0 changed rows when the values are identical.
         // Only accept that if the row still matches and already has the new values.
         const row = await this.model.findOne({
-          where: { [Op.and]: [{ _id: parsedId }, predicate] },
+          where: { [Op.and]: [{ _id: parsedId }, updatePredicate] },
           transaction: t,
         });
         const unchanged =
@@ -251,7 +266,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
             value !== null && typeof value === 'object' ? true : row.get(key) === value,
           );
         if (!unchanged) throw new Error('Document not found');
-      } else if (predicate && affected === 0) {
+      } else if (updatePredicate && affected === 0) {
         throw new Error('Document not found');
       }
       incrementDbQueries();
