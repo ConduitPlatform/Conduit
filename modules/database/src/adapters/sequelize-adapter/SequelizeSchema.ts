@@ -234,13 +234,25 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
           transaction: t,
         },
       );
-      if (predicate && affected === 0) {
+      if (
+        predicate &&
+        affected === 0 &&
+        ['mysql', 'mariadb'].includes(this.sequelize.getDialect())
+      ) {
         // MySQL/MariaDB report 0 changed rows when the values are identical.
-        const stillMatches = await this.model.findOne({
+        // Only accept that if the row still matches and already has the new values.
+        const row = await this.model.findOne({
           where: { [Op.and]: [{ _id: parsedId }, predicate] },
           transaction: t,
         });
-        if (!stillMatches) throw new Error('Document not found');
+        const unchanged =
+          row &&
+          Object.entries(parsedQuery).every(([key, value]) =>
+            value !== null && typeof value === 'object' ? true : row.get(key) === value,
+          );
+        if (!unchanged) throw new Error('Document not found');
+      } else if (predicate && affected === 0) {
+        throw new Error('Document not found');
       }
       incrementDbQueries();
 
@@ -730,17 +742,11 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     if (!doc) {
       throw new Error('Document not found');
     }
-    // Keep the filter in the UPDATE so a conditional write is atomic.
-    const authorized = await this.getAuthorizedQuery(
-      'read',
-      filterQuery as Indexable,
-      false,
-      options?.userId,
-      options?.scope,
-    );
+    // Keep the filter in the UPDATE so a conditional write is atomic. Authorization
+    // is already enforced by the read above and by the edit check on the update.
     const { filter, parsingResult } = parseQueryFilter(
       this,
-      this.parseStringToQuery(authorized),
+      this.parseStringToQuery(filterQuery),
     );
     const predicate = parsingResult.requiredRelations?.length ? undefined : filter;
     return this.findByIdAndUpdate(doc._id, query, options, predicate);

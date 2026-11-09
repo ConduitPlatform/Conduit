@@ -75,4 +75,22 @@ describe('SequelizeSchema updateOne predicate', () => {
     const updated = await schema.updateOne({ _id: doc._id, url: 'a' }, { url: 'a' });
     expect(updated.url).toBe('a');
   });
+
+  it('keeps the caller filter in the UPDATE when authorization narrows reads to _id', async () => {
+    const doc = await schema.create({ url: 'a' });
+    // A scoped authorization lookup resolves to just { _id }.
+    (schema as any).getAuthorizedQuery = async (_op: string, query: any) => ({
+      _id: query._id,
+    });
+    const original = schema.findOne.bind(schema);
+    schema.findOne = (async (...args: Parameters<typeof original>) => {
+      const found = await original(...args);
+      await schema.model.update({ url: 'other' }, { where: { _id: doc._id } });
+      return found;
+    }) as typeof schema.findOne;
+    await expect(
+      schema.updateOne({ _id: doc._id, url: 'a' }, { url: 'b' }, { scope: 'team' }),
+    ).rejects.toThrow('Document not found');
+    expect((await schema.model.findByPk(doc._id)).url).toBe('other');
+  });
 });
