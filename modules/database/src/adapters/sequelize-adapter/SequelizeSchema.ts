@@ -144,19 +144,20 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       query,
       this.sequelize,
     );
-    const parsedId = await this.getAuthorizedQuery(
-      'edit',
-      { _id: id },
-      false,
-      options?.userId,
-      options?.scope,
-    ).then(r => {
-      if (!r) {
-        throw new Error("Document doesn't exist or can't be modified by user.");
-      }
-      return r._id;
-    });
+    // Every path ends in one commit (or one rollback) when this function owns t.
     try {
+      const parsedId = await this.getAuthorizedQuery(
+        'edit',
+        { _id: id },
+        false,
+        options?.userId,
+        options?.scope,
+      ).then(r => {
+        if (!r) {
+          throw new Error("Document doesn't exist or can't be modified by user.");
+        }
+        return r._id;
+      });
       if (predicate) {
         // Check (and lock, where the dialect supports it) the row before anything
         // is written, so a stale predicate leaves no partial $push behind.
@@ -186,14 +187,6 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         }
         delete parsedQuery['$inc'];
       }
-      if (Object.keys(parsedQuery).length === 0) {
-        return this.model
-          .findByPk(parsedId, {
-            nest: true,
-            include: constructRelationInclusion(this, options?.populate),
-          })
-          .then(doc => (doc ? doc.toJSON() : doc));
-      }
 
       // The row is already checked and locked when a predicate was given, and a
       // $push may touch the fields it filters on, so the UPDATE then skips it.
@@ -205,18 +198,11 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
             if (!Array.isArray(this.extractedRelations[key])) {
               throw new Error(`Cannot push in non-array field: ${key}`);
             }
-            let modelName = key.charAt(0).toUpperCase() + key.slice(1);
-            if (push[key]['$each']) {
-              if (!modelName.endsWith('s')) {
-                modelName = modelName + 's';
-              }
-              await parentDoc[`add${modelName}`](push[key]['$each'], {
-                transaction: t,
-              });
-            } else {
-              const actualRel = key.charAt(0).toUpperCase() + key.slice(1);
-              await parentDoc[`add${actualRel}Id`](push[key], { transaction: t });
-            }
+            const association = this.model.associations[key] as any;
+            if (!association) throw new Error(`Cannot push in field: ${key}`);
+            await parentDoc[association.accessors.add](push[key]['$each'] ?? push[key], {
+              transaction: t,
+            });
             continue;
           }
           if (push[key]['$each']) {
@@ -229,71 +215,55 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         delete parsedQuery['$push'];
       }
 
-      if (Object.keys(parsedQuery).length === 0) {
-        return this.model
-          .findByPk(parsedId, {
-            nest: true,
-          })
-          .then(doc => (doc ? doc.toJSON() : doc));
-      }
-      // process the update query after special conditions have been handled.
-      processCreateQuery(parsedQuery, this.objectPaths);
-      incrementDbQueries();
-      const relationObjects = extractRelationsModification(this, parsedQuery);
-      const [affected] = await this.model.update(
-        { ...parsedQuery },
-        {
-          where: updatePredicate
-            ? { [Op.and]: [{ _id: parsedId }, updatePredicate] }
-            : { _id: parsedId },
-          transaction: t,
-        },
-      );
-      if (
-        updatePredicate &&
-        affected === 0 &&
-        ['mysql', 'mariadb'].includes(this.sequelize.getDialect())
-      ) {
-        // MySQL/MariaDB report 0 changed rows when the values are identical.
-        // Only accept that if the row still matches and already has the new values.
-        const row = await this.model.findOne({
-          where: { [Op.and]: [{ _id: parsedId }, updatePredicate] },
-          transaction: t,
-        });
-        const unchanged =
-          row &&
-          Object.entries(parsedQuery).every(([key, value]) =>
-            value !== null && typeof value === 'object' ? true : row.get(key) === value,
-          );
-        if (!unchanged) throw new Error('Document not found');
-      } else if (updatePredicate && affected === 0) {
-        throw new Error('Document not found');
-      }
-      incrementDbQueries();
-
-      const data = await this.model
-        .findByPk(parsedId, {
-          nest: true,
-          transaction: t,
-        })
-        .then(doc => createWithPopulation(this, doc, relationObjects, t!))
-        .then(() => {
-          if (!transactionProvided) {
-            return t!.commit();
-          }
-          return;
-        })
-        .then(() => {
-          return this.model.findByPk(parsedId, {
-            nest: true,
-            include: constructRelationInclusion(this, options?.populate),
+      if (Object.keys(parsedQuery).length > 0) {
+        // process the update query after special conditions have been handled.
+        processCreateQuery(parsedQuery, this.objectPaths);
+        incrementDbQueries();
+        const relationObjects = extractRelationsModification(this, parsedQuery);
+        const [affected] = await this.model.update(
+          { ...parsedQuery },
+          {
+            where: updatePredicate
+              ? { [Op.and]: [{ _id: parsedId }, updatePredicate] }
+              : { _id: parsedId },
+            transaction: t,
+          },
+        );
+        if (
+          updatePredicate &&
+          affected === 0 &&
+          ['mysql', 'mariadb'].includes(this.sequelize.getDialect())
+        ) {
+          // MySQL/MariaDB report 0 changed rows when the values are identical.
+          // Only accept that if the row still matches and already has the new values.
+          const row = await this.model.findOne({
+            where: { [Op.and]: [{ _id: parsedId }, updatePredicate] },
+            transaction: t,
           });
-        })
-        .then(doc => (doc ? doc.toJSON() : doc));
-      return data;
+          const unchanged =
+            row &&
+            Object.entries(parsedQuery).every(([key, value]) =>
+              value !== null && typeof value === 'object' ? true : row.get(key) === value,
+            );
+          if (!unchanged) throw new Error('Document not found');
+        } else if (updatePredicate && affected === 0) {
+          throw new Error('Document not found');
+        }
+        incrementDbQueries();
+        const doc = await this.model.findByPk(parsedId, { nest: true, transaction: t });
+        await createWithPopulation(this, doc, relationObjects, t);
+      }
+
+      if (!transactionProvided) await t.commit();
+      const data = await this.model.findByPk(parsedId, {
+        nest: true,
+        include: constructRelationInclusion(this, options?.populate),
+        transaction: transactionProvided ? t : undefined,
+      });
+      return data ? data.toJSON() : data;
     } catch (e) {
-      if (!transactionProvided) {
-        await t!.rollback();
+      if (!transactionProvided && !(t as any).finished) {
+        await t.rollback();
       }
       throw e;
     }
