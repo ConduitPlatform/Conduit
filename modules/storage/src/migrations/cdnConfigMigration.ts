@@ -1,4 +1,4 @@
-import { ConduitGrpcSdk, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, Indexable, isLockContention } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { File, _StorageCdnState } from '../models/index.js';
 import { replaceUrlHost } from '../utils/index.js';
@@ -10,6 +10,9 @@ export const CDN_RECONCILIATION_LOCK_TTL_MS = 10_000;
 export const CDN_RECONCILIATION_BATCH_SIZE = 200;
 const MAX_CONFIG_RETARGETS = 3;
 const MAX_RECONCILIATION_PASSES = 4;
+export const CDN_WRITE_CONCURRENCY = 10;
+export const CDN_RETRY_DELAY_MS = 30_000;
+const MAX_CDN_RETRIES = 5;
 
 export type CdnStateRecord = {
   container: string;
@@ -52,6 +55,8 @@ export interface CdnReconciliationDeps {
     fn: (signal: AbortSignal) => Promise<T>,
   ) => Promise<T>;
   batchSize?: number;
+  /** Containers to rescan even if their persisted state says complete. */
+  force?: string[];
 }
 
 /**
@@ -106,7 +111,7 @@ function isApplied(state: CdnStateRecord | undefined, host: string): boolean {
 type PageCounts = { updated: number; unchanged: number; skipped: number };
 
 /**
- * Rewrites one page concurrently. Each write is conditional on the url that was
+ * Rewrites one page in concurrent chunks. Each write is conditional on the url that was
  * read, so a row changed by someone else is skipped, not overwritten.
  */
 async function reconcilePage(
@@ -116,34 +121,35 @@ async function reconcilePage(
   host: string,
 ): Promise<PageCounts> {
   const counts: PageCounts = { updated: 0, unchanged: 0, skipped: 0 };
-  await Promise.all(
-    files.map(async file => {
-      let nextUrl: string;
-      try {
-        if (!file.sourceUrl) throw new Error('missing sourceUrl');
-        nextUrl = reconciledFileUrl(file.sourceUrl, host);
-      } catch (error) {
-        ConduitGrpcSdk.Logger?.warn(
-          `CDN reconciliation skipped file ${file._id} in container "${container}": invalid sourceUrl (${(error as Error).message})`,
-        );
-        counts.skipped += 1;
-        return;
-      }
-      const observedUrl = file.url ?? null;
-      if (nextUrl === observedUrl) {
-        counts.unchanged += 1;
-        return;
-      }
-      if (await deps.updateFileUrl(file._id, observedUrl, nextUrl)) {
-        counts.updated += 1;
-      } else {
-        ConduitGrpcSdk.Logger?.warn(
-          `CDN reconciliation skipped file ${file._id} in container "${container}": url changed concurrently`,
-        );
-        counts.skipped += 1;
-      }
-    }),
-  );
+  const rewrite = async (file: CdnFileRecord) => {
+    let nextUrl: string;
+    try {
+      if (!file.sourceUrl) throw new Error('missing sourceUrl');
+      nextUrl = reconciledFileUrl(file.sourceUrl, host);
+    } catch (error) {
+      ConduitGrpcSdk.Logger?.warn(
+        `CDN reconciliation skipped file ${file._id} in container "${container}": invalid sourceUrl (${(error as Error).message})`,
+      );
+      counts.skipped += 1;
+      return;
+    }
+    const observedUrl = file.url ?? null;
+    if (nextUrl === observedUrl) {
+      counts.unchanged += 1;
+      return;
+    }
+    if (await deps.updateFileUrl(file._id, observedUrl, nextUrl)) {
+      counts.updated += 1;
+    } else {
+      ConduitGrpcSdk.Logger?.warn(
+        `CDN reconciliation skipped file ${file._id} in container "${container}": url changed concurrently`,
+      );
+      counts.skipped += 1;
+    }
+  };
+  for (let i = 0; i < files.length; i += CDN_WRITE_CONCURRENCY) {
+    await Promise.all(files.slice(i, i + CDN_WRITE_CONCURRENCY).map(rewrite));
+  }
   return counts;
 }
 
@@ -151,15 +157,16 @@ async function reconcileContainer(
   deps: CdnReconciliationDeps,
   signal: AbortSignal,
   container: string,
+  force: boolean,
 ): Promise<void> {
   throwIfLeaseLost(signal);
   const state = await deps.findState(container);
   let desired = cdnHostOf(deps.readConfig(), container);
-  if (isApplied(state ?? undefined, desired)) return;
+  if (!force && isApplied(state ?? undefined, desired)) return;
 
   // Resume only a pending pass that was already working towards this host.
   let afterId =
-    state?.status === 'pending' && state.targetHost === desired
+    !force && state?.status === 'pending' && state.targetHost === desired
       ? state.checkpointId || ''
       : '';
   const pending = { status: 'pending', targetHost: desired, checkpointId: afterId };
@@ -240,7 +247,12 @@ async function reconcileUnderLock(
     const config = deps.readConfig();
     const containers = reconciliationContainers(config, await deps.loadStates());
     for (const container of containers) {
-      await reconcileContainer(deps, signal, container);
+      await reconcileContainer(
+        deps,
+        signal,
+        container,
+        pass === 0 && !!deps.force?.includes(container),
+      );
     }
     throwIfLeaseLost(signal);
     const states = await deps.loadStates();
@@ -255,16 +267,11 @@ async function reconcileUnderLock(
   throw new Error('CDN configuration changed during reconciliation');
 }
 
-function isLockContention(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    (error.name === 'ExecutionError' || /unable to achieve a quorum/i.test(error.message))
-  );
-}
+export type ReconciliationOutcome = 'done' | 'busy';
 
 export async function reconcileCdnConfiguration(
   deps: CdnReconciliationDeps,
-): Promise<void> {
+): Promise<ReconciliationOutcome> {
   let entered = false;
   try {
     await deps.usingLock(
@@ -275,14 +282,15 @@ export async function reconcileCdnConfiguration(
         await reconcileUnderLock(deps, signal);
       },
     );
+    return 'done';
   } catch (error) {
-    // Failing to acquire the lock means another replica is reconciling.
-    // Errors after acquisition, lease loss included, are real failures.
-    if (!entered && isLockContention(error)) {
+    // Only a genuinely held lock means another replica is reconciling. Redis
+    // failures and errors after acquisition, lease loss included, are real.
+    if (!entered && (await isLockContention(error))) {
       ConduitGrpcSdk.Logger?.log(
         'CDN reconciliation is already running on another replica, skipping',
       );
-      return;
+      return 'busy';
     }
     throw error;
   }
@@ -296,13 +304,17 @@ function isMissingDocument(error: unknown): boolean {
   );
 }
 
-export async function reconcileStoredCdnConfig(grpcSdk: ConduitGrpcSdk): Promise<void> {
+export async function reconcileStoredCdnConfig(
+  grpcSdk: ConduitGrpcSdk,
+  force: string[] = [],
+): Promise<ReconciliationOutcome> {
   if (!grpcSdk.state) {
     throw new Error('CDN reconciliation requires state locks');
   }
   const files = File.getInstance();
   const states = _StorageCdnState.getInstance();
-  await reconcileCdnConfiguration({
+  return reconcileCdnConfiguration({
+    force,
     readConfig: () =>
       (ConfigController.getInstance().config.cdnConfiguration ?? {}) as CdnConfiguration,
     loadStates: () => states.findMany({}, { readPreference: 'primary' }),
@@ -327,20 +339,77 @@ export async function reconcileStoredCdnConfig(grpcSdk: ConduitGrpcSdk): Promise
   });
 }
 
+/** Containers whose host differs between two snapshots. */
+export function changedCdnContainers(
+  previous: CdnConfiguration,
+  current: CdnConfiguration,
+): string[] {
+  return reconciliationContainers(
+    current,
+    Object.keys(previous).map(container => ({ container })),
+  ).filter(container => cdnHostOf(previous, container) !== cdnHostOf(current, container));
+}
+
 /**
+ * Runs reconciliation for one Storage instance.
+ *
+ * Config is published to other replicas only after this replica's onConfig
+ * returns, so uploads elsewhere (and in-flight uploads here) can write the old
+ * host behind a finished scan. A runtime run therefore rescans every container
+ * whose host differs from the last snapshot this instance applied, even if the
+ * persisted state says complete. At boot there is no snapshot and persisted
+ * state decides.
+ *
  * Boot failures reject so the process exits before SERVING and the next start
- * retries. Runtime failures are logged so the rest of onConfig still runs.
+ * retries. Runtime failures are logged. A busy lock or a failed runtime run is
+ * retried later, since the lock holder may die before finishing.
  */
-export async function runCdnReconciliation(
-  reconcile: () => Promise<void>,
-  failOnError: boolean,
-): Promise<void> {
-  try {
-    await reconcile();
-  } catch (error) {
-    if (failOnError) throw error;
-    ConduitGrpcSdk.Logger?.error(
-      `CDN reconciliation failed, it will be retried on the next config update or restart: ${(error as Error).message}`,
+export class CdnReconciliationRunner {
+  private lastApplied?: CdnConfiguration;
+  private timer?: NodeJS.Timeout;
+  private retries = 0;
+
+  constructor(
+    private readonly reconcile: (force: string[]) => Promise<ReconciliationOutcome>,
+    private readonly readConfig: () => CdnConfiguration,
+    private readonly retryDelayMs = CDN_RETRY_DELAY_MS,
+  ) {}
+
+  async run(failOnError: boolean): Promise<void> {
+    this.cancel();
+    this.retries = 0;
+    await this.execute(failOnError);
+  }
+
+  cancel() {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+  }
+
+  private async execute(failOnError: boolean): Promise<void> {
+    const current = { ...this.readConfig() };
+    const force = this.lastApplied ? changedCdnContainers(this.lastApplied, current) : [];
+    let outcome: ReconciliationOutcome | 'failed';
+    try {
+      outcome = await this.reconcile(force);
+    } catch (error) {
+      if (failOnError) throw error;
+      ConduitGrpcSdk.Logger?.error(
+        `CDN reconciliation failed: ${(error as Error).message}`,
+      );
+      outcome = 'failed';
+    }
+    if (outcome === 'done' || failOnError) this.lastApplied = current;
+    if (outcome !== 'done') this.scheduleRetry();
+  }
+
+  private scheduleRetry() {
+    if (this.retries >= MAX_CDN_RETRIES) return;
+    this.retries += 1;
+    this.timer = setTimeout(
+      () => void this.execute(false),
+      this.retryDelayMs * this.retries,
     );
+    this.timer.unref();
   }
 }

@@ -424,14 +424,19 @@ export const constructDispositionHeader = (
 
 /**
  * Replaces the authority of a URL without rebuilding the path or query.
- * The first occurrence of `URL.host` is replaced, so a SAS query is preserved.
+ * Only the authority is replaced (case-insensitively, whatever its spelling), so a
+ * SAS query is preserved. Throws when the authority cannot be replaced.
  */
 export function replaceUrlHost(url: string, cdnHost: string): string {
-  const host = new URL(url).host;
-  if (!host) {
+  if (!new URL(url).host) {
     throw new TypeError('URL has no host');
   }
-  return url.replace(host, cdnHost);
+  // Replace the authority as written, so mixed case and explicit default ports work.
+  const replaced = url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/?#]*/i, `$1${cdnHost}`);
+  if (replaced === url && !url.includes(`//${cdnHost}`)) {
+    throw new TypeError('URL authority could not be replaced');
+  }
+  return replaced;
 }
 
 /**

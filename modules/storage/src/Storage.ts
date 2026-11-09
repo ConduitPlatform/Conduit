@@ -19,8 +19,9 @@ import { runMigrations } from './migrations/index.js';
 import { migratePublicContainers } from './migrations/publicContainerMigration.js';
 import { migrateFileUriReferences } from './migrations/fileUriMigration.js';
 import {
+  CdnConfiguration,
+  CdnReconciliationRunner,
   reconcileStoredCdnConfig,
-  runCdnReconciliation,
 } from './migrations/cdnConfigMigration.js';
 import {
   CreateFileByUrlRequest,
@@ -84,7 +85,11 @@ export default class Storage extends ManagedModule<Config> {
   private enableAuthRoutes: boolean = false;
   private storageParamAdapter: StorageParamAdapter;
   private publicContainerMigrationRan: boolean = false;
-  private initialConfigApplied = false;
+  private cdnReconciliation = new CdnReconciliationRunner(
+    force => reconcileStoredCdnConfig(this.grpcSdk, force),
+    () =>
+      (ConfigController.getInstance().config.cdnConfiguration ?? {}) as CdnConfiguration,
+  );
   private fileUriMigrationRan: boolean = false;
   private _storageAuthzResourceDispose: (() => void) | null = null;
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
@@ -233,6 +238,7 @@ export default class Storage extends ManagedModule<Config> {
         clearTimeout(this.refreshAppRoutesTimeout);
         this.refreshAppRoutesTimeout = null;
       }
+      this.cdnReconciliation.cancel();
       this._storageAuthzResourceDispose?.();
       this._storageAuthzResourceDispose = null;
       this.disposeDeclaredPeerWatches();
@@ -285,10 +291,7 @@ export default class Storage extends ManagedModule<Config> {
         await migrateFileUriReferences();
         this.fileUriMigrationRan = true;
       }
-      await runCdnReconciliation(
-        () => reconcileStoredCdnConfig(this.grpcSdk),
-        !this.initialConfigApplied,
-      );
+      await this.cdnReconciliation.run(!this.configInitialized);
       this.adminRouter = new AdminRoutes(
         this.grpcServer,
         this.grpcSdk,
@@ -296,7 +299,6 @@ export default class Storage extends ManagedModule<Config> {
       );
       this.scheduleAppRouteRefresh();
       this.updateHealth(HealthCheckStatus.SERVING);
-      this.initialConfigApplied = true;
     }
   }
 

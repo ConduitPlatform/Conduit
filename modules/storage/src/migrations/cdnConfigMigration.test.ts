@@ -1,7 +1,9 @@
 import { afterEach, before, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
 import { ConduitGrpcSdk, type IConduitLogger } from '@conduitplatform/grpc-sdk';
 import { File, _StorageContainer, _StorageCdnState } from '../models/index.js';
+import { replaceUrlHost } from '../utils/index.js';
 import { migrateFileUriReferences } from './fileUriMigration.js';
 import {
   type CdnConfiguration,
@@ -12,8 +14,29 @@ import {
   reconcileCdnConfiguration,
   reconciledFileUrl,
   reconcileStoredCdnConfig,
-  runCdnReconciliation,
+  CdnReconciliationRunner,
+  changedCdnContainers,
+  CDN_WRITE_CONCURRENCY,
 } from './cdnConfigMigration.js';
+
+// Redlock is a dependency of grpc-sdk only, so load the same classes from there.
+const redlock = createRequire(
+  createRequire(import.meta.url).resolve('@conduitplatform/grpc-sdk'),
+)('@sesamecare-oss/redlock');
+
+/** Redlock wraps whatever each Redis node answered into an ExecutionError. */
+function executionError(...votes: Error[]): Error {
+  const attempt = Promise.resolve({
+    membershipSize: votes.length,
+    quorumSize: 1,
+    votesFor: new Set(),
+    votesAgainst: new Map(votes.map((vote, i) => [`node-${i}`, vote])),
+  });
+  return new redlock.ExecutionError(
+    'The operation was unable to achieve a quorum during its retry window.',
+    [attempt],
+  );
+}
 
 const SOURCE =
   'https://account.blob.core.windows.net/media/object?se=2125-01-01T00:00:00Z&sig=keep';
@@ -283,10 +306,12 @@ describe('reconcileCdnConfiguration', () => {
     assert.ok(warnings.some(m => m.includes('file-00')));
   });
 
-  it('writes the rows of a page concurrently', async () => {
+  it('writes the rows of a page concurrently, capped per chunk', async () => {
     const env = harness({
       config: { media: CDN_HOST },
-      files: Array.from({ length: 4 }, (_, i) => file(`file-0${i}`)),
+      files: Array.from({ length: 25 }, (_, i) =>
+        file(`file-${String(i).padStart(2, '0')}`),
+      ),
     });
     const realUpdate = env.deps.updateFileUrl;
     let inFlight = 0;
@@ -298,8 +323,8 @@ describe('reconcileCdnConfiguration', () => {
       return realUpdate(...args);
     };
     await reconcileCdnConfiguration(env.deps);
-    assert.equal(peak, 4);
-    assert.equal(env.fileWrites.length, 4);
+    assert.equal(peak, CDN_WRITE_CONCURRENCY);
+    assert.equal(env.fileWrites.length, 25);
   });
 
   it('does not checkpoint or complete when a page write fails', async () => {
@@ -334,38 +359,60 @@ describe('reconcileCdnConfiguration', () => {
     assert.equal(env.docs[0]!.checkpointId, '');
   });
 
-  it('returns cleanly when another replica holds the lock', async () => {
-    const contention = Object.assign(
-      new Error('The operation was unable to achieve a quorum during its retry window.'),
-      { name: 'ExecutionError' },
-    );
+  it('returns busy when another replica holds the lock', async () => {
     const env = harness({
       config: { media: CDN_HOST },
       files: [file('file-00')],
       usingLock: async resource => {
         assert.equal(resource, CDN_RECONCILIATION_LOCK);
-        throw contention;
+        throw executionError(new redlock.ResourceLockedError('locked'));
       },
     });
-    await reconcileCdnConfiguration(env.deps);
+    assert.equal(await reconcileCdnConfiguration(env.deps), 'busy');
     assert.equal(env.queries.length, 0);
     assert.equal(env.docs.length, 0);
     assert.ok(logs.some(m => /another replica/.test(m)));
   });
 
-  it('still fails on unrelated lock errors and on errors after acquisition', async () => {
+  it('does not mistake a Redis outage for a held lock', async () => {
     const env = harness({ config: {}, files: [] });
+    env.deps.usingLock = async () => {
+      throw executionError(new Error('connect ECONNREFUSED'));
+    };
+    await assert.rejects(() => reconcileCdnConfiguration(env.deps), /quorum/);
     env.deps.usingLock = async () => {
       throw new Error('redis down');
     };
     await assert.rejects(() => reconcileCdnConfiguration(env.deps), /redis down/);
+  });
 
-    const quorum = new Error('unable to achieve a quorum');
+  it('still fails on errors after acquisition even if they look like contention', async () => {
+    const env = harness({ config: {}, files: [] });
     env.deps.usingLock = async (_resource, _ttl, fn) => {
       await fn(new AbortController().signal);
-      throw quorum;
+      throw executionError(new redlock.ResourceLockedError('locked'));
     };
     await assert.rejects(() => reconcileCdnConfiguration(env.deps), /quorum/);
+  });
+
+  it('rescans a forced container whose state says complete, writing only unequal rows', async () => {
+    const env = harness({
+      config: { media: CDN_HOST },
+      // An upload on another replica landed the old host behind the checkpoint.
+      files: [file('file-00', { url: CDN_URL }), file('file-01', { url: SOURCE })],
+      states: [completeState(CDN_HOST)],
+    });
+    await reconcileCdnConfiguration(env.deps);
+    assert.equal(env.queries.length, 0);
+
+    env.deps.force = ['media'];
+    await reconcileCdnConfiguration(env.deps);
+    assert.deepEqual(
+      env.fileWrites.map(w => w.id),
+      ['file-01'],
+    );
+    assert.equal(env.docs[0]!.status, 'complete');
+    assert.equal(env.docs[0]!.appliedHost, CDN_HOST);
   });
 
   it('retargets when config changes and refuses to finish while it keeps changing', async () => {
@@ -471,23 +518,92 @@ describe('reconcileCdnConfiguration', () => {
   });
 });
 
-describe('runCdnReconciliation', () => {
-  it('rethrows boot failures', async () => {
-    await assert.rejects(
-      () =>
-        runCdnReconciliation(async () => {
-          throw new Error('db down');
-        }, true),
-      /db down/,
+describe('changedCdnContainers', () => {
+  it('lists added, removed and changed hosts only', () => {
+    assert.deepEqual(
+      changedCdnContainers({ a: 'x', b: 'y', c: 'z' }, { a: 'x', b: 'q', d: 'n' }),
+      ['b', 'c', 'd'],
     );
+  });
+});
+
+describe('CdnReconciliationRunner', () => {
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  function runner(
+    outcomes: Array<'done' | 'busy' | Error>,
+    config: { current: CdnConfiguration },
+  ) {
+    const forces: string[][] = [];
+    const instance = new CdnReconciliationRunner(
+      async force => {
+        forces.push(force);
+        const next = outcomes.shift() ?? 'done';
+        if (next instanceof Error) throw next;
+        return next;
+      },
+      () => config.current,
+      5,
+    );
+    return { instance, forces };
+  }
+
+  it('rethrows boot failures', async () => {
+    const { instance } = runner([new Error('db down')], { current: {} });
+    await assert.rejects(() => instance.run(true), /db down/);
   });
 
   it('logs runtime failures instead of rejecting', async () => {
-    await runCdnReconciliation(async () => {
-      throw new Error('db down');
-    }, false);
+    const { instance } = runner([new Error('db down')], { current: {} });
+    await instance.run(false);
+    instance.cancel();
     assert.equal(errors.length, 1);
     assert.match(errors[0]!, /db down/);
+  });
+
+  it('does not force at boot but forces hosts that changed since the last snapshot', async () => {
+    const config = { current: { media: CDN_HOST } as CdnConfiguration };
+    const { instance, forces } = runner([], config);
+    await instance.run(true);
+    await instance.run(false);
+    config.current = { media: OTHER_HOST };
+    await instance.run(false);
+    assert.deepEqual(forces, [[], [], ['media']]);
+  });
+
+  it('keeps forcing until a changed host has been applied', async () => {
+    const config = { current: { media: CDN_HOST } as CdnConfiguration };
+    const { instance, forces } = runner(['done', new Error('boom'), 'done'], config);
+    await instance.run(false);
+    config.current = { media: OTHER_HOST };
+    await instance.run(false);
+    await sleep(30);
+    assert.deepEqual(forces, [[], ['media'], ['media']]);
+  });
+
+  it('retries after a busy lock or a runtime failure, then stops', async () => {
+    const { instance, forces } = runner(['busy', new Error('boom'), 'done'], {
+      current: {},
+    });
+    await instance.run(false);
+    await sleep(60);
+    assert.equal(forces.length, 3);
+    await sleep(30);
+    assert.equal(forces.length, 3);
+  });
+
+  it('replaces a pending retry when new config arrives and cancel clears it', async () => {
+    const { instance, forces } = runner(['busy', 'done'], { current: {} });
+    await instance.run(false);
+    await instance.run(false);
+    await sleep(30);
+    assert.equal(forces.length, 2);
+
+    const second = runner(['busy'], { current: {} });
+    await second.instance.run(false);
+    second.instance.cancel();
+    await sleep(30);
+    assert.equal(second.forces.length, 1);
   });
 });
 
@@ -575,8 +691,10 @@ describe('reconcileStoredCdnConfig', () => {
         throw new Error("Document doesn't exist or can't be modified by user.");
       },
     ]) {
+      logs.length = 0;
       install(miss);
       await run({ media: CDN_HOST });
+      assert.ok(logs.some(m => /0 updated, 0 unchanged, 1 skipped/.test(m)));
     }
   });
 
@@ -601,6 +719,30 @@ describe('reconcileStoredCdnConfig', () => {
       /requires state locks/,
     );
     assert.equal(scanned, false);
+  });
+});
+
+describe('replaceUrlHost', () => {
+  it('replaces the authority regardless of case or an explicit default port', () => {
+    assert.equal(
+      replaceUrlHost('https://Account.Blob.Core.Windows.net/m/o?sig=1', CDN_HOST),
+      'https://cdn.example.test/m/o?sig=1',
+    );
+    assert.equal(
+      replaceUrlHost('https://h.example.com:443/m/o', CDN_HOST),
+      'https://cdn.example.test/m/o',
+    );
+  });
+
+  it('does not touch the host spelled inside the path or query', () => {
+    assert.equal(
+      replaceUrlHost('https://h.example.com/h.example.com?u=h.example.com', CDN_HOST),
+      'https://cdn.example.test/h.example.com?u=h.example.com',
+    );
+  });
+
+  it('throws for urls without a host', () => {
+    assert.throws(() => replaceUrlHost('not a url', CDN_HOST));
   });
 });
 
