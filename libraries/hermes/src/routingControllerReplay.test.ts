@@ -4,6 +4,7 @@ import { Redis } from 'ioredis';
 import winston from 'winston';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ConduitRoutingController } from './index.js';
+import { ConduitMiddleware } from './interfaces/Middleware.js';
 
 const fakeLogger = Object.assign(Object.create(console), {
   winston: winston.createLogger({ silent: true }),
@@ -47,6 +48,30 @@ describe('ConduitRoutingController local middleware / recovery check replay', ()
     assert.equal(c._restRouter._localMiddlewares.get('auth'), handler);
     assert.equal(c._socketRouter._localMiddlewares.get('auth'), handler);
     assert.equal(c._socketRouter.recoveryCheck, check);
+  });
+
+  it('dedupes route middlewares by name for socket replay (last write wins, order kept)', () => {
+    const mwA = new ConduitMiddleware({}, 'mwA', async () => ({}));
+    const mwB = new ConduitMiddleware({}, 'mwB', async () => ({}));
+    const mwA2 = new ConduitMiddleware({}, 'mwA', async () => ({ v: 2 }));
+    const routes = () =>
+      c._socketRouteMiddlewares as Array<{ middleware: unknown; moduleUrl: string }>;
+
+    controller.registerRouteMiddleware(mwA, 'urlA');
+    controller.registerRouteMiddleware(mwB, 'urlB');
+    controller.registerRouteMiddleware(mwA, 'urlA');
+    assert.equal(routes().length, 2);
+
+    controller.registerRouteMiddleware(mwA2, 'urlA2');
+    assert.equal(routes().length, 2);
+    assert.deepEqual(
+      routes().map(e => [(e.middleware as ConduitMiddleware).name, e.moduleUrl]),
+      [
+        ['mwA', 'urlA2'],
+        ['mwB', 'urlB'],
+      ],
+    );
+    assert.equal(routes()[0].middleware, mwA2);
   });
 
   it('applies live registrations to running routers and honors unregister', () => {

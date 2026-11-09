@@ -158,7 +158,29 @@ export class EventBus {
       payload = message.split('CND_Signature:')[0];
     }
     for (const fn of callbacks.values()) {
-      fn(payload);
+      try {
+        const result: unknown = fn(payload);
+        if (isPromise(result)) {
+          void result.catch(err => {
+            this.logHandlerError(channel, err);
+          });
+        }
+      } catch (err) {
+        this.logHandlerError(channel, err);
+      }
     }
   }
+
+  private logHandlerError(channel: string, err: unknown): void {
+    const detail = err instanceof Error ? err.message : String(err);
+    getLogger().error(`EventBus dropped handler error on ${channel}: ${detail}`);
+  }
+}
+
+function isPromise(value: unknown): value is Promise<unknown> {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    typeof (value as Promise<unknown>).then === 'function'
+  );
 }

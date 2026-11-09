@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { EventBus } from './EventBus.js';
+import { setLogger } from './GrpcSdkContext.js';
+import type { IConduitLogger } from '../interfaces/IConduitLogger.js';
 
 type Listener = (channel: string, message: string) => void;
 
@@ -100,6 +102,42 @@ describe('EventBus', () => {
     sub.emitMessage('chan', 'x');
     assert.equal(first, 0);
     assert.equal(second, 1);
+  });
+
+  it('drops a throwing subscriber and still runs the others', () => {
+    const errors: string[] = [];
+    setLogger({
+      error: (message: string | Error) => {
+        errors.push(message instanceof Error ? message.message : message);
+        return undefined as never;
+      },
+    } as unknown as IConduitLogger);
+    try {
+      const { bus, sub } = createBus();
+      let second = 0;
+      bus.subscribe(
+        'config',
+        () => {
+          throw new SyntaxError('"reconciling" is not valid JSON');
+        },
+        'service-discovery',
+      );
+      bus.subscribe(
+        'config',
+        () => {
+          second += 1;
+        },
+        'config-storage',
+      );
+      assert.doesNotThrow(() => {
+        sub.emitMessage('config', 'reconcilingCND_Signature:someone-else');
+      });
+      assert.equal(second, 1);
+      assert.equal(errors.length, 1);
+      assert.match(errors[0], /reconciling/);
+    } finally {
+      setLogger(console);
+    }
   });
 
   it('subscribeAck rejects when Redis subscribe fails', async () => {

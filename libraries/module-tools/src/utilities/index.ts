@@ -8,3 +8,4 @@ export * from './redactSensitiveConfig.js';
 export * from './reconcileModuleConfig.js';
 export * from './accessTokenVerifier.js';
 export * from './accessTokenVerifier.logic.js';
+export * from './busMessage.js';

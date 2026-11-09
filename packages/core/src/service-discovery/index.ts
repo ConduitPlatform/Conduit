@@ -13,6 +13,7 @@ import { EventEmitter } from 'events';
 import { ServiceRegistry } from './ServiceRegistry.js';
 import { ServiceMonitor } from './ServiceMonitor.js';
 import { isEmpty } from 'lodash-es';
+import { parseConfigBusMessage } from '../configBus.js';
 
 /*
  * - Multi-instance services are not handled individually (LoadBalancer)
@@ -53,18 +54,36 @@ export class ServiceDiscovery {
       }
     }
     this.grpcSdk.bus!.subscribe('config', (message: string) => {
-      const parsedMessage = JSON.parse(message);
-      if (parsedMessage.type === 'module-health') {
-        this._serviceMonitor.updateModuleHealth(
-          parsedMessage.name,
-          parsedMessage.url,
-          parsedMessage.status,
-        );
-      } else if (parsedMessage.type === 'serving-modules-update') {
-        this._serviceRegistry.updateModule(parsedMessage.name, {
-          address: parsedMessage.url,
-          serving: true,
-        });
+      const parsed = parseConfigBusMessage(message);
+      switch (parsed.kind) {
+        case 'unknown':
+          ConduitGrpcSdk.Logger.log(`SD: ignoring non-JSON config bus message`);
+          return;
+        case 'invalid':
+          ConduitGrpcSdk.Logger.warn(
+            `SD: dropping invalid config bus message: ${parsed.reason}`,
+          );
+          return;
+        case 'module-health':
+          this._serviceMonitor.updateModuleHealth(
+            parsed.name,
+            parsed.url,
+            parsed.status as HealthCheckStatus,
+          );
+          return;
+        case 'serving-modules-update':
+          this._serviceRegistry.updateModule(parsed.name, {
+            address: parsed.url,
+            serving: true,
+          });
+          return;
+        case 'reconcile':
+        case 'ignore':
+          return;
+        default: {
+          const _exhaustive: never = parsed;
+          return _exhaustive;
+        }
       }
     });
   }

@@ -279,7 +279,16 @@ export class ConduitRoutingController {
   registerRouteMiddleware(middleware: ConduitMiddleware, moduleUrl: string) {
     this._restRouter?.registerMiddleware(middleware, moduleUrl);
     this._graphQLRouter?.registerMiddleware(middleware, moduleUrl);
-    this._socketRouteMiddlewares.push({ middleware, moduleUrl });
+    // Last-write-wins by name (matches ConduitRouter.registerMiddleware), so repeated
+    // registrations of the same middleware don't grow the list or duplicate on replay.
+    const existing = this._socketRouteMiddlewares.findIndex(
+      entry => entry.middleware.name === middleware.name,
+    );
+    if (existing === -1) {
+      this._socketRouteMiddlewares.push({ middleware, moduleUrl });
+    } else {
+      this._socketRouteMiddlewares[existing] = { middleware, moduleUrl };
+    }
     this._socketRouter?.registerMiddleware(middleware, moduleUrl);
     this._mcpRouter?.registerMiddleware(middleware, moduleUrl);
   }

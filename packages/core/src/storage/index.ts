@@ -4,6 +4,7 @@ import * as models from '../models/index.js';
 import { ServiceDiscovery } from '../service-discovery/index.js';
 import { clearInterval } from 'timers';
 import { ServiceRegistry } from '../service-discovery/ServiceRegistry.js';
+import { parseConfigBusMessage } from '../configBus.js';
 
 export type ConfigVersionMeta = { version: number; explicit: boolean };
 
@@ -57,10 +58,21 @@ export class ConfigStorage {
 
   highAvailability() {
     this.grpcSdk.bus!.subscribe('config', (message: string) => {
-      if (message === 'reconciling') {
-        this.reconciling = true;
-      } else if (message === 'reconcile-done') {
-        this.reconciling = false;
+      const parsed = parseConfigBusMessage(message);
+      switch (parsed.kind) {
+        case 'reconcile':
+          this.reconciling = parsed.state === 'reconciling';
+          return;
+        case 'module-health':
+        case 'serving-modules-update':
+        case 'unknown':
+        case 'invalid':
+        case 'ignore':
+          return;
+        default: {
+          const _exhaustive: never = parsed;
+          return _exhaustive;
+        }
       }
     });
   }
