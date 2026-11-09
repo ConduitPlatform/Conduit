@@ -1,6 +1,6 @@
 import { ConduitGrpcSdk, Indexable, isLockContention } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
-import { File, _StorageCdnState } from '../models/index.js';
+import { File, _StorageCdnHostState } from '../models/index.js';
 import { replaceUrlHost } from '../utils/index.js';
 
 export type CdnConfiguration = Record<string, string>;
@@ -312,7 +312,7 @@ export async function reconcileStoredCdnConfig(
     throw new Error('CDN reconciliation requires state locks');
   }
   const files = File.getInstance();
-  const states = _StorageCdnState.getInstance();
+  const states = _StorageCdnHostState.getInstance();
   return reconcileCdnConfiguration({
     force,
     readConfig: () =>

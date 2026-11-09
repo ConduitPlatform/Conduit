@@ -2,7 +2,7 @@ import { afterEach, before, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { ConduitGrpcSdk, type IConduitLogger } from '@conduitplatform/grpc-sdk';
-import { File, _StorageContainer, _StorageCdnState } from '../models/index.js';
+import { File, _StorageContainer, _StorageCdnHostState } from '../models/index.js';
 import { replaceUrlHost } from '../utils/index.js';
 import { migrateFileUriReferences } from './fileUriMigration.js';
 import {
@@ -609,11 +609,11 @@ describe('CdnReconciliationRunner', () => {
 
 describe('reconcileStoredCdnConfig', () => {
   const originalFile = File.getInstance.bind(File);
-  const originalState = _StorageCdnState.getInstance.bind(_StorageCdnState);
+  const originalState = _StorageCdnHostState.getInstance.bind(_StorageCdnHostState);
 
   afterEach(() => {
     File.getInstance = originalFile;
-    _StorageCdnState.getInstance = originalState;
+    _StorageCdnHostState.getInstance = originalState;
   });
 
   function install(updateOne: (filter: any, patch: any) => Promise<unknown>) {
@@ -623,7 +623,7 @@ describe('reconcileStoredCdnConfig', () => {
       updateOne,
     })) as unknown as typeof File.getInstance;
     const rows: any[] = [];
-    _StorageCdnState.getInstance = (() => ({
+    _StorageCdnHostState.getInstance = (() => ({
       findMany: async () => rows,
       findOne: async (filter: any) =>
         rows.find(row => row.container === filter.container) ?? null,
@@ -638,7 +638,7 @@ describe('reconcileStoredCdnConfig', () => {
         );
         stateWrites.push({ filter, patch });
       },
-    })) as unknown as typeof _StorageCdnState.getInstance;
+    })) as unknown as typeof _StorageCdnHostState.getInstance;
     return stateWrites;
   }
 
@@ -748,7 +748,7 @@ describe('replaceUrlHost', () => {
 
 describe('cdn state schema', () => {
   it('requires one unique container field and has no fence', () => {
-    const model = _StorageCdnState.getInstance({} as never);
+    const model = _StorageCdnHostState.getInstance({} as never);
     try {
       const container = model.fields.container as {
         unique?: boolean;
@@ -757,8 +757,11 @@ describe('cdn state schema', () => {
       assert.equal(container.required, true);
       assert.equal(container.unique, true);
       assert.equal('fence' in model.fields, false);
+      // Must not reuse the earlier build's table, which has a NOT NULL fence column.
+      assert.equal(model.name, '_StorageCdnHostState');
+      assert.notEqual(model.name, '_StorageCdnState');
     } finally {
-      (_StorageCdnState as unknown as { _instance?: unknown })._instance = undefined;
+      (_StorageCdnHostState as unknown as { _instance?: unknown })._instance = undefined;
     }
   });
 });
