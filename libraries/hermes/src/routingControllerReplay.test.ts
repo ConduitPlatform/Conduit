@@ -54,7 +54,8 @@ describe('ConduitRoutingController local middleware / recovery check replay', ()
     const mwA = new ConduitMiddleware({}, 'mwA', async () => ({}));
     const mwB = new ConduitMiddleware({}, 'mwB', async () => ({}));
     const mwA2 = new ConduitMiddleware({}, 'mwA', async () => ({ v: 2 }));
-    const routes = () => c._socketRouteMiddlewares as Array<{ middleware: unknown; moduleUrl: string }>;
+    const routes = () =>
+      c._socketRouteMiddlewares as Array<{ middleware: unknown; moduleUrl: string }>;
 
     controller.registerRouteMiddleware(mwA, 'urlA');
     controller.registerRouteMiddleware(mwB, 'urlB');

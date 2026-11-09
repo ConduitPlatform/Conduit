@@ -106,7 +106,9 @@ describe('admin routes after a core restart', () => {
   it('restores only the last url when state already holds two for a module', () => {
     const restored = adminRoutesFromState<Route>({
       routes: [
-        entry('conduit-authentication-old:5000', 'authentication', ['/authentication/gone']),
+        entry('conduit-authentication-old:5000', 'authentication', [
+          '/authentication/gone',
+        ]),
         entry(storageUrl, 'storage', ['/storage/files']),
         entry(authenticationUrl, 'authentication', ['/authentication/users']),
       ],
