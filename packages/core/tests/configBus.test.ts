@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { configReconcileMessage, parseConfigBusMessage } from '../src/configBus.ts';
+import { parseConfigBusMessage } from '../src/configBus.ts';
 
 describe('config bus messages', () => {
   it('accepts the legacy bare reconciling signal without throwing', () => {
@@ -9,17 +9,6 @@ describe('config bus messages', () => {
       state: 'reconciling',
     });
     assert.deepEqual(parseConfigBusMessage('reconcile-done'), {
-      kind: 'reconcile',
-      state: 'reconcile-done',
-    });
-  });
-
-  it('publishes the reconcile signal as JSON on the shared config channel', () => {
-    assert.deepEqual(parseConfigBusMessage(configReconcileMessage(true)), {
-      kind: 'reconcile',
-      state: 'reconciling',
-    });
-    assert.deepEqual(parseConfigBusMessage(configReconcileMessage(false)), {
       kind: 'reconcile',
       state: 'reconcile-done',
     });
@@ -58,8 +47,24 @@ describe('config bus messages', () => {
     );
   });
 
-  it('reports malformed JSON instead of throwing', () => {
-    const parsed = parseConfigBusMessage('{');
-    assert.equal(parsed.kind, 'malformed');
+  it('classifies non-JSON messages as unknown instead of throwing', () => {
+    assert.deepEqual(parseConfigBusMessage('{'), { kind: 'unknown', raw: '{' });
+    assert.deepEqual(parseConfigBusMessage('something-else'), {
+      kind: 'unknown',
+      raw: 'something-else',
+    });
+  });
+
+  it('flags known types with wrong fields as invalid', () => {
+    assert.equal(
+      parseConfigBusMessage(JSON.stringify({ type: 'module-health', name: 'a' })).kind,
+      'invalid',
+    );
+    assert.equal(
+      parseConfigBusMessage(JSON.stringify({ type: 'serving-modules-update', url: 1 }))
+        .kind,
+      'invalid',
+    );
+    assert.equal(parseConfigBusMessage(JSON.stringify({ type: 'other' })).kind, 'ignore');
   });
 });

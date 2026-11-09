@@ -43,7 +43,12 @@ import { generateConfigDefaults } from './utils/config.js';
 import { resolveProtoPath } from '../utils/index.js';
 import metricsSchema from './metrics/index.js';
 import cors from 'cors';
-import { ConfigController, GrpcServer, merge } from '@conduitplatform/module-tools';
+import {
+  ConfigController,
+  GrpcServer,
+  merge,
+  parseBusJson,
+} from '@conduitplatform/module-tools';
 import { fileURLToPath } from 'node:url';
 import { loadReadinessConfig } from '../health/config.js';
 import { getReadinessMiddleware } from '../health/readinessMiddleware.js';
@@ -66,6 +71,7 @@ export default class AdminModule {
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
   } = {};
+  private readonly _moduleUrls = new Map<string, string>();
   private databaseHandled = false;
   private hasAppliedMiddleware: string[] = [];
   private _refreshTimeout: NodeJS.Timeout | null = null;
@@ -147,18 +153,14 @@ export default class AdminModule {
 
   async subscribeToBusEvents() {
     this.grpcSdk.bus!.subscribe('admin:config:update', (config: string) => {
-      let cfg: convict.Config<any>;
-      try {
-        cfg = JSON.parse(config);
-      } catch (err) {
+      const parsed = parseBusJson(config);
+      if (!parsed.ok) {
         ConduitGrpcSdk.Logger.error(
-          `Dropping malformed admin config update: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
+          `Dropping malformed admin config update: ${parsed.error}`,
         );
         return;
       }
-      this.handleConfigUpdate(cfg);
+      this.handleConfigUpdate(parsed.value as convict.Config<any>);
     });
     ConfigController.getInstance().config = await this.configManager.get('admin');
     this.onConfig();
@@ -341,6 +343,14 @@ export default class AdminModule {
         this._router.registerConduitSocket(r);
       }
     });
+    if (moduleName) {
+      const previousUrl = this._moduleUrls.get(moduleName);
+      if (previousUrl !== undefined && previousUrl !== url) {
+        // Module moved: let cleanupRoutes drop paths registered at the old url.
+        delete this._grpcRoutes[previousUrl];
+      }
+      this._moduleUrls.set(moduleName, url);
+    }
     // @ts-ignore
     this._grpcRoutes[url] = routes;
     this.cleanupRoutes();
@@ -435,14 +445,15 @@ export default class AdminModule {
   }
 
   private async highAvailability() {
+    // Subscribe first so a registration published during recovery is not lost.
+    this.grpcSdk.bus!.subscribe('admin', (message: string) => {
+      this.applyAdminBusMessage(message);
+    });
     try {
       await this.recoverRoutesFromState();
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
     }
-    this.grpcSdk.bus!.subscribe('admin', (message: string) => {
-      this.applyAdminBusMessage(message);
-    });
   }
 
   /**

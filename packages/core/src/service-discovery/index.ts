@@ -56,9 +56,12 @@ export class ServiceDiscovery {
     this.grpcSdk.bus!.subscribe('config', (message: string) => {
       const parsed = parseConfigBusMessage(message);
       switch (parsed.kind) {
-        case 'malformed':
-          ConduitGrpcSdk.Logger.error(
-            `SD: dropping malformed config bus message: ${parsed.error}`,
+        case 'unknown':
+          ConduitGrpcSdk.Logger.log(`SD: ignoring non-JSON config bus message`);
+          return;
+        case 'invalid':
+          ConduitGrpcSdk.Logger.warn(
+            `SD: dropping invalid config bus message: ${parsed.reason}`,
           );
           return;
         case 'module-health':

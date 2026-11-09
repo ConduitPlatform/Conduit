@@ -4,7 +4,7 @@ import * as models from '../models/index.js';
 import { ServiceDiscovery } from '../service-discovery/index.js';
 import { clearInterval } from 'timers';
 import { ServiceRegistry } from '../service-discovery/ServiceRegistry.js';
-import { configReconcileMessage, parseConfigBusMessage } from '../configBus.js';
+import { parseConfigBusMessage } from '../configBus.js';
 
 export type ConfigVersionMeta = { version: number; explicit: boolean };
 
@@ -63,13 +63,10 @@ export class ConfigStorage {
         case 'reconcile':
           this.reconciling = parsed.state === 'reconciling';
           return;
-        case 'malformed':
-          ConduitGrpcSdk.Logger.error(
-            `Config: dropping malformed config bus message: ${parsed.error}`,
-          );
-          return;
         case 'module-health':
         case 'serving-modules-update':
+        case 'unknown':
+        case 'invalid':
         case 'ignore':
           return;
         default: {
@@ -82,7 +79,7 @@ export class ConfigStorage {
 
   changeState(reconciling: boolean) {
     this.reconciling = reconciling;
-    this.grpcSdk.bus!.publish('config', configReconcileMessage(reconciling));
+    this.grpcSdk.bus!.publish('config', reconciling ? 'reconciling' : 'reconcile-done');
   }
 
   versionKey(moduleName: string) {

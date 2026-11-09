@@ -31,7 +31,8 @@ export function readPersistedAdminRoutes<T = unknown>(
 }
 
 /**
- * Routes persisted by a previous core process. The last entry for a url wins:
+ * Routes persisted by a previous core process. The last entry for a url wins,
+ * and so does the last entry for a moduleName (older urls are stale):
  * a falsy index used to push a duplicate instead of replacing index 0.
  * Module health is not consulted. Already-running modules do not re-register
  * after core restarts, matching the router's recovery of client routes.
@@ -46,6 +47,14 @@ export function adminRoutesFromState<T = unknown>(
   for (const entry of routes) {
     const parsed = readPersistedAdminRoutes<T>(entry);
     if (!parsed) continue;
+    if (parsed.moduleName) {
+      // Only the last entry per module survives; earlier urls are stale.
+      for (const [url, other] of byUrl) {
+        if (other.moduleName === parsed.moduleName && url !== parsed.url) {
+          byUrl.delete(url);
+        }
+      }
+    }
     byUrl.set(parsed.url, parsed);
   }
   return [...byUrl.values()];
@@ -73,7 +82,19 @@ export function upsertAdminRoute<T>(
   entry: PersistedAdminRoutes<T>,
 ): AdminRouteState {
   const next: AdminRouteState = state && typeof state === 'object' ? { ...state } : {};
-  const existing = Array.isArray(next.routes) ? [...next.routes] : [];
+  let existing = Array.isArray(next.routes) ? [...next.routes] : [];
+  if (entry.moduleName) {
+    // The module moved: drop its entries for any other url.
+    existing = existing.filter(value => {
+      const v = value as { url?: unknown; moduleName?: unknown } | null;
+      return !(
+        !!v &&
+        typeof v === 'object' &&
+        v.moduleName === entry.moduleName &&
+        v.url !== entry.url
+      );
+    });
+  }
   const index = existing.findIndex(value => {
     return (
       !!value &&

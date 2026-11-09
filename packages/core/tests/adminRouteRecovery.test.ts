@@ -71,6 +71,53 @@ describe('admin routes after a core restart', () => {
     assert.equal(restored[0].routes[0].options.path, '/authentication/users');
   });
 
+  it('drops the old url when a module moves to a new one', () => {
+    const oldUrl = 'conduit-authentication-old:5000';
+    let state = upsertAdminRoute(
+      undefined,
+      entry(oldUrl, 'authentication', ['/authentication/users', '/authentication/gone']),
+    );
+    state = upsertAdminRoute(state, entry(storageUrl, 'storage', ['/storage/files']));
+    state = upsertAdminRoute(
+      state,
+      entry(authenticationUrl, 'authentication', ['/authentication/users']),
+    );
+    const persisted = state.routes as PersistedAdminRoutes<Route>[];
+    assert.equal(persisted.length, 2);
+    assert.equal(
+      persisted.some(item => item.url === oldUrl),
+      false,
+    );
+    const restored = adminRoutesFromState<Route>(state);
+    const auth = restored.filter(item => item.moduleName === 'authentication');
+    assert.equal(auth.length, 1);
+    assert.equal(auth[0].url, authenticationUrl);
+  });
+
+  it('keeps url-keyed behavior for entries without a moduleName', () => {
+    let state = upsertAdminRoute(undefined, {
+      url: 'a:1',
+      routes: [],
+    } as PersistedAdminRoutes<Route>);
+    state = upsertAdminRoute(state, { url: 'b:1', routes: [] });
+    assert.equal((state.routes as unknown[]).length, 2);
+  });
+
+  it('restores only the last url when state already holds two for a module', () => {
+    const restored = adminRoutesFromState<Route>({
+      routes: [
+        entry('conduit-authentication-old:5000', 'authentication', ['/authentication/gone']),
+        entry(storageUrl, 'storage', ['/storage/files']),
+        entry(authenticationUrl, 'authentication', ['/authentication/users']),
+      ],
+    });
+    assert.equal(restored.length, 2);
+    const auth = restored.filter(item => item.moduleName === 'authentication');
+    assert.equal(auth.length, 1);
+    assert.equal(auth[0].url, authenticationUrl);
+    assert.equal(auth[0].routes[0].options.path, '/authentication/users');
+  });
+
   it('reads the payload published on the admin channel', () => {
     const published = JSON.stringify(
       entry(authenticationUrl, 'authentication', ['/authentication/users']),
