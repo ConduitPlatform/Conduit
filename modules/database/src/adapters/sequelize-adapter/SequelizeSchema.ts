@@ -2,7 +2,6 @@ import {
   FindAttributeOptions,
   FindOptions,
   ModelStatic,
-  Op,
   Order,
   OrderItem,
   Sequelize,
@@ -15,13 +14,7 @@ import {
   Query,
   SchemaAdapter,
   SingleDocQuery,
-  type Schema as AdapterSchema,
 } from '../../interfaces/index.js';
-import {
-  sqlRowLock,
-  sqlTransactionOptions,
-  supportedSqlDialect,
-} from './utils/sqlTransaction.js';
 import {
   extractRelations,
   getTransactionAndParsedQuery,
@@ -708,174 +701,6 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   }
 
   async updateOne(
-    filterQuery: Query,
-    query: SingleDocQuery,
-    options?: {
-      userId?: string;
-      scope?: string;
-      populate?: string[];
-      transaction?: Transaction;
-    },
-  ): Promise<any> {
-    return this.updateOneByLocatedId(filterQuery, query, options);
-  }
-
-  async compareAndSet(
-    filterQuery: Query,
-    query: SingleDocQuery,
-    guard?: { schema: AdapterSchema; filter: Query },
-  ): Promise<any | null> {
-    if (guard && !(guard.schema instanceof SequelizeSchema)) {
-      throw new Error('compareAndSet guard must use the same SQL adapter');
-    }
-    const patch = this.plainFieldPatch(query);
-    if (!patch) {
-      throw new Error('compareAndSet accepts only a plain field patch');
-    }
-    const transaction = await this.sequelize.transaction(
-      sqlTransactionOptions(supportedSqlDialect(this.sequelize.getDialect())),
-    );
-    try {
-      if (guard) {
-        if (!(guard.schema instanceof SequelizeSchema)) {
-          throw new Error('compareAndSet guard must use the same SQL adapter');
-        }
-        const held = await guard.schema.claimGuard(guard.filter, transaction);
-        if (!held) {
-          await transaction.rollback();
-          return null;
-        }
-      }
-      const written = await this.writeWhere(filterQuery, patch, transaction);
-      if (!written) {
-        await transaction.rollback();
-        return null;
-      }
-      await transaction.commit();
-      return written;
-    } catch (error) {
-      if (!(transaction as { finished?: string }).finished) await transaction.rollback();
-      throw error;
-    }
-  }
-
-  private plainFieldPatch(query: SingleDocQuery): ParsedQuery | undefined {
-    const raw = this.parseStringToQuery(query);
-    if (Array.isArray(raw) || raw === null || typeof raw !== 'object') return undefined;
-    const record = raw as ParsedQuery;
-    const unwrapped = record.$set;
-    const candidate =
-      unwrapped && typeof unwrapped === 'object' && !Array.isArray(unwrapped)
-        ? (unwrapped as ParsedQuery)
-        : record;
-    if (candidate !== record && Object.keys(record).some(key => key !== '$set')) {
-      return undefined;
-    }
-    const keys = Object.keys(candidate);
-    if (keys.some(key => key.startsWith('$'))) return undefined;
-    if (
-      keys.some(key => Object.prototype.hasOwnProperty.call(this.extractedRelations, key))
-    ) {
-      return undefined;
-    }
-    return { ...candidate };
-  }
-
-  /**
-   * Writes the guard row so this transaction conflicts with a newer fence
-   * update. Model.update is not used: Sequelize skips the statement and
-   * returns zero rows when the only assigned column is updatedAt. MySQL and
-   * MariaDB also report zero changed rows when every assigned value is
-   * identical, so the stored timestamp moves by one second.
-   */
-  private async claimGuard(
-    filterQuery: Query,
-    transaction: Transaction,
-  ): Promise<boolean> {
-    if (!this.model.rawAttributes.updatedAt) {
-      throw new Error('compareAndSet guard requires an updatedAt column');
-    }
-    const parsed = this.parseStringToQuery(filterQuery) as ParsedQuery;
-    const { filter } = parseQueryFilter(this, parsed);
-    const lock = sqlRowLock(supportedSqlDialect(this.sequelize.getDialect()));
-    incrementDbQueries();
-    const row = await this.model.findOne({
-      where: filter,
-      transaction,
-      ...(lock ? { lock } : {}),
-    });
-    if (!row) return false;
-    const current = row.get('updatedAt');
-    const currentMs =
-      current instanceof Date ? current.getTime() : new Date(current as string).getTime();
-    const next = new Date((Number.isFinite(currentMs) ? currentMs : Date.now()) + 1000);
-    incrementDbQueries();
-    // Model.update skips a statement whose only assignment is updatedAt.
-    // bulkUpdate's published types do not describe the runtime count or the
-    // attribute map used to format the timestamp.
-    const queryInterface = this.sequelize.getQueryInterface();
-    const writeGuard = queryInterface.bulkUpdate.bind(queryInterface) as unknown as (
-      tableName: unknown,
-      values: object,
-      identifier: object,
-      options: { transaction: Transaction },
-      attributes: object,
-    ) => Promise<number>;
-    const affected = await writeGuard(
-      this.model.getTableName(),
-      { updatedAt: next },
-      filter,
-      { transaction },
-      this.model.rawAttributes,
-    );
-    return affected === 1;
-  }
-
-  private async writeWhere(
-    filterQuery: Query,
-    patch: ParsedQuery,
-    transaction: Transaction,
-    options?: { userId?: string; scope?: string },
-  ): Promise<any | null> {
-    const parsed = this.parseStringToQuery(filterQuery) as ParsedQuery;
-    const authorized = await this.getAuthorizedQuery(
-      'edit',
-      parsed,
-      false,
-      options?.userId,
-      options?.scope,
-    );
-    if (isNil(authorized)) return null;
-    const { filter } = parseQueryFilter(this, authorized as ParsedQuery);
-    const lock = sqlRowLock(supportedSqlDialect(this.sequelize.getDialect()));
-    incrementDbQueries();
-    const located = await this.model.findOne({
-      where: filter,
-      transaction,
-      ...(lock ? { lock } : {}),
-    });
-    if (!located) return null;
-    const pk = this.model.primaryKeyAttribute;
-    const id = located.get(pk);
-    processCreateQuery(patch, this.objectPaths);
-    incrementDbQueries();
-    const [count] = await this.model.update(
-      { ...patch },
-      { where: { [Op.and]: [filter, { [pk]: id }] }, transaction },
-    );
-    if (count !== 1) {
-      const still = await this.model.findOne({
-        where: { [Op.and]: [filter, { [pk]: id }] },
-        transaction,
-        ...(lock ? { lock } : {}),
-      });
-      return still ? still.toJSON() : null;
-    }
-    const fresh = await this.model.findByPk(id, { transaction, nest: true });
-    return fresh ? fresh.toJSON() : null;
-  }
-
-  private updateOneByLocatedId(
     filterQuery: Query,
     query: SingleDocQuery,
     options?: {

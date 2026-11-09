@@ -13,7 +13,6 @@ import {
 } from '../../adapters/utils/database-transform-utils.js';
 import { sqlSchemaConverter } from '../../adapters/sequelize-adapter/sql-adapter/SqlSchemaConverter.js';
 import { pgSchemaConverter } from '../../adapters/sequelize-adapter/postgres-adapter/PgSchemaConverter.js';
-import { Schema } from 'mongoose';
 import { schemaConverter } from '../../adapters/mongoose-adapter/SchemaConverter.js';
 
 type ConvertedSqlIndex = {
@@ -336,45 +335,6 @@ describe('SQL index converters', () => {
     };
     expect(index.name).toBe('cnd_idx_Permission_resource_asc');
     expect(index.fields[0]).toEqual({ name: 'resource', order: 'ASC' });
-  });
-});
-
-describe('storage CDN state uniqueness', () => {
-  const cdnState = () =>
-    new ConduitSchema(
-      '_StorageCdnState',
-      {
-        container: { type: TYPE.String, required: true, unique: true },
-        status: { type: TYPE.String, required: true },
-        appliedHost: { type: TYPE.String, required: false },
-        fence: { type: TYPE.Number, required: true },
-      },
-      { timestamps: true },
-    );
-
-  it('keeps a unique mongoose index on container', () => {
-    const converted = schemaConverter(cdnState());
-    const container = converted.fields.container as {
-      unique?: boolean;
-      required?: boolean;
-    };
-    expect(container.unique).toBe(true);
-    expect(container.required).toBe(true);
-    const indexes = new Schema(converted.fields).indexes();
-    const containerIndex = indexes.find(([keys]) => keys.container === 1);
-    expect(containerIndex?.[1]).toEqual(expect.objectContaining({ unique: true }));
-  });
-
-  it('keeps a unique SQL column on container', () => {
-    const [converted] = sqlSchemaConverter(cdnState());
-    const container = converted.fields.container as {
-      unique?: boolean;
-      allowNull?: boolean;
-    };
-    expect(container.unique).toBe(true);
-    expect(container.allowNull).toBe(false);
-    const [postgres] = pgSchemaConverter(cdnState());
-    expect((postgres.fields.container as { unique?: boolean }).unique).toBe(true);
   });
 });
 

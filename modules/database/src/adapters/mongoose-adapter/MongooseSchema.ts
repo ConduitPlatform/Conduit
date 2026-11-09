@@ -15,9 +15,7 @@ import {
   Query,
   SchemaAdapter,
   SingleDocQuery,
-  type Schema as AdapterSchema,
 } from '../../interfaces/index.js';
-import { CompareAndSetMiss } from '../compareAndSetMiss.js';
 import { MongooseAdapter } from './index.js';
 import {
   ConduitGrpcSdk,
@@ -198,72 +196,6 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       finalQuery = this.populate(finalQuery, options?.populate);
     }
     return finalQuery.lean().exec();
-  }
-
-  /**
-   * One transaction writes the guard document and the target document.
-   * Snapshot isolation alone would allow a file write after merely reading
-   * the fence, so the guard update (`updatedAt`) conflicts with a newer
-   * fence increment. A miss aborts the transaction and returns null.
-   * Requires a replica set; a standalone MongoDB throws and the caller
-   * must not treat that as success.
-   */
-  async compareAndSet(
-    filterQuery: Query,
-    query: SingleDocQuery,
-    guard?: { schema: AdapterSchema; filter: Query },
-  ): Promise<any | null> {
-    if (guard && !(guard.schema instanceof MongooseSchema)) {
-      throw new Error('compareAndSet guard must use the same Mongo adapter');
-    }
-    const session = await this.model.db.startSession();
-    try {
-      return await session.withTransaction(
-        async () => {
-          if (guard) {
-            const guardSchema = guard.schema as MongooseSchema;
-            const guardFilter = parseQuery(
-              guardSchema.parseStringToQuery(guard.filter) as ParsedQuery,
-            );
-            const guarded = await guardSchema.model.findOneAndUpdate(
-              guardFilter,
-              { $currentDate: { updatedAt: true } },
-              { session, returnDocument: 'after' },
-            );
-            if (!guarded) throw new CompareAndSetMiss();
-          }
-          let parsedFilter: Indexable | null = parseQuery(
-            this.parseStringToQuery(filterQuery) as ParsedQuery,
-          );
-          parsedFilter = await this.getAuthorizedQuery('edit', parsedFilter, false);
-          if (isNil(parsedFilter)) throw new CompareAndSetMiss();
-          let parsedQuery = this.parseStringToQuery(query) as ParsedQuery;
-          if (parsedQuery.$set) parsedQuery = parsedQuery.$set;
-          const wc = this.effectiveWriteConcern;
-          const doc = await this.model.findOneAndUpdate(parsedFilter, parsedQuery, {
-            session,
-            returnDocument: 'after',
-            ...(wc && { writeConcern: wc }),
-          });
-          if (!doc) throw new CompareAndSetMiss();
-          return doc.toObject({ flattenMaps: true });
-        },
-        {
-          readConcern: { level: 'snapshot' },
-          writeConcern: { w: 'majority' },
-        },
-      );
-    } catch (error) {
-      if (
-        error instanceof CompareAndSetMiss ||
-        (error as Error).name === 'CompareAndSetMiss'
-      ) {
-        return null;
-      }
-      throw error;
-    } finally {
-      await session.endSession();
-    }
   }
 
   async updateOne(

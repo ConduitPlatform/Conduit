@@ -120,8 +120,6 @@ export default class DatabaseModule extends ManagedModule<Config> {
       findByIdAndReplace: this.findByIdAndReplace.bind(this),
       replaceOne: this.replaceOne.bind(this),
       updateOne: this.updateOne.bind(this),
-      compareAndSet: this.compareAndSet.bind(this),
-      guardedUpdateCapability: this.guardedUpdateCapability.bind(this),
       updateMany: this.updateMany.bind(this),
       deleteOne: this.deleteOne.bind(this),
       deleteMany: this.deleteMany.bind(this),
@@ -815,13 +813,6 @@ export default class DatabaseModule extends ManagedModule<Config> {
         });
       }
 
-      if (call.request.guardSchema || call.request.guardFilter) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'guarded updates must use compareAndSet',
-        });
-      }
-
       const result = await schemaAdapter.model.updateOne(
         call.request.filterQuery,
         call.request.query,
@@ -841,79 +832,6 @@ export default class DatabaseModule extends ManagedModule<Config> {
       }
 
       callback(null, { result: resultString });
-    } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
-    }
-  }
-
-  async guardedUpdateCapability(
-    _call: GrpcRequest<Empty>,
-    callback: GrpcResponse<Empty>,
-  ) {
-    callback(null, {});
-  }
-
-  async compareAndSet(
-    call: GrpcRequest<UpdateManyRequest>,
-    callback: GrpcResponse<QueryResponse>,
-  ) {
-    const moduleName = call.metadata!.get('module-name')![0] as string;
-    const { schemaName } = call.request;
-    try {
-      const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (
-        !(await canModify(
-          moduleName,
-          schemaAdapter.model,
-          JSON.parse(call.request.query),
-        ))
-      ) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
-        });
-      }
-      const guardSchemaName = call.request.guardSchema;
-      const guardFilter = call.request.guardFilter;
-      if ((guardSchemaName && !guardFilter) || (!guardSchemaName && guardFilter)) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'guardSchema and guardFilter must be set together',
-        });
-      }
-      if (call.request.userId || call.request.scope) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'compareAndSet cannot take userId or scope',
-        });
-      }
-      let guard: { schema: typeof schemaAdapter.model; filter: string } | undefined;
-      if (guardSchemaName && guardFilter) {
-        const guardAdapter = this._activeAdapter.getSchemaModel(guardSchemaName);
-        if (!(await canModify(moduleName, guardAdapter.model))) {
-          return callback({
-            code: status.PERMISSION_DENIED,
-            message: `Module ${moduleName} is not authorized to modify ${guardSchemaName} entries!`,
-          });
-        }
-        guard = { schema: guardAdapter.model, filter: guardFilter };
-      }
-      const guarded = await schemaAdapter.model.compareAndSet(
-        call.request.filterQuery,
-        call.request.query,
-        guard,
-      );
-      const guardedString = JSON.stringify(guarded);
-      if (guarded != null && shouldPublishMutationEvent(call.request.suppressEvent)) {
-        this.grpcSdk.bus?.publish(
-          mutationEventChannel(this.name, 'update', schemaName),
-          guardedString,
-        );
-      }
-      callback(null, { result: guardedString });
     } catch (err) {
       callback({
         code: status.INTERNAL,

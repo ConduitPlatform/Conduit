@@ -141,10 +141,6 @@ message UpdateManyRequest {
   optional string scope = 6;
   // When true, skip bus publication. Existing callers omit this and keep publishing.
   optional bool suppressEvent = 7;
-  // Honored only by compareAndSet. updateOne rejects these fields.
-  // A miss returns JSON null instead of an error.
-  optional string guardSchema = 8;
-  optional string guardFilter = 9;
 }
 
 message DropCollectionRequest {
@@ -247,10 +243,6 @@ service DatabaseProvider {
   rpc findByIdAndReplace(UpdateRequest) returns (QueryResponse);
   rpc updateMany(UpdateManyRequest) returns (QueryResponse);
   rpc updateOne(UpdateManyRequest) returns (QueryResponse);
-  // Separate method so an older database service fails the call instead of
-  // applying updateOne and dropping unknown guard fields.
-  rpc compareAndSet(UpdateManyRequest) returns (QueryResponse);
-  rpc guardedUpdateCapability(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc replaceOne(UpdateManyRequest) returns (QueryResponse);
   rpc countDocuments(QueryRequest) returns (QueryResponse);
   rpc rawQuery(RawQueryRequest) returns (QueryResponse);

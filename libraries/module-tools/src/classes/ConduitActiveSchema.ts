@@ -65,10 +65,6 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     return this.dbInstance.updateOne(this.name, filterQuery, query, options);
   }
 
-  compareAndSet(filterQuery: Query<T>, query: Query<T>, options?: PopulateAuthzOptions) {
-    return this.dbInstance.compareAndSet(this.name, filterQuery, query, options);
-  }
-
   updateMany(filterQuery: Query<T>, query: Query<T>, options?: PopulateAuthzOptions) {
     return this.dbInstance.updateMany(this.name, filterQuery, query, options);
   }

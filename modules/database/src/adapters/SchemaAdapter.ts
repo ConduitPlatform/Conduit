@@ -437,18 +437,6 @@ export abstract class SchemaAdapter<T> {
     },
   ): Promise<any>;
 
-  /**
-   * Updates one document only when `filterQuery` still matches, inside one
-   * transaction. When `guard` is set, that transaction also updates the guard
-   * document, so a stale guard filter rolls the document write back. A miss
-   * returns null. Callers that pass userId or scope stay on updateOne.
-   */
-  abstract compareAndSet(
-    filterQuery: Query,
-    query: SingleDocQuery,
-    guard?: { schema: Schema; filter: Query },
-  ): Promise<any | null>;
-
   abstract updateMany(
     filterQuery: Query,
     query: SingleDocQuery,

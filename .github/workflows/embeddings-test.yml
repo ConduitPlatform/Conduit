@@ -37,52 +37,6 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     name: Embeddings unit and contract tests
-    env:
-      CDN_CAS_POSTGRES_URL: postgres://cas:cas@127.0.0.1:5432/cas
-      CDN_CAS_MYSQL_URL: mysql://cas:cas@127.0.0.1:3306/cas
-      CDN_CAS_MARIADB_URL: mariadb://cas:cas@127.0.0.1:3307/cas
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: cas
-          POSTGRES_PASSWORD: cas
-          POSTGRES_DB: cas
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U cas -d cas"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: cas
-          MYSQL_USER: cas
-          MYSQL_PASSWORD: cas
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -proot"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 20
-      mariadb:
-        image: mariadb:11
-        env:
-          MARIADB_ROOT_PASSWORD: root
-          MARIADB_DATABASE: cas
-          MARIADB_USER: cas
-          MARIADB_PASSWORD: cas
-        ports:
-          - 3307:3306
-        options: >-
-          --health-cmd "healthcheck.sh --connect --innodb_initialized"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 20
     steps:
       - name: Checkout
         uses: actions/checkout@v7
