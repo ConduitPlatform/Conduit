@@ -5,7 +5,7 @@ import { applyCdnHost } from '../utils/index.js';
 
 export type CdnConfiguration = Record<string, string>;
 
-const UPDATE_BATCH_SIZE = 50;
+const UPDATE_BATCH_SIZE = 200;
 
 type MigrationCounts = { updated: number; unchanged: number; missingSourceUrl: number };
 
