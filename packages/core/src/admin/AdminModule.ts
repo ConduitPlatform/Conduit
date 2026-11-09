@@ -51,6 +51,11 @@ import { ReadinessService } from '../health/ReadinessService.js';
 import type { CoreHealthProvider } from '../health/types.js';
 import { stripUndeclaredConfigParams } from '../utils/stripUndeclaredConfigParams.js';
 import { adminSocketNamespace } from './realtime/namespace.js';
+import {
+  adminRouteFromBusMessage,
+  adminRoutesFromState,
+  upsertAdminRoute,
+} from './adminRouteRecovery.js';
 
 export default class AdminModule {
   grpcSdk: ConduitGrpcSdk;
@@ -142,7 +147,17 @@ export default class AdminModule {
 
   async subscribeToBusEvents() {
     this.grpcSdk.bus!.subscribe('admin:config:update', (config: string) => {
-      const cfg: convict.Config<any> = JSON.parse(config);
+      let cfg: convict.Config<any>;
+      try {
+        cfg = JSON.parse(config);
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(
+          `Dropping malformed admin config update: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+        return;
+      }
       this.handleConfigUpdate(cfg);
     });
     ConfigController.getInstance().config = await this.configManager.get('admin');
@@ -420,46 +435,72 @@ export default class AdminModule {
   }
 
   private async highAvailability() {
-    const r = await this.grpcSdk.state!.getState();
-    if (!r || r.length === 0) {
+    try {
+      await this.recoverRoutesFromState();
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(err as Error);
+    }
+    this.grpcSdk.bus!.subscribe('admin', (message: string) => {
+      this.applyAdminBusMessage(message);
+    });
+  }
+
+  /**
+   * Rebuild admin routes from Redis the way the router rebuilds client routes.
+   * Already-running modules do not call registerAdminRoute again when core restarts.
+   */
+  private async recoverRoutesFromState() {
+    const raw = await this.grpcSdk.state!.getState();
+    if (!raw || raw.length === 0) {
       this.cleanupRoutes();
       return;
     }
-    if (r) {
-      const state = JSON.parse(r);
-      if (state.routes) {
-        const promises = state.routes.map((r: Indexable) => {
-          try {
-            if (r.moduleName) {
-              return this.configManager.isModuleUp(r.moduleName).then((isUp: boolean) => {
-                if (isUp) {
-                  return this.internalRegisterRoute(r.routes, r.url, r.moduleName);
-                }
-              });
-            }
-            return this.internalRegisterRoute(r.protofile, r.routes, r.url);
-          } catch (err) {
-            ConduitGrpcSdk.Logger.error(err as Error);
-          }
-        }, this);
-        await Promise.all(promises);
-      }
+    let state: unknown;
+    try {
+      state = JSON.parse(raw);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(
+        `Failed to parse persisted admin state: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      this.cleanupRoutes();
+      return;
     }
-    ConduitGrpcSdk.Logger.log('Recovered routes');
-
-    this.grpcSdk.bus!.subscribe('admin', (message: string) => {
-      const messageParsed = JSON.parse(message);
+    const entries = adminRoutesFromState<RegisterAdminRouteRequest_PathDefinition>(state);
+    for (const entry of entries) {
       try {
-        this.internalRegisterRoute(
-          messageParsed.protofile,
-          messageParsed.routes,
-          messageParsed.url,
-        );
+        this.internalRegisterRoute(entry.routes, entry.url, entry.moduleName);
       } catch (err) {
         ConduitGrpcSdk.Logger.error(err as Error);
       }
-      this.cleanupRoutes();
-    });
+    }
+    ConduitGrpcSdk.Logger.log('Recovered routes');
+  }
+
+  private applyAdminBusMessage(message: string) {
+    const parsed =
+      adminRouteFromBusMessage<RegisterAdminRouteRequest_PathDefinition>(message);
+    if (!parsed.ok) {
+      ConduitGrpcSdk.Logger.error(
+        `Dropping malformed admin bus message: ${parsed.error}`,
+      );
+      return;
+    }
+    if (!parsed.entry) {
+      ConduitGrpcSdk.Logger.error('Dropping admin bus message without routes and url');
+      return;
+    }
+    try {
+      this.internalRegisterRoute(
+        parsed.entry.routes,
+        parsed.entry.url,
+        parsed.entry.moduleName,
+      );
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(err as Error);
+    }
+    this.cleanupRoutes();
   }
 
   private updateState(
@@ -469,24 +510,7 @@ export default class AdminModule {
   ) {
     this.grpcSdk.state
       ?.modifyState(async (existingState: Indexable) => {
-        const state = existingState ?? {};
-        if (!state.routes) state.routes = [];
-        let index;
-        (state.routes as Indexable[]).forEach((val, i) => {
-          if (val.url === url) {
-            index = i;
-          }
-        });
-        if (index) {
-          state.routes[index] = { routes, url, moduleName };
-        } else {
-          state.routes.push({
-            routes,
-            url,
-            moduleName,
-          });
-        }
-        return state;
+        return upsertAdminRoute(existingState, { routes, url, moduleName });
       })
       .then(() => {
         this.publishAdminRouteData(routes, url, moduleName);
