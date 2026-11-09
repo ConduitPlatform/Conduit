@@ -18,7 +18,7 @@
     "prepare": "npm run build",
     "build:docker": "docker build -t ghcr.io/conduitplatform/storage:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/storage:latest",
     "generateTypes": "sh build.sh",
-    "test": "tsc -p tsconfig.test.json && node --test dist-test/utils/disposition.test.js"
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/utils/disposition.test.js dist-test/migrations/cdnConfigMigration.test.js dist-test/migrations/cdnConfigSync.test.js"
   },
   "keywords": [],
   "author": "",

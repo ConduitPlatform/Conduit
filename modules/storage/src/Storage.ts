@@ -17,11 +17,8 @@ import { status } from '@grpc/grpc-js';
 import { isEmpty, isNil } from 'lodash-es';
 import { runMigrations } from './migrations/index.js';
 import { migratePublicContainers } from './migrations/publicContainerMigration.js';
-import {
-  CdnConfiguration,
-  cdnConfigsAreEqual,
-  migrateCdnConfigChanges,
-} from './migrations/cdnConfigMigration.js';
+import { CdnConfiguration } from './migrations/cdnConfigMigration.js';
+import { syncCdnConfig } from './migrations/cdnConfigSync.js';
 import {
   CreateFileByUrlRequest,
   CreateFileRequest,
@@ -79,6 +76,7 @@ export default class Storage extends ManagedModule<Config> {
   private storageParamAdapter: StorageParamAdapter;
   private publicContainerMigrationRan: boolean = false;
   private previousCdnConfig: CdnConfiguration = {};
+  private initialConfigApplied = false;
 
   constructor() {
     super('storage');
@@ -145,11 +143,16 @@ export default class Storage extends ManagedModule<Config> {
       // Detect CDN config changes and run migration if needed (order-independent comparison)
       const currentCdnConfig = (ConfigController.getInstance().config.cdnConfiguration ??
         {}) as CdnConfiguration;
-      if (!cdnConfigsAreEqual(this.previousCdnConfig, currentCdnConfig)) {
-        await migrateCdnConfigChanges(this.grpcSdk, this.previousCdnConfig);
-        // Deep copy to store as previous
-        this.previousCdnConfig = { ...currentCdnConfig };
-      }
+      // Boot failures reject onConfig so the process exits and the next start retries.
+      // Runtime failures are logged and keep the previous snapshot, so the next config
+      // update retries. The snapshot is in-memory only: a CDN host removed while the
+      // process is down is not detected on the next boot.
+      this.previousCdnConfig = await syncCdnConfig(
+        this.grpcSdk,
+        this.previousCdnConfig,
+        currentCdnConfig,
+        { failOnError: !this.initialConfigApplied },
+      );
       this.adminRouter = new AdminRoutes(
         this.grpcServer,
         this.grpcSdk,
@@ -157,6 +160,7 @@ export default class Storage extends ManagedModule<Config> {
       );
       await this.refreshAppRoutes();
       this.updateHealth(HealthCheckStatus.SERVING);
+      this.initialConfigApplied = true;
     }
   }
 
