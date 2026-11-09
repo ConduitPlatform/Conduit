@@ -2,10 +2,12 @@ import {
   FindAttributeOptions,
   FindOptions,
   ModelStatic,
+  Op,
   Order,
   OrderItem,
   Sequelize,
   Transaction,
+  WhereOptions,
 } from 'sequelize';
 import {
   ConduitDatabaseSchema,
@@ -135,6 +137,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       populate?: string[];
       transaction?: Transaction;
     },
+    predicate?: WhereOptions,
   ): Promise<Indexable> {
     const { t, parsedQuery, transactionProvided } = await getTransactionAndParsedQuery(
       options?.transaction,
@@ -222,10 +225,23 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       processCreateQuery(parsedQuery, this.objectPaths);
       incrementDbQueries();
       const relationObjects = extractRelationsModification(this, parsedQuery);
-      await this.model.update(
+      const [affected] = await this.model.update(
         { ...parsedQuery },
-        { where: { _id: parsedId }, transaction: t },
+        {
+          where: predicate
+            ? { [Op.and]: [{ _id: parsedId }, predicate] }
+            : { _id: parsedId },
+          transaction: t,
+        },
       );
+      if (predicate && affected === 0) {
+        // MySQL/MariaDB report 0 changed rows when the values are identical.
+        const stillMatches = await this.model.findOne({
+          where: { [Op.and]: [{ _id: parsedId }, predicate] },
+          transaction: t,
+        });
+        if (!stillMatches) throw new Error('Document not found');
+      }
       incrementDbQueries();
 
       const data = await this.model
@@ -710,11 +726,23 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       transaction?: Transaction;
     },
   ): Promise<any> {
-    return this.findOne(filterQuery, options).then(doc => {
-      if (!doc) {
-        throw new Error('Document not found');
-      }
-      return this.findByIdAndUpdate(doc._id, query, options);
-    });
+    const doc = await this.findOne(filterQuery, options);
+    if (!doc) {
+      throw new Error('Document not found');
+    }
+    // Keep the filter in the UPDATE so a conditional write is atomic.
+    const authorized = await this.getAuthorizedQuery(
+      'read',
+      filterQuery as Indexable,
+      false,
+      options?.userId,
+      options?.scope,
+    );
+    const { filter, parsingResult } = parseQueryFilter(
+      this,
+      this.parseStringToQuery(authorized),
+    );
+    const predicate = parsingResult.requiredRelations?.length ? undefined : filter;
+    return this.findByIdAndUpdate(doc._id, query, options, predicate);
   }
 }
