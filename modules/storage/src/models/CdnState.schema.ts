@@ -24,10 +24,6 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: false,
   },
-  fence: {
-    type: TYPE.Number,
-    required: true,
-  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -52,7 +48,6 @@ export class _StorageCdnState extends ConduitActiveSchema<_StorageCdnState> {
   appliedHost?: string;
   targetHost?: string;
   checkpointId?: string;
-  fence!: number;
   createdAt!: Date;
   updatedAt!: Date;
 
