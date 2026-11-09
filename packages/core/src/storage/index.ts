@@ -4,6 +4,7 @@ import * as models from '../models/index.js';
 import { ServiceDiscovery } from '../service-discovery/index.js';
 import { clearInterval } from 'timers';
 import { ServiceRegistry } from '../service-discovery/ServiceRegistry.js';
+import { configReconcileMessage, parseConfigBusMessage } from '../configBus.js';
 
 export type ConfigVersionMeta = { version: number; explicit: boolean };
 
@@ -57,17 +58,31 @@ export class ConfigStorage {
 
   highAvailability() {
     this.grpcSdk.bus!.subscribe('config', (message: string) => {
-      if (message === 'reconciling') {
-        this.reconciling = true;
-      } else if (message === 'reconcile-done') {
-        this.reconciling = false;
+      const parsed = parseConfigBusMessage(message);
+      switch (parsed.kind) {
+        case 'reconcile':
+          this.reconciling = parsed.state === 'reconciling';
+          return;
+        case 'malformed':
+          ConduitGrpcSdk.Logger.error(
+            `Config: dropping malformed config bus message: ${parsed.error}`,
+          );
+          return;
+        case 'module-health':
+        case 'serving-modules-update':
+        case 'ignore':
+          return;
+        default: {
+          const _exhaustive: never = parsed;
+          return _exhaustive;
+        }
       }
     });
   }
 
   changeState(reconciling: boolean) {
     this.reconciling = reconciling;
-    this.grpcSdk.bus!.publish('config', reconciling ? 'reconciling' : 'reconcile-done');
+    this.grpcSdk.bus!.publish('config', configReconcileMessage(reconciling));
   }
 
   versionKey(moduleName: string) {

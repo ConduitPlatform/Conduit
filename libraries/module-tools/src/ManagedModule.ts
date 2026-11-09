@@ -10,7 +10,12 @@ import {
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
-import { initializeSdk, merge, readConduitPeersManifest } from './utilities/index.js';
+import {
+  initializeSdk,
+  merge,
+  parseBusJson,
+  readConduitPeersManifest,
+} from './utilities/index.js';
 import type { ConduitPeersManifest } from './utilities/conduitPeers.js';
 import { convictConfigParser } from './utilities/convictConfigParser.js';
 import { reconcileStoredModuleConfig } from './utilities/reconcileModuleConfig.js';
@@ -317,7 +322,14 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
     try {
       while (this._pendingConfigUpdates.length > 0) {
         const message = this._pendingConfigUpdates.shift()!;
-        ConfigController.getInstance().config = await this.preConfig(JSON.parse(message));
+        const parsed = parseBusJson(message);
+        if (!parsed.ok) {
+          ConduitGrpcSdk.Logger.error(
+            `Dropping malformed config update for ${this.name}: ${parsed.error}`,
+          );
+          continue;
+        }
+        ConfigController.getInstance().config = await this.preConfig(parsed.value as T);
         await this.onConfig();
       }
     } finally {
