@@ -10,7 +10,9 @@
     "src/utils/disposition.ts",
     "src/utils/disposition.test.ts",
     "src/migrations/cdnConfigMigration.ts",
-    "src/migrations/cdnConfigMigration.test.ts"
+    "src/migrations/cdnConfigMigration.test.ts",
+    "src/migrations/cdnConfigSync.ts",
+    "src/migrations/cdnConfigSync.test.ts"
   ],
   "exclude": []
 }
