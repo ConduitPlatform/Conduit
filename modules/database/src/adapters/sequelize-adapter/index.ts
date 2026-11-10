@@ -24,6 +24,7 @@ import {
   resolveRelatedSchemas,
   tableFetch,
 } from './utils/index.js';
+import { createSequelize } from './utils/sqlite.js';
 import { sqlIntroSchemaConverter } from '../../introspection/sequelize/utils.js';
 import {
   ConduitDatabaseSchema,
@@ -755,7 +756,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   }
 
   protected connect() {
-    this.sequelize = new Sequelize(this.connectionUri, { logging: false });
+    this.sequelize = createSequelize(this.connectionUri);
   }
 
   protected async ensureConnected() {
