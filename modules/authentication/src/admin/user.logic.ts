@@ -152,6 +152,85 @@ function smsTwoFa(method: string | null | undefined, enabled: boolean): boolean 
   return method === 'sms' || method === 'phone' || method == null || method === '';
 }
 
+function normalizedEmail(value: string | null | undefined): string | undefined {
+  return typeof value === 'string' ? value.trim().toLowerCase() : undefined;
+}
+
+function emailPatch(
+  user: UserPatchSource,
+  params: UserPatchInput,
+): { email?: string; emailChanged: boolean } {
+  const email = normalizedEmail(params.email);
+  if (email === undefined || email === normalizedEmail(user.email)) {
+    return { emailChanged: false };
+  }
+  AuthUtils.assertValidEmail(email);
+  return { email, emailChanged: true };
+}
+
+function twoFaMethodPatch(
+  user: UserPatchSource,
+  params: UserPatchInput,
+  authenticatorSecret: boolean,
+): { method: string | null | undefined; update: Indexable } {
+  const setAuthenticator =
+    params.hasTwoFA !== false && params.twoFaMethod === 'authenticator';
+  if (setAuthenticator && !authenticatorSecret) {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      'Authenticator 2FA requires an existing secret',
+    );
+  }
+  if (params.hasTwoFA === false) {
+    return { method: null, update: { twoFaMethod: null } };
+  }
+  if (setAuthenticator) {
+    return { method: 'authenticator', update: { twoFaMethod: 'authenticator' } };
+  }
+  if (params.hasTwoFA === true) {
+    const method = user.twoFaMethod || 'sms';
+    return { method, update: { twoFaMethod: method } };
+  }
+  return { method: user.twoFaMethod, update: {} };
+}
+
+function phonePatch(
+  user: UserPatchSource,
+  params: UserPatchInput,
+): { phone: string | null | undefined; update: Indexable } {
+  const stored = user.phoneNumber === '' ? null : user.phoneNumber;
+  if (typeof params.phoneNumber !== 'string' || params.phoneNumber === stored) {
+    return { phone: stored, update: {} };
+  }
+  if (params.phoneNumber === '') {
+    return { phone: null, update: { phoneNumber: null } };
+  }
+  if (!PHONE_E164.test(params.phoneNumber)) {
+    throw new GrpcError(status.INVALID_ARGUMENT, 'Phone number must be in E.164 format');
+  }
+  return { phone: params.phoneNumber, update: { phoneNumber: params.phoneNumber } };
+}
+
+function assertSmsPhoneAvailable(
+  method: string | null | undefined,
+  enabled: boolean,
+  phone: string | null | undefined,
+  clearing: boolean,
+): void {
+  const missing = phone == null || phone === '';
+  if (!smsTwoFa(method, enabled) || !missing) return;
+  if (clearing) {
+    throw new GrpcError(
+      status.FAILED_PRECONDITION,
+      'Cannot clear the phone number while SMS two-factor authentication is enabled',
+    );
+  }
+  throw new GrpcError(
+    status.INVALID_ARGUMENT,
+    'Can not enable 2fa without a phone number',
+  );
+}
+
 /**
  * The update document for `PATCH /users/:id`. `null` clears a field: both database
  * adapters store it, and readers treat null as unset. Email and phone checks that
@@ -162,82 +241,17 @@ export function buildUserPatch(
   params: UserPatchInput,
   options: { authenticatorSecret?: boolean } = {},
 ): UserPatchResult {
-  const update: Indexable = {};
-  let emailChanged = false;
+  const email = emailPatch(user, params);
+  const twoFa = twoFaMethodPatch(user, params, Boolean(options.authenticatorSecret));
+  const phone = phonePatch(user, params);
+  const enabled = !isNil(params.hasTwoFA) ? params.hasTwoFA : Boolean(user.hasTwoFA);
+  assertSmsPhoneAvailable(twoFa.method, enabled, phone.phone, params.phoneNumber === '');
 
-  if (typeof params.email === 'string') {
-    const email = params.email.trim().toLowerCase();
-    const current =
-      typeof user.email === 'string' ? user.email.trim().toLowerCase() : undefined;
-    if (email !== current) {
-      AuthUtils.assertValidEmail(email);
-      update.email = email;
-      emailChanged = true;
-    }
-  }
-
+  const update: Indexable = { ...twoFa.update, ...phone.update };
+  if (email.emailChanged) update.email = email.email;
   if (!isNil(params.isVerified)) update.isVerified = params.isVerified;
   if (!isNil(params.hasTwoFA)) update.hasTwoFA = params.hasTwoFA;
-
-  const setAuthenticator =
-    params.hasTwoFA !== false && params.twoFaMethod === 'authenticator';
-  if (setAuthenticator && !options.authenticatorSecret) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Authenticator 2FA requires an existing secret',
-    );
-  }
-
-  let resultingMethod: string | null | undefined;
-  if (params.hasTwoFA === false) {
-    resultingMethod = null;
-    update.twoFaMethod = null;
-  } else if (setAuthenticator) {
-    resultingMethod = 'authenticator';
-    update.twoFaMethod = 'authenticator';
-  } else if (params.hasTwoFA === true) {
-    resultingMethod = user.twoFaMethod || 'sms';
-    update.twoFaMethod = resultingMethod;
-  } else {
-    resultingMethod = user.twoFaMethod;
-  }
-
-  let resultingPhone: string | null | undefined =
-    user.phoneNumber === '' ? null : user.phoneNumber;
-  if (typeof params.phoneNumber === 'string') {
-    if (params.phoneNumber === '') {
-      resultingPhone = null;
-      update.phoneNumber = null;
-    } else if (params.phoneNumber !== user.phoneNumber) {
-      if (!PHONE_E164.test(params.phoneNumber)) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Phone number must be in E.164 format',
-        );
-      }
-      resultingPhone = params.phoneNumber;
-      update.phoneNumber = params.phoneNumber;
-    }
-  }
-
-  const resultingHasTwoFA = !isNil(params.hasTwoFA)
-    ? params.hasTwoFA
-    : Boolean(user.hasTwoFA);
-  const noPhone = resultingPhone == null || resultingPhone === '';
-  if (smsTwoFa(resultingMethod, resultingHasTwoFA) && noPhone) {
-    if (params.phoneNumber === '') {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'Cannot clear the phone number while SMS two-factor authentication is enabled',
-      );
-    }
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Can not enable 2fa without a phone number',
-    );
-  }
-
-  return { update, emailChanged };
+  return { update, emailChanged: email.emailChanged };
 }
 
 export function buildUserAdminCapabilities(input: {

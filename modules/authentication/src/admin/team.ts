@@ -36,6 +36,68 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 
+type UserTeamEntry = {
+  _id: string;
+  name: string;
+  isDefault: boolean;
+  roles: string[];
+  parentTeam?: string;
+  realm?: { enabled: boolean; slug?: string };
+  membershipType?: string;
+};
+
+function teamMatchesSearch(team: Team, search: unknown): boolean {
+  if (isNil(search) || search === '') return true;
+  const text = String(search);
+  if (/^[a-fA-F0-9]{24}$/.test(text)) return String(team._id) === text;
+  return team.name.toLowerCase().includes(text.toLowerCase());
+}
+
+function userTeamEntry(
+  team: Team,
+  roles: string[],
+  membershipType: string | undefined,
+): UserTeamEntry {
+  const entry: UserTeamEntry = {
+    _id: String(team._id),
+    name: team.name,
+    isDefault: Boolean(team.isDefault),
+    roles,
+  };
+  if (team.parentTeam) entry.parentTeam = String(team.parentTeam);
+  if (team.realm) {
+    entry.realm = {
+      enabled: Boolean(team.realm.enabled),
+      ...(team.realm.slug ? { slug: team.realm.slug } : {}),
+    };
+  }
+  if (membershipType) entry.membershipType = membershipType;
+  return entry;
+}
+
+async function teamsForUser(
+  userId: string,
+  grouped: { teamId: string; roles: string[] }[],
+  search: unknown,
+): Promise<UserTeamEntry[]> {
+  const found = await Team.getInstance().findMany({
+    _id: { $in: grouped.map(group => group.teamId) },
+  });
+  const byId = new Map(found.map(team => [String(team._id), team]));
+  const entries = grouped.flatMap(group => {
+    const team = byId.get(group.teamId);
+    return team ? [{ team, roles: group.roles }] : [];
+  });
+  const teams: UserTeamEntry[] = [];
+  for (const entry of entries) {
+    if (!teamMatchesSearch(entry.team, search)) continue;
+    const probe: { _id: string; membershipType?: string }[] = [{ _id: userId }];
+    await decorateMembershipType(probe, String(entry.team._id));
+    teams.push(userTeamEntry(entry.team, entry.roles, probe[0].membershipType));
+  }
+  return teams;
+}
+
 export class TeamsAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
@@ -569,8 +631,6 @@ export class TeamsAdmin {
 
   async getUserTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, search } = call.request.params;
-    const skip = call.request.params.skip ?? 0;
-    const limit = call.request.params.limit ?? 25;
     const user = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
       throw new ModuleError(errors.USER_NOT_FOUND);
@@ -578,59 +638,14 @@ export class TeamsAdmin {
     const relations = await this.grpcSdk.authorization!.findRelation({
       subject: 'User:' + id,
       resourceType: 'Team',
-      skip,
-      limit,
+      skip: call.request.params.skip ?? 0,
+      limit: call.request.params.limit ?? 25,
     });
     const grouped = groupUserTeamRelations(relations?.relations ?? []);
     if (grouped.length === 0) {
       return { teams: [], count: relations?.count ?? 0 };
     }
-    const found = await Team.getInstance().findMany({
-      _id: { $in: grouped.map(group => group.teamId) },
-    });
-    const byId = new Map(found.map(team => [String(team._id), team]));
-    let entries = grouped.flatMap(group => {
-      const team = byId.get(group.teamId);
-      return team ? [{ team, roles: group.roles }] : [];
-    });
-    if (!isNil(search) && search !== '') {
-      if (String(search).match(/^[a-fA-F0-9]{24}$/)) {
-        entries = entries.filter(entry => String(entry.team._id) === search);
-      } else {
-        const needle = String(search).toLowerCase();
-        entries = entries.filter(entry => entry.team.name.toLowerCase().includes(needle));
-      }
-    }
-    const teams = [];
-    for (const entry of entries) {
-      const probe: { _id: string; membershipType?: string }[] = [
-        { _id: String(user._id) },
-      ];
-      await decorateMembershipType(probe, String(entry.team._id));
-      const dto: {
-        _id: string;
-        name: string;
-        isDefault: boolean;
-        roles: string[];
-        parentTeam?: string;
-        realm?: { enabled: boolean; slug?: string };
-        membershipType?: string;
-      } = {
-        _id: String(entry.team._id),
-        name: entry.team.name,
-        isDefault: Boolean(entry.team.isDefault),
-        roles: entry.roles,
-      };
-      if (entry.team.parentTeam) dto.parentTeam = String(entry.team.parentTeam);
-      if (entry.team.realm) {
-        dto.realm = {
-          enabled: Boolean(entry.team.realm.enabled),
-          ...(entry.team.realm.slug ? { slug: entry.team.realm.slug } : {}),
-        };
-      }
-      if (probe[0].membershipType) dto.membershipType = probe[0].membershipType;
-      teams.push(dto);
-    }
+    const teams = await teamsForUser(String(user._id), grouped, search);
     return { teams, count: relations?.count ?? teams.length };
   }
 
