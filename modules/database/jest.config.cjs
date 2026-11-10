@@ -6,12 +6,12 @@ module.exports = {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {
-    '^.+\\.tsx?$': [
+    '^.+\\.[jt]sx?$': [
       'ts-jest',
       { useESM: true, tsconfig: '<rootDir>/tsconfig.jest.json' },
     ],
   },
-  transformIgnorePatterns: ['/node_modules/(?!(uuid)/)'],
+  transformIgnorePatterns: ['/node_modules/(?!(\\.pnpm/uuid@[^/]+/node_modules/)?uuid/)'],
   testMatch: ['<rootDir>/src/**/__tests__/**/*.test.ts'],
   testTimeout: 120_000,
 };

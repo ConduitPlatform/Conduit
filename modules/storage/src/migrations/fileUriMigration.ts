@@ -74,15 +74,14 @@ async function loadContainerPublicity(): Promise<Map<string, boolean>> {
   let lastId: string | undefined;
 
   for (;;) {
-    const batch = await _StorageContainer.getInstance().findMany(
-      lastId ? { _id: { $gt: lastId } } : {},
-      {
+    const batch = await _StorageContainer
+      .getInstance()
+      .findMany(lastId ? { _id: { $gt: lastId } } : {}, {
         skip: 0,
         limit: FILE_URI_MIGRATION_BATCH_SIZE,
         sort: { _id: 1 },
         select: '_id name isPublic',
-      },
-    );
+      });
     if (batch.length === 0) {
       break;
     }

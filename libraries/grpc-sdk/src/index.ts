@@ -849,6 +849,7 @@ export {
   USER_CACHE_TTL_MS,
   SESSION_REGISTRY_PREFIX,
 } from './utilities/index.js';
+export { isLockContention } from './utilities/StateManager.js';
 export type { SessionRegistryData } from './utilities/SessionRegistry.js';
 export * from './classes/index.js';
 export * from './modules/index.js';

@@ -2,10 +2,12 @@ import {
   FindAttributeOptions,
   FindOptions,
   ModelStatic,
+  Op,
   Order,
   OrderItem,
   Sequelize,
   Transaction,
+  WhereOptions,
 } from 'sequelize';
 import {
   ConduitDatabaseSchema,
@@ -135,25 +137,37 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       populate?: string[];
       transaction?: Transaction;
     },
+    predicate?: WhereOptions,
   ): Promise<Indexable> {
     const { t, parsedQuery, transactionProvided } = await getTransactionAndParsedQuery(
       options?.transaction,
       query,
       this.sequelize,
     );
-    const parsedId = await this.getAuthorizedQuery(
-      'edit',
-      { _id: id },
-      false,
-      options?.userId,
-      options?.scope,
-    ).then(r => {
-      if (!r) {
-        throw new Error("Document doesn't exist or can't be modified by user.");
-      }
-      return r._id;
-    });
+    // Every path ends in one commit (or one rollback) when this function owns t.
     try {
+      const parsedId = await this.getAuthorizedQuery(
+        'edit',
+        { _id: id },
+        false,
+        options?.userId,
+        options?.scope,
+      ).then(r => {
+        if (!r) {
+          throw new Error("Document doesn't exist or can't be modified by user.");
+        }
+        return r._id;
+      });
+      if (predicate) {
+        // Check (and lock, where the dialect supports it) the row before anything
+        // is written, so a stale predicate leaves no partial $push behind.
+        const matching = await this.model.findOne({
+          where: { [Op.and]: [{ _id: parsedId }, predicate] },
+          transaction: t,
+          lock: this.sequelize.getDialect() === 'sqlite' ? undefined : t.LOCK.UPDATE,
+        });
+        if (!matching) throw new Error('Document not found');
+      }
       const parentDoc = await this.model.findByPk(parsedId, {
         nest: true,
         transaction: t,
@@ -173,15 +187,10 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         }
         delete parsedQuery['$inc'];
       }
-      if (Object.keys(parsedQuery).length === 0) {
-        return this.model
-          .findByPk(parsedId, {
-            nest: true,
-            include: constructRelationInclusion(this, options?.populate),
-          })
-          .then(doc => (doc ? doc.toJSON() : doc));
-      }
 
+      // The row is already checked and locked when a predicate was given, and a
+      // $push may touch the fields it filters on, so the UPDATE then skips it.
+      const updatePredicate = parsedQuery.hasOwnProperty('$push') ? undefined : predicate;
       if (parsedQuery.hasOwnProperty('$push')) {
         const push = parsedQuery['$push'];
         for (const key in push) {
@@ -189,16 +198,11 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
             if (!Array.isArray(this.extractedRelations[key])) {
               throw new Error(`Cannot push in non-array field: ${key}`);
             }
-            let modelName = key.charAt(0).toUpperCase() + key.slice(1);
-            if (push[key]['$each']) {
-              if (!modelName.endsWith('s')) {
-                modelName = modelName + 's';
-              }
-              parentDoc[`add${modelName}`](push[key]['$each'], parentDoc._id);
-            } else {
-              const actualRel = key.charAt(0).toUpperCase() + key.slice(1);
-              parentDoc[`add${actualRel}Id`](push[key], parentDoc._id);
-            }
+            const association = this.model.associations[key] as any;
+            if (!association) throw new Error(`Cannot push in field: ${key}`);
+            await parentDoc[association.accessors.add](push[key]['$each'] ?? push[key], {
+              transaction: t,
+            });
             continue;
           }
           if (push[key]['$each']) {
@@ -207,50 +211,50 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
             parentDoc[key] = [...parentDoc[key], push[key]];
           }
         }
-        await parentDoc.save();
+        await parentDoc.save({ transaction: t });
         delete parsedQuery['$push'];
       }
 
-      if (Object.keys(parsedQuery).length === 0) {
-        return this.model
-          .findByPk(parsedId, {
-            nest: true,
-          })
-          .then(doc => (doc ? doc.toJSON() : doc));
+      if (Object.keys(parsedQuery).length > 0) {
+        // process the update query after special conditions have been handled.
+        processCreateQuery(parsedQuery, this.objectPaths);
+        incrementDbQueries();
+        const relationObjects = extractRelationsModification(this, parsedQuery);
+        const [affected] = await this.model.update(
+          { ...parsedQuery },
+          {
+            where: updatePredicate
+              ? { [Op.and]: [{ _id: parsedId }, updatePredicate] }
+              : { _id: parsedId },
+            transaction: t,
+          },
+        );
+        // MySQL/MariaDB report 0 changed rows when the values are identical. The row
+        // was already matched and locked by the predicate check above, so zero changed
+        // rows there can only mean a no-op update, which is a success. Other dialects
+        // report matched rows, so zero there means the predicate no longer holds.
+        if (
+          updatePredicate &&
+          affected === 0 &&
+          !['mysql', 'mariadb'].includes(this.sequelize.getDialect())
+        ) {
+          throw new Error('Document not found');
+        }
+        incrementDbQueries();
+        const doc = await this.model.findByPk(parsedId, { nest: true, transaction: t });
+        await createWithPopulation(this, doc, relationObjects, t);
       }
-      // process the update query after special conditions have been handled.
-      processCreateQuery(parsedQuery, this.objectPaths);
-      incrementDbQueries();
-      const relationObjects = extractRelationsModification(this, parsedQuery);
-      await this.model.update(
-        { ...parsedQuery },
-        { where: { _id: parsedId }, transaction: t },
-      );
-      incrementDbQueries();
 
-      const data = await this.model
-        .findByPk(parsedId, {
-          nest: true,
-          transaction: t,
-        })
-        .then(doc => createWithPopulation(this, doc, relationObjects, t!))
-        .then(() => {
-          if (!transactionProvided) {
-            return t!.commit();
-          }
-          return;
-        })
-        .then(() => {
-          return this.model.findByPk(parsedId, {
-            nest: true,
-            include: constructRelationInclusion(this, options?.populate),
-          });
-        })
-        .then(doc => (doc ? doc.toJSON() : doc));
-      return data;
+      if (!transactionProvided) await t.commit();
+      const data = await this.model.findByPk(parsedId, {
+        nest: true,
+        include: constructRelationInclusion(this, options?.populate),
+        transaction: transactionProvided ? t : undefined,
+      });
+      return data ? data.toJSON() : data;
     } catch (e) {
-      if (!transactionProvided) {
-        await t!.rollback();
+      if (!transactionProvided && !(t as any).finished) {
+        await t.rollback();
       }
       throw e;
     }
@@ -710,11 +714,17 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       transaction?: Transaction;
     },
   ): Promise<any> {
-    return this.findOne(filterQuery, options).then(doc => {
-      if (!doc) {
-        throw new Error('Document not found');
-      }
-      return this.findByIdAndUpdate(doc._id, query, options);
-    });
+    const doc = await this.findOne(filterQuery, options);
+    if (!doc) {
+      throw new Error('Document not found');
+    }
+    // Keep the filter in the UPDATE so a conditional write is atomic. Authorization
+    // is already enforced by the read above and by the edit check on the update.
+    const { filter, parsingResult } = parseQueryFilter(
+      this,
+      this.parseStringToQuery(filterQuery),
+    );
+    const predicate = parsingResult.requiredRelations?.length ? undefined : filter;
+    return this.findByIdAndUpdate(doc._id, query, options, predicate);
   }
 }

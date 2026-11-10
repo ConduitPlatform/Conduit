@@ -158,36 +158,6 @@ export async function getTransactionAndParsedQuery(
   return { t, parsedQuery, transactionProvided };
 }
 
-export function processPushOperations(
-  parentDoc: any,
-  push: any,
-  extractedRelations: any,
-) {
-  for (const key in push) {
-    if (extractedRelations[key]) {
-      if (!Array.isArray(extractedRelations[key])) {
-        throw new Error(`Cannot push in non-array field: ${key}`);
-      }
-      let modelName = key.charAt(0).toUpperCase() + key.slice(1);
-      if (push[key]['$each']) {
-        if (!modelName.endsWith('s')) {
-          modelName = modelName + 's';
-        }
-        parentDoc[`add${modelName}`](push[key]['$each'], parentDoc._id);
-      } else {
-        const actualRel = key.charAt(0).toUpperCase() + key.slice(1);
-        parentDoc[`add${actualRel}Id`](push[key], parentDoc._id);
-      }
-      continue;
-    }
-    if (push[key]['$each']) {
-      parentDoc[key] = [...parentDoc[key], ...push[key]['$each']];
-    } else {
-      parentDoc[key] = [...parentDoc[key], push[key]];
-    }
-  }
-}
-
 export function compileSchema(
   schema: ConduitDatabaseSchema,
   registeredSchemas: Map<string, ConduitDatabaseSchema>,

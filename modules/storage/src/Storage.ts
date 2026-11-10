@@ -20,8 +20,8 @@ import { migratePublicContainers } from './migrations/publicContainerMigration.j
 import { migrateFileUriReferences } from './migrations/fileUriMigration.js';
 import {
   CdnConfiguration,
-  cdnConfigsAreEqual,
-  migrateCdnConfigChanges,
+  CdnReconciliationRunner,
+  reconcileStoredCdnConfig,
 } from './migrations/cdnConfigMigration.js';
 import {
   CreateFileByUrlRequest,
@@ -85,8 +85,12 @@ export default class Storage extends ManagedModule<Config> {
   private enableAuthRoutes: boolean = false;
   private storageParamAdapter: StorageParamAdapter;
   private publicContainerMigrationRan: boolean = false;
+  private cdnReconciliation = new CdnReconciliationRunner(
+    force => reconcileStoredCdnConfig(this.grpcSdk, force),
+    () =>
+      (ConfigController.getInstance().config.cdnConfiguration ?? {}) as CdnConfiguration,
+  );
   private fileUriMigrationRan: boolean = false;
-  private previousCdnConfig: CdnConfiguration = {};
   private _storageAuthzResourceDispose: (() => void) | null = null;
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
 
@@ -234,6 +238,7 @@ export default class Storage extends ManagedModule<Config> {
         clearTimeout(this.refreshAppRoutesTimeout);
         this.refreshAppRoutesTimeout = null;
       }
+      this.cdnReconciliation.cancel();
       this._storageAuthzResourceDispose?.();
       this._storageAuthzResourceDispose = null;
       this.disposeDeclaredPeerWatches();
@@ -278,18 +283,15 @@ export default class Storage extends ManagedModule<Config> {
         this.publicContainerMigrationRan = true;
         await migratePublicContainers(this.grpcSdk, this.storageProvider);
       }
+      // URI migration clears sourceUrl for files in private containers. CDN
+      // reconciliation runs after that and refuses to derive a provider URL from
+      // a CDN-hosted url. A failure at boot rejects, so the process exits before
+      // SERVING and the next start retries. Later failures are only logged.
       if (!this.fileUriMigrationRan) {
         await migrateFileUriReferences();
         this.fileUriMigrationRan = true;
       }
-      // Detect CDN config changes and run migration if needed (order-independent comparison)
-      const currentCdnConfig = (ConfigController.getInstance().config.cdnConfiguration ??
-        {}) as CdnConfiguration;
-      if (!cdnConfigsAreEqual(this.previousCdnConfig, currentCdnConfig)) {
-        await migrateCdnConfigChanges(this.grpcSdk, this.previousCdnConfig);
-        // Deep copy to store as previous
-        this.previousCdnConfig = { ...currentCdnConfig };
-      }
+      await this.cdnReconciliation.run(!this.configInitialized);
       this.adminRouter = new AdminRoutes(
         this.grpcServer,
         this.grpcSdk,
