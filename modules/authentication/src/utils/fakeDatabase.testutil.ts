@@ -103,6 +103,9 @@ export function createFakeDatabase() {
     withOptionalTransaction<R>(work: (db: unknown) => Promise<R>): Promise<R> {
       return work(database);
     },
+    async countDocuments(name: string, query: Doc) {
+      return table(name).filter(doc => matches(doc, query)).length;
+    },
   };
   return { tables, table, database: database as unknown as DatabaseProvider };
 }

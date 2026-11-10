@@ -46,9 +46,23 @@ export class AdminHandlers {
     this.routingManager.clear();
     this.routingManager.route(
       {
+        path: '/users/capabilities',
+        action: ConduitRouteActions.GET,
+        description: `Returns the user-admin filters, sorts and actions this server supports.`,
+      },
+      new ConduitRouteReturnDefinition('UserAdminCapabilities', {
+        version: ConduitNumber.Required,
+        filters: [ConduitString.Required],
+        sort: [ConduitString.Required],
+        actions: [ConduitString.Required],
+      }),
+      this.userAdmin.getUserCapabilities.bind(this.userAdmin),
+    );
+    this.routingManager.route(
+      {
         path: '/users',
         action: ConduitRouteActions.GET,
-        description: `Returns queried users and their total count.`,
+        description: `Returns queried users and their total count. Filters: search, isActive, isAnonymous (false matches users with no flag), isVerified, hasTwoFA, provider (local, phone, metamask, username or an OAuth provider) and homeRealm. sort is a field or -field and cannot target secrets.`,
         queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
@@ -56,6 +70,8 @@ export class AdminHandlers {
           search: ConduitString.Optional,
           isActive: ConduitBoolean.Optional,
           isAnonymous: ConduitBoolean.Optional,
+          isVerified: ConduitBoolean.Optional,
+          hasTwoFA: ConduitBoolean.Optional,
           provider: ConduitString.Optional,
           homeRealm: ConduitString.Optional,
           realm: ConduitString.Optional,
@@ -94,7 +110,7 @@ export class AdminHandlers {
       {
         path: '/users/:id',
         action: ConduitRouteActions.PATCH,
-        description: `Updates user's fields.`,
+        description: `Updates a user's email, verification, phone number or two-factor flags. email is optional. phoneNumber "" clears the number. hasTwoFA false clears the method. Changing the email deletes outstanding verification and reset tokens and leaves isVerified as sent.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
@@ -120,7 +136,7 @@ export class AdminHandlers {
       {
         path: '/users',
         action: ConduitRouteActions.DELETE,
-        description: `Deletes queried users.`,
+        description: `Deletes queried users, their sessions, realm memberships and authorization relations.`,
         queryParams: {
           ids: { type: [TYPE.String], required: true }, // handler array check is still required
         },
@@ -170,6 +186,54 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
+        path: '/users/:id/password',
+        action: ConduitRouteActions.POST,
+        description: `Sets a local password. Refuses anonymous users and users without password authentication. Clears outstanding reset tokens and signs the user out unless revokeSessions is false.`,
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+        bodyParams: {
+          password: ConduitString.RequiredWith({ minLength: 8 }),
+          revokeSessions: ConduitBoolean.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('SetUserPassword', 'String'),
+      this.userAdmin.setPassword.bind(this.userAdmin),
+    );
+    if (this.grpcSdk.isAvailable('email')) {
+      this.routingManager.route(
+        {
+          path: '/users/:id/password-reset',
+          action: ConduitRouteActions.POST,
+          description: `Emails the user a password reset link. Does not change the password or sign the user out.`,
+          urlParams: {
+            id: { type: TYPE.String, required: true },
+          },
+          bodyParams: {
+            redirectUri: ConduitString.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('SendUserPasswordReset', 'String'),
+        this.userAdmin.sendPasswordReset.bind(this.userAdmin),
+      );
+    }
+    this.routingManager.route(
+      {
+        path: '/users/:id/two-fa/reset',
+        action: ConduitRouteActions.POST,
+        description: `Turns off two-factor authentication and deletes the stored secret, backup codes and pending 2FA tokens. Signs the user out only when revokeSessions is true.`,
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+        bodyParams: {
+          revokeSessions: ConduitBoolean.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('ResetUserTwoFa', 'String'),
+      this.userAdmin.resetTwoFa.bind(this.userAdmin),
+    );
+    this.routingManager.route(
+      {
         path: '/users/:id/realms',
         action: ConduitRouteActions.GET,
         description: `Returns the home realm and the guest realms of a user. Each guest realm carries when the user was linked into it.`,
@@ -202,7 +266,7 @@ export class AdminHandlers {
       {
         path: '/users/toggle',
         action: ConduitRouteActions.POST,
-        description: `Blocks/unblocks queried users.`,
+        description: `Blocks or unblocks queried users. block true sets active to false and signs out the users whose status changed. block false sets active to true and leaves sessions in place.`,
         bodyParams: {
           ids: { type: [TYPE.String], required: true }, // handler array check is still required
           block: ConduitBoolean.Required,

@@ -1,20 +1,36 @@
 import {
   ConduitGrpcSdk,
+  GrpcError,
   Indexable,
   ParsedRouterRequest,
+  Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/index.js';
-import { assertEmailAllowed } from '../utils/emailRestrictions.js';
 import { isNil } from 'lodash-es';
-import { RealmMembership, Team, User } from '../models/index.js';
+import {
+  RealmMembership,
+  Team,
+  Token,
+  TwoFactorBackUpCodes,
+  TwoFactorSecret,
+  User,
+} from '../models/index.js';
 import { toRealmRef } from '../handlers/realm.logic.js';
-import escapeStringRegexp from 'escape-string-regexp';
-import { ModuleError } from '@conduitplatform/module-tools';
+import { ConfigController, ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
 import { TokenProvider } from '../handlers/tokenProvider.js';
+import { issuePasswordReset } from '../handlers/local.logic.js';
+import { TokenType } from '../constants/index.js';
 import { invalidateTeamClaims } from '../utils/teamClaims.js';
 import { requireAuthorization } from '../utils/teamRealm.js';
+import {
+  assertSortAllowed,
+  buildUserAdminCapabilities,
+  buildUserPatch,
+  userFilterQuery,
+} from './user.logic.js';
 import {
   grantHomeMembership,
   homeRealmFields,
@@ -30,7 +46,6 @@ import {
   realmsEnabled,
   resolveRealmById,
   uniqueIdentifierQuery,
-  withHomeScope,
 } from '../utils/realm.js';
 
 /** The identifier of a validated `{ email }` or `{ username }` query. */
@@ -43,37 +58,21 @@ function identifierOf(query: Record<string, unknown>): IdentifierQuery {
 // Cap on the memberships loaded to resolve the `realm` filter next to other filters.
 const MAX_MEMBERSHIP_FILTER = 1000;
 
-/** The user query of the getUsers filters, except `realm`. */
-function userFilterQuery(params: Indexable): Indexable {
-  const { isActive, isAnonymous, provider, search, homeRealm } = params;
-  let query: Indexable = {};
-  if (!isNil(isActive)) {
-    query.active = isActive;
-  }
-  if (!isNil(isAnonymous)) {
-    query.isAnonymous = isAnonymous;
-  }
-  if (!isNil(provider)) {
-    if (provider === 'local') {
-      query['hashedPassword'] = { $exists: true, $ne: null };
-    } else {
-      query[provider] = { $exists: true, $ne: null };
-    }
-  }
-  if (!isNil(search)) {
-    if (search.match(/^[a-fA-F0-9]{24}$/)) {
-      query = { _id: search };
-    } else {
-      const emailIdentifier = escapeStringRegexp(search);
-      query['email'] = { $regex: `.*${emailIdentifier}.*`, $options: 'i' };
-    }
-  }
-  if (!isNil(homeRealm)) {
-    // 'global' = users without a home realm, otherwise a realm team id
-    query = withHomeScope(query, homeRealm === 'global' ? null : homeRealm);
-  }
-  return query;
-}
+const PASSWORD_RESET_TOKEN_TYPES = [
+  TokenType.PASSWORD_RESET_TOKEN,
+  TokenType.TWO_FA_CHANGE_PASSWORD_TOKEN,
+];
+
+const EMAIL_CHANGE_TOKEN_TYPES = [
+  TokenType.VERIFICATION_TOKEN,
+  TokenType.CHANGE_EMAIL_TOKEN,
+  TokenType.PASSWORD_RESET_TOKEN,
+];
+
+const TWO_FA_RESET_TOKEN_TYPES = [
+  TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
+  TokenType.AUTHENTICATOR_VERIFICATION_TOKEN,
+];
 
 /** A page of the members (home or guest) of a realm, in membership order. */
 async function pageRealmMembers(realm: string, skip?: number, limit?: number) {
@@ -142,10 +141,22 @@ export class UserAdmin {
     return { home, guests };
   }
 
+  async getUserCapabilities(): Promise<UnparsedRouterResponse> {
+    const config = ConfigController.getInstance().config;
+    const teamsEnabled = Boolean(
+      config.teams?.enabled && this.grpcSdk.isAvailable('authorization'),
+    );
+    return buildUserAdminCapabilities({
+      emailAvailable: this.grpcSdk.isAvailable('email'),
+      teamsEnabled,
+    });
+  }
+
   async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { sort, realm } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
+    assertSortAllowed(sort);
 
     const query = userFilterQuery(call.request.params);
     if (!isNil(realm)) {
@@ -216,45 +227,136 @@ export class UserAdmin {
   }
 
   async patchUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, isVerified, hasTwoFA, phoneNumber } = call.request.params;
-    const email = call.request.params.email.toLowerCase();
-
-    const user: User | null = await User.getInstance().findOne({ _id: id });
+    const params = call.request.params;
+    const user: User | null = await User.getInstance().findOne({ _id: params.id });
     if (isNil(user)) {
       throw new ModuleError(errors.USER_NOT_FOUND);
-    } else if (hasTwoFA && isNil(phoneNumber) && isNil(user.phoneNumber)) {
-      throw new ModuleError(errors.PHONE_NUMBER_REQUIRED_FOR_2FA);
     }
-    if (user.email !== email) {
+    const wantsAuthenticator =
+      params.hasTwoFA !== false && params.twoFaMethod === 'authenticator';
+    const secret = wantsAuthenticator
+      ? await TwoFactorSecret.getInstance().findOne({ user: user._id })
+      : null;
+    const { update, emailChanged } = buildUserPatch(user, params, {
+      authenticatorSecret: !isNil(secret),
+    });
+    if (emailChanged) {
       // isolated mode: scoped to the target user's home realm and to the realms the user is
       // linked into as a guest
-      if (await identifierTakenForUser(user, identifierQuery('email', email))) {
+      if (
+        await identifierTakenForUser(user, identifierQuery('email', String(update.email)))
+      ) {
         throw new ModuleError(errors.USER_EMAIL_TAKEN);
       }
-      assertEmailAllowed(email);
     }
-    if (!isNil(phoneNumber) && phoneNumber !== '' && phoneNumber !== user.phoneNumber) {
+    if (typeof update.phoneNumber === 'string') {
       await assertIdentifierFreeForUser(
         user,
-        identifierQuery('phoneNumber', phoneNumber),
+        identifierQuery('phoneNumber', update.phoneNumber),
         errors.PHONE_NUMBER_TAKEN,
       );
     }
-    let twoFaMethod: string | undefined;
-    if (hasTwoFA) {
-      twoFaMethod = user.twoFaMethod ?? 'sms';
-    }
-    const query = {
-      email: email ?? user.email,
-      isVerified: isVerified ?? user.isVerified,
-      hasTwoFA: hasTwoFA ?? user.hasTwoFA,
-      phoneNumber: phoneNumber ?? user.phoneNumber,
-      twoFaMethod: twoFaMethod,
-    };
 
-    const res: User | null = await User.getInstance().findByIdAndUpdate(user._id, query);
+    const res: User | null = await User.getInstance().findByIdAndUpdate(
+      user._id,
+      update as Query<User>,
+    );
+    if (emailChanged) {
+      await Token.getInstance().deleteMany({
+        user: user._id,
+        tokenType: { $in: EMAIL_CHANGE_TOKEN_TYPES },
+      });
+    }
     this.grpcSdk.bus?.publish('authentication:update:user', JSON.stringify(res));
     return { res };
+  }
+
+  async setPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, password, revokeSessions } = call.request.params;
+    if (typeof password !== 'string' || password.length < 8) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Password must be at least 8 characters',
+      );
+    }
+    const user: User | null = await User.getInstance().findOne(
+      { _id: id },
+      { select: '+hashedPassword' },
+    );
+    if (isNil(user)) {
+      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+    }
+    if (user.isAnonymous) {
+      throw new GrpcError(status.FAILED_PRECONDITION, 'Anonymous user');
+    }
+    if (isNil(user.hashedPassword)) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'User does not use password authentication',
+      );
+    }
+    const hashedPassword = await AuthUtils.hashPassword(password);
+    const updated: User | null = await User.getInstance().findByIdAndUpdate(user._id, {
+      hashedPassword,
+    });
+    await Token.getInstance().deleteMany({
+      user: user._id,
+      tokenType: { $in: PASSWORD_RESET_TOKEN_TYPES },
+    });
+    if (revokeSessions !== false) {
+      await TokenProvider.getInstance().deleteUserTokens({ user: String(user._id) });
+      TokenProvider.getInstance().trackLoggedOutUserMetric(String(user._id));
+    }
+    if (updated) {
+      const published = { ...updated };
+      delete published.hashedPassword;
+      this.grpcSdk.bus?.publish('authentication:update:user', JSON.stringify(published));
+    }
+    return 'Password updated';
+  }
+
+  async sendPasswordReset(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
+    const user: User | null = await User.getInstance().findOne(
+      { _id: id },
+      { select: '+hashedPassword' },
+    );
+    if (isNil(user)) {
+      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+    }
+    const redirectUri =
+      AuthUtils.validateRedirectUri(call.request.params.redirectUri) ??
+      ConfigController.getInstance().config.local?.forgot_password_redirect_uri ??
+      '';
+    await issuePasswordReset(this.grpcSdk, user, redirectUri);
+    return 'Password reset email sent';
+  }
+
+  async resetTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, revokeSessions } = call.request.params;
+    const user: User | null = await User.getInstance().findOne({ _id: id });
+    if (isNil(user)) {
+      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+    }
+    await User.getInstance().findByIdAndUpdate(user._id, {
+      hasTwoFA: false,
+      twoFaMethod: null,
+    } as Query<User>);
+    await TwoFactorSecret.getInstance().deleteMany({ user: user._id });
+    await TwoFactorBackUpCodes.getInstance().deleteMany({ user: user._id });
+    await Token.getInstance().deleteMany({
+      user: user._id,
+      tokenType: { $in: TWO_FA_RESET_TOKEN_TYPES },
+    });
+    if (revokeSessions === true) {
+      await TokenProvider.getInstance().deleteUserTokens({ user: String(user._id) });
+      TokenProvider.getInstance().trackLoggedOutUserMetric(String(user._id));
+    }
+    this.grpcSdk.bus?.publish(
+      'authentication:disableTwofa:user',
+      JSON.stringify({ id: user._id }),
+    );
+    return '2FA reset';
   }
 
   async deleteUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -293,25 +395,32 @@ export class UserAdmin {
       throw new ModuleError(errors.USER_IDS_REQUIRED);
     }
 
+    if (ids.length > 100) {
+      ConduitGrpcSdk.Logger.warn(`Bulk delete of ${ids.length} users exceeds 100`);
+    }
     const users: User[] = await User.getInstance().findMany({ _id: { $in: ids } });
     if (users.length === 0) {
       throw new ModuleError(errors.USER_NOT_FOUND);
     }
 
     const deletedIds = users.map(u => String(u._id));
-    const res = await this.grpcSdk.database!.withOptionalTransaction(async db => {
-      const deleted = await User.getInstance().deleteMany(
-        { _id: { $in: ids } },
-        { transaction: db },
-      );
+    await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      await User.getInstance().deleteMany({ _id: { $in: ids } }, { transaction: db });
       await deleteUserRealmMemberships(deletedIds, db);
-      return deleted;
     });
+    for (const id of deletedIds) {
+      await requireAuthorization(this.grpcSdk).deleteAllRelations({
+        resource: 'User:' + id,
+      });
+      await requireAuthorization(this.grpcSdk).deleteAllRelations({
+        subject: 'User:' + id,
+      });
+    }
     await invalidateTeamClaims(deletedIds);
     // no session may outlive its user
     await TokenProvider.getInstance().deleteUserTokens({ user: { $in: deletedIds } });
     deletedIds.forEach(id => TokenProvider.getInstance().trackLoggedOutUserMetric(id));
-    this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
+    this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(users));
     return 'Users were deleted';
   }
 
@@ -360,16 +469,25 @@ export class UserAdmin {
     if (users.length === 0) {
       throw new ModuleError(errors.USER_NOT_FOUND);
     }
-    await User.getInstance().updateMany({ _id: { $in: ids } }, { active: block });
-    if (block) {
-      const blockedIds = users.map(u => String(u._id));
-      await TokenProvider.getInstance().deleteUserTokens({ user: { $in: blockedIds } });
-      blockedIds.forEach(id => TokenProvider.getInstance().trackLoggedOutUserMetric(id));
-      this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(users));
-      return 'Users were blocked';
-    } else {
-      this.grpcSdk.bus?.publish('authentication:unblock:user', JSON.stringify(users));
-      return 'Users were unblocked';
+    const active = !block;
+    const changed = users.filter(user => user.active !== active);
+    const changedIds = changed.map(user => String(user._id));
+    if (changedIds.length > 0) {
+      await User.getInstance().updateMany({ _id: { $in: changedIds } }, { active });
     }
+    if (block) {
+      if (changedIds.length > 0) {
+        await TokenProvider.getInstance().deleteUserTokens({
+          user: { $in: changedIds },
+        });
+        changedIds.forEach(id =>
+          TokenProvider.getInstance().trackLoggedOutUserMetric(id),
+        );
+      }
+      this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(changed));
+      return 'Users were blocked';
+    }
+    this.grpcSdk.bus?.publish('authentication:unblock:user', JSON.stringify(changed));
+    return 'Users were unblocked';
   }
 }

@@ -24,6 +24,7 @@ import {
   revokeOrphanedGuests,
 } from '../utils/teamRealm.js';
 import { TokenType } from '../constants/index.js';
+import { groupUserTeamRelations } from './user.logic.js';
 import { v4 as uuid } from 'uuid';
 import {
   ConduitBoolean,
@@ -39,6 +40,44 @@ export class TeamsAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   declareRoutes(routingManager: RoutingManager) {
+    routingManager.route(
+      {
+        path: '/users/:id/teams',
+        action: ConduitRouteActions.GET,
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          search: ConduitString.Optional,
+        },
+        name: 'GetUserTeams',
+        description:
+          'Returns the teams a user belongs to, with every role the user holds on each team. Realm teams include the user membership type.',
+      },
+      new ConduitRouteReturnDefinition('GetUserTeams', {
+        teams: [
+          {
+            _id: ConduitString.Required,
+            name: ConduitString.Required,
+            parentTeam: ConduitString.Optional,
+            isDefault: ConduitBoolean.Required,
+            realm: {
+              type: {
+                enabled: ConduitBoolean.Optional,
+                slug: ConduitString.Optional,
+              },
+              required: false,
+            },
+            roles: [ConduitString.Required],
+            membershipType: ConduitString.Optional,
+          },
+        ],
+        count: ConduitNumber.Required,
+      }),
+      this.getUserTeams.bind(this),
+    );
     routingManager.route(
       {
         path: '/teams',
@@ -526,6 +565,73 @@ export class TeamsAdmin {
     );
 
     return 'Users removed from team';
+  }
+
+  async getUserTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, search } = call.request.params;
+    const skip = call.request.params.skip ?? 0;
+    const limit = call.request.params.limit ?? 25;
+    const user = await User.getInstance().findOne({ _id: id });
+    if (isNil(user)) {
+      throw new ModuleError(errors.USER_NOT_FOUND);
+    }
+    const relations = await this.grpcSdk.authorization!.findRelation({
+      subject: 'User:' + id,
+      resourceType: 'Team',
+      skip,
+      limit,
+    });
+    const grouped = groupUserTeamRelations(relations?.relations ?? []);
+    if (grouped.length === 0) {
+      return { teams: [], count: relations?.count ?? 0 };
+    }
+    const found = await Team.getInstance().findMany({
+      _id: { $in: grouped.map(group => group.teamId) },
+    });
+    const byId = new Map(found.map(team => [String(team._id), team]));
+    let entries = grouped.flatMap(group => {
+      const team = byId.get(group.teamId);
+      return team ? [{ team, roles: group.roles }] : [];
+    });
+    if (!isNil(search) && search !== '') {
+      if (String(search).match(/^[a-fA-F0-9]{24}$/)) {
+        entries = entries.filter(entry => String(entry.team._id) === search);
+      } else {
+        const needle = String(search).toLowerCase();
+        entries = entries.filter(entry => entry.team.name.toLowerCase().includes(needle));
+      }
+    }
+    const teams = [];
+    for (const entry of entries) {
+      const probe: { _id: string; membershipType?: string }[] = [
+        { _id: String(user._id) },
+      ];
+      await decorateMembershipType(probe, String(entry.team._id));
+      const dto: {
+        _id: string;
+        name: string;
+        isDefault: boolean;
+        roles: string[];
+        parentTeam?: string;
+        realm?: { enabled: boolean; slug?: string };
+        membershipType?: string;
+      } = {
+        _id: String(entry.team._id),
+        name: entry.team.name,
+        isDefault: Boolean(entry.team.isDefault),
+        roles: entry.roles,
+      };
+      if (entry.team.parentTeam) dto.parentTeam = String(entry.team.parentTeam);
+      if (entry.team.realm) {
+        dto.realm = {
+          enabled: Boolean(entry.team.realm.enabled),
+          ...(entry.team.realm.slug ? { slug: entry.team.realm.slug } : {}),
+        };
+      }
+      if (probe[0].membershipType) dto.membershipType = probe[0].membershipType;
+      teams.push(dto);
+    }
+    return { teams, count: relations?.count ?? teams.length };
   }
 
   async getTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
