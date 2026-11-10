@@ -49,7 +49,7 @@
     "mariadb": "^3.5.4",
     "mongodb": "^7.3.0",
     "mongodb-schema": "^12.7.0",
-    "mongoose": "^9.9.4",
+    "mongoose": "^9.11.4",
     "mysql2": "^3.23.1",
     "object-hash": "^3.0.0",
     "pg": "^8.22.0",
