@@ -630,6 +630,96 @@ describe('CdnReconciliationRunner', () => {
   });
 });
 
+describe('CdnReconciliationRunner stale runs', () => {
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  /** Calls after the first `immediate` ones block until their gate is opened. */
+  function gated(
+    config: { current: CdnConfiguration },
+    outcomes: Array<'done' | 'busy'>,
+  ) {
+    const forces: string[][] = [];
+    const gates: Array<(outcome: 'done' | 'busy') => void> = [];
+    let call = 0;
+    const instance = new CdnReconciliationRunner(
+      async force => {
+        forces.push(force);
+        const index = call++;
+        const immediate = outcomes[index];
+        if (immediate) return immediate;
+        return new Promise<'done' | 'busy'>(resolve => gates.push(resolve));
+      },
+      () => config.current,
+      5,
+    );
+    return { instance, forces, gates };
+  }
+
+  it('an in-flight retry finishing after a new run() neither schedules a timer nor clobbers lastApplied', async () => {
+    const config = { current: { media: CDN_HOST } as CdnConfiguration };
+    // run #1 is busy and arms a retry; the retry (call 2) stays in flight; run #2 is done.
+    const { instance, forces, gates } = gated(config, ['busy']);
+    await instance.run(false);
+    await sleep(30);
+    assert.equal(forces.length, 2);
+    assert.equal(gates.length, 1);
+
+    config.current = { media: OTHER_HOST };
+    const second = instance.run(false);
+    await sleep(5);
+    gates[1]!('done');
+    await second;
+    assert.equal(forces.length, 3);
+
+    // The stale retry saw the old snapshot and reports busy; it must be dropped.
+    gates[0]!('busy');
+    await sleep(40);
+    assert.equal(forces.length, 3, 'stale run must not schedule another retry');
+
+    // lastApplied is still OTHER_HOST: nothing changed, so nothing is forced.
+    const third = instance.run(false);
+    await sleep(5);
+    gates[2]!('done');
+    await third;
+    assert.deepEqual(forces[3], []);
+  });
+
+  it('a stale run reporting done does not overwrite the newer snapshot', async () => {
+    const config = { current: { media: CDN_HOST } as CdnConfiguration };
+    const { instance, forces, gates } = gated(config, ['busy']);
+    await instance.run(false);
+    await sleep(30);
+    assert.equal(gates.length, 1);
+
+    config.current = { media: OTHER_HOST };
+    const second = instance.run(false);
+    await sleep(5);
+    gates[1]!('done');
+    await second;
+
+    gates[0]!('done');
+    await sleep(10);
+    const third = instance.run(false);
+    await sleep(5);
+    gates[2]!('done');
+    await third;
+    assert.deepEqual(forces[3], []);
+  });
+
+  it('cancel() during an in-flight execute leaves no timer behind', async () => {
+    const config = { current: {} as CdnConfiguration };
+    const { instance, forces, gates } = gated(config, ['busy']);
+    await instance.run(false);
+    await sleep(30);
+    assert.equal(forces.length, 2);
+
+    instance.cancel();
+    gates[0]!('busy');
+    await sleep(40);
+    assert.equal(forces.length, 2);
+  });
+});
+
 describe('reconcileStoredCdnConfig', () => {
   const originalFile = File.getInstance.bind(File);
   const originalState = _StorageCdnHostState.getInstance.bind(_StorageCdnHostState);

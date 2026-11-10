@@ -375,18 +375,22 @@ export class CdnReconciliationRunner {
     private readonly retryDelayMs = CDN_RETRY_DELAY_MS,
   ) {}
 
+  /** Bumped by run() and cancel(); an execute from an older generation is stale. */
+  private generation = 0;
+
   async run(failOnError: boolean): Promise<void> {
     this.cancel();
     this.retries = 0;
-    await this.execute(failOnError);
+    await this.execute(failOnError, this.generation);
   }
 
   cancel() {
+    this.generation += 1;
     clearTimeout(this.timer);
     this.timer = undefined;
   }
 
-  private async execute(failOnError: boolean): Promise<void> {
+  private async execute(failOnError: boolean, generation: number): Promise<void> {
     const current = { ...this.readConfig() };
     const force = this.lastApplied ? changedCdnContainers(this.lastApplied, current) : [];
     let outcome: ReconciliationOutcome | 'failed';
@@ -399,15 +403,17 @@ export class CdnReconciliationRunner {
       );
       outcome = 'failed';
     }
+    // A newer run() or cancel() owns the timer and the snapshot now.
+    if (generation !== this.generation) return;
     if (outcome === 'done' || failOnError) this.lastApplied = current;
-    if (outcome !== 'done') this.scheduleRetry();
+    if (outcome !== 'done') this.scheduleRetry(generation);
   }
 
-  private scheduleRetry() {
+  private scheduleRetry(generation: number) {
     if (this.retries >= MAX_CDN_RETRIES) return;
     this.retries += 1;
     this.timer = setTimeout(
-      () => void this.execute(false),
+      () => void this.execute(false, generation),
       this.retryDelayMs * this.retries,
     );
     this.timer.unref();
