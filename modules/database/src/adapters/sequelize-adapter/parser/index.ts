@@ -52,7 +52,7 @@ function matchOperation(
       return value ? { [Op.ne]: null } : { [Op.eq]: null };
     case '$ne':
       // replace the parsed query with the sequelize-native equivalent
-      if (value[Op.regexp]) {
+      if (value?.[Op.regexp]) {
         return { [Op.notRegexp]: value[Op.regexp] };
       }
       return { [Op.ne]: value };
@@ -60,7 +60,7 @@ function matchOperation(
       return { [Op.gt]: value };
     case '$not':
       // replace the parsed query with the sequelize-native equivalent
-      if (value[Op.regexp]) {
+      if (value?.[Op.regexp]) {
         return { [Op.notRegexp]: value[Op.regexp] };
       }
       return { [Op.not]: value };
