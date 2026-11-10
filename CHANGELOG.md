@@ -2,6 +2,51 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.17.0-alpha.10](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.9...v0.17.0-alpha.10) (2026-11-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* **hermes:** sockets are disconnected server-side when their access
+token expires. Socket.IO clients do not auto-reconnect after a server
+disconnect ("io server disconnect"), so clients must refresh their token
+and call `socket.connect()` on that reason (or set
+`SOCKET_DISCONNECT_ON_TOKEN_EXPIRY=false`). Clients sending more than the
+default event rate now have excess events dropped.
+
+* fix(chat): skip soft-deleted rooms when joining on socket connect
+
+* feat(router): configure socket limits through router config
+
+Socket limits are now Router config instead of env vars:
+
+  sockets.maxHttpBufferSize          (default 1000000)
+  sockets.rateLimit.enabled          (default true)
+  sockets.rateLimit.burst            (default 100)
+  sockets.rateLimit.eventsPerSecond  (default 30)
+  sockets.disconnectOnTokenExpiry    (default true)
+
+The Router passes them to hermes on every config change through
+`ConduitRoutingController.setSocketSettings`. The rate limit and the
+token-expiry switch apply to connected sockets; the message size limit
+applies to new connections.
+
+hermes defaults keep Socket.IO's previous behaviour (no rate limit, no
+expiry disconnect), so socket servers that don't pass settings, such as
+Admin, are unchanged.
+
+### Features
+
+* **hermes:** targeted socket pushes, event rate limit, disconnect on token expiry ([#1671](https://github.com/ConduitPlatform/Conduit/issues/1671)) ([d5495ca](https://github.com/ConduitPlatform/Conduit/commit/d5495ca7abeb6918681c075031cf7e7d9913fa8d))
+
+
+### Bug Fixes
+
+* **communications:** legacy config migration and firebase push initialization ([#1673](https://github.com/ConduitPlatform/Conduit/issues/1673)) ([c6e3782](https://github.com/ConduitPlatform/Conduit/commit/c6e37820b91ad01f6e27b619b28958066b774ca8))
+* **core:** drop non-JSON config bus messages and restore admin routes ([#1678](https://github.com/ConduitPlatform/Conduit/issues/1678)) ([f24c050](https://github.com/ConduitPlatform/Conduit/commit/f24c050f037fc3ea2da197021562fe49f042a1dc))
+* **database:** let communications claim legacy email/sms/push schemas ([#1672](https://github.com/ConduitPlatform/Conduit/issues/1672)) ([3c96bbd](https://github.com/ConduitPlatform/Conduit/commit/3c96bbdf4f6076e12f33d45ee0c9e371aafc8398))
+* **storage:** persist CDN host reconciliation across restarts ([#1676](https://github.com/ConduitPlatform/Conduit/issues/1676)) ([a66b8e4](https://github.com/ConduitPlatform/Conduit/commit/a66b8e4757f07f299678805db329c0cae86ac848))
+
 ## [0.17.0-alpha.9](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.8...v0.17.0-alpha.9) (2026-11-04)
 
 
