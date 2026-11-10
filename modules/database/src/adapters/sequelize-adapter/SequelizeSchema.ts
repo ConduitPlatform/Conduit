@@ -229,24 +229,15 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
             transaction: t,
           },
         );
+        // MySQL/MariaDB report 0 changed rows when the values are identical. The row
+        // was already matched and locked by the predicate check above, so zero changed
+        // rows there can only mean a no-op update, which is a success. Other dialects
+        // report matched rows, so zero there means the predicate no longer holds.
         if (
           updatePredicate &&
           affected === 0 &&
-          ['mysql', 'mariadb'].includes(this.sequelize.getDialect())
+          !['mysql', 'mariadb'].includes(this.sequelize.getDialect())
         ) {
-          // MySQL/MariaDB report 0 changed rows when the values are identical.
-          // Only accept that if the row still matches and already has the new values.
-          const row = await this.model.findOne({
-            where: { [Op.and]: [{ _id: parsedId }, updatePredicate] },
-            transaction: t,
-          });
-          const unchanged =
-            row &&
-            Object.entries(parsedQuery).every(([key, value]) =>
-              value !== null && typeof value === 'object' ? true : row.get(key) === value,
-            );
-          if (!unchanged) throw new Error('Document not found');
-        } else if (updatePredicate && affected === 0) {
           throw new Error('Document not found');
         }
         incrementDbQueries();
