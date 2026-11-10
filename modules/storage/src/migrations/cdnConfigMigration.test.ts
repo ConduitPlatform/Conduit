@@ -162,7 +162,30 @@ describe('reconciledFileUrl', () => {
   });
 });
 
+// The database module runs this exact filter against real SQL in
+// modules/database/src/adapters/sequelize-adapter/__tests__/
+// SequelizeSchema.cdnReconciliationWrite.file.test.ts (storage cannot import it).
+// Keep the shapes asserted below identical to the ones used there.
 describe('publicFilesWithProviderSourceQuery', () => {
+  it('produces exactly the filter shape the database test runs on SQL', () => {
+    const $and = [
+      { sourceUrl: { $exists: true } },
+      { sourceUrl: { $ne: null } },
+      { sourceUrl: { $ne: '' } },
+    ];
+    assert.deepEqual(publicFilesWithProviderSourceQuery('media'), {
+      container: 'media',
+      isPublic: true,
+      $and,
+    });
+    assert.deepEqual(publicFilesWithProviderSourceQuery('media', 'file-01'), {
+      container: 'media',
+      isPublic: true,
+      $and,
+      _id: { $gt: 'file-01' },
+    });
+  });
+
   it('selects public files in one container that have a provider source and can resume', () => {
     const query = publicFilesWithProviderSourceQuery('media', 'file-01');
     assert.equal(query.container, 'media');
