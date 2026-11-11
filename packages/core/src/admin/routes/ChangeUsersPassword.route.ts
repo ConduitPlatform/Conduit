@@ -1,14 +1,18 @@
 import {
-  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
+import {
+  ConduitString,
+  ConfigController,
+  ModuleError,
+} from '@conduitplatform/module-tools';
 import { hash } from 'bcrypt';
 import { isNil } from 'lodash-es';
 import { Admin } from '../../models/index.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
+import { errors } from '../../errors.js';
 
 export function changeUsersPasswordRoute() {
   return new ConduitRoute(
@@ -23,6 +27,11 @@ export function changeUsersPasswordRoute() {
       bodyParams: {
         newPassword: ConduitString.Required,
       },
+      errors: [
+        errors.SUPER_ADMIN_REQUIRED,
+        errors.ADMIN_ID_REQUIRED,
+        errors.ADMIN_NOT_FOUND,
+      ],
     },
     new ConduitRouteReturnDefinition('ChangePassword', {
       message: ConduitString.Required,
@@ -32,18 +41,14 @@ export function changeUsersPasswordRoute() {
       const loggedInAdmin = req.context!.admin;
 
       if (!loggedInAdmin.isSuperAdmin) {
-        throw new ConduitError(
-          'INVALID_ARGUMENTS',
-          400,
-          'Only superAdmin can change other admins password',
-        );
+        throw new ModuleError(errors.SUPER_ADMIN_REQUIRED);
       }
       if (isNil(adminId)) {
-        throw new ConduitError('INVALID_ARGUMENTS', 400, 'Id must be provided');
+        throw new ModuleError(errors.ADMIN_ID_REQUIRED);
       }
       const admin = await Admin.getInstance().findOne({ _id: adminId });
       if (isNil(admin)) {
-        throw new ConduitError('NOT_FOUND', 404, 'Admin not found');
+        throw new ModuleError(errors.ADMIN_NOT_FOUND);
       }
 
       const hashRounds = ConfigController.getInstance().config.auth.hashRounds;

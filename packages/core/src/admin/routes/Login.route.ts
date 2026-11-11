@@ -2,16 +2,18 @@ import { Admin, AdminTwoFactorSecret } from '../../models/index.js';
 import { isNil } from 'lodash-es';
 import { comparePasswords, signToken } from '../utils/auth.js';
 import {
-  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
-  GrpcError,
   ConduitRouteReturnDefinition,
   type FindOneOptions,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
+import {
+  ConduitString,
+  ConfigController,
+  ModuleError,
+} from '@conduitplatform/module-tools';
 import { ConduitRoute } from '@conduitplatform/hermes';
-import { status } from '@grpc/grpc-js';
+import { errors } from '../../errors.js';
 
 export function getLoginRoute() {
   return new ConduitRoute(
@@ -24,6 +26,11 @@ export function getLoginRoute() {
         username: ConduitString.Required,
         password: ConduitString.Required,
       },
+      errors: [
+        errors.USERNAME_AND_PASSWORD_REQUIRED,
+        errors.INVALID_ADMIN_CREDENTIALS,
+        errors.ADMIN_TWO_FA_NOT_CONFIGURED,
+      ],
     },
     new ConduitRouteReturnDefinition('Login', {
       token: ConduitString.Required,
@@ -31,11 +38,7 @@ export function getLoginRoute() {
     async (req: ConduitRouteParameters) => {
       const { username, password } = req.params!;
       if (isNil(username) || isNil(password)) {
-        throw new ConduitError(
-          'INVALID_ARGUMENTS',
-          400,
-          'Both username and password must be provided',
-        );
+        throw new ModuleError(errors.USERNAME_AND_PASSWORD_REQUIRED);
       }
 
       const admin = await Admin.getInstance().findOne(
@@ -43,19 +46,18 @@ export function getLoginRoute() {
         { select: '+password' },
       );
       if (isNil(admin)) {
-        throw new ConduitError('UNAUTHORIZED', 401, 'Invalid username/password');
+        throw new ModuleError(errors.INVALID_ADMIN_CREDENTIALS);
       }
       const passwordsMatch = await comparePasswords(password, admin.password);
       if (!passwordsMatch) {
-        throw new ConduitError('UNAUTHORIZED', 401, 'Invalid username/password');
+        throw new ModuleError(errors.INVALID_ADMIN_CREDENTIALS);
       }
       if (admin.hasTwoFA) {
         const secret = await AdminTwoFactorSecret.getInstance().findOne(
           { adminId: admin._id },
           { readPreference: 'primary' } satisfies FindOneOptions,
         );
-        if (isNil(secret))
-          throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
+        if (isNil(secret)) throw new ModuleError(errors.ADMIN_TWO_FA_NOT_CONFIGURED);
 
         const authConfig = ConfigController.getInstance().config.auth;
         const { tokenSecret } = authConfig;

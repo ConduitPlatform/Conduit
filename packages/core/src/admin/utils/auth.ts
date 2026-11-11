@@ -1,10 +1,10 @@
 import jwt from 'jsonwebtoken';
 import { compare, hash } from 'bcrypt';
-import { GrpcError, type FindOneOptions } from '@conduitplatform/grpc-sdk';
-import { ConfigController } from '@conduitplatform/module-tools';
+import { type FindOneOptions } from '@conduitplatform/grpc-sdk';
+import { ConfigController, ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 import { Admin, AdminTwoFactorSecret } from '../../models/index.js';
 import { isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
 import * as twoFactor from '@conduitplatform/node-2fa';
 
 export function signToken(data: any, secret: string, expiresIn?: number) {
@@ -43,11 +43,11 @@ export async function verify2Fa(admin: Admin, code: string) {
     { adminId: admin._id },
     { readPreference: 'primary' } satisfies FindOneOptions,
   );
-  if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
+  if (isNil(secret)) throw new ModuleError(errors.ADMIN_TWO_FA_NOT_CONFIGURED);
 
   const verification = verifyTwoFactorToken(secret.secret, code, 1);
   if (isNil(verification)) {
-    throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
+    throw new ModuleError(errors.ADMIN_TWO_FA_CODE_INVALID);
   }
   const authConfig = ConfigController.getInstance().config.auth;
   const { tokenSecret, tokenExpirationTime } = authConfig;

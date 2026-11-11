@@ -1,7 +1,6 @@
 import { isNil } from 'lodash-es';
 import { ConduitRoute } from '@conduitplatform/hermes';
 import {
-  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
@@ -10,7 +9,9 @@ import {
   ConduitNumber,
   ConduitString,
   ConfigController,
+  ModuleError,
 } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 import { signToken } from '../utils/auth.js';
 import {
   ADMIN_REALTIME_TICKET_TTL_SECONDS,
@@ -25,6 +26,7 @@ export function getRealtimeTicketRoute() {
       mcp: false,
       description:
         'Issue a short-lived token for Admin Socket.IO handshakes. The token cannot be used for REST or GraphQL.',
+      errors: [errors.ADMIN_AUTHENTICATION_REQUIRED],
     },
     new ConduitRouteReturnDefinition('RealtimeTicket', {
       token: ConduitString.Required,
@@ -33,7 +35,7 @@ export function getRealtimeTicketRoute() {
     async (req: ConduitRouteParameters) => {
       const admin = req.context?.admin;
       if (isNil(admin) || isNil(admin._id)) {
-        throw new ConduitError('UNAUTHORIZED', 401, 'Authentication required');
+        throw new ModuleError(errors.ADMIN_AUTHENTICATION_REQUIRED);
       }
       const adminId = admin._id.toString();
       const authConfig = ConfigController.getInstance().config.auth;

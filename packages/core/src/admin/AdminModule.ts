@@ -1,11 +1,8 @@
 import { isNaN, isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
 import {
-  ConduitError,
   ConduitGrpcSdk,
   ConduitRouteActions,
   GrpcCallback,
-  GrpcError,
   GrpcRequest,
   IConduitLogger,
   Indexable,
@@ -45,10 +42,13 @@ import metricsSchema from './metrics/index.js';
 import cors from 'cors';
 import {
   ConfigController,
+  grpcCallbackError,
   GrpcServer,
   merge,
+  ModuleError,
   parseBusJson,
 } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { fileURLToPath } from 'node:url';
 import { loadReadinessConfig } from '../health/config.js';
 import { getReadinessMiddleware } from '../health/readinessMiddleware.js';
@@ -230,10 +230,7 @@ export default class AdminModule {
           call.metadata!.get('module-name')![0] as string,
         );
         if (!result) {
-          return callback({
-            code: status.INTERNAL,
-            message: 'Error when registering routes',
-          });
+          return callback(grpcCallbackError(errors.ADMIN_ROUTE_REGISTRATION_FAILED));
         }
         call.request.routerUrl = result;
       }
@@ -252,10 +249,7 @@ export default class AdminModule {
       }
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
-      return callback({
-        code: status.INTERNAL,
-        message: 'Error when registering routes',
-      });
+      return callback(grpcCallbackError(errors.ADMIN_ROUTE_REGISTRATION_FAILED));
     }
     callback(null, {});
   }
@@ -276,7 +270,7 @@ export default class AdminModule {
       await this._router.socketPush(socketData);
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
-      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
+      return callback(grpcCallbackError(errors.ADMIN_SOCKET_PUSH_FAILED));
     }
     callback(null, {});
   }
@@ -368,7 +362,10 @@ export default class AdminModule {
     } catch (e) {
       (this.config as unknown) = convict(AppConfigSchema);
       this.config.load(previousConfig);
-      throw new ConduitError('INVALID_ARGUMENT', 400, (e as Error).message);
+      throw new ModuleError({
+        ...errors.CONFIG_VALIDATION_FAILED,
+        message: (e as Error).message,
+      });
     }
     config = this.config.getProperties();
     this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(config));
@@ -605,23 +602,17 @@ export default class AdminModule {
     callback: GrpcCallback<Record<string, never>>,
   ) {
     const { path, action, middlewares } = call.request;
-    const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
-      call.metadata!.get('module-name')![0] as string,
-    );
-    if (!moduleUrl) {
-      return callback({
-        code: status.INTERNAL,
-        message: 'Something went wrong',
-      });
+    try {
+      const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
+        call.metadata!.get('module-name')![0] as string,
+      );
+      if (!moduleUrl) {
+        return callback(grpcCallbackError(errors.ADMIN_MIDDLEWARE_PATCH_FAILED));
+      }
+      await this._patchRouteMiddlewares(path, action, middlewares, moduleUrl.url);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.ADMIN_MIDDLEWARE_PATCH_FAILED));
     }
-    await this._patchRouteMiddlewares(path, action, middlewares, moduleUrl.url).catch(
-      e => {
-        return callback({
-          code: status.INTERNAL,
-          message: (e as Error).message,
-        });
-      },
-    );
     callback(null, {});
   }
 
@@ -765,12 +756,7 @@ export default class AdminModule {
           JSON.stringify({ routes: stateRoutes }),
         );
       })
-      .catch(() => {
-        throw new GrpcError(
-          status.INTERNAL,
-          'Failed to update state for patched middleware',
-        );
-      });
+      .catch(ModuleError.rethrow(errors.ADMIN_MIDDLEWARE_PATCH_FAILED));
   }
 
   findGrpcRoute(path: string, action: string) {
@@ -782,7 +768,10 @@ export default class AdminModule {
         }
       }
     }
-    throw new GrpcError(status.NOT_FOUND, `Grpc route ${action} ${path} not found`);
+    throw new ModuleError(
+      errors.ADMIN_ROUTE_NOT_FOUND,
+      `Grpc route ${action} ${path} not found`,
+    );
   }
 
   getGrpcRoute(

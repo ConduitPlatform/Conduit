@@ -75,8 +75,7 @@ export function getStateImportRoute(admin: AdminModule) {
 
         for (const moduleName of moduleNames) {
           const client = grpcSdk.getModuleClient(moduleName) as unknown as
-            | ModuleImportClient
-            | undefined;
+            ModuleImportClient | undefined;
           if (!client?.getExportableResources || !client?.importResources) {
             moduleResults[moduleName] = { error: 'Module does not support import' };
             continue;

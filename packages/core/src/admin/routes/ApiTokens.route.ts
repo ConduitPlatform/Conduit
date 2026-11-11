@@ -3,12 +3,17 @@ import { AdminApiToken } from '../../models/index.js';
 import { hashPassword } from '../utils/auth.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
 import {
-  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString, ConduitNumber, ConduitDate } from '@conduitplatform/module-tools';
+import {
+  ConduitString,
+  ConduitNumber,
+  ConduitDate,
+  ModuleError,
+} from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 /**
  * Generates a cryptographically secure random token.
@@ -127,6 +132,7 @@ export function deleteApiTokenRoute() {
       urlParams: {
         id: ConduitString.Required,
       },
+      errors: [errors.API_TOKEN_NOT_FOUND],
     },
     new ConduitRouteReturnDefinition('DeleteApiToken', {
       message: ConduitString.Required,
@@ -141,7 +147,7 @@ export function deleteApiTokenRoute() {
       });
 
       if (!deleted.deletedCount) {
-        throw new ConduitError('NOT_FOUND', 404, 'Token not found');
+        throw new ModuleError(errors.API_TOKEN_NOT_FOUND);
       }
 
       return { message: 'Token revoked successfully' };

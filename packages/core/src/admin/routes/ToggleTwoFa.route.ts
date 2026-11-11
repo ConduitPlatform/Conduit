@@ -1,14 +1,17 @@
 import {
   ConduitRouteActions,
   ConduitRouteParameters,
-  GrpcError,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitBoolean, ConduitString } from '@conduitplatform/module-tools';
+import {
+  ConduitBoolean,
+  ConduitString,
+  ModuleError,
+} from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 import { isNil } from 'lodash-es';
 import { Admin, AdminTwoFactorSecret } from '../../models/index.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
-import { status } from '@grpc/grpc-js';
 import { generateSecret } from '../utils/auth.js';
 
 export function toggleTwoFaRoute() {
@@ -20,6 +23,7 @@ export function toggleTwoFaRoute() {
       bodyParams: {
         enableTwoFa: ConduitBoolean.Required,
       },
+      errors: [errors.ADMIN_AUTHENTICATION_REQUIRED],
     },
     new ConduitRouteReturnDefinition('ToggleTwoFaResponse', {
       message: ConduitString.Required,
@@ -30,7 +34,7 @@ export function toggleTwoFaRoute() {
       const context = req.context!;
 
       if (isNil(context) || isNil(admin)) {
-        throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
+        throw new ModuleError(errors.ADMIN_AUTHENTICATION_REQUIRED);
       }
       if (enableTwoFa === true) {
         if (admin.hasTwoFA) {

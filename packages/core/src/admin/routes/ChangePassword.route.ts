@@ -1,13 +1,17 @@
 import {
-  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
+import {
+  ConduitString,
+  ConfigController,
+  ModuleError,
+} from '@conduitplatform/module-tools';
 import { compare, hash } from 'bcrypt';
 import { Admin } from '../../models/index.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
+import { errors } from '../../errors.js';
 import { isNil } from 'lodash-es';
 
 export function changePasswordRoute() {
@@ -21,6 +25,11 @@ export function changePasswordRoute() {
         oldPassword: ConduitString.Required,
         newPassword: ConduitString.Required,
       },
+      errors: [
+        errors.ADMIN_NOT_FOUND,
+        errors.OLD_AND_NEW_PASSWORD_REQUIRED,
+        errors.INCORRECT_PASSWORD,
+      ],
     },
     new ConduitRouteReturnDefinition('ChangePassword', {
       message: ConduitString.Required,
@@ -34,22 +43,18 @@ export function changePasswordRoute() {
         },
       );
       if (!admin) {
-        throw ConduitError.notFound('Authenticated admin no longer exists');
+        throw new ModuleError(errors.ADMIN_NOT_FOUND);
       }
 
       if (isNil(oldPassword) || isNil(newPassword)) {
-        throw new ConduitError(
-          'INVALID_ARGUMENTS',
-          400,
-          'Both old and new password must be provided',
-        );
+        throw new ModuleError(errors.OLD_AND_NEW_PASSWORD_REQUIRED);
       }
 
       const hashRounds = ConfigController.getInstance().config.auth.hashRounds;
       const passwordsMatch = await compare(oldPassword, admin.password);
 
       if (!passwordsMatch) {
-        throw new ConduitError('INVALID_ARGUMENTS', 400, 'Incorrect Password');
+        throw new ModuleError(errors.INCORRECT_PASSWORD);
       }
       await Admin.getInstance().findByIdAndUpdate(admin._id, {
         password: await hash(newPassword, hashRounds ?? 11),

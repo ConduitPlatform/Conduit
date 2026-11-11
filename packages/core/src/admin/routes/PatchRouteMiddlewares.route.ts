@@ -2,11 +2,10 @@ import {
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
-  GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute } from '@conduitplatform/hermes';
-import { ConduitString } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
+import { ConduitString, ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 import AdminModule from '../AdminModule.js';
 
 export function patchRouteMiddlewares(admin: AdminModule) {
@@ -22,16 +21,21 @@ export function patchRouteMiddlewares(admin: AdminModule) {
       bodyParams: {
         middlewares: [ConduitString.Required],
       },
+      errors: [
+        errors.INVALID_ADMIN_ROUTE_ACTION,
+        errors.ADMIN_ROUTE_NOT_FOUND,
+        errors.ADMIN_MIDDLEWARE_PATCH_FAILED,
+      ],
     },
     new ConduitRouteReturnDefinition('InjectAdminMiddleware', 'String'),
     async (req: ConduitRouteParameters) => {
       const { path, action, middlewares } = req.params!;
       if (!(action in ConduitRouteActions)) {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
+        throw new ModuleError(errors.INVALID_ADMIN_ROUTE_ACTION);
       }
-      await admin._patchRouteMiddlewares(path, action, middlewares).catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      await admin
+        ._patchRouteMiddlewares(path, action, middlewares)
+        .catch(ModuleError.rethrow(errors.ADMIN_MIDDLEWARE_PATCH_FAILED));
       return 'Middleware patched successfully';
     },
   );

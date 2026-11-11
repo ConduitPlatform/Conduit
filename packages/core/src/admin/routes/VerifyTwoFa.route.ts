@@ -1,3 +1,4 @@
+import { errors } from '../../errors.js';
 import {
   ConduitRouteActions,
   ConduitRouteParameters,
@@ -16,6 +17,7 @@ export function verifyTwoFaRoute() {
       bodyParams: {
         code: ConduitString.Required,
       },
+      errors: [errors.ADMIN_TWO_FA_NOT_CONFIGURED, errors.ADMIN_TWO_FA_CODE_INVALID],
     },
     new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
       token: ConduitString.Required,

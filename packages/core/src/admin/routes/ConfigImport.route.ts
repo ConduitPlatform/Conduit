@@ -29,8 +29,7 @@ export function getConfigImportRoute(admin: AdminModule) {
     }),
     async (params: ConduitRouteParameters) => {
       const config = params.params?.config as
-        | { modules?: Record<string, object> }
-        | undefined;
+        { modules?: Record<string, object> } | undefined;
       const modules = config?.modules ?? {};
       const results: Record<string, { success: boolean; error?: string }> = {};
 
@@ -50,8 +49,7 @@ export function getConfigImportRoute(admin: AdminModule) {
             continue;
           }
           const client = grpcSdk.getModuleClient(moduleName) as unknown as
-            | ModuleConfigClient
-            | undefined;
+            ModuleConfigClient | undefined;
           if (!client?.setConfig) {
             results[moduleName] = { success: false, error: 'Module not available' };
             continue;

@@ -1,4 +1,3 @@
-import { status } from '@grpc/grpc-js';
 import {
   ConduitGrpcSdk,
   GrpcCallback,
@@ -12,6 +11,8 @@ import {
   UpdateConfigRequest,
   UpdateConfigResponse,
 } from './interfaces/index.js';
+import { grpcCallbackError } from '@conduitplatform/module-tools';
+import { errors } from './errors.js';
 import * as models from './models/index.js';
 import path from 'path';
 import { ServiceDiscovery } from './service-discovery/index.js';
@@ -57,10 +58,7 @@ export default class ConfigManager {
     const name = call.request.name;
     const result = this.getModuleUrlByName(name);
     if (!result) {
-      return callback({
-        code: status.NOT_FOUND,
-        message: 'Module not found',
-      });
+      return callback(grpcCallbackError(errors.MODULE_NOT_FOUND));
     }
     callback(null, { moduleUrl: result });
   }
@@ -119,10 +117,7 @@ export default class ConfigManager {
         });
       })
       .catch(() => {
-        return callback({
-          code: status.NOT_FOUND,
-          message: 'Server config not found!',
-        });
+        return callback(grpcCallbackError(errors.SERVER_CONFIG_NOT_FOUND));
       });
   }
 
@@ -177,13 +172,11 @@ export default class ConfigManager {
       .then(() => this.get(call.request.key))
       .then(r => {
         if (!r) {
-          return callback({
-            code: status.INTERNAL,
-            message: 'Config for module not set!',
-          });
+          return callback(grpcCallbackError(errors.MODULE_CONFIG_NOT_SET));
         }
         callback(null, { data: JSON.stringify(r) });
-      });
+      })
+      .catch(e => callback(grpcCallbackError(e, errors.MODULE_CONFIG_NOT_SET)));
   }
 
   async get(moduleName: string) {
@@ -220,19 +213,11 @@ export default class ConfigManager {
       callerModule !== 'communications' ||
       !LEGACY_COMMUNICATIONS_CONFIG_KEYS.has(key)
     ) {
-      return callback({
-        code: status.PERMISSION_DENIED,
-        message: 'Not authorized to delete module configuration',
-      });
+      return callback(grpcCallbackError(errors.CONFIG_DELETE_FORBIDDEN));
     }
     this.deleteConfig(key)
       .then(() => callback(null, {}))
-      .catch((e: Error) =>
-        callback({
-          code: status.INTERNAL,
-          message: e.message,
-        }),
-      );
+      .catch((e: unknown) => callback(grpcCallbackError(e, errors.CONFIG_DELETE_FAILED)));
   }
 
   async configureModule(
@@ -240,23 +225,27 @@ export default class ConfigManager {
     callback: GrpcCallback<UpdateConfigResponse>,
   ) {
     const moduleName = call.metadata!.get('module-name')![0] as string;
-    let config = JSON.parse(call.request.config);
-    const configSchema = JSON.parse(call.request.schema);
-    parseConfigSchema(configSchema);
-    await this._configStorage.waitForDbSync();
-    if (call.request.override) {
-      await this.set(moduleName, config);
-    } else {
-      let existingConfig = await this.get(moduleName);
-      existingConfig = await this.applyDbConfigPreference(moduleName, existingConfig);
-      if (!existingConfig) {
+    try {
+      let config = JSON.parse(call.request.config);
+      const configSchema = JSON.parse(call.request.schema);
+      parseConfigSchema(configSchema);
+      await this._configStorage.waitForDbSync();
+      if (call.request.override) {
         await this.set(moduleName, config);
+      } else {
+        let existingConfig = await this.get(moduleName);
+        existingConfig = await this.applyDbConfigPreference(moduleName, existingConfig);
+        if (!existingConfig) {
+          await this.set(moduleName, config);
+        }
+        config = await this.addFieldsToModule(moduleName, config);
       }
-      config = await this.addFieldsToModule(moduleName, config);
+      this.registerConfigRoutes(moduleName, configSchema);
+      this.updateState(moduleName, configSchema);
+      return callback(null, { result: JSON.stringify(config) });
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.CONFIG_UPDATE_FAILED));
     }
-    this.registerConfigRoutes(moduleName, configSchema);
-    this.updateState(moduleName, configSchema);
-    return callback(null, { result: JSON.stringify(config) });
   }
 
   async configurePackage(moduleName: string, config: any, schema: any) {
