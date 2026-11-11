@@ -154,7 +154,6 @@ export class ChatRoutes {
   async addUsersToRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { roomId, users } = call.request.params;
     const { user } = call.request.context;
-    let usersToBeAdded;
     if (isNil(users) || !isArray(users) || users.length === 0) {
       throw new ModuleError(errors.USERS_REQUIRED);
     }
@@ -165,7 +164,7 @@ export class ChatRoutes {
     if (room.deleted) {
       throw new ModuleError(errors.ROOM_NOT_FOUND);
     }
-    usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
+    const usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
 
     for (const user of usersToBeAdded) {
       if (room.participants.includes(user._id))
