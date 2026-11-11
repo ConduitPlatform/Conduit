@@ -49,7 +49,7 @@ function reason(fn: () => unknown): string {
     fn();
   } catch (e: any) {
     assert.equal(e.code, 16);
-    return e.message;
+    return e.debugLogInfo;
   }
   assert.fail('expected throw');
 }

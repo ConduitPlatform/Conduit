@@ -12,7 +12,6 @@ import {
   ConduitRouteObject,
   ConduitRouteOptions,
   ConduitGrpcSdk,
-  GrpcError,
   ConduitRouteReturnDefinition,
   ConduitSocketOptions,
   Indexable,
@@ -20,7 +19,8 @@ import {
   Router,
   SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '../classes/ModuleError.js';
+import { authErrors } from '../utilities/authErrors.js';
 import { GrpcServer } from '../classes/index.js';
 import { createUserHydrator, UserHydrator, UserResolver } from './hydrateUser.js';
 import { RoutingController } from './RoutingController.js';
@@ -52,7 +52,7 @@ export class RoutingManager {
     return async (userId: string) => {
       const auth = sdk.authentication;
       if (!auth) {
-        throw new GrpcError(status.UNAVAILABLE, 'authentication module unavailable');
+        throw new ModuleError(authErrors.USER_LOOKUP_UNAVAILABLE);
       }
       return auth.getUser(userId);
     };
