@@ -1,3 +1,5 @@
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../../errors.js';
 import { createTransport, SentMessageInfo } from 'nodemailer';
 import { Options } from 'nodemailer/lib/mailer/index.js';
 import {
@@ -18,15 +20,15 @@ export class SmtpProvider extends EmailProviderClass {
   }
 
   listTemplates(): Promise<Template[]> {
-    throw new Error('Method not implemented.');
+    throw new ModuleError(errors.EMAIL_OPERATION_UNSUPPORTED);
   }
 
   getTemplateInfo(template_name: string): Promise<Template> {
-    throw new Error('Method not implemented.');
+    throw new ModuleError(errors.EMAIL_OPERATION_UNSUPPORTED);
   }
 
   createTemplate(): Promise<Template> {
-    throw new Error('Method not implemented.');
+    throw new ModuleError(errors.EMAIL_OPERATION_UNSUPPORTED);
   }
 
   getBuilder(): EmailBuilderClass<Options> {
@@ -34,15 +36,15 @@ export class SmtpProvider extends EmailProviderClass {
   }
 
   updateTemplate(data: UpdateEmailTemplate): Promise<Template> {
-    throw new Error('Method not implemented.');
+    throw new ModuleError(errors.EMAIL_OPERATION_UNSUPPORTED);
   }
 
   async deleteTemplate(id: string): Promise<DeleteEmailTemplate> {
-    throw new Error('Method not implemented.');
+    throw new ModuleError(errors.EMAIL_OPERATION_UNSUPPORTED);
   }
 
   getEmailStatus(messageId: string): Promise<Indexable> {
-    throw new Error('Method not implemented.');
+    throw new ModuleError(errors.EMAIL_OPERATION_UNSUPPORTED);
   }
 
   getMessageId(info: SentMessageInfo): string | undefined {

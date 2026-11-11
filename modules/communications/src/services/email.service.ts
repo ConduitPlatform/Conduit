@@ -1,9 +1,9 @@
 import { isEmpty, isNil } from 'lodash-es';
 import { EmailRecord, EmailTemplate } from '../models/index.js';
 import handlebars from 'handlebars';
-import { ConduitGrpcSdk, GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
-import { ConfigController } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
+import { ConduitGrpcSdk, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConfigController, ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import {
   ChannelResult,
   ChannelStatus,
@@ -18,7 +18,7 @@ import { getHandleBarsValues } from '../providers/email/utils/index.js';
 import { QueueController } from '../controllers/queue.controller.js';
 import { storeEmail } from '../utils/storeEmail.js';
 import { Config } from '../config/index.js';
-import { Provider } from '../utils/index.js';
+import { channelFailure, Provider } from '../utils/index.js';
 
 const STATUS_UNSUPPORTED_TRANSPORTS = new Set(['amazonSes', 'smtp', 'mock']);
 
@@ -104,7 +104,7 @@ export class EmailService implements IChannel {
     } catch (error) {
       return {
         success: false,
-        error: (error as Error).message,
+        ...channelFailure(error, errors.EMAIL_PROVIDER_ERROR),
         channel: 'email',
       };
     }
@@ -134,58 +134,86 @@ export class EmailService implements IChannel {
       return {
         status: 'failed' as const,
         messageId,
-        error: (error as Error).message,
+        ...channelFailure(error, errors.EMAIL_PROVIDER_ERROR),
         timestamp: new Date(),
       };
     }
   }
 
-  getExternalTemplates() {
-    if (!this.isAvailable()) throw new Error('Email not configured');
-    return this.emailer!._transport?.listTemplates();
+  /**
+   * Runs a transport call: typed errors (unsupported operation, ...) pass through,
+   * anything else becomes EMAIL_PROVIDER_ERROR with the provider text kept for the log.
+   */
+  private async callTransport<T>(call: () => Promise<T> | T): Promise<T> {
+    try {
+      return await call();
+    } catch (e) {
+      throw ModuleError.from(e, errors.EMAIL_PROVIDER_ERROR);
+    }
   }
 
-  getExternalTemplate(id: string) {
-    if (!this.isAvailable()) throw new Error('Email not configured');
-    return this.emailer!._transport?.getTemplateInfo(id);
+  private callTransportSync<T>(call: () => T): T {
+    try {
+      return call();
+    } catch (e) {
+      throw ModuleError.from(e, errors.EMAIL_PROVIDER_ERROR);
+    }
   }
 
-  createExternalTemplate(data: CreateEmailTemplate): Promise<Template> {
-    if (!this.isAvailable()) throw new Error('Email not configured');
-    return (
-      this.emailer!._transport?.createTemplate(data) ??
-      Promise.reject(new Error('Transport is not available'))
+  async getExternalTemplates() {
+    if (!this.isAvailable()) throw new ModuleError(errors.EMAIL_NOT_CONFIGURED);
+    return this.callTransport(() => this.emailer!._transport?.listTemplates());
+  }
+
+  async getExternalTemplate(id: string) {
+    if (!this.isAvailable()) throw new ModuleError(errors.EMAIL_NOT_CONFIGURED);
+    return this.callTransport(() => this.emailer!._transport?.getTemplateInfo(id));
+  }
+
+  async createExternalTemplate(data: CreateEmailTemplate): Promise<Template> {
+    if (!this.isAvailable()) throw new ModuleError(errors.EMAIL_NOT_CONFIGURED);
+    const created = await this.callTransport(() =>
+      this.emailer!._transport?.createTemplate(data),
     );
+    if (!created)
+      throw new ModuleError(errors.EMAIL_NOT_CONFIGURED, 'Transport is not available');
+    return created;
   }
 
-  deleteExternalTemplate(id: string) {
-    if (!this.isAvailable()) throw new Error('Email not configured');
-    return this.emailer!._transport?.deleteTemplate(id);
+  async deleteExternalTemplate(id: string) {
+    if (!this.isAvailable()) throw new ModuleError(errors.EMAIL_NOT_CONFIGURED);
+    return this.callTransport(() => this.emailer!._transport?.deleteTemplate(id));
   }
 
   async registerTemplate(params: IRegisterTemplateParams) {
     const { name, body, subject, variables, sender, jsonTemplate } = params;
 
-    const existing = await EmailTemplate.getInstance().findOne({ name });
+    const existing = await EmailTemplate.getInstance()
+      .findOne({ name })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (!isNil(existing)) return existing;
 
-    return EmailTemplate.getInstance().create({
-      name,
-      subject,
-      body,
-      sender,
-      variables,
-      jsonTemplate,
-    });
+    return EmailTemplate.getInstance()
+      .create({
+        name,
+        subject,
+        body,
+        sender,
+        variables,
+        jsonTemplate,
+      })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
   }
 
   async updateTemplate(id: string, params: IUpdateTemplateParams) {
-    if (!this.isAvailable()) throw new Error('Email not configured');
-    const templateDocument = await EmailTemplate.getInstance().findOne({
-      _id: id,
-    });
+    if (!this.isAvailable()) throw new ModuleError(errors.EMAIL_NOT_CONFIGURED);
+    const templateDocument = await EmailTemplate.getInstance()
+      .findOne({
+        _id: id,
+      })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (isNil(templateDocument)) {
-      throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
+      throw new ModuleError(errors.TEMPLATE_NOT_FOUND);
     }
 
     ['name', 'subject', 'body', 'sender', 'jsonTemplate'].forEach(key => {
@@ -204,9 +232,7 @@ export class EmailService implements IChannel {
 
     const updatedTemplate = await EmailTemplate.getInstance()
       .findByIdAndUpdate(id, templateDocument)
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     if (templateDocument.externalManaged) {
       const template = await this.getExternalTemplate(updatedTemplate!.externalId!);
@@ -220,9 +246,7 @@ export class EmailService implements IChannel {
         body: updatedTemplate!.body,
         versionId: versionId,
       };
-      await this.emailer!._transport?.updateTemplate(data).catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      await this.callTransport(() => this.emailer!._transport?.updateTemplate(data));
     }
 
     return { template: updatedTemplate };
@@ -233,32 +257,44 @@ export class EmailService implements IChannel {
     params: ISendEmailParams,
     contentFileId?: string,
   ) {
-    if (!this.isAvailable()) throw new Error('Email not configured');
+    if (!this.isAvailable()) throw new ModuleError(errors.EMAIL_NOT_CONFIGURED);
     const { email, body, subject, variables, sender } = params;
-    const builder = this.emailer!.emailBuilder();
+    const builder = this.callTransportSync(() => this.emailer!.emailBuilder());
 
     if (!template && (!body || !subject)) {
-      throw new Error(`Template/body+subject not provided`);
+      throw new ModuleError(errors.EMAIL_CONTENT_REQUIRED);
     }
     let subjectString = subject!;
     let bodyString = body!;
     let templateFound: EmailTemplate | null = null;
     let senderAddress: string | undefined;
     if (template) {
-      templateFound = await EmailTemplate.getInstance().findOne({ name: template });
+      templateFound = await EmailTemplate.getInstance()
+        .findOne({ name: template })
+        .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
       if (isNil(templateFound)) {
-        throw new Error(`Template ${template} not found`);
+        throw new ModuleError(
+          errors.TEMPLATE_NOT_FOUND,
+          `Template ${template} not found`,
+        );
       }
-      if (templateFound.externalManaged) {
-        builder.setTemplate({
-          id: templateFound.externalId!,
-          variables: variables as Indexable,
-        });
+      const found = templateFound;
+      if (found.externalManaged) {
+        this.callTransportSync(() =>
+          builder.setTemplate({
+            id: found.externalId!,
+            variables: variables as Indexable,
+          }),
+        );
       } else {
-        bodyString = handlebars.compile(templateFound.body)(variables);
+        bodyString = this.callTransportSync(() =>
+          handlebars.compile(found.body)(variables),
+        );
       }
-      if (!isNil(templateFound.subject)) {
-        subjectString = handlebars.compile(templateFound.subject)(variables);
+      if (!isNil(found.subject)) {
+        subjectString = this.callTransportSync(() =>
+          handlebars.compile(found.subject)(variables),
+        );
       }
       if (!isEmpty(templateFound.sender)) {
         senderAddress = templateFound.sender;
@@ -282,8 +318,9 @@ export class EmailService implements IChannel {
           `Sending domain is not set, attempting to send email with provided address: ${senderAddress}`,
         );
       } else {
-        throw new Error(
-          `Sending domain is not set, and sender address is not valid: ${senderAddress}`,
+        throw new ModuleError(
+          errors.EMAIL_SENDING_DOMAIN_NOT_SET,
+          `Sender address: ${senderAddress}`,
         );
       }
     } else if (senderAddress && !senderAddress.includes(config.email.sendingDomain)) {
@@ -311,7 +348,9 @@ export class EmailService implements IChannel {
       builder.addAttachments(params.attachments as Attachment[]);
     }
 
-    const sentMessageInfo = await this.emailer!.sendEmail(builder);
+    const sentMessageInfo = await this.callTransport(() =>
+      this.emailer!.sendEmail(builder),
+    );
     const messageId = this.emailer!._transport?.getMessageId(sentMessageInfo);
 
     if (config.email?.storeEmails?.enabled) {
@@ -325,17 +364,14 @@ export class EmailService implements IChannel {
           subject: subjectString,
           ...params,
         },
-      );
+      ).catch(ModuleError.rethrow(errors.STORAGE_UNAVAILABLE));
 
       if (messageId) {
         const transport = config.email?.transport;
         if (transport && !STATUS_UNSUPPORTED_TRANSPORTS.has(transport)) {
-          await QueueController.getInstance().addEmailStatusJob(
-            messageId,
-            emailRecId,
-            0,
-            transport as Provider,
-          );
+          await QueueController.getInstance()
+            .addEmailStatusJob(messageId, emailRecId, 0, transport as Provider)
+            .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
         }
       }
     }
@@ -344,24 +380,32 @@ export class EmailService implements IChannel {
 
   async resendEmail(emailRecordId: string) {
     if (!this.grpcSdk.isAvailable('storage')) {
-      throw new GrpcError(status.INTERNAL, 'Storage is not available.');
+      throw new ModuleError(errors.STORAGE_UNAVAILABLE);
     }
-    const emailRecord = await EmailRecord.getInstance().findOne({ _id: emailRecordId });
+    const emailRecord = await EmailRecord.getInstance()
+      .findOne({ _id: emailRecordId })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (isNil(emailRecord)) {
-      throw new GrpcError(status.NOT_FOUND, 'Email record not found.');
+      throw new ModuleError(errors.EMAIL_RECORD_NOT_FOUND);
     }
-    const contentFileData = await this.grpcSdk.storage!.getFileData(
-      emailRecord.contentFile,
-    );
+    const contentFileData = await this.grpcSdk
+      .storage!.getFileData(emailRecord.contentFile)
+      .catch(ModuleError.rethrow(errors.STORAGE_UNAVAILABLE));
     if (!contentFileData) {
-      throw new GrpcError(status.NOT_FOUND, 'Email content file not found.');
+      throw new ModuleError(errors.EMAIL_CONTENT_FILE_NOT_FOUND);
     }
     const dataString = Buffer.from(contentFileData.data, 'base64').toString('utf-8');
-    return this.sendEmail(undefined, JSON.parse(dataString), emailRecord.contentFile);
+    let emailParams: ISendEmailParams;
+    try {
+      emailParams = JSON.parse(dataString);
+    } catch (e) {
+      throw ModuleError.from(e, errors.INVALID_JSON_PAYLOAD);
+    }
+    return this.sendEmail(undefined, emailParams, emailRecord.contentFile);
   }
 
   async getEmailStatus(messageId: string) {
-    if (!this.isAvailable()) return Promise.reject('Email not configured');
-    return this.emailer!.getEmailStatus(messageId);
+    if (!this.isAvailable()) throw new ModuleError(errors.EMAIL_NOT_CONFIGURED);
+    return this.callTransport(() => this.emailer!.getEmailStatus(messageId));
   }
 }

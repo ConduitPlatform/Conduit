@@ -1,4 +1,7 @@
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
+import { channelFailure } from '../utils/channelFailure.js';
 import { IChannel, IChannelSendParams, ChannelResult } from '../interfaces/index.js';
 import { EmailService } from './email.service.js';
 import { PushService } from './push.service.js';
@@ -22,6 +25,8 @@ export interface IFallbackSendParams extends IChannelSendParams {
 export type OrchestratorSendParams = IChannelSendParams & {
   templateName?: string;
 };
+
+class FallbackTimeoutError extends Error {}
 
 export class OrchestratorService {
   constructor(
@@ -55,7 +60,7 @@ export class OrchestratorService {
       case 'sms':
         return this.smsService;
       default:
-        throw new Error(`Unknown channel: ${channel}`);
+        throw new ModuleError(errors.INVALID_CHANNEL, `Unknown channel: ${channel}`);
     }
   }
 
@@ -98,7 +103,7 @@ export class OrchestratorService {
       } catch (error) {
         return {
           success: false,
-          error: (error as Error).message,
+          ...channelFailure(error, errors.EMAIL_PROVIDER_ERROR),
           channel: 'email',
         };
       }
@@ -131,7 +136,7 @@ export class OrchestratorService {
     );
 
     if (availableChannels.length === 0) {
-      throw new Error('No available channels');
+      throw new ModuleError(errors.NO_AVAILABLE_CHANNELS);
     }
 
     const promises = availableChannels.map(async channel => {
@@ -146,7 +151,7 @@ export class OrchestratorService {
       } catch (error) {
         const result: ChannelResult = {
           success: false,
-          error: (error as Error).message,
+          ...channelFailure(error, errors.COMMUNICATIONS_DATABASE_ERROR),
           channel,
         };
         results.push(result);
@@ -162,7 +167,10 @@ export class OrchestratorService {
 
     if (strategy === 'ALL_OR_NOTHING' && failureCount > 0) {
       const failedChannels = channelResults.filter(r => !r.success).map(r => r.channel);
-      throw new Error(`Failed to send to channels: ${failedChannels.join(', ')}`);
+      throw new ModuleError(
+        errors.CHANNEL_SEND_FAILED,
+        `Failed channels: ${failedChannels.join(', ')}`,
+      );
     }
 
     return {
@@ -187,6 +195,7 @@ export class OrchestratorService {
         const result: ChannelResult = {
           success: false,
           error: `Channel ${channel} is not available`,
+          conduitCode: errors.COMMUNICATION_CHANNEL_UNAVAILABLE.conduitCode,
           channel,
         };
         attempts.push(result);
@@ -200,7 +209,10 @@ export class OrchestratorService {
         });
 
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error(`Timeout after ${timeout}ms`)), timeout);
+          setTimeout(
+            () => reject(new FallbackTimeoutError(`Timeout after ${timeout}ms`)),
+            timeout,
+          );
         });
 
         const result = await Promise.race([
@@ -222,7 +234,9 @@ export class OrchestratorService {
       } catch (error) {
         const result: ChannelResult = {
           success: false,
-          error: (error as Error).message,
+          ...(error instanceof FallbackTimeoutError
+            ? { error: error.message }
+            : channelFailure(error, errors.COMMUNICATIONS_DATABASE_ERROR)),
           channel,
         };
         attempts.push(result);
@@ -230,7 +244,7 @@ export class OrchestratorService {
     }
 
     this.trackSendMetrics(attempts);
-    throw new Error(`All fallback channels failed. Attempts: ${attempts.length}`);
+    throw new ModuleError(errors.ALL_CHANNELS_FAILED, `Attempts: ${attempts.length}`);
   }
 
   async sendToChannel(
@@ -240,7 +254,10 @@ export class OrchestratorService {
     const service = this.getChannelService(channel);
 
     if (!service.isAvailable()) {
-      throw new Error(`Channel ${channel} is not available`);
+      throw new ModuleError(
+        errors.COMMUNICATION_CHANNEL_UNAVAILABLE,
+        `Channel ${channel} is not available`,
+      );
     }
 
     const resolvedParams = await this.resolveParamsForChannel(channel, params);

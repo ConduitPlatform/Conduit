@@ -1,3 +1,5 @@
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../../errors.js';
 import { MailersendConfig } from './mailersend.config.js';
 import { createTransport, SentMessageInfo } from 'nodemailer';
 import { EmailParams, MailerSend, Recipient, Sender } from 'mailersend';
@@ -23,23 +25,23 @@ export class MailersendProvider extends EmailProviderClass {
   }
 
   listTemplates(): Promise<Template[]> {
-    throw new Error('Method not implemented.');
+    throw new ModuleError(errors.EMAIL_OPERATION_UNSUPPORTED);
   }
 
   getTemplateInfo(template_name: string): Promise<Template> {
-    throw new Error('Method not implemented.');
+    throw new ModuleError(errors.EMAIL_OPERATION_UNSUPPORTED);
   }
 
   createTemplate(): Promise<Template> {
-    throw new Error('Method not implemented.');
+    throw new ModuleError(errors.EMAIL_OPERATION_UNSUPPORTED);
   }
 
   updateTemplate(data: UpdateEmailTemplate): Promise<Template> {
-    throw new Error('Method not implemented.');
+    throw new ModuleError(errors.EMAIL_OPERATION_UNSUPPORTED);
   }
 
   async deleteTemplate(id: string): Promise<DeleteEmailTemplate> {
-    throw new Error('Method not implemented.');
+    throw new ModuleError(errors.EMAIL_OPERATION_UNSUPPORTED);
   }
 
   getBuilder(): EmailBuilderClass<Options> {

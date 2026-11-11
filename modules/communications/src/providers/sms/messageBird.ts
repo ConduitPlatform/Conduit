@@ -1,3 +1,5 @@
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import messagebird from 'messagebird';
 import { ISmsProvider } from './interfaces/ISmsProvider.js';
@@ -22,7 +24,7 @@ export class messageBirdProvider implements ISmsProvider {
         (error: Error | null, response: messagebird.Message | null) => {
           if (error) {
             ConduitGrpcSdk.Logger.error(error);
-            reject(error);
+            reject(new ModuleError(errors.SMS_PROVIDER_ERROR, error.message));
           } else {
             resolve(response);
           }
@@ -44,7 +46,12 @@ export class messageBirdProvider implements ISmsProvider {
         (error: Error | null, response: any) => {
           if (error) {
             ConduitGrpcSdk.Logger.error(error);
-            reject(new Error('Could not send verification code'));
+            reject(
+              new ModuleError(
+                errors.SMS_PROVIDER_ERROR,
+                'Could not send verification code',
+              ),
+            );
           } else {
             resolve(response.id);
           }
@@ -54,11 +61,11 @@ export class messageBirdProvider implements ISmsProvider {
   }
 
   async verify(verificationId: string, otp: string): Promise<boolean> {
-    return new Promise<boolean>((resolve, reject) => {
+    return new Promise<boolean>(resolve => {
       this.client.verify.verify(verificationId, otp, (error: Error | null) => {
         if (error) {
           ConduitGrpcSdk.Logger.error(error);
-          reject(false);
+          resolve(false);
         } else {
           resolve(true);
         }

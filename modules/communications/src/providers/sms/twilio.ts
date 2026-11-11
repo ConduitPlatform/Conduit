@@ -1,3 +1,5 @@
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import twilio from 'twilio';
 import { ISmsProvider } from './interfaces/ISmsProvider.js';
@@ -27,17 +29,21 @@ export class TwilioProvider implements ISmsProvider {
 
   sendSms(to: string, message: string) {
     if (!this.phoneNumber)
-      return Promise.reject(Error('Phone number missing from settings'));
-    return this.client.messages.create({
-      body: message,
-      to,
-      from: this.phoneNumber,
-    });
+      return Promise.reject(
+        new ModuleError(errors.SMS_NOT_CONFIGURED, 'Phone number missing from settings'),
+      );
+    return this.client.messages
+      .create({
+        body: message,
+        to,
+        from: this.phoneNumber,
+      })
+      .catch(ModuleError.rethrow(errors.SMS_PROVIDER_ERROR));
   }
 
   async sendVerificationCode(to: string) {
     if (this.serviceSid === undefined) {
-      return Promise.reject(Error('no service sid specified'));
+      return Promise.reject(new ModuleError(errors.SMS_VERIFICATION_NOT_CONFIGURED));
     }
 
     const verification = await this.client.verify.v2
@@ -48,7 +54,9 @@ export class TwilioProvider implements ISmsProvider {
       });
 
     if (!verification) {
-      return Promise.reject(Error('could not send verification code'));
+      return Promise.reject(
+        new ModuleError(errors.SMS_PROVIDER_ERROR, 'could not send verification code'),
+      );
     }
 
     return Promise.resolve(verification.sid);
@@ -56,7 +64,7 @@ export class TwilioProvider implements ISmsProvider {
 
   async verify(verificationSid: string, code: string): Promise<boolean> {
     if (this.serviceSid === undefined) {
-      return Promise.reject(Error('no service sid specified'));
+      return Promise.reject(new ModuleError(errors.SMS_VERIFICATION_NOT_CONFIGURED));
     }
     const verificationCheck = await this.client.verify.v2
       .services(this.serviceSid)
@@ -66,7 +74,9 @@ export class TwilioProvider implements ISmsProvider {
       });
 
     if (!verificationCheck) {
-      return Promise.reject(Error('could not verify code'));
+      return Promise.reject(
+        new ModuleError(errors.SMS_PROVIDER_ERROR, 'could not verify code'),
+      );
     }
 
     return Promise.resolve(verificationCheck.status === 'approved');

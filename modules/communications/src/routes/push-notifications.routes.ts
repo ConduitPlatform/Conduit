@@ -15,6 +15,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { Notification, NotificationToken } from '../models/index.js';
 import { PushService } from '../services/push.service.js';
+import { errors } from '../errors.js';
 
 export class PushNotificationsRoutes {
   private readonly handlers: NotificationTokensHandler;
@@ -42,6 +43,12 @@ export class PushNotificationsRoutes {
         description: 'Sets the given notification token for a user.',
         middlewares: ['authMiddleware'],
         path: '/token',
+        errors: [
+          errors.PUSH_NOT_CONFIGURED,
+          errors.PUSH_PLATFORM_UNSUPPORTED,
+          errors.PUSH_PROVIDER_ERROR,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('SetNotificationTokenResponse', {
         newTokenDocument: NotificationToken.getInstance().fields,
@@ -58,6 +65,7 @@ export class PushNotificationsRoutes {
         description: 'Removes tokens for a user (optionally for specific platform).',
         middlewares: ['authMiddleware'],
         path: '/token',
+        errors: [errors.COMMUNICATIONS_DATABASE_ERROR],
       },
       new ConduitRouteReturnDefinition('ClearNotificationTokenResponse', 'String'),
       this.handlers.clearNotificationTokens.bind(this.handlers),
@@ -75,6 +83,7 @@ export class PushNotificationsRoutes {
         description: 'Get User notifications',
         middlewares: ['authMiddleware'],
         path: '/notifications',
+        errors: [errors.COMMUNICATIONS_DATABASE_ERROR],
       },
       new ConduitRouteReturnDefinition('GetNotificationsResponse', {
         notifications: [Notification.name],
@@ -94,6 +103,11 @@ export class PushNotificationsRoutes {
         description: 'Read user notifications.',
         middlewares: ['authMiddleware'],
         path: '/notifications',
+        errors: [
+          errors.NOTIFICATION_READ_PARAMS_REQUIRED,
+          errors.NOTIFICATION_NOT_FOUND,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('ReadNotificationsResponse', 'String'),
       this.handlers.readUserNotification.bind(this.handlers),

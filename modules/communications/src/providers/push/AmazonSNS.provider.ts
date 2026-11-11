@@ -1,3 +1,5 @@
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 import {
   CreatePlatformEndpointCommand,
   PublishCommand,
@@ -63,7 +65,8 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
         : this.settings.apnsApplicationArn;
 
     if (!applicationArn) {
-      throw new Error(
+      throw new ModuleError(
+        errors.PUSH_PLATFORM_UNSUPPORTED,
         `Only ANDROID (GCM) and IOS (APNS) platforms are supported: ${platform}`,
       );
     }
@@ -80,7 +83,7 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
       ConduitGrpcSdk.Logger.error(
         `Failed to register the device token at Amazon SNS: ${(error as Error).message}`,
       );
-      throw error;
+      throw ModuleError.from(error, errors.PUSH_PROVIDER_ERROR);
     }
 
     await NotificationToken.getInstance().updateOne(
@@ -144,7 +147,8 @@ export class AmazonSNSProvider extends BaseNotificationProvider<IAmazonSNSSettin
 
     const awsPlatform = CONDUIT_TO_AWS_PLATFORM[platform as PlatformTypesEnum];
     if (!awsPlatform) {
-      throw new Error(
+      throw new ModuleError(
+        errors.PUSH_PLATFORM_UNSUPPORTED,
         `Unsupported platform for AWS SNS, use ANDROID or IOS: ${platform}`,
       );
     }

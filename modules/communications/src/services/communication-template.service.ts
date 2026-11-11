@@ -1,7 +1,8 @@
 import handlebars from 'handlebars';
 import { isEmpty, isNil } from 'lodash-es';
-import { ConduitGrpcSdk, GrpcError, Query } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ConduitGrpcSdk, Query } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { CommunicationTemplate, EmailTemplate } from '../models/index.js';
 import { getHandleBarsValues } from '../providers/email/utils/index.js';
 import { IChannelSendParams } from '../interfaces/index.js';
@@ -73,18 +74,19 @@ export class CommunicationTemplateService {
         ...validated,
         variables,
       })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     ConduitGrpcSdk.Metrics?.increment('communication_templates_total');
     return doc;
   }
 
   async update(id: string, params: IUpdateCommunicationTemplateParams) {
-    const existing = await CommunicationTemplate.getInstance().findOne({ _id: id });
+    const existing = await CommunicationTemplate.getInstance()
+      .findOne({ _id: id })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (isNil(existing)) {
-      throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
+      throw new ModuleError(errors.TEMPLATE_NOT_FOUND);
     }
 
     const merged: ICreateCommunicationTemplateParams = {
@@ -109,39 +111,43 @@ export class CommunicationTemplateService {
 
     const updated = await CommunicationTemplate.getInstance()
       .findByIdAndUpdate(id, { ...validated, variables })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     return updated;
   }
 
   async delete(id: string) {
-    const existing = await CommunicationTemplate.getInstance().findOne({ _id: id });
+    const existing = await CommunicationTemplate.getInstance()
+      .findOne({ _id: id })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (isNil(existing)) {
-      throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
+      throw new ModuleError(errors.TEMPLATE_NOT_FOUND);
     }
 
     await CommunicationTemplate.getInstance()
       .deleteOne({ _id: id })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     ConduitGrpcSdk.Metrics?.decrement('communication_templates_total');
     return { deleted: true };
   }
 
   async getById(id: string) {
-    const doc = await CommunicationTemplate.getInstance().findOne({ _id: id });
+    const doc = await CommunicationTemplate.getInstance()
+      .findOne({ _id: id })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (isNil(doc)) {
-      throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
+      throw new ModuleError(errors.TEMPLATE_NOT_FOUND);
     }
     return doc;
   }
 
   async getByName(name: string) {
-    return CommunicationTemplate.getInstance().findOne({ name });
+    return CommunicationTemplate.getInstance()
+      .findOne({ name })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
   }
 
   async list(
@@ -151,7 +157,7 @@ export class CommunicationTemplateService {
     const [documents, count] = await Promise.all([
       CommunicationTemplate.getInstance().findMany(query, pagination),
       CommunicationTemplate.getInstance().countDocuments(query),
-    ]);
+    ]).catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     return { documents, count };
   }
 
@@ -163,8 +169,8 @@ export class CommunicationTemplateService {
     const unified = await this.getByName(templateName);
     if (unified) {
       if (!unified.channels.includes(channel)) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
+        throw new ModuleError(
+          errors.TEMPLATE_CHANNEL_NOT_INCLUDED,
           `Template '${templateName}' does not include channel '${channel}'`,
         );
       }
@@ -172,9 +178,11 @@ export class CommunicationTemplateService {
     }
 
     if (channel === 'email') {
-      const emailTemplate = await EmailTemplate.getInstance().findOne({
-        name: templateName,
-      });
+      const emailTemplate = await EmailTemplate.getInstance()
+        .findOne({
+          name: templateName,
+        })
+        .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
       if (emailTemplate) {
         if (emailTemplate.externalManaged) {
           return { emailTemplateName: templateName };
@@ -191,7 +199,10 @@ export class CommunicationTemplateService {
       }
     }
 
-    throw new GrpcError(status.NOT_FOUND, `Template '${templateName}' not found`);
+    throw new ModuleError(
+      errors.TEMPLATE_NOT_FOUND,
+      `Template '${templateName}' not found`,
+    );
   }
 
   async resolveAll(
@@ -207,9 +218,11 @@ export class CommunicationTemplateService {
       return result;
     }
 
-    const emailTemplate = await EmailTemplate.getInstance().findOne({
-      name: templateName,
-    });
+    const emailTemplate = await EmailTemplate.getInstance()
+      .findOne({
+        name: templateName,
+      })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (emailTemplate) {
       if (emailTemplate.externalManaged) {
         return { email: { emailTemplateName: templateName } };
@@ -227,7 +240,10 @@ export class CommunicationTemplateService {
       };
     }
 
-    throw new GrpcError(status.NOT_FOUND, `Template '${templateName}' not found`);
+    throw new ModuleError(
+      errors.TEMPLATE_NOT_FOUND,
+      `Template '${templateName}' not found`,
+    );
   }
 
   mergeWithRequest(
@@ -260,7 +276,9 @@ export class CommunicationTemplateService {
   }) {
     const { emailTemplateId, dryRun, skipExisting, deleteSource } = options;
     const query = emailTemplateId ? { _id: emailTemplateId } : {};
-    const emailTemplates = await EmailTemplate.getInstance().findMany(query);
+    const emailTemplates = await EmailTemplate.getInstance()
+      .findMany(query)
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     const planned: Array<{
       sourceId: string;
@@ -291,8 +309,8 @@ export class CommunicationTemplateService {
           });
           continue;
         }
-        throw new GrpcError(
-          status.ALREADY_EXISTS,
+        throw new ModuleError(
+          errors.TEMPLATE_NAME_TAKEN,
           `Unified template '${emailTemplate.name}' already exists`,
         );
       }
@@ -330,7 +348,9 @@ export class CommunicationTemplateService {
       const doc = await this.createMigratedTemplate(item.target);
       created.push(doc);
       if (deleteSource) {
-        await EmailTemplate.getInstance().deleteOne({ _id: item.sourceId });
+        await EmailTemplate.getInstance()
+          .deleteOne({ _id: item.sourceId })
+          .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
         ConduitGrpcSdk.Metrics?.decrement('email_templates_total');
       }
     }
@@ -352,9 +372,8 @@ export class CommunicationTemplateService {
         ...validated,
         variables,
       })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     ConduitGrpcSdk.Metrics?.increment('communication_templates_total');
     return doc;
@@ -369,8 +388,8 @@ export class CommunicationTemplateService {
       case 'email': {
         const email = template.email;
         if (!email?.subject || !email?.body) {
-          throw new GrpcError(
-            status.INVALID_ARGUMENT,
+          throw new ModuleError(
+            errors.TEMPLATE_CHANNEL_INCOMPLETE,
             `Template '${template.name}' email channel is incomplete`,
           );
         }
@@ -383,8 +402,8 @@ export class CommunicationTemplateService {
       case 'push': {
         const push = template.push;
         if (!push?.title || !push?.body) {
-          throw new GrpcError(
-            status.INVALID_ARGUMENT,
+          throw new ModuleError(
+            errors.TEMPLATE_CHANNEL_INCOMPLETE,
             `Template '${template.name}' push channel is incomplete`,
           );
         }
@@ -396,8 +415,8 @@ export class CommunicationTemplateService {
       case 'sms': {
         const sms = template.sms;
         if (!sms?.message) {
-          throw new GrpcError(
-            status.INVALID_ARGUMENT,
+          throw new ModuleError(
+            errors.TEMPLATE_CHANNEL_INCOMPLETE,
             `Template '${template.name}' sms channel is incomplete`,
           );
         }
@@ -407,7 +426,7 @@ export class CommunicationTemplateService {
       }
       default: {
         const _exhaustive: never = channel;
-        throw new GrpcError(status.INVALID_ARGUMENT, `Unknown channel: ${_exhaustive}`);
+        throw new ModuleError(errors.INVALID_CHANNEL, `Unknown channel: ${_exhaustive}`);
       }
     }
   }
@@ -416,21 +435,24 @@ export class CommunicationTemplateService {
     params: ICreateCommunicationTemplateParams,
   ): ICreateCommunicationTemplateParams {
     if (!params.name || isEmpty(params.name.trim())) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Template name is required');
+      throw new ModuleError(errors.TEMPLATE_NAME_REQUIRED);
     }
 
     if (!params.channels || params.channels.length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'At least one channel is required');
+      throw new ModuleError(errors.TEMPLATE_CHANNELS_REQUIRED);
     }
 
     const uniqueChannels = [...new Set(params.channels)];
     if (uniqueChannels.length !== params.channels.length) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Duplicate channels are not allowed');
+      throw new ModuleError(errors.TEMPLATE_DUPLICATE_CHANNELS);
     }
 
     for (const ch of params.channels) {
       if (!CHANNELS.includes(ch)) {
-        throw new GrpcError(status.INVALID_ARGUMENT, `Invalid channel: ${ch}`);
+        throw new ModuleError({
+          ...errors.INVALID_CHANNEL,
+          message: `Invalid channel: ${ch}`,
+        });
       }
     }
 
@@ -442,10 +464,10 @@ export class CommunicationTemplateService {
 
     if (params.channels.includes('email')) {
       if (!params.email?.subject || !params.email?.body) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Email channel requires subject and body',
-        );
+        throw new ModuleError({
+          ...errors.TEMPLATE_CHANNEL_INCOMPLETE,
+          message: 'Email channel requires subject and body',
+        });
       }
       result.email = {
         subject: params.email.subject,
@@ -456,10 +478,10 @@ export class CommunicationTemplateService {
 
     if (params.channels.includes('push')) {
       if (!params.push?.title || !params.push?.body) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Push channel requires title and body',
-        );
+        throw new ModuleError({
+          ...errors.TEMPLATE_CHANNEL_INCOMPLETE,
+          message: 'Push channel requires title and body',
+        });
       }
       result.push = {
         title: params.push.title,
@@ -469,7 +491,10 @@ export class CommunicationTemplateService {
 
     if (params.channels.includes('sms')) {
       if (!params.sms?.message) {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'SMS channel requires message');
+        throw new ModuleError({
+          ...errors.TEMPLATE_CHANNEL_INCOMPLETE,
+          message: 'SMS channel requires message',
+        });
       }
       result.sms = { message: params.sms.message };
     }
@@ -500,11 +525,13 @@ export class CommunicationTemplateService {
   }
 
   private async assertUnifiedNameAvailable(name: string, excludeId?: string) {
-    const unified = await CommunicationTemplate.getInstance().findOne({ name });
+    const unified = await CommunicationTemplate.getInstance()
+      .findOne({ name })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     if (unified && unified._id !== excludeId) {
-      throw new GrpcError(
-        status.ALREADY_EXISTS,
+      throw new ModuleError(
+        errors.TEMPLATE_NAME_TAKEN,
         `A unified template named '${name}' already exists`,
       );
     }
@@ -513,11 +540,17 @@ export class CommunicationTemplateService {
   private async assertNameAvailable(name: string, excludeId?: string) {
     await this.assertUnifiedNameAvailable(name, excludeId);
 
-    const email = await EmailTemplate.getInstance().findOne({ name });
+    const email = await EmailTemplate.getInstance()
+      .findOne({ name })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (email) {
-      throw new GrpcError(
-        status.ALREADY_EXISTS,
-        `An email template named '${name}' already exists. Migrate or rename before creating a unified template.`,
+      throw new ModuleError(
+        {
+          ...errors.TEMPLATE_NAME_TAKEN,
+          message:
+            'An email template with this name already exists. Migrate or rename it before creating a unified template',
+        },
+        `Email template name: ${name}`,
       );
     }
   }

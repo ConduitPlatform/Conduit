@@ -17,6 +17,7 @@ export interface ChannelResult {
   success: boolean;
   messageId?: string;
   error?: string;
+  conduitCode?: string;
   channel: string;
 }
 
@@ -25,6 +26,7 @@ export interface ChannelStatus {
   messageId: string;
   timestamp?: Date;
   error?: string;
+  conduitCode?: string;
 }
 
 export interface IChannel {

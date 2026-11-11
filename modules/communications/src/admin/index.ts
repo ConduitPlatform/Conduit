@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
   Query,
@@ -16,9 +15,10 @@ import {
   ConduitObjectId,
   ConduitString,
   GrpcServer,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
+import { errors } from '../errors.js';
 import { to } from 'await-to-js';
 import { isNil } from 'lodash-es';
 import escapeStringRegexp from 'escape-string-regexp';
@@ -73,7 +73,7 @@ export class AdminHandlers {
     const { templateName, body, subject, email, variables } = call.request.params;
     let { sender } = call.request.params;
     if (!templateName && (!body || !subject)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Template/body+subject not provided');
+      throw new ModuleError(errors.EMAIL_CONTENT_REQUIRED);
     }
     sender ??= 'conduit';
 
@@ -92,10 +92,7 @@ export class AdminHandlers {
         variables,
         sender: sender,
       })
-      .catch((e: Error) => {
-        ConduitGrpcSdk.Logger.error(e);
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.EMAIL_PROVIDER_ERROR));
     ConduitGrpcSdk.Metrics?.increment('emails_sent_total');
     return { message: sentEmailInfo.messageId ?? 'Email sent' };
   }
@@ -111,9 +108,9 @@ export class AdminHandlers {
       platform: call.request.params.platform,
       doNotStore: call.request.params.doNotStore,
     };
-    await this.pushService.sendNotification(params).catch(e => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
+    await this.pushService
+      .sendNotification(params)
+      .catch(ModuleError.rethrow(errors.PUSH_PROVIDER_ERROR));
     ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1);
     return 'Ok';
   }
@@ -121,9 +118,9 @@ export class AdminHandlers {
   // SMS admin routes
   async sendSms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { to, message } = call.request.params;
-    await this.smsService.sendSms(to, message).catch(e => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
+    await this.smsService
+      .sendSms(to, message)
+      .catch(ModuleError.rethrow(errors.SMS_PROVIDER_ERROR));
     ConduitGrpcSdk.Metrics?.increment('sms_sent_total');
     return 'SMS sent';
   }
@@ -145,11 +142,7 @@ export class AdminHandlers {
       templateName,
     };
 
-    const result = await this.orchestratorService
-      .sendToMultipleChannels(sendParams)
-      .catch(e => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    const result = await this.orchestratorService.sendToMultipleChannels(sendParams);
 
     return {
       successCount: result.successCount,
@@ -174,11 +167,7 @@ export class AdminHandlers {
       templateName,
     };
 
-    const result = await this.orchestratorService
-      .sendWithFallback(sendParams)
-      .catch(e => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    const result = await this.orchestratorService.sendWithFallback(sendParams);
 
     return {
       successfulChannel: result.successfulChannel,
@@ -192,20 +181,17 @@ export class AdminHandlers {
     const { channel, templateName, recipient, subject, body, variables, sender } =
       call.request.params;
 
-    const result = await this.orchestratorService
-      .sendToChannel(channel as 'email' | 'push' | 'sms', {
+    return await this.orchestratorService.sendToChannel(
+      channel as 'email' | 'push' | 'sms',
+      {
         recipient,
         subject,
         body,
         variables,
         sender,
         templateName,
-      })
-      .catch(e => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-
-    return result;
+      },
+    );
   }
 
   async getCommunicationTemplates(
@@ -223,11 +209,11 @@ export class AdminHandlers {
       }
     }
 
-    const { documents, count } = await this.templateService
-      .list(query, { skip, limit, sort })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    const { documents, count } = await this.templateService.list(query, {
+      skip,
+      limit,
+      sort,
+    });
 
     return { templateDocuments: documents, count };
   }
@@ -235,14 +221,7 @@ export class AdminHandlers {
   async getCommunicationTemplate(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
-    const template = await this.templateService
-      .getById(call.request.urlParams.id)
-      .catch((e: Error) => {
-        if (e.message.includes('not exist')) {
-          throw new GrpcError(status.NOT_FOUND, e.message);
-        }
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    const template = await this.templateService.getById(call.request.urlParams.id);
     return { template };
   }
 
@@ -251,22 +230,15 @@ export class AdminHandlers {
   ): Promise<UnparsedRouterResponse> {
     const { name, channels, email, push, sms, variables, templateDescription } =
       call.request.params;
-    const template = await this.templateService
-      .create({
-        name,
-        channels,
-        email,
-        push,
-        sms,
-        variables,
-        summary: templateDescription,
-      })
-      .catch((e: Error) => {
-        if (e.message.includes('already exists')) {
-          throw new GrpcError(status.ALREADY_EXISTS, e.message);
-        }
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    const template = await this.templateService.create({
+      name,
+      channels,
+      email,
+      push,
+      sms,
+      variables,
+      summary: templateDescription,
+    });
     return { template };
   }
 
@@ -278,50 +250,29 @@ export class AdminHandlers {
       bodyParams.summary = bodyParams.templateDescription;
       delete bodyParams.templateDescription;
     }
-    const template = await this.templateService
-      .update(call.request.urlParams.id, bodyParams)
-      .catch((e: Error) => {
-        if (e.message.includes('not exist')) {
-          throw new GrpcError(status.NOT_FOUND, e.message);
-        }
-        if (e.message.includes('already exists')) {
-          throw new GrpcError(status.ALREADY_EXISTS, e.message);
-        }
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    const template = await this.templateService.update(
+      call.request.urlParams.id,
+      bodyParams,
+    );
     return { template };
   }
 
   async deleteCommunicationTemplate(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
-    return await this.templateService
-      .delete(call.request.urlParams.id)
-      .catch((e: Error) => {
-        if (e.message.includes('not exist')) {
-          throw new GrpcError(status.NOT_FOUND, e.message);
-        }
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    return await this.templateService.delete(call.request.urlParams.id);
   }
 
   async migrateFromEmailTemplate(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
     const { emailTemplateId, dryRun, skipExisting, deleteSource } = call.request.params;
-    return await this.templateService
-      .migrateFromEmailTemplate({
-        emailTemplateId,
-        dryRun,
-        skipExisting,
-        deleteSource,
-      })
-      .catch((e: Error) => {
-        if (e.message.includes('already exists')) {
-          throw new GrpcError(status.ALREADY_EXISTS, e.message);
-        }
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    return await this.templateService.migrateFromEmailTemplate({
+      emailTemplateId,
+      dryRun,
+      skipExisting,
+      deleteSource,
+    });
   }
 
   // Email template management methods
@@ -347,9 +298,7 @@ export class AdminHandlers {
     const [templateDocuments, count] = await Promise.all([
       templateDocumentsPromise,
       totalCountPromise,
-    ]).catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
+    ]).catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     return { templateDocuments, count };
   }
@@ -375,7 +324,7 @@ export class AdminHandlers {
           }),
         );
         if (err) {
-          throw new GrpcError(status.INTERNAL, err.message);
+          throw ModuleError.from(err, errors.EMAIL_PROVIDER_ERROR);
         }
         externalId = (template as Template)?.id;
       } else {
@@ -383,10 +332,12 @@ export class AdminHandlers {
       }
     }
 
-    const unifiedCollision = await CommunicationTemplate.getInstance().findOne({ name });
+    const unifiedCollision = await CommunicationTemplate.getInstance()
+      .findOne({ name })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (!isNil(unifiedCollision)) {
-      throw new GrpcError(
-        status.ALREADY_EXISTS,
+      throw new ModuleError(
+        errors.TEMPLATE_NAME_TAKEN,
         `A unified template named '${name}' already exists`,
       );
     }
@@ -402,9 +353,7 @@ export class AdminHandlers {
         externalId,
         jsonTemplate,
       })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     ConduitGrpcSdk.Metrics?.increment('email_templates_total');
     return { template: newTemplate };
   }
@@ -417,25 +366,23 @@ export class AdminHandlers {
   }
 
   async deleteTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const templateDocument = await EmailTemplate.getInstance().findOne({
-      _id: call.request.params.id,
-    });
+    const templateDocument = await EmailTemplate.getInstance()
+      .findOne({
+        _id: call.request.params.id,
+      })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (isNil(templateDocument)) {
-      throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
+      throw new ModuleError(errors.TEMPLATE_NOT_FOUND);
     }
 
     await EmailTemplate.getInstance()
       .deleteOne({ _id: call.request.params.id })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     let deleted;
     if (templateDocument!.externalManaged) {
-      deleted = await this.emailService
-        .deleteExternalTemplate(templateDocument!.externalId!)
-        ?.catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+      deleted = await this.emailService.deleteExternalTemplate(
+        templateDocument!.externalId!,
+      );
     }
     ConduitGrpcSdk.Metrics?.decrement('email_templates_total');
     return { deleted };
@@ -453,14 +400,14 @@ export class AdminHandlers {
     };
     const [err, externalTemplates] = await to(this.emailService.getExternalTemplates()!);
     if (!isNil(err)) {
-      throw new GrpcError(status.INTERNAL, err.message);
-    }
-    if (!isNil(sortByName)) {
-      if (sortByName) externalTemplates!.sort((a, b) => a.name.localeCompare(b.name));
-      else externalTemplates!.sort((a, b) => b.name.localeCompare(a.name));
+      throw ModuleError.from(err, errors.EMAIL_PROVIDER_ERROR);
     }
     if (isNil(externalTemplates)) {
-      throw new GrpcError(status.NOT_FOUND, 'No external templates could be retrieved');
+      throw new ModuleError(errors.EXTERNAL_TEMPLATES_NOT_FOUND);
+    }
+    if (!isNil(sortByName)) {
+      if (sortByName) externalTemplates.sort((a, b) => a.name.localeCompare(b.name));
+      else externalTemplates.sort((a, b) => b.name.localeCompare(a.name));
     }
     let templateDocuments: TemplateDocument[] = [];
     (externalTemplates as Template[]).forEach((element: Template) => {
@@ -479,16 +426,17 @@ export class AdminHandlers {
   }
 
   async syncExternalTemplates(): Promise<UnparsedRouterResponse> {
-    let errorMessage: string | null = null;
     const externalTemplates = await this.emailService.getExternalTemplates();
     if (isNil(externalTemplates)) {
-      throw new GrpcError(status.NOT_FOUND, 'No external templates could be retrieved');
+      throw new ModuleError(errors.EXTERNAL_TEMPLATES_NOT_FOUND);
     }
     const updated = [];
     for (const element of externalTemplates) {
-      const templateDocument = await EmailTemplate.getInstance().findOne({
-        externalId: element.id,
-      });
+      const templateDocument = await EmailTemplate.getInstance()
+        .findOne({
+          externalId: element.id,
+        })
+        .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
       if (isNil(templateDocument)) {
         continue;
       }
@@ -501,10 +449,7 @@ export class AdminHandlers {
       };
       const updatedTemplate = await EmailTemplate.getInstance()
         .findByIdAndUpdate(templateDocument._id, synchronized)
-        .catch((e: Error) => (errorMessage = e.message));
-      if (!isNil(errorMessage)) {
-        throw new GrpcError(status.INTERNAL, errorMessage);
-      }
+        .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
       updated.push(updatedTemplate);
     }
 
@@ -512,11 +457,13 @@ export class AdminHandlers {
   }
 
   async resendEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const emailRecord = await EmailRecord.getInstance().findOne({
-      _id: call.request.params.id,
-    });
+    const emailRecord = await EmailRecord.getInstance()
+      .findOne({
+        _id: call.request.params.id,
+      })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (isNil(emailRecord)) {
-      throw new GrpcError(status.NOT_FOUND, 'Email record does not exist');
+      throw new ModuleError(errors.EMAIL_RECORD_NOT_FOUND);
     }
 
     return await this.emailService.sendEmail(
@@ -556,19 +503,19 @@ export class AdminHandlers {
     const [emailDocuments, count] = await Promise.all([
       emailDocumentsPromise,
       totalCountPromise,
-    ]).catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
+    ]).catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     return { emailDocuments, count };
   }
 
   async getEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const emailRecord = await EmailRecord.getInstance().findOne({
-      _id: call.request.urlParams.id,
-    });
+    const emailRecord = await EmailRecord.getInstance()
+      .findOne({
+        _id: call.request.urlParams.id,
+      })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (isNil(emailRecord)) {
-      throw new GrpcError(status.NOT_FOUND, 'Email record does not exist');
+      throw new ModuleError(errors.EMAIL_RECORD_NOT_FOUND);
     }
     return { emailRecord };
   }
@@ -590,26 +537,32 @@ export class AdminHandlers {
       query[platform] = platform;
     }
 
-    const tokens: any[] = await NotificationToken.getInstance().findMany(query, {
-      skip,
-      limit,
-      sort,
-      populate,
-    });
-    const count: number = await NotificationToken.getInstance().countDocuments(query);
+    const tokens: any[] = await NotificationToken.getInstance()
+      .findMany(query, {
+        skip,
+        limit,
+        sort,
+        populate,
+      })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
+    const count: number = await NotificationToken.getInstance()
+      .countDocuments(query)
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     return { tokens, count };
   }
 
   async getNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const tokenDocuments = await NotificationToken.getInstance().findOne(
-      {
-        _id: call.request.urlParams.id,
-      },
-      { populate: call.request.queryParams.populate },
-    );
+    const tokenDocuments = await NotificationToken.getInstance()
+      .findOne(
+        {
+          _id: call.request.urlParams.id,
+        },
+        { populate: call.request.queryParams.populate },
+      )
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (isNil(tokenDocuments)) {
-      throw new GrpcError(status.NOT_FOUND, 'Could not find a token for user');
+      throw new ModuleError(errors.NOTIFICATION_TOKEN_NOT_FOUND);
     }
     return { tokenDocuments };
   }
@@ -617,18 +570,18 @@ export class AdminHandlers {
   async deleteNotificationToken(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
-    const tokenDocument = await NotificationToken.getInstance().findOne({
-      _id: call.request.urlParams.id,
-    });
+    const tokenDocument = await NotificationToken.getInstance()
+      .findOne({
+        _id: call.request.urlParams.id,
+      })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (isNil(tokenDocument)) {
-      throw new GrpcError(status.NOT_FOUND, 'Token does not exist');
+      throw new ModuleError(errors.NOTIFICATION_TOKEN_NOT_FOUND);
     }
 
     await NotificationToken.getInstance()
       .deleteOne({ _id: call.request.urlParams.id })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     return { deleted: true };
   }
@@ -658,19 +611,19 @@ export class AdminHandlers {
     const [smsDocuments, count] = await Promise.all([
       smsDocumentsPromise,
       totalCountPromise,
-    ]).catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
+    ]).catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     return { smsDocuments, count };
   }
 
   async getSmsMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const smsRecord = await SmsRecord.getInstance().findOne({
-      _id: call.request.urlParams.id,
-    });
+    const smsRecord = await SmsRecord.getInstance()
+      .findOne({
+        _id: call.request.urlParams.id,
+      })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     if (isNil(smsRecord)) {
-      throw new GrpcError(status.NOT_FOUND, 'SMS record does not exist');
+      throw new ModuleError(errors.SMS_RECORD_NOT_FOUND);
     }
     return { smsRecord };
   }
@@ -683,6 +636,16 @@ export class AdminHandlers {
       {
         path: '/email/send',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.EMAIL_CONTENT_REQUIRED,
+          errors.EMAIL_NOT_CONFIGURED,
+          errors.TEMPLATE_NOT_FOUND,
+          errors.EMAIL_SENDING_DOMAIN_NOT_SET,
+          errors.EMAIL_OPERATION_UNSUPPORTED,
+          errors.STORAGE_UNAVAILABLE,
+          errors.EMAIL_PROVIDER_ERROR,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Sends email.',
         bodyParams: {
           templateName: ConduitString.Optional,
@@ -702,6 +665,13 @@ export class AdminHandlers {
       {
         path: '/push/send',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.PUSH_NOT_CONFIGURED,
+          errors.INVALID_SILENT_NOTIFICATION,
+          errors.RECIPIENT_TOKENS_NOT_FOUND,
+          errors.PUSH_PROVIDER_ERROR,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Sends push notification.',
         bodyParams: {
           userId: ConduitString.Required,
@@ -722,6 +692,11 @@ export class AdminHandlers {
       {
         path: '/sms/send',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.SMS_NOT_CONFIGURED,
+          errors.SMS_PROVIDER_ERROR,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Sends SMS.',
         bodyParams: {
           to: ConduitString.Required,
@@ -737,6 +712,11 @@ export class AdminHandlers {
       {
         path: '/send/multiple',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.NO_AVAILABLE_CHANNELS,
+          errors.INVALID_CHANNEL,
+          errors.CHANNEL_SEND_FAILED,
+        ],
         description: 'Sends message to multiple channels.',
         bodyParams: {
           channels: ConduitJson.Required,
@@ -756,6 +736,7 @@ export class AdminHandlers {
       {
         path: '/send/fallback',
         action: ConduitRouteActions.POST,
+        errors: [errors.INVALID_CHANNEL, errors.ALL_CHANNELS_FAILED],
         description: 'Sends message with fallback chain.',
         bodyParams: {
           fallbackChain: ConduitJson.Required,
@@ -774,6 +755,14 @@ export class AdminHandlers {
       {
         path: '/communications/send',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.COMMUNICATION_CHANNEL_UNAVAILABLE,
+          errors.INVALID_CHANNEL,
+          errors.TEMPLATE_NOT_FOUND,
+          errors.TEMPLATE_CHANNEL_NOT_INCLUDED,
+          errors.TEMPLATE_CHANNEL_INCOMPLETE,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Sends a message on a single channel.',
         bodyParams: {
           channel: ConduitString.Required,
@@ -793,6 +782,7 @@ export class AdminHandlers {
       {
         path: '/communications/templates',
         action: ConduitRouteActions.GET,
+        errors: [errors.COMMUNICATIONS_DATABASE_ERROR],
         description: 'Get unified communication templates',
         queryParams: {
           skip: ConduitNumber.Optional,
@@ -812,6 +802,15 @@ export class AdminHandlers {
       {
         path: '/communications/templates',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.TEMPLATE_NAME_REQUIRED,
+          errors.TEMPLATE_CHANNELS_REQUIRED,
+          errors.TEMPLATE_DUPLICATE_CHANNELS,
+          errors.INVALID_CHANNEL,
+          errors.TEMPLATE_CHANNEL_INCOMPLETE,
+          errors.TEMPLATE_NAME_TAKEN,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Create unified communication template',
         bodyParams: {
           name: ConduitString.Required,
@@ -833,6 +832,14 @@ export class AdminHandlers {
       {
         path: '/communications/templates/migrate-from-email',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.TEMPLATE_NAME_TAKEN,
+          errors.TEMPLATE_NAME_REQUIRED,
+          errors.TEMPLATE_CHANNELS_REQUIRED,
+          errors.TEMPLATE_CHANNEL_INCOMPLETE,
+          errors.INVALID_CHANNEL,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Migrate email templates to unified communication templates',
         bodyParams: {
           emailTemplateId: ConduitString.Optional,
@@ -849,6 +856,7 @@ export class AdminHandlers {
       {
         path: '/communications/templates/:id',
         action: ConduitRouteActions.GET,
+        errors: [errors.TEMPLATE_NOT_FOUND, errors.COMMUNICATIONS_DATABASE_ERROR],
         description: 'Get unified communication template by id',
         urlParams: {
           id: ConduitString.Required,
@@ -864,6 +872,16 @@ export class AdminHandlers {
       {
         path: '/communications/templates/:id',
         action: ConduitRouteActions.PATCH,
+        errors: [
+          errors.TEMPLATE_NOT_FOUND,
+          errors.TEMPLATE_NAME_TAKEN,
+          errors.TEMPLATE_NAME_REQUIRED,
+          errors.TEMPLATE_CHANNELS_REQUIRED,
+          errors.TEMPLATE_DUPLICATE_CHANNELS,
+          errors.INVALID_CHANNEL,
+          errors.TEMPLATE_CHANNEL_INCOMPLETE,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Update unified communication template',
         urlParams: {
           id: ConduitString.Required,
@@ -888,6 +906,7 @@ export class AdminHandlers {
       {
         path: '/communications/templates/:id',
         action: ConduitRouteActions.DELETE,
+        errors: [errors.TEMPLATE_NOT_FOUND, errors.COMMUNICATIONS_DATABASE_ERROR],
         description: 'Delete unified communication template',
         urlParams: {
           id: ConduitString.Required,
@@ -904,6 +923,7 @@ export class AdminHandlers {
       {
         path: '/email/templates',
         action: ConduitRouteActions.GET,
+        errors: [errors.COMMUNICATIONS_DATABASE_ERROR],
         description: 'Get email templates',
         queryParams: {
           skip: ConduitNumber.Optional,
@@ -923,6 +943,13 @@ export class AdminHandlers {
       {
         path: '/email/templates',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.EMAIL_NOT_CONFIGURED,
+          errors.EMAIL_OPERATION_UNSUPPORTED,
+          errors.TEMPLATE_NAME_TAKEN,
+          errors.EMAIL_PROVIDER_ERROR,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Create email template',
         bodyParams: {
           name: ConduitString.Required,
@@ -945,6 +972,13 @@ export class AdminHandlers {
       {
         path: '/email/templates/:id',
         action: ConduitRouteActions.PATCH,
+        errors: [
+          errors.EMAIL_NOT_CONFIGURED,
+          errors.TEMPLATE_NOT_FOUND,
+          errors.EMAIL_OPERATION_UNSUPPORTED,
+          errors.EMAIL_PROVIDER_ERROR,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Update email template',
         urlParams: {
           id: ConduitString.Required,
@@ -965,6 +999,13 @@ export class AdminHandlers {
       {
         path: '/email/templates/:id',
         action: ConduitRouteActions.DELETE,
+        errors: [
+          errors.TEMPLATE_NOT_FOUND,
+          errors.EMAIL_NOT_CONFIGURED,
+          errors.EMAIL_OPERATION_UNSUPPORTED,
+          errors.EMAIL_PROVIDER_ERROR,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Delete email template',
         urlParams: {
           id: ConduitString.Required,
@@ -980,6 +1021,12 @@ export class AdminHandlers {
       {
         path: '/email/templates/external',
         action: ConduitRouteActions.GET,
+        errors: [
+          errors.EMAIL_NOT_CONFIGURED,
+          errors.EXTERNAL_TEMPLATES_NOT_FOUND,
+          errors.EMAIL_OPERATION_UNSUPPORTED,
+          errors.EMAIL_PROVIDER_ERROR,
+        ],
         description: 'Get external email templates',
         queryParams: {
           skip: ConduitNumber.Optional,
@@ -998,6 +1045,13 @@ export class AdminHandlers {
       {
         path: '/email/templates/external/sync',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.EMAIL_NOT_CONFIGURED,
+          errors.EXTERNAL_TEMPLATES_NOT_FOUND,
+          errors.EMAIL_OPERATION_UNSUPPORTED,
+          errors.EMAIL_PROVIDER_ERROR,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Sync external email templates',
       },
       new ConduitRouteReturnDefinition('SyncExternalTemplates', {
@@ -1011,6 +1065,17 @@ export class AdminHandlers {
       {
         path: '/email/resend',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.EMAIL_RECORD_NOT_FOUND,
+          errors.EMAIL_CONTENT_REQUIRED,
+          errors.EMAIL_NOT_CONFIGURED,
+          errors.TEMPLATE_NOT_FOUND,
+          errors.EMAIL_SENDING_DOMAIN_NOT_SET,
+          errors.EMAIL_OPERATION_UNSUPPORTED,
+          errors.STORAGE_UNAVAILABLE,
+          errors.EMAIL_PROVIDER_ERROR,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Resend email',
         bodyParams: {
           id: ConduitString.Required,
@@ -1024,6 +1089,7 @@ export class AdminHandlers {
       {
         path: '/email/emails',
         action: ConduitRouteActions.GET,
+        errors: [errors.COMMUNICATIONS_DATABASE_ERROR],
         description: 'Get sent emails',
         queryParams: {
           skip: ConduitNumber.Optional,
@@ -1043,6 +1109,7 @@ export class AdminHandlers {
       {
         path: '/email/emails/:id',
         action: ConduitRouteActions.GET,
+        errors: [errors.EMAIL_RECORD_NOT_FOUND, errors.COMMUNICATIONS_DATABASE_ERROR],
         description: 'Get email details',
         urlParams: {
           id: ConduitString.Required,
@@ -1059,6 +1126,7 @@ export class AdminHandlers {
       {
         path: '/push/tokens',
         action: ConduitRouteActions.GET,
+        errors: [errors.COMMUNICATIONS_DATABASE_ERROR],
         description: 'Get notification tokens',
         queryParams: {
           skip: ConduitNumber.Optional,
@@ -1080,6 +1148,10 @@ export class AdminHandlers {
       {
         path: '/push/tokens/:id',
         action: ConduitRouteActions.GET,
+        errors: [
+          errors.NOTIFICATION_TOKEN_NOT_FOUND,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Get notification token by id',
         urlParams: {
           id: ConduitString.Required,
@@ -1096,6 +1168,10 @@ export class AdminHandlers {
       {
         path: '/push/tokens/:id',
         action: ConduitRouteActions.DELETE,
+        errors: [
+          errors.NOTIFICATION_TOKEN_NOT_FOUND,
+          errors.COMMUNICATIONS_DATABASE_ERROR,
+        ],
         description: 'Delete notification token',
         urlParams: {
           id: ConduitString.Required,
@@ -1112,6 +1188,7 @@ export class AdminHandlers {
       {
         path: '/sms/messages',
         action: ConduitRouteActions.GET,
+        errors: [errors.COMMUNICATIONS_DATABASE_ERROR],
         description: 'Get sent SMS messages',
         queryParams: {
           skip: ConduitNumber.Optional,
@@ -1131,6 +1208,7 @@ export class AdminHandlers {
       {
         path: '/sms/messages/:id',
         action: ConduitRouteActions.GET,
+        errors: [errors.SMS_RECORD_NOT_FOUND, errors.COMMUNICATIONS_DATABASE_ERROR],
         description: 'Get SMS message details',
         urlParams: {
           id: ConduitString.Required,
