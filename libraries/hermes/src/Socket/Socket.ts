@@ -536,7 +536,7 @@ export class SocketController extends ConduitRouter {
           new ConduitError(
             'UNAUTHENTICATED',
             401,
-            'Token is expired',
+            'Token has expired',
             HermesErrorCodes.TOKEN_EXPIRED,
           ),
         ),

@@ -19,6 +19,97 @@ Modules log to stdout. When `LOKI_URL` is set, the same logs are also shipped to
 
 Files roll once per day and are not gzipped. Metadata in file lines is single-line JSON.
 
+## Errors
+
+Every error a module returns to a client should come from its catalog, so that clients can
+branch on a stable `conduitCode` instead of on message text.
+
+```ts
+// src/errors.ts
+import { status } from '@grpc/grpc-js';
+import { defineErrors } from '@conduitplatform/grpc-sdk';
+
+export const errors = defineErrors({
+  FILE_NOT_FOUND: {
+    grpcCode: status.NOT_FOUND,
+    message: 'File does not exist',
+    description: 'No file matches the given id', // published in the API docs
+  },
+  STORAGE_OPERATION_FAILED: {
+    grpcCode: status.INTERNAL,
+    message: 'Storage operation failed',
+    description: 'The storage provider rejected the operation',
+  },
+});
+```
+
+```ts
+import { ModuleError } from '@conduitplatform/module-tools';
+
+// Throw it. The optional second argument is only written to the module log.
+throw new ModuleError(errors.FILE_NOT_FOUND, `id=${id}`);
+
+// Keep a specific, caller-actionable message under the same code.
+throw new ModuleError({
+  ...errors.INVALID_FILE_DATA,
+  message: `"${field}" must be base64`,
+});
+
+// Never forward driver or provider text: typed errors pass through, the rest is wrapped.
+await provider.delete(file).catch(ModuleError.rethrow(errors.STORAGE_OPERATION_FAILED));
+
+// Declare what a route can return. It is published in Swagger, GraphQL and MCP.
+routingManager.route(
+  { path: '/file/:id', action: ConduitRouteActions.GET, errors: [errors.FILE_NOT_FOUND] },
+  returnType,
+  handler,
+);
+
+// gRPC service methods answering through a callback.
+callback(grpcCallbackError(errors.FILE_NOT_FOUND));
+callback(grpcCallbackError(caught, errors.STORAGE_OPERATION_FAILED));
+```
+
+Clients receive the same body on REST, GraphQL (`extensions`), sockets (`conduit_error`)
+and MCP tool errors:
+
+```json
+{
+  "name": "NOT_FOUND",
+  "status": 404,
+  "message": "File does not exist",
+  "conduitCode": "FILE_NOT_FOUND"
+}
+```
+
+| gRPC status         | HTTP | name                  |
+| ------------------- | ---- | --------------------- |
+| INVALID_ARGUMENT    | 400  | INVALID_ARGUMENTS     |
+| OUT_OF_RANGE        | 400  | OUT_OF_RANGE          |
+| UNAUTHENTICATED     | 401  | UNAUTHORIZED          |
+| PERMISSION_DENIED   | 403  | FORBIDDEN             |
+| NOT_FOUND           | 404  | NOT_FOUND             |
+| ALREADY_EXISTS      | 409  | CONFLICT              |
+| ABORTED             | 409  | ABORTED               |
+| FAILED_PRECONDITION | 412  | PRECONDITION_FAILED   |
+| RESOURCE_EXHAUSTED  | 429  | TOO_MANY_REQUESTS     |
+| UNIMPLEMENTED       | 501  | NOT_IMPLEMENTED       |
+| UNAVAILABLE         | 503  | SERVICE_UNAVAILABLE   |
+| DEADLINE_EXCEEDED   | 504  | GATEWAY_TIMEOUT       |
+| anything else       | 500  | INTERNAL_SERVER_ERROR |
+
+Rules of the road:
+
+- An error from another module's gRPC client keeps its status and `conduitCode` when it
+  bubbles up, so do not re-wrap it. To branch on it use `hasConduitCode(err, 'CODE')` or
+  `getConduitCode(err)` from `@conduitplatform/grpc-sdk`. `err.message` of a typed error is
+  JSON: use `parseErrorPayload(err).message` when you need the text.
+- An error with no gRPC status that escapes a client route is answered as
+  `INTERNAL_ERROR` with a static message; the cause is logged. Admin routes keep the cause.
+- `conduitCode`s are unique across modules unless they mean exactly the same thing.
+  `node scripts/check-error-codes.mjs` verifies this.
+- Request authentication uses the shared `authErrors` catalog exported from this package.
+
 ## Features ✔️
 
 - Service registration & discovery
