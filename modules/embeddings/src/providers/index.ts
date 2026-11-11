@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { isGrpcStatusError } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import {
   assertSafeEmbeddingEndpoint,
   DEFAULT_EMBED_TIMEOUT_MS,
@@ -35,18 +36,15 @@ export interface EmbeddingProviderDependencies {
 }
 
 function mapEmbedFetchError(err: unknown): never {
-  if (err instanceof GrpcError) throw err;
+  if (isGrpcStatusError(err)) throw err;
   const message = sanitizeErrorMessage(err);
   if (/redirect/i.test(message)) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'Embedding provider redirects are not allowed',
-    );
+    throw new ModuleError(errors.EMBEDDING_PROVIDER_REDIRECT_BLOCKED);
   }
   if (err instanceof Error && err.name === 'TimeoutError') {
-    throw new GrpcError(status.DEADLINE_EXCEEDED, 'Embedding provider request timed out');
+    throw new ModuleError(errors.EMBEDDING_PROVIDER_TIMEOUT);
   }
-  throw new GrpcError(status.UNAVAILABLE, message);
+  throw new ModuleError(errors.EMBEDDING_PROVIDER_UNAVAILABLE, message);
 }
 
 function parseEmbeddingResponse(bodyText: string): number[] {
@@ -54,15 +52,15 @@ function parseEmbeddingResponse(bodyText: string): number[] {
   try {
     body = JSON.parse(bodyText) as { data?: { embedding?: number[] }[] };
   } catch {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
+    throw new ModuleError(
+      errors.EMBEDDING_PROVIDER_RESPONSE_INVALID,
       'Embedding provider response was not valid JSON',
     );
   }
   const embedding = body.data?.[0]?.embedding;
   if (!embedding?.length) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
+    throw new ModuleError(
+      errors.EMBEDDING_PROVIDER_RESPONSE_INVALID,
       'Embedding provider response did not include an embedding',
     );
   }
@@ -74,18 +72,12 @@ export class OpenAICompatibleEmbeddingProvider implements EmbeddingProvider {
 
   async embed(input: string, config: EmbeddingProviderConfig): Promise<number[]> {
     if (!config.endpoint) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'Embedding provider endpoint is not configured',
-      );
+      throw new ModuleError(errors.EMBEDDING_PROVIDER_ENDPOINT_NOT_CONFIGURED);
     }
     if (
       Buffer.byteLength(input) > (config.maxInputBytes ?? DEFAULT_MAX_EMBED_INPUT_BYTES)
     ) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Embedding input exceeds the allowed size',
-      );
+      throw new ModuleError(errors.EMBEDDING_INPUT_TOO_LARGE);
     }
     await assertSafeEmbeddingEndpoint(config.endpoint, {
       lookup: this.deps.lookup,
@@ -110,8 +102,8 @@ export class OpenAICompatibleEmbeddingProvider implements EmbeddingProvider {
       mapEmbedFetchError(err);
     }
     if (!response.ok) {
-      throw new GrpcError(
-        status.UNAVAILABLE,
+      throw new ModuleError(
+        errors.EMBEDDING_PROVIDER_UNAVAILABLE,
         `Embedding provider failed with HTTP ${response.status}`,
       );
     }
@@ -129,7 +121,10 @@ export function getProvider(
   deps: EmbeddingProviderDependencies = {},
 ): EmbeddingProvider {
   if (name === 'openai-compatible') return new OpenAICompatibleEmbeddingProvider(deps);
-  throw new GrpcError(status.INVALID_ARGUMENT, `Unsupported embedding provider: ${name}`);
+  throw new ModuleError(
+    errors.EMBEDDING_PROVIDER_INVALID,
+    `Unsupported embedding provider: ${name}`,
+  );
 }
 
 export function hashEmbeddingInput(input: string) {

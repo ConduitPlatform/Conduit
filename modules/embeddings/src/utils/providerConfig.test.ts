@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { getConduitCode, parseErrorPayload } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
   findProviderModel,
@@ -60,22 +60,19 @@ describe('provider model catalogue', () => {
             { name: 'small', dimensions: 768 },
           ],
         }),
-      err => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
+      err => err instanceof Error && /duplicated/.test(err.message),
     );
     assert.throws(
       () => normalizeProviderSettings({ models: [{ name: '  ', dimensions: 1536 }] }),
-      err => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
+      err => err instanceof Error && /non-empty name/.test(err.message),
     );
     assert.throws(
       () => normalizeProviderSettings({ models: [{ name: 'small', dimensions: 0 }] }),
-      err => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
+      err => err instanceof Error && /positive integer/.test(err.message),
     );
     assert.throws(
       () => normalizeProviderSettings({ model: 'small' }),
-      err =>
-        err instanceof GrpcError &&
-        err.code === status.INVALID_ARGUMENT &&
-        /positive integer/.test(err.message),
+      err => err instanceof Error && /positive integer/.test(err.message),
     );
   });
 
@@ -86,10 +83,7 @@ describe('provider model catalogue', () => {
           models: [{ name: 'small', dimensions: 1536 }],
           defaultModel: 'missing',
         }),
-      err =>
-        err instanceof GrpcError &&
-        err.code === status.INVALID_ARGUMENT &&
-        /not in the catalogue/.test(err.message),
+      err => err instanceof Error && /not in the catalogue/.test(err.message),
     );
     const normalized = normalizeProviderSettings({
       models: [
@@ -131,9 +125,9 @@ describe('provider model catalogue', () => {
     assert.throws(
       () => assertConfiguredProvider(providers, 'missing'),
       err =>
-        err instanceof GrpcError &&
-        err.code === status.INVALID_ARGUMENT &&
-        /not a configured provider/.test(err.message),
+        (err as { code?: number }).code === status.INVALID_ARGUMENT &&
+        getConduitCode(err) === 'EMBEDDING_PROVIDER_INVALID' &&
+        /not a configured provider/.test(parseErrorPayload(err).message),
     );
     const openai = providers['openai-compatible'];
     const [small, large] = openai.models;
@@ -142,9 +136,9 @@ describe('provider model catalogue', () => {
     assert.throws(
       () => resolveCatalogueDimensions(small, 768),
       err =>
-        err instanceof GrpcError &&
-        err.code === status.INVALID_ARGUMENT &&
-        /do not match catalogue dimensions/.test(err.message),
+        (err as { code?: number }).code === status.INVALID_ARGUMENT &&
+        getConduitCode(err) === 'EMBEDDING_CONFIG_INVALID' &&
+        /do not match catalogue dimensions/.test(parseErrorPayload(err).message),
     );
   });
 

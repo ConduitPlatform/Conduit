@@ -1,6 +1,8 @@
 import { Queue, Worker } from 'bullmq';
 import { Cluster, Redis } from 'ioredis';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import {
   EmbeddingJobData,
   dedupeEmbeddingJobs,
@@ -275,7 +277,9 @@ export class QueueController {
       );
       return 1;
     } catch (err) {
-      if (!isDuplicateJobError(err)) throw err;
+      if (!isDuplicateJobError(err)) {
+        throw ModuleError.from(err, errors.EMBEDDINGS_OPERATION_FAILED);
+      }
       return 0;
     }
   }
@@ -316,7 +320,9 @@ export class QueueController {
       );
       return enqueueable.length;
     } catch (err) {
-      if (!isDuplicateJobError(err)) throw err;
+      if (!isDuplicateJobError(err)) {
+        throw ModuleError.from(err, errors.EMBEDDINGS_OPERATION_FAILED);
+      }
       const added = await Promise.all(
         enqueueable.map(job => this.addEmbeddingJob(job, attempts)),
       );
@@ -356,7 +362,9 @@ export class QueueController {
         },
       );
     } catch (err) {
-      if (!isDuplicateJobError(err)) throw err;
+      if (!isDuplicateJobError(err)) {
+        throw ModuleError.from(err, errors.EMBEDDINGS_OPERATION_FAILED);
+      }
     }
   }
 

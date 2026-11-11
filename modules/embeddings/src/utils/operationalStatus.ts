@@ -1,5 +1,10 @@
-import { GrpcError, VectorCapabilities } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import {
+  parseErrorPayload,
+  VectorCapabilities,
+  type ModuleErrorDefinition,
+} from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import {
   assertBackfillExecutable,
   BackfillGateError,
@@ -23,15 +28,28 @@ export const SEARCH_GATE_REASONS = [
 
 export type SearchGateReason = (typeof SEARCH_GATE_REASONS)[number];
 
-export class SearchGateError extends Error {
-  readonly code = 'SEARCH_GATE' as const;
+/** Single place mapping a search gate reason to its catalog entry. */
+export const SEARCH_GATE_DEFINITIONS: Record<SearchGateReason, ModuleErrorDefinition> = {
+  module_disabled: errors.EMBEDDINGS_MODULE_DISABLED,
+  vector_unsupported: errors.VECTOR_UNSUPPORTED,
+  vector_search_unavailable: errors.VECTOR_UNAVAILABLE,
+  config_not_found: errors.ENABLED_EMBEDDING_CONFIG_NOT_FOUND,
+  config_disabled: errors.EMBEDDING_CONFIG_UNUSABLE,
+  index_not_queryable: errors.VECTOR_INDEX_NOT_QUERYABLE,
+};
 
+/**
+ * A failed search precondition. It is a typed `ModuleError`, so routes and gRPC answer
+ * with its catalog code. `message` (optional) replaces the catalog message.
+ */
+export class SearchGateError extends ModuleError {
   constructor(
     readonly reason: SearchGateReason,
-    message: string,
+    message?: string,
     readonly indexStatus?: string,
+    definition: ModuleErrorDefinition = SEARCH_GATE_DEFINITIONS[reason],
   ) {
-    super(message);
+    super(message ? { ...definition, message } : definition);
     this.name = 'SearchGateError';
   }
 }
@@ -78,7 +96,7 @@ export function assertSearchExecutable(args: {
   const targetField = args.config.targetField;
   if (typeof targetField !== 'string' || !targetField.length) {
     throw new SearchGateError(
-      'config_not_found',
+      'config_disabled',
       'Embedding config is missing a target vector field',
     );
   }
@@ -92,22 +110,6 @@ export function assertSearchExecutable(args: {
       'Wait until the index is ready before running semantic search.',
     indexStatus,
   );
-}
-
-export function grpcErrorFromSearchGate(err: SearchGateError): GrpcError {
-  switch (err.reason) {
-    case 'module_disabled':
-    case 'vector_unsupported':
-    case 'vector_search_unavailable':
-    case 'config_not_found':
-    case 'config_disabled':
-    case 'index_not_queryable':
-      return new GrpcError(status.FAILED_PRECONDITION, err.message);
-    default: {
-      const unexpected: never = err.reason;
-      return new GrpcError(status.INTERNAL, String(unexpected));
-    }
-  }
 }
 
 export function capabilityWarnings(
@@ -203,10 +205,10 @@ export function assertConfigActivation(args: {
     });
   } catch (err) {
     if (err instanceof BackfillGateError && err.reason === 'index_not_queryable') {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        `${err.message} Save the config with enabled=false until the index is ready.`,
-      );
+      throw new ModuleError({
+        ...errors.VECTOR_INDEX_NOT_QUERYABLE,
+        message: `${parseErrorPayload(err).message} Save the config with enabled=false until the index is ready.`,
+      });
     }
     throw err;
   }

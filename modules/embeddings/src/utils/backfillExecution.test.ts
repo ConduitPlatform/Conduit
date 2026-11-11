@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { VectorIndexStatus } from '@conduitplatform/grpc-sdk';
+import { hasConduitCode, VectorIndexStatus } from '@conduitplatform/grpc-sdk';
 import {
   applyBackfillJobOutcome,
   backfillRunFromDocument,
@@ -542,7 +542,7 @@ describe('backfill enqueue failures, drain timeout, and start idempotency', () =
             },
           }),
         ),
-      /redis down/,
+      err => hasConduitCode(err, 'EMBEDDINGS_OPERATION_FAILED'),
     );
     const persisted = [...store.runs.values()];
     assert.equal(persisted.length, 1);
@@ -659,7 +659,7 @@ describe('backfill enqueue failures, drain timeout, and start idempotency', () =
             throw new Error('queue unavailable Bearer sk-secret');
           },
         }),
-      /queue unavailable/,
+      err => hasConduitCode(err, 'EMBEDDINGS_OPERATION_FAILED'),
     );
     const persisted = (await store.getRun(created._id))!;
     assert.equal(persisted.state, 'failed');

@@ -1,7 +1,7 @@
 import { BlockList, isIP } from 'node:net';
 import { lookup as defaultLookup } from 'node:dns/promises';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 export const DEFAULT_EMBED_TIMEOUT_MS = 10_000;
 export const DEFAULT_MAX_EMBED_INPUT_BYTES = 32 * 1024;
@@ -50,54 +50,53 @@ export async function assertSafeEmbeddingEndpoint(
   try {
     url = new URL(endpoint);
   } catch {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Embedding provider endpoint is invalid',
-    );
+    throw new ModuleError(errors.EMBEDDING_ENDPOINT_INVALID);
   }
   if (url.protocol !== 'https:') {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Embedding provider endpoint must use HTTPS',
-    );
+    throw new ModuleError({
+      ...errors.EMBEDDING_ENDPOINT_INVALID,
+      message: 'Embedding provider endpoint must use HTTPS',
+    });
   }
   if (url.username || url.password) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Embedding provider endpoint must not include credentials',
-    );
+    throw new ModuleError({
+      ...errors.EMBEDDING_ENDPOINT_INVALID,
+      message: 'Embedding provider endpoint must not include credentials',
+    });
   }
   const hostname = url.hostname.toLowerCase();
   if (BLOCKED_HOSTNAMES.has(hostname)) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'Embedding provider endpoint host is not allowed',
-    );
+    throw new ModuleError({
+      ...errors.EMBEDDING_ENDPOINT_ADDRESS_BLOCKED,
+      message: 'Embedding provider endpoint host is not allowed',
+    });
   }
   if (isIP(hostname)) {
     if (isBlockedIp(hostname)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Embedding provider endpoint resolves to a blocked address',
-      );
+      throw new ModuleError({
+        ...errors.EMBEDDING_ENDPOINT_ADDRESS_BLOCKED,
+        message: 'Embedding provider endpoint resolves to a blocked address',
+      });
     }
     return url;
   }
   const lookup = options.lookup ?? defaultLookup;
-  const resolved = await lookup(hostname, { all: true, verbatim: true });
+  let resolved: Awaited<ReturnType<typeof lookup>>;
+  try {
+    resolved = await lookup(hostname, { all: true, verbatim: true });
+  } catch (err) {
+    throw ModuleError.from(err, errors.EMBEDDING_ENDPOINT_UNRESOLVABLE);
+  }
   const records = Array.isArray(resolved) ? resolved : [resolved];
   if (!records.length) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      'Embedding provider endpoint host could not be resolved',
-    );
+    throw new ModuleError(errors.EMBEDDING_ENDPOINT_UNRESOLVABLE);
   }
   for (const record of records) {
     if (isBlockedIp(record.address)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Embedding provider endpoint resolves to a blocked address',
-      );
+      throw new ModuleError({
+        ...errors.EMBEDDING_ENDPOINT_ADDRESS_BLOCKED,
+        message: 'Embedding provider endpoint resolves to a blocked address',
+      });
     }
   }
   return url;
@@ -110,10 +109,7 @@ export async function readCappedResponse(
   if (!response.body) {
     const text = await response.text();
     if (Buffer.byteLength(text) > maxBytes) {
-      throw new GrpcError(
-        status.RESOURCE_EXHAUSTED,
-        'Embedding provider response is too large',
-      );
+      throw new ModuleError(errors.EMBEDDING_PROVIDER_RESPONSE_TOO_LARGE);
     }
     return text;
   }
@@ -126,10 +122,7 @@ export async function readCappedResponse(
     received += value.byteLength;
     if (received > maxBytes) {
       await reader.cancel();
-      throw new GrpcError(
-        status.RESOURCE_EXHAUSTED,
-        'Embedding provider response is too large',
-      );
+      throw new ModuleError(errors.EMBEDDING_PROVIDER_RESPONSE_TOO_LARGE);
     }
     chunks.push(value);
   }

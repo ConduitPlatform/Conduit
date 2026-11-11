@@ -1,0 +1,41 @@
+import { errors } from './errors.js';
+
+/** Failures of the embedding provider call (request path and generation). */
+export const PROVIDER_ERRORS = [
+  errors.EMBEDDING_PROVIDER_INVALID,
+  errors.EMBEDDING_PROVIDER_ENDPOINT_NOT_CONFIGURED,
+  errors.EMBEDDING_INPUT_TOO_LARGE,
+  errors.EMBEDDING_PROVIDER_REDIRECT_BLOCKED,
+  errors.EMBEDDING_PROVIDER_TIMEOUT,
+  errors.EMBEDDING_PROVIDER_UNAVAILABLE,
+  errors.EMBEDDING_PROVIDER_RESPONSE_INVALID,
+  errors.EMBEDDING_PROVIDER_RESPONSE_TOO_LARGE,
+  errors.EMBEDDING_PROVIDER_DIMENSIONS_MISMATCH,
+  errors.EMBEDDING_ENDPOINT_INVALID,
+  errors.EMBEDDING_ENDPOINT_ADDRESS_BLOCKED,
+  errors.EMBEDDING_ENDPOINT_UNRESOLVABLE,
+];
+
+/** Operational gates shared by backfills and config activation. */
+export const BACKFILL_GATE_ERRORS = [
+  errors.EMBEDDINGS_MODULE_DISABLED,
+  errors.VECTOR_UNSUPPORTED,
+  errors.VECTOR_UNAVAILABLE,
+  errors.ENABLED_EMBEDDING_CONFIG_NOT_FOUND,
+  errors.EMBEDDING_CONFIG_UNUSABLE,
+  errors.VECTOR_INDEX_NOT_QUERYABLE,
+];
+
+/** Everything semantic search can fail with, apart from the caller subject check. */
+export const SEARCH_ERRORS = [
+  errors.SEARCH_REQUEST_INVALID,
+  errors.FILTER_INVALID,
+  errors.EMBEDDING_SCHEMA_DENIED,
+  errors.EMBEDDING_CONFIG_NOT_FOUND,
+  errors.EMBEDDINGS_MODULE_DISABLED,
+  errors.VECTOR_UNSUPPORTED,
+  errors.VECTOR_UNAVAILABLE,
+  errors.EMBEDDING_CONFIG_UNUSABLE,
+  errors.VECTOR_INDEX_NOT_QUERYABLE,
+  ...PROVIDER_ERRORS,
+];

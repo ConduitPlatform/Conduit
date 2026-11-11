@@ -1,11 +1,15 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ConduitGrpcSdk, VectorIndexStatus } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitGrpcSdk,
+  getConduitCode,
+  parseErrorPayload,
+  VectorIndexStatus,
+} from '@conduitplatform/grpc-sdk';
 import {
   assertBackfillExecutable,
   BackfillGateError,
   findTargetVectorIndex,
-  grpcErrorFromBackfillGate,
   isEmbeddingVectorIndexQueryable,
 } from './backfillGates.js';
 
@@ -62,7 +66,8 @@ describe('backfill execution gates', () => {
       (err: unknown) =>
         err instanceof BackfillGateError &&
         err.reason === 'vector_unsupported' &&
-        /mysql/.test(err.message),
+        getConduitCode(err) === 'VECTOR_UNSUPPORTED' &&
+        /mysql/.test(parseErrorPayload(err).message),
     );
     assert.throws(
       () =>
@@ -195,7 +200,9 @@ describe('backfill execution gates', () => {
         err instanceof BackfillGateError &&
         err.reason === 'index_not_queryable' &&
         err.indexStatus === VectorIndexStatus.Pending &&
-        /Wait until the index is ready/.test(err.message),
+        getConduitCode(err) === 'VECTOR_INDEX_NOT_QUERYABLE' &&
+        err.code === 9 &&
+        /not queryable/.test(parseErrorPayload(err).message),
     );
     assert.doesNotThrow(() =>
       assertBackfillExecutable({
@@ -205,14 +212,21 @@ describe('backfill execution gates', () => {
         indexes: [{ ...readyIndex, method: '' }],
       }),
     );
-    const mapped = grpcErrorFromBackfillGate(
-      new BackfillGateError(
-        'index_not_queryable',
-        "Vector index for field 'embedding' is not queryable (status: pending). Wait until the index is ready before running a backfill.",
-        'pending',
-      ),
+    const mapped = new BackfillGateError(
+      'index_not_queryable',
+      "Vector index for field 'embedding' is not queryable (status: pending). Wait until the index is ready before running a backfill.",
+      'pending',
     );
     assert.equal(mapped.code, 9);
+    assert.equal(mapped.conduitCode, 'VECTOR_INDEX_NOT_QUERYABLE');
+    assert.equal(
+      new BackfillGateError('module_disabled').conduitCode,
+      'EMBEDDINGS_MODULE_DISABLED',
+    );
+    assert.equal(
+      new BackfillGateError('config_disabled').conduitCode,
+      'EMBEDDING_CONFIG_UNUSABLE',
+    );
   });
 });
 

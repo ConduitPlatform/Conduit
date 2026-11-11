@@ -1,5 +1,5 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 export const CLIENT_SEMANTIC_SEARCH_MAX_LIMIT = 50;
 
@@ -20,10 +20,10 @@ export function assertClientSearchSubject(subject: { userId?: string; scope?: st
   scope?: string;
 } {
   if (!subject.userId) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'Semantic search requires an authenticated user',
-    );
+    throw new ModuleError({
+      ...errors.SEMANTIC_SEARCH_SUBJECT_REQUIRED,
+      message: 'Semantic search requires an authenticated user',
+    });
   }
   if (!subject.scope) return { userId: subject.userId };
   return { userId: subject.userId, scope: subject.scope };
@@ -32,7 +32,10 @@ export function assertClientSearchSubject(subject: { userId?: string; scope?: st
 export function clampClientSearchLimit(limit?: number): number | undefined {
   if (limit === undefined || limit === null) return undefined;
   if (!Number.isInteger(limit) || limit < 1) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'limit must be a positive integer');
+    throw new ModuleError({
+      ...errors.SEARCH_REQUEST_INVALID,
+      message: 'limit must be a positive integer',
+    });
   }
   return Math.min(limit, CLIENT_SEMANTIC_SEARCH_MAX_LIMIT);
 }

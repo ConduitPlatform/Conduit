@@ -1,5 +1,6 @@
-import { GrpcError, TYPE } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { TYPE } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { BACKFILL_RUN_SCHEMA } from './backfillRun.js';
 import { sourceHashField } from './configChange.js';
 
@@ -118,8 +119,8 @@ export function assertEmbeddingTargetSchema(schema: {
   ownerModule?: string;
 }): void {
   if (!isDeniedEmbeddingSchema(schema)) return;
-  throw new GrpcError(
-    status.PERMISSION_DENIED,
+  throw new ModuleError(
+    errors.EMBEDDING_SCHEMA_DENIED,
     `Schema '${schema.name}' cannot be used as an embedding source`,
   );
 }
@@ -131,14 +132,14 @@ export function assertSchemaCanReceiveEmbeddings(schema: {
 }): void {
   assertEmbeddingTargetSchema(schema);
   if (!isEmbeddingSchemaEnabled(schema.modelOptions)) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
+    throw new ModuleError(
+      { ...errors.EMBEDDING_SCHEMA_NOT_ELIGIBLE, message: 'Schema is not enabled' },
       `Schema '${schema.name}' is not enabled`,
     );
   }
   if (!isSchemaExtendable(schema.modelOptions)) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
+    throw new ModuleError(
+      { ...errors.EMBEDDING_SCHEMA_NOT_ELIGIBLE, message: 'Schema is not extendable' },
       `Schema '${schema.name}' is not extendable`,
     );
   }
@@ -161,8 +162,8 @@ export function assertCanManageEmbeddingConfig(args: {
   schemaName: string;
 }): void {
   if (canManageEmbeddingConfig(args)) return;
-  throw new GrpcError(
-    status.PERMISSION_DENIED,
+  throw new ModuleError(
+    errors.EMBEDDING_ACCESS_DENIED,
     `Module '${args.callerModule ?? 'unknown'}' is not allowed to manage embeddings for '${args.schemaName}'`,
   );
 }
@@ -175,9 +176,12 @@ export function resolveAdminOperatorContext(args: {
   if (!args.requested) return false;
   const operators = args.operatorModules ?? SEARCH_OPERATOR_MODULES;
   if (!args.callerModule || !operators.includes(args.callerModule)) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'Admin operator context is not allowed for this caller',
+    throw new ModuleError(
+      {
+        ...errors.EMBEDDING_ACCESS_DENIED,
+        message: 'Admin operator context is not allowed for this caller',
+      },
+      `Module '${args.callerModule ?? 'unknown'}' requested the operator context`,
     );
   }
   return true;
@@ -189,10 +193,7 @@ export function assertSemanticSearchAccess(args: {
   adminOperator?: boolean;
 }): void {
   if (args.userId || args.scope || args.adminOperator) return;
-  throw new GrpcError(
-    status.PERMISSION_DENIED,
-    'Semantic search requires a subject, scope, or admin operator context',
-  );
+  throw new ModuleError(errors.SEMANTIC_SEARCH_SUBJECT_REQUIRED);
 }
 
 export function normalizeSourceFieldAllowlist(fields?: string[]): string[] {
@@ -226,36 +227,36 @@ export function assertSourceFields(args: {
   const allowlist = new Set(args.allowlist ?? []);
   for (const field of args.sourceFields) {
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(field)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        `Invalid source field name '${field}'`,
-      );
+      throw new ModuleError({
+        ...errors.SOURCE_FIELD_INVALID,
+        message: `Invalid source field name '${field}'`,
+      });
     }
     const definition = args.schemaFields[field];
     if (definition === undefined) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        `Source field '${field}' does not exist on the target schema`,
-      );
+      throw new ModuleError({
+        ...errors.SOURCE_FIELD_INVALID,
+        message: `Source field '${field}' does not exist on the target schema`,
+      });
     }
     if (!isStringLikeField(definition)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        `Source field '${field}' must be string-like`,
-      );
+      throw new ModuleError({
+        ...errors.SOURCE_FIELD_INVALID,
+        message: `Source field '${field}' must be string-like`,
+      });
     }
     const allowed = allowlist.has(field);
     if (!allowed && isHiddenField(definition)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        `Source field '${field}' is hidden and cannot be embedded`,
-      );
+      throw new ModuleError({
+        ...errors.SOURCE_FIELD_INVALID,
+        message: `Source field '${field}' is hidden and cannot be embedded`,
+      });
     }
     if (!allowed && isSensitiveFieldName(field)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        `Source field '${field}' looks sensitive and cannot be embedded`,
-      );
+      throw new ModuleError({
+        ...errors.SOURCE_FIELD_INVALID,
+        message: `Source field '${field}' looks sensitive and cannot be embedded`,
+      });
     }
   }
 }
@@ -342,11 +343,11 @@ function assertExtensionFieldAvailable(args: {
   }
 }
 
-function extensionCollision(schemaName: string, fieldName: string): GrpcError {
-  return new GrpcError(
-    status.ALREADY_EXISTS,
-    `Field '${fieldName}' already exists on schema '${schemaName}' and is not a compatible embeddings extension`,
-  );
+function extensionCollision(schemaName: string, fieldName: string): ModuleError {
+  return new ModuleError({
+    ...errors.EMBEDDING_FIELD_COLLISION,
+    message: `Field '${fieldName}' already exists on schema '${schemaName}' and is not a compatible embeddings extension`,
+  });
 }
 
 function fieldType(field: unknown): string | undefined {
