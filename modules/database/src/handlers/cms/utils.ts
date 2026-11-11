@@ -4,7 +4,6 @@ import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.j
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
 import { Doc, Schema } from '../../interfaces/index.js';
 import { rethrowDatabaseError } from '../../utils/databaseErrors.js';
-import { errors } from '../../errors.js';
 
 export function findSchema(
   call: ParsedRouterRequest,

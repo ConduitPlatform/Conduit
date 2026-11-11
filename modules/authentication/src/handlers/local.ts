@@ -427,7 +427,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
     const { isVerified, userInvitationExtensionData } =
       await this.acceptRegistrationInvite(realmCtx, invitationToken, email, teams);
-    AuthUtils.assertValidEmail(email, 'module');
+    AuthUtils.assertValidEmail(email);
     await this.assertEmailAvailable(email, realmCtx);
     if (userData) {
       AuthUtils.checkUserData(userData);
@@ -681,7 +681,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (user.email === newEmail) {
       throw new ModuleError(errors.USER_EMAIL_UNCHANGED);
     }
-    AuthUtils.assertValidEmail(newEmail, 'module');
+    AuthUtils.assertValidEmail(newEmail);
     await assertIdentifierFreeForUser(
       user,
       identifierQuery('email', newEmail),

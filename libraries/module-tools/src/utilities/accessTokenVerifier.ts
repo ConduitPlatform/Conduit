@@ -1,7 +1,6 @@
 import { AccessTokenClaims, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ModuleError } from '../classes/ModuleError.js';
 import { authErrors } from './authErrors.js';
-import { status } from '@grpc/grpc-js';
 import { createPublicKey } from 'node:crypto';
 import {
   AccessTokenSigningKeys,

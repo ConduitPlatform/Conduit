@@ -186,11 +186,7 @@ export namespace AuthUtils {
       );
   }
 
-  /**
-   * @param _errorType ignored: both failures are always typed errors. Kept so existing
-   * callers that still pass 'module' compile.
-   */
-  export function assertValidEmail(email: string, _errorType?: 'grpc' | 'module'): void {
+  export function assertValidEmail(email: string): void {
     if (invalidEmailAddress(email)) {
       throw new ModuleError(errors.USER_EMAIL_INVALID);
     }

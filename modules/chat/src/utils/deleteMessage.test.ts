@@ -11,8 +11,6 @@ const EXISTING_MESSAGE = {
   room: 'room-1',
 };
 
-const NOT_FOUND_OR_NO_ACCESS = "Message does not exist or you don't have access";
-
 function createSdk(message: typeof EXISTING_MESSAGE | null) {
   const finds: unknown[] = [];
   const updates: unknown[] = [];

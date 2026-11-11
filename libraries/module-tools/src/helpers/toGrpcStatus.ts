@@ -35,63 +35,70 @@ export function toGrpcStatus(
   error: unknown,
   options: { maskUnknown?: boolean; exposeDebug?: boolean } = {},
 ): GrpcStatusPayload {
-  if (isGrpcStatusError(error)) {
-    const payload = parseErrorPayload(error);
-    const debug = (error as { debugLogInfo?: unknown }).debugLogInfo;
-    const hasDebug = typeof debug === 'string' && debug !== '';
-    const label = payload.conduitCode
-      ? `[${payload.conduitCode}] ${payload.message}`
-      : payload.message;
-    return {
-      code: error.code,
-      // Operators (admin routes) get the cause appended; it is the only way they can
-      // see why e.g. a provider or the database refused an operation.
-      message:
-        options.exposeDebug && hasDebug && payload.conduitCode
-          ? JSON.stringify({
-              message: `${payload.message}: ${debug}`,
-              conduitCode: payload.conduitCode,
-            })
-          : error.details || error.message || 'Something went wrong',
-      conduitCode: payload.conduitCode,
-      log: hasDebug ? `${label}: ${debug}` : label,
-    };
-  }
-  const candidate = (error ?? {}) as {
-    status?: unknown;
-    message?: unknown;
-    conduitCode?: unknown;
-    stack?: unknown;
+  if (isGrpcStatusError(error)) return fromGrpcError(error, options.exposeDebug);
+  const text = errorText(error);
+  const httpStatus = (error as { status?: unknown } | null)?.status;
+  if (typeof httpStatus === 'number') return fromHttpError(error, httpStatus, text);
+  const stack = (error as { stack?: unknown } | null)?.stack;
+  const log = typeof stack === 'string' ? stack : text;
+  if (!options.maskUnknown) return { code: INTERNAL, message: text, log };
+  return {
+    code: INTERNAL,
+    message: typedMessage('Something went wrong', INTERNAL_ERROR_CODE),
+    conduitCode: INTERNAL_ERROR_CODE,
+    log,
   };
-  const text =
-    typeof candidate.message === 'string' && candidate.message !== ''
-      ? candidate.message
-      : typeof error === 'string' && error !== ''
-        ? error
-        : 'Something went wrong';
-  if (typeof candidate.status === 'number') {
-    const conduitCode =
-      typeof candidate.conduitCode === 'string' ? candidate.conduitCode : undefined;
-    return {
-      code: httpStatusToGrpc(candidate.status),
-      message: conduitCode ? JSON.stringify({ message: text, conduitCode }) : text,
-      conduitCode,
-      log: conduitCode ? `[${conduitCode}] ${text}` : text,
-    };
-  }
-  const log = typeof candidate.stack === 'string' ? candidate.stack : text;
-  if (options.maskUnknown) {
-    return {
-      code: INTERNAL,
-      message: JSON.stringify({
-        message: 'Something went wrong',
-        conduitCode: INTERNAL_ERROR_CODE,
-      }),
-      conduitCode: INTERNAL_ERROR_CODE,
-      log,
-    };
-  }
-  return { code: INTERNAL, message: text, log };
+}
+
+function typedMessage(message: string, conduitCode: string): string {
+  return JSON.stringify({ message, conduitCode });
+}
+
+function errorText(error: unknown): string {
+  const message = (error as { message?: unknown } | null)?.message;
+  if (typeof message === 'string' && message !== '') return message;
+  if (typeof error === 'string' && error !== '') return error;
+  return 'Something went wrong';
+}
+
+/** GrpcError, ModuleError, or an error returned by another module: status kept. */
+function fromGrpcError(
+  error: Error & { code: number; details?: string },
+  exposeDebug = false,
+): GrpcStatusPayload {
+  const { message, conduitCode } = parseErrorPayload(error);
+  const debug = hasDebugInfo(error)
+    ? (error as unknown as { debugLogInfo: string }).debugLogInfo
+    : undefined;
+  const label = conduitCode ? `[${conduitCode}] ${message}` : message;
+  // Operators (admin routes) get the cause appended; it is the only way they can see
+  // why e.g. a provider or the database refused an operation.
+  const exposed =
+    exposeDebug && debug && conduitCode
+      ? typedMessage(`${message}: ${debug}`, conduitCode)
+      : undefined;
+  return {
+    code: error.code,
+    message: exposed ?? (error.details || error.message || 'Something went wrong'),
+    conduitCode,
+    log: debug ? `${label}: ${debug}` : label,
+  };
+}
+
+/** ConduitError thrown inside a module: mapped to the matching gRPC status. */
+function fromHttpError(
+  error: unknown,
+  httpStatus: number,
+  text: string,
+): GrpcStatusPayload {
+  const code = (error as { conduitCode?: unknown }).conduitCode;
+  const conduitCode = typeof code === 'string' ? code : undefined;
+  return {
+    code: httpStatusToGrpc(httpStatus),
+    message: conduitCode ? typedMessage(text, conduitCode) : text,
+    conduitCode,
+    log: conduitCode ? `[${conduitCode}] ${text}` : text,
+  };
 }
 
 /**
