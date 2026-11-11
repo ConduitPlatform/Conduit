@@ -1,15 +1,14 @@
 import {
   ConduitGrpcSdk,
   ConduitRouteActions,
-  GrpcError,
   Indexable,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { RouteBuilder } from '@conduitplatform/module-tools';
+import { ModuleError, RouteBuilder } from '@conduitplatform/module-tools';
 import { FunctionExecutions, Functions } from '../models/index.js';
 import { isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
+import { errors } from '../errors.js';
 import type { CompiledUserFunction } from '../sandbox/functionSandbox.js';
 import {
   compileUserFunctionScript,
@@ -96,18 +95,25 @@ async function executeFunction(
     ConduitGrpcSdk.Metrics?.observe('function_execution_time', duration, {
       function_name: name,
     });
-    throw new GrpcError(status.INTERNAL, 'Execution failed');
+    if ((e as { code?: string })?.code === 'ERR_SCRIPT_EXECUTION_TIMEOUT') {
+      throw new ModuleError(errors.FUNCTION_EXECUTION_TIMEOUT, (e as Error).message);
+    }
+    throw new ModuleError(
+      errors.FUNCTION_EXECUTION_FAILED,
+      e instanceof Error ? (e.stack ?? e.message) : String(e),
+    );
   }
 }
 
 export function createRequestOrWebhookFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
   if (!func.inputs?.method) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'Method is required');
+    throw new ModuleError(errors.FUNCTION_METHOD_REQUIRED);
   }
   const compiledFunctionCode = compileFunctionCode(func.functionCode);
   const route = new RouteBuilder()
     .path(`${func.functionType !== 'request' ? '/hook' : ''}/${func.name}`)
     .method(getOperation(func.inputs?.method))
+    .errors(errors.FUNCTION_EXECUTION_TIMEOUT, errors.FUNCTION_EXECUTION_FAILED)
     .handler((call: ParsedRouterRequest) => {
       return executeFunction(
         func,
@@ -208,7 +214,7 @@ export async function executeBackgroundFunction(
 
 export function createEventFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
   if (!func.inputs?.event) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'Event not found');
+    throw new ModuleError(errors.FUNCTION_EVENT_REQUIRED);
   }
   const compiledFunctionCode = compileFunctionCode(func.functionCode);
   grpcSdk.bus?.subscribe(
@@ -241,10 +247,7 @@ export function createEventFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
 export function validateCronFunctionConfig(func: Functions): void {
   const pattern = getCronPatternFromInputs(func.inputs);
   if (!pattern) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Cron pattern is required (inputs.cronPattern or inputs.event)',
-    );
+    throw new ModuleError(errors.CRON_PATTERN_REQUIRED);
   }
   validateCronPattern(pattern, getCronTimezone(func.inputs));
 }
@@ -309,7 +312,7 @@ async function addFunctionExecutions(
 export function compileFunctionCode(functionCode: string): CompiledUserFunction {
   try {
     return compileUserFunctionScript(functionCode);
-  } catch {
-    throw new GrpcError(status.INTERNAL, 'Compilation failed');
+  } catch (e) {
+    throw ModuleError.from(e, errors.FUNCTION_COMPILATION_FAILED);
   }
 }

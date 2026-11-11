@@ -1,5 +1,5 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import cronParser from 'cron-parser';
 import type { IWebInputsInterface } from '../interfaces/IWebInputs.interface.js';
 
@@ -55,18 +55,18 @@ export function validateCronPattern(pattern: string, timezone = 'UTC'): void {
   try {
     Intl.DateTimeFormat('en-US', { timeZone: timezone });
   } catch {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      `Invalid timezone: "${timezone}". Use an IANA name (e.g. UTC, Europe/Athens).`,
-    );
+    throw new ModuleError({
+      ...errors.CRON_TIMEZONE_INVALID,
+      message: `Invalid timezone: "${timezone}". Use an IANA name (e.g. UTC, Europe/Athens).`,
+    });
   }
   try {
     cronParser.parseExpression(pattern, { tz: timezone });
   } catch {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      `Invalid cron pattern: "${pattern}". Expected 5-field format: minute hour day month weekday (${timezone}).`,
-    );
+    throw new ModuleError({
+      ...errors.CRON_PATTERN_INVALID,
+      message: `Invalid cron pattern: "${pattern}". Expected 5-field format: minute hour day month weekday (${timezone}).`,
+    });
   }
 }
 
@@ -75,10 +75,7 @@ export function normalizeCronInputs(
 ): IWebInputsInterface {
   const pattern = getCronPatternFromInputs(inputs);
   if (!pattern) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Cron pattern is required (inputs.cronPattern or inputs.event)',
-    );
+    throw new ModuleError(errors.CRON_PATTERN_REQUIRED);
   }
   const timezone = getCronTimezone(inputs);
   validateCronPattern(pattern, timezone);

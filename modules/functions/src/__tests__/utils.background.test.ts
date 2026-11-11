@@ -1,6 +1,6 @@
 import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, getConduitCode } from '@conduitplatform/grpc-sdk';
 import { FunctionExecutions } from '../models/index.js';
 import type { Functions } from '../models/index.js';
 import { compileFunctionCode, executeBackgroundFunction } from '../controllers/utils.js';
@@ -52,8 +52,7 @@ describe('executeBackgroundFunction failure path', () => {
           {} as ConduitGrpcSdk,
         ),
       (err: unknown) => {
-        assert.ok(err instanceof Error);
-        assert.match(err.message, /Execution failed|intentional failure/);
+        assert.equal(getConduitCode(err), 'FUNCTION_EXECUTION_FAILED');
         return true;
       },
     );
