@@ -2,18 +2,18 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
   Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import {
   ConduitJson,
   ConduitNumber,
   ConduitString,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { ResourceDefinition } from '../models/index.js';
 import { isNil } from 'lodash-es';
 import escapeStringRegexp from 'escape-string-regexp';
@@ -28,6 +28,13 @@ export class ResourceHandler {
         path: '/resources',
         action: ConduitRouteActions.POST,
         description: `Creates a resource.`,
+        errors: [
+          errors.RESOURCE_DEFINITION_MALFORMED,
+          errors.RELATED_RESOURCE_NOT_FOUND,
+          errors.INVALID_PERMISSION_ACTION,
+          errors.INHERITED_PERMISSION_NOT_FOUND,
+          errors.RESOURCE_VERSION_CONFLICT,
+        ],
         bodyParams: {
           name: ConduitString.Required,
           relations: ConduitJson.Required,
@@ -65,6 +72,7 @@ export class ResourceHandler {
         path: '/resources/:id',
         action: ConduitRouteActions.GET,
         description: `Returns a resource.`,
+        errors: [errors.RESOURCE_DEFINITION_NOT_FOUND],
         urlParams: {
           id: ConduitString.Required,
         },
@@ -77,6 +85,14 @@ export class ResourceHandler {
         path: '/resources/:id',
         action: ConduitRouteActions.PATCH,
         description: `Updates a resource.`,
+        errors: [
+          errors.RESOURCE_DEFINITION_NOT_FOUND,
+          errors.RESOURCE_DEFINITION_MALFORMED,
+          errors.RELATED_RESOURCE_NOT_FOUND,
+          errors.INVALID_PERMISSION_ACTION,
+          errors.INHERITED_PERMISSION_NOT_FOUND,
+          errors.RESOURCE_VERSION_CONFLICT,
+        ],
         urlParams: {
           id: ConduitString.Required,
         },
@@ -97,6 +113,7 @@ export class ResourceHandler {
         path: '/resources/:id',
         action: ConduitRouteActions.DELETE,
         description: `Deletes a resource.`,
+        errors: [errors.RESOURCE_DEFINITION_NOT_FOUND],
         urlParams: {
           id: ConduitString.Required,
         },
@@ -114,7 +131,7 @@ export class ResourceHandler {
       typeof permissions !== 'object' ||
       Array.isArray(permissions)
     ) {
-      throw new Error('Relations and permissions must be objects');
+      throw new ModuleError(errors.RESOURCE_DEFINITION_MALFORMED);
     }
     return ResourceController.getInstance().createResource({
       name,
@@ -143,7 +160,7 @@ export class ResourceHandler {
       sort,
     });
     if (isNil(resources)) {
-      throw new Error('Resources not found');
+      throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND);
     }
     resources.filter(r => isNil(r.version)).forEach(r => (r.version = 0));
     const count = await ResourceDefinition.getInstance().countDocuments(query);
@@ -169,7 +186,7 @@ export class ResourceHandler {
       typeof permissions !== 'object' ||
       Array.isArray(permissions)
     ) {
-      throw new Error('Relations and permissions must be objects');
+      throw new ModuleError(errors.RESOURCE_DEFINITION_MALFORMED);
     }
     return ResourceController.getInstance().updateResourceDefinition(
       { _id: id },
@@ -181,7 +198,7 @@ export class ResourceHandler {
     const { id } = call.request.params;
     const found = await ResourceDefinition.getInstance().findOne({ _id: id });
     if (isNil(found)) {
-      throw new GrpcError(status.NOT_FOUND, 'Resource does not exist');
+      throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND);
     }
     await ResourceController.getInstance().deleteResource(found.name);
     return 'Resource deleted successfully';

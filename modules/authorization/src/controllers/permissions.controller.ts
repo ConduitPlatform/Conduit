@@ -1,5 +1,6 @@
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import {
   assertDistinctResources,
   checkPermissionTuple,
@@ -19,20 +20,21 @@ import { createHash } from 'crypto';
 function actionPrefixOrEmpty(actionPrefix?: string) {
   if (actionPrefix === undefined || actionPrefix === '') return '';
   if (!PERMISSION_ACTION_PATTERN.test(actionPrefix)) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Action prefix must start with a letter and contain only letters, numbers, and underscores',
-    );
+    throw new ModuleError({
+      ...errors.INVALID_PERMISSION_ACTION,
+      message:
+        'Action prefix must start with a letter and contain only letters, numbers, and underscores',
+    });
   }
   return actionPrefix;
 }
 
 function assertResourceIdentifier(value: string, label: 'Subject' | 'Resource') {
   if (!hasResourceIdentifier(value)) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      `${label} must be a valid resource identifier`,
-    );
+    throw new ModuleError({
+      ...errors.INVALID_RESOURCE_IDENTIFIER,
+      message: `${label} must be a valid resource identifier`,
+    });
   }
 }
 
@@ -77,7 +79,7 @@ export class PermissionsController {
       computedTuple,
     });
     if (!permission) {
-      throw new Error(`Permission does not exist!`);
+      throw new ModuleError(errors.PERMISSION_NOT_FOUND);
     }
     await Permission.getInstance().deleteOne({ _id: permission._id });
     await RuleCache.invalidateSubject(this.grpcSdk, subject);
@@ -132,7 +134,7 @@ export class PermissionsController {
       name: resourceType,
     });
     if (!definition) {
-      throw new GrpcError(status.NOT_FOUND, 'Resource definition not found');
+      throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND);
     }
     const actions = Object.keys(definition.permissions ?? {})
       .filter(action => prefix === '' || action.startsWith(prefix))

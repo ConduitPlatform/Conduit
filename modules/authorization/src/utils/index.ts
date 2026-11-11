@@ -1,5 +1,7 @@
 //can be used both for relation checks and permission checks
+import { ModuleError } from '@conduitplatform/module-tools';
 import { ObjectIndex } from '../models/index.js';
+import { errors } from '../errors.js';
 
 export const PERMISSION_ACTION_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
 
@@ -9,27 +11,31 @@ export function hasResourceIdentifier(value: string) {
 
 export function assertPermissionAction(action: string) {
   if (!PERMISSION_ACTION_PATTERN.test(action)) {
-    throw new Error(
-      'Action must start with a letter and contain only letters, numbers, and underscores',
-    );
+    throw new ModuleError(errors.INVALID_PERMISSION_ACTION);
   }
 }
 
 export function assertDistinctResources(subject: string, object: string) {
   if (subject === object) {
-    throw new Error('Subject and object must be different');
+    throw new ModuleError(errors.SUBJECT_AND_OBJECT_IDENTICAL);
   }
 }
 
 export const checkRelation = (subject: string, relation: string, object: string) => {
   if (!hasResourceIdentifier(subject)) {
-    throw new Error('Subject must be a valid resource identifier');
+    throw new ModuleError({
+      ...errors.INVALID_RESOURCE_IDENTIFIER,
+      message: 'Subject must be a valid resource identifier',
+    });
   }
   if (!hasResourceIdentifier(object)) {
-    throw new Error('Object must be a valid resource identifier');
+    throw new ModuleError({
+      ...errors.INVALID_RESOURCE_IDENTIFIER,
+      message: 'Object must be a valid resource identifier',
+    });
   }
   if (!/^[a-zA-Z]+$/.test(relation)) {
-    throw new Error('Relation must be a plain string');
+    throw new ModuleError(errors.INVALID_RELATION_NAME);
   }
   assertDistinctResources(subject, object);
 };
@@ -37,10 +43,16 @@ export const checkRelation = (subject: string, relation: string, object: string)
 /** Validates subject/action/object for permission checks (allows subject === object for self-access). */
 export const checkPermissionTuple = (subject: string, action: string, object: string) => {
   if (!hasResourceIdentifier(subject)) {
-    throw new Error('Subject must be a valid resource identifier');
+    throw new ModuleError({
+      ...errors.INVALID_RESOURCE_IDENTIFIER,
+      message: 'Subject must be a valid resource identifier',
+    });
   }
   if (!hasResourceIdentifier(object)) {
-    throw new Error('Object must be a valid resource identifier');
+    throw new ModuleError({
+      ...errors.INVALID_RESOURCE_IDENTIFIER,
+      message: 'Object must be a valid resource identifier',
+    });
   }
   assertPermissionAction(action);
 };

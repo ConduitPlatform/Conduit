@@ -9,6 +9,7 @@ import {
   ConduitString,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { isEmpty } from 'lodash-es';
 import { Permission, Relationship } from '../models/index.js';
 import { PermissionsController } from '../controllers/index.js';
@@ -22,6 +23,7 @@ export class PermissionsAdminHandler {
         path: '/permissions/can',
         action: ConduitRouteActions.GET,
         description: `Returns if a subject has a permission on a resource.`,
+        errors: [errors.INVALID_RESOURCE_IDENTIFIER, errors.INVALID_PERMISSION_ACTION],
         queryParams: {
           subject: ConduitString.Required,
           permission: ConduitString.Required,
@@ -39,6 +41,7 @@ export class PermissionsAdminHandler {
         path: '/permissions/evaluate',
         action: ConduitRouteActions.GET,
         description: `Returns a path-based evaluation of a permission.`,
+        errors: [errors.INVALID_RESOURCE_IDENTIFIER, errors.INVALID_PERMISSION_ACTION],
         queryParams: {
           subject: ConduitString.Required,
           permission: ConduitString.Required,

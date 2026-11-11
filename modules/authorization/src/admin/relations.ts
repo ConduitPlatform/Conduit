@@ -9,8 +9,10 @@ import {
 import {
   ConduitNumber,
   ConduitString,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { RelationsController } from '../controllers/index.js';
 import { isNil } from 'lodash-es';
 import { Relationship } from '../models/index.js';
@@ -24,6 +26,13 @@ export class RelationHandler {
         path: '/relations',
         action: ConduitRouteActions.POST,
         description: `Creates a new relation.`,
+        errors: [
+          errors.INVALID_RESOURCE_IDENTIFIER,
+          errors.INVALID_RELATION_NAME,
+          errors.SUBJECT_AND_OBJECT_IDENTICAL,
+          errors.RESOURCE_DEFINITION_NOT_FOUND,
+          errors.RELATION_NOT_ALLOWED,
+        ],
         bodyParams: {
           subject: ConduitString.Required,
           relation: ConduitString.Required,
@@ -38,6 +47,15 @@ export class RelationHandler {
         path: '/relations/many',
         action: ConduitRouteActions.POST,
         description: `Creates many relations in one request. Body: subject, relation, resources[] (required). Enqueues async index jobs per tuple. Prefer post_authorization_relations for a single tuple. Validate subject/relation against the ResourceDefinition; batch ≤100 resources when possible. Admin-only.`,
+        errors: [
+          errors.INVALID_RESOURCE_IDENTIFIER,
+          errors.INVALID_RELATION_NAME,
+          errors.SUBJECT_AND_OBJECT_IDENTICAL,
+          errors.RESOURCE_DEFINITION_NOT_FOUND,
+          errors.RELATION_NOT_ALLOWED,
+          errors.RELATIONS_ALREADY_EXIST,
+          errors.RELATIONS_REQUIRED,
+        ],
         bodyParams: {
           subject: ConduitString.Required,
           relation: ConduitString.Required,
@@ -52,6 +70,7 @@ export class RelationHandler {
         path: '/relations/:id',
         action: ConduitRouteActions.GET,
         description: `Returns a relation.`,
+        errors: [errors.RELATION_NOT_FOUND],
         urlParams: {
           id: ConduitString.Required,
         },
@@ -84,6 +103,7 @@ export class RelationHandler {
         path: '/relations/:id',
         action: ConduitRouteActions.DELETE,
         description: `Deletes a relation.`,
+        errors: [errors.RELATION_NOT_FOUND],
         urlParams: {
           id: ConduitString.Required,
         },
@@ -111,7 +131,7 @@ export class RelationHandler {
     const { id } = call.request.params;
     const found = await Relationship.getInstance().findOne({ _id: id });
     if (isNil(found)) {
-      throw new Error('Relation not found');
+      throw new ModuleError(errors.RELATION_NOT_FOUND);
     }
     return found;
   }
@@ -132,7 +152,7 @@ export class RelationHandler {
       sort,
     });
     if (isNil(relations)) {
-      throw new Error('Relations not found');
+      throw new ModuleError(errors.RELATION_NOT_FOUND);
     }
     const count = await Relationship.getInstance().countDocuments(query);
     return { relations, count };
@@ -142,7 +162,7 @@ export class RelationHandler {
     const { id } = call.request.params;
     const found = Relationship.getInstance().findOne({ _id: id });
     if (isNil(found)) {
-      throw new Error('Relation not found');
+      throw new ModuleError(errors.RELATION_NOT_FOUND);
     }
     await RelationsController.getInstance().deleteRelationById(id);
     return 'Relation deleted successfully';

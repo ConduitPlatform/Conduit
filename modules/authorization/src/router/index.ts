@@ -2,20 +2,19 @@ import {
   ConduitBoolean,
   ConduitString,
   GrpcServer,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
 import { PermissionsController } from '../controllers/index.js';
 import { Relationship } from '../models/index.js';
 import { isEmpty } from 'lodash-es';
-import { Status } from '@grpc/grpc-js/build/src/constants.js';
-
+import { errors } from '../errors.js';
 export class AuthorizationRouter {
   private _routingManager?: RoutingManager;
   private _permissionsController: PermissionsController;
@@ -44,6 +43,11 @@ export class AuthorizationRouter {
         action: ConduitRouteActions.GET,
         description: `Checks if a user has the given permission, on a resource either directly or through a scope.`,
         middlewares: ['authMiddleware'],
+        errors: [
+          errors.SCOPE_ACCESS_DENIED,
+          errors.INVALID_RESOURCE_IDENTIFIER,
+          errors.INVALID_PERMISSION_ACTION,
+        ],
         path: '/check',
       },
       new ConduitRouteReturnDefinition('CheckPermissionResponse', {
@@ -59,10 +63,7 @@ export class AuthorizationRouter {
             scope,
           );
           if (!mayUseScope) {
-            throw new GrpcError(
-              Status.PERMISSION_DENIED,
-              'User does not have access to scope',
-            );
+            throw new ModuleError(errors.SCOPE_ACCESS_DENIED);
           }
         }
         const allowed = await this._permissionsController.can(
@@ -84,6 +85,7 @@ export class AuthorizationRouter {
         action: ConduitRouteActions.GET,
         description: `Get a user's or scope's roles for a resource.`,
         middlewares: ['authMiddleware'],
+        errors: [errors.SCOPE_ACCESS_DENIED, errors.INVALID_RESOURCE_IDENTIFIER],
         path: '/role/:resource',
       },
       new ConduitRouteReturnDefinition('GetResourceRolesResponse', {
@@ -100,10 +102,7 @@ export class AuthorizationRouter {
             scope,
           );
           if (!mayUseScope) {
-            throw new GrpcError(
-              Status.PERMISSION_DENIED,
-              'User does not have access to scope',
-            );
+            throw new ModuleError(errors.SCOPE_ACCESS_DENIED);
           }
         }
         const relations = await Relationship.getInstance().findMany({

@@ -1,4 +1,6 @@
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { checkRelation, computeRelationTuple } from '../utils/index.js';
 import { Relationship, ResourceDefinition } from '../models/index.js';
 import { IndexController } from './index.controller.js';
@@ -28,25 +30,26 @@ export class RelationsController {
     const subjectResource = await ResourceDefinition.getInstance().findOne({
       name: subject.split(':')[0],
     });
-    if (!subjectResource) throw new Error('Subject resource not found');
+    if (!subjectResource)
+      throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND, 'Subject resource');
     await ResourceDefinition.getInstance()
       .findOne({ name: object.split(':')[0] })
       .then(resourceDefinition => {
         if (!resourceDefinition) {
-          throw new Error('Object resource definition not found');
+          throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND, 'Object resource');
         }
         if (
           !resourceDefinition.relations ||
           !resourceDefinition.relations[relation] ||
           resourceDefinition.relations[relation].length === 0
         ) {
-          throw new Error('Relation not allowed');
+          throw new ModuleError(errors.RELATION_NOT_ALLOWED);
         }
         if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
         if (
           resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1
         ) {
-          throw new Error('Relation not allowed');
+          throw new ModuleError(errors.RELATION_NOT_ALLOWED);
         }
       });
 
@@ -77,29 +80,30 @@ export class RelationsController {
     const relationResources = await Relationship.getInstance().findMany({
       computedTuple: { $in: computedTuples },
     });
-    if (relationResources.length) throw new Error('Relations already exist');
+    if (relationResources.length) throw new ModuleError(errors.RELATIONS_ALREADY_EXIST);
     const subjectResource = await ResourceDefinition.getInstance().findOne({
       name: subject.split(':')[0],
     });
-    if (!subjectResource) throw new Error('Subject resource not found');
+    if (!subjectResource)
+      throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND, 'Subject resource');
     const definitions = await ResourceDefinition.getInstance().findMany({
       name: { $in: resources.map(resource => resource.split(':')[0]) },
     });
     for (const resource of resources) {
       const resourceDefinition = definitions.find(d => d.name === resource.split(':')[0]);
       if (!resourceDefinition) {
-        throw new Error('Object resource definition not found');
+        throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND, 'Object resource');
       }
       if (
         !resourceDefinition.relations ||
         !resourceDefinition.relations[relation] ||
         resourceDefinition.relations[relation].length === 0
       ) {
-        throw new Error('Relation not allowed');
+        throw new ModuleError(errors.RELATION_NOT_ALLOWED);
       }
       if (resourceDefinition.relations[relation].indexOf('*') !== -1) continue;
       if (resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1) {
-        throw new Error('Relation not allowed');
+        throw new ModuleError(errors.RELATION_NOT_ALLOWED);
       }
     }
   }
@@ -137,7 +141,7 @@ export class RelationsController {
     const relationResource = await Relationship.getInstance().findOne({
       computedTuple: computeRelationTuple(subject, relation, object),
     });
-    if (!relationResource) throw new Error('Relation does not exist');
+    if (!relationResource) throw new ModuleError(errors.RELATION_NOT_FOUND);
     await Relationship.getInstance().deleteOne({
       computedTuple: computeRelationTuple(subject, relation, object),
     });
@@ -150,7 +154,8 @@ export class RelationsController {
 
   async deleteAllRelations(query: { subject?: string; resource?: string }) {
     const relationResources = await Relationship.getInstance().findMany(query);
-    if (relationResources.length === 0) throw new Error('No relations found');
+    if (relationResources.length === 0)
+      throw new ModuleError(errors.RELATION_NOT_FOUND, 'No relations found');
     await Relationship.getInstance().deleteMany(query);
     for (const relationResource of relationResources) {
       await IndexController.getInstance().removeRelation(
@@ -168,7 +173,7 @@ export class RelationsController {
 
   async deleteRelationById(id: string) {
     const relationResource = await Relationship.getInstance().findOne({ _id: id });
-    if (!relationResource) throw new Error('Relation does not exist');
+    if (!relationResource) throw new ModuleError(errors.RELATION_NOT_FOUND);
     await Relationship.getInstance().deleteOne({ _id: id });
     await IndexController.getInstance().removeRelation(
       relationResource.subject,
