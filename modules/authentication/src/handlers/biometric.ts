@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
   Query,
   UnparsedRouterResponse,
@@ -12,14 +11,19 @@ import {
   ConduitString,
   ConfigController,
   RoutingManager,
+  ModuleError,
 } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
 import { Token, User } from '../models/index.js';
 import { ALT_STRATEGY_AUTH, TokenType } from '../constants/index.js';
 import { AuthUtils } from '../utils/index.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import { errors } from '../errors.js';
+import {
+  LOGIN_ROUTE_ERRORS,
+  REALM_RESOLUTION_ERRORS,
+  SESSION_AUTH_ERRORS,
+} from './utils.js';
 import {
   assertGlobalStrategyAvailable,
   assertStrategyEnabledForRealm,
@@ -34,7 +38,6 @@ import { v4 as uuid } from 'uuid';
 import crypto from 'crypto';
 import { BiometricToken } from '../models/BiometricToken.schema.js';
 import {
-  BIOMETRIC_CHALLENGE_UNAVAILABLE,
   consumeBiometricChallenge,
   isBiometricChallengeExpired,
   issueOrReuseBiometricLoginChallenge,
@@ -68,9 +71,9 @@ export class BiometricHandlers implements IAuthenticationStrategy {
           realm: realmParam,
         },
         errors: [
-          errors.REALM_NOT_FOUND,
-          errors.REALMS_DISABLED,
-          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+          errors.BIOMETRIC_SIGNATURE_INVALID,
+          errors.BIOMETRIC_CHALLENGE_UNAVAILABLE,
+          ...REALM_RESOLUTION_ERRORS,
         ],
         rateLimit: ALT_STRATEGY_AUTH,
       },
@@ -90,6 +93,11 @@ export class BiometricHandlers implements IAuthenticationStrategy {
           encryptedData: ConduitString.Required,
           keyId: ConduitString.Required,
         },
+        errors: [
+          errors.BIOMETRIC_SIGNATURE_INVALID,
+          errors.BIOMETRIC_CLIENT_MISMATCH,
+          ...LOGIN_ROUTE_ERRORS,
+        ],
         rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('BiometricsAuthenticateResponse', {
@@ -107,6 +115,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
         bodyParams: {
           publicKey: ConduitString.Required,
         },
+        errors: [errors.VERIFICATION_RESEND_THROTTLED, ...SESSION_AUTH_ERRORS],
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('BiometricsEnrollResponse', {
@@ -123,6 +132,11 @@ export class BiometricHandlers implements IAuthenticationStrategy {
         bodyParams: {
           encryptedData: ConduitString.Required,
         },
+        errors: [
+          errors.BIOMETRIC_SIGNATURE_INVALID,
+          errors.BIOMETRIC_CLIENT_MISMATCH,
+          ...SESSION_AUTH_ERRORS,
+        ],
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('VerifyBiometricEnrollResponse', {
@@ -136,7 +150,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     const { keyId } = call.request.params;
     const clientId = call.request.context.clientId;
     if (!clientId) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+      throw new ModuleError(errors.BIOMETRIC_SIGNATURE_INVALID);
     }
     const realmCtx = await resolveRealmFromCall(call);
     if (!realmCtx) assertGlobalStrategyAvailable('biometric');
@@ -146,10 +160,13 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       { readPreference: 'primary' },
     );
     if (!key || !key.user) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+      throw new ModuleError(errors.BIOMETRIC_SIGNATURE_INVALID);
     }
     if (!this.grpcSdk.state) {
-      throw new GrpcError(status.UNAVAILABLE, BIOMETRIC_CHALLENGE_UNAVAILABLE);
+      throw new ModuleError(
+        errors.BIOMETRIC_CHALLENGE_UNAVAILABLE,
+        'state store missing',
+      );
     }
     const userId = typeof key.user === 'string' ? key.user : key.user._id;
     // the key must belong to a user of the realm the challenge is requested for
@@ -159,7 +176,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
         { readPreference: 'primary' },
       );
       if (!keyOwner || !isHomeRealm(keyOwner.homeRealm, realmIdOf(realmCtx))) {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+        throw new ModuleError(errors.BIOMETRIC_SIGNATURE_INVALID);
       }
     }
     const scopedQuery = {
@@ -201,7 +218,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     const { encryptedData, keyId } = call.request.params;
     const clientId = call.request.context.clientId;
     if (!clientId) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+      throw new ModuleError(errors.BIOMETRIC_SIGNATURE_INVALID);
     }
     const config = ConfigController.getInstance().config;
     const existingTokens = await Token.getInstance().findMany(
@@ -214,20 +231,20 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     );
     const existingToken = existingTokens[0];
     if (!existingToken) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+      throw new ModuleError(errors.BIOMETRIC_SIGNATURE_INVALID);
     }
     const tokenClientId = await consumeBiometricChallenge(existingToken, clientId, id =>
       Token.getInstance().deleteOne({ _id: id }),
     );
     if (isBiometricChallengeExpired(existingToken.createdAt)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+      throw new ModuleError(errors.BIOMETRIC_SIGNATURE_INVALID);
     }
     const key = await BiometricToken.getInstance().findOne(
       { _id: keyId },
       { populate: ['user'], readPreference: 'primary' },
     );
     if (!key || !key.user) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+      throw new ModuleError(errors.BIOMETRIC_SIGNATURE_INVALID);
     }
     if (
       !verifyBiometricSignature(
@@ -236,7 +253,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
         encryptedData,
       )
     ) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+      throw new ModuleError(errors.BIOMETRIC_SIGNATURE_INVALID);
     }
     // the realm comes from the challenge; a key owner from another home realm looks
     // like any other invalid signature
@@ -247,7 +264,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       (realmCtx || realmsEnabled()) &&
       !isHomeRealm((key.user as User).homeRealm, realmIdOf(realmCtx))
     ) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+      throw new ModuleError(errors.BIOMETRIC_SIGNATURE_INVALID);
     }
     return TokenProvider.getInstance().provideUserTokens({
       user: key.user as User,
@@ -303,7 +320,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       { readPreference: 'primary' },
     );
     if (!existingToken) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+      throw new ModuleError(errors.BIOMETRIC_SIGNATURE_INVALID);
     }
     await consumeBiometricChallenge(existingToken, clientId, id =>
       Token.getInstance().deleteOne({ _id: id }),
@@ -315,7 +332,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
         encryptedData,
       )
     ) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+      throw new ModuleError(errors.BIOMETRIC_SIGNATURE_INVALID);
     }
     const biometricToken = await BiometricToken.getInstance().create({
       user: user._id,

@@ -3,11 +3,9 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import {
@@ -15,8 +13,16 @@ import {
   ConduitString,
   ConfigController,
   RoutingManager,
+  ModuleError,
 } from '@conduitplatform/module-tools';
-import { authenticateChecks, changePassword } from './utils.js';
+import {
+  ANONYMOUS_DENIED_ERRORS,
+  authenticateChecks,
+  CAPTCHA_ERRORS,
+  changePassword,
+  LOGIN_ROUTE_ERRORS,
+  SESSION_AUTH_ERRORS,
+} from './utils.js';
 import { Config } from '../config/index.js';
 import { ALT_STRATEGY_AUTH } from '../constants/index.js';
 import { errors } from '../errors.js';
@@ -59,9 +65,13 @@ export class UsernameHandlers implements IAuthenticationStrategy {
             ? ['captchaMiddleware']
             : undefined,
         errors: [
-          errors.REALM_NOT_FOUND,
-          errors.REALMS_DISABLED,
-          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+          errors.INVALID_CREDENTIALS,
+          errors.PASSWORD_AUTH_NOT_AVAILABLE,
+          errors.ACCOUNT_NOT_VERIFIED,
+          errors.DISCOVERY_REQUEST_INVALID,
+          errors.AUTHENTICATION_REQUIRED,
+          ...LOGIN_ROUTE_ERRORS,
+          ...(captchaConfig.enabled && captchaConfig.routes.login ? CAPTCHA_ERRORS : []),
         ],
         rateLimit: ALT_STRATEGY_AUTH,
       },
@@ -81,6 +91,11 @@ export class UsernameHandlers implements IAuthenticationStrategy {
         bodyParams: {
           newPassword: ConduitString.Required,
         },
+        errors: [
+          errors.SUDO_REQUIRED,
+          ...ANONYMOUS_DENIED_ERRORS,
+          ...SESSION_AUTH_ERRORS,
+        ],
         middlewares: ['authMiddleware', 'denyAnonymousMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
@@ -105,7 +120,7 @@ export class UsernameHandlers implements IAuthenticationStrategy {
     const context = call.request.context;
 
     if (isNil(context)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
+      throw new ModuleError(errors.AUTHENTICATION_REQUIRED);
     }
 
     assertDiscoveryAllowed({
@@ -130,7 +145,7 @@ export class UsernameHandlers implements IAuthenticationStrategy {
       select: '+hashedPassword',
     });
     if (isNil(principal)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
+      throw new ModuleError(errors.INVALID_CREDENTIALS);
     }
 
     await authenticateChecks(

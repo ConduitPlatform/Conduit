@@ -2,7 +2,7 @@ import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveAppleOAuthClient } from './resolveAppleOAuthClient.js';
 import { ConfigController } from '@conduitplatform/module-tools';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { GrpcError, parseErrorPayload } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 
 describe('resolveAppleOAuthClient', () => {
@@ -88,7 +88,7 @@ describe('resolveAppleOAuthClient', () => {
       (err: any) =>
         err instanceof GrpcError &&
         err.code === status.INVALID_ARGUMENT &&
-        err.message.includes('mixed credentials'),
+        parseErrorPayload(err).message.includes('mixed credentials'),
     );
   });
 
@@ -108,7 +108,7 @@ describe('resolveAppleOAuthClient', () => {
       (err: any) =>
         err instanceof GrpcError &&
         err.code === status.INVALID_ARGUMENT &&
-        err.message.includes('mixed credentials'),
+        parseErrorPayload(err).message.includes('mixed credentials'),
     );
   });
 
@@ -125,7 +125,7 @@ describe('resolveAppleOAuthClient', () => {
       (err: any) =>
         err instanceof GrpcError &&
         err.code === status.INVALID_ARGUMENT &&
-        err.message.includes('Unknown Apple OAuth client id'),
+        parseErrorPayload(err).message.includes('Unknown Apple OAuth client id'),
     );
   });
 
@@ -142,7 +142,7 @@ describe('resolveAppleOAuthClient', () => {
       (err: any) =>
         err instanceof GrpcError &&
         err.code === status.INVALID_ARGUMENT &&
-        err.message.includes('missing clientId'),
+        parseErrorPayload(err).message.includes('missing clientId'),
     );
   });
 

@@ -1,4 +1,4 @@
-import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
+import { hasConduitCode, Indexable } from '@conduitplatform/grpc-sdk';
 import { randomBytes } from 'crypto';
 import {
   ConduitBoolean,
@@ -6,11 +6,9 @@ import {
   ConfigController,
   ModuleError,
 } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
 import { TokenType } from '../constants/index.js';
 import { errors } from '../errors.js';
 import { Token, User } from '../models/index.js';
-import { hasConduitCode } from '../utils/common.logic.js';
 import { AuthUtils } from '../utils/index.js';
 import {
   realmsEnabled,
@@ -166,7 +164,7 @@ export async function discoverWithPassword(params: {
     if (accepted) accounts.push(accountOf(user, home.ctx));
   }
   if (accounts.length === 0) {
-    throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
+    throw new ModuleError(errors.INVALID_CREDENTIALS);
   }
   return issueDiscoveryAnswer(accounts, params.clientId);
 }

@@ -2,11 +2,9 @@ import {
   ConduitGrpcSdk,
   FindRelationRequest,
   FindRelationResponse,
-  GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { ModuleError } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
 import { errors } from '../errors.js';
 import { RealmMembership, RealmSettings, Team, User } from '../models/index.js';
 import { deleteSessionTokens } from './sessionRevocation.js';
@@ -20,6 +18,7 @@ import {
   MAX_TEAM_DEPTH,
   identityMode,
   realmsEnabled,
+  requireAuthorization,
   resolveTeamRealm,
   revokeRealmMembership,
   withHomeScope,
@@ -36,6 +35,7 @@ import {
 } from './teamRealm.logic.js';
 
 export * from './teamRealm.logic.js';
+export { requireAuthorization };
 
 type Relations = FindRelationResponse['relations'];
 
@@ -64,7 +64,7 @@ export async function fetchAllRelations(
 ): Promise<Relations> {
   const relations: Relations = [];
   for (let skip = 0; ; skip += RELATION_PAGE_SIZE) {
-    const page = await grpcSdk.authorization!.findRelation({
+    const page = await requireAuthorization(grpcSdk).findRelation({
       ...request,
       skip,
       limit: RELATION_PAGE_SIZE,
@@ -148,7 +148,7 @@ export async function claimHomeRealm(
       { _id: userId },
       { readPreference: 'primary' },
     );
-    if (!candidate) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+    if (!candidate) throw new ModuleError(errors.USER_NOT_FOUND);
     await assertRealmPrincipalsFree(realmId, [candidate]);
   }
   const result = await User.getInstance().updateMany(
@@ -160,7 +160,7 @@ export async function claimHomeRealm(
     { _id: userId },
     { readPreference: 'primary' },
   );
-  if (!fresh) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+  if (!fresh) throw new ModuleError(errors.USER_NOT_FOUND);
   return fresh.homeRealm && String(fresh.homeRealm) === realmId ? 'already' : 'lost';
 }
 
@@ -199,7 +199,7 @@ export async function addUserToTeamWithRealm(
       });
       if (!existing) await joinRealm(grpcSdk, { userId, realmId, mode }, rollback);
     }
-    await grpcSdk.authorization!.createRelation({
+    await requireAuthorization(grpcSdk).createRelation({
       subject: 'User:' + userId,
       relation: role,
       resource: 'Team:' + teamId,
@@ -223,7 +223,7 @@ async function joinRealm(
   const { userId, realmId, mode } = params;
   // always judge on the stored home realm, the caller's user object may be stale
   const user = await User.getInstance().findOne({ _id: userId });
-  if (!user) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+  if (!user) throw new ModuleError(errors.USER_NOT_FOUND);
   // home or guest, the user becomes a principal of the realm: judged before any write
   await assertRealmPrincipalsFree(realmId, [user]);
   const classification = classifyRealmMember(user.homeRealm, realmId, mode);
@@ -367,10 +367,7 @@ export async function assertInviteeAllowed(
 /** Realm teams cannot be deleted: demote them first. */
 export function assertTeamDeletable(team: Pick<Team, 'realm'>): void {
   if (team.realm?.enabled === true) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      'This team is a realm. Demote the realm before deleting the team.',
-    );
+    throw new ModuleError(errors.REALM_TEAM_NOT_DELETABLE);
   }
 }
 
@@ -398,8 +395,8 @@ export async function deleteTeamAndDetachChildren(
   const children = await Team.getInstance().findMany({ parentTeam: teamId });
 
   await Team.getInstance().deleteOne({ _id: teamId });
-  await grpcSdk.authorization!.deleteAllRelations({ resource: 'Team:' + teamId });
-  await grpcSdk.authorization!.deleteAllRelations({ subject: 'Team:' + teamId });
+  await requireAuthorization(grpcSdk).deleteAllRelations({ resource: 'Team:' + teamId });
+  await requireAuthorization(grpcSdk).deleteAllRelations({ subject: 'Team:' + teamId });
   await invalidateTeamClaims(allMemberIds);
   if (children.length > 0) {
     // null (not undefined, which an update drops) puts them on the top level
@@ -409,7 +406,7 @@ export async function deleteTeamAndDetachChildren(
     if (parentId) {
       // the owner relation of the deleted parent went with it
       for (const child of children) {
-        await grpcSdk.authorization!.createRelation({
+        await requireAuthorization(grpcSdk).createRelation({
           subject: 'Team:' + parentId,
           relation: 'owner',
           resource: 'Team:' + String(child._id),
@@ -422,7 +419,7 @@ export async function deleteTeamAndDetachChildren(
 }
 
 /**
- * Throws INVALID_ARGUMENT listing the ids in `requested` that are not realm teams.
+ * Throws REALM_SETTINGS_INVALID listing the ids in `requested` that are not realm teams.
  * `selfId` (the realm being written) is accepted even when it is not a realm yet.
  */
 export async function assertRealmTeamIds(
@@ -438,10 +435,11 @@ export async function assertRealmTeamIds(
     teams.map(team => team._id),
   );
   if (unknown.length > 0) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'policies.guests.allowedHomeRealms contains ids that are not realm teams: ' +
+    throw new ModuleError({
+      ...errors.REALM_SETTINGS_INVALID,
+      message:
+        'policies.guests.allowedHomeRealms contains ids that are not realm teams: ' +
         unknown.join(', '),
-    );
+    });
   }
 }

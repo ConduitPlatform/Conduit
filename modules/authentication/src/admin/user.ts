@@ -1,11 +1,9 @@
 import {
   ConduitGrpcSdk,
-  GrpcError,
   Indexable,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/index.js';
 import { assertEmailAllowed } from '../utils/emailRestrictions.js';
 import { isNil } from 'lodash-es';
@@ -16,6 +14,7 @@ import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
 import { TokenProvider } from '../handlers/tokenProvider.js';
 import { invalidateTeamClaims } from '../utils/teamClaims.js';
+import { requireAuthorization } from '../utils/teamRealm.js';
 import {
   grantHomeMembership,
   homeRealmFields,
@@ -119,7 +118,7 @@ export class UserAdmin {
   async getUserRealms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
     const user = await User.getInstance().findOne({ _id: id });
-    if (!user) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+    if (!user) throw new ModuleError(errors.USER_NOT_FOUND);
     const homeId = user.homeRealm ? String(user.homeRealm) : null;
     const memberships = await RealmMembership.getInstance().findMany(
       { user: String(user._id), membershipType: 'guest' },
@@ -183,7 +182,7 @@ export class UserAdmin {
       uniqueIdentifierQuery(query, realmIdOf(realmCtx)),
     );
     if (!isNil(user)) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
+      throw new ModuleError(errors.USER_EXISTS);
     }
 
     if (realmCtx) {
@@ -222,18 +221,15 @@ export class UserAdmin {
 
     const user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     } else if (hasTwoFA && isNil(phoneNumber) && isNil(user.phoneNumber)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Can not enable 2fa without a phone number',
-      );
+      throw new ModuleError(errors.PHONE_NUMBER_REQUIRED_FOR_2FA);
     }
     if (user.email !== email) {
       // isolated mode: scoped to the target user's home realm and to the realms the user is
       // linked into as a guest
       if (await identifierTakenForUser(user, identifierQuery('email', email))) {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'Email already exists');
+        throw new ModuleError(errors.USER_EMAIL_TAKEN);
       }
       assertEmailAllowed(email);
     }
@@ -241,7 +237,7 @@ export class UserAdmin {
       await assertIdentifierFreeForUser(
         user,
         identifierQuery('phoneNumber', phoneNumber),
-        'Phone number already exists',
+        errors.PHONE_NUMBER_TAKEN,
       );
     }
     let twoFaMethod: string | undefined;
@@ -266,14 +262,16 @@ export class UserAdmin {
       _id: call.request.params.id,
     });
     if (isNil(user)) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     }
     const res = await User.getInstance().deleteOne({ _id: call.request.params.id });
     await deleteUserRealmMemberships(String(user._id));
-    await this.grpcSdk.authorization!.deleteAllRelations({
+    await requireAuthorization(this.grpcSdk).deleteAllRelations({
       resource: 'User:' + user._id,
     });
-    await this.grpcSdk.authorization!.deleteAllRelations({ subject: 'User:' + user._id });
+    await requireAuthorization(this.grpcSdk).deleteAllRelations({
+      subject: 'User:' + user._id,
+    });
     await invalidateTeamClaims([String(user._id)]);
     // no session may outlive its user
     await TokenProvider.getInstance().deleteUserTokens({ user: String(user._id) });
@@ -286,15 +284,12 @@ export class UserAdmin {
     const { ids } = call.request.params;
     if (ids.length === 0) {
       // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'ids is required and must be an non-empty array',
-      );
+      throw new ModuleError(errors.USER_IDS_REQUIRED);
     }
 
     const users: User[] = await User.getInstance().findMany({ _id: { $in: ids } });
     if (users.length === 0) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     }
 
     const res = await User.getInstance().deleteMany({ _id: { $in: ids } });
@@ -313,10 +308,10 @@ export class UserAdmin {
       _id: call.request.params.id,
     });
     if (isNil(user)) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     }
     if (!user.active) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'User is already blocked');
+      throw new ModuleError(errors.USER_ALREADY_BLOCKED);
     }
     user = await User.getInstance().findByIdAndUpdate(user._id, { active: false });
     // a blocked user's sessions end (same as the userModifyStatus rpc)
@@ -333,10 +328,10 @@ export class UserAdmin {
       _id: call.request.params.id,
     });
     if (isNil(user)) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     }
     if (user.active) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'user is not blocked');
+      throw new ModuleError(errors.USER_ALREADY_ACTIVE);
     }
     user = await User.getInstance().findByIdAndUpdate(user._id, { active: true });
     this.grpcSdk.bus?.publish('authentication:unblock:user', JSON.stringify(user));
@@ -347,14 +342,11 @@ export class UserAdmin {
     const { ids, block } = call.request.params;
     if (ids.length === 0) {
       // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'ids is required and must be a non-empty array',
-      );
+      throw new ModuleError(errors.USER_IDS_REQUIRED);
     }
     const users: User[] | null = await User.getInstance().findMany({ _id: { $in: ids } });
     if (users.length === 0) {
-      throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     }
     await User.getInstance().updateMany({ _id: { $in: ids } }, { active: block });
     if (block) {

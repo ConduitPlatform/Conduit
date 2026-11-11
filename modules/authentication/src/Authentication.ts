@@ -2,7 +2,8 @@ import {
   ConduitGrpcSdk,
   DatabaseProvider,
   GrpcCallback,
-  GrpcError,
+  hasConduitCode,
+  parseErrorPayload,
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
@@ -12,7 +13,7 @@ import {
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
-import { isEmpty, isNil } from 'lodash-es';
+import { isEmpty, isNil, isPlainObject } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import AppConfigSchema, { Config } from './config/index.js';
 import { AdminHandlers } from './admin/index.js';
@@ -66,10 +67,12 @@ import metricsSchema from './metrics/index.js';
 import { TokenProvider } from './handlers/tokenProvider.js';
 import {
   AccessTokenVerifier,
+  authErrors,
   ConduitActiveSchema,
   ConfigController,
   convictConfigParser,
   createParsedRouterRequest,
+  grpcCallbackError,
   ManagedModule,
   ModuleError,
   RoutingManager,
@@ -149,7 +152,6 @@ import {
   assertGrantMembershipAllowed,
   parseMembershipType,
   parseOptionalMembershipType,
-  toCallbackError,
   toGrpcTeam,
   toRealmResponse,
 } from './utils/realmGrpc.logic.js';
@@ -332,7 +334,7 @@ export default class Authentication extends ManagedModule<Config> {
           tally.created(index);
         }
       } catch (e) {
-        tally.failed(index, `${name}: ${(e as Error).message}`);
+        tally.failed(index, `${name}: ${parseErrorPayload(e).message}`);
       }
     }
   }
@@ -363,7 +365,7 @@ export default class Authentication extends ManagedModule<Config> {
       } catch (e) {
         // a missing parent is ignored (as before); a realm that would nest is reported
         if (e instanceof ModuleError) {
-          tally.failed(index, `${rec.name}: parent: ${(e as Error).message}`);
+          tally.failed(index, `${rec.name}: parent: ${parseErrorPayload(e).message}`);
         }
       }
     }
@@ -413,7 +415,9 @@ export default class Authentication extends ManagedModule<Config> {
       sessionUpdate.error ??
       totpIssuerConfigError(incoming?.twoFa);
     if (configError) {
-      return callback({ code: status.INVALID_ARGUMENT, message: configError });
+      return callback(
+        grpcCallbackError({ ...errors.AUTH_CONFIG_INVALID, message: configError }),
+      );
     }
     // server-managed fields (tokenVersion, signing) and the keypair minted on a switch to
     // jwt mode are applied to the update before it is merged
@@ -426,13 +430,20 @@ export default class Authentication extends ManagedModule<Config> {
         const collisions = await countIdentifierCollisions();
         const blocked = identityModeRevertBlockedMessage(collisions.total);
         if (blocked) {
-          return callback({ code: status.FAILED_PRECONDITION, message: blocked });
+          return callback(
+            grpcCallbackError({
+              ...errors.IDENTITY_MODE_REVERT_BLOCKED,
+              message: blocked,
+            }),
+          );
         }
       } catch (e) {
-        return callback({
-          code: status.INTERNAL,
-          message: `Could not verify identifier uniqueness: ${(e as Error).message}`,
-        });
+        return callback(
+          grpcCallbackError(e, {
+            ...errors.AUTH_OPERATION_FAILED,
+            message: 'Could not verify identifier uniqueness',
+          }),
+        );
       }
     }
     if (isRealmsDisableTransition(previousTeams, incomingTeams)) {
@@ -442,13 +453,17 @@ export default class Authentication extends ManagedModule<Config> {
           await models.Team.getInstance().countDocuments(enabledRealmsQuery);
         const blocked = realmsDisableBlockedMessage(enabledRealms);
         if (blocked) {
-          return callback({ code: status.FAILED_PRECONDITION, message: blocked });
+          return callback(
+            grpcCallbackError({ ...errors.REALMS_DISABLE_BLOCKED, message: blocked }),
+          );
         }
       } catch (e) {
-        return callback({
-          code: status.INTERNAL,
-          message: `Could not verify that no enabled realms exist: ${(e as Error).message}`,
-        });
+        return callback(
+          grpcCallbackError(e, {
+            ...errors.AUTH_OPERATION_FAILED,
+            message: 'Could not verify that no enabled realms exist',
+          }),
+        );
       }
     }
     const previousMode = currentConfig?.accessTokens?.mode ?? 'session';
@@ -488,7 +503,7 @@ export default class Authentication extends ManagedModule<Config> {
       );
     } catch (e) {
       ConduitGrpcSdk.Logger.error(
-        `Failed to invalidate sessions after the access token mode switch: ${(e as Error).message}`,
+        `Failed to invalidate sessions after the access token mode switch: ${parseErrorPayload(e).message}`,
       );
     }
   }
@@ -539,11 +554,14 @@ export default class Authentication extends ManagedModule<Config> {
     }
 
     const modeError = identityModeConfigError(config.teams?.realms?.identityMode);
-    if (modeError) throw new GrpcError(status.INVALID_ARGUMENT, modeError);
+    if (modeError)
+      throw new ModuleError({ ...errors.AUTH_CONFIG_INVALID, message: modeError });
     const expiryError = magicLinkExpiryError(config.magic_link?.expiry_period);
-    if (expiryError) throw new GrpcError(status.INVALID_ARGUMENT, expiryError);
+    if (expiryError)
+      throw new ModuleError({ ...errors.AUTH_CONFIG_INVALID, message: expiryError });
     const issuerError = totpIssuerConfigError(config.twoFa);
-    if (issuerError) throw new GrpcError(status.INVALID_ARGUMENT, issuerError);
+    if (issuerError)
+      throw new ModuleError({ ...errors.AUTH_CONFIG_INVALID, message: issuerError });
     // an install whose refresh expiryPeriod exceeds the (new) 30 day default maxLifetime
     // must keep starting: raise the cap instead of rejecting
     const clamp = clampRefreshMaxLifetime(config.refreshTokens);
@@ -554,7 +572,8 @@ export default class Authentication extends ManagedModule<Config> {
       config.refreshTokens.maxLifetime = clamp.maxLifetime!;
     }
     const sessionError = sessionModeConfigError(config);
-    if (sessionError) throw new GrpcError(status.INVALID_ARGUMENT, sessionError);
+    if (sessionError)
+      throw new ModuleError({ ...errors.AUTH_CONFIG_INVALID, message: sessionError });
 
     return config;
   }
@@ -759,16 +778,10 @@ export default class Authentication extends ManagedModule<Config> {
     const { userId, clientId, realm } = call.request;
     const user = await models.User.getInstance(this.database).findOne({ _id: userId });
     if (!user) {
-      return callback({
-        code: status.NOT_FOUND,
-        message: 'User not found',
-      });
+      return callback(grpcCallbackError(errors.USER_NOT_FOUND));
     }
     if (!user.active) {
-      return callback({
-        code: status.PERMISSION_DENIED,
-        message: 'User is blocked or deleted',
-      });
+      return callback(grpcCallbackError(authErrors.USER_BLOCKED));
     }
     const config = ConfigController.getInstance().config;
 
@@ -792,11 +805,7 @@ export default class Authentication extends ManagedModule<Config> {
         refreshToken: tokens.refreshToken ?? undefined,
       });
     } catch (e) {
-      if (e instanceof GrpcError) return callback(toCallbackError(e));
-      return callback({
-        code: status.INTERNAL,
-        message: 'Failed to login',
-      });
+      return callback(grpcCallbackError(e, errors.AUTH_OPERATION_FAILED));
     }
   }
 
@@ -811,20 +820,24 @@ export default class Authentication extends ManagedModule<Config> {
 
     const verificationConfig = ConfigController.getInstance().config.local.verification;
     if (verify && !(verificationConfig.required && verificationConfig.send_email)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Email verification is disabled. Configuration required.',
-      });
+      return callback(grpcCallbackError(errors.VERIFICATION_DISABLED));
     }
     if (isNil(password) || password.length === 0) {
       password = AuthUtils.randomToken(8);
     }
-    if (call.request.userData) {
-      userData = JSON.parse(call.request.userData);
-      AuthUtils.checkUserData(userData);
-    }
 
     try {
+      if (call.request.userData) {
+        try {
+          userData = JSON.parse(call.request.userData);
+        } catch {
+          throw new ModuleError(errors.USER_DATA_INVALID, 'userData must be valid JSON');
+        }
+        if (!isPlainObject(userData)) {
+          throw new ModuleError(errors.USER_DATA_INVALID, 'userData must be an object');
+        }
+        AuthUtils.checkUserData(userData);
+      }
       const realmCtx = await resolveRealmFromSlug(call.request.realm);
       let user = await models.User.getInstance().findOne(
         uniqueIdentifierQuery({ email }, realmIdOf(realmCtx)),
@@ -839,7 +852,7 @@ export default class Authentication extends ManagedModule<Config> {
         if (user && (await accountLinkOffered(realmCtx, user))) {
           throw new ModuleError(errors.ACCOUNT_LINK_AVAILABLE);
         }
-        return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
+        return callback(grpcCallbackError(errors.USER_EXISTS));
       }
       AuthUtils.assertValidEmail(email);
       const hashedPassword = await AuthUtils.hashPassword(password);
@@ -862,10 +875,7 @@ export default class Authentication extends ManagedModule<Config> {
       } else {
         const config = ConfigController.getInstance().config;
         if (!config.anonymousUsers.enabled) {
-          return callback({
-            code: status.FAILED_PRECONDITION,
-            message: 'Anonymous users configuration is disabled',
-          });
+          return callback(grpcCallbackError(errors.ANONYMOUS_USERS_DISABLED));
         }
         if (realmCtx) {
           // the anonymous user keeps its home realm on conversion
@@ -883,10 +893,7 @@ export default class Authentication extends ManagedModule<Config> {
           ...userData,
         });
         if (!user) {
-          return callback({
-            code: status.NOT_FOUND,
-            message: 'Anonymous user not found',
-          });
+          return callback(grpcCallbackError(errors.ANONYMOUS_USER_NOT_FOUND));
         }
       }
       const sendEmail =
@@ -925,10 +932,7 @@ export default class Authentication extends ManagedModule<Config> {
       }
       return callback(null, { password });
     } catch (e) {
-      if (e instanceof GrpcError) {
-        return callback({ code: e.code, message: e.message });
-      }
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(grpcCallbackError(e, errors.AUTH_OPERATION_FAILED));
     }
   }
 
@@ -946,10 +950,7 @@ export default class Authentication extends ManagedModule<Config> {
     try {
       realmCtx = await resolveRealmFromSlug(call.request.realm);
     } catch (e) {
-      if (e instanceof GrpcError) {
-        return callback({ code: e.code, message: e.message });
-      }
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(grpcCallbackError(e, errors.AUTH_OPERATION_FAILED));
     }
     try {
       let user = await models.User.getInstance().findOne(
@@ -959,7 +960,7 @@ export default class Authentication extends ManagedModule<Config> {
         identifierQuery('username', username),
       ]);
       if (user || guestHolder) {
-        return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
+        return callback(grpcCallbackError(errors.USER_EXISTS));
       }
       const hashedPassword = await AuthUtils.hashPassword(password);
       const anonymousUserId = call.request.anonymousId;
@@ -986,10 +987,7 @@ export default class Authentication extends ManagedModule<Config> {
       } else {
         const config = ConfigController.getInstance().config;
         if (!config.anonymousUsers.enabled) {
-          return callback({
-            code: status.FAILED_PRECONDITION,
-            message: 'Anonymous users configuration is disabled',
-          });
+          return callback(grpcCallbackError(errors.ANONYMOUS_USERS_DISABLED));
         }
         if (realmCtx) {
           // the anonymous user keeps its home realm on conversion
@@ -1006,15 +1004,12 @@ export default class Authentication extends ManagedModule<Config> {
           isVerified: true,
         });
         if (!user) {
-          return callback({
-            code: status.NOT_FOUND,
-            message: 'Anonymous user not found',
-          });
+          return callback(grpcCallbackError(errors.ANONYMOUS_USER_NOT_FOUND));
         }
       }
       return callback(null, { password });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(grpcCallbackError(e, errors.AUTH_OPERATION_FAILED));
     }
   }
 
@@ -1024,20 +1019,14 @@ export default class Authentication extends ManagedModule<Config> {
   ) {
     const config = ConfigController.getInstance().config;
     if (!config.anonymousUsers.enabled) {
-      return callback({
-        code: status.FAILED_PRECONDITION,
-        message: 'Anonymous user creation is disabled',
-      });
+      return callback(grpcCallbackError(errors.ANONYMOUS_USERS_DISABLED));
     }
     const { clientId } = call.request;
     let realmCtx;
     try {
       realmCtx = await resolveRealmFromSlug(call.request.realm);
     } catch (e) {
-      if (e instanceof GrpcError) {
-        return callback({ code: e.code, message: e.message });
-      }
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(grpcCallbackError(e, errors.AUTH_OPERATION_FAILED));
     }
     const email = `${uuid()}@anonymous.com`;
     try {
@@ -1079,10 +1068,7 @@ export default class Authentication extends ManagedModule<Config> {
         refreshToken: tokens.refreshToken ?? undefined,
       });
     } catch (e) {
-      if (e instanceof GrpcError) {
-        return callback({ code: e.code, message: e.message });
-      }
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(grpcCallbackError(e, errors.AUTH_OPERATION_FAILED));
     }
   }
 
@@ -1102,7 +1088,7 @@ export default class Authentication extends ManagedModule<Config> {
         message: 'ok',
       });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(grpcCallbackError(e, errors.AUTH_OPERATION_FAILED));
     }
   }
 
@@ -1133,17 +1119,14 @@ export default class Authentication extends ManagedModule<Config> {
       } else if (identityMode() === 'isolated') {
         const holders = await models.User.getInstance().findMany({ email }, { limit: 2 });
         if (holders.length > 1) {
-          return callback({
-            code: status.FAILED_PRECONDITION,
-            message: 'email is held by more than one account; pass realm',
-          });
+          return callback(grpcCallbackError(errors.IDENTIFIER_HELD_BY_MULTIPLE_ACCOUNTS));
         }
         user = holders[0] ?? null;
       } else {
         user = await models.User.getInstance().findOne({ email });
       }
       if (!user) {
-        return callback({ code: status.NOT_FOUND, message: 'User not found' });
+        return callback(grpcCallbackError(errors.USER_NOT_FOUND));
       }
 
       const hashedPassword = await AuthUtils.hashPassword(password);
@@ -1153,7 +1136,7 @@ export default class Authentication extends ManagedModule<Config> {
 
       return callback(null, { password });
     } catch (e) {
-      return callback(toCallbackError(e));
+      return callback(grpcCallbackError(e, errors.AUTH_OPERATION_FAILED));
     }
   }
 
@@ -1165,14 +1148,11 @@ export default class Authentication extends ManagedModule<Config> {
     const newEmail = call.request.newEmail.trim().toLowerCase();
     try {
       if (newEmail.length === 0) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Invalid email address provided',
-        });
+        return callback(grpcCallbackError(errors.USER_EMAIL_INVALID));
       }
       const user = await models.User.getInstance().findOne({ _id: userId });
       if (!user) {
-        return callback({ code: status.NOT_FOUND, message: 'User not found' });
+        return callback(grpcCallbackError(errors.USER_NOT_FOUND));
       }
 
       await models.User.getInstance().findByIdAndUpdate(user._id, {
@@ -1182,7 +1162,7 @@ export default class Authentication extends ManagedModule<Config> {
 
       return callback(null, { message: 'ok' });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(grpcCallbackError(e, errors.AUTH_OPERATION_FAILED));
     }
   }
 
@@ -1192,11 +1172,11 @@ export default class Authentication extends ManagedModule<Config> {
       const team = (await new TeamsAdmin(this.grpcSdk).getTeam(request)) as
         models.Team | undefined;
       if (!team) {
-        return callback({ code: status.NOT_FOUND, message: 'Team not found' });
+        return callback(grpcCallbackError(errors.TEAM_NOT_FOUND));
       }
       return callback(null, toGrpcTeam(team));
     } catch (e) {
-      return callback(toCallbackError(e));
+      return callback(grpcCallbackError(e, errors.TEAM_OPERATION_FAILED));
     }
   }
 
@@ -1211,7 +1191,7 @@ export default class Authentication extends ManagedModule<Config> {
       )) as models.Team;
       return callback(null, toGrpcTeam(team));
     } catch (e) {
-      return callback(toCallbackError(e));
+      return callback(grpcCallbackError(e, errors.TEAM_OPERATION_FAILED));
     }
   }
 
@@ -1220,10 +1200,12 @@ export default class Authentication extends ManagedModule<Config> {
     callback: GrpcCallback<TeamDeleteResponse>,
   ) {
     const request = createParsedRouterRequest(call.request);
-    const result = await new TeamsAdmin(this.grpcSdk).deleteTeam(request).catch(e => {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
-    });
-    return callback(null, { message: result as string });
+    try {
+      const result = await new TeamsAdmin(this.grpcSdk).deleteTeam(request);
+      return callback(null, { message: result as string });
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.TEAM_OPERATION_FAILED));
+    }
   }
 
   async addTeamMembers(
@@ -1232,10 +1214,7 @@ export default class Authentication extends ManagedModule<Config> {
   ) {
     const teamId = call.request.teamId;
     if (isEmpty(teamId)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'teamId must be a valid Team ID!',
-      });
+      return callback(grpcCallbackError(errors.TEAM_ID_INVALID));
     }
     const urlParams = { teamId };
     const bodyParams = { members: call.request.memberIds };
@@ -1245,10 +1224,12 @@ export default class Authentication extends ManagedModule<Config> {
       undefined,
       bodyParams,
     );
-    await new TeamsAdmin(this.grpcSdk).addTeamMembers(request).catch(e => {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
-    });
-    return callback(null, {});
+    try {
+      await new TeamsAdmin(this.grpcSdk).addTeamMembers(request);
+      return callback(null, {});
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.TEAM_OPERATION_FAILED));
+    }
   }
 
   async removeTeamMembers(
@@ -1257,10 +1238,7 @@ export default class Authentication extends ManagedModule<Config> {
   ) {
     const teamId = call.request.teamId;
     if (isEmpty(teamId)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'teamId must be a valid Team ID!',
-      });
+      return callback(grpcCallbackError(errors.TEAM_ID_INVALID));
     }
     const urlParams = { teamId };
     const bodyParams = { members: call.request.memberIds };
@@ -1270,10 +1248,12 @@ export default class Authentication extends ManagedModule<Config> {
       undefined,
       bodyParams,
     );
-    await new TeamsAdmin(this.grpcSdk).removeTeamMembers(request).catch(e => {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
-    });
-    return callback(null, {});
+    try {
+      await new TeamsAdmin(this.grpcSdk).removeTeamMembers(request);
+      return callback(null, {});
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.TEAM_OPERATION_FAILED));
+    }
   }
 
   async validateAccessToken(
@@ -1301,14 +1281,14 @@ export default class Authentication extends ManagedModule<Config> {
       .catch(err => {
         if (err.code === status.UNAVAILABLE) {
           ConduitGrpcSdk.Logger.warn(
-            `Access token validation could not check revocation: ${err.message}`,
+            `Access token validation could not check revocation: ${parseErrorPayload(err).message}`,
           );
         }
         switch (err.code as status) {
           case status.PERMISSION_DENIED:
             return ValidateAccessTokenResponse_Status.USER_BLOCKED;
           case status.UNAUTHENTICATED:
-            if (err.message.includes('2FA')) {
+            if (hasConduitCode(err, authErrors.TWO_FA_REQUIRED)) {
               return ValidateAccessTokenResponse_Status.REQUIRES_2FA;
             }
           // intentional fall through
@@ -1331,7 +1311,7 @@ export default class Authentication extends ManagedModule<Config> {
         ]);
       } catch (e) {
         ConduitGrpcSdk.Logger.warn(
-          `Failed to resolve realm slugs for access token validation: ${(e as Error).message}`,
+          `Failed to resolve realm slugs for access token validation: ${parseErrorPayload(e).message}`,
         );
         realm = undefined;
         homeRealm = undefined;
@@ -1357,30 +1337,33 @@ export default class Authentication extends ManagedModule<Config> {
     callback: GrpcCallback<UserModifyStatusResponse>,
   ) {
     const { id, active } = call.request as { id: string; active: boolean };
-    const user = await User.getInstance().findOne({ _id: id });
-    if (!user) {
-      return callback({ code: status.NOT_FOUND, message: 'User not found' });
+    try {
+      const user = await User.getInstance().findOne({ _id: id });
+      if (!user) {
+        return callback(grpcCallbackError(errors.USER_NOT_FOUND));
+      }
+      if (user.active && active) {
+        return callback(grpcCallbackError(errors.USER_ALREADY_ACTIVE));
+      }
+      if (!user.active && !active) {
+        return callback(grpcCallbackError(errors.USER_ALREADY_BLOCKED));
+      }
+      await User.getInstance().findByIdAndUpdate(user._id, { active });
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.AUTH_OPERATION_FAILED));
     }
-    if (user.active && active) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'User is already active',
-      });
-    }
-    if (!user.active && !active) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'User is already blocked',
-      });
-    }
-    await User.getInstance().findByIdAndUpdate(user._id, { active });
     callback(null, { message: 'ok' });
     if (!active) {
-      await TokenProvider.getInstance().deleteUserTokens({
-        user: id,
-      });
-
-      TokenProvider.getInstance().trackLoggedOutUserMetric(id);
+      try {
+        await TokenProvider.getInstance().deleteUserTokens({
+          user: id,
+        });
+        TokenProvider.getInstance().trackLoggedOutUserMetric(id);
+      } catch (e) {
+        ConduitGrpcSdk.Logger.error(
+          `Failed to delete tokens of blocked user ${id}: ${parseErrorPayload(e).message}`,
+        );
+      }
     }
   }
 
@@ -1397,20 +1380,14 @@ export default class Authentication extends ManagedModule<Config> {
       } as Query<Token>);
 
       if (deletedToken.deletedCount === 0) {
-        return callback({
-          code: status.NOT_FOUND,
-          message: 'Invitation not found',
-        });
+        return callback(grpcCallbackError(errors.TEAM_INVITE_NOT_FOUND));
       }
 
       return callback(null, {
         message: 'Invitation deleted successfully',
       });
     } catch (e) {
-      return callback({
-        code: status.INTERNAL,
-        message: (e as Error).message,
-      });
+      return callback(grpcCallbackError(e, errors.TEAM_OPERATION_FAILED));
     }
   }
 
@@ -1420,16 +1397,18 @@ export default class Authentication extends ManagedModule<Config> {
   ) {
     const { teamId, email, role, redirectUri, inviterUserId, userData } = call.request;
     if (isEmpty(teamId) || isEmpty(email) || isEmpty(role) || isEmpty(inviterUserId)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'teamId, email, role and inviterUserId are required',
-      });
+      return callback(
+        grpcCallbackError({
+          ...errors.REQUEST_INVALID,
+          message: 'teamId, email, role and inviterUserId are required',
+        }),
+      );
     }
 
     try {
       const inviter = await User.getInstance().findOne({ _id: inviterUserId });
       if (!inviter) {
-        return callback({ code: status.NOT_FOUND, message: 'Inviter user not found' });
+        return callback(grpcCallbackError(errors.USER_NOT_FOUND));
       }
 
       let parsedUserData: Indexable | undefined = undefined;
@@ -1437,10 +1416,12 @@ export default class Authentication extends ManagedModule<Config> {
         try {
           parsedUserData = JSON.parse(userData);
         } catch (e) {
-          return callback({
-            code: status.INVALID_ARGUMENT,
-            message: 'userData must be valid JSON',
-          });
+          return callback(
+            grpcCallbackError({
+              ...errors.USER_DATA_INVALID,
+              message: 'userData must be valid JSON',
+            }),
+          );
         }
       }
 
@@ -1459,7 +1440,7 @@ export default class Authentication extends ManagedModule<Config> {
       )) as string;
       return callback(null, { invitationToken });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(grpcCallbackError(e, errors.TEAM_OPERATION_FAILED));
     }
   }
 
@@ -1471,15 +1452,17 @@ export default class Authentication extends ManagedModule<Config> {
 
     try {
       if (!name && !newParentTeamId) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'At least one of name or newParentTeamId must be provided',
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.REQUEST_INVALID,
+            message: 'At least one of name or newParentTeamId must be provided',
+          }),
+        );
       }
 
       const team = await models.Team.getInstance().findOne({ _id: teamId });
       if (!team) {
-        return callback({ code: status.NOT_FOUND, message: 'Team not found' });
+        return callback(grpcCallbackError(errors.TEAM_NOT_FOUND));
       }
 
       const updateFields: { name?: string; parentTeam?: string } = {
@@ -1492,10 +1475,7 @@ export default class Authentication extends ManagedModule<Config> {
       if (newParentTeamId) {
         const moved = await this.reparentTeam(teamId, team.parentTeam, newParentTeamId);
         if (!moved) {
-          return callback({
-            code: status.NOT_FOUND,
-            message: 'New parent team not found',
-          });
+          return callback(grpcCallbackError(errors.PARENT_TEAM_NOT_FOUND));
         }
         realmMove = moved;
         updateFields.parentTeam = newParentTeamId;
@@ -1507,7 +1487,7 @@ export default class Authentication extends ManagedModule<Config> {
       );
 
       if (!updatedTeam) {
-        return callback({ code: status.INTERNAL, message: 'Failed to update team' });
+        return callback(grpcCallbackError(errors.TEAM_OPERATION_FAILED));
       }
 
       await this.revokeGuestsIfRealmLeft(teamId, realmMove);
@@ -1518,10 +1498,7 @@ export default class Authentication extends ManagedModule<Config> {
 
       return callback(null, toGrpcTeam(updatedTeam));
     } catch (e) {
-      return callback({
-        code: e instanceof GrpcError ? e.code : status.INTERNAL,
-        message: (e as Error).message,
-      });
+      return callback(grpcCallbackError(e, errors.TEAM_OPERATION_FAILED));
     }
   }
 
@@ -1566,21 +1543,25 @@ export default class Authentication extends ManagedModule<Config> {
     oldParentTeamId: string | undefined,
     newParentTeamId: string,
   ) {
+    const authorization = this.grpcSdk.authorization;
+    if (!authorization) {
+      throw new ModuleError(errors.AUTHORIZATION_UNAVAILABLE);
+    }
     if (oldParentTeamId) {
       try {
-        await this.grpcSdk.authorization!.deleteRelation({
+        await authorization.deleteRelation({
           subject: 'Team:' + oldParentTeamId,
           relation: 'owner',
           resource: 'Team:' + teamId,
         });
       } catch (e) {
         ConduitGrpcSdk.Logger.warn(
-          `Failed to delete old parent relation: ${(e as Error).message}`,
+          `Failed to delete old parent relation: ${parseErrorPayload(e).message}`,
         );
       }
     }
 
-    await this.grpcSdk.authorization!.createRelation({
+    await authorization.createRelation({
       subject: 'Team:' + newParentTeamId,
       relation: 'owner',
       resource: 'Team:' + teamId,
@@ -1618,7 +1599,7 @@ export default class Authentication extends ManagedModule<Config> {
       const teamId = params.teamId as string;
       const team = await models.Team.getInstance().findOne({ _id: teamId });
       if (!team) {
-        return callback({ code: status.NOT_FOUND, message: 'Team not found' });
+        return callback(grpcCallbackError(errors.TEAM_NOT_FOUND));
       }
       const request = createParsedRouterRequest(params, { teamId }, undefined, params);
       const admin = this.realmsAdmin();
@@ -1631,7 +1612,7 @@ export default class Authentication extends ManagedModule<Config> {
         toRealmResponse(realm as Parameters<typeof toRealmResponse>[0]),
       );
     } catch (e) {
-      return callback(toCallbackError(e));
+      return callback(grpcCallbackError(e, errors.REALM_OPERATION_FAILED));
     }
   }
 
@@ -1648,7 +1629,7 @@ export default class Authentication extends ManagedModule<Config> {
         toRealmResponse(realm as Parameters<typeof toRealmResponse>[0]),
       );
     } catch (e) {
-      return callback(toCallbackError(e));
+      return callback(grpcCallbackError(e, errors.REALM_OPERATION_FAILED));
     }
   }
 
@@ -1669,7 +1650,7 @@ export default class Authentication extends ManagedModule<Config> {
         blockedUsers: result.blockedUsers,
       });
     } catch (e) {
-      return callback(toCallbackError(e));
+      return callback(grpcCallbackError(e, errors.REALM_OPERATION_FAILED));
     }
   }
 
@@ -1684,7 +1665,7 @@ export default class Authentication extends ManagedModule<Config> {
       const force = call.request.force === true;
       const user = await models.User.getInstance().findOne({ _id: userId });
       if (!user) {
-        return callback({ code: status.NOT_FOUND, message: 'User not found' });
+        return callback(grpcCallbackError(errors.USER_NOT_FOUND));
       }
       assertGrantMembershipAllowed({
         type,
@@ -1710,7 +1691,7 @@ export default class Authentication extends ManagedModule<Config> {
       }
       return callback(null, {});
     } catch (e) {
-      return callback(toCallbackError(e));
+      return callback(grpcCallbackError(e, errors.REALM_OPERATION_FAILED));
     }
   }
 
@@ -1728,7 +1709,7 @@ export default class Authentication extends ManagedModule<Config> {
       );
       return callback(null, {});
     } catch (e) {
-      return callback(toCallbackError(e));
+      return callback(grpcCallbackError(e, errors.REALM_OPERATION_FAILED));
     }
   }
 

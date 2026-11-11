@@ -6,17 +6,17 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   Email,
-  GrpcError,
   ParsedRouterRequest,
+  parseErrorPayload,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitString,
   ConfigController,
   RoutingManager,
+  ModuleError,
 } from '@conduitplatform/module-tools';
 import { Client, Token, User } from '../models/index.js';
-import { status } from '@grpc/grpc-js';
 import {
   EMAIL_SEND_STRICT,
   MAGIC_LINK_EXCHANGE,
@@ -27,6 +27,7 @@ import { TokenProvider } from './tokenProvider.js';
 import { MagicLinkTemplate as magicLinkTemplate } from '../templates/index.js';
 import { AuthUtils } from '../utils/index.js';
 import { errors } from '../errors.js';
+import { LOGIN_ROUTE_ERRORS, REALM_RESOLUTION_ERRORS } from './utils.js';
 import { issueMagicLinkToken, redeemMagicLink } from './magicLink.logic.js';
 import {
   admitPrincipal,
@@ -82,9 +83,11 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
           realm: realmParam,
         },
         errors: [
-          errors.REALM_NOT_FOUND,
-          errors.REALMS_DISABLED,
-          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+          errors.REDIRECT_URI_NOT_ALLOWED,
+          errors.USER_NOT_FOUND,
+          errors.ANONYMOUS_USER_NOT_ELIGIBLE,
+          errors.AUTH_EMAIL_DELIVERY_FAILED,
+          ...REALM_RESOLUTION_ERRORS,
         ],
         rateLimit: EMAIL_SEND_STRICT,
       },
@@ -99,6 +102,12 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
         urlParams: {
           verificationToken: ConduitString.Required,
         },
+        errors: [
+          errors.MAGIC_LINK_TOKEN_NOT_FOUND,
+          errors.USER_NOT_FOUND,
+          errors.REDIRECT_URI_NOT_ALLOWED,
+          ...LOGIN_ROUTE_ERRORS,
+        ],
         rateLimit: OAUTH_CALLBACK,
       },
       new ConduitRouteReturnDefinition('VerifyMagicLinkLoginResponse', {
@@ -116,6 +125,11 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
           urlParams: {
             magicToken: ConduitString.Required,
           },
+          errors: [
+            errors.MAGIC_LINK_TOKEN_NOT_FOUND,
+            errors.USER_NOT_FOUND,
+            ...LOGIN_ROUTE_ERRORS,
+          ],
           rateLimit: MAGIC_LINK_EXCHANGE,
         },
         new ConduitRouteReturnDefinition('MagicLinkExchangeResponse', {
@@ -137,8 +151,8 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     if (!realmCtx) assertGlobalStrategyAvailable('magicLink');
     const user: User | null =
       (await resolveSignInPrincipal(realmCtx, { email }, 'magicLink'))?.user ?? null;
-    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
-    if (user.isAnonymous) throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
+    if (isNil(user)) throw new ModuleError(errors.USER_NOT_FOUND);
+    if (user.isAnonymous) throw new ModuleError(errors.ANONYMOUS_USER_NOT_ELIGIBLE);
 
     await issueMagicLinkToken({
       userId: user._id,
@@ -158,7 +172,13 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
         );
         return stored ?? created;
       },
-      deliver: token => this.sendMagicLinkMail(user, token),
+      deliver: token =>
+        this.sendMagicLinkMail(user, token).catch(e => {
+          throw new ModuleError(
+            errors.AUTH_EMAIL_DELIVERY_FAILED,
+            parseErrorPayload(e).message,
+          );
+        }),
       deleteMany: query => Token.getInstance().deleteMany(query),
     });
     return 'token sent';

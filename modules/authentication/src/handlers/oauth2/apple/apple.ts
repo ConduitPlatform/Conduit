@@ -3,8 +3,8 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   Indexable,
+  parseErrorPayload,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
 import appleParameters from '../apple/apple.json' with { type: 'json' };
@@ -20,13 +20,11 @@ import { AppleUser } from './apple.user.js';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { TokenProvider } from '../../tokenProvider.js';
 import { Token } from '../../../models/index.js';
-import { status } from '@grpc/grpc-js';
 import jwksRsa from 'jwks-rsa';
 import {
   validateStateToken,
   resolveAppleOAuthClient,
   validateAppleClients,
-  OAUTH_ROUTE_ERRORS,
   redirectOnRegistrationNotAllowed,
   resolveOAuthMode,
 } from '../utils/index.js';
@@ -39,8 +37,10 @@ import {
   ConduitJson,
   ConduitString,
   ConfigController,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { errors } from '../../../errors.js';
 import { OAUTH_CALLBACK } from '../../../constants/index.js';
 import { AuthUtils } from '../../../utils/index.js';
 import { verifyAppleIdentityToken } from '../../../utils/appleIdentityToken.js';
@@ -100,6 +100,15 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
 
   constructScopes(scopes: string[]): string {
     return scopes.join(' ');
+  }
+
+  protected providerRouteErrors() {
+    return [
+      errors.APPLE_TOKEN_INVALID,
+      errors.APPLE_KEYS_UNAVAILABLE,
+      errors.APPLE_CLIENT_NOT_FOUND,
+      errors.APPLE_CLIENT_CONFIG_INVALID,
+    ];
   }
 
   protected getInitRouteQueryParams() {
@@ -172,7 +181,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       },
     };
     const appleResponseToken = await axios(req).catch(err => {
-      throw new GrpcError(status.INTERNAL, err.message);
+      throw ModuleError.from(err, errors.OAUTH_PROVIDER_REQUEST_FAILED);
     });
 
     const data = appleResponseToken.data;
@@ -183,7 +192,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       providerClient.clientId,
     );
     if (clientTokenPayload.sub !== payload.sub) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
+      throw new ModuleError(errors.APPLE_TOKEN_INVALID, 'subject mismatch');
     }
     const userData = (params.user ?? {}) as Indexable;
 
@@ -268,7 +277,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       },
     };
     const appleResponseToken = await axios(req).catch(err => {
-      throw new GrpcError(status.INTERNAL, err.message);
+      throw ModuleError.from(err, errors.OAUTH_PROVIDER_REQUEST_FAILED);
     });
 
     const data = appleResponseToken.data;
@@ -279,7 +288,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       providerClient.clientId,
     );
     if (clientTokenPayload.sub !== payload.sub) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
+      throw new ModuleError(errors.APPLE_TOKEN_INVALID, 'subject mismatch');
     }
     const userData = (params.user ?? {}) as Indexable;
 
@@ -328,7 +337,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
           state: ConduitString.Required,
           user: ConduitJson.Optional,
         },
-        errors: OAUTH_ROUTE_ERRORS,
+        errors: this.callbackRouteErrors(),
         rateLimit: OAUTH_CALLBACK,
       },
       new ConduitRouteReturnDefinition(`AppleResponse`, {
@@ -358,10 +367,17 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       sub: providerClient.clientId,
     };
 
-    return jwt.sign(jwtPayload, providerClient.privateKey, {
-      algorithm: 'ES256',
-      header: jwtHeader,
-    });
+    try {
+      return jwt.sign(jwtPayload, providerClient.privateKey, {
+        algorithm: 'ES256',
+        header: jwtHeader,
+      });
+    } catch (err) {
+      throw new ModuleError(
+        errors.APPLE_CLIENT_CONFIG_INVALID,
+        parseErrorPayload(err).message,
+      );
+    }
   }
 
   private verifyIdentityToken(

@@ -1,5 +1,5 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 export const DEFAULT_TOTP_ISSUER = 'Conduit';
 export const TOTP_ISSUER_MAX_LENGTH = 64;
@@ -64,7 +64,7 @@ export function resolveTotpIssuer(
   const requested = stripUnsafe(requestedIssuer);
   const allowed = (settings.allowedIssuers ?? []).map(sanitizeTotpIssuer);
   if (issuerError('issuer', requestedIssuer) || !allowed.includes(requested)) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'Issuer is not allowed');
+    throw new ModuleError(errors.TOTP_ISSUER_NOT_ALLOWED);
   }
   return requested;
 }

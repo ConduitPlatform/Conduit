@@ -2,6 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import { getConduitCode } from '@conduitplatform/grpc-sdk';
+import { errors } from '../errors.js';
 import { verifyAppleIdentityToken } from './appleIdentityToken.js';
 
 function ecKeyPair() {
@@ -44,7 +46,7 @@ describe('verifyAppleIdentityToken', () => {
           token,
           'com.example.app',
         ),
-      (err: Error) => err.message === 'Invalid token',
+      (err: unknown) => getConduitCode(err) === errors.APPLE_TOKEN_INVALID.conduitCode,
     );
   });
 
@@ -61,7 +63,7 @@ describe('verifyAppleIdentityToken', () => {
     const token = appleToken(privateKey, 'com.example.attacker');
     assert.throws(
       () => verifyAppleIdentityToken(publicKey, token, 'com.example.secondary'),
-      (err: Error) => err.message === 'Invalid token',
+      (err: unknown) => getConduitCode(err) === errors.APPLE_TOKEN_INVALID.conduitCode,
     );
   });
 });

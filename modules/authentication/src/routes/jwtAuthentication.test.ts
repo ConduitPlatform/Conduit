@@ -1,7 +1,7 @@
 import { beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { AccessTokenClaims, GrpcError } from '@conduitplatform/grpc-sdk';
-import { ConfigController } from '@conduitplatform/module-tools';
+import { AccessTokenClaims, getConduitCode, GrpcError } from '@conduitplatform/grpc-sdk';
+import { authErrors, ConfigController } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import jwt from 'jsonwebtoken';
 import { handleAuthentication } from './middleware.js';
@@ -125,7 +125,9 @@ describe('handleAuthentication (jwt mode)', () => {
     const t = setup({ claims: { authorized: false } });
     await assert.rejects(
       handleAuthentication({}, bearer, {}, '/authentication/local', t.deps),
-      e => code(e) === status.UNAUTHENTICATED && /2FA/.test((e as Error).message),
+      e =>
+        code(e) === status.UNAUTHENTICATED &&
+        getConduitCode(e) === authErrors.TWO_FA_REQUIRED.conduitCode,
     );
     for (const path of [
       '/authentication/twoFa/verify',

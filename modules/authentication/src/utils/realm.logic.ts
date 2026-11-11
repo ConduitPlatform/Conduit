@@ -1,6 +1,5 @@
-import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ModuleError } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
 import { errors } from '../errors.js';
 import { isRecord } from './common.logic.js';
 
@@ -298,10 +297,10 @@ export function isRealmId(value: unknown): boolean {
   );
 }
 
-/** Returns the id as a string or throws INVALID_ARGUMENT (a programming error). */
+/** Returns the id as a string or throws REALM_ID_INVALID (a programming error). */
 export function assertRealmId(value: unknown): string {
   if (!isRealmId(value)) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'realm must be a realm team id');
+    throw new ModuleError(errors.REALM_ID_INVALID);
   }
   return String(value);
 }
@@ -333,22 +332,22 @@ export function isValidSlug(slug: unknown): slug is string {
   );
 }
 
-/** Normalizes and validates a slug, throwing INVALID_ARGUMENT when it is malformed. */
+/** Normalizes and validates a slug, throwing REALM_SLUG_INVALID when it is malformed. */
 export function assertValidSlug(slug: unknown): string {
   // a realm created with 'global' before it was reserved keeps the slug: admin reads and demote
   // address the team by id and never validate the slug, so they still work (no migration)
   const normalized = typeof slug === 'string' ? normalizeSlug(slug) : '';
   if (normalized === GLOBAL_REALM_SCOPE) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      `Realm slug "${GLOBAL_REALM_SCOPE}" is reserved for the global scope`,
-    );
+    throw new ModuleError({
+      ...errors.REALM_SLUG_INVALID,
+      message: `Realm slug "${GLOBAL_REALM_SCOPE}" is reserved for the global scope`,
+    });
   }
   if (!isValidSlug(normalized)) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      `Realm slug must match ${REALM_SLUG_PATTERN.source}`,
-    );
+    throw new ModuleError({
+      ...errors.REALM_SLUG_INVALID,
+      message: `Realm slug must match ${REALM_SLUG_PATTERN.source}`,
+    });
   }
   return normalized;
 }

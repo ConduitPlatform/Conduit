@@ -2,8 +2,9 @@
  * Pure helpers of the realm gRPC surface (Team realm fields, SetTeamRealm,
  * RealmResponse). No IO: unit-testable with node --test.
  */
-import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { Indexable, ModuleErrorDefinition } from '@conduitplatform/grpc-sdk';
+import { grpcCallbackError, ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { isRecord } from './common.logic.js';
 import { isRealmId, RealmMembershipType } from './realm.logic.js';
 
@@ -29,32 +30,37 @@ export function toGrpcTeam(team: Indexable) {
 }
 
 /**
- * gRPC callback error that keeps the code of a GrpcError (ModuleError included). The
- * message of a ModuleError is a JSON string (`{"conduitCode": ..., "message": ...}`) and
- * reaches the caller as is; clients key on `conduitCode`.
+ * gRPC callback error of a service method: typed (ModuleError) and other gRPC errors keep
+ * their status and their `{message, conduitCode}` payload, anything else becomes
+ * `fallback` (REALM_OPERATION_FAILED by default; its raw text is only logged).
  */
-export function toCallbackError(e: unknown): { code: status; message: string } {
-  if (e instanceof GrpcError) return { code: e.code, message: e.message };
-  return { code: status.INTERNAL, message: (e as Error)?.message ?? String(e) };
+export function toCallbackError(
+  e: unknown,
+  fallback: ModuleErrorDefinition = errors.REALM_OPERATION_FAILED,
+): { code: number; message: string } {
+  return grpcCallbackError(e, fallback);
 }
 
 export function assertTeamId(value: unknown, field: string = 'teamId'): string {
   if (!isRealmId(value)) {
-    throw new GrpcError(status.INVALID_ARGUMENT, `${field} must be a valid Team ID!`);
+    throw new ModuleError({
+      ...errors.TEAM_ID_INVALID,
+      message: `${field} must be a valid Team ID`,
+    });
   }
   return String(value);
 }
 
 export function assertUserId(value: unknown): string {
   if (!isRealmId(value)) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'userId must be a valid User ID!');
+    throw new ModuleError(errors.USER_ID_INVALID);
   }
   return String(value);
 }
 
 export function parseMembershipType(value: unknown): RealmMembershipType {
   if (value === 'home' || value === 'guest') return value;
-  throw new GrpcError(status.INVALID_ARGUMENT, "type must be 'home' or 'guest'");
+  throw new ModuleError(errors.REALM_MEMBERSHIP_TYPE_INVALID);
 }
 
 /** Like parseMembershipType, but an empty type is allowed (RevokeRealmMembership). */
@@ -82,19 +88,12 @@ export function assertGrantMembershipAllowed(params: {
   const realm = String(params.realmTeamId);
   if (params.type === 'guest') {
     if (home === realm) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'The user is a home user of this realm and cannot be its guest',
-      );
+      throw new ModuleError(errors.HOME_USER_CANNOT_BE_GUEST);
     }
     return;
   }
   if (home && home !== realm && params.force !== true) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      'The user already has a different home realm. Set force to move them: all ' +
-        'their tokens are revoked.',
-    );
+    throw new ModuleError(errors.HOME_REALM_MOVE_REQUIRES_FORCE);
   }
 }
 
@@ -111,10 +110,16 @@ export function parseSettingsJson(json: string | null | undefined): Indexable {
   try {
     parsed = JSON.parse(json);
   } catch {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'settingsJson must be valid JSON');
+    throw new ModuleError({
+      ...errors.REALM_SETTINGS_INVALID,
+      message: 'settingsJson must be valid JSON',
+    });
   }
   if (!isRecord(parsed)) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'settingsJson must be a JSON object');
+    throw new ModuleError({
+      ...errors.REALM_SETTINGS_INVALID,
+      message: 'settingsJson must be a JSON object',
+    });
   }
   const settings: Indexable = {};
   for (const key of SETTINGS_KEYS) {
@@ -132,7 +137,10 @@ export function buildSetRealmParams(request: {
 }): Indexable {
   const teamId = assertTeamId(request.teamId);
   if (typeof request.slug !== 'string' || request.slug.trim() === '') {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'slug is required');
+    throw new ModuleError({
+      ...errors.REALM_SLUG_INVALID,
+      message: 'slug is required',
+    });
   }
   return {
     ...parseSettingsJson(request.settingsJson),

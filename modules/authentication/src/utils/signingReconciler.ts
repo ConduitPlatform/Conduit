@@ -1,5 +1,5 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import type { PersistedConfigRead } from './jwtSecret.js';
 import {
   ensureSigning,
@@ -39,7 +39,7 @@ function cloneConfig<T extends SigningKeysConfig>(config: T): T {
 }
 
 function throwUnavailable(): never {
-  throw new GrpcError(status.UNAVAILABLE, SIGNING_KEYS_UNAVAILABLE);
+  throw new ModuleError(errors.SIGNING_KEYS_UNAVAILABLE, SIGNING_KEYS_UNAVAILABLE);
 }
 
 /**

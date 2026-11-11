@@ -1,5 +1,7 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { ModuleErrorDefinition } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { authErrors, ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import {
   FailureRecord,
   isTotpReplay,
@@ -47,11 +49,15 @@ export interface SudoDeps<U extends SudoUserRecord> {
   mint: (user: U) => Promise<{ accessToken: string }>;
 }
 
-const REJECTIONS: Record<SudoRejection, [number, string]> = {
-  MISSING_CREDENTIALS: [status.INVALID_ARGUMENT, 'A password is required'],
-  NO_PASSWORD: [status.FAILED_PRECONDITION, 'User has no password'],
-  CODE_REQUIRED: [status.INVALID_ARGUMENT, 'A 2FA code is required'],
-  UNSUPPORTED_2FA: [status.FAILED_PRECONDITION, '2FA method is not supported for sudo'],
+const REJECTIONS: Record<SudoRejection, ModuleErrorDefinition> = {
+  MISSING_CREDENTIALS: errors.SUDO_PASSWORD_REQUIRED,
+  NO_PASSWORD: {
+    ...errors.PASSWORD_AUTH_NOT_AVAILABLE,
+    grpcCode: status.FAILED_PRECONDITION,
+    message: 'User has no password',
+  },
+  CODE_REQUIRED: errors.SUDO_CODE_REQUIRED,
+  UNSUPPORTED_2FA: errors.TWO_FA_METHOD_UNAVAILABLE,
 };
 
 const failKey = (id: string) => `sudo:fail:${id}`;
@@ -76,11 +82,11 @@ async function prepareSudo<U extends SudoUserRecord>(
 ): Promise<{ state: SudoStateStore; user: U; plan: SudoPlan }> {
   const state = deps.state;
   if (!state) {
-    throw new GrpcError(status.UNAVAILABLE, 'Step-up authentication is unavailable');
+    throw new ModuleError(errors.STEP_UP_UNAVAILABLE);
   }
   const user = await deps.loadUser();
   if (!user || !user.active) {
-    throw new GrpcError(status.PERMISSION_DENIED, 'User is blocked or deleted');
+    throw new ModuleError(authErrors.USER_BLOCKED);
   }
   const plan = planSudo(
     {
@@ -91,8 +97,7 @@ async function prepareSudo<U extends SudoUserRecord>(
     input,
   );
   if (plan.action === 'reject') {
-    const [code, message] = REJECTIONS[plan.reason];
-    throw new GrpcError(code, message);
+    throw new ModuleError(REJECTIONS[plan.reason]);
   }
   return { state, user, plan };
 }
@@ -106,10 +111,10 @@ async function readLockout(
   const record = parseFailureRecord(await state.getKey(failKey(id)));
   const lock = lockStatus(record, now);
   if (lock.locked) {
-    throw new GrpcError(
-      status.RESOURCE_EXHAUSTED,
-      `Too many failed attempts. Try again in ${Math.ceil(lock.retryAfterMs / 1000)} seconds`,
-    );
+    throw new ModuleError({
+      ...errors.SUDO_LOCKED_OUT,
+      message: `Too many failed attempts. Try again in ${Math.ceil(lock.retryAfterMs / 1000)} seconds`,
+    });
   }
   return record;
 }
@@ -118,11 +123,10 @@ async function readLockout(
 async function recordFailure<U extends SudoUserRecord>(
   ctx: SudoContext<U>,
   record: FailureRecord,
-  message = 'Invalid credentials',
 ): Promise<never> {
   const next = registerFailure(record, ctx.deps.now());
   await ctx.state.setKey(failKey(ctx.id), JSON.stringify(next), SUDO_LOCK_MS);
-  throw new GrpcError(status.UNAUTHENTICATED, message);
+  throw new ModuleError(errors.INVALID_CREDENTIALS);
 }
 
 async function checkPasswordProof<U extends SudoUserRecord>(

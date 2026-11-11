@@ -1,4 +1,7 @@
-import { ModuleError } from '@conduitplatform/module-tools';
+import {
+  getConduitCode,
+  hasConduitCode as sdkHasConduitCode,
+} from '@conduitplatform/grpc-sdk';
 
 /*
  * Small pure helpers shared by the realm code (no database or grpc access).
@@ -14,21 +17,14 @@ export function filled(value: unknown): boolean {
 }
 
 /**
- * The `conduitCode` of a ModuleError. The message of a ModuleError is a JSON string
- * (`{"conduitCode": ..., "message": ...}`); anything else yields undefined.
+ * The `conduitCode` of an error thrown by this module or returned by another module's
+ * gRPC client; undefined for errors without one.
  */
 export function parseConduitCode(err: unknown): string | undefined {
-  if (!(err instanceof ModuleError)) return undefined;
-  try {
-    const code = (JSON.parse(err.message) as { conduitCode?: unknown } | null)
-      ?.conduitCode;
-    return typeof code === 'string' ? code : undefined;
-  } catch {
-    return undefined;
-  }
+  return getConduitCode(err);
 }
 
-/** Whether `err` is a ModuleError carrying this error definition's `conduitCode`. */
+/** Whether `err` carries this error definition's `conduitCode`. */
 export function hasConduitCode(err: unknown, definition: { conduitCode: string }) {
-  return parseConduitCode(err) === definition.conduitCode;
+  return sdkHasConduitCode(err, definition);
 }

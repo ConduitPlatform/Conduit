@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   Indexable,
   ParsedRouterRequest,
   SMS,
@@ -15,9 +14,9 @@ import {
   ConduitString,
   ConfigController,
   RoutingManager,
+  ModuleError,
 } from '@conduitplatform/module-tools';
 import { isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
 import { Token, User } from '../models/index.js';
 import { AuthUtils } from '../utils/index.js';
 import { PHONE_CODE_VERIFY, PHONE_SMS_SEND, TokenType } from '../constants/index.js';
@@ -26,6 +25,13 @@ import { TokenProvider } from './tokenProvider.js';
 import { v4 as uuid } from 'uuid';
 import { TeamsHandler } from './team.js';
 import { errors } from '../errors.js';
+import {
+  ANONYMOUS_CONFIG_ERRORS,
+  CAPTCHA_ERRORS,
+  LOGIN_ROUTE_ERRORS,
+  REALM_RESOLUTION_ERRORS,
+  SESSION_AUTH_ERRORS,
+} from './utils.js';
 import {
   identifierQuery,
   realmPrincipalClash,
@@ -112,10 +118,13 @@ export class PhoneHandlers implements IAuthenticationStrategy {
             ? ['captchaMiddleware']
             : undefined,
         errors: [
-          errors.REALM_NOT_FOUND,
-          errors.REALMS_DISABLED,
-          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+          errors.INVITATION_REQUIRED,
           errors.INVALID_INVITATION,
+          errors.DISCOVERY_REQUEST_INVALID,
+          errors.VERIFICATION_RESEND_THROTTLED,
+          errors.VERIFICATION_CODE_SEND_FAILED,
+          ...REALM_RESOLUTION_ERRORS,
+          ...(captchaConfig.enabled && captchaConfig.routes.login ? CAPTCHA_ERRORS : []),
         ],
         rateLimit: PHONE_SMS_SEND,
       },
@@ -135,6 +144,16 @@ export class PhoneHandlers implements IAuthenticationStrategy {
           userData: ConduitJson.Optional,
         },
         middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
+        errors: [
+          errors.PHONE_TOKEN_INVALID,
+          errors.CODE_VERIFICATION_FAILED,
+          errors.DISCOVERY_REQUEST_INVALID,
+          errors.USER_DATA_INVALID,
+          errors.INVALID_CREDENTIALS,
+          ...LOGIN_ROUTE_ERRORS,
+          ...ANONYMOUS_CONFIG_ERRORS,
+          ...SESSION_AUTH_ERRORS,
+        ],
         rateLimit: PHONE_CODE_VERIFY,
       },
       new ConduitRouteReturnDefinition('VerifyPhoneLoginResponse', {
@@ -165,11 +184,11 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       { readPreference: 'primary' },
     );
     if (!existingToken) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid token provided');
+      throw new ModuleError(errors.PHONE_TOKEN_INVALID);
     }
     const verified = await AuthUtils.verifyCode(this.grpcSdk, existingToken, code);
     if (!verified) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
+      throw new ModuleError(errors.CODE_VERIFICATION_FAILED);
     }
 
     // a discovery login: the code proves the number, the answer lists its accounts and opens
@@ -211,7 +230,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         identifierQuery('phoneNumber', existingToken.data.phone),
       ]);
       if (phoneOwner || guestHolder) {
-        throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
+        throw new ModuleError(errors.CODE_VERIFICATION_FAILED);
       }
       user = await this.handlePhoneRegistration(
         existingUser ?? anonymousUser,
@@ -221,7 +240,10 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       );
     } else {
       const admitted = await admitPrincipal(realmCtx, loginUser, 'phone');
-      if (isNil(admitted)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
+      if (isNil(admitted)) {
+        // the same answer as a wrong code: the account must not be revealed
+        throw new ModuleError(errors.INVALID_CREDENTIALS, 'user not found');
+      }
       user = admitted.user;
     }
     return TokenProvider.getInstance().provideUserTokens({
@@ -292,16 +314,13 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       isInviteRequired(realmCtx?.effective.registration, teams) &&
       !foundInvitationToken
     ) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Registration requires valid invitation',
-      );
+      throw new ModuleError(errors.INVITATION_REQUIRED);
     }
 
     if ((teams.enabled || realmCtx) && invitationToken) {
       const valid = await TeamsHandler.getInstance().inviteValidation(invitationToken);
       if (!valid) {
-        throw new GrpcError(status.PERMISSION_DENIED, 'Invalid invitation token');
+        throw new ModuleError(errors.INVALID_INVITATION);
       }
     }
   }
@@ -330,7 +349,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const { user, discovering, realmCtx } = options;
     const verificationSid = await AuthUtils.sendVerificationCode(this.sms!, phone);
     if (verificationSid === '') {
-      throw new GrpcError(status.INTERNAL, 'Could not send verification code');
+      throw new ModuleError(errors.VERIFICATION_CODE_SEND_FAILED);
     }
     return Token.getInstance().create({
       tokenType:

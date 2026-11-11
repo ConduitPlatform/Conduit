@@ -4,6 +4,7 @@ import {
   GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
+import { authErrors, ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 
 /*
@@ -36,7 +37,7 @@ export async function authenticateJwt(
 ) {
   const claims = deps.verifier.verify(params.token, { clientId: params.clientId });
   if (!claims.authorized && !TWO_FA_PATHS.includes(params.path)) {
-    throw new GrpcError(status.UNAUTHENTICATED, '2FA is required');
+    throw new ModuleError(authErrors.TWO_FA_REQUIRED);
   }
   if (deps.verifier.strictRevocation) {
     let exists: boolean;
@@ -46,10 +47,10 @@ export async function authenticateJwt(
       ConduitGrpcSdk.Logger.warn(
         `Session registry check failed: ${(e as Error)?.message ?? e}`,
       );
-      throw new GrpcError(status.UNAVAILABLE, 'Session registry unavailable');
+      throw new ModuleError(authErrors.SESSION_REGISTRY_UNAVAILABLE);
     }
     if (!exists) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Session revoked');
+      throw new ModuleError(authErrors.SESSION_REVOKED);
     }
   }
   let user: Indexable;
@@ -58,12 +59,12 @@ export async function authenticateJwt(
   } catch (e) {
     // a deleted user answers like a blocked one in session mode
     if ((e as GrpcError)?.code === status.NOT_FOUND) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'User is blocked or deleted');
+      throw new ModuleError(authErrors.USER_BLOCKED);
     }
     throw e;
   }
   if (!user || !user.active) {
-    throw new GrpcError(status.PERMISSION_DENIED, 'User is blocked or deleted');
+    throw new ModuleError(authErrors.USER_BLOCKED);
   }
   return {
     user,

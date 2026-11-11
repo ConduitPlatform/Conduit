@@ -2,12 +2,13 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
+  isGrpcStatusError,
+  ModuleErrorDefinition,
+  parseErrorPayload,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { isNil, merge } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
 import { Token, User } from '../../models/index.js';
 import axios from 'axios';
 import {
@@ -25,6 +26,7 @@ import { createHash } from 'crypto';
 import { TeamsHandler } from '../team.js';
 import {
   assertOAuthRegistrationAllowed,
+  OAUTH_INIT_ROUTE_ERRORS,
   OAUTH_MODE_PARAM,
   OAUTH_ROUTE_ERRORS,
   redirectOnRegistrationNotAllowed,
@@ -39,6 +41,7 @@ import {
   ConduitJson,
   ConduitString,
   ConfigController,
+  authErrors,
   ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
@@ -50,6 +53,7 @@ import {
 import { AuthUtils } from '../../utils/index.js';
 import { assertEmailAllowed } from '../../utils/emailRestrictions.js';
 import { errors } from '../../errors.js';
+import { CAPTCHA_ERRORS } from '../utils.js';
 import {
   assertAnonymousUserInRealm,
   assertStrategyEnabledForRealm,
@@ -232,7 +236,7 @@ export abstract class OAuth2<
       )
     ) {
       // the routes exist because a realm enables the provider: global calls are refused
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
+      throw new ModuleError(errors.STRATEGY_DISABLED);
     }
     return realmCtx;
   }
@@ -322,16 +326,30 @@ export abstract class OAuth2<
           ...this.getOAuthStateExtras(call),
         },
       })
-      .catch(err => {
-        throw new GrpcError(status.INTERNAL, err);
-      });
+      .catch(ModuleError.rethrow(errors.AUTH_OPERATION_FAILED));
     queryOptions['state'] = stateToken.token;
 
     return queryOptions;
   }
 
   nativeAuthorize(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    throw new GrpcError(status.INTERNAL, 'Not supported for current provider');
+    throw new ModuleError(errors.OAUTH_NATIVE_NOT_SUPPORTED);
+  }
+
+  /**
+   * A failure of a request to the identity provider: typed errors pass through, anything
+   * else (axios, parsing) becomes OAUTH_PROVIDER_REQUEST_FAILED with the cause logged,
+   * never sent to the client.
+   */
+  protected providerRequestFailed(err: unknown): never {
+    if (isGrpcStatusError(err)) throw err;
+    ConduitGrpcSdk.Logger.error(
+      JSON.stringify((err as { response?: { data?: unknown } })?.response?.data ?? null),
+    );
+    throw new ModuleError(
+      errors.OAUTH_PROVIDER_REQUEST_FAILED,
+      parseErrorPayload(err).message,
+    );
   }
 
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -384,9 +402,7 @@ export abstract class OAuth2<
           ...this.getOAuthStateExtras(call),
         },
       })
-      .catch(err => {
-        throw new GrpcError(status.INTERNAL, err);
-      });
+      .catch(ModuleError.rethrow(errors.AUTH_OPERATION_FAILED));
     queryOptions['state'] = stateToken.token;
 
     const keys = Object.keys(queryOptions) as [keyof RedirectOptions];
@@ -428,10 +444,7 @@ export abstract class OAuth2<
     const providerOptions = this.makeRequest(myParams, settings);
     const providerResponse: { data: { access_token: string } } = await axios(
       providerOptions,
-    ).catch(err => {
-      ConduitGrpcSdk.Logger.error(JSON.stringify(err.response.data));
-      throw new GrpcError(status.INTERNAL, err.message);
-    });
+    ).catch(err => this.providerRequestFailed(err));
     const access_token = providerResponse.data.access_token;
 
     const clientId = stateToken.data.clientId;
@@ -441,10 +454,7 @@ export abstract class OAuth2<
       clientId,
       scope: scope,
       providerClientId: settings.clientId,
-    }).catch(err => {
-      ConduitGrpcSdk.Logger.error(JSON.stringify(err.response.data));
-      throw new GrpcError(status.INTERNAL, err.message);
-    });
+    }).catch(err => this.providerRequestFailed(err));
 
     await Token.getInstance().deleteOne(stateToken);
     const redirectUri =
@@ -487,7 +497,7 @@ export abstract class OAuth2<
       clientId: settings.clientId,
       scope: scopes,
       providerClientId: settings.clientId,
-    });
+    }).catch(err => this.providerRequestFailed(err));
     const user = await this.createOrUpdateUser(
       payload,
       call.request.params.invitationToken,
@@ -562,10 +572,7 @@ export abstract class OAuth2<
         }
       }
     } else {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'No email or id received from provider',
-      );
+      throw new ModuleError(errors.OAUTH_PROFILE_INCOMPLETE);
     }
 
     let anonymousUser;
@@ -574,21 +581,17 @@ export abstract class OAuth2<
         _id: anonymousUserId,
         isAnonymous: true,
       });
-      if (!anonymousUser)
-        throw new GrpcError(status.NOT_FOUND, 'Anonymous user not found');
+      if (!anonymousUser) throw new ModuleError(errors.ANONYMOUS_USER_NOT_FOUND);
     }
 
     if (!isNil(user)) {
-      if (!user!.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
+      if (!user!.active) throw new ModuleError(authErrors.USER_BLOCKED);
       const accountLinking = realmCtx
         ? (realmCtx.effective.strategies.oauth[this.providerName as RealmOAuthProviderKey]
             ?.accountLinking ?? this.settings.accountLinking)
         : this.settings.accountLinking;
       if (!accountLinking) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'User with this email already exists',
-        );
+        throw new ModuleError(errors.OAUTH_ACCOUNT_LINKING_DISABLED);
       }
       // the provider account may be linked only once per scope: the user's home realm and
       // each realm it is a guest of (the user's own id does not count)
@@ -649,7 +652,7 @@ export abstract class OAuth2<
         isInviteRequired(realmCtx?.effective.registration, teams) &&
         isNil(invitationToken)
       ) {
-        throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
+        throw new ModuleError(errors.INVITATION_REQUIRED);
       }
       if ((teams.enabled || realmCtx) && invitationToken) {
         const valid = await TeamsHandler.getInstance().inviteValidation(
@@ -657,7 +660,7 @@ export abstract class OAuth2<
           payload.email,
         );
         if (!valid) {
-          throw new GrpcError(status.PERMISSION_DENIED, 'Invalid invitation token');
+          throw new ModuleError(errors.INVALID_INVITATION);
         }
         // an invitation into a realm must agree with the realm being registered at
         await resolveInvitationRealm(realmCtx, invitationToken);
@@ -725,7 +728,7 @@ export abstract class OAuth2<
     clientId: string,
   ): Promise<{ redirect: string }> {
     if (!redirectUri) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'No redirect URI for the discovery');
+      throw new ModuleError(errors.OAUTH_DISCOVERY_REDIRECT_MISSING);
     }
     const answer = await discoverWithOAuth(this.providerName, payload, {
       clientId,
@@ -737,8 +740,10 @@ export abstract class OAuth2<
   declareRoutes(routingManager: RoutingManager) {
     const config = ConfigController.getInstance().config;
     const initRouteMiddleware = ['authMiddleware?', 'checkAnonymousMiddleware'];
+    const initRouteErrors = [...this.providerRouteErrors(), ...OAUTH_INIT_ROUTE_ERRORS];
     if (config.captcha.enabled && config.captcha.routes.oAuth2) {
       initRouteMiddleware.unshift('captchaMiddleware');
+      initRouteErrors.push(...CAPTCHA_ERRORS);
     }
     routingManager.route(
       {
@@ -747,6 +752,7 @@ export abstract class OAuth2<
         action: ConduitRouteActions.GET,
         queryParams: this.getInitRouteQueryParams(),
         middlewares: initRouteMiddleware,
+        errors: initRouteErrors,
         rateLimit: OAUTH_INIT,
       },
       new ConduitRouteReturnDefinition(
@@ -763,6 +769,7 @@ export abstract class OAuth2<
           action: ConduitRouteActions.GET,
           queryParams: this.getInitNativeRouteQueryParams(),
           middlewares: initRouteMiddleware,
+          errors: initRouteErrors,
           rateLimit: OAUTH_INIT,
         },
         new ConduitRouteReturnDefinition(
@@ -782,7 +789,7 @@ export abstract class OAuth2<
             state: ConduitString.Required,
             user: ConduitJson.Optional,
           },
-          errors: OAUTH_ROUTE_ERRORS,
+          errors: this.callbackRouteErrors(),
           rateLimit: OAUTH_NATIVE_COMPLETE,
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
@@ -804,7 +811,7 @@ export abstract class OAuth2<
             code: ConduitString.Required,
             state: ConduitString.Required,
           },
-          errors: OAUTH_ROUTE_ERRORS,
+          errors: this.callbackRouteErrors(),
           rateLimit: OAUTH_CALLBACK,
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
@@ -824,7 +831,7 @@ export abstract class OAuth2<
             code: ConduitString.Required,
             state: ConduitString.Required,
           },
-          errors: OAUTH_ROUTE_ERRORS,
+          errors: this.callbackRouteErrors(),
           rateLimit: OAUTH_CALLBACK,
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
@@ -835,6 +842,16 @@ export abstract class OAuth2<
         this.authorize.bind(this),
       );
     }
+  }
+
+  /** Errors only this provider can add to its routes. */
+  protected providerRouteErrors(): ModuleErrorDefinition[] {
+    return [];
+  }
+
+  /** The errors declared on the native completion and callback routes of the provider. */
+  protected callbackRouteErrors(): ModuleErrorDefinition[] {
+    return [...this.providerRouteErrors(), ...OAUTH_ROUTE_ERRORS];
   }
 
   protected getInitRouteQueryParams() {

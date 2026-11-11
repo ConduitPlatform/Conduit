@@ -1,12 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { merge } from 'lodash-es';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { getConduitCode, GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import {
-  JWT_SECRET_UNAVAILABLE,
-  reconcileSharedAccessTokenJwtSecret,
-} from './jwtSecretReconciler.js';
+import { errors } from '../errors.js';
+import { reconcileSharedAccessTokenJwtSecret } from './jwtSecretReconciler.js';
 import { ensureAccessTokenJwtSecret, type PersistedConfigRead } from './jwtSecret.js';
 
 type AuthConfig = { accessTokens: { jwtSecret?: string | null }; active?: boolean };
@@ -28,7 +26,7 @@ function isUnavailable(error: unknown) {
   return (
     error instanceof GrpcError &&
     error.code === status.UNAVAILABLE &&
-    error.message === JWT_SECRET_UNAVAILABLE
+    getConduitCode(error) === errors.SIGNING_KEYS_UNAVAILABLE.conduitCode
   );
 }
 

@@ -1,5 +1,6 @@
-import { ConduitGrpcSdk, GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ConduitGrpcSdk, Indexable } from '@conduitplatform/grpc-sdk';
+import { grpcCallbackError, ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 /*
  * The user lookup behind the GetUser rpc, the local module-tools user resolver and the
@@ -81,7 +82,7 @@ export interface UserResolverDeps {
 export function createUserResolver(deps: UserResolverDeps) {
   return async (userId: string): Promise<Indexable> => {
     if (typeof userId !== 'string' || userId.length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'userId is required');
+      throw new ModuleError(errors.USER_ID_INVALID);
     }
     let cache: ReturnType<NonNullable<UserResolverDeps['cache']>>;
     try {
@@ -92,7 +93,7 @@ export function createUserResolver(deps: UserResolverDeps) {
     const cached = await cache?.get(userId).catch(() => null);
     if (cached) return sanitizeUser(cached, deps.hiddenFields());
     const found = await deps.findUser(userId);
-    if (!found) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    if (!found) throw new ModuleError(errors.USER_NOT_FOUND);
     const user = sanitizeUser(found, deps.hiddenFields());
     void cache?.set(userId, user).catch(() => undefined);
     return user;
@@ -100,7 +101,7 @@ export function createUserResolver(deps: UserResolverDeps) {
 }
 
 type GetUserCallback = (
-  error: { code: status; message: string } | null,
+  error: { code: number; message: string } | null,
   response?: { user: string },
 ) => void;
 
@@ -117,15 +118,11 @@ export function createGetUserHandler(resolve: (userId: string) => Promise<Indexa
         ConduitGrpcSdk.Logger.error(
           `getUser: user ${call.request.userId} is larger than ${MAX_USER_JSON_BYTES} bytes, not serialized`,
         );
-        return callback({ code: status.INTERNAL, message: 'User document is too large' });
+        return callback(grpcCallbackError(errors.USER_DOCUMENT_TOO_LARGE));
       }
       return callback(null, { user: json });
     } catch (e) {
-      if (e instanceof GrpcError) return callback({ code: e.code, message: e.message });
-      return callback({
-        code: status.INTERNAL,
-        message: (e as Error)?.message ?? String(e),
-      });
+      return callback(grpcCallbackError(e, errors.AUTH_OPERATION_FAILED));
     }
   };
 }

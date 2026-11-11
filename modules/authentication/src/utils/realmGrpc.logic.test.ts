@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { GrpcError, getConduitCode, parseErrorPayload } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
@@ -49,13 +49,21 @@ describe('realm gRPC helpers', () => {
       code: status.NOT_FOUND,
       message: 'nope',
     });
-    assert.equal(toCallbackError(new Error('boom')).code, status.INTERNAL);
+    const unknown = toCallbackError(new Error('boom'));
+    assert.equal(unknown.code, status.INTERNAL);
+    assert.equal(getConduitCode(unknown), 'REALM_OPERATION_FAILED');
+    assert.doesNotMatch(unknown.message, /boom/);
+    const custom = toCallbackError(new Error('boom'), errors.AUTH_OPERATION_FAILED);
+    assert.equal(getConduitCode(custom), 'AUTH_OPERATION_FAILED');
   });
 
   it('validates the membership type', () => {
     assert.equal(parseMembershipType('home'), 'home');
     assert.equal(parseMembershipType('guest'), 'guest');
-    assert.throws(() => parseMembershipType('owner'), /home' or 'guest/);
+    assert.throws(
+      () => parseMembershipType('owner'),
+      (e: unknown) => getConduitCode(e) === 'REALM_MEMBERSHIP_TYPE_INVALID',
+    );
   });
 
   it('parses settingsJson and only keeps settings keys', () => {
@@ -65,8 +73,16 @@ describe('realm gRPC helpers', () => {
       parseSettingsJson(JSON.stringify({ active: false, slug: 'x', force: true })),
       { active: false },
     );
-    assert.throws(() => parseSettingsJson('{'), /valid JSON/);
-    assert.throws(() => parseSettingsJson('[]'), /JSON object/);
+    assert.throws(
+      () => parseSettingsJson('{'),
+      (e: unknown) =>
+        getConduitCode(e) === 'REALM_SETTINGS_INVALID' &&
+        /valid JSON/.test(parseErrorPayload(e).message),
+    );
+    assert.throws(
+      () => parseSettingsJson('[]'),
+      (e: unknown) => /JSON object/.test(parseErrorPayload(e).message),
+    );
   });
 
   it('builds the write params, request fields win', () => {
@@ -84,9 +100,12 @@ describe('realm gRPC helpers', () => {
     });
     assert.throws(
       () => buildSetRealmParams({ teamId: 'nope', slug: 'acme' }),
-      /valid Team ID/,
+      (e: unknown) => getConduitCode(e) === 'TEAM_ID_INVALID',
     );
-    assert.throws(() => buildSetRealmParams({ teamId: TEAM_ID, slug: ' ' }), /slug/);
+    assert.throws(
+      () => buildSetRealmParams({ teamId: TEAM_ID, slug: ' ' }),
+      (e: unknown) => getConduitCode(e) === 'REALM_SLUG_INVALID',
+    );
   });
 
   it('never lets secrets into the response', () => {
@@ -235,6 +254,9 @@ describe('parseOptionalMembershipType', () => {
     assert.equal(parseOptionalMembershipType(''), undefined);
     assert.equal(parseOptionalMembershipType(undefined), undefined);
     assert.equal(parseOptionalMembershipType('guest'), 'guest');
-    assert.throws(() => parseOptionalMembershipType('owner'), /home/);
+    assert.throws(
+      () => parseOptionalMembershipType('owner'),
+      (e: unknown) => getConduitCode(e) === 'REALM_MEMBERSHIP_TYPE_INVALID',
+    );
   });
 });

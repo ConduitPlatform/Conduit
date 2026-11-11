@@ -1,5 +1,5 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { TokenType } from '../constants/TokenType.js';
 
 export function magicLinkExpired(
@@ -100,13 +100,13 @@ export async function redeemMagicLink<
   const now = args.now ?? Date.now();
   const token = await args.findToken(args.magicToken);
   if (token == null || magicLinkExpired(token.expiresAt, now)) {
-    throw new GrpcError(status.NOT_FOUND, 'Magic link token does not exist');
+    throw new ModuleError(errors.MAGIC_LINK_TOKEN_NOT_FOUND);
   }
   const user = await args.loadUser(token);
-  if (user == null) throw new GrpcError(status.NOT_FOUND, 'User not found');
+  if (user == null) throw new ModuleError(errors.USER_NOT_FOUND);
   const realm = await args.resolveRealm(token, user);
   if (!(await args.admit(user, realm))) {
-    throw new GrpcError(status.NOT_FOUND, 'User not found');
+    throw new ModuleError(errors.USER_NOT_FOUND);
   }
   const consumed = await args.deleteOne({
     _id: token._id,
@@ -114,7 +114,7 @@ export async function redeemMagicLink<
     tokenType: TokenType.MAGIC_LINK,
   });
   if (consumed?.deletedCount !== 1) {
-    throw new GrpcError(status.NOT_FOUND, 'Magic link token does not exist');
+    throw new ModuleError(errors.MAGIC_LINK_TOKEN_NOT_FOUND);
   }
   return args.issueSession(token, user, realm);
 }

@@ -1,6 +1,5 @@
-import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ModuleError } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
 import { errors } from '../errors.js';
 import { filled, isRecord } from '../utils/common.logic.js';
 import {
@@ -94,14 +93,10 @@ export function assertTeamPromotable(team: {
   realm?: { enabled?: boolean } | null;
 }): void {
   if (team.realm?.enabled) {
-    throw new GrpcError(status.ALREADY_EXISTS, 'Team is already a realm');
+    throw new ModuleError(errors.TEAM_ALREADY_REALM);
   }
   if (team.isDefault) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      'The default team cannot become a realm: new users are added to it. ' +
-        'Make another team the default first.',
-    );
+    throw new ModuleError(errors.DEFAULT_TEAM_REALM_CONFLICT);
   }
 }
 
@@ -179,15 +174,15 @@ export function resolveSlugChange(
 ): string | undefined {
   if (requestedSlug === undefined || requestedSlug === null) return undefined;
   if (typeof requestedSlug !== 'string') {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'slug must be a string');
+    throw new ModuleError({
+      ...errors.REALM_SLUG_INVALID,
+      message: 'slug must be a string',
+    });
   }
   const normalized = normalizeSlug(requestedSlug);
   if (normalized === (currentSlug ?? '')) return undefined;
   if (force !== true) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Changing the realm slug breaks clients that use it; send force: true to confirm',
-    );
+    throw new ModuleError(errors.REALM_SLUG_CHANGE_REQUIRES_FORCE);
   }
   return normalized;
 }
@@ -199,7 +194,7 @@ export function resolveSlugChange(
 type Record_ = Record<string, any>;
 
 function fail(message: string): never {
-  throw new GrpcError(status.INVALID_ARGUMENT, message);
+  throw new ModuleError({ ...errors.REALM_SETTINGS_INVALID, message });
 }
 
 function readRecord(value: unknown, path: string): Record_ {

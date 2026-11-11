@@ -4,7 +4,6 @@ import bcrypt from 'bcrypt';
 import {
   ConduitGrpcSdk,
   Cookies,
-  GrpcError,
   Headers,
   Indexable,
   SMS,
@@ -12,11 +11,11 @@ import {
 import { Team, Token, User } from '../models/index.js';
 import { Redis, Cluster } from 'ioredis';
 import { isEmpty, isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
 import escapeStringRegexp from 'escape-string-regexp';
 import { FetchMembersParams } from '../interfaces/index.js';
-import { ConfigController } from '@conduitplatform/module-tools';
+import { authErrors, ConfigController, ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { assertEmailAllowed } from './emailRestrictions.js';
 
 export namespace AuthUtils {
@@ -74,20 +73,27 @@ export namespace AuthUtils {
     const tokenHeader = (headers['Authorization'] || headers['authorization']) as string; // formatted token
     const tokenCookie = cookies[`${reqType}Token`] as string; // token
     if (isNil(tokenHeader) && isNil(tokenCookie)) {
-      throw new GrpcError(
-        status.UNAUTHENTICATED,
-        `No 'Authorization' header or '${reqType}Token' cookie present`,
+      throw new ModuleError(
+        reqType === 'access'
+          ? authErrors.AUTH_TOKEN_MISSING
+          : {
+              ...authErrors.AUTH_TOKEN_MISSING,
+              message: "No 'Authorization' header or 'refreshToken' cookie present",
+            },
       );
     }
     let headerArgs: string[] = [];
     if (tokenHeader) {
       headerArgs = tokenHeader.split(' ');
       if (headerArgs.length !== 2) {
-        throw new GrpcError(status.UNAUTHENTICATED, "'Authorization' header malformed");
+        throw new ModuleError(
+          authErrors.AUTH_HEADER_MALFORMED,
+          'Authorization header must have exactly two parts',
+        );
       }
       if (headerArgs[0] !== 'Bearer') {
-        throw new GrpcError(
-          status.UNAUTHENTICATED,
+        throw new ModuleError(
+          authErrors.AUTH_HEADER_MALFORMED,
           "The 'Authorization' header must be prefixed by 'Bearer '",
         );
       }
@@ -137,7 +143,10 @@ export namespace AuthUtils {
     token: Token,
     code: string,
   ): Promise<boolean> {
-    const verified = await grpcSdk.sms!.verify(token.data.verification, code);
+    if (!grpcSdk.sms) {
+      throw new ModuleError(errors.PHONE_PROVIDER_UNAVAILABLE);
+    }
+    const verified = await grpcSdk.sms.verify(token.data.verification, code);
     if (!verified.verified) {
       return false;
     }
@@ -167,14 +176,15 @@ export namespace AuthUtils {
       );
   }
 
-  export function assertValidEmail(
-    email: string,
-    errorType: 'grpc' | 'module' = 'grpc',
-  ): void {
+  /**
+   * @param _errorType ignored: both failures are always typed errors. Kept so existing
+   * callers that still pass 'module' compile.
+   */
+  export function assertValidEmail(email: string, _errorType?: 'grpc' | 'module'): void {
     if (invalidEmailAddress(email)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
+      throw new ModuleError(errors.USER_EMAIL_INVALID);
     }
-    assertEmailAllowed(email, errorType);
+    assertEmailAllowed(email);
   }
 
   export function checkResendThreshold(token: Token, notBefore?: number) {
@@ -184,12 +194,10 @@ export namespace AuthUtils {
     const diffInMilliSec = Math.abs(new Date(token.createdAt).getTime() - Date.now());
     if (diffInMilliSec < threshold) {
       const remainTimeInSec = Math.ceil((threshold - diffInMilliSec) / 1000);
-      throw new GrpcError(
-        status.RESOURCE_EXHAUSTED,
-        'Verification not sent. You have to wait ' +
-          remainTimeInSec +
-          ' seconds to try again',
-      );
+      throw new ModuleError({
+        ...errors.VERIFICATION_RESEND_THROTTLED,
+        message: `Verification not sent. You have to wait ${remainTimeInSec} seconds to try again`,
+      });
     } else {
       return true;
     }
@@ -264,19 +272,13 @@ export namespace AuthUtils {
 
   export async function validateMembers(members: string[]): Promise<void> {
     if (!members || members.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'members is required and must be a non-empty array',
-      );
+      throw new ModuleError(errors.USER_IDS_REQUIRED);
     }
     const existingUsers = await User.getInstance().findMany({
       _id: { $in: members },
     });
     if (existingUsers.length !== members.length) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'members array contains invalid user ids',
-      );
+      throw new ModuleError(errors.USER_IDS_INVALID);
     }
   }
 
@@ -286,10 +288,7 @@ export namespace AuthUtils {
     const { allowAny, whitelistedUris } = ConfigController.getInstance().config
       .redirectUris as RedirectUris;
     if (!allowAny && !whitelistedUris.includes(redirectUri)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        `Invalid redirectUri provided! Check the redirectUris section in Authentication's config.`,
-      );
+      throw new ModuleError(errors.REDIRECT_URI_NOT_ALLOWED, redirectUri);
     }
     return redirectUri;
   }
@@ -303,10 +302,7 @@ export namespace AuthUtils {
     const userDataKeys = Object.keys(userData);
     const overwrite = userDataKeys.some(key => userKeys.includes(key));
     if (overwrite) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        `User data cannot overwrite User schema fields`,
-      );
+      throw new ModuleError(errors.USER_DATA_INVALID);
     }
   }
 
@@ -315,10 +311,7 @@ export namespace AuthUtils {
     username?: string,
   ): { [key: string]: string } {
     if (!!email === !!username) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Exactly one of email or username must be provided',
-      );
+      throw new ModuleError(errors.USER_IDENTIFIER_INVALID);
     }
 
     if (email) {

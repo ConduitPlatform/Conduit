@@ -1,4 +1,8 @@
-import { ConduitGrpcSdk, FindRelationRequest } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitGrpcSdk,
+  FindRelationRequest,
+  parseErrorPayload,
+} from '@conduitplatform/grpc-sdk';
 import {
   MAX_TEAM_CLAIMS,
   TeamClaim,
@@ -100,7 +104,7 @@ export async function loadTeamClaims(
     if (!warnedUnavailable) {
       warnedUnavailable = true;
       warn(
-        `Authorization unavailable, access tokens are minted without teams: ${(e as Error)?.message ?? e}`,
+        `Authorization unavailable, access tokens are minted without teams: ${parseErrorPayload(e).message || String(e)}`,
       );
     }
     return undefined;
@@ -136,7 +140,7 @@ export async function invalidateTeamClaims(
           await bounded(() => redis.del(teamClaimsKey(id)));
         } catch (e) {
           ConduitGrpcSdk.Logger.warn(
-            `Team claims cache invalidation failed: ${(e as Error)?.message ?? e}`,
+            `Team claims cache invalidation failed: ${parseErrorPayload(e).message || String(e)}`,
           );
         }
       }),

@@ -1,11 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { getConduitCode, GrpcError } from '@conduitplatform/grpc-sdk';
+import { errors } from '../errors.js';
 import { status } from '@grpc/grpc-js';
 import {
   BIOMETRIC_CHALLENGE_TTL_MS,
-  BIOMETRIC_CHALLENGE_UNAVAILABLE,
   biometricChallengeLockResource,
   consumeBiometricChallenge,
   findReusableBiometricChallenge,
@@ -118,7 +118,7 @@ describe('consumeBiometricChallenge', () => {
       (err: unknown) =>
         err instanceof GrpcError &&
         err.code === status.PERMISSION_DENIED &&
-        err.message === "Responding client doesn't match requesting!",
+        getConduitCode(err) === errors.BIOMETRIC_CLIENT_MISMATCH.conduitCode,
     );
     assert.equal(consumed, false);
   });
@@ -147,7 +147,7 @@ describe('consumeBiometricChallenge', () => {
       (err: unknown) =>
         err instanceof GrpcError &&
         err.code === status.INVALID_ARGUMENT &&
-        err.message === 'Invalid signature!',
+        getConduitCode(err) === errors.BIOMETRIC_SIGNATURE_INVALID.conduitCode,
     );
   });
 });
@@ -169,6 +169,15 @@ describe('verifyBiometricSignature', () => {
     const signature = signChallenge(privateKey, 'user-id-instead-of-challenge');
     assert.equal(
       verifyBiometricSignature(publicKey.toString('base64'), challenge, signature),
+      false,
+    );
+  });
+
+  it('treats a malformed key or signature as a failed verification', () => {
+    assert.equal(verifyBiometricSignature('not-a-key', 'challenge', 'c2ln'), false);
+    const { publicKey } = generateKeyPair();
+    assert.equal(
+      verifyBiometricSignature(publicKey.toString('base64'), 'challenge', '%%%'),
       false,
     );
   });
@@ -346,7 +355,7 @@ describe('issueOrReuseBiometricLoginChallenge', () => {
       (error: unknown) =>
         error instanceof GrpcError &&
         error.code === status.UNAVAILABLE &&
-        error.message === BIOMETRIC_CHALLENGE_UNAVAILABLE,
+        getConduitCode(error) === errors.BIOMETRIC_CHALLENGE_UNAVAILABLE.conduitCode,
     );
   });
 });

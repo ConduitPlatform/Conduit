@@ -1,7 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import convict from 'convict';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { getConduitCode, GrpcError } from '@conduitplatform/grpc-sdk';
+import { errors } from '../errors.js';
 import { status } from '@grpc/grpc-js';
 import magicLinkConfig, { MAGIC_LINK_TTL_MS } from '../config/magicLink.config.js';
 import { TokenType } from '../constants/TokenType.js';
@@ -250,7 +251,7 @@ describe('magic link redeem', () => {
       (err: unknown) =>
         err instanceof GrpcError &&
         err.code === status.NOT_FOUND &&
-        err.message === 'Magic link token does not exist',
+        getConduitCode(err) === errors.MAGIC_LINK_TOKEN_NOT_FOUND.conduitCode,
     );
     assert.deepEqual(sessions, ['exchange']);
   });

@@ -3,11 +3,14 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
+import {
+  ConduitString,
+  ModuleError,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
+import { errors } from '../../../errors.js';
 import { OAUTH_NATIVE_COMPLETE } from '../../../constants/index.js';
-import { status } from '@grpc/grpc-js';
 import facebookParameters from './facebook.json' with { type: 'json' };
 import axios, { AxiosRequestConfig } from 'axios';
 import {
@@ -18,7 +21,7 @@ import {
 } from '../interfaces/index.js';
 import { OAuth2 } from '../OAuth2.js';
 import { FacebookUser } from './facebook.user.js';
-import { OAUTH_MODE_PARAM, OAUTH_ROUTE_ERRORS } from '../utils/index.js';
+import { OAUTH_CLIENT_ROUTE_ERRORS, OAUTH_MODE_PARAM } from '../utils/index.js';
 import { realmParam } from '../../realmRequest.js';
 
 // todo migrate to use native method properly
@@ -52,8 +55,7 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
   }
 
   async connectWithProvider(details: ConnectionParams): Promise<Payload<FacebookUser>> {
-    if (!this.initialized)
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
+    if (!this.initialized) throw new ModuleError(errors.STRATEGY_DISABLED);
 
     const facebookOptions: AxiosRequestConfig = {
       params: {
@@ -66,7 +68,10 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
       facebookOptions,
     );
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
+      throw new ModuleError({
+        ...errors.OAUTH_PROVIDER_AUTH_FAILED,
+        message: 'Authentication with facebook failed',
+      });
     }
 
     return {
@@ -92,7 +97,7 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
           realm: realmParam,
         },
         middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
-        errors: OAUTH_ROUTE_ERRORS,
+        errors: OAUTH_CLIENT_ROUTE_ERRORS,
         rateLimit: OAUTH_NATIVE_COMPLETE,
       },
       new ConduitRouteReturnDefinition('FacebookResponse', {

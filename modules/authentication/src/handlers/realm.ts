@@ -2,7 +2,7 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
+  hasConduitCode,
   Indexable,
   ParsedRouterRequest,
   TYPE,
@@ -15,13 +15,11 @@ import {
   ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash-es';
 import { AUTH_CREDENTIALS, OAUTH_CALLBACK, TokenType } from '../constants/index.js';
 import { errors } from '../errors.js';
 import { RealmMembership, Token, User } from '../models/index.js';
-import { hasConduitCode } from '../utils/common.logic.js';
-import { collectTeamSubtreeIds } from '../utils/teamRealm.js';
+import { collectTeamSubtreeIds, requireAuthorization } from '../utils/teamRealm.js';
 import { invalidateTeamClaims } from '../utils/teamClaims.js';
 import {
   evaluateLinkEligibility,
@@ -56,8 +54,7 @@ import { consumeLinkProof, findLinkProof } from './realmDiscovery.js';
 import { resolveRealmFromSlug } from './realmRequest.js';
 import { TeamsHandler } from './team.js';
 import { TokenProvider } from './tokenProvider.js';
-
-const realmRouteErrors = [errors.REALMS_DISABLED, errors.REALM_NOT_FOUND];
+import { ANONYMOUS_DENIED_ERRORS, SESSION_AUTH_ERRORS } from './utils.js';
 
 /** Accounts read per email by discover; more home realms than this are not listed. */
 const DISCOVER_MAX_HOLDERS = 50;
@@ -79,7 +76,11 @@ export class RealmHandlers {
         description: `Public description of a realm: its name, enabled login strategies and policy summary.`,
         urlParams: { slug: ConduitString.Required },
         rateLimit: OAUTH_CALLBACK,
-        errors: realmRouteErrors,
+        errors: [
+          errors.REALMS_DISABLED,
+          errors.REALM_NOT_FOUND,
+          errors.REALM_SLUG_INVALID,
+        ],
       },
       new ConduitRouteReturnDefinition('RealmDiscovery', {
         name: ConduitString.Required,
@@ -107,6 +108,7 @@ export class RealmHandlers {
         action: ConduitRouteActions.GET,
         description: `Returns the home realm and the guest realms of the current user.`,
         middlewares: authRouteMiddlewares,
+        errors: [...ANONYMOUS_DENIED_ERRORS, ...SESSION_AUTH_ERRORS],
       },
       new ConduitRouteReturnDefinition('UserRealmsResponse', {
         home: {
@@ -143,10 +145,16 @@ export class RealmHandlers {
         urlParams: { slug: ConduitString.Required },
         middlewares: authRouteMiddlewares,
         errors: [
-          ...realmRouteErrors,
+          errors.REALMS_DISABLED,
+          errors.REALM_NOT_FOUND,
+          errors.REALM_SLUG_INVALID,
           errors.REALM_ACCESS_DENIED,
           errors.TWO_FA_REQUIRED_FOR_REALM,
           errors.GUESTS_NOT_ALLOWED,
+          errors.SIGNING_KEYS_UNAVAILABLE,
+          errors.AUTHORIZATION_UNAVAILABLE,
+          ...ANONYMOUS_DENIED_ERRORS,
+          ...SESSION_AUTH_ERRORS,
         ],
       },
       new ConduitRouteReturnDefinition('RealmEnterResponse', {
@@ -168,7 +176,9 @@ export class RealmHandlers {
         },
         middlewares: ['authMiddleware?'],
         errors: [
-          ...realmRouteErrors,
+          errors.REALMS_DISABLED,
+          errors.REALM_NOT_FOUND,
+          errors.REALM_SLUG_INVALID,
           errors.INVALID_LINK_PROOF,
           errors.LINKING_NOT_ALLOWED,
           errors.LINK_CONFLICT,
@@ -177,6 +187,13 @@ export class RealmHandlers {
           errors.TWO_FA_REQUIRED_FOR_REALM,
           errors.INVITATION_REQUIRED,
           errors.INVALID_INVITATION,
+          errors.TEAM_INVITE_NOT_FOUND,
+          errors.TEAM_INVITE_EMAIL_MISMATCH,
+          errors.TEAM_NOT_FOUND,
+          errors.USER_NOT_FOUND,
+          errors.SIGNING_KEYS_UNAVAILABLE,
+          errors.AUTHORIZATION_UNAVAILABLE,
+          ...SESSION_AUTH_ERRORS,
         ],
         rateLimit: AUTH_CREDENTIALS,
       },
@@ -193,7 +210,14 @@ export class RealmHandlers {
         description: `Leaves a guest realm: the membership of the user in it and its sessions and relations there are removed. A home realm cannot be left.`,
         urlParams: { slug: ConduitString.Required },
         middlewares: authRouteMiddlewares,
-        errors: [...realmRouteErrors, errors.HOME_USER_REMOVAL],
+        errors: [
+          errors.REALMS_DISABLED,
+          errors.REALM_NOT_FOUND,
+          errors.REALM_SLUG_INVALID,
+          errors.HOME_USER_REMOVAL,
+          ...ANONYMOUS_DENIED_ERRORS,
+          ...SESSION_AUTH_ERRORS,
+        ],
       },
       new ConduitRouteReturnDefinition('RealmLeaveResponse', 'String'),
       this.leaveRealm.bind(this),
@@ -206,7 +230,7 @@ export class RealmHandlers {
           description: `Returns the home realms of the accounts with an email address: one slug per home realm, null for a global account. Several entries are possible in isolated identity mode.`,
           bodyParams: { email: ConduitString.Required },
           rateLimit: AUTH_CREDENTIALS,
-          errors: [errors.REALMS_DISABLED],
+          errors: [errors.REALMS_DISABLED, errors.REALM_DISCOVERY_DISABLED],
         },
         new ConduitRouteReturnDefinition('RealmDiscoverResponse', {
           slugs: [ConduitString.Optional],
@@ -495,12 +519,12 @@ export class RealmHandlers {
       await collectTeamSubtreeIds(targetId),
     )) {
       try {
-        await this.grpcSdk.authorization!.deleteAllRelations({
+        await requireAuthorization(this.grpcSdk).deleteAllRelations({
           subject: 'User:' + userId,
           resource: 'Team:' + teamId,
         });
       } catch {
-        // authorization throws when no relation exists
+        // authorization throws when no relation exists (or is not available): best effort
       }
     }
     await invalidateTeamClaims([userId]);
@@ -510,7 +534,7 @@ export class RealmHandlers {
   async discover(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!realmsEnabled()) throw new ModuleError(errors.REALMS_DISABLED);
     const { allowEmailDiscovery } = ConfigController.getInstance().config.teams.realms;
-    if (!allowEmailDiscovery) throw new GrpcError(status.NOT_FOUND, 'Not found');
+    if (!allowEmailDiscovery) throw new ModuleError(errors.REALM_DISCOVERY_DISABLED);
     const email = String(call.request.params.email).trim().toLowerCase();
     // a global lookup: in isolated mode the same email may be held by several accounts,
     // each under its own home realm. An unknown email answers like a global account, as it

@@ -2,8 +2,9 @@
  * IO side of the realm GitOps export/import. The transforms live in
  * ./realmExport.logic.ts.
  */
-import { ConduitGrpcSdk, Indexable } from '@conduitplatform/grpc-sdk';
-
+import { ConduitGrpcSdk, Indexable, parseErrorPayload } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { RealmSettings, Team } from '../models/index.js';
 import { assertTeamPromotable } from '../admin/realm.logic.js';
 import { promoteTeamToRealm } from '../admin/realm.js';
@@ -193,7 +194,12 @@ async function prepareImportedRealm(
   const team = await Team.getInstance().findOne(topLevelTeamQuery(name), {
     readPreference: 'primary',
   });
-  if (!team) throw new Error('no top-level team with this name (realms are top-level)');
+  if (!team) {
+    throw new ModuleError({
+      ...errors.TEAM_NOT_FOUND,
+      message: 'no top-level team with this name (realms are top-level)',
+    });
+  }
   return { index, name, team, parsed };
 }
 
@@ -210,7 +216,7 @@ async function prepareImportedRealms(
       const item = await prepareImportedRealm(rec, index, name, tally);
       if (item) prepared.push(item);
     } catch (e) {
-      tally.failed(index, `${name}: realm: ${(e as Error).message}`);
+      tally.failed(index, `${name}: realm: ${parseErrorPayload(e).message}`);
     }
   }
   return prepared;
@@ -307,7 +313,7 @@ export async function importTeamRealms(
   } catch (e) {
     // nothing was written: fail every realm rather than guessing the trusted realms
     for (const item of prepared) {
-      tally.failed(item.index, `${item.name}: realm: ${(e as Error).message}`);
+      tally.failed(item.index, `${item.name}: realm: ${parseErrorPayload(e).message}`);
     }
     return false;
   }
@@ -321,7 +327,7 @@ export async function importTeamRealms(
         tally.failed(item.index, missingTrustedRealmsMessage(item.name, decision));
       }
     } catch (e) {
-      tally.failed(item.index, `${item.name}: realm: ${(e as Error).message}`);
+      tally.failed(item.index, `${item.name}: realm: ${parseErrorPayload(e).message}`);
     }
   }
   if (changed) invalidateRealmCache();

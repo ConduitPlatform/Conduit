@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   Indexable,
   ParsedRouterRequest,
   TYPE,
@@ -17,7 +16,6 @@ import {
   ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
 import escapeStringRegexp from 'escape-string-regexp';
 import { isNil } from 'lodash-es';
 import { REALM_UPDATE_EVENT } from '../constants/index.js';
@@ -43,6 +41,7 @@ import {
   assertRealmTeamIds,
   collectTeamSubtreeIds,
   collectTeamUserIds,
+  requireAuthorization,
   revokeRealmlessTokens,
 } from '../utils/teamRealm.js';
 import {
@@ -285,9 +284,16 @@ export class RealmsAdmin {
         },
         errors: [
           errors.REALMS_DISABLED,
-          errors.REALM_SLUG_TAKEN,
+          errors.TEAM_NOT_FOUND,
+          errors.TEAM_ALREADY_REALM,
+          errors.DEFAULT_TEAM_REALM_CONFLICT,
+          errors.REALM_SLUG_INVALID,
+          errors.REALM_SETTINGS_INVALID,
           errors.REALM_NESTED,
+          errors.REALM_SLUG_TAKEN,
           errors.GUESTS_NOT_ALLOWED,
+          errors.LINK_CONFLICT,
+          errors.AUTHORIZATION_UNAVAILABLE,
         ],
         name: 'PromoteTeamToRealm',
         description:
@@ -315,7 +321,14 @@ export class RealmsAdmin {
           registration: ConduitJson.Optional,
           linking: ConduitJson.Optional,
         },
-        errors: [errors.REALMS_DISABLED, errors.REALM_NOT_FOUND, errors.REALM_SLUG_TAKEN],
+        errors: [
+          errors.REALMS_DISABLED,
+          errors.REALM_NOT_FOUND,
+          errors.REALM_SLUG_CHANGE_REQUIRES_FORCE,
+          errors.REALM_SLUG_INVALID,
+          errors.REALM_SETTINGS_INVALID,
+          errors.REALM_SLUG_TAKEN,
+        ],
         name: 'UpdateRealm',
         description:
           'Updates realm settings (deep merge, arrays replace). A credential sent as ' +
@@ -359,7 +372,11 @@ export class RealmsAdmin {
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
         },
-        errors: [errors.REALM_NOT_FOUND],
+        errors: [
+          errors.REALM_NOT_FOUND,
+          errors.REALM_MEMBERSHIP_TYPE_INVALID,
+          errors.AUTHORIZATION_UNAVAILABLE,
+        ],
         name: 'GetRealmMembers',
         description: 'Lists the home and guest users of a realm.',
       },
@@ -378,7 +395,11 @@ export class RealmsAdmin {
         errors: [
           errors.REALMS_DISABLED,
           errors.REALM_NOT_FOUND,
+          errors.USER_IDS_REQUIRED,
+          errors.USER_IDS_INVALID,
           errors.GUESTS_NOT_ALLOWED,
+          errors.LINK_CONFLICT,
+          errors.AUTHORIZATION_UNAVAILABLE,
         ],
         name: 'AddRealmGuests',
         description: 'Adds existing users to a realm as guests.',
@@ -396,7 +417,7 @@ export class RealmsAdmin {
           teamId: ConduitObjectId.Required,
           userId: ConduitObjectId.Required,
         },
-        errors: [errors.REALM_NOT_FOUND, errors.HOME_USER_REMOVAL],
+        errors: [errors.REALM_NOT_FOUND, errors.USER_NOT_FOUND, errors.HOME_USER_REMOVAL],
         name: 'RemoveRealmGuest',
         description: 'Removes a guest from a realm and ends the sessions bound to it.',
       },
@@ -413,7 +434,13 @@ export class RealmsAdmin {
           realmTeamId: ConduitString.Required,
           force: ConduitBoolean.Optional,
         },
-        errors: [errors.REALMS_DISABLED, errors.REALM_NOT_FOUND],
+        errors: [
+          errors.REALMS_DISABLED,
+          errors.USER_NOT_FOUND,
+          errors.REALM_NOT_FOUND,
+          errors.LINK_CONFLICT,
+          errors.AUTHORIZATION_UNAVAILABLE,
+        ],
         name: 'MoveUserHomeRealm',
         description:
           "Moves a user's home realm (an empty realmTeamId makes the user global). " +
@@ -477,7 +504,7 @@ export class RealmsAdmin {
   }
 
   private async hasRelationOn(userId: string, teamId: string): Promise<boolean> {
-    const found = await this.grpcSdk.authorization!.findRelation({
+    const found = await requireAuthorization(this.grpcSdk).findRelation({
       subject: 'User:' + userId,
       resource: 'Team:' + teamId,
       limit: 1,
@@ -489,12 +516,12 @@ export class RealmsAdmin {
   private async removeRelationsInRealm(userId: string, realmTeamId: string) {
     for (const teamId of await collectTeamSubtreeIds(realmTeamId)) {
       try {
-        await this.grpcSdk.authorization!.deleteAllRelations({
+        await requireAuthorization(this.grpcSdk).deleteAllRelations({
           subject: 'User:' + userId,
           resource: 'Team:' + teamId,
         });
       } catch {
-        // authorization throws when no relation exists
+        // authorization throws when no relation exists (or is not available): best effort
       }
     }
     await invalidateTeamClaims([userId]);
@@ -553,7 +580,7 @@ export class RealmsAdmin {
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
     if (!isNil(type) && type !== '' && type !== 'home' && type !== 'guest') {
-      throw new GrpcError(status.INVALID_ARGUMENT, "type must be 'home' or 'guest'");
+      throw new ModuleError(errors.REALM_MEMBERSHIP_TYPE_INVALID);
     }
     await this.findRealmTeam(teamId);
 
@@ -587,7 +614,7 @@ export class RealmsAdmin {
       .filter((user): user is User => !!user);
     const members = await Promise.all(
       users.map(async user => {
-        const relations = await this.grpcSdk.authorization!.findRelation({
+        const relations = await requireAuthorization(this.grpcSdk).findRelation({
           subject: 'User:' + user._id,
           resource: 'Team:' + teamId,
           limit: 1,
@@ -611,7 +638,7 @@ export class RealmsAdmin {
     const params = call.request.params;
     const { teamId } = params;
     const team = await Team.getInstance().findOne({ _id: teamId });
-    if (!team) throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+    if (!team) throw new ModuleError(errors.TEAM_NOT_FOUND);
     assertTeamPromotable(team);
     const slug = assertValidSlug(params.slug);
     // (nesting and slug availability are checked by promoteTeamToRealm)
@@ -749,15 +776,12 @@ export class RealmsAdmin {
     const { teamId, userIds } = call.request.params;
     await this.findRealmTeam(teamId);
     if (!Array.isArray(userIds) || userIds.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'userIds is required and must be a non-empty array',
-      );
+      throw new ModuleError(errors.USER_IDS_REQUIRED);
     }
     const uniqueIds = Array.from(new Set<string>(userIds.map(String)));
     const users = await findUsersByIds(uniqueIds);
     if (users.length !== uniqueIds.length) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'userIds contains invalid user ids');
+      throw new ModuleError(errors.USER_IDS_INVALID);
     }
     // home users are not guests of their own realm
     const candidates = users.filter(user => String(user.homeRealm ?? '') !== teamId);
@@ -802,7 +826,7 @@ export class RealmsAdmin {
     const { teamId, userId } = call.request.params;
     await this.findRealmTeam(teamId);
     const user = await User.getInstance().findOne({ _id: userId });
-    if (!user) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+    if (!user) throw new ModuleError(errors.USER_NOT_FOUND);
     if (String(user.homeRealm ?? '') === teamId) {
       throw new ModuleError(errors.HOME_USER_REMOVAL);
     }
@@ -820,7 +844,7 @@ export class RealmsAdmin {
     this.assertEnabled();
     const { id, realmTeamId, force } = call.request.params;
     const user = await User.getInstance().findOne({ _id: id });
-    if (!user) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+    if (!user) throw new ModuleError(errors.USER_NOT_FOUND);
 
     const targetId: string | null =
       isNil(realmTeamId) || realmTeamId === '' || realmTeamId === 'global'

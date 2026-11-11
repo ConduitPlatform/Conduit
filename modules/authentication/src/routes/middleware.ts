@@ -1,16 +1,20 @@
 import {
   Cookies,
-  GrpcError,
   Headers,
   Indexable,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { AccessTokenVerifier, ConfigController } from '@conduitplatform/module-tools';
+import {
+  AccessTokenVerifier,
+  authErrors,
+  ConfigController,
+  ModuleError,
+} from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { AuthUtils } from '../utils/index.js';
 import { AccessToken, Client, User } from '../models/index.js';
 import { isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
 import { realmsEnabled } from '../utils/realm.js';
 import { authenticateJwt, JwtAuthenticationDeps } from './jwtAuthentication.logic.js';
@@ -83,10 +87,7 @@ export async function handleAuthentication(
     ConfigController.getInstance().config.accessTokens.jwtSecret,
   );
   if (!payload || typeof payload === 'string') {
-    throw new GrpcError(
-      status.UNAUTHENTICATED,
-      'Token is expired or otherwise not valid',
-    );
+    throw new ModuleError(authErrors.TOKEN_INVALID);
   }
   if (
     !(payload as JwtPayload).authorized &&
@@ -94,7 +95,7 @@ export async function handleAuthentication(
     path !== '/authentication/twoFa/authorize' &&
     path !== '/authentication/twoFa/recover'
   ) {
-    throw new GrpcError(status.UNAUTHENTICATED, '2FA is required');
+    throw new ModuleError(authErrors.TWO_FA_REQUIRED);
   }
   const accessToken = await AccessToken.getInstance().findOne(
     {
@@ -104,13 +105,13 @@ export async function handleAuthentication(
     { populate: ['user'], readPreference: 'primary' },
   );
   if (!accessToken) {
-    throw new GrpcError(
-      status.UNAUTHENTICATED,
+    throw new ModuleError(
+      authErrors.SESSION_REVOKED,
       'Token has been revoked or there is a mismatch between the token and the client',
     );
   }
   if (!accessToken.user || !(accessToken.user as User).active) {
-    throw new GrpcError(status.PERMISSION_DENIED, 'User is blocked or deleted');
+    throw new ModuleError(authErrors.USER_BLOCKED);
   }
   return {
     user: accessToken.user,
@@ -134,7 +135,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   let clientPlatform;
 
   if (!enabled || captcha === 'disabled') {
-    throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
+    throw new ModuleError(errors.CAPTCHA_DISABLED);
   }
 
   if (clientId === 'anonymous-client') clientPlatform = 'anonymous-client';
@@ -148,15 +149,15 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
         break;
       }
       if (captcha === 'missing') {
-        throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
+        throw new ModuleError(errors.CAPTCHA_TOKEN_MISSING);
       }
       if (captcha === 'failed') {
-        throw new GrpcError(status.PERMISSION_DENIED, 'Can not verify captcha.');
+        throw new ModuleError(errors.CAPTCHA_VERIFICATION_FAILED);
       }
       break;
     case 'anonymous-client':
       if (captcha === 'failed') {
-        throw new GrpcError(status.PERMISSION_DENIED, 'Can not verify captcha.');
+        throw new ModuleError(errors.CAPTCHA_VERIFICATION_FAILED);
       }
       break;
   }
@@ -170,18 +171,16 @@ export async function checkAnonymousMiddleware(call: ParsedRouterRequest) {
     return {};
   }
   const config = ConfigController.getInstance().config;
-  if (!config.anonymousUsers.enabled)
-    throw new Error('Anonymous users configuration is disabled.');
+  if (!config.anonymousUsers.enabled) {
+    throw new ModuleError(errors.ANONYMOUS_USERS_DISABLED);
+  }
   return { anonymousUser: user };
 }
 
 export async function denyAnonymousMiddleware(call: ParsedRouterRequest) {
   const { user } = call.request.context;
   if (user.isAnonymous) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'Anonymous users are not allowed to perform this action.',
-    );
+    throw new ModuleError(errors.ANONYMOUS_USER_NOT_ELIGIBLE);
   }
   return {};
 }

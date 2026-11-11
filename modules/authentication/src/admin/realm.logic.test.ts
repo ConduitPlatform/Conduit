@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { GrpcError, getConduitCode, parseErrorPayload } from '@conduitplatform/grpc-sdk';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import {
@@ -526,7 +526,8 @@ describe('OAuth credential pairing on write', () => {
         }),
       (err: any) =>
         err.code === status.INVALID_ARGUMENT &&
-        /oauth\.github.*clientSecret/.test(err.message),
+        getConduitCode(err) === 'REALM_SETTINGS_INVALID' &&
+        /oauth\.github.*clientSecret/.test(parseErrorPayload(err).message),
     );
   });
 
@@ -657,7 +658,8 @@ describe('Apple key triple on write', () => {
         () => buildRealmSettingsWrite(apple(entry)),
         (err: any) =>
           err.code === status.INVALID_ARGUMENT &&
-          /oauth\.apple.*together/.test(err.message),
+          getConduitCode(err) === 'REALM_SETTINGS_INVALID' &&
+          /oauth\.apple.*together/.test(parseErrorPayload(err).message),
       );
     }
   });
@@ -704,11 +706,15 @@ describe('assertTeamPromotable', () => {
     assert.doesNotThrow(() => assertTeamPromotable({ isDefault: false }));
     assert.throws(
       () => assertTeamPromotable({ realm: { enabled: true } }),
-      (err: any) => err.code === status.ALREADY_EXISTS,
+      (err: any) =>
+        err.code === status.ALREADY_EXISTS &&
+        getConduitCode(err) === 'TEAM_ALREADY_REALM',
     );
     assert.throws(
       () => assertTeamPromotable({ isDefault: true }),
-      (err: any) => err.code === status.FAILED_PRECONDITION,
+      (err: any) =>
+        err.code === status.FAILED_PRECONDITION &&
+        getConduitCode(err) === 'DEFAULT_TEAM_REALM_CONFLICT',
     );
   });
 });

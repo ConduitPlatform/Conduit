@@ -41,4 +41,16 @@ describe('parseConduitCode / hasConduitCode', () => {
     assert.equal(parseConduitCode(null), undefined);
     assert.equal(hasConduitCode(new Error('boom'), errors.REALM_NOT_FOUND), false);
   });
+
+  it('reads the conduitCode of an error returned by another module', () => {
+    const remote = Object.assign(new Error('5 NOT_FOUND: x'), {
+      code: 5,
+      details: JSON.stringify({
+        message: 'Realm not found',
+        conduitCode: 'REALM_NOT_FOUND',
+      }),
+    });
+    assert.equal(parseConduitCode(remote), 'REALM_NOT_FOUND');
+    assert.equal(hasConduitCode(remote, errors.REALM_NOT_FOUND), true);
+  });
 });

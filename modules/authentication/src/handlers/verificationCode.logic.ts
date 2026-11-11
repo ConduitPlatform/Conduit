@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 export const EMAIL_CODE_TTL_MS = 2 * 60 * 1000;
 export const EMAIL_CODE_MAX_ATTEMPTS = 5;
@@ -25,6 +25,6 @@ export async function consumeEmailVerificationCode(
 ): Promise<void> {
   const { codeKey, attemptsKey } = emailCodeKeys(email);
   if (!(await consumeKeyIfMatches(codeKey, attemptsKey, code, EMAIL_CODE_MAX_ATTEMPTS))) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid verification code');
+    throw new ModuleError(errors.VERIFICATION_CODE_INVALID);
   }
 }

@@ -1,6 +1,7 @@
 import { beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, getConduitCode, GrpcError } from '@conduitplatform/grpc-sdk';
+import { authErrors } from '@conduitplatform/module-tools';
 import { ConfigController, verifyAccessToken } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import jwt from 'jsonwebtoken';
@@ -255,7 +256,10 @@ describe('jwt mode minting', () => {
         } as unknown as RefreshToken,
         'x',
       ),
-      e => e instanceof GrpcError && e.code === status.UNAVAILABLE,
+      e =>
+        e instanceof GrpcError &&
+        e.code === status.UNAVAILABLE &&
+        getConduitCode(e) === authErrors.SESSION_REGISTRY_UNAVAILABLE.conduitCode,
     );
   });
   it('sudo reusing a uuid sid extends its registry entry; row sessions are left alone', async () => {

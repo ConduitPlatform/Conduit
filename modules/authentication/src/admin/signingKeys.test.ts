@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { status } from '@grpc/grpc-js';
+import { getConduitCode } from '@conduitplatform/grpc-sdk';
 import { SIGNING_KEYS_LOCK, SigningKeysAdmin } from './signingKeys.js';
 import { ensureSigning, emptySigning } from '../utils/signingKeys.logic.js';
 
@@ -33,6 +34,7 @@ function setup(opts: { mode?: string; persisted?: any; persistedNull?: boolean }
 }
 
 const code = (e: unknown) => (e as any)?.code;
+const conduitCode = (e: unknown) => getConduitCode(e);
 
 describe('SigningKeysAdmin.rotate', () => {
   it('rotates under the lock, persists, loads locally and publishes the full config', async () => {
@@ -53,7 +55,9 @@ describe('SigningKeysAdmin.rotate', () => {
     await t.admin.rotate(t.call());
     await assert.rejects(
       t.admin.rotate(t.call()),
-      e => code(e) === status.FAILED_PRECONDITION,
+      e =>
+        code(e) === status.FAILED_PRECONDITION &&
+        conduitCode(e) === 'PREVIOUS_SIGNING_KEY_ACTIVE',
     );
     assert.equal(t.calls.persist, 1);
     const forced: any = await t.admin.rotate(t.call(true));
@@ -71,10 +75,17 @@ describe('SigningKeysAdmin.rotate', () => {
     const s = setup({ mode: 'session' });
     await assert.rejects(
       s.admin.rotate(s.call()),
-      e => code(e) === status.FAILED_PRECONDITION,
+      e =>
+        code(e) === status.FAILED_PRECONDITION &&
+        conduitCode(e) === 'SIGNING_KEYS_NOT_APPLICABLE',
     );
     const u = setup({ persistedNull: true });
-    await assert.rejects(u.admin.rotate(u.call()), e => code(e) === status.UNAVAILABLE);
+    await assert.rejects(
+      u.admin.rotate(u.call()),
+      e =>
+        code(e) === status.UNAVAILABLE &&
+        conduitCode(e) === 'AUTH_CONFIG_PERSISTENCE_UNAVAILABLE',
+    );
     assert.equal(u.calls.persist, 0);
   });
   it('uses the persisted block (a peer may have rotated) for the previous-key check', async () => {

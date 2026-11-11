@@ -2,7 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import convict from 'convict';
 import { generateSecret } from '@conduitplatform/node-2fa';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { getConduitCode, GrpcError } from '@conduitplatform/grpc-sdk';
+import { errors } from '../errors.js';
 import { status } from '@grpc/grpc-js';
 import authConfig from '../config/config.js';
 import {
@@ -16,7 +17,7 @@ import {
 const notAllowed = (err: unknown) =>
   err instanceof GrpcError &&
   err.code === status.INVALID_ARGUMENT &&
-  err.message === 'Issuer is not allowed';
+  getConduitCode(err) === errors.TOTP_ISSUER_NOT_ALLOWED.conduitCode;
 
 describe('twoFa issuer config', () => {
   it('defaults the issuer to Conduit and the allowlist to empty', () => {
