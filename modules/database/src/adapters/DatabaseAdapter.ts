@@ -179,10 +179,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
     } else if (this.views && this.views[schemaName]) {
       return this.views[schemaName].originalSchema;
     }
-    throw new ModuleError(
-      errors.SCHEMA_NOT_FOUND,
-      `Schema ${schemaName} not defined yet`,
-    );
+    throw new ModuleError({
+      ...errors.SCHEMA_NOT_FOUND,
+      message: `Schema ${schemaName} not defined yet`,
+    });
   }
 
   getSchemas(): ConduitSchema[] {
@@ -319,10 +319,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
   createVectorIndex(schemaName: string, index: VectorIndexDefinition): Promise<string> {
     void schemaName;
     void index;
-    throw new ModuleError(
-      errors.VECTOR_UNSUPPORTED,
-      `${this.getDatabaseType()} does not support vector indexes`,
-    );
+    throw new ModuleError({
+      ...errors.VECTOR_UNSUPPORTED,
+      message: `${this.getDatabaseType()} does not support vector indexes`,
+    });
   }
 
   getVectorIndexes(schemaName: string): Promise<VectorIndexDefinition[]> {
@@ -333,10 +333,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
   deleteVectorIndex(schemaName: string, indexName: string): Promise<string> {
     void schemaName;
     void indexName;
-    throw new ModuleError(
-      errors.VECTOR_UNSUPPORTED,
-      `${this.getDatabaseType()} does not support vector indexes`,
-    );
+    throw new ModuleError({
+      ...errors.VECTOR_UNSUPPORTED,
+      message: `${this.getDatabaseType()} does not support vector indexes`,
+    });
   }
 
   protected async applyDeclaredVectorIndexes(
@@ -355,10 +355,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   vectorSearch(request: VectorSearchInput): Promise<VectorSearchResult[]> {
     void request;
-    throw new ModuleError(
-      errors.VECTOR_UNSUPPORTED,
-      `${this.getDatabaseType()} does not support vector search`,
-    );
+    throw new ModuleError({
+      ...errors.VECTOR_UNSUPPORTED,
+      message: `${this.getDatabaseType()} does not support vector search`,
+    });
   }
 
   abstract syncSchema(name: string): Promise<void>;
@@ -526,10 +526,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
       !baseSchema.modelOptions.conduit.permissions ||
       !baseSchema.modelOptions.conduit.permissions.extendable
     ) {
-      throw new ModuleError(
-        errors.SCHEMA_NOT_EXTENDABLE,
-        `Schema ${schemaName} is not extendable`,
-      );
+      throw new ModuleError({
+        ...errors.SCHEMA_NOT_EXTENDABLE,
+        message: `Schema ${schemaName} is not extendable`,
+      });
     }
     // Hacky input type conversion, clean up input flow types asap // @dirty-type-cast
     const schema: ConduitDatabaseSchema = baseSchema as ConduitDatabaseSchema;

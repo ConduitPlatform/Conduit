@@ -31,7 +31,12 @@ describe('vector field contracts', () => {
     expect(isVectorShorthand(TYPE.Vector)).toBe(true);
     expect(isVectorShorthand('Vector')).toBe(true);
     expect(isVectorShorthand(['Vector'])).toBe(true);
-    expect(() => assertVectorFieldIfPresent('Docs', 'embedding', 'Vector')).toThrow();
+    expect(() => assertVectorFieldIfPresent('Docs', 'embedding', 'Vector')).toThrow(
+      expect.objectContaining({
+        conduitCode: 'VECTOR_FIELD_INVALID',
+        code: status.INVALID_ARGUMENT,
+      }),
+    );
     expect(() => fieldsValidator('Docs', { embedding: 'Vector' }, 'mongodb')).toThrow(
       /object form/,
     );

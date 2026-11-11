@@ -57,10 +57,10 @@ function extractType(type: string, sqlType?: SQLDataType) {
   if (sqlType) {
     const expectedType = sqlDataTypeMap.get(sqlType);
     if (expectedType && type !== expectedType) {
-      throw new ModuleError(
-        errors.SCHEMA_FIELDS_INVALID,
-        `Invalid data type for SQL data type ${sqlType}: expected ${expectedType}, but got ${type}`,
-      );
+      throw new ModuleError({
+        ...errors.SCHEMA_FIELDS_INVALID,
+        message: `Invalid data type for SQL data type ${sqlType}: expected ${expectedType}, but got ${type}`,
+      });
     }
   }
   switch (type) {

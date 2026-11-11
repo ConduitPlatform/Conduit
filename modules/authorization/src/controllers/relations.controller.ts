@@ -31,12 +31,18 @@ export class RelationsController {
       name: subject.split(':')[0],
     });
     if (!subjectResource)
-      throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND, 'Subject resource');
+      throw new ModuleError({
+        ...errors.RESOURCE_DEFINITION_NOT_FOUND,
+        message: 'Subject resource definition not found',
+      });
     await ResourceDefinition.getInstance()
       .findOne({ name: object.split(':')[0] })
       .then(resourceDefinition => {
         if (!resourceDefinition) {
-          throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND, 'Object resource');
+          throw new ModuleError({
+            ...errors.RESOURCE_DEFINITION_NOT_FOUND,
+            message: 'Object resource definition not found',
+          });
         }
         if (
           !resourceDefinition.relations ||
@@ -85,14 +91,20 @@ export class RelationsController {
       name: subject.split(':')[0],
     });
     if (!subjectResource)
-      throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND, 'Subject resource');
+      throw new ModuleError({
+        ...errors.RESOURCE_DEFINITION_NOT_FOUND,
+        message: 'Subject resource definition not found',
+      });
     const definitions = await ResourceDefinition.getInstance().findMany({
       name: { $in: resources.map(resource => resource.split(':')[0]) },
     });
     for (const resource of resources) {
       const resourceDefinition = definitions.find(d => d.name === resource.split(':')[0]);
       if (!resourceDefinition) {
-        throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND, 'Object resource');
+        throw new ModuleError({
+          ...errors.RESOURCE_DEFINITION_NOT_FOUND,
+          message: 'Object resource definition not found',
+        });
       }
       if (
         !resourceDefinition.relations ||

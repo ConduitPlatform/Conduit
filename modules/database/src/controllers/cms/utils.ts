@@ -271,6 +271,8 @@ export function getOps(
         errors.SCHEMA_NOT_FOUND,
         errors.RESOURCE_ACCESS_DENIED,
         errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DOCUMENT_UNIQUE_CONFLICT,
+        errors.DOCUMENT_VALIDATION_FAILED,
         errors.DATABASE_OPERATION_FAILED,
       )
       .handler(handlers.createDocument.bind(handlers));
@@ -297,6 +299,8 @@ export function getOps(
         errors.SCHEMA_NOT_FOUND,
         errors.RESOURCE_ACCESS_DENIED,
         errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DOCUMENT_UNIQUE_CONFLICT,
+        errors.DOCUMENT_VALIDATION_FAILED,
         errors.DATABASE_OPERATION_FAILED,
       )
       .handler(handlers.createManyDocuments.bind(handlers));
@@ -334,6 +338,8 @@ export function getOps(
         errors.SCHEMA_NOT_FOUND,
         errors.RESOURCE_ACCESS_DENIED,
         errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DOCUMENT_UNIQUE_CONFLICT,
+        errors.DOCUMENT_VALIDATION_FAILED,
         errors.DATABASE_OPERATION_FAILED,
       )
       .handler(handlers.updateManyDocuments.bind(handlers));
@@ -367,6 +373,8 @@ export function getOps(
         errors.SCHEMA_NOT_FOUND,
         errors.RESOURCE_ACCESS_DENIED,
         errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DOCUMENT_UNIQUE_CONFLICT,
+        errors.DOCUMENT_VALIDATION_FAILED,
         errors.DATABASE_OPERATION_FAILED,
       )
       .handler(handlers.patchManyDocuments.bind(handlers));
@@ -393,6 +401,8 @@ export function getOps(
         errors.SCHEMA_NOT_FOUND,
         errors.RESOURCE_ACCESS_DENIED,
         errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DOCUMENT_UNIQUE_CONFLICT,
+        errors.DOCUMENT_VALIDATION_FAILED,
         errors.DATABASE_OPERATION_FAILED,
       )
       .handler(handlers.updateDocument.bind(handlers));
@@ -423,6 +433,8 @@ export function getOps(
         errors.SCHEMA_NOT_FOUND,
         errors.RESOURCE_ACCESS_DENIED,
         errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DOCUMENT_UNIQUE_CONFLICT,
+        errors.DOCUMENT_VALIDATION_FAILED,
         errors.DATABASE_OPERATION_FAILED,
       )
       .handler(handlers.patchDocument.bind(handlers));

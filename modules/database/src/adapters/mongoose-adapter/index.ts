@@ -232,7 +232,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     timeoutMs: number = VIEW_READINESS_TIMEOUT_MS,
   ): Promise<boolean> {
     if (!this.models[modelName]) {
-      throw new ModuleError(errors.SCHEMA_NOT_FOUND, `Model ${modelName} not found`);
+      throw new ModuleError({
+        ...errors.SCHEMA_NOT_FOUND,
+        message: `Model ${modelName} not found`,
+      });
     }
 
     const deadline = Date.now() + timeoutMs;
@@ -258,7 +261,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     query: any,
   ): Promise<ViewReadinessStatus> {
     if (!this.models[modelName]) {
-      throw new ModuleError(errors.SCHEMA_NOT_FOUND, `Model ${modelName} not found`);
+      throw new ModuleError({
+        ...errors.SCHEMA_NOT_FOUND,
+        message: `Model ${modelName} not found`,
+      });
     }
 
     if (this.views[viewName] && isEqual(this.views[viewName]?.viewQuery, query)) {
@@ -389,10 +395,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       if (namespaceExists) {
         const definition = await this.readMongoViewDefinition(viewName);
         if (!definition) {
-          throw new ModuleError(
-            errors.VIEW_CONFLICT,
-            `Collection ${viewName} exists but is not a MongoDB view`,
-          );
+          throw new ModuleError({
+            ...errors.VIEW_CONFLICT,
+            message: `Collection ${viewName} exists but is not a MongoDB view`,
+          });
         }
         await this.mongoose.connection.db!.dropCollection(viewName).catch((e: Error) => {
           if (!e.message.includes('ns not found')) throw e;
@@ -462,7 +468,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     query: any,
   ): Promise<void> {
     if (!this.models[modelName]) {
-      throw new ModuleError(errors.SCHEMA_NOT_FOUND, `Model ${modelName} not found`);
+      throw new ModuleError({
+        ...errors.SCHEMA_NOT_FOUND,
+        message: `Model ${modelName} not found`,
+      });
     }
 
     const existingView = this.views[viewName];
@@ -491,10 +500,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (namespaceExists) {
       const definition = await this.readMongoViewDefinition(viewName);
       if (!definition) {
-        throw new ModuleError(
-          errors.VIEW_CONFLICT,
-          `Collection ${viewName} exists but is not a MongoDB view`,
-        );
+        throw new ModuleError({
+          ...errors.VIEW_CONFLICT,
+          message: `Collection ${viewName} exists but is not a MongoDB view`,
+        });
       }
       if (this.viewDefinitionMatches(definition, viewOn, pipeline)) {
         this.buildViewModel(modelName, viewName, query);
@@ -599,10 +608,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     } else if (this.views && this.views[schemaName]) {
       return { model: this.views[schemaName] };
     }
-    throw new ModuleError(
-      errors.SCHEMA_NOT_FOUND,
-      `Schema ${schemaName} not defined yet`,
-    );
+    throw new ModuleError({
+      ...errors.SCHEMA_NOT_FOUND,
+      message: `Schema ${schemaName} not defined yet`,
+    });
   }
 
   async deleteSchema(
@@ -723,7 +732,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       });
     }
     if (failure) {
-      throw new ModuleError(errors.INDEX_OPERATION_FAILED, (failure as Error).message);
+      throw new ModuleError({
+        ...errors.INDEX_OPERATION_FAILED,
+        message: `Index operation failed: ${(failure as Error).message}`,
+      });
     }
     return 'Indexes created!';
   }
@@ -767,7 +779,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         await collection.createIndex(indexKeys, options);
       } catch (e) {
         if (isIndexAlreadyExistsError(e) || isIndexKeySpecsConflictError(e)) continue;
-        throw new ModuleError(errors.INDEX_OPERATION_FAILED, (e as Error).message);
+        throw new ModuleError({
+          ...errors.INDEX_OPERATION_FAILED,
+          message: `Index operation failed: ${(e as Error).message}`,
+        });
       }
     }
   }

@@ -96,7 +96,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     query: any,
   ): Promise<void> {
     if (!this.models[modelName]) {
-      throw new ModuleError(errors.SCHEMA_NOT_FOUND, `Model ${modelName} not found`);
+      throw new ModuleError({
+        ...errors.SCHEMA_NOT_FOUND,
+        message: `Model ${modelName} not found`,
+      });
     }
     const existingView = this.views[viewName];
     const isQueryEqual = isEqual(existingView?.viewQuery, query);
@@ -413,10 +416,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     } else if (this.views && this.views[schemaName]) {
       return { model: this.views[schemaName] };
     }
-    throw new ModuleError(
-      errors.SCHEMA_NOT_FOUND,
-      `Schema ${schemaName} not defined yet`,
-    );
+    throw new ModuleError({
+      ...errors.SCHEMA_NOT_FOUND,
+      message: `Schema ${schemaName} not defined yet`,
+    });
   }
 
   getDatabaseType(): string {
@@ -516,7 +519,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       });
     }
     if (failure) {
-      throw new ModuleError(errors.INDEX_OPERATION_FAILED);
+      throw new ModuleError({
+        ...errors.INDEX_OPERATION_FAILED,
+        message: 'Unsuccessful index creation',
+      });
     }
     return 'Indexes created!';
   }
@@ -591,7 +597,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       });
     }
     if (failure) {
-      throw new ModuleError(errors.INDEX_OPERATION_FAILED);
+      throw new ModuleError({
+        ...errors.INDEX_OPERATION_FAILED,
+        message: 'Unsuccessful index creation',
+      });
     }
     return 'Indexes deleted';
   }
@@ -789,10 +798,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
 
   private ensurePostgresVectorSupport(schemaName: string) {
     if (this.sequelize.getDialect() !== 'postgres') {
-      throw new ModuleError(
-        errors.VECTOR_UNSUPPORTED,
-        `${this.sequelize.getDialect()} does not support vector search`,
-      );
+      throw new ModuleError({
+        ...errors.VECTOR_UNSUPPORTED,
+        message: `${this.sequelize.getDialect()} does not support vector search`,
+      });
     }
     if (!this.models[schemaName]) {
       throw new ModuleError(errors.SCHEMA_NOT_FOUND);

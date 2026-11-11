@@ -98,20 +98,20 @@ export class ResourceController {
       if (perm.indexOf('->') !== -1) {
         const relatedTypes = relations?.[perm.split('->')[0]];
         if (!Array.isArray(relatedTypes)) {
-          throw new ModuleError(
-            errors.INHERITED_PERMISSION_NOT_FOUND,
-            `Permission ${perm} refers to an undeclared relation`,
-          );
+          throw new ModuleError({
+            ...errors.INHERITED_PERMISSION_NOT_FOUND,
+            message: `Permission ${perm} refers to an undeclared relation`,
+          });
         }
         const found = await ResourceDefinition.getInstance().findMany({
           name: { $in: this.excludeWildcard(relatedTypes) },
           [`permissions.${perm.split('->')[1]}`]: { $exists: true },
         });
         if (found.length === this.excludeWildcard(relatedTypes).length) continue;
-        throw new ModuleError(
-          errors.INHERITED_PERMISSION_NOT_FOUND,
-          `Permission ${perm} not found in related resources`,
-        );
+        throw new ModuleError({
+          ...errors.INHERITED_PERMISSION_NOT_FOUND,
+          message: `Permission ${perm} not found in related resources`,
+        });
       }
     }
   }

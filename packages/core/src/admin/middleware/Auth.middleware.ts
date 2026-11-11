@@ -9,7 +9,7 @@ import { gql } from 'graphql-tag';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { realtimeTicketForbiddenOnHttp } from '../realtime/ticket.js';
 import { errors } from '../../errors.js';
-import { sendError } from '../utils/errorResponse.js';
+import { sendError, sendInternalError } from '../utils/errorResponse.js';
 
 const excludedRestRoutes = ['/ready', '/live', '/login', '/config/modules'];
 const excludedGqlOperations = [
@@ -93,7 +93,7 @@ async function handleApiToken(
     sendError(res, errors.ADMIN_TOKEN_INVALID);
   } catch (error) {
     ConduitGrpcSdk.Logger.error(error as Error);
-    next(error);
+    sendInternalError(res);
   }
 }
 
@@ -135,7 +135,7 @@ async function handleJwtToken(
     next();
   } catch (error) {
     ConduitGrpcSdk.Logger.error(error as Error);
-    next(error);
+    sendInternalError(res);
   }
 }
 

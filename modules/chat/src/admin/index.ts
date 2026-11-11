@@ -702,7 +702,10 @@ export class AdminHandlers {
       const dbUserIds = usersToBeAdded.map(user => user._id);
       const wrongIds = uniqueUsers.filter(id => !dbUserIds.includes(id));
       if (wrongIds.length !== 0) {
-        throw new ModuleError(errors.USERS_NOT_FOUND, `users [${wrongIds}] do not exist`);
+        throw new ModuleError({
+          ...errors.USERS_NOT_FOUND,
+          message: `users [${wrongIds}] do not exist`,
+        });
       }
     }
     return uniqueUsers;

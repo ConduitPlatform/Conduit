@@ -270,10 +270,9 @@ export const errors = {
     message: 'Identifier is held by more than one account; pass realm',
     description: 'Several realms hold an account with this identifier; specify the realm',
   },
-  // was INTERNAL
   USER_DOCUMENT_TOO_LARGE: {
     conduitCode: 'USER_DOCUMENT_TOO_LARGE',
-    grpcCode: status.RESOURCE_EXHAUSTED,
+    grpcCode: status.INTERNAL,
     message: 'User document is too large',
     description: 'The user record exceeds the maximum size that can be returned',
   },

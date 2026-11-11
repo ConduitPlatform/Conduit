@@ -3,7 +3,7 @@ import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
 import { Doc, Schema } from '../../interfaces/index.js';
-import { ModuleError } from '@conduitplatform/module-tools';
+import { rethrowDatabaseError } from '../../utils/databaseErrors.js';
 import { errors } from '../../errors.js';
 
 export function findSchema(
@@ -32,14 +32,14 @@ export async function getUpdatedDocument(
         userId: options.userId,
         scope: options.scope,
       })
-      .catch(ModuleError.rethrow(errors.DATABASE_OPERATION_FAILED));
+      .catch(rethrowDatabaseError());
   } else {
     updatedDocument = await model
       .findByIdAndUpdate(id, data, {
         userId: options.userId,
         scope: options.scope,
       })
-      .catch(ModuleError.rethrow(errors.DATABASE_OPERATION_FAILED));
+      .catch(rethrowDatabaseError());
   }
   updatedDocument = await model
     .findOne(
@@ -51,7 +51,7 @@ export async function getUpdatedDocument(
         readPreference: 'primary',
       },
     )
-    .catch(ModuleError.rethrow(errors.DATABASE_OPERATION_FAILED));
+    .catch(rethrowDatabaseError());
 
   return updatedDocument;
 }

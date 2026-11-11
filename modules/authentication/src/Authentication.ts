@@ -13,7 +13,7 @@ import {
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
-import { isEmpty, isNil, isPlainObject } from 'lodash-es';
+import { isEmpty, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import AppConfigSchema, { Config } from './config/index.js';
 import { AdminHandlers } from './admin/index.js';
@@ -831,10 +831,10 @@ export default class Authentication extends ManagedModule<Config> {
         try {
           userData = JSON.parse(call.request.userData);
         } catch {
-          throw new ModuleError(errors.USER_DATA_INVALID, 'userData must be valid JSON');
-        }
-        if (!isPlainObject(userData)) {
-          throw new ModuleError(errors.USER_DATA_INVALID, 'userData must be an object');
+          throw new ModuleError({
+            ...errors.USER_DATA_INVALID,
+            message: 'userData must be valid JSON',
+          });
         }
         AuthUtils.checkUserData(userData);
       }

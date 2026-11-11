@@ -8,6 +8,7 @@ import {
   VectorIndexDefinition,
   VectorSimilarity,
   defaultVectorIndexMethod,
+  isGrpcStatusError,
   parseErrorPayload,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin/index.js';
@@ -97,6 +98,7 @@ import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
 import { RealtimeService } from './realtime/index.js';
 import { errors } from './errors.js';
+import { toDatabaseError } from './utils/databaseErrors.js';
 
 function importErrorText(e: unknown): string {
   const { message, conduitCode } = parseErrorPayload(e);
@@ -544,7 +546,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -580,7 +582,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -611,7 +613,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: docString });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -645,7 +647,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: docsString });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -698,7 +700,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -739,7 +741,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -780,7 +782,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -827,7 +829,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -882,7 +884,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -916,7 +918,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -950,7 +952,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -967,7 +969,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -1012,7 +1014,16 @@ export default class DatabaseModule extends ManagedModule<Config> {
       }
       callback(null, { result: JSON.stringify(result) });
     } catch (e) {
-      callback(grpcCallbackError(e, errors.DATABASE_OPERATION_FAILED));
+      callback(
+        grpcCallbackError(
+          isGrpcStatusError(e)
+            ? e
+            : {
+                ...errors.DATABASE_OPERATION_FAILED,
+                message: `${errors.DATABASE_OPERATION_FAILED.message}: ${parseErrorPayload(e).message}`,
+              },
+        ),
+      );
     }
   }
 
@@ -1025,7 +1036,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       const exist = await schemaAdapter.model.columnExistence(call.request.columns);
       callback(null, { result: exist });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -1039,7 +1050,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       callback(null, result);
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -1079,7 +1090,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -1103,7 +1114,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
         })),
       });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -1137,7 +1148,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 
@@ -1172,7 +1183,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
-      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+      callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
 

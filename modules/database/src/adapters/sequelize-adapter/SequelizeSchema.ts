@@ -179,10 +179,10 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         for (const key in inc) {
           if (!inc.hasOwnProperty(key)) continue;
           if (this.extractedRelations[key]) {
-            throw new ModuleError(
-              errors.DOCUMENT_UPDATE_INVALID,
-              `Cannot increment relation: ${key}`,
-            );
+            throw new ModuleError({
+              ...errors.DOCUMENT_UPDATE_INVALID,
+              message: `Cannot increment relation: ${key}`,
+            });
           }
           if (inc[key] > 0) {
             parsedQuery[key] = Sequelize.literal(`${key} + ${inc[key]}`);
@@ -201,17 +201,17 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         for (const key in push) {
           if (this.extractedRelations[key]) {
             if (!Array.isArray(this.extractedRelations[key])) {
-              throw new ModuleError(
-                errors.DOCUMENT_UPDATE_INVALID,
-                `Cannot push in non-array field: ${key}`,
-              );
+              throw new ModuleError({
+                ...errors.DOCUMENT_UPDATE_INVALID,
+                message: `Cannot push in non-array field: ${key}`,
+              });
             }
             const association = this.model.associations[key] as any;
             if (!association)
-              throw new ModuleError(
-                errors.DOCUMENT_UPDATE_INVALID,
-                `Cannot push in field: ${key}`,
-              );
+              throw new ModuleError({
+                ...errors.DOCUMENT_UPDATE_INVALID,
+                message: `Cannot push in field: ${key}`,
+              });
             await parentDoc[association.accessors.add](push[key]['$each'] ?? push[key], {
               transaction: t,
             });

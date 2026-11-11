@@ -164,6 +164,18 @@ export const errors = defineErrors({
     message: 'Database operation failed',
     description: 'A database operation failed unexpectedly. Retry later.',
   },
+  DOCUMENT_UNIQUE_CONFLICT: {
+    grpcCode: status.ALREADY_EXISTS,
+    message: 'A document with the same unique value already exists',
+    description:
+      'The write violates a unique constraint. Change the conflicting field value, or update the existing document instead.',
+  },
+  DOCUMENT_VALIDATION_FAILED: {
+    grpcCode: status.INVALID_ARGUMENT,
+    message: 'Document validation failed',
+    description:
+      'The document does not satisfy the schema, for example a required field is missing or a value has the wrong type. The message describes the problem.',
+  },
   // Access control
   MODULE_NOT_AUTHORIZED: {
     grpcCode: status.PERMISSION_DENIED,

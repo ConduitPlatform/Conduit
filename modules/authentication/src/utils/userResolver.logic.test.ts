@@ -180,7 +180,7 @@ describe('GetUser rpc handler', () => {
         resolve({ error, response }),
       );
     });
-    assert.equal(result.error.code, status.RESOURCE_EXHAUSTED);
+    assert.equal(result.error.code, status.INTERNAL);
     assert.equal(
       getConduitCode(result.error),
       errors.USER_DOCUMENT_TOO_LARGE.conduitCode,

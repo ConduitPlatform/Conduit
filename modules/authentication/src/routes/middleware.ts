@@ -87,7 +87,15 @@ export async function handleAuthentication(
     ConfigController.getInstance().config.accessTokens.jwtSecret,
   );
   if (!payload || typeof payload === 'string') {
-    throw new ModuleError(authErrors.TOKEN_INVALID);
+    // Same split as JWT mode, so a client can refresh on TOKEN_EXPIRED in both.
+    throw new ModuleError(
+      AuthUtils.isExpired(
+        token,
+        ConfigController.getInstance().config.accessTokens.jwtSecret,
+      )
+        ? authErrors.TOKEN_EXPIRED
+        : authErrors.TOKEN_INVALID,
+    );
   }
   if (
     !(payload as JwtPayload).authorized &&

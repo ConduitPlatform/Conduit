@@ -86,6 +86,8 @@ export function createCustomEndpointRoute(
       errors.RESOURCE_ACCESS_DENIED,
       errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
       errors.DOCUMENT_UPDATE_INVALID,
+      errors.DOCUMENT_UNIQUE_CONFLICT,
+      errors.DOCUMENT_VALIDATION_FAILED,
       errors.DATABASE_OPERATION_FAILED,
     )
     .handler(handler);

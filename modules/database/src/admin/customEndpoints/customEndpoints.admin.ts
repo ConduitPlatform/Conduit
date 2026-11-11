@@ -195,10 +195,10 @@ export class CustomEndpointsAdmin {
       .getSchemaModel('CustomEndpoints')
       .model.findOne({ name });
     if (customEndpointExists) {
-      throw new ModuleError(
-        errors.CUSTOM_ENDPOINT_EXISTS,
-        `${name} custom endpoint already exists`,
-      );
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_EXISTS,
+        message: `${name} custom endpoint already exists`,
+      });
     }
     const { schemaId, schemaName, fields, compiledFields } =
       await this.getAccessibleSchemaFields(operation, selectedSchema, selectedSchemaName);

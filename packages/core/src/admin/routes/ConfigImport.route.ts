@@ -3,6 +3,7 @@ import {
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
   TYPE,
+  parseErrorPayload,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitJson } from '@conduitplatform/module-tools';
 import { ConduitRoute } from '@conduitplatform/hermes';
@@ -58,7 +59,7 @@ export function getConfigImportRoute(admin: AdminModule) {
           await configManager.set(moduleName, moduleConfig);
           results[moduleName] = { success: true };
         } catch (e) {
-          results[moduleName] = { success: false, error: (e as Error).message };
+          results[moduleName] = { success: false, error: parseErrorPayload(e).message };
         }
       }
 

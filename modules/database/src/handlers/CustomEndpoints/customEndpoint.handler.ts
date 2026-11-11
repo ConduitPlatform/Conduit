@@ -12,6 +12,7 @@ import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.j
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
 import { OperationsEnum } from '../../enums/index.js';
 import { ModuleError } from '@conduitplatform/module-tools';
+import { rethrowDatabaseError } from '../../utils/databaseErrors.js';
 import { errors } from '../../errors.js';
 
 export class CustomEndpointHandler {
@@ -79,20 +80,20 @@ export class CustomEndpointHandler {
             createString += ',';
           } else if (r.assignmentField.type === 'Context') {
             if (isNil(call.request.context)) {
-              throw new ModuleError(
-                errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
-                `Field ${r.assignmentField.value} is missing from context`,
-              );
+              throw new ModuleError({
+                ...errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
+                message: `Field ${r.assignmentField.value} is missing from context`,
+              });
             }
             let context = call.request.context;
             for (const key of r.assignmentField.value.split('.')) {
               if (context.hasOwnProperty(key)) {
                 context = context[key];
               } else {
-                throw new ModuleError(
-                  errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
-                  `Field ${r.assignmentField.value} is missing from context`,
-                );
+                throw new ModuleError({
+                  ...errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
+                  message: `Field ${r.assignmentField.value} is missing from context`,
+                });
               }
             }
             createString += constructAssignment(
@@ -198,6 +199,6 @@ export class CustomEndpointHandler {
         }
         return r;
       })
-      .catch(ModuleError.rethrow(errors.DATABASE_OPERATION_FAILED));
+      .catch(rethrowDatabaseError());
   }
 }

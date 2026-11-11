@@ -167,10 +167,10 @@ export class OrchestratorService {
 
     if (strategy === 'ALL_OR_NOTHING' && failureCount > 0) {
       const failedChannels = channelResults.filter(r => !r.success).map(r => r.channel);
-      throw new ModuleError(
-        errors.CHANNEL_SEND_FAILED,
-        `Failed channels: ${failedChannels.join(', ')}`,
-      );
+      throw new ModuleError({
+        ...errors.CHANNEL_SEND_FAILED,
+        message: `Failed to send to channels: ${failedChannels.join(', ')}`,
+      });
     }
 
     return {

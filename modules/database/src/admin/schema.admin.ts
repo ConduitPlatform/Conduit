@@ -813,10 +813,10 @@ export class SchemaAdmin {
     }
     for (const [schemaName, schemaIndexes] of bySchema) {
       if (!this.database.models[schemaName]) {
-        throw new ModuleError(
-          errors.SCHEMA_NOT_FOUND,
-          `Requested schema not found: ${schemaName}`,
-        );
+        throw new ModuleError({
+          ...errors.SCHEMA_NOT_FOUND,
+          message: `Requested schema not found: ${schemaName}`,
+        });
       }
       const collectionName =
         this.database.models[schemaName].originalSchema.collectionName ?? schemaName;

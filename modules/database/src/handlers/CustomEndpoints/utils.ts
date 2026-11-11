@@ -96,19 +96,19 @@ function _constructQuery(
     );
   } else if (query.comparisonField.type === 'Context') {
     if (isNil(context)) {
-      throw new ModuleError(
-        errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
-        `Field ${query.comparisonField.value} is missing from context`,
-      );
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
+        message: `Field ${query.comparisonField.value} is missing from context`,
+      });
     }
     for (const key of query.comparisonField.value.split('.')) {
       if (context.hasOwnProperty(key)) {
         context = context[key];
       } else {
-        throw new ModuleError(
-          errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
-          `Field ${query.comparisonField.value} is missing from context`,
-        );
+        throw new ModuleError({
+          ...errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
+          message: `Field ${query.comparisonField.value} is missing from context`,
+        });
       }
     }
     return _translateQuery(

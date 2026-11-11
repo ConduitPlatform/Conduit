@@ -99,10 +99,10 @@ export class SecurityAdmin {
   validateDomain(domain: string) {
     if (!domain || domain === '') throw new ModuleError(errors.CLIENT_DOMAIN_REQUIRED);
     if (domain.replace(/[^*]/g, '').length > 1) {
-      throw new ModuleError(
-        errors.INVALID_CLIENT_DOMAIN,
-        `Domain must not contain more than one '*' character`,
-      );
+      throw new ModuleError({
+        ...errors.INVALID_CLIENT_DOMAIN,
+        message: `Domain must not contain more than one '*' character`,
+      });
     }
     const domainPattern = new RegExp(
       '^(?!-)[A-Za-z0-9-]+([\\-\\.]{1}[a-z0-9]+)*\\.[A-Za-z]{2,6}$',

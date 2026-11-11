@@ -36,10 +36,10 @@ export const extractRelations = (
           item.model.associations[model.name + '_' + relation].foreignKey !==
             item.originalSchema.name
         ) {
-          throw new ModuleError(
-            errors.SCHEMA_FIELDS_INVALID,
-            `Relation ${relation} already exists on ${item.model.name} with a different foreign key`,
-          );
+          throw new ModuleError({
+            ...errors.SCHEMA_FIELDS_INVALID,
+            message: `Relation ${relation} already exists on ${item.model.name} with a different foreign key`,
+          });
         } else {
           model.belongsToMany(item.model, {
             foreignKey: name,

@@ -130,6 +130,16 @@ export namespace AuthUtils {
     }
   }
 
+  /** Whether a token fails verification only because it expired (its signature is valid). */
+  export function isExpired(token: string, secret: string): boolean {
+    try {
+      jwt.verify(token, secret, { algorithms: ['HS256'] });
+      return false;
+    } catch (error) {
+      return (error as Error)?.name === 'TokenExpiredError';
+    }
+  }
+
   export async function hashPassword(password: string, hashRounds = 10) {
     return bcrypt.hash(password, hashRounds);
   }

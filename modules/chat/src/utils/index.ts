@@ -1,4 +1,8 @@
-import { ConduitGrpcSdk, UntypedArray } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitGrpcSdk,
+  parseErrorPayload,
+  UntypedArray,
+} from '@conduitplatform/grpc-sdk';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
 import { ChatRoom, InvitationToken, User } from '../models/index.js';
@@ -18,10 +22,21 @@ export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: Untyped
     const dbUserIds = usersToBeAdded.map((user: any) => user._id);
     const wrongIds = uniqueUsers.filter(id => !dbUserIds.includes(id));
     if (wrongIds.length != 0) {
-      throw new ModuleError(errors.USERS_NOT_FOUND, `users [${wrongIds}] do not exist`);
+      throw new ModuleError({
+        ...errors.USERS_NOT_FOUND,
+        message: `users [${wrongIds}] do not exist`,
+      });
     }
   }
   return usersToBeAdded;
+}
+
+/**
+ * A failed invitation email or push is one chat error, whatever the delivering module
+ * answered (its own not-found / not-configured codes would be misleading on a room route).
+ */
+function deliveryFailed(e: unknown): never {
+  throw new ModuleError(errors.INVITATION_DELIVERY_FAILED, parseErrorPayload(e).message);
 }
 
 export async function sendInvitations(
@@ -79,14 +94,14 @@ export async function sendInvitations(
             user: safeUser,
           },
         })
-        .catch(ModuleError.rethrow(errors.INVITATION_DELIVERY_FAILED));
+        .catch(deliveryFailed);
     }
     if (sendNotification) {
       const body = `User ${sender._id} has invited you to join in room ${room.name}`;
       const title = 'You have an invitation request!';
       await grpcSdk
         .pushNotifications!.sendNotification(invitedUser._id, title, body)
-        .catch(ModuleError.rethrow(errors.INVITATION_DELIVERY_FAILED));
+        .catch(deliveryFailed);
     }
   }
   return 'Invitations sent';

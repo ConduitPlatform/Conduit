@@ -17,7 +17,9 @@ export class NotificationTokensHandler {
     const { token, platform } = call.request.params;
 
     const provider = this.pushService.getProvider();
-    if (!provider || !this.pushService.isAvailable()) {
+    // Tokens are stored even while the provider is not initialised yet (bad or pending
+    // credentials), so they are usable as soon as it is.
+    if (!provider) {
       throw new ModuleError(errors.PUSH_NOT_CONFIGURED);
     }
 

@@ -57,7 +57,10 @@ const REJECTIONS: Record<SudoRejection, ModuleErrorDefinition> = {
     message: 'User has no password',
   },
   CODE_REQUIRED: errors.SUDO_CODE_REQUIRED,
-  UNSUPPORTED_2FA: errors.TWO_FA_METHOD_UNAVAILABLE,
+  UNSUPPORTED_2FA: {
+    ...errors.TWO_FA_METHOD_UNAVAILABLE,
+    message: '2FA method is not supported for sudo',
+  },
 };
 
 const failKey = (id: string) => `sudo:fail:${id}`;

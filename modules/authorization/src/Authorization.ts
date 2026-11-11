@@ -5,6 +5,7 @@ import {
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
+  parseErrorPayload,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import AppConfigSchema, { Config } from './config/index.js';
@@ -262,7 +263,7 @@ export default class Authorization extends ManagedModule<Config> {
     try {
       await this.relationsController.deleteAllRelations({ subject, resource });
     } catch (e) {
-      ConduitGrpcSdk.Logger.warn((e as Error).message);
+      ConduitGrpcSdk.Logger.warn(parseErrorPayload(e).message);
     } finally {
       callback(null, {});
     }
