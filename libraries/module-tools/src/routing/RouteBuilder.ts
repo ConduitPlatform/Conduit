@@ -1,5 +1,6 @@
 import {
   ConduitModel,
+  ModuleErrorDefinition,
   ConduitQueryParams,
   ConduitReturn,
   ConduitRoute,
@@ -110,6 +111,12 @@ export class RouteBuilder {
    */
   hydrateUser(hydrate: boolean): RouteBuilder {
     this._options.hydrateUser = hydrate;
+    return this;
+  }
+
+  /** Typed errors this route can return; published in Swagger, GraphQL and MCP. */
+  errors(...definitions: ModuleErrorDefinition[]): RouteBuilder {
+    this._options.errors = [...(this._options.errors ?? []), ...definitions];
     return this;
   }
 

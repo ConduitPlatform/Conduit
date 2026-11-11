@@ -1,7 +1,9 @@
 import {
+  ConduitGrpcSdk,
   httpStatusToGrpc,
   INTERNAL_ERROR_CODE,
   isGrpcStatusError,
+  ModuleErrorDefinition,
   parseErrorPayload,
 } from '@conduitplatform/grpc-sdk';
 
@@ -80,4 +82,50 @@ export function toGrpcStatus(
     };
   }
   return { code: INTERNAL, message: text, log };
+}
+
+/**
+ * The `{ code, message }` a gRPC service method answers its callback with:
+ *
+ *   callback(grpcCallbackError(errors.TEMPLATE_NOT_FOUND));
+ *   .catch(e => callback(grpcCallbackError(e, errors.EMAIL_SEND_FAILED)));
+ *
+ * A definition is sent as a typed error. Anything caught keeps its gRPC status when it
+ * has one; otherwise it becomes `fallback` (its message is logged, never sent), or a
+ * plain INTERNAL when no fallback is given.
+ */
+export function grpcCallbackError(
+  error: unknown,
+  fallback?: ModuleErrorDefinition,
+): { code: number; message: string } {
+  if (isDefinition(error)) {
+    return {
+      code: error.grpcCode,
+      message: JSON.stringify({ message: error.message, conduitCode: error.conduitCode }),
+    };
+  }
+  if (
+    fallback &&
+    !isGrpcStatusError(error) &&
+    typeof (error as any)?.status !== 'number'
+  ) {
+    ConduitGrpcSdk.Logger.error(
+      `[${fallback.conduitCode}] ${fallback.message}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+    return grpcCallbackError(fallback);
+  }
+  const { code, message } = toGrpcStatus(error);
+  return { code, message };
+}
+
+function isDefinition(value: unknown): value is ModuleErrorDefinition {
+  if (!value || typeof value !== 'object' || value instanceof Error) return false;
+  const v = value as Partial<ModuleErrorDefinition>;
+  return (
+    typeof v.grpcCode === 'number' &&
+    typeof v.conduitCode === 'string' &&
+    typeof v.message === 'string'
+  );
 }
