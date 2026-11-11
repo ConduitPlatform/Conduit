@@ -181,6 +181,7 @@ export class RoutingManager {
       this._routeHandlers,
       this.isAdmin ? 'admin' : 'client',
       hydrations,
+      this.declaredErrors(),
     );
     if (this.isAdmin) {
       RoutingManager.AdminController.setRoutes(modifiedFunctions);
@@ -189,6 +190,18 @@ export class RoutingManager {
     }
     const paths = Object.values(this._moduleRoutes);
     return this._router.register(paths as unknown as any);
+  }
+
+  /** conduitCodes each HTTP route lists in its `errors` option, keyed by handler name. */
+  private declaredErrors(): { [name: string]: ReadonlySet<string> } {
+    const declared: { [name: string]: ReadonlySet<string> } = {};
+    for (const [name, route] of Object.entries(this._moduleRoutes)) {
+      if ('events' in route) continue;
+      const errors = (route as ConduitRouteObject).options?.errors;
+      if (!Array.isArray(errors)) continue;
+      declared[name] = new Set(errors.map(e => e.conduitCode));
+    }
+    return declared;
   }
 
   private generateGrpcName(options: ConduitRouteOptions) {

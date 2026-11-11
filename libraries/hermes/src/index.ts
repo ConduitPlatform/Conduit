@@ -36,6 +36,7 @@ import path from 'path';
 import { ConduitRoute } from './classes/index.js';
 import { createRouteMiddleware } from './utils/logger.js';
 import { captureRequestRawBody } from './Rest/util.js';
+import { toErrorResponse } from './utils/errors.js';
 import { fileURLToPath } from 'node:url';
 import { instrumentationMiddleware } from './metrics/middleware.js';
 import { RouteTrie } from './metrics/RouteTrie.js';
@@ -108,7 +109,10 @@ export class ConduitRoutingController {
     this.expressApp.use(
       baseUrl,
       (err: ConduitError, req: Request, res: Response, _: NextFunction) => {
-        res.status(err?.status || 500).send(err.message);
+        // Errors of global middlewares (body parsers, security checks) share the shape of
+        // every other error response.
+        const response = toErrorResponse(err);
+        res.status(response.status).json(response);
       },
     );
 
@@ -571,4 +575,6 @@ export * from './types/index.js';
 export * from './classes/index.js';
 export * from './utils/GrpcConverter.js';
 export * from './utils/extractClientIp.js';
+export * from './utils/errors.js';
+export { mapGrpcErrorToHttp } from './Rest/util.js';
 export * from './MCP/index.js';

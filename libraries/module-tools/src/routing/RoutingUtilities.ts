@@ -10,6 +10,7 @@ export function wrapFunctionsAsync(
   functions: { [name: string]: RequestHandlers | SocketRequestHandlers },
   routerType: 'admin' | 'client',
   hydrations: { [name: string]: { options: Indexable; hydrator: UserHydrator } } = {},
+  declaredErrors: { [name: string]: ReadonlySet<string> } = {},
 ): {
   [name: string]: (call: Indexable, callback?: Indexable) => void;
 } {
@@ -21,6 +22,7 @@ export function wrapFunctionsAsync(
       functions[key],
       routerType,
       hydrations[key],
+      declaredErrors[key],
     );
   });
   return modifiedFunctions;

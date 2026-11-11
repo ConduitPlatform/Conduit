@@ -15,6 +15,11 @@ import {
 } from '../interfaces/index.js';
 import ObjectHash from 'object-hash';
 import { ConduitError, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import {
+  HermesErrorCodes,
+  toErrorResponse,
+  toSocketConnectError,
+} from '../utils/errors.js';
 import { buildSocketMiddlewareParams } from './buildSocketMiddlewareParams.js';
 import {
   createSocketGate,
@@ -190,7 +195,7 @@ export class SocketController extends ConduitRouter {
           next();
         })
         .catch((err: Error | ConduitError) => {
-          next(err);
+          next(toSocketConnectError(err));
         });
     });
 
@@ -223,7 +228,7 @@ export class SocketController extends ConduitRouter {
             .then(res => this.handleResponse(res, socket, namespace))
             .catch(e => {
               ConduitGrpcSdk.Logger.error(e);
-              socket.emit('conduit_error', e);
+              socket.emit('conduit_error', toErrorResponse(e));
             });
         });
       } else {
@@ -236,7 +241,7 @@ export class SocketController extends ConduitRouter {
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
             ConduitGrpcSdk.Logger.error(e);
-            socket.emit('conduit_error', e);
+            socket.emit('conduit_error', toErrorResponse(e));
           });
       }
 
@@ -246,7 +251,14 @@ export class SocketController extends ConduitRouter {
             rateLimitNotified = true;
             socket.emit(
               'conduit_error',
-              new ConduitError('RESOURCE_EXHAUSTED', 429, 'Too many socket events'),
+              toErrorResponse(
+                new ConduitError(
+                  'RESOURCE_EXHAUSTED',
+                  429,
+                  'Too many socket events',
+                  HermesErrorCodes.RATE_LIMIT_EXCEEDED,
+                ),
+              ),
             );
           }
           return;
@@ -263,7 +275,7 @@ export class SocketController extends ConduitRouter {
             .then(res => this.handleResponse(res, socket, namespace))
             .catch(e => {
               ConduitGrpcSdk.Logger.error(e);
-              socket.emit('conduit_error', e);
+              socket.emit('conduit_error', toErrorResponse(e));
             }),
         );
       });
@@ -280,7 +292,7 @@ export class SocketController extends ConduitRouter {
           .then(res => this.handleResponse(res, socket, namespace))
           .catch(e => {
             ConduitGrpcSdk.Logger.error(e);
-            socket.emit('conduit_error', e);
+            socket.emit('conduit_error', toErrorResponse(e));
           });
       });
     });
@@ -520,7 +532,14 @@ export class SocketController extends ConduitRouter {
       if (!socket.connected || !this.settings.disconnectOnTokenExpiry) return;
       socket.emit(
         'conduit_error',
-        new ConduitError('UNAUTHENTICATED', 401, 'Token is expired'),
+        toErrorResponse(
+          new ConduitError(
+            'UNAUTHENTICATED',
+            401,
+            'Token is expired',
+            HermesErrorCodes.TOKEN_EXPIRED,
+          ),
+        ),
       );
       socket.disconnect(true);
     };

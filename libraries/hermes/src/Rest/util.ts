@@ -1,11 +1,13 @@
 import {
   BodyParams,
   ConduitError,
+  grpcStatusToHttp,
   Params,
   QueryParams,
   UrlParams,
 } from '@conduitplatform/grpc-sdk';
 import { ZodParser } from '../classes/ZodParser.js';
+import { HermesErrorCodes } from '../utils/errors.js';
 import { Response } from 'express';
 import { ConduitRequest } from '../interfaces/ConduitRequest.js';
 
@@ -102,28 +104,20 @@ export function validateParams(
         return path + issue.message;
       })
       .join('; ');
-    throw ConduitError.userInput(message);
+    throw new ConduitError(
+      'USER_INPUT_ERROR',
+      400,
+      message,
+      HermesErrorCodes.INVALID_PARAMETERS,
+    );
   }
   return result.data as Params;
 }
 
+/** HTTP status and error name a gRPC status is served as. */
 export function mapGrpcErrorToHttp(gRPCErrorCode: number): {
   name: string;
   status: number;
 } {
-  switch (gRPCErrorCode) {
-    case 3:
-      return { name: 'INVALID_ARGUMENTS', status: 400 };
-    case 5:
-      return { name: 'NOT_FOUND', status: 404 };
-    // TODO: Enable this case once conflict error handling is implemented. Currently commented out to avoid introducing a breaking change.
-    // case 6:
-    //   return { name: 'CONFLICT', status: 409 };
-    case 7:
-      return { name: 'FORBIDDEN', status: 403 };
-    case 16:
-      return { name: 'UNAUTHORIZED', status: 401 };
-    default:
-      return { name: 'INTERNAL_SERVER_ERROR', status: 500 };
-  }
+  return grpcStatusToHttp(gRPCErrorCode);
 }

@@ -6,3 +6,4 @@ export * from './StateManager.js';
 export * from './GrpcSdkContext.js';
 export * from './UserCache.js';
 export * from './SessionRegistry.js';
+export * from './errors.js';

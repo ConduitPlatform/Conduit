@@ -850,6 +850,7 @@ export {
   SESSION_REGISTRY_PREFIX,
 } from './utilities/index.js';
 export { isLockContention } from './utilities/StateManager.js';
+export * from './utilities/errors.js';
 export type { SessionRegistryData } from './utilities/SessionRegistry.js';
 export * from './classes/index.js';
 export * from './modules/index.js';

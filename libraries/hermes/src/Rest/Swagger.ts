@@ -9,6 +9,7 @@ import { mapGrpcErrorToHttp } from './util.js';
 
 interface SwaggerExample {
   name: string;
+  status: number;
   message: string;
   conduitCode: string;
 }
@@ -16,7 +17,7 @@ interface SwaggerExample {
 interface SwaggerResponseContent {
   schema: { $ref: string };
   example?: SwaggerExample;
-  examples?: Record<string, { value: SwaggerExample }>;
+  examples?: Record<string, { summary?: string; value: SwaggerExample }>;
 }
 
 export class SwaggerGenerator {
@@ -51,16 +52,21 @@ export class SwaggerGenerator {
                 type: 'string',
                 description: 'HTTP error name',
               },
+              status: {
+                type: 'integer',
+                description: 'HTTP status code',
+              },
               message: {
                 type: 'string',
                 description: 'Error message',
               },
               conduitCode: {
                 type: 'string',
-                description: 'Conduit internal error code',
+                description:
+                  'Stable machine-readable error code. Present on typed errors; branch on this rather than on the message',
               },
             },
-            required: ['httpCode', 'conduitCode', 'description'],
+            required: ['name', 'status', 'message'],
           },
         },
         securitySchemes: this._routerMetadata.securitySchemes,
@@ -225,6 +231,7 @@ export class SwaggerGenerator {
       if (allExamples.length === 1) {
         responseContent['application/json']['example'] = {
           name: allExamples[0].name,
+          status: Number(status),
           message: allExamples[0].message,
           conduitCode: allExamples[0].conduitCode,
         };
@@ -233,9 +240,12 @@ export class SwaggerGenerator {
         allExamples.forEach(example => {
           const { name, message, conduitCode, description } = example;
           if (responseContent['application/json']['examples']) {
-            responseContent['application/json']['examples'][description] = {
+            // Keyed by conduitCode: example keys must be unique and URL-safe.
+            responseContent['application/json']['examples'][conduitCode] = {
+              summary: description,
               value: {
                 name,
+                status: Number(status),
                 message,
                 conduitCode,
               },
@@ -244,6 +254,7 @@ export class SwaggerGenerator {
         });
       }
       routeDoc.responses[status] = {
+        description: [...new Set(allExamples.map(e => e.conduitCode))].join(', '),
         content: responseContent,
       };
     }
