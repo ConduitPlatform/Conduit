@@ -1,22 +1,15 @@
-export class InvitationError extends Error {
-  constructor(
-    public code: number,
-    message: string,
-  ) {
-    super(message);
-    this.name = 'InvitationError';
-  }
-}
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 export function validateInvitationAnswer(answer: string): void {
   if (answer !== 'accept' && answer !== 'decline') {
-    throw new InvitationError(3, 'Answer must be accept or decline');
+    throw new ModuleError(errors.INVALID_INVITATION_ANSWER);
   }
 }
 
 export function assertInvitationReceiver(userId: unknown, receiver: unknown): void {
   if (String(userId) !== String(receiver)) {
-    throw new InvitationError(7, 'Invitation is not for the current user');
+    throw new ModuleError(errors.INVITATION_NOT_FOR_USER);
   }
 }
 
@@ -24,7 +17,7 @@ export function assertRoomJoinable<T extends { deleted?: boolean }>(
   room: T | null,
 ): asserts room is T {
   if (room == null || room.deleted === true) {
-    throw new InvitationError(5, 'Chat room does not exist');
+    throw new ModuleError(errors.ROOM_NOT_FOUND);
   }
 }
 
@@ -43,16 +36,25 @@ export function buildLoginRedirectUrl(
   redirectUri: string,
 ): string {
   if (!loginUri) {
-    throw new InvitationError(9, 'Invitation login redirect is not configured');
+    throw new ModuleError(
+      errors.INVITATION_REDIRECT_MISCONFIGURED,
+      'Invitation login redirect is not configured',
+    );
   }
   if (!redirectUri) {
-    throw new InvitationError(9, 'Invitation hook return URL is required');
+    throw new ModuleError(
+      errors.INVITATION_REDIRECT_MISCONFIGURED,
+      'Invitation hook return URL is required',
+    );
   }
   let redirectUrl: URL;
   try {
     redirectUrl = new URL(loginUri);
   } catch {
-    throw new InvitationError(9, 'login_uri must be an absolute URL');
+    throw new ModuleError(
+      errors.INVITATION_REDIRECT_MISCONFIGURED,
+      'login_uri must be an absolute URL',
+    );
   }
   redirectUrl.searchParams.set('redirectUri', redirectUri);
   redirectUrl.searchParams.set('answer', answer);

@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
   Query,
   TYPE,
@@ -14,9 +13,10 @@ import {
   ConduitString,
   ConfigController,
   GrpcServer,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
+import { errors } from '../errors.js';
 import { isArray, isNil } from 'lodash-es';
 import { populateArray } from '../utils/index.js';
 import { invalidateMembershipCache } from '../utils/membershipCache.js';
@@ -49,11 +49,9 @@ export class AdminHandlers {
     }
     const room = await ChatRoom.getInstance()
       .findOne({ _id: id }, { populate: populates })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     if (!room) {
-      throw new GrpcError(status.NOT_FOUND, 'Room does not exist');
+      throw new ModuleError(errors.ROOM_NOT_FOUND);
     }
     return room;
   }
@@ -89,9 +87,7 @@ export class AdminHandlers {
     const [chatRoomDocuments, count] = await Promise.all([
       chatRoomDocumentsPromise,
       totalCountPromise,
-    ]).catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
+    ]).catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
 
     return { chatRoomDocuments, count };
   }
@@ -114,9 +110,7 @@ export class AdminHandlers {
         participants,
         creator: roomCreator,
       })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     const participantsLog = await ChatParticipantsLog.getInstance().createMany([
       {
         user: roomCreator,
@@ -135,9 +129,7 @@ export class AdminHandlers {
       .findByIdAndUpdate(chatRoom._id, {
         participantsLog: participantsLog.map(log => log._id),
       })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     this.grpcSdk.router?.socketPush({
       event: 'join-room',
       receivers: participants,
@@ -165,17 +157,12 @@ export class AdminHandlers {
     const { ids } = call.request.params;
     if (ids.length === 0) {
       // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'ids is required and must be a non-empty array',
-      );
+      throw new ModuleError(errors.ROOM_IDS_REQUIRED);
     }
 
     const rooms = await ChatRoom.getInstance()
       .findMany({ _id: { $in: ids }, deleted: { $ne: true } })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
 
     if (rooms.length === 0) return 'Done';
 
@@ -195,9 +182,7 @@ export class AdminHandlers {
               chatRoom: room._id,
             })),
           )
-          .catch((e: Error) => {
-            throw new GrpcError(status.INTERNAL, e.message);
-          });
+          .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
         await ChatRoom.getInstance()
           .findByIdAndUpdate(room._id, {
             participantsLog: [
@@ -208,36 +193,24 @@ export class AdminHandlers {
             ],
             deleted: true,
           })
-          .catch((e: Error) => {
-            throw new GrpcError(status.INTERNAL, e.message);
-          });
+          .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
         await ChatMessage.getInstance()
           .updateMany({ room: room._id }, { deleted: true })
-          .catch((e: Error) => {
-            throw new GrpcError(status.INTERNAL, e.message);
-          });
+          .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
       }
       await InvitationToken.getInstance()
         .deleteMany({ room: { $in: roomIds } })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     } else {
       await ChatRoom.getInstance()
         .deleteMany({ _id: { $in: roomIds } })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
       await ChatMessage.getInstance()
         .deleteMany({ room: { $in: roomIds } })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
       await InvitationToken.getInstance()
         .deleteMany({ room: { $in: roomIds } })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     }
 
     for (const room of rooms) {
@@ -271,11 +244,9 @@ export class AdminHandlers {
 
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     if (isNil(room) || room.deleted) {
-      throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
+      throw new ModuleError(errors.ROOM_NOT_FOUND);
     }
 
     const participantIds = room.participants.map(p =>
@@ -283,10 +254,7 @@ export class AdminHandlers {
     );
     for (const userId of usersToAdd) {
       if (participantIds.includes(userId)) {
-        throw new GrpcError(
-          status.ALREADY_EXISTS,
-          'users array contains existing member ids',
-        );
+        throw new ModuleError(errors.USERS_ALREADY_IN_ROOM);
       }
     }
 
@@ -305,9 +273,7 @@ export class AdminHandlers {
           ...participantsLog.map(log => log._id),
         ],
       })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
 
     await this.invalidateMembershipCache(room._id);
     this.grpcSdk.router?.socketPush({
@@ -332,19 +298,14 @@ export class AdminHandlers {
     const { roomId, users } = call.request.params;
     const usersToRemove = this.sanitizeUserIds(users ?? []);
     if (usersToRemove.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'users is required and must be a non-empty array',
-      );
+      throw new ModuleError(errors.USERS_REQUIRED);
     }
 
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     if (isNil(room) || room.deleted) {
-      throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
+      throw new ModuleError(errors.ROOM_NOT_FOUND);
     }
 
     const participantIds = room.participants.map(p =>
@@ -371,10 +332,7 @@ export class AdminHandlers {
     }
 
     if (removedUsers.length === 0) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        'None of the specified users are room participants',
-      );
+      throw new ModuleError(errors.USERS_NOT_IN_ROOM);
     }
 
     room.participants = participantIds;
@@ -399,9 +357,7 @@ export class AdminHandlers {
     } else {
       await ChatRoom.getInstance()
         .findByIdAndUpdate(room._id, room)
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     }
 
     await this.invalidateMembershipCache(room._id);
@@ -427,7 +383,7 @@ export class AdminHandlers {
 
     const room = await ChatRoom.getInstance().findOne({ _id: roomId });
     if (isNil(room)) {
-      throw new GrpcError(status.NOT_FOUND, `Room ${roomId} does not exist`);
+      throw new ModuleError(errors.ROOM_NOT_FOUND, `Room ${roomId}`);
     }
 
     let populates;
@@ -443,9 +399,7 @@ export class AdminHandlers {
     const [invitations, count] = await Promise.all([
       invitationsPromise,
       countPromise,
-    ]).catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
+    ]).catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
 
     return { invitations, count };
   }
@@ -455,22 +409,17 @@ export class AdminHandlers {
   ): Promise<UnparsedRouterResponse> {
     const { roomId, invitations } = call.request.params;
     if (isNil(invitations) || !isArray(invitations) || invitations.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'invitations is required and must be a non-empty array',
-      );
+      throw new ModuleError(errors.INVITATION_IDS_REQUIRED);
     }
 
     const room = await ChatRoom.getInstance().findOne({ _id: roomId });
     if (isNil(room)) {
-      throw new GrpcError(status.NOT_FOUND, `Room ${roomId} does not exist`);
+      throw new ModuleError(errors.ROOM_NOT_FOUND, `Room ${roomId}`);
     }
 
     await InvitationToken.getInstance()
       .deleteMany({ _id: { $in: invitations }, room: roomId })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     return 'Done';
   }
 
@@ -489,13 +438,13 @@ export class AdminHandlers {
     if (!isNil(senderUser)) {
       const user = await User.getInstance().findOne({ _id: senderUser });
       if (isNil(user)) {
-        throw new GrpcError(status.NOT_FOUND, `User ${senderUser} does not exist`);
+        throw new ModuleError(errors.SENDER_USER_NOT_FOUND, `User ${senderUser}`);
       }
     }
     if (!isNil(roomId)) {
       const room = await ChatRoom.getInstance().findOne({ _id: roomId });
       if (isNil(room)) {
-        throw new GrpcError(status.NOT_FOUND, `Room ${roomId} does not exists`);
+        throw new ModuleError(errors.ROOM_NOT_FOUND, `Room ${roomId}`);
       }
     }
 
@@ -507,9 +456,7 @@ export class AdminHandlers {
     });
     const countPromise = ChatMessage.getInstance().countDocuments(query);
     const [messages, count] = await Promise.all([messagesPromise, countPromise]).catch(
-      (e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      },
+      ModuleError.rethrow(errors.CHAT_DATABASE_ERROR),
     );
 
     return { messages, count };
@@ -519,16 +466,11 @@ export class AdminHandlers {
     const { ids } = call.request.params;
     if (ids.length === 0) {
       // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'ids is required and must be a non-empty array',
-      );
+      throw new ModuleError(errors.MESSAGE_IDS_REQUIRED);
     }
     await ChatMessage.getInstance()
       .deleteMany({ _id: { $in: ids } })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     return 'Done';
   }
 
@@ -545,6 +487,7 @@ export class AdminHandlers {
         queryParams: {
           populate: [ConduitString.Optional],
         },
+        errors: [errors.ROOM_NOT_FOUND, errors.CHAT_DATABASE_ERROR],
       },
       new ConduitRouteReturnDefinition(ChatRoom.name),
       this.getRoom.bind(this),
@@ -563,6 +506,7 @@ export class AdminHandlers {
           users: { type: [TYPE.String], required: false },
           deleted: ConduitBoolean.Optional,
         },
+        errors: [errors.CHAT_DATABASE_ERROR],
       },
       new ConduitRouteReturnDefinition('GetRooms', {
         chatRoomDocuments: [ChatRoom.name],
@@ -580,6 +524,11 @@ export class AdminHandlers {
           participants: { type: [TYPE.String], required: true }, // handler array check is still required
           creator: ConduitString.Optional,
         },
+        errors: [
+          errors.USERS_REQUIRED,
+          errors.USERS_NOT_FOUND,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition(ChatRoom.name),
       this.createRoom.bind(this),
@@ -592,6 +541,7 @@ export class AdminHandlers {
         queryParams: {
           ids: { type: [TYPE.String], required: true },
         },
+        errors: [errors.ROOM_IDS_REQUIRED, errors.CHAT_DATABASE_ERROR],
       },
       new ConduitRouteReturnDefinition('DeleteRooms', 'String'),
       this.deleteRooms.bind(this),
@@ -607,6 +557,13 @@ export class AdminHandlers {
         bodyParams: {
           users: { type: [TYPE.String], required: true },
         },
+        errors: [
+          errors.USERS_REQUIRED,
+          errors.USERS_NOT_FOUND,
+          errors.ROOM_NOT_FOUND,
+          errors.USERS_ALREADY_IN_ROOM,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('AddUsersToRoomResponse', 'String'),
       this.addUsersToRoom.bind(this),
@@ -622,6 +579,12 @@ export class AdminHandlers {
         bodyParams: {
           users: { type: [TYPE.String], required: true },
         },
+        errors: [
+          errors.USERS_REQUIRED,
+          errors.ROOM_NOT_FOUND,
+          errors.USERS_NOT_IN_ROOM,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('RemoveUsersFromRoomResponse', 'String'),
       this.removeUsersFromRoom.bind(this),
@@ -640,6 +603,7 @@ export class AdminHandlers {
           sort: ConduitString.Optional,
           populate: [ConduitString.Optional],
         },
+        errors: [errors.ROOM_NOT_FOUND, errors.CHAT_DATABASE_ERROR],
       },
       new ConduitRouteReturnDefinition('GetRoomInvitations', {
         invitations: [InvitationToken.name],
@@ -658,6 +622,11 @@ export class AdminHandlers {
         queryParams: {
           invitations: { type: [TYPE.String], required: true },
         },
+        errors: [
+          errors.INVITATION_IDS_REQUIRED,
+          errors.ROOM_NOT_FOUND,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('DeleteRoomInvitations', 'String'),
       this.deleteRoomInvitations.bind(this),
@@ -676,6 +645,11 @@ export class AdminHandlers {
           search: ConduitString.Optional,
           populate: [ConduitString.Optional],
         },
+        errors: [
+          errors.SENDER_USER_NOT_FOUND,
+          errors.ROOM_NOT_FOUND,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('GetMessages', {
         messages: [ChatMessage.name],
@@ -691,6 +665,7 @@ export class AdminHandlers {
         queryParams: {
           ids: { type: [TYPE.String], required: true }, // handler array check is still required
         },
+        errors: [errors.MESSAGE_IDS_REQUIRED, errors.CHAT_DATABASE_ERROR],
       },
       new ConduitRouteReturnDefinition('DeleteMessages', 'String'),
       this.deleteMessages.bind(this),
@@ -715,22 +690,19 @@ export class AdminHandlers {
   private async validateUsersInput(users: (string | undefined)[]): Promise<string[]> {
     const uniqueUsers = this.sanitizeUserIds(users);
     if (uniqueUsers.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'users is required and must be a non-empty array',
-      );
+      throw new ModuleError(errors.USERS_REQUIRED);
     }
     const usersToBeAdded: void | User[] = await User.getInstance().findMany({
       _id: { $in: uniqueUsers },
     });
     if (isNil(usersToBeAdded)) {
-      throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
+      throw new ModuleError(errors.USERS_NOT_FOUND);
     }
     if (usersToBeAdded.length !== uniqueUsers.length) {
       const dbUserIds = usersToBeAdded.map(user => user._id);
       const wrongIds = uniqueUsers.filter(id => !dbUserIds.includes(id));
       if (wrongIds.length !== 0) {
-        throw new GrpcError(status.INVALID_ARGUMENT, `users [${wrongIds}] do not exist`);
+        throw new ModuleError(errors.USERS_NOT_FOUND, `users [${wrongIds}] do not exist`);
       }
     }
     return uniqueUsers;

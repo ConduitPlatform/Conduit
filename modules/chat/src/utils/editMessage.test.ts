@@ -119,7 +119,7 @@ describe('editChatMessage', () => {
           userId: 'user-1',
           newMessage: 'hi',
         }),
-      { code: status.NOT_FOUND, message: NOT_FOUND_OR_NO_ACCESS },
+      { code: status.NOT_FOUND, conduitCode: 'MESSAGE_NOT_FOUND' },
     );
     assert.deepEqual(sdk.finds, [
       { schemaName: 'ChatMessage', query: { _id: 'missing', deleted: false } },
@@ -139,7 +139,7 @@ describe('editChatMessage', () => {
           userId: 'user-1',
           newMessage: 'hi',
         }),
-      { code: status.NOT_FOUND, message: NOT_FOUND_OR_NO_ACCESS },
+      { code: status.NOT_FOUND, conduitCode: 'MESSAGE_NOT_FOUND' },
     );
     assert.deepEqual(sdk.finds, [
       { schemaName: 'ChatMessage', query: { _id: 'deleted-msg', deleted: false } },
@@ -157,7 +157,7 @@ describe('editChatMessage', () => {
           userId: 'other-user',
           newMessage: 'hi',
         }),
-      { code: status.NOT_FOUND, message: NOT_FOUND_OR_NO_ACCESS },
+      { code: status.NOT_FOUND, conduitCode: 'MESSAGE_NOT_FOUND' },
     );
     assert.equal(sdk.updates.length, 0);
     assert.equal(sdk.socketPushes.length, 0);
@@ -191,7 +191,7 @@ describe('editChatMessage', () => {
           userId: 'user-1',
           newMessage: 'updated text',
         }),
-      { code: status.FAILED_PRECONDITION, message: 'Message editing is disabled' },
+      { code: status.FAILED_PRECONDITION, conduitCode: 'MESSAGE_EDIT_DISABLED' },
     );
     assert.equal(sdk.finds.length, 0);
     assert.equal(sdk.updates.length, 0);

@@ -116,7 +116,7 @@ describe('deleteChatMessage', () => {
 
     await assert.rejects(
       () => deleteChatMessage(sdk.grpcSdk, { messageId: 'missing', userId: 'user-1' }),
-      { code: status.NOT_FOUND, message: NOT_FOUND_OR_NO_ACCESS },
+      { code: status.NOT_FOUND, conduitCode: 'MESSAGE_NOT_FOUND' },
     );
     assert.equal(sdk.updates.length, 0);
     assert.equal(sdk.deletes.length, 0);
@@ -129,7 +129,7 @@ describe('deleteChatMessage', () => {
 
     await assert.rejects(
       () => deleteChatMessage(sdk.grpcSdk, { messageId: 'msg-1', userId: 'other-user' }),
-      { code: status.NOT_FOUND, message: NOT_FOUND_OR_NO_ACCESS },
+      { code: status.NOT_FOUND, conduitCode: 'MESSAGE_NOT_FOUND' },
     );
     assert.equal(sdk.updates.length, 0);
     assert.equal(sdk.deletes.length, 0);
@@ -146,7 +146,7 @@ describe('deleteChatMessage', () => {
 
     await assert.rejects(
       () => deleteChatMessage(sdk.grpcSdk, { messageId: 'msg-1', userId: 'user-1' }),
-      { code: status.FAILED_PRECONDITION, message: 'Message deletion is disabled' },
+      { code: status.FAILED_PRECONDITION, conduitCode: 'MESSAGE_DELETE_DISABLED' },
     );
     assert.equal(sdk.finds.length, 0);
     assert.equal(sdk.updates.length, 0);

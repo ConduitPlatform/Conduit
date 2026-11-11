@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -10,6 +9,7 @@ import {
   ConduitNumber,
   ConduitString,
   ConfigController,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { ChatRoom, InvitationToken } from '../models/index.js';
@@ -22,10 +22,9 @@ import {
   buildLoginRedirectUrl,
   isAlreadyMember,
   replaceRoomIdInUri,
-  InvitationError,
 } from '../utils/invitationHelpers.js';
 import { isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
+import { errors } from '../errors.js';
 import { Config } from '../config/index.js';
 
 export class InvitationRoutes {
@@ -50,6 +49,14 @@ export class InvitationRoutes {
           maxRequests: 50,
           resetInterval: 3600,
         },
+        errors: [
+          errors.INVALID_INVITATION_ANSWER,
+          errors.INVITATION_NOT_FOUND,
+          errors.INVITATION_NOT_FOR_USER,
+          errors.ROOM_NOT_FOUND,
+          errors.INVITATION_REDIRECT_MISCONFIGURED,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('InvitationHookResponse', {
         result: ConduitString.Optional,
@@ -67,6 +74,13 @@ export class InvitationRoutes {
           invitationToken: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
+        errors: [
+          errors.INVALID_INVITATION_ANSWER,
+          errors.INVITATION_NOT_FOUND,
+          errors.INVITATION_NOT_FOR_USER,
+          errors.ROOM_NOT_FOUND,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('InvitationByTokenResponse', 'String'),
       this.answerInvitationByToken.bind(this),
@@ -81,6 +95,13 @@ export class InvitationRoutes {
           answer: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
+        errors: [
+          errors.INVALID_INVITATION_ANSWER,
+          errors.INVITATION_NOT_FOUND,
+          errors.INVITATION_NOT_FOR_USER,
+          errors.ROOM_NOT_FOUND,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('InvitationResponse', 'String'),
       this.answerInvitation.bind(this),
@@ -95,6 +116,7 @@ export class InvitationRoutes {
           limit: ConduitNumber.Optional,
         },
         middlewares: ['authMiddleware'],
+        errors: [errors.CHAT_DATABASE_ERROR],
       },
       new ConduitRouteReturnDefinition('GetInvitationsResponse', {
         invitations: [InvitationToken.name],
@@ -112,6 +134,7 @@ export class InvitationRoutes {
         action: ConduitRouteActions.GET,
         description: `Returns queried invitations the current user has sent.`,
         middlewares: ['authMiddleware'],
+        errors: [errors.CHAT_DATABASE_ERROR],
       },
       new ConduitRouteReturnDefinition('SentInvitationsResponse', {
         invitations: [InvitationToken.name],
@@ -128,6 +151,11 @@ export class InvitationRoutes {
           id: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
+        errors: [
+          errors.INVITATION_NOT_FOUND,
+          errors.INVITATION_CANCEL_NOT_ALLOWED,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('InvitationCancelResponse', 'String'),
       this.cancelInvitation.bind(this),
@@ -138,21 +166,14 @@ export class InvitationRoutes {
     const { id, answer } = call.request.params;
     const { user } = call.request.context;
 
-    try {
-      validateInvitationAnswer(answer);
-    } catch (err) {
-      if (err instanceof InvitationError) {
-        throw new GrpcError(err.code, err.message);
-      }
-      throw err;
-    }
+    validateInvitationAnswer(answer);
 
     const invitationTokenDoc: InvitationToken | null =
       await InvitationToken.getInstance().findOne({
         _id: id,
       });
     if (isNil(invitationTokenDoc)) {
-      throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
+      throw new ModuleError(errors.INVITATION_NOT_FOUND);
     }
 
     const receiver = invitationTokenDoc.receiver as string;
@@ -173,14 +194,7 @@ export class InvitationRoutes {
     const { user } = call.request.context;
     const config = ConfigController.getInstance().config;
 
-    try {
-      validateInvitationAnswer(answer);
-    } catch (err) {
-      if (err instanceof InvitationError) {
-        throw new GrpcError(err.code, err.message);
-      }
-      throw err;
-    }
+    validateInvitationAnswer(answer);
 
     if (isNil(user)) {
       return this.redirectUnauthenticatedUser(answer, invitationToken, config);
@@ -191,7 +205,7 @@ export class InvitationRoutes {
         token: invitationToken,
       });
     if (isNil(invitationTokenDoc)) {
-      throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
+      throw new ModuleError(errors.INVITATION_NOT_FOUND);
     }
 
     const receiver = invitationTokenDoc.receiver as string;
@@ -212,21 +226,14 @@ export class InvitationRoutes {
     const { invitationToken, answer } = call.request.params;
     const { user } = call.request.context;
 
-    try {
-      validateInvitationAnswer(answer);
-    } catch (err) {
-      if (err instanceof InvitationError) {
-        throw new GrpcError(err.code, err.message);
-      }
-      throw err;
-    }
+    validateInvitationAnswer(answer);
 
     const invitationTokenDoc: InvitationToken | null =
       await InvitationToken.getInstance().findOne({
         token: invitationToken,
       });
     if (isNil(invitationTokenDoc)) {
-      throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
+      throw new ModuleError(errors.INVITATION_NOT_FOUND);
     }
 
     const receiver = invitationTokenDoc.receiver as string;
@@ -248,9 +255,7 @@ export class InvitationRoutes {
     const roomId = invitationTokenDoc.room as string;
     const chatRoom = await ChatRoom.getInstance()
       .findOne({ _id: roomId })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
 
     const receiver = invitationTokenDoc.receiver as string;
     if (chatRoom?.deleted) {
@@ -301,27 +306,13 @@ export class InvitationRoutes {
   }
 
   private ensureInvitationReceiver(userId: unknown, receiver: unknown): void {
-    try {
-      assertInvitationReceiver(userId, receiver);
-    } catch (err) {
-      if (err instanceof InvitationError) {
-        throw new GrpcError(err.code, err.message);
-      }
-      throw err;
-    }
+    assertInvitationReceiver(userId, receiver);
   }
 
   private ensureRoomJoinable<T extends { deleted?: boolean }>(
     room: T | null,
   ): asserts room is T {
-    try {
-      assertRoomJoinable(room);
-    } catch (err) {
-      if (err instanceof InvitationError) {
-        throw new GrpcError(err.code, err.message);
-      }
-      throw err;
-    }
+    assertRoomJoinable(room);
   }
 
   private async resolveInvitationHookUrl(
@@ -346,20 +337,8 @@ export class InvitationRoutes {
       '',
     );
     const hookUrl = await this.resolveInvitationHookUrl(answer, invitationToken);
-    try {
-      const redirectUrl = buildLoginRedirectUrl(
-        loginUri,
-        answer,
-        invitationToken,
-        hookUrl,
-      );
-      return { redirect: redirectUrl };
-    } catch (err) {
-      if (err instanceof InvitationError) {
-        throw new GrpcError(err.code, err.message);
-      }
-      throw err;
-    }
+    const redirectUrl = buildLoginRedirectUrl(loginUri, answer, invitationToken, hookUrl);
+    return { redirect: redirectUrl };
   }
 
   private redirectAfterAnswer(
@@ -383,26 +362,19 @@ export class InvitationRoutes {
     const { id } = call.request.params;
     const invitation = await InvitationToken.getInstance()
       .findOne({ _id: id })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     if (isNil(invitation)) {
-      throw new GrpcError(status.NOT_FOUND, 'Room does not exist');
+      throw new ModuleError(errors.INVITATION_NOT_FOUND);
     }
     if (user._id === invitation.sender) {
       const deleted = await InvitationToken.getInstance()
         .deleteOne({ _id: id })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
       if (!deleted.deletedCount) {
-        throw new GrpcError(status.NOT_FOUND, `You don't own invitations`);
+        throw new ModuleError(errors.INVITATION_NOT_FOUND);
       }
     } else {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        `You can't cancel an invitation which is not sent by you`,
-      );
+      throw new ModuleError(errors.INVITATION_CANCEL_NOT_ALLOWED);
     }
     return 'Invitation canceled successfully';
   }
@@ -421,9 +393,7 @@ export class InvitationRoutes {
           populate: 'sender',
         },
       )
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
 
     const count = invitations.length;
     return { invitations, count };
@@ -443,9 +413,7 @@ export class InvitationRoutes {
           populate: 'receiver',
         },
       )
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     const count = invitations.length;
     return { invitations, count };
   }

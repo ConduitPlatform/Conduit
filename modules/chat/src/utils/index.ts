@@ -1,6 +1,6 @@
-import { isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
-import { ConduitGrpcSdk, GrpcError, UntypedArray } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, UntypedArray } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { ChatRoom, InvitationToken, User } from '../models/index.js';
 import { v4 as uuid } from 'uuid';
 import { buildInvitationHookUrl } from './invitationHelpers.js';
@@ -11,23 +11,14 @@ export { deleteChatMessage } from './deleteMessage.js';
 
 export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: UntypedArray) {
   const uniqueUsers = Array.from(new Set(users));
-  let errorMessage: string | null = null;
   const usersToBeAdded = (await User.getInstance()
     .findMany({ _id: { $in: uniqueUsers } })
-    .catch((e: Error) => {
-      errorMessage = e.message;
-    })) as UntypedArray;
-  if (!isNil(errorMessage)) {
-    return Promise.reject({ code: status.INTERNAL, message: errorMessage });
-  }
+    .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR))) as UntypedArray;
   if (usersToBeAdded.length != uniqueUsers.length) {
     const dbUserIds = usersToBeAdded.map((user: any) => user._id);
     const wrongIds = uniqueUsers.filter(id => !dbUserIds.includes(id));
     if (wrongIds.length != 0) {
-      return Promise.reject({
-        code: status.INVALID_ARGUMENT,
-        message: `users [${wrongIds}] do not exist`,
-      });
+      throw new ModuleError(errors.USERS_NOT_FOUND, `users [${wrongIds}] do not exist`);
     }
   }
   return usersToBeAdded;
@@ -51,10 +42,7 @@ export async function sendInvitations(
       sender: sender._id,
     });
     if (invitationsCount > 0) {
-      throw new GrpcError(
-        status.ALREADY_EXISTS,
-        `users array contains invited member ids`,
-      );
+      throw new ModuleError(errors.USERS_ALREADY_INVITED);
     }
     const invitationToken: InvitationToken = await InvitationToken.getInstance().create({
       receiver: invitedUser._id,
@@ -91,18 +79,14 @@ export async function sendInvitations(
             user: safeUser,
           },
         })
-        .catch((e: Error) => {
-          throw new Error(e.message);
-        });
+        .catch(ModuleError.rethrow(errors.INVITATION_DELIVERY_FAILED));
     }
     if (sendNotification) {
       const body = `User ${sender._id} has invited you to join in room ${room.name}`;
       const title = 'You have an invitation request!';
       await grpcSdk
         .pushNotifications!.sendNotification(invitedUser._id, title, body)
-        .catch((e: Error) => {
-          throw new Error(e.message);
-        });
+        .catch(ModuleError.rethrow(errors.INVITATION_DELIVERY_FAILED));
     }
   }
   return 'Invitations sent';

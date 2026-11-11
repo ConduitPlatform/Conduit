@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   DatabaseProvider,
   GrpcCallback,
-  GrpcError,
   GrpcRequest,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
@@ -15,7 +14,7 @@ import { deleteChatMessage, editChatMessage, validateUsersInput } from './utils/
 import { MessageType } from './enums/messageType.enum.js';
 import path from 'path';
 import { isArray, isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
+import { errors } from './errors.js';
 import { runMigrations } from './migrations/index.js';
 import {
   CreateRoomRequest,
@@ -29,6 +28,7 @@ import metricsSchema from './metrics/index.js';
 import {
   ConduitActiveSchema,
   ConfigController,
+  grpcCallbackError,
   ManagedModule,
 } from '@conduitplatform/module-tools';
 import { fileURLToPath } from 'node:url';
@@ -168,25 +168,23 @@ export default class Chat extends ManagedModule<Config> {
     const { name, participants } = call.request;
 
     if (isNil(participants) || !isArray(participants) || participants.length === 0) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'participants array is required and cannot be empty',
-      });
+      return callback(grpcCallbackError(errors.USERS_REQUIRED));
     }
 
     try {
       await validateUsersInput(this.grpcSdk, participants);
     } catch (e) {
-      return callback({ code: (e as GrpcError).code, message: (e as GrpcError).message });
+      return callback(grpcCallbackError(e, errors.CHAT_DATABASE_ERROR));
     }
 
-    const errorMessage: string | null = null;
-    const room: models.ChatRoom = await models.ChatRoom.getInstance().create({
-      name: name,
-      participants: participants,
-    });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    let room: models.ChatRoom;
+    try {
+      room = await models.ChatRoom.getInstance().create({
+        name: name,
+        participants: participants,
+      });
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.CHAT_DATABASE_ERROR));
     }
     this.grpcSdk.router?.socketPush({
       event: 'join-room',
@@ -221,18 +219,19 @@ export default class Chat extends ManagedModule<Config> {
     const { roomId, message, messageType, persist, files } = call.request;
     const requestFiles = files ?? [];
 
-    let errorMessage: string | null = null;
-    const room = await models.ChatRoom.getInstance()
-      .findOne({ _id: roomId, deleted: false, participants: userId })
-      .catch((e: Error) => {
-        errorMessage = e.message;
+    let room;
+    try {
+      room = await models.ChatRoom.getInstance().findOne({
+        _id: roomId,
+        deleted: false,
+        participants: userId,
       });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.CHAT_DATABASE_ERROR));
     }
 
     if (isNil(room)) {
-      return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
+      return callback(grpcCallbackError(errors.ROOM_NOT_FOUND_OR_NO_ACCESS));
     }
 
     const resolvedType = (messageType || MessageType.Text) as MessageType;
@@ -241,25 +240,15 @@ export default class Chat extends ManagedModule<Config> {
     );
 
     if (!['text', 'file', 'typing', 'multimedia', 'system'].includes(resolvedType)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message:
-          'Invalid contentType, must be one of: text, file, typing, multimedia, system',
-      });
+      return callback(grpcCallbackError(errors.INVALID_MESSAGE_TYPE));
     }
 
     if (isFileMessage && requestFiles.length === 0) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: `Files are required for ${resolvedType} messages`,
-      });
+      return callback(grpcCallbackError(errors.MESSAGE_FILES_REQUIRED));
     }
 
     if (isFileMessage && !Array.isArray(requestFiles)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: `Files must be an array for ${resolvedType} messages`,
-      });
+      return callback(grpcCallbackError(errors.MESSAGE_FILES_INVALID));
     }
 
     if (
@@ -268,10 +257,7 @@ export default class Chat extends ManagedModule<Config> {
       ) &&
       !message
     ) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: `${resolvedType} messages need to have content`,
-      });
+      return callback(grpcCallbackError(errors.MESSAGE_CONTENT_REQUIRED));
     }
 
     const shouldPersist = persist !== false;
@@ -302,7 +288,8 @@ export default class Chat extends ManagedModule<Config> {
               data: JSON.stringify({
                 _id: messageId,
                 room: roomId,
-                error: 'Message could not be saved',
+                error: errors.MESSAGE_NOT_SAVED.message,
+                conduitCode: 'MESSAGE_NOT_SAVED',
               }),
             });
           });
@@ -326,10 +313,7 @@ export default class Chat extends ManagedModule<Config> {
 
       callback(null, {});
     } catch (e: unknown) {
-      callback({
-        code: status.INTERNAL,
-        message: (e as Error).message,
-      });
+      callback(grpcCallbackError(e, errors.CHAT_OPERATION_FAILED));
     }
   }
 
@@ -342,10 +326,7 @@ export default class Chat extends ManagedModule<Config> {
       await editChatMessage(this.grpcSdk, { messageId, userId, newMessage });
       callback(null, {});
     } catch (e) {
-      return callback({
-        code: (e as GrpcError).code ?? status.INTERNAL,
-        message: (e as GrpcError).message,
-      });
+      return callback(grpcCallbackError(e, errors.CHAT_DATABASE_ERROR));
     }
   }
 
@@ -358,37 +339,26 @@ export default class Chat extends ManagedModule<Config> {
       await deleteChatMessage(this.grpcSdk, { messageId, userId });
       callback(null, {});
     } catch (e) {
-      return callback({
-        code: (e as GrpcError).code ?? status.INTERNAL,
-        message: (e as GrpcError).message,
-      });
+      return callback(grpcCallbackError(e, errors.CHAT_DATABASE_ERROR));
     }
   }
 
   async deleteRoom(call: GrpcRequest<DeleteRoomRequest>, callback: GrpcCallback<Room>) {
     const { _id } = call.request;
-    let errorMessage: string | null = null;
-
-    const room = await models.ChatRoom.getInstance()
-      .findOne({ _id })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-        return null;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    let room;
+    try {
+      room = await models.ChatRoom.getInstance().findOne({ _id });
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.CHAT_DATABASE_ERROR));
     }
     if (isNil(room)) {
-      return callback({ code: status.NOT_FOUND, message: 'Room not found' });
+      return callback(grpcCallbackError(errors.ROOM_NOT_FOUND));
     }
 
-    await models.ChatRoom.getInstance()
-      .deleteOne({ _id })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    try {
+      await models.ChatRoom.getInstance().deleteOne({ _id });
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.CHAT_DATABASE_ERROR));
     }
 
     models.ChatMessage.getInstance()
@@ -396,11 +366,10 @@ export default class Chat extends ManagedModule<Config> {
         room: _id,
       })
       .catch((e: Error) => {
-        errorMessage = e.message;
+        ConduitGrpcSdk.Logger.error(
+          `Failed to delete messages of room ${_id}: ${e.message}`,
+        );
       });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
     this.grpcSdk.router
       ?.socketPush({
         event: 'room-deleted',
