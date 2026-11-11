@@ -111,6 +111,19 @@ describe('route wrapper error conversion', () => {
     });
   });
 
+  it('appends the cause of a typed error on admin routes only', async () => {
+    const failure = () =>
+      new ModuleError(errors.STORAGE_OPERATION_FAILED, 'AccessDenied: bucket policy');
+    const admin = await failWith(failure(), true);
+    assert.equal(admin.code, status.INTERNAL);
+    assert.deepEqual(JSON.parse(admin.message), {
+      message: 'Storage operation failed: AccessDenied: bucket policy',
+      conduitCode: 'STORAGE_OPERATION_FAILED',
+    });
+    const client = await failWith(failure());
+    assert.equal(JSON.parse(client.message).message, 'Storage operation failed');
+  });
+
   it('keeps the cause of unexpected failures on admin routes', async () => {
     const err = await failWith(new Error('E11000 duplicate key'), true);
     assert.deepEqual(err, { code: status.INTERNAL, message: 'E11000 duplicate key' });

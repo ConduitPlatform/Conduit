@@ -139,7 +139,7 @@ export abstract class ConduitRouter {
           new ConduitError(
             'INTERNAL_SERVER_ERROR',
             500,
-            `Middleware "${middleware}" does not exist`,
+            'Middleware does not exist',
             HermesErrorCodes.INTERNAL_ERROR,
           ),
         );
@@ -187,8 +187,8 @@ export abstract class ConduitRouter {
         ),
       );
       throw new ConduitError(
-        'SERVICE_UNAVAILABLE',
-        503,
+        'RATE_LIMIT',
+        429,
         'Rate limit check unavailable',
         HermesErrorCodes.RATE_LIMIT_UNAVAILABLE,
       );

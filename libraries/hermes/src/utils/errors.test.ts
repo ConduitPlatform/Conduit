@@ -68,6 +68,14 @@ describe('toErrorResponse', () => {
       toErrorResponse(Object.assign(new Error('x'), { code: 'ECONNREFUSED' })),
       expected,
     );
+    assert.deepEqual(
+      toErrorResponse(Object.assign(new Error('E11000 dup key'), { code: 11000 })),
+      expected,
+    );
+    assert.deepEqual(
+      toErrorResponse(Object.assign(new Error('mongo Unauthorized'), { code: 13 })),
+      expected,
+    );
     assert.deepEqual(toErrorResponse('Middleware does not exist'), expected);
     assert.deepEqual(toErrorResponse(undefined), expected);
   });

@@ -175,9 +175,10 @@ export function wrapRouterGrpcFunction(
   hydration?: { options: Indexable; hydrator: UserHydrator },
   declaredErrors?: ReadonlySet<string>,
 ): (call: Indexable, callback: any) => void {
-  // Admin routes are operator-facing and keep the cause of unexpected failures; client
-  // routes never expose it.
+  // Admin routes are operator-facing and keep the cause of failures (of unexpected ones,
+  // and the debug text of typed ones); client routes never expose it.
   const maskUnknown = routerType !== 'admin';
+  const exposeDebug = routerType === 'admin';
   const reportedUndeclared = new Set<string>();
   return (call: any, callback: any) => {
     const requestReceive = Date.now();
@@ -250,7 +251,10 @@ export function wrapRouterGrpcFunction(
       )
       .catch(error => {
         ConduitGrpcSdk.Metrics?.increment(`${routerType}_grpc_errors_total`);
-        const { code, message, conduitCode, log } = toGrpcStatus(error, { maskUnknown });
+        const { code, message, conduitCode, log } = toGrpcStatus(error, {
+          maskUnknown,
+          exposeDebug,
+        });
         generateLog(routerType, routerRequest, requestReceive, call, code);
         ConduitGrpcSdk.Logger.error(log);
         if (

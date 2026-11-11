@@ -29,22 +29,32 @@ export interface GrpcStatusPayload {
  *   becoming INTERNAL.
  * - Anything else is an unexpected failure: INTERNAL. With `maskUnknown` the client
  *   receives a static message and the INTERNAL_ERROR code, the cause only goes to the log.
+ * - With `exposeDebug` the `debugLogInfo` of a typed error is appended to its message.
  */
 export function toGrpcStatus(
   error: unknown,
-  options: { maskUnknown?: boolean } = {},
+  options: { maskUnknown?: boolean; exposeDebug?: boolean } = {},
 ): GrpcStatusPayload {
   if (isGrpcStatusError(error)) {
     const payload = parseErrorPayload(error);
     const debug = (error as { debugLogInfo?: unknown }).debugLogInfo;
+    const hasDebug = typeof debug === 'string' && debug !== '';
     const label = payload.conduitCode
       ? `[${payload.conduitCode}] ${payload.message}`
       : payload.message;
     return {
       code: error.code,
-      message: error.details ?? error.message ?? 'Something went wrong',
+      // Operators (admin routes) get the cause appended; it is the only way they can
+      // see why e.g. a provider or the database refused an operation.
+      message:
+        options.exposeDebug && hasDebug && payload.conduitCode
+          ? JSON.stringify({
+              message: `${payload.message}: ${debug}`,
+              conduitCode: payload.conduitCode,
+            })
+          : error.details || error.message || 'Something went wrong',
       conduitCode: payload.conduitCode,
-      log: typeof debug === 'string' && debug !== '' ? `${label}: ${debug}` : label,
+      log: hasDebug ? `${label}: ${debug}` : label,
     };
   }
   const candidate = (error ?? {}) as {
@@ -116,8 +126,16 @@ export function grpcCallbackError(
     );
     return grpcCallbackError(fallback);
   }
-  const { code, message } = toGrpcStatus(error);
+  const { code, message, log } = toGrpcStatus(error);
+  // The cause of a typed error never leaves the module, so it has to reach the log here.
+  if (hasDebugInfo(error)) ConduitGrpcSdk.Logger.error(log);
   return { code, message };
+}
+
+/** Whether an error carries a cause (`debugLogInfo`) that is only meant for the log. */
+export function hasDebugInfo(error: unknown): boolean {
+  const debug = (error as { debugLogInfo?: unknown } | null)?.debugLogInfo;
+  return typeof debug === 'string' && debug !== '';
 }
 
 function isDefinition(value: unknown): value is ModuleErrorDefinition {

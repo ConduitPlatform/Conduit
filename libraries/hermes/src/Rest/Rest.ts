@@ -271,12 +271,16 @@ export class RestController extends ConduitRouter {
   handleError(res: Response): (err: Error | ConduitError) => void {
     return (err: Error | ConduitError | any) => {
       const response = toErrorResponse(err);
-      // Typed module errors are already logged, with their cause, by the module.
-      ConduitGrpcSdk.Logger.error(
-        response.conduitCode && response.status < 500
-          ? `[${response.conduitCode}] ${response.message}`
-          : err,
-      );
+      // Typed errors of a module are already logged there, with their cause. Those
+      // raised in-process (core and router routes) only reach the log here.
+      const debug = (err as { debugLogInfo?: unknown } | null)?.debugLogInfo;
+      if (response.conduitCode && (response.status < 500 || debug)) {
+        ConduitGrpcSdk.Logger.error(
+          `[${response.conduitCode}] ${response.message}${debug ? `: ${debug}` : ''}`,
+        );
+      } else {
+        ConduitGrpcSdk.Logger.error(err);
+      }
       res.status(response.status).json(response);
     };
   }

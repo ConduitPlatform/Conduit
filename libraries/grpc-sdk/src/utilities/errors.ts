@@ -73,7 +73,7 @@ export function isGrpcStatusError(
   if (
     typeof candidate.code !== 'number' ||
     !Number.isInteger(candidate.code) ||
-    candidate.code < 0 ||
+    candidate.code < 1 ||
     candidate.code > 16
   ) {
     return false;
@@ -94,7 +94,11 @@ export function parseErrorPayload(err: unknown): {
   if (!err || typeof err !== 'object') return { message: '' };
   const { details, message } = err as { details?: unknown; message?: unknown };
   const raw =
-    typeof details === 'string' ? details : typeof message === 'string' ? message : '';
+    typeof details === 'string' && details !== ''
+      ? details
+      : typeof message === 'string'
+        ? message
+        : '';
   if (raw.startsWith('{')) {
     try {
       const parsed = JSON.parse(raw) as { message?: unknown; conduitCode?: unknown };

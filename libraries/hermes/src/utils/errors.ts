@@ -1,6 +1,7 @@
 import {
   grpcStatusToHttp,
   INTERNAL_ERROR_CODE,
+  isGrpcStatusError,
   parseErrorPayload,
 } from '@conduitplatform/grpc-sdk';
 
@@ -59,8 +60,10 @@ export function toErrorResponse(err: unknown): ConduitErrorResponse {
           : {}),
       };
     }
-    if (typeof candidate.code === 'number') {
-      const { name, status } = grpcStatusToHttp(candidate.code);
+    // Only real gRPC errors: a driver error with a numeric code (MongoDB's 11000) raised
+    // by an in-process route must not have its text sent to the client.
+    if (isGrpcStatusError(err)) {
+      const { name, status } = grpcStatusToHttp(err.code);
       const { message, conduitCode } = parseErrorPayload(err);
       return { name, status, message, ...(conduitCode ? { conduitCode } : {}) };
     }
