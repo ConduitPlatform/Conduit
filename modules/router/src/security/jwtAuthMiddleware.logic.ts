@@ -1,5 +1,5 @@
-import { AccessTokenClaims, GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { AccessTokenClaims, Indexable } from '@conduitplatform/grpc-sdk';
+import { authErrors, ModuleError } from '@conduitplatform/module-tools';
 import type { LocalMiddlewareHandler } from '@conduitplatform/hermes';
 
 export interface JwtVerifierLike {
@@ -59,20 +59,20 @@ export function extractAccessToken(headers: Indexable = {}, cookies: Indexable =
     string | null | undefined;
   const tokenCookie = cookies['accessToken'] as string | null | undefined;
   if (tokenHeader == null && tokenCookie == null) {
-    throw new GrpcError(
-      status.UNAUTHENTICATED,
-      "No 'Authorization' header or 'accessToken' cookie present",
-    );
+    throw new ModuleError(authErrors.AUTH_TOKEN_MISSING);
   }
   let headerArgs: string[] = [];
   if (tokenHeader) {
     headerArgs = tokenHeader.split(' ');
     if (headerArgs.length !== 2) {
-      throw new GrpcError(status.UNAUTHENTICATED, "'Authorization' header malformed");
+      throw new ModuleError(
+        authErrors.AUTH_HEADER_MALFORMED,
+        'Authorization header must have exactly two parts',
+      );
     }
     if (headerArgs[0] !== 'Bearer') {
-      throw new GrpcError(
-        status.UNAUTHENTICATED,
+      throw new ModuleError(
+        authErrors.AUTH_HEADER_MALFORMED,
         "The 'Authorization' header must be prefixed by 'Bearer '",
       );
     }
@@ -100,22 +100,23 @@ export async function jwtAuthenticate(
   const token = extractAccessToken(request.headers, request.cookies);
   const clientId = request.context?.clientId;
   if (typeof clientId !== 'string' || !clientId) {
-    throw new GrpcError(status.UNAUTHENTICATED, 'Client id missing');
+    throw new ModuleError(authErrors.CLIENT_ID_MISSING);
   }
   const claims = verifier.verify(token, { clientId });
   if (!claims.authorized && !TWO_FA_PATHS.includes(request.path as string)) {
-    throw new GrpcError(status.UNAUTHENTICATED, '2FA is required');
+    throw new ModuleError(authErrors.TWO_FA_REQUIRED);
   }
   if (verifier.strictRevocation) {
     let exists: boolean;
     try {
       exists = await registry.exists(claims.sid);
     } catch (e) {
-      logger?.warn(`Session registry check failed: ${(e as Error)?.message ?? e}`);
-      throw new GrpcError(status.UNAVAILABLE, 'Session registry unavailable');
+      const cause = (e as Error)?.message ?? String(e);
+      logger?.warn(`Session registry check failed: ${cause}`);
+      throw new ModuleError(authErrors.SESSION_REGISTRY_UNAVAILABLE, cause);
     }
     if (!exists) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Session revoked');
+      throw new ModuleError(authErrors.SESSION_REVOKED);
     }
   }
   return {

@@ -12,6 +12,7 @@ import {
 import { parseDotPath } from './path.js';
 import { assertTemplateSize } from './template.js';
 import { EventRelayValidationError } from './validationError.js';
+import { errors } from '../errors.js';
 
 export type EventRelayInput = {
   name: string;
@@ -57,7 +58,10 @@ export function validateEventRelayInput(input: EventRelayInput): EventRelayInput
 
 export function validateResourceId(resourceId: unknown): string {
   if (typeof resourceId !== 'string' && typeof resourceId !== 'number') {
-    throw new EventRelayValidationError('Resource ID must be a string');
+    throw new EventRelayValidationError(
+      errors.RESOURCE_ID_INVALID,
+      'Resource ID must be a string',
+    );
   }
   const value = String(resourceId).trim();
   if (
@@ -65,14 +69,17 @@ export function validateResourceId(resourceId: unknown): string {
     value.length > MAX_RESOURCE_ID_LENGTH ||
     !RESOURCE_ID_PATTERN.test(value)
   ) {
-    throw new EventRelayValidationError('Resource ID is invalid');
+    throw new EventRelayValidationError(errors.RESOURCE_ID_INVALID);
   }
   return value;
 }
 
 function requireTrimmed(value: unknown, label: string): string {
   if (typeof value !== 'string' || value.trim() === '') {
-    throw new EventRelayValidationError(`${label} is required`);
+    throw new EventRelayValidationError(
+      errors.EVENT_RELAY_FIELD_REQUIRED,
+      `${label} is required`,
+    );
   }
   return value.trim();
 }
@@ -80,9 +87,7 @@ function requireTrimmed(value: unknown, label: string): string {
 function parseName(raw: unknown): string {
   const name = requireTrimmed(raw, 'Name');
   if (name.length > MAX_NAME_LENGTH || !NAME_PATTERN.test(name)) {
-    throw new EventRelayValidationError(
-      'Name must be 1-64 characters and start with a letter or number',
-    );
+    throw new EventRelayValidationError(errors.EVENT_RELAY_NAME_INVALID);
   }
   return name;
 }
@@ -94,6 +99,7 @@ function parseNotes(raw: unknown): string | undefined {
   const notes = requireTrimmed(raw, 'Notes');
   if (notes.length > MAX_DESCRIPTION_LENGTH) {
     throw new EventRelayValidationError(
+      errors.EVENT_RELAY_NOTES_INVALID,
       `Notes must be at most ${MAX_DESCRIPTION_LENGTH} characters`,
     );
   }
@@ -107,9 +113,7 @@ function parseBusEvent(raw: unknown): string {
     busEvent.includes('*') ||
     !BUS_EVENT_PATTERN.test(busEvent)
   ) {
-    throw new EventRelayValidationError(
-      'Bus event must be an exact channel name with no wildcards',
-    );
+    throw new EventRelayValidationError(errors.EVENT_RELAY_BUS_EVENT_INVALID);
   }
   return busEvent;
 }
@@ -121,7 +125,7 @@ function parseSocketEvent(raw: unknown): string {
     !SOCKET_EVENT_PATTERN.test(socketEvent) ||
     RESERVED_SOCKET_EVENTS.has(socketEvent)
   ) {
-    throw new EventRelayValidationError('Socket event must be a non-reserved event name');
+    throw new EventRelayValidationError(errors.EVENT_RELAY_SOCKET_EVENT_INVALID);
   }
   return socketEvent;
 }
@@ -132,7 +136,7 @@ function parseResourceType(raw: unknown): string {
     resourceType.length > MAX_RESOURCE_TYPE_LENGTH ||
     !RESOURCE_TYPE_PATTERN.test(resourceType)
   ) {
-    throw new EventRelayValidationError('Resource type is invalid');
+    throw new EventRelayValidationError(errors.EVENT_RELAY_RESOURCE_TYPE_INVALID);
   }
   return resourceType;
 }
@@ -140,7 +144,10 @@ function parseResourceType(raw: unknown): string {
 function parseResourceIdPath(raw: unknown): string {
   const resourceIdPath = requireTrimmed(raw, 'Resource ID path');
   if (resourceIdPath.length > MAX_RESOURCE_ID_PATH_LENGTH) {
-    throw new EventRelayValidationError('Resource ID path is too long');
+    throw new EventRelayValidationError(
+      errors.EVENT_RELAY_PATH_INVALID,
+      'Resource ID path is too long',
+    );
   }
   parseDotPath(resourceIdPath, 'Resource ID path');
   return resourceIdPath;
@@ -149,14 +156,17 @@ function parseResourceIdPath(raw: unknown): string {
 function parsePermission(raw: unknown): string {
   const permission = requireTrimmed(raw, 'Permission');
   if (permission.length > MAX_PERMISSION_LENGTH || !PERMISSION_PATTERN.test(permission)) {
-    throw new EventRelayValidationError('Permission is invalid');
+    throw new EventRelayValidationError(errors.EVENT_RELAY_PERMISSION_INVALID);
   }
   return permission;
 }
 
 function parseMessageTemplate(raw: unknown): unknown {
   if (raw === undefined) {
-    throw new EventRelayValidationError('Message template is required');
+    throw new EventRelayValidationError(
+      errors.EVENT_RELAY_TEMPLATE_INVALID,
+      'Message template is required',
+    );
   }
   assertTemplateSize(raw);
   return raw;

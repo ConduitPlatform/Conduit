@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { status } from '@grpc/grpc-js';
 import { authorizeRelaySubscription, RelaySubscriptionError } from './authorize.js';
+import { errors } from '../errors.js';
 import { eventRelayRoom } from './rooms.js';
 import type { RelayLookup } from './authorize.js';
 
@@ -61,7 +62,9 @@ describe('authorizeRelaySubscription', () => {
           'order-1',
         ),
       (err: unknown) =>
-        err instanceof RelaySubscriptionError && err.code === status.PERMISSION_DENIED,
+        err instanceof RelaySubscriptionError &&
+        err.code === status.PERMISSION_DENIED &&
+        err.conduitCode === errors.EVENT_RELAY_PERMISSION_DENIED.conduitCode,
     );
   });
 
@@ -76,7 +79,9 @@ describe('authorizeRelaySubscription', () => {
           'order-1',
         ),
       (err: unknown) =>
-        err instanceof RelaySubscriptionError && err.code === status.UNAVAILABLE,
+        err instanceof RelaySubscriptionError &&
+        err.code === status.UNAVAILABLE &&
+        err.conduitCode === errors.EVENT_RELAY_AUTHORIZATION_UNAVAILABLE.conduitCode,
     );
   });
 });

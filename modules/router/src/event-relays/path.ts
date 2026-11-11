@@ -1,20 +1,30 @@
 import { FORBIDDEN_PATH_SEGMENTS, MAX_PATH_SEGMENTS } from './constants.js';
 import { EventRelayValidationError } from './validationError.js';
+import { errors } from '../errors.js';
 
 const PATH_SEGMENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 export function parseDotPath(path: string, label: string): string[] {
   const trimmed = path.trim();
   if (!trimmed) {
-    throw new EventRelayValidationError(`${label} is required`);
+    throw new EventRelayValidationError(
+      errors.EVENT_RELAY_PATH_INVALID,
+      `${label} is required`,
+    );
   }
   const segments = trimmed.split('.');
   if (segments.length > MAX_PATH_SEGMENTS) {
-    throw new EventRelayValidationError(`${label} exceeds ${MAX_PATH_SEGMENTS} segments`);
+    throw new EventRelayValidationError(
+      errors.EVENT_RELAY_PATH_INVALID,
+      `${label} exceeds ${MAX_PATH_SEGMENTS} segments`,
+    );
   }
   for (const segment of segments) {
     if (FORBIDDEN_PATH_SEGMENTS.has(segment) || !PATH_SEGMENT.test(segment)) {
-      throw new EventRelayValidationError(`${label} contains an invalid path segment`);
+      throw new EventRelayValidationError(
+        errors.EVENT_RELAY_PATH_INVALID,
+        `${label} contains an invalid path segment`,
+      );
     }
   }
   return segments;
@@ -42,6 +52,7 @@ export function requireOwnPath(source: unknown, path: string, label: string): un
   const value = lookupOwnPath(source, path);
   if (value === undefined) {
     throw new EventRelayValidationError(
+      errors.EVENT_RELAY_PAYLOAD_PATH_NOT_FOUND,
       `${label} '${path}' was not found on the payload`,
     );
   }

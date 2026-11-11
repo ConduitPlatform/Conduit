@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateEventRelayInput, validateResourceId } from './validation.js';
+import { errors } from '../errors.js';
 
 const validInput = {
   name: 'Order paid',
@@ -65,5 +66,18 @@ describe('validateResourceId', () => {
     assert.throws(() => validateResourceId('Team:123'), {
       name: 'EventRelayValidationError',
     });
+  });
+});
+
+describe('validation error codes', () => {
+  it('tags validator failures with their conduitCode', () => {
+    assert.throws(
+      () => validateEventRelayInput({ ...validInput, name: '' }),
+      (e: any) => e.conduitCode === errors.EVENT_RELAY_FIELD_REQUIRED.conduitCode,
+    );
+    assert.throws(
+      () => validateResourceId(''),
+      (e: any) => e.conduitCode === errors.RESOURCE_ID_INVALID.conduitCode,
+    );
   });
 });

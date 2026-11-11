@@ -1,6 +1,6 @@
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import {
-  GrpcError,
   ParsedRouterRequest,
   Query,
   UnparsedRouterResponse,
@@ -38,7 +38,7 @@ export class EventRelayAdmin {
       _id: call.request.params.id,
     });
     if (isNil(relay)) {
-      throw new GrpcError(status.NOT_FOUND, 'Event relay not found');
+      throw new ModuleError(errors.EVENT_RELAY_NOT_FOUND);
     }
     return relay;
   }
@@ -65,7 +65,7 @@ export class EventRelayAdmin {
       return { rendered };
     } catch (err) {
       if (err instanceof EventRelayValidationError) {
-        throw new GrpcError(status.INVALID_ARGUMENT, err.message);
+        throw new ModuleError(err.toDefinition());
       }
       throw err;
     }
@@ -76,7 +76,7 @@ export class EventRelayAdmin {
       _id: call.request.params.id,
     });
     if (isNil(existing)) {
-      throw new GrpcError(status.NOT_FOUND, 'Event relay not found');
+      throw new ModuleError(errors.EVENT_RELAY_NOT_FOUND);
     }
 
     const merged: EventRelayInput = {
@@ -128,7 +128,7 @@ export class EventRelayAdmin {
       _id: call.request.params.id,
     });
     if (isNil(existing)) {
-      throw new GrpcError(status.NOT_FOUND, 'Event relay not found');
+      throw new ModuleError(errors.EVENT_RELAY_NOT_FOUND);
     }
     await EventRelay.getInstance().deleteOne({ _id: existing._id });
     await this.manager.notifyChanged({ evictRelayIds: [existing._id] });
@@ -141,7 +141,7 @@ function parseInput(params: EventRelayInput): EventRelayInput {
     return validateEventRelayInput(params);
   } catch (err) {
     if (err instanceof EventRelayValidationError) {
-      throw new GrpcError(status.INVALID_ARGUMENT, err.message);
+      throw new ModuleError(err.toDefinition());
     }
     throw err;
   }
@@ -150,9 +150,6 @@ function parseInput(params: EventRelayInput): EventRelayInput {
 async function assertUniqueName(name: string, excludeId?: string): Promise<void> {
   const existing = await EventRelay.getInstance().findOne({ name });
   if (existing && existing._id !== excludeId) {
-    throw new GrpcError(
-      status.ALREADY_EXISTS,
-      `An event relay named '${name}' already exists`,
-    );
+    throw new ModuleError(errors.EVENT_RELAY_NAME_TAKEN, `name '${name}'`);
   }
 }

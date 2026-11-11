@@ -1,15 +1,26 @@
-import { status } from '@grpc/grpc-js';
+import type { ModuleErrorDefinition } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
 import { eventRelayRoom } from './rooms.js';
 import { validateResourceId } from './validation.js';
 import { EventRelayValidationError } from './validationError.js';
+import { errors } from '../errors.js';
 
 export class RelaySubscriptionError extends Error {
-  constructor(
-    readonly code: number,
-    message: string,
-  ) {
-    super(message);
+  /** gRPC status of the definition; `recovery.ts` branches on it. */
+  readonly code: number;
+
+  constructor(readonly definition: ModuleErrorDefinition) {
+    super(definition.message);
     this.name = 'RelaySubscriptionError';
+    this.code = definition.grpcCode;
+  }
+
+  get conduitCode(): string {
+    return this.definition.conduitCode;
+  }
+
+  toModuleError(): ModuleError {
+    return new ModuleError(this.definition);
   }
 }
 
@@ -43,10 +54,10 @@ export async function authorizeRelaySubscription(
   onDenied?: () => void,
 ): Promise<string> {
   if (!userId) {
-    throw new RelaySubscriptionError(status.UNAUTHENTICATED, 'Authentication required');
+    throw new RelaySubscriptionError(errors.EVENT_RELAY_AUTH_REQUIRED);
   }
   if (typeof relayId !== 'string' || relayId.trim() === '') {
-    throw new RelaySubscriptionError(status.INVALID_ARGUMENT, 'Relay ID is required');
+    throw new RelaySubscriptionError(errors.RELAY_ID_REQUIRED);
   }
 
   let validatedResourceId: string;
@@ -58,11 +69,11 @@ export async function authorizeRelaySubscription(
 
   const relay = manager.getActiveRelay(relayId);
   if (!relay) {
-    throw new RelaySubscriptionError(status.NOT_FOUND, 'Event relay not found');
+    throw new RelaySubscriptionError(errors.EVENT_RELAY_NOT_FOUND);
   }
 
   if (!grpcSdk.authorization || !grpcSdk.isAvailable('authorization')) {
-    throw new RelaySubscriptionError(status.UNAVAILABLE, 'Authorization is unavailable');
+    throw new RelaySubscriptionError(errors.EVENT_RELAY_AUTHORIZATION_UNAVAILABLE);
   }
 
   let allowed = false;
@@ -74,12 +85,12 @@ export async function authorizeRelaySubscription(
     });
     allowed = decision.allow;
   } catch {
-    throw new RelaySubscriptionError(status.UNAVAILABLE, 'Authorization check failed');
+    throw new RelaySubscriptionError(errors.EVENT_RELAY_AUTHORIZATION_UNAVAILABLE);
   }
 
   if (!allowed) {
     onDenied?.();
-    throw new RelaySubscriptionError(status.PERMISSION_DENIED, 'Permission denied');
+    throw new RelaySubscriptionError(errors.EVENT_RELAY_PERMISSION_DENIED);
   }
 
   return eventRelayRoom(relay._id, validatedResourceId);
@@ -87,13 +98,13 @@ export async function authorizeRelaySubscription(
 
 export function toSubscriptionError(err: unknown): RelaySubscriptionError {
   if (err instanceof EventRelayValidationError) {
-    return new RelaySubscriptionError(status.INVALID_ARGUMENT, err.message);
+    return new RelaySubscriptionError(err.toDefinition());
   }
   if (err instanceof RelaySubscriptionError) {
     return err;
   }
-  return new RelaySubscriptionError(
-    status.INTERNAL,
-    err instanceof Error ? err.message : 'Unexpected error',
-  );
+  if (err instanceof ModuleError) {
+    return new RelaySubscriptionError(err.definition);
+  }
+  return new RelaySubscriptionError(errors.EVENT_RELAY_SUBSCRIPTION_FAILED);
 }

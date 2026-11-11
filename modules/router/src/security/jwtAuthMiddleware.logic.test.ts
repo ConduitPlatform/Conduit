@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { status } from '@grpc/grpc-js';
+import { getConduitCode } from '@conduitplatform/grpc-sdk';
+import { authErrors } from '@conduitplatform/module-tools';
 import {
   createAuthModeToggle,
   createSocketRecoveryCheck,
@@ -79,16 +81,18 @@ describe('jwtAuthenticate', () => {
     const { deps } = setup();
     await assert.rejects(jwtAuthenticate(deps, req({ headers: {} })), (e: any) => {
       assert.equal(e.code, status.UNAUTHENTICATED);
-      assert.match(e.message, /No 'Authorization' header or 'accessToken' cookie/);
+      assert.equal(getConduitCode(e), authErrors.AUTH_TOKEN_MISSING.conduitCode);
       return true;
     });
     await assert.rejects(
       jwtAuthenticate(deps, req({ headers: { Authorization: 'tok' } })),
-      /malformed/,
+      (e: any) => getConduitCode(e) === authErrors.AUTH_HEADER_MALFORMED.conduitCode,
     );
     await assert.rejects(
       jwtAuthenticate(deps, req({ headers: { Authorization: 'Basic tok' } })),
-      /Bearer/,
+      (e: any) =>
+        e.code === status.UNAUTHENTICATED &&
+        getConduitCode(e) === authErrors.AUTH_HEADER_MALFORMED.conduitCode,
     );
   });
 
@@ -102,7 +106,7 @@ describe('jwtAuthenticate', () => {
     const { deps } = setup({ claims: claims({ authorized: false }) });
     await assert.rejects(jwtAuthenticate(deps, req()), (e: any) => {
       assert.equal(e.code, status.UNAUTHENTICATED);
-      assert.equal(e.message, '2FA is required');
+      assert.equal(getConduitCode(e), authErrors.TWO_FA_REQUIRED.conduitCode);
       return true;
     });
     for (const p of ['verify', 'authorize', 'recover']) {
@@ -117,7 +121,7 @@ describe('jwtAuthenticate', () => {
     const on = setup({ strict: true, exists: false });
     await assert.rejects(jwtAuthenticate(on.deps, req()), (e: any) => {
       assert.equal(e.code, status.UNAUTHENTICATED);
-      assert.equal(e.message, 'Session revoked');
+      assert.equal(getConduitCode(e), authErrors.SESSION_REVOKED.conduitCode);
       return true;
     });
     assert.deepEqual(on.calls.exists, ['s1']);
@@ -129,7 +133,10 @@ describe('jwtAuthenticate', () => {
     const { deps, calls } = setup({ strict: true, exists: new Error('timeout') });
     await assert.rejects(jwtAuthenticate(deps, req()), (e: any) => {
       assert.equal(e.code, status.UNAVAILABLE);
-      assert.equal(e.message, 'Session registry unavailable');
+      assert.equal(
+        getConduitCode(e),
+        authErrors.SESSION_REGISTRY_UNAVAILABLE.conduitCode,
+      );
       return true;
     });
     assert.equal(calls.warn.length, 1);
@@ -157,7 +164,7 @@ describe('jwtAuthenticate extras', () => {
     for (const context of [undefined, {}, { clientId: 5 }]) {
       await assert.rejects(jwtAuthenticate(deps, req({ context })), (e: any) => {
         assert.equal(e.code, status.UNAUTHENTICATED);
-        assert.equal(e.message, 'Client id missing');
+        assert.equal(getConduitCode(e), authErrors.CLIENT_ID_MISSING.conduitCode);
         return true;
       });
     }
