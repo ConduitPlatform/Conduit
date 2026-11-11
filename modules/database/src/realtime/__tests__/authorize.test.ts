@@ -63,7 +63,7 @@ describe('realtime authorization helpers', () => {
     expect(() => assertSchemaAvailable(lookup, 'Missing', false)).toThrow(
       expect.objectContaining({
         code: status.NOT_FOUND,
-        message: 'Schema does not exist',
+        conduitCode: 'SCHEMA_NOT_FOUND',
       }),
     );
   });

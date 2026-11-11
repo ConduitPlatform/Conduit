@@ -19,6 +19,8 @@ import {
   extractRelations,
   RelationType,
 } from '../utils/extractors/index.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../../errors.js';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
@@ -55,7 +57,8 @@ function extractType(type: string, sqlType?: SQLDataType) {
   if (sqlType) {
     const expectedType = sqlDataTypeMap.get(sqlType);
     if (expectedType && type !== expectedType) {
-      throw new Error(
+      throw new ModuleError(
+        errors.SCHEMA_FIELDS_INVALID,
         `Invalid data type for SQL data type ${sqlType}: expected ${expectedType}, but got ${type}`,
       );
     }

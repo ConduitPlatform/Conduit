@@ -8,6 +8,7 @@ import { RequestHandlers, RouteBuilder } from '@conduitplatform/module-tools';
 import { PopulatedCustomEndpoint } from '../../interfaces/index.js';
 import { isNil } from 'lodash-es';
 import { LocationEnum } from '../../enums/index.js';
+import { errors } from '../../errors.js';
 
 function getOperation(op: number) {
   switch (op) {
@@ -75,6 +76,18 @@ export function createCustomEndpointRoute(
     .path(`/function/${endpoint.name}`)
     .description(endpoint.endpointDescription ?? ' No description provided')
     .method(getOperation(endpoint.operation))
+    .errors(
+      errors.CUSTOM_ENDPOINT_INPUT_MISSING,
+      errors.CUSTOM_ENDPOINT_PAYLOAD_INVALID,
+      errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
+      errors.CUSTOM_ENDPOINT_DEFINITION_CORRUPT,
+      errors.CUSTOM_ENDPOINT_NOT_FOUND,
+      errors.SCHEMA_NOT_FOUND,
+      errors.RESOURCE_ACCESS_DENIED,
+      errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+      errors.DOCUMENT_UPDATE_INVALID,
+      errors.DATABASE_OPERATION_FAILED,
+    )
     .handler(handler);
   if (authorizationEnabled || endpoint.authentication) {
     route.middleware('authMiddleware');

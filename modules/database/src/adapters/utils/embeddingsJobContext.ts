@@ -1,6 +1,7 @@
-import { GrpcError, TYPE } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { TYPE } from '@conduitplatform/grpc-sdk';
 import type { DeclaredSchemaExtension } from '../../interfaces/DeclaredSchemaExtension.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 export const EMBEDDINGS_MODULE_NAME = 'embeddings';
 
@@ -66,10 +67,10 @@ export function isIdOnlyQuery(query: unknown): boolean {
 
 export function assertEmbeddingsJobCaller(moduleName?: string): void {
   if (moduleName === EMBEDDINGS_MODULE_NAME) return;
-  throw new GrpcError(
-    status.PERMISSION_DENIED,
-    'Embeddings job context is only available to the embeddings module',
-  );
+  throw new ModuleError({
+    ...errors.EMBEDDINGS_JOB_CALLER_NOT_ALLOWED,
+    message: 'Embeddings job context is only available to the embeddings module',
+  });
 }
 
 export function assertEmbeddingsJobRead(args: {
@@ -79,52 +80,52 @@ export function assertEmbeddingsJobRead(args: {
   schema: EmbeddingsJobSchema;
 }): void {
   if (!isIdOnlyQuery(args.query)) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'Embeddings jobs may only read documents by id',
-    );
+    throw new ModuleError({
+      ...errors.EMBEDDINGS_JOB_ACCESS_DENIED,
+      message: 'Embeddings jobs may only read documents by id',
+    });
   }
   const allowed = new Set(
     (args.allowedFields ?? []).filter(field => typeof field === 'string' && field.length),
   );
   if (!allowed.size) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Embeddings jobs require an explicit allowed field list',
-    );
+    throw new ModuleError({
+      ...errors.EMBEDDINGS_JOB_REQUEST_INVALID,
+      message: 'Embeddings jobs require an explicit allowed field list',
+    });
   }
   const fields = schemaFields(args.schema);
   for (const field of allowed) {
     if (field === '_id' || field === 'id') continue;
     if (!(field in fields)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        `Embeddings jobs cannot read unknown field '${field}'`,
-      );
+      throw new ModuleError({
+        ...errors.EMBEDDINGS_JOB_ACCESS_DENIED,
+        message: `Embeddings jobs cannot read unknown field '${field}'`,
+      });
     }
     const definition = fields[field];
     const hashField = field.endsWith('SourceHash');
     if (!hashField && !isStringLikeField(definition)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        `Embeddings jobs cannot read non-string field '${field}'`,
-      );
+      throw new ModuleError({
+        ...errors.EMBEDDINGS_JOB_ACCESS_DENIED,
+        message: `Embeddings jobs cannot read non-string field '${field}'`,
+      });
     }
   }
   const selected = parseSelectFields(args.select);
   if (!selected.length) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'Embeddings jobs must select configured source and hash fields',
-    );
+    throw new ModuleError({
+      ...errors.EMBEDDINGS_JOB_ACCESS_DENIED,
+      message: 'Embeddings jobs must select configured source and hash fields',
+    });
   }
   for (const field of selected) {
     if (field === '_id' || field === 'id') continue;
     if (!allowed.has(field)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        `Embeddings jobs cannot select field '${field}'`,
-      );
+      throw new ModuleError({
+        ...errors.EMBEDDINGS_JOB_ACCESS_DENIED,
+        message: `Embeddings jobs cannot select field '${field}'`,
+      });
     }
   }
 }
@@ -148,36 +149,39 @@ export function updateDocumentFields(document: unknown): string[] {
     try {
       parsed = JSON.parse(document);
     } catch {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Embeddings job write is not valid JSON',
-      );
+      throw new ModuleError({
+        ...errors.EMBEDDINGS_JOB_REQUEST_INVALID,
+        message: 'Embeddings job write is not valid JSON',
+      });
     }
   }
   if (!isRecord(parsed)) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'Embeddings job writes must be objects');
+    throw new ModuleError({
+      ...errors.EMBEDDINGS_JOB_REQUEST_INVALID,
+      message: 'Embeddings job writes must be objects',
+    });
   }
   if ('$set' in parsed) {
     const keys = Object.keys(parsed);
     if (keys.some(key => key !== '$set')) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Embeddings jobs may only use $set when sending update operators',
-      );
+      throw new ModuleError({
+        ...errors.EMBEDDINGS_JOB_ACCESS_DENIED,
+        message: 'Embeddings jobs may only use $set when sending update operators',
+      });
     }
     if (!isRecord(parsed.$set)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Embeddings job $set must be an object',
-      );
+      throw new ModuleError({
+        ...errors.EMBEDDINGS_JOB_REQUEST_INVALID,
+        message: 'Embeddings job $set must be an object',
+      });
     }
     return Object.keys(parsed.$set);
   }
   if (Object.keys(parsed).some(key => key.startsWith('$'))) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'Embeddings jobs cannot use update operators other than $set',
-    );
+    throw new ModuleError({
+      ...errors.EMBEDDINGS_JOB_ACCESS_DENIED,
+      message: 'Embeddings jobs cannot use update operators other than $set',
+    });
   }
   return Object.keys(parsed);
 }
@@ -189,17 +193,17 @@ export function assertEmbeddingsJobWrite(args: {
   const owned = embeddingsOwnedWriteFields(args.schema);
   const fields = updateDocumentFields(args.document);
   if (!fields.length) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Embeddings job writes must include fields',
-    );
+    throw new ModuleError({
+      ...errors.EMBEDDINGS_JOB_REQUEST_INVALID,
+      message: 'Embeddings job writes must include fields',
+    });
   }
   for (const field of fields) {
     if (!owned.has(field)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        `Embeddings jobs cannot write field '${field}'`,
-      );
+      throw new ModuleError({
+        ...errors.EMBEDDINGS_JOB_ACCESS_DENIED,
+        message: `Embeddings jobs cannot write field '${field}'`,
+      });
     }
   }
 }

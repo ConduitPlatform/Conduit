@@ -1,5 +1,5 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 export const MUTATION_EVENT_ID_CHUNK_SIZE = 500;
 export const MUTATION_EVENT_ID_PAGE_SIZE = MUTATION_EVENT_ID_CHUNK_SIZE;
@@ -45,11 +45,11 @@ export function collectDocumentIds(docs: unknown): string[] {
 
 export function mutationIdCollectionExhaustedError(
   cap: number = MAX_MUTATION_EVENT_COLLECT_IDS,
-): GrpcError {
-  return new GrpcError(
-    status.RESOURCE_EXHAUSTED,
-    `updateMany matched more than ${cap} documents; refuse unbounded mutation event collection`,
-  );
+): ModuleError {
+  return new ModuleError({
+    ...errors.MUTATION_EVENT_LIMIT_EXCEEDED,
+    message: `updateMany matched more than ${cap} documents; refuse unbounded mutation event collection`,
+  });
 }
 
 export async function collectBoundedMutationIds(args: {

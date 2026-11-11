@@ -1,18 +1,18 @@
 import {
-  GrpcError,
   VectorIndexDefinition,
   VectorIndexStatus,
   VectorSimilarity,
   defaultVectorIndexMethod,
   vectorIndexMethodsEquivalent,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import {
   assertVectorIndexContract,
   assertVectorIndexMatchesField,
   isObjectFormVectorField,
   VectorIndexProvider,
 } from './vectorField.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 export const MONGO_VECTOR_ID_FILTER_FIELD = '_id';
 
@@ -149,20 +149,22 @@ export function assertVectorIndexQueryable(
 ): asserts index is VectorIndexDefinition {
   if (!index) {
     const named = request.indexName ? ` (index '${request.indexName}')` : '';
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      `No vector index is available for field '${request.field}'${named}. ` +
+    throw new ModuleError({
+      ...errors.VECTOR_INDEX_UNAVAILABLE,
+      message:
+        `No vector index is available for field '${request.field}'${named}. ` +
         'Create the index and wait until it is ready before searching.',
-    );
+    });
   }
   if (isVectorIndexQueryable(index)) return;
   const indexName = index.name ?? defaultVectorIndexName(index.field);
   const statusLabel = index.status ?? 'unknown';
-  throw new GrpcError(
-    status.FAILED_PRECONDITION,
-    `Vector index '${indexName}' is not queryable (status: ${statusLabel}). ` +
+  throw new ModuleError({
+    ...errors.VECTOR_INDEX_NOT_QUERYABLE,
+    message:
+      `Vector index '${indexName}' is not queryable (status: ${statusLabel}). ` +
       'Wait until the index is ready before searching.',
-  );
+  });
 }
 
 export function vectorIndexesEquivalent(
@@ -192,11 +194,12 @@ export function planMongoVectorIndexCreate(args: {
   if (vectorIndexesEquivalent(args.requested, existing, 'mongodb')) {
     return { action: 'reuse' };
   }
-  throw new GrpcError(
-    status.FAILED_PRECONDITION,
-    `Vector index '${args.requested.name}' already exists with a different definition. ` +
+  throw new ModuleError({
+    ...errors.VECTOR_INDEX_CONFLICT,
+    message:
+      `Vector index '${args.requested.name}' already exists with a different definition. ` +
       'Drop it before recreating.',
-  );
+  });
 }
 
 function postgresSimilarityFromOperator(operator?: string): VectorSimilarity {
@@ -263,16 +266,16 @@ export function planPostgresVectorIndexCreate(args: {
     };
   }
   if (args.existing.tablename !== args.tableName) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      `Vector index name '${args.indexName}' already exists on table '${args.existing.tablename}'.`,
-    );
+    throw new ModuleError({
+      ...errors.VECTOR_INDEX_CONFLICT,
+      message: `Vector index name '${args.indexName}' already exists on table '${args.existing.tablename}'.`,
+    });
   }
   if (!isPostgresVectorIndexDef(args.existing.indexdef)) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      `Index '${args.indexName}' exists on '${args.tableName}' but is not a vector index.`,
-    );
+    throw new ModuleError({
+      ...errors.VECTOR_INDEX_CONFLICT,
+      message: `Index '${args.indexName}' exists on '${args.tableName}' but is not a vector index.`,
+    });
   }
   if (
     !postgresVectorIndexDefinitionMatches(args.existing.indexdef, {
@@ -283,11 +286,12 @@ export function planPostgresVectorIndexCreate(args: {
       options: withOptionsToDefinition(args.method, args.withOptions),
     })
   ) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      `Vector index '${args.indexName}' already exists on '${args.tableName}' with a different definition. ` +
+    throw new ModuleError({
+      ...errors.VECTOR_INDEX_CONFLICT,
+      message:
+        `Vector index '${args.indexName}' already exists on '${args.tableName}' with a different definition. ` +
         'Drop it before recreating.',
-    );
+    });
   }
   return { action: 'reuse' };
 }
@@ -315,16 +319,16 @@ export function assertPostgresVectorIndexDropTarget(args: {
   existing?: PostgresCatalogIndex;
 }): PostgresCatalogIndex {
   if (!args.existing || args.existing.tablename !== args.tableName) {
-    throw new GrpcError(
-      status.NOT_FOUND,
-      `Vector index '${args.indexName}' was not found on table '${args.tableName}'.`,
-    );
+    throw new ModuleError({
+      ...errors.VECTOR_INDEX_NOT_FOUND,
+      message: `Vector index '${args.indexName}' was not found on table '${args.tableName}'.`,
+    });
   }
   if (!isPostgresVectorIndexDef(args.existing.indexdef)) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      `Index '${args.indexName}' on '${args.tableName}' is not a vector index.`,
-    );
+    throw new ModuleError({
+      ...errors.VECTOR_INDEX_INVALID,
+      message: `Index '${args.indexName}' on '${args.tableName}' is not a vector index.`,
+    });
   }
   return args.existing;
 }
@@ -341,16 +345,16 @@ export function assertMongoVectorSearchIndexDropTarget(args: {
   existing?: { name?: string; type?: string };
 }): { name: string; type: 'vectorSearch' } {
   if (!args.existing) {
-    throw new GrpcError(
-      status.NOT_FOUND,
-      `Vector search index '${args.indexName}' was not found.`,
-    );
+    throw new ModuleError({
+      ...errors.VECTOR_INDEX_NOT_FOUND,
+      message: `Vector search index '${args.indexName}' was not found.`,
+    });
   }
   if (!isMongoVectorSearchIndex(args.existing)) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      `Search index '${args.indexName}' is not a vectorSearch index.`,
-    );
+    throw new ModuleError({
+      ...errors.VECTOR_INDEX_INVALID,
+      message: `Search index '${args.indexName}' is not a vectorSearch index.`,
+    });
   }
   return {
     name: args.existing.name ?? args.indexName,

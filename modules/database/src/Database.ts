@@ -2,13 +2,13 @@ import {
   ConduitGrpcSdk,
   ConduitModel,
   ConduitSchema,
-  GrpcError,
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
   VectorIndexDefinition,
   VectorSimilarity,
   defaultVectorIndexMethod,
+  parseErrorPayload,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin/index.js';
 import { SchemaAdmin } from './admin/schema.admin.js';
@@ -65,7 +65,6 @@ import { runMigrations } from './migrations/index.js';
 import { SchemaController } from './controllers/cms/schema.controller.js';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller.js';
 import { SchemaConverter } from './utils/SchemaConverter.js';
-import { status } from '@grpc/grpc-js';
 import path from 'path';
 import metricsSchema from './metrics/index.js';
 import { isNil } from 'lodash-es';
@@ -73,7 +72,9 @@ import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter/i
 import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter/index.js';
 import {
   ConfigController,
+  grpcCallbackError,
   ManagedModule,
+  ModuleError,
   type ExportableResource,
   type ExportResult,
   type ImportResult,
@@ -84,7 +85,6 @@ import {
   collectBoundedMutationIds,
   mutationEventChannel,
   shouldPublishMutationEvent,
-  grpcStatusFromError,
   callerModuleName,
   resolveAdminOperatorContext,
   assertVectorSearchAccess,
@@ -96,6 +96,13 @@ import AppConfigSchema, { Config } from './config/index.js';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { fileURLToPath } from 'node:url';
 import { RealtimeService } from './realtime/index.js';
+import { errors } from './errors.js';
+
+function importErrorText(e: unknown): string {
+  const { message, conduitCode } = parseErrorPayload(e);
+  return conduitCode ? `${conduitCode}: ${message}` : message;
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -333,7 +340,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       } catch (e) {
         result.schemas.failed =
           (data.schemas?.length ?? 0) + (data.extensions?.length ?? 0);
-        result.schemas.errors.push((e as Error).message);
+        result.schemas.errors.push(importErrorText(e));
       }
     }
     if (data.customEndpoints?.length) {
@@ -344,7 +351,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
         result.customEndpoints.created = data.customEndpoints.length;
       } catch (e) {
         result.customEndpoints.failed = data.customEndpoints.length;
-        result.customEndpoints.errors.push((e as Error).message);
+        result.customEndpoints.errors.push(importErrorText(e));
       }
     }
     return result;
@@ -357,17 +364,29 @@ export default class DatabaseModule extends ManagedModule<Config> {
    * @param callback
    */
   async createSchemaFromAdapter(call: GrpcRequest<SchemaDto>, callback: SchemaResponse) {
-    const schema = new ConduitSchema(
-      call.request.name,
-      JSON.parse(call.request.fields),
-      JSON.parse(call.request.modelOptions),
-      call.request.collectionName,
-    );
+    let schema: ConduitSchema;
+    try {
+      schema = new ConduitSchema(
+        call.request.name,
+        JSON.parse(call.request.fields),
+        JSON.parse(call.request.modelOptions),
+        call.request.collectionName,
+      );
+    } catch (err) {
+      return callback(
+        grpcCallbackError(
+          err instanceof SyntaxError
+            ? {
+                ...errors.SCHEMA_FIELDS_INVALID,
+                message: 'Schema fields or model options are not valid JSON',
+              }
+            : err,
+          errors.SCHEMA_OPERATION_FAILED,
+        ),
+      );
+    }
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Names cannot include spaces and - characters',
-      });
+      return callback(grpcCallbackError(errors.SCHEMA_NAME_INVALID));
     }
     schema.ownerModule = call.metadata!.get('module-name')![0] as string;
     await this._activeAdapter
@@ -382,10 +401,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
         ); // @dirty-type-cast
       })
       .catch(err => {
-        callback({
-          code: status.INTERNAL,
-          message: err.message,
-        });
+        callback(grpcCallbackError(err, errors.SCHEMA_OPERATION_FAILED));
       });
   }
 
@@ -405,10 +421,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
         ),
       ); // @dirty-type-cast
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.SCHEMA_OPERATION_FAILED));
     }
   }
 
@@ -427,10 +440,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       callback(null, {});
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.VIEW_OPERATION_FAILED));
     }
   }
 
@@ -444,10 +454,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       await this._activeAdapter.deleteView(call.request.viewName);
       callback(null, {});
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.VIEW_OPERATION_FAILED));
     }
   }
 
@@ -460,10 +467,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
         ), // @dirty-type-cast
       });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.SCHEMA_OPERATION_FAILED));
     }
   }
 
@@ -479,10 +483,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       callback(null, { result: schemas });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.SCHEMA_OPERATION_FAILED));
     }
   }
 
@@ -498,7 +499,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       const extModel: ConduitModel = JSON.parse(call.request.fields);
       const schema = this._activeAdapter.getSchema(schemaName);
       if (!schema) {
-        throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+        throw new ModuleError(errors.SCHEMA_NOT_FOUND);
       }
       await this._activeAdapter
         .setSchemaExtension(schemaName, extOwner, extModel)
@@ -512,16 +513,10 @@ export default class DatabaseModule extends ManagedModule<Config> {
           ); // @dirty-type-cast
         })
         .catch(err => {
-          callback({
-            code: status.INTERNAL,
-            message: err.message,
-          });
+          callback(grpcCallbackError(err, errors.SCHEMA_OPERATION_FAILED));
         });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.SCHEMA_OPERATION_FAILED));
     }
   }
 
@@ -549,7 +544,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
-      callback(grpcStatusFromError(err));
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -560,14 +555,16 @@ export default class DatabaseModule extends ManagedModule<Config> {
       // gRPC undefined object field values fall back to  empty objects...
       let sort: { [field: string]: -1 | 1 } | undefined = undefined;
       if (_sort && !!Object.keys(_sort).length) {
-        Object.keys(_sort).forEach(field => {
+        for (const field of Object.keys(_sort)) {
           if (_sort[field] !== 1 && _sort[field] !== -1) {
-            return callback({
-              code: status.INVALID_ARGUMENT,
-              message: `Invalid sort field value "${_sort[field]}" in field "${field}", should be -1 or 1.`,
-            });
+            return callback(
+              grpcCallbackError({
+                ...errors.SORT_INVALID,
+                message: `Invalid sort field value "${_sort[field]}" in field "${field}", should be -1 or 1.`,
+              }),
+            );
           }
-        });
+        }
         sort = _sort as { [field: string]: -1 | 1 };
       }
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
@@ -583,10 +580,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -596,10 +590,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
       if (!(await canCreate(moduleName, schemaAdapter.model))) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`,
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.MODULE_NOT_AUTHORIZED,
+            message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`,
+          }),
+        );
       }
 
       const doc = await schemaAdapter.model.create(call.request.query, {
@@ -615,10 +611,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: docString });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -631,10 +624,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
       if (!(await canCreate(moduleName, schemaAdapter.model))) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`,
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.MODULE_NOT_AUTHORIZED,
+            message: `Module ${moduleName} is not authorized to create ${schemaName} entries!`,
+          }),
+        );
       }
 
       const docs = await schemaAdapter.model.createMany(call.request.query, {
@@ -650,10 +645,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: docsString });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -678,10 +670,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
           JSON.parse(call.request.query),
         ))
       ) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.MODULE_NOT_AUTHORIZED,
+            message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+          }),
+        );
       }
 
       const result = await schemaAdapter.model.findByIdAndUpdate(
@@ -704,7 +698,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback(grpcStatusFromError(err));
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -717,10 +711,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
       if (!(await canModify(moduleName, schemaAdapter.model))) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.MODULE_NOT_AUTHORIZED,
+            message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+          }),
+        );
       }
 
       const result = await schemaAdapter.model.findByIdAndReplace(
@@ -743,10 +739,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -759,10 +752,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
       if (!(await canModify(moduleName, schemaAdapter.model))) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.MODULE_NOT_AUTHORIZED,
+            message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+          }),
+        );
       }
 
       const result = await schemaAdapter.model.replaceOne(
@@ -785,10 +780,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -807,10 +799,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
           JSON.parse(call.request.query),
         ))
       ) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.MODULE_NOT_AUTHORIZED,
+            message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+          }),
+        );
       }
 
       const result = await schemaAdapter.model.updateOne(
@@ -833,10 +827,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -855,10 +846,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
           JSON.parse(call.request.query),
         ))
       ) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.MODULE_NOT_AUTHORIZED,
+            message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+          }),
+        );
       }
 
       const ids = shouldPublishMutationEvent(call.request.suppressEvent)
@@ -889,7 +882,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback(grpcStatusFromError(err));
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -902,10 +895,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
       if (!(await canDelete(moduleName, schemaAdapter.model))) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`,
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.MODULE_NOT_AUTHORIZED,
+            message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`,
+          }),
+        );
       }
 
       const result = await schemaAdapter.model.deleteOne(query, {
@@ -921,10 +916,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -937,10 +929,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
       if (!(await canDelete(moduleName, schemaAdapter.model))) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`,
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.MODULE_NOT_AUTHORIZED,
+            message: `Module ${moduleName} is not authorized to delete ${schemaName} entries!`,
+          }),
+        );
       }
 
       const result = await schemaAdapter.model.deleteMany(query, {
@@ -956,10 +950,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -976,10 +967,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
-      callback({
-        code: status.INTERNAL,
-        message: (err as Error).message,
-      });
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -993,10 +981,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
       (dbType === 'MongoDB' && isNil(query?.mongoQuery)) ||
       (dbType !== 'MongoDB' && isNil(query?.sqlQuery))
     ) {
-      callback({
-        code: status.INVALID_ARGUMENT,
-        message: `Invalid raw query format for ${dbType}`,
-      });
+      return callback(
+        grpcCallbackError({
+          ...errors.RAW_QUERY_INVALID,
+          message: `Invalid raw query format for ${dbType}`,
+        }),
+      );
     }
     try {
       let result;
@@ -1022,7 +1012,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       }
       callback(null, { result: JSON.stringify(result) });
     } catch (e) {
-      callback({ code: status.INTERNAL, message: (e as Error).message });
+      callback(grpcCallbackError(e, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -1030,9 +1020,13 @@ export default class DatabaseModule extends ManagedModule<Config> {
     call: GrpcRequest<ColumnExistenceRequest>,
     callback: GrpcResponse<ColumnExistenceResponse>,
   ) {
-    const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-    const exist = await schemaAdapter.model.columnExistence(call.request.columns);
-    callback(null, { result: exist });
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+      const exist = await schemaAdapter.model.columnExistence(call.request.columns);
+      callback(null, { result: exist });
+    } catch (err) {
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
+    }
   }
 
   async getVectorCapabilities(
@@ -1045,7 +1039,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       callback(null, result);
     } catch (err) {
-      callback({ code: status.INTERNAL, message: (err as Error).message });
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -1055,10 +1049,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
   ) {
     try {
       if (!call.request.index) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Vector index definition is required',
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.VECTOR_INDEX_INVALID,
+            message: 'Vector index definition is required',
+          }),
+        );
       }
       const moduleName = call.metadata!.get('module-name')![0] as string;
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
@@ -1070,10 +1066,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
           vectorIndexMutationData(index.field),
         ))
       ) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to create vector indexes for ${call.request.schemaName}!`,
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.MODULE_NOT_AUTHORIZED,
+            message: `Module ${moduleName} is not authorized to create vector indexes for ${call.request.schemaName}!`,
+          }),
+        );
       }
       const result = await this._activeAdapter.createVectorIndex(
         call.request.schemaName,
@@ -1081,7 +1079,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
-      callback(grpcStatusFromError(err));
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -1105,7 +1103,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
         })),
       });
     } catch (err) {
-      callback(grpcStatusFromError(err));
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -1126,10 +1124,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
           vectorIndexDeleteMutationData(liveIndexes, call.request.indexName),
         ))
       ) {
-        return callback({
-          code: status.PERMISSION_DENIED,
-          message: `Module ${moduleName} is not authorized to delete vector indexes for ${call.request.schemaName}!`,
-        });
+        return callback(
+          grpcCallbackError({
+            ...errors.MODULE_NOT_AUTHORIZED,
+            message: `Module ${moduleName} is not authorized to delete vector indexes for ${call.request.schemaName}!`,
+          }),
+        );
       }
       const result = await this._activeAdapter.deleteVectorIndex(
         call.request.schemaName,
@@ -1137,7 +1137,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
       );
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
-      callback(grpcStatusFromError(err));
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
@@ -1172,26 +1172,30 @@ export default class DatabaseModule extends ManagedModule<Config> {
       });
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
-      callback(grpcStatusFromError(err));
+      callback(grpcCallbackError(err, errors.DATABASE_OPERATION_FAILED));
     }
   }
 
   async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<Empty>) {
-    if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
-      const schemaName = call.request.schemaName;
-      await this._activeAdapter.syncSchema(schemaName).catch(async () => {
-        const views: IView[] = await this._activeAdapter
-          .getSchemaModel('Views')
-          .model.findMany({});
-        for (const view of views) {
-          if (view.joinedSchemas.includes(schemaName)) {
-            await this._activeAdapter.deleteView(view.name);
+    try {
+      if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
+        const schemaName = call.request.schemaName;
+        await this._activeAdapter.syncSchema(schemaName).catch(async () => {
+          const views: IView[] = await this._activeAdapter
+            .getSchemaModel('Views')
+            .model.findMany({});
+          for (const view of views) {
+            if (view.joinedSchemas.includes(schemaName)) {
+              await this._activeAdapter.deleteView(view.name);
+            }
           }
-        }
-        await this._activeAdapter.syncSchema(schemaName);
-      });
+          await this._activeAdapter.syncSchema(schemaName);
+        });
+      }
+      callback(null, {});
+    } catch (err) {
+      callback(grpcCallbackError(err, errors.SCHEMA_OPERATION_FAILED));
     }
-    callback(null, {});
   }
 
   async getDatabaseType(
@@ -1230,16 +1234,39 @@ export default class DatabaseModule extends ManagedModule<Config> {
     });
     try {
       this.grpcSdk.bus?.subscribe('database:create:schema', async schemaStr => {
-        const syncSchema: ConduitDatabaseSchema = JSON.parse(schemaStr); // @dirty-type-cast
-        delete (syncSchema as any).fieldHash;
-        await this._activeAdapter.createSchemaFromAdapter(syncSchema, false, false, true);
+        try {
+          const syncSchema: ConduitDatabaseSchema = JSON.parse(schemaStr); // @dirty-type-cast
+          delete (syncSchema as any).fieldHash;
+          await this._activeAdapter.createSchemaFromAdapter(
+            syncSchema,
+            false,
+            false,
+            true,
+          );
+        } catch (e) {
+          ConduitGrpcSdk.Logger.error(
+            `Failed to synchronize created schema: ${parseErrorPayload(e).message}`,
+          );
+        }
       });
       this.grpcSdk.bus?.subscribe('database:create:view', async viewStr => {
-        const viewData = JSON.parse(viewStr);
-        await this._activeAdapter.createViewFromAdapter(viewData, true);
+        try {
+          const viewData = JSON.parse(viewStr);
+          await this._activeAdapter.createViewFromAdapter(viewData, true);
+        } catch (e) {
+          ConduitGrpcSdk.Logger.error(
+            `Failed to synchronize created view: ${parseErrorPayload(e).message}`,
+          );
+        }
       });
       this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
-        await this._activeAdapter.deleteSchema(schemaName, false, '', true);
+        try {
+          await this._activeAdapter.deleteSchema(schemaName, false, '', true);
+        } catch (e) {
+          ConduitGrpcSdk.Logger.error(
+            `Failed to synchronize deleted schema: ${parseErrorPayload(e).message}`,
+          );
+        }
       });
       this.grpcSdk.bus?.subscribe('database:delete:view', async (viewName: string) => {
         delete this._activeAdapter.views[viewName];

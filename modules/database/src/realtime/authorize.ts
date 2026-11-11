@@ -1,13 +1,8 @@
 import { status } from '@grpc/grpc-js';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import type { OptedInSchema, RebacDecision, SubscribeRequest } from './types.js';
-
-export class RealtimeSubscriptionError extends GrpcError {
-  constructor(code: number, message: string) {
-    super(code, message);
-    this.name = 'RealtimeSubscriptionError';
-  }
-}
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 export type AuthorizationSdk = {
   isAvailable: (module: string) => boolean;
@@ -45,7 +40,10 @@ export function parseSubscribeRequest(params: unknown[]): SubscribeRequest {
 
 export function requireSchemaName(value: unknown): string {
   if (typeof value !== 'string' || value.trim() === '') {
-    throw new RealtimeSubscriptionError(status.INVALID_ARGUMENT, 'schema is required');
+    throw new ModuleError({
+      ...errors.SUBSCRIPTION_REQUEST_INVALID,
+      message: 'schema is required',
+    });
   }
   return value.trim();
 }
@@ -53,10 +51,10 @@ export function requireSchemaName(value: unknown): string {
 export function optionalDocumentId(value: unknown): string | undefined {
   if (value === undefined || value === null || value === '') return undefined;
   if (typeof value !== 'string') {
-    throw new RealtimeSubscriptionError(
-      status.INVALID_ARGUMENT,
-      'documentId must be a string',
-    );
+    throw new ModuleError({
+      ...errors.SUBSCRIPTION_REQUEST_INVALID,
+      message: 'documentId must be a string',
+    });
   }
   return value;
 }
@@ -103,25 +101,19 @@ export function assertSchemaAvailable(
     schema = lookup.getSchema(schemaName);
   } catch (err) {
     if (err instanceof GrpcError && err.code === status.NOT_FOUND) {
-      throw new RealtimeSubscriptionError(status.NOT_FOUND, 'Schema does not exist');
+      throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     }
     throw err;
   }
   if (!schema) {
-    throw new RealtimeSubscriptionError(status.NOT_FOUND, 'Schema does not exist');
+    throw new ModuleError(errors.SCHEMA_NOT_FOUND);
   }
   const conduit = schema.modelOptions?.conduit;
   if (!conduit?.realtime?.enabled) {
-    throw new RealtimeSubscriptionError(
-      status.FAILED_PRECONDITION,
-      'Live updates are not enabled for this schema',
-    );
+    throw new ModuleError(errors.LIVE_UPDATES_NOT_ENABLED);
   }
   if (requireCmsRead && conduit.cms?.crudOperations?.read?.enabled !== true) {
-    throw new RealtimeSubscriptionError(
-      status.PERMISSION_DENIED,
-      'CMS read is not enabled for this schema',
-    );
+    throw new ModuleError(errors.CMS_READ_DISABLED);
   }
   return {
     authorizationEnabled: conduit.authorization?.enabled === true,

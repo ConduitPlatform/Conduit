@@ -1,8 +1,10 @@
-import { ConduitError, Indexable } from '@conduitplatform/grpc-sdk';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitDatabaseSchema, Fields } from '../../interfaces/index.js';
 import { isArray, isEqual, isNil, isString } from 'lodash-es';
 import { DataTypes } from 'sequelize';
 import { assertSafeVectorFieldChange } from './vectorField.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 /*
  * Validates schema compiled fields for type changes.
@@ -36,12 +38,18 @@ function validateSchemaFields(oldSchemaFields: Indexable, newSchemaFields: Index
         if (typeof oldType[0] === 'object') {
           validateObject(oldType[0], newType[0]);
         } else if (JSON.stringify(oldType[0]) !== JSON.stringify(newType[0]))
-          throw ConduitError.forbidden('Invalid schema types');
+          throw new ModuleError({
+            ...errors.SCHEMA_FIELD_CHANGE_FORBIDDEN,
+            message: 'Invalid schema types',
+          });
       } else if (typeof oldType === 'object') {
         validateObject(oldType, newType);
       } else if (!isEqual(oldType, newType)) {
         // TODO: Support schema field type migration
-        throw ConduitError.forbidden('Invalid schema types');
+        throw new ModuleError({
+          ...errors.SCHEMA_FIELD_CHANGE_FORBIDDEN,
+          message: 'Invalid schema types',
+        });
       }
     }
   });
@@ -53,5 +61,8 @@ function validateObject(oldType: any, newType: any) {
     validateSchemaFields(oldType, newType);
   }
   if (JSON.stringify(oldType[0]) !== JSON.stringify(newType[0]))
-    throw ConduitError.forbidden('Invalid schema types');
+    throw new ModuleError({
+      ...errors.SCHEMA_FIELD_CHANGE_FORBIDDEN,
+      message: 'Invalid schema types',
+    });
 }

@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   ConduitModel,
   ConduitSchema,
-  GrpcError,
   Indexable,
   ModelOptionsIndexes,
   RawMongoQuery,
@@ -13,7 +12,7 @@ import {
   VectorSearchInput,
   VectorSearchResult,
 } from '@conduitplatform/grpc-sdk';
-import { ConfigController } from '@conduitplatform/module-tools';
+import { ConfigController, ModuleError } from '@conduitplatform/module-tools';
 import type { Config } from '../config/index.js';
 import { unsupportedVectorCapabilities } from './utils/vectorCapabilities.js';
 import { declaredVectorIndexes } from './utils/vectorSearchQuery.js';
@@ -29,11 +28,11 @@ import {
   keepDeclaredIndexExtras,
   persistDeclaredSchemaIndexes,
 } from './utils/indexes.js';
-import { status } from '@grpc/grpc-js';
 import { isEqual, isNil } from 'lodash-es';
 import ObjectHash from 'object-hash';
 import { DATABASE_SYSTEM_SCHEMA_NAME_SET } from '../models/systemSchemas.js';
 import { migratingComms } from '../permissions/index.js';
+import { errors } from '../errors.js';
 
 export abstract class DatabaseAdapter<T extends Schema> {
   registeredSchemas: Map<string, ConduitDatabaseSchema>;
@@ -180,7 +179,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
     } else if (this.views && this.views[schemaName]) {
       return this.views[schemaName].originalSchema;
     }
-    throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
+    throw new ModuleError(
+      errors.SCHEMA_NOT_FOUND,
+      `Schema ${schemaName} not defined yet`,
+    );
   }
 
   getSchemas(): ConduitSchema[] {
@@ -317,8 +319,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
   createVectorIndex(schemaName: string, index: VectorIndexDefinition): Promise<string> {
     void schemaName;
     void index;
-    throw new GrpcError(
-      status.UNIMPLEMENTED,
+    throw new ModuleError(
+      errors.VECTOR_UNSUPPORTED,
       `${this.getDatabaseType()} does not support vector indexes`,
     );
   }
@@ -331,8 +333,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
   deleteVectorIndex(schemaName: string, indexName: string): Promise<string> {
     void schemaName;
     void indexName;
-    throw new GrpcError(
-      status.UNIMPLEMENTED,
+    throw new ModuleError(
+      errors.VECTOR_UNSUPPORTED,
       `${this.getDatabaseType()} does not support vector indexes`,
     );
   }
@@ -353,8 +355,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   vectorSearch(request: VectorSearchInput): Promise<VectorSearchResult[]> {
     void request;
-    throw new GrpcError(
-      status.UNIMPLEMENTED,
+    throw new ModuleError(
+      errors.VECTOR_UNSUPPORTED,
       `${this.getDatabaseType()} does not support vector search`,
     );
   }
@@ -524,8 +526,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
       !baseSchema.modelOptions.conduit.permissions ||
       !baseSchema.modelOptions.conduit.permissions.extendable
     ) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
+      throw new ModuleError(
+        errors.SCHEMA_NOT_EXTENDABLE,
         `Schema ${schemaName} is not extendable`,
       );
     }
@@ -741,7 +743,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   private async checkModelOwnershipAndPermissions(schema: ConduitSchema) {
     const owned = await this.checkModelOwnership(schema);
     if (!owned) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
+      throw new ModuleError(errors.SCHEMA_NOT_OWNED);
     }
     this.addSchemaPermissions(schema);
   }

@@ -1,24 +1,27 @@
-import { ConduitModel, GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitModel } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 import {
   ConduitDatabaseSchema,
   DeclaredSchemaExtension,
 } from '../../interfaces/index.js';
-import { status } from '@grpc/grpc-js';
 
 import * as deepdash from 'deepdash-es/standalone';
 
 function deepFieldValidate(extFields: ConduitModel) {
-  const uniqueError = new GrpcError(
-    status.INVALID_ARGUMENT,
-    "Schema extension fields can not be 'unique'",
-  );
-  const requiredError = new GrpcError(
-    status.INVALID_ARGUMENT,
-    "Schema extension fields can not be 'required'",
-  );
   deepdash.eachDeep(extFields, (value: any, key: string) => {
-    if (key === 'unique' && value === true) throw uniqueError;
-    if (key === 'required' && value === true) throw requiredError;
+    if (key === 'unique' && value === true) {
+      throw new ModuleError({
+        ...errors.EXTENSION_FIELD_CONSTRAINT_INVALID,
+        message: "Schema extension fields can not be 'unique'",
+      });
+    }
+    if (key === 'required' && value === true) {
+      throw new ModuleError({
+        ...errors.EXTENSION_FIELD_CONSTRAINT_INVALID,
+        message: "Schema extension fields can not be 'required'",
+      });
+    }
   });
 }
 
@@ -27,17 +30,13 @@ export function validateExtensionFields(
   extFields: ConduitModel,
   extOwner: string,
 ) {
-  const duplicateError = new GrpcError(
-    status.ALREADY_EXISTS,
-    'Schema extension contains duplicate fields',
-  );
   for (const field of Object.keys(extFields)) {
-    if (field in schema.fields) throw duplicateError;
+    if (field in schema.fields) throw new ModuleError(errors.EXTENSION_FIELD_DUPLICATE);
   }
   for (const ext of schema.extensions) {
     if (ext.ownerModule === extOwner) continue;
     for (const field of Object.keys(extFields)) {
-      if (field in ext.fields) throw duplicateError;
+      if (field in ext.fields) throw new ModuleError(errors.EXTENSION_FIELD_DUPLICATE);
     }
   }
   deepFieldValidate(extFields);

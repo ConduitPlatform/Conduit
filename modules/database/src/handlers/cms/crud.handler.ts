@@ -1,17 +1,17 @@
 import {
   ConduitGrpcSdk,
-  GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
 import { Doc } from '../../interfaces/index.js';
 import { findSchema, getUpdatedDocument } from './utils.js';
 import { constructSortObj } from '../utils.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 export class CmsHandlers {
   constructor(
@@ -68,7 +68,7 @@ export class CmsHandlers {
       },
     );
     if (!document) {
-      throw new GrpcError(status.NOT_FOUND, 'Document does not exist');
+      throw new ModuleError(errors.DOCUMENT_NOT_FOUND);
     }
     return document;
   }
@@ -92,9 +92,7 @@ export class CmsHandlers {
         userId: call.request.context.user?._id,
         scope,
       })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.DATABASE_OPERATION_FAILED));
     return { docs: newDocuments };
   }
 
@@ -122,9 +120,7 @@ export class CmsHandlers {
           userId: call.request.context.user?._id,
           scope,
         })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.DATABASE_OPERATION_FAILED));
       updatedDocuments.push(updatedDocument);
     }
     return { docs: updatedDocuments };
@@ -154,9 +150,7 @@ export class CmsHandlers {
           userId: call.request.context.user?._id,
           scope,
         })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.DATABASE_OPERATION_FAILED));
       updatedDocuments.push(updatedDocument);
     }
     return { docs: updatedDocuments };
@@ -174,9 +168,7 @@ export class CmsHandlers {
           scope,
         },
       )
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.DATABASE_OPERATION_FAILED));
 
     return 'Ok';
   }

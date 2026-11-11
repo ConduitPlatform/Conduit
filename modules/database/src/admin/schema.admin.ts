@@ -1,13 +1,11 @@
 import {
   ConduitGrpcSdk,
   ConduitSchema,
-  GrpcError,
   Indexable,
   ModelOptionsIndexes,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import { isEmpty, isNil, merge } from 'lodash-es';
 import { validatePermissions, validateSchemaInput } from '../utils/utilities.js';
 import { SchemaController } from '../controllers/cms/schema.controller.js';
@@ -32,6 +30,8 @@ import {
   ensureIndexName,
   resolveIndexName,
 } from '../adapters/utils/indexes.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 type ExportedCmsSchema = Pick<
   ConduitDatabaseSchema,
@@ -114,10 +114,10 @@ export class SchemaAdmin {
     for (const schema of schemas) {
       const model = models.find(m => m.name === schema.name);
       if (model && model.ownerModule !== 'database') {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          `Cannot import '${schema.name}'. Schema already owned by a module!`,
-        );
+        throw new ModuleError({
+          ...errors.SCHEMA_IMPORT_OWNED,
+          message: `Cannot import '${schema.name}'. Schema already owned by a module!`,
+        });
       }
       const operation = model ? 'update' : 'create';
       const imported = !!(model ?? schema).modelOptions.conduit?.imported;
@@ -140,10 +140,10 @@ export class SchemaAdmin {
     for (const ext of extensions ?? []) {
       const model = models.find(m => m.name === ext.schemaName);
       if (!model) {
-        throw new GrpcError(
-          status.FAILED_PRECONDITION,
-          `Cannot create an extension for '${ext.schemaName}'. Schema doesn't exist!`,
-        );
+        throw new ModuleError({
+          ...errors.EXTENSION_SCHEMA_MISSING,
+          message: `Cannot create an extension for '${ext.schemaName}'. Schema doesn't exist!`,
+        });
       }
       await this.database.setSchemaExtension(
         ext.schemaName,
@@ -162,7 +162,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findOne(query);
     if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     }
     return requestedSchema;
   }
@@ -240,9 +240,7 @@ export class SchemaAdmin {
     const [schemasExtensions, count] = await Promise.all([
       schemasExtensionsPromise,
       totalCountPromise,
-    ]).catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
+    ]).catch(ModuleError.rethrow(errors.SCHEMA_OPERATION_FAILED));
     return { schemasExtensions, count };
   }
 
@@ -252,7 +250,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({ name });
     if (existingSchema) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'Schema name is already in use!');
+      throw new ModuleError(errors.SCHEMA_NAME_TAKEN);
     }
     const modelOptions = SchemaConverter.getModelOptions({
       cmsSchema: true,
@@ -267,16 +265,9 @@ export class SchemaAdmin {
       call.request.params.conduitOptions?.authorization?.enabled &&
       !this.grpcSdk.isAvailable('authorization')
     ) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'Authorization service is not available',
-      );
+      throw new ModuleError(errors.SCHEMA_AUTHORIZATION_UNAVAILABLE);
     }
-    try {
-      validateSchemaInput(name, fields, modelOptions);
-    } catch (err: unknown) {
-      throw new GrpcError(status.INTERNAL, (err as Error).message);
-    }
+    validateSchemaInput(name, fields, modelOptions);
     await this.schemaController.createSchema(
       new ConduitSchema(name, fields, modelOptions),
     );
@@ -288,19 +279,15 @@ export class SchemaAdmin {
   async putSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, fields } = call.request.params;
     if (isNil(fields) || isEmpty(fields)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        "Argument 'fields' is required and must be a non-empty object!",
-      );
+      throw new ModuleError({
+        ...errors.SCHEMA_FIELDS_INVALID,
+        message: "Argument 'fields' is required and must be a non-empty object!",
+      });
     }
     const requestedSchema = await this.checkRequestedSchema(id);
     requestedSchema.fields = fields;
     const modelOptions = await this.applySchemaOptionsUpdate(call, requestedSchema);
-    try {
-      validateSchemaInput(requestedSchema.name, requestedSchema.fields, modelOptions);
-    } catch (err: unknown) {
-      throw new GrpcError(status.INTERNAL, (err as Error).message);
-    }
+    validateSchemaInput(requestedSchema.name, requestedSchema.fields, modelOptions);
 
     return this.schemaController.createSchema(
       new ConduitSchema(requestedSchema.name, requestedSchema.fields, modelOptions),
@@ -317,18 +304,14 @@ export class SchemaAdmin {
       return this.putSchema(call);
     }
     if (isNil(conduitOptions)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        "Argument 'conduitOptions' is required!",
-      );
+      throw new ModuleError({
+        ...errors.SCHEMA_OPTIONS_INVALID,
+        message: "Argument 'conduitOptions' is required!",
+      });
     }
     const requestedSchema = await this.checkRequestedSchema(call.request.params.id);
     const modelOptions = await this.applySchemaOptionsUpdate(call, requestedSchema);
-    try {
-      validateSchemaInput(requestedSchema.name, undefined, modelOptions);
-    } catch (err: unknown) {
-      throw new GrpcError(status.INTERNAL, (err as Error).message);
-    }
+    validateSchemaInput(requestedSchema.name, undefined, modelOptions);
 
     return this.schemaController.createSchema(
       new ConduitSchema(requestedSchema.name, requestedSchema.fields, modelOptions),
@@ -361,10 +344,7 @@ export class SchemaAdmin {
       conduitOptions?.authorization?.enabled &&
       !this.grpcSdk.isAvailable('authorization')
     ) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'Authorization service is not available',
-      );
+      throw new ModuleError(errors.SCHEMA_AUTHORIZATION_UNAVAILABLE);
     }
     return modelOptions;
   }
@@ -379,10 +359,7 @@ export class SchemaAdmin {
         selectedSchema: id,
       });
     if (!isNil(endpoints) && endpoints.length !== 0) {
-      throw new GrpcError(
-        status.ABORTED,
-        'Cannot delete schema because it is used by a custom endpoint',
-      );
+      throw new ModuleError(errors.SCHEMA_IN_USE_BY_CUSTOM_ENDPOINT);
     }
 
     const message = await this.database.deleteSchema(
@@ -410,10 +387,7 @@ export class SchemaAdmin {
         });
       if (!isNil(endpoints) && endpoints > 0) {
         // Temp: error out until Admin handles this case
-        throw new GrpcError(
-          status.ABORTED,
-          'Cannot delete schema because it is used by a custom endpoint',
-        );
+        throw new ModuleError(errors.SCHEMA_IN_USE_BY_CUSTOM_ENDPOINT);
       }
       await this.database.deleteSchema(schema.name, deleteData, 'database');
     }
@@ -440,12 +414,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findByIdAndUpdate(requestedSchema._id, requestedSchema);
     if (isNil(updatedSchema)) {
-      throw new GrpcError(
-        status.INTERNAL,
-        `Could not ${
-          requestedSchema.modelOptions.conduit.cms.enabled ? 'enable' : 'disable'
-        } schema`,
-      );
+      throw new ModuleError(errors.SCHEMA_TOGGLE_FAILED);
     }
     await this.database
       .getSchemaModel('CustomEndpoints')
@@ -479,10 +448,7 @@ export class SchemaAdmin {
         { 'modelOptions.conduit.cms.enabled': enabled },
       );
     if (isNil(updatedSchemas)) {
-      throw new GrpcError(
-        status.INTERNAL,
-        `Could not ${enabled ? 'enable' : 'disable'} schemas`,
-      );
+      throw new ModuleError(errors.SCHEMA_TOGGLE_FAILED);
     }
 
     await this.database
@@ -505,13 +471,11 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({ _id: call.request.params.schemaId });
     if (!requestedSchema) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     }
     await this.database
       .setSchemaExtension(requestedSchema.name, 'database', call.request.params.fields)
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.SCHEMA_OPERATION_FAILED));
     return this.database.getSchema(requestedSchema.name);
   }
 
@@ -523,11 +487,7 @@ export class SchemaAdmin {
       ...(canModify !== undefined && { canModify }),
       ...(canDelete !== undefined && { canDelete }),
     };
-    try {
-      validatePermissions(permissions);
-    } catch (err: unknown) {
-      throw new GrpcError(status.INTERNAL, (err as Error).message);
-    }
+    validatePermissions(permissions);
 
     const requestedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
@@ -535,7 +495,10 @@ export class SchemaAdmin {
         $and: [{ name: { $nin: this.database.systemSchemas } }, { _id: id }],
       });
     if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, "Schema does not exist or can't be modified");
+      throw new ModuleError({
+        ...errors.SCHEMA_NOT_FOUND,
+        message: "Schema does not exist or can't be modified",
+      });
     }
 
     merge(requestedSchema.modelOptions.permissions, permissions);
@@ -543,7 +506,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findByIdAndUpdate(requestedSchema._id, requestedSchema);
     if (isNil(updatedSchema)) {
-      throw new GrpcError(status.INTERNAL, 'Could not update schema permissions');
+      throw new ModuleError(errors.SCHEMA_PERMISSIONS_UPDATE_FAILED);
     }
 
     return 'Schema permissions updated successfully';
@@ -616,7 +579,7 @@ export class SchemaAdmin {
       .getSchemaModel('_PendingSchemas')
       .model.findOne(query);
     if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Pending schema does not exist');
+      throw new ModuleError(errors.PENDING_SCHEMA_NOT_FOUND);
     }
     return requestedSchema;
   }
@@ -648,10 +611,10 @@ export class SchemaAdmin {
     const schemas: _ConduitSchema[] = Object.values(call.request.params.schemas); // @dirty-type-cast
     if (schemas.length === 0) {
       // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Argument schemas is required and must be a non-empty array!',
-      );
+      throw new ModuleError({
+        ...errors.SCHEMA_IDS_REQUIRED,
+        message: 'Argument schemas is required and must be a non-empty array!',
+      });
     }
     const schemaNames = schemas.map(schema => schema.name);
     await Promise.all(
@@ -707,7 +670,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({ _id: id });
     if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     }
     return this.database.createVectorIndex(requestedSchema.name, index);
   }
@@ -718,7 +681,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({ _id: id });
     if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     }
     return { indexes: await this.database.getVectorIndexes(requestedSchema.name) };
   }
@@ -729,7 +692,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({ _id: id });
     if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     }
     return this.database.deleteVectorIndex(requestedSchema.name, indexName);
   }
@@ -776,10 +739,10 @@ export class SchemaAdmin {
     const { id, indexNames } = call.request.params;
     const requestedSchema = await this.findDeclaredSchemaById(id);
     if (isNil(indexNames) || indexNames.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Index names should be a string array',
-      );
+      throw new ModuleError({
+        ...errors.INDEX_DEFINITION_INVALID,
+        message: 'Index names should be a string array',
+      });
     }
     return this.database.deleteIndexes(requestedSchema.name, indexNames);
   }
@@ -830,16 +793,19 @@ export class SchemaAdmin {
       indexes: Array<ModelOptionsIndexes & { schemaName: string }>;
     };
     if (!Array.isArray(indexes) || indexes.length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'indexes must be a non-empty array');
+      throw new ModuleError({
+        ...errors.INDEX_DEFINITION_INVALID,
+        message: 'indexes must be a non-empty array',
+      });
     }
     const bySchema = new Map<string, ModelOptionsIndexes[]>();
     for (const entry of indexes) {
       const { schemaName, ...rest } = entry;
       if (!schemaName) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Each imported index needs schemaName',
-        );
+        throw new ModuleError({
+          ...errors.INDEX_DEFINITION_INVALID,
+          message: 'Each imported index needs schemaName',
+        });
       }
       const bucket = bySchema.get(schemaName) ?? [];
       bucket.push(rest);
@@ -847,8 +813,8 @@ export class SchemaAdmin {
     }
     for (const [schemaName, schemaIndexes] of bySchema) {
       if (!this.database.models[schemaName]) {
-        throw new GrpcError(
-          status.NOT_FOUND,
+        throw new ModuleError(
+          errors.SCHEMA_NOT_FOUND,
           `Requested schema not found: ${schemaName}`,
         );
       }
@@ -883,7 +849,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({ _id: id });
     if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     }
     return requestedSchema;
   }
@@ -895,10 +861,7 @@ export class SchemaAdmin {
         $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: id }],
       });
     if (isNil(requestedSchema)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Schema does not exist or isn't a CMS schema",
-      );
+      throw new ModuleError(errors.CMS_SCHEMA_NOT_FOUND);
     }
     return requestedSchema;
   }
@@ -906,10 +869,10 @@ export class SchemaAdmin {
   private async retrieveSchemasByIds(ids: string[]) {
     if (ids.length === 0) {
       // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Argument ids is required and must be a non-empty array!',
-      );
+      throw new ModuleError({
+        ...errors.SCHEMA_IDS_REQUIRED,
+        message: 'Argument ids is required and must be a non-empty array!',
+      });
     }
 
     const requestedSchemas = await this.database
@@ -918,7 +881,7 @@ export class SchemaAdmin {
         $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: { $in: ids } }],
       });
     if (!requestedSchemas || requestedSchemas.length === 0) {
-      throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
+      throw new ModuleError(errors.SCHEMA_IDS_INVALID);
     }
     return requestedSchemas;
   }

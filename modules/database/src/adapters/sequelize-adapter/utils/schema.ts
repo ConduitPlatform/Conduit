@@ -6,6 +6,8 @@ import { isNil } from 'lodash-es';
 import { validateFieldChanges, validateFieldConstraints } from '../../utils/index.js';
 
 import * as deepdash from 'deepdash-es/standalone';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../../errors.js';
 
 export const extractRelations = (
   name: string,
@@ -34,7 +36,8 @@ export const extractRelations = (
           item.model.associations[model.name + '_' + relation].foreignKey !==
             item.originalSchema.name
         ) {
-          throw new Error(
+          throw new ModuleError(
+            errors.SCHEMA_FIELDS_INVALID,
             `Relation ${relation} already exists on ${item.model.name} with a different foreign key`,
           );
         } else {

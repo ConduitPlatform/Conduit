@@ -1,5 +1,6 @@
-import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { Indexable } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 export type VectorFilterProvider = 'mongodb' | 'postgres';
 
@@ -29,7 +30,7 @@ function isScalar(value: unknown): boolean {
 }
 
 function invalid(message: string): never {
-  throw new GrpcError(status.INVALID_ARGUMENT, message);
+  throw new ModuleError({ ...errors.VECTOR_SEARCH_FILTER_INVALID, message: message });
 }
 
 function assertAllowedField(

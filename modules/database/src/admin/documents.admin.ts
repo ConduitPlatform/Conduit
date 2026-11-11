@@ -1,11 +1,9 @@
 import {
   ConduitGrpcSdk,
-  GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash-es';
 import { populateArray, wrongFields } from '../utils/utilities.js';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
@@ -13,6 +11,8 @@ import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
 import { ConduitDatabaseSchema, Doc } from '../interfaces/index.js';
 import { parseSortParam } from '../handlers/utils.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 export class DocumentsAdmin {
   constructor(
@@ -24,7 +24,7 @@ export class DocumentsAdmin {
     const { schemaName, id, populate } = call.request.params;
     const schema = this.database.getSchemaModel(schemaName);
     if (isNil(schema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist ');
+      throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     }
     let populates;
     if (!isNil(populate)) {
@@ -34,7 +34,7 @@ export class DocumentsAdmin {
       .getSchemaModel(schemaName)
       .model.findOne({ _id: id }, { populate: populates });
     if (isNil(document)) {
-      throw new GrpcError(status.NOT_FOUND, 'Document does not exist');
+      throw new ModuleError(errors.DOCUMENT_NOT_FOUND);
     }
     return document;
   }
@@ -46,7 +46,7 @@ export class DocumentsAdmin {
     const { limit } = call.request.params ?? 25;
     const schema = this.database.getSchemaModel(schemaName);
     if (isNil(schema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     }
     if (!query || query.length === '') {
       query = {};
@@ -71,10 +71,7 @@ export class DocumentsAdmin {
     const { schemaName, inputDocument } = call.request.params;
     const schema = this.database.getSchemaModel(schemaName);
     if (isNil(schema) || this.database.systemSchemas.includes(schemaName)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        'Schema does not exist or disallows doc modifications',
-      );
+      throw new ModuleError(errors.SCHEMA_DOCUMENTS_NOT_MODIFIABLE);
     }
     return await this.database.getSchemaModel(schemaName).model.create(inputDocument);
   }
@@ -83,10 +80,7 @@ export class DocumentsAdmin {
     const { schemaName, inputDocuments } = call.request.params;
     const schema = this.database.getSchemaModel(schemaName);
     if (isNil(schema) || this.database.systemSchemas.includes(schemaName)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        'Schema does not exist or disallows doc modifications',
-      );
+      throw new ModuleError(errors.SCHEMA_DOCUMENTS_NOT_MODIFIABLE);
     }
     const newDocuments = await this.database
       .getSchemaModel(schemaName)
@@ -98,21 +92,21 @@ export class DocumentsAdmin {
     const { schemaName, id, changedDocument } = call.request.params;
     const schema = this.database.getSchemaModel(schemaName);
     if (isNil(schema) || this.database.systemSchemas.includes(schemaName)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        'Schema does not exist or disallows doc modifications',
-      );
+      throw new ModuleError(errors.SCHEMA_DOCUMENTS_NOT_MODIFIABLE);
     }
     const currentFields = Object.keys(
       (schema.model.originalSchema as ConduitDatabaseSchema).compiledFields,
     );
     const changedFields = Object.keys(changedDocument);
     if (!wrongFields(currentFields, changedFields)) {
-      throw new GrpcError(status.NOT_FOUND, 'Wrong input fields!');
+      throw new ModuleError(errors.DOCUMENT_FIELDS_INVALID);
     }
     const dbDocument: Doc = await this.database
       .getSchemaModel(schemaName)
       .model.findOne({ _id: id });
+    if (isNil(dbDocument)) {
+      throw new ModuleError(errors.DOCUMENT_NOT_FOUND);
+    }
 
     Object.assign(dbDocument, changedDocument);
     return await this.database
@@ -124,16 +118,16 @@ export class DocumentsAdmin {
     const { schemaName, changedDocuments } = call.request.params;
     const schema = this.database.getSchemaModel(schemaName);
     if (isNil(schema) || this.database.systemSchemas.includes(schemaName)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        'Schema does not exist or disallows doc modifications',
-      );
+      throw new ModuleError(errors.SCHEMA_DOCUMENTS_NOT_MODIFIABLE);
     }
     const updatedDocuments: UntypedArray = [];
     for (const doc of changedDocuments) {
       const dbDocument: Doc = await this.database
         .getSchemaModel(schemaName)
         .model.findOne({ _id: doc._id });
+      if (isNil(dbDocument)) {
+        throw new ModuleError(errors.DOCUMENT_NOT_FOUND);
+      }
       Object.assign(dbDocument, doc);
       const updatedDocument = await this.database
         .getSchemaModel(schemaName)
@@ -147,10 +141,7 @@ export class DocumentsAdmin {
     const { schemaName, id } = call.request.params;
     const schema = this.database.getSchemaModel(schemaName);
     if (isNil(schema) || this.database.systemSchemas.includes(schemaName)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        'Schema does not exist or disallows doc modifications',
-      );
+      throw new ModuleError(errors.SCHEMA_DOCUMENTS_NOT_MODIFIABLE);
     }
     await this.database.getSchemaModel(schemaName).model.deleteOne({ _id: id });
     return 'Ok';

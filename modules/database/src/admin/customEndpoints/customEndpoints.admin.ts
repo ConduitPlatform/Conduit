@@ -1,13 +1,11 @@
 import {
   ConduitGrpcSdk,
   ConduitModel,
-  GrpcError,
   Indexable,
   ParsedRouterRequest,
   Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import {
   inputValidation,
   operationValidation,
@@ -28,6 +26,8 @@ import {
 } from '../../interfaces/index.js';
 import { OperationsEnum } from '../../enums/index.js';
 import { parseSortParam } from '../../handlers/utils.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 export class CustomEndpointsAdmin {
   constructor(
@@ -65,7 +65,10 @@ export class CustomEndpointsAdmin {
       );
       let error = paramValidation(endpoint);
       if (error !== true) {
-        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+        throw new ModuleError({
+          ...errors.CUSTOM_ENDPOINT_INVALID,
+          message: error as string,
+        });
       }
       error = operationValidation(
         endpoint.operation,
@@ -73,11 +76,17 @@ export class CustomEndpointsAdmin {
         endpoint.assignments,
       );
       if (error !== true) {
-        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+        throw new ModuleError({
+          ...errors.CUSTOM_ENDPOINT_INVALID,
+          message: error as string,
+        });
       }
       error = inputValidation(endpoint.operation, endpoint.inputs);
       if (error !== true) {
-        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+        throw new ModuleError({
+          ...errors.CUSTOM_ENDPOINT_INPUT_INVALID,
+          message: error as string,
+        });
       }
       endpoint.selectedSchema = schemaId;
       error = paginationAndSortingValidation(
@@ -87,7 +96,10 @@ export class CustomEndpointsAdmin {
         null,
       );
       if (error !== true) {
-        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+        throw new ModuleError({
+          ...errors.CUSTOM_ENDPOINT_INVALID,
+          message: error as string,
+        });
       }
       if (
         [OperationsEnum.POST, OperationsEnum.PUT, OperationsEnum.PATCH].includes(
@@ -113,7 +125,7 @@ export class CustomEndpointsAdmin {
         .getSchemaModel('CustomEndpoints')
         .model.create(endpoint);
       if (isNil(customEndpoint)) {
-        throw new GrpcError(status.INTERNAL, 'Endpoint creation failed');
+        throw new ModuleError(errors.CUSTOM_ENDPOINT_OPERATION_FAILED);
       }
     }
     this.customEndpointController.refreshEndpoints();
@@ -162,7 +174,7 @@ export class CustomEndpointsAdmin {
       .getSchemaModel('CustomEndpoints')
       .model.findOne({ _id: call.request.params.id });
     if (isNil(customEndpoint)) {
-      throw new GrpcError(status.NOT_FOUND, 'Custom endpoint does not exist');
+      throw new ModuleError(errors.CUSTOM_ENDPOINT_NOT_FOUND);
     }
     return customEndpoint;
   }
@@ -183,8 +195,8 @@ export class CustomEndpointsAdmin {
       .getSchemaModel('CustomEndpoints')
       .model.findOne({ name });
     if (customEndpointExists) {
-      throw new GrpcError(
-        status.ALREADY_EXISTS,
+      throw new ModuleError(
+        errors.CUSTOM_ENDPOINT_EXISTS,
         `${name} custom endpoint already exists`,
       );
     }
@@ -193,15 +205,24 @@ export class CustomEndpointsAdmin {
     await this.assertAuthenticationAllowedForSchema(authentication, schemaId, schemaName);
     let error = paramValidation(call.request.params);
     if (error !== true) {
-      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INVALID,
+        message: error as string,
+      });
     }
     error = operationValidation(operation, query, assignments);
     if (error !== true) {
-      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INVALID,
+        message: error as string,
+      });
     }
     error = inputValidation(operation, inputs);
     if (error !== true) {
-      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INPUT_INVALID,
+        message: error as string,
+      });
     }
 
     const endpoint = {
@@ -224,7 +245,10 @@ export class CustomEndpointsAdmin {
       endpoint,
     );
     if (error !== true) {
-      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INVALID,
+        message: error as string,
+      });
     }
 
     if (
@@ -240,7 +264,7 @@ export class CustomEndpointsAdmin {
       .getSchemaModel('CustomEndpoints')
       .model.create(endpoint);
     if (isNil(customEndpoint)) {
-      throw new GrpcError(status.INTERNAL, 'Endpoint creation failed');
+      throw new ModuleError(errors.CUSTOM_ENDPOINT_OPERATION_FAILED);
     }
     this.customEndpointController.refreshEndpoints();
     return customEndpoint;
@@ -250,16 +274,16 @@ export class CustomEndpointsAdmin {
     const { id, selectedSchema, selectedSchemaName, query, inputs, assignments } =
       call.request.params;
     if (isNil(selectedSchema) && isNil(selectedSchemaName)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Either selectedSchema or selectedSchemaName must be specified',
-      );
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INVALID,
+        message: 'Either selectedSchema or selectedSchemaName must be specified',
+      });
     }
     const found = await this.database
       .getSchemaModel('CustomEndpoints')
       .model.findOne({ _id: id });
     if (isNil(found)) {
-      throw new GrpcError(status.NOT_FOUND, 'Custom endpoint does not exist');
+      throw new ModuleError(errors.CUSTOM_ENDPOINT_NOT_FOUND);
     }
     const operation = found.operation;
 
@@ -271,11 +295,17 @@ export class CustomEndpointsAdmin {
 
     let error = operationValidation(operation, query, assignments);
     if (error !== true) {
-      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INVALID,
+        message: error as string,
+      });
     }
     error = inputValidation(inputs);
     if (error !== true) {
-      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INPUT_INVALID,
+        message: error as string,
+      });
     }
     error = paginationAndSortingValidation(
       operation,
@@ -284,7 +314,10 @@ export class CustomEndpointsAdmin {
       null,
     );
     if (error !== true) {
-      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INVALID,
+        message: error as string,
+      });
     }
 
     if (
@@ -313,11 +346,9 @@ export class CustomEndpointsAdmin {
     const customEndpoint = await this.database
       .getSchemaModel('CustomEndpoints')
       .model.findByIdAndUpdate(found._id, found)
-      .catch(e => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CUSTOM_ENDPOINT_OPERATION_FAILED));
     if (isNil(customEndpoint)) {
-      throw new GrpcError(status.INTERNAL, 'Could not update custom endpoint');
+      throw new ModuleError(errors.CUSTOM_ENDPOINT_OPERATION_FAILED);
     }
 
     this.customEndpointController.refreshEndpoints();
@@ -326,20 +357,21 @@ export class CustomEndpointsAdmin {
 
   async deleteCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (call.request.params.id.length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'id must not be empty');
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INVALID,
+        message: 'id must not be empty',
+      });
     }
     const customEndpoint = await this.database
       .getSchemaModel('CustomEndpoints')
       .model.findOne({ _id: call.request.params.id });
     if (isNil(customEndpoint)) {
-      throw new GrpcError(status.NOT_FOUND, 'Custom endpoint does not exist');
+      throw new ModuleError(errors.CUSTOM_ENDPOINT_NOT_FOUND);
     }
     await this.database
       .getSchemaModel('CustomEndpoints')
       .model.deleteOne({ _id: call.request.params.id })
-      .catch(e => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CUSTOM_ENDPOINT_OPERATION_FAILED));
     this.customEndpointController.refreshEndpoints();
     ConduitGrpcSdk.Metrics?.decrement('custom_endpoints_total');
     return 'Custom Endpoint deleted';
@@ -401,7 +433,10 @@ export class CustomEndpointsAdmin {
     compiledFields: ConduitModel;
   }> {
     if (!schemaId && !schemaName) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Specify schema id or name');
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INVALID,
+        message: 'Specify schema id or name',
+      });
     }
     const schema: IDeclaredSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
@@ -412,10 +447,10 @@ export class CustomEndpointsAdmin {
         ],
       });
     if (!schema) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        `Schema '${schemaName ?? schemaId}' does not exist or can't be used by CMS`,
-      );
+      throw new ModuleError({
+        ...errors.CMS_SCHEMA_NOT_FOUND,
+        message: `Schema '${schemaName ?? schemaId}' does not exist or can't be used by CMS`,
+      });
     }
     schemaId = schema._id.toString();
     schemaName = schema.name;
@@ -437,7 +472,10 @@ export class CustomEndpointsAdmin {
       const fields = perms.canDelete ? schema.compiledFields : {};
       return { schemaId, schemaName, fields, compiledFields: schema.compiledFields };
     } else {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Unknown Operation');
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INVALID,
+        message: 'Unknown Operation',
+      });
     }
   }
 
@@ -447,7 +485,7 @@ export class CustomEndpointsAdmin {
       // This is almost certainly never undefined, but adding this just in case... // TODO: Remove after type cleanup
       const error = `Schema '${schema.name}' does not define any permissions! Can't create non-GET custom endpoint!`;
       ConduitGrpcSdk.Logger.error(error);
-      throw new GrpcError(status.FAILED_PRECONDITION, error);
+      throw new ModuleError({ ...errors.CUSTOM_ENDPOINT_NOT_ALLOWED, message: error });
     }
     return perms;
   }
@@ -484,10 +522,7 @@ export class CustomEndpointsAdmin {
     }
     const schema = await this.findDeclaredSchemaForCustomEndpoint(schemaId, schemaName);
     if (schema?.modelOptions?.conduit?.authorization?.enabled) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Custom endpoints for schemas with authorization enabled must require authentication',
-      );
+      throw new ModuleError(errors.CUSTOM_ENDPOINT_AUTH_REQUIRED);
     }
   }
 
