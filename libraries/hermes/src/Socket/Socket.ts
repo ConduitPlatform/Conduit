@@ -80,18 +80,21 @@ export class SocketController extends ConduitRouter {
       },
     };
     this.io = new IOServer(this.httpServer, this.options);
-    this.redisClient = grpcSdk.redisManager.getClient();
+    // The adapter also uses pub/sub channels, which keyPrefix doesn't cover,
+    // so all of its names carry the deployment prefix explicitly.
+    this.redisClient = grpcSdk.redisManager.getUnprefixedClient();
+    const redisPrefix = grpcSdk.redisManager.prefix;
     // Admin (e.g. :3031) and Router (e.g. :3001) are separate Socket.IO
     // servers that share Redis. The adapter defaults would put both on the
     // same stream, so a database change pushed to admin *and* router is
     // delivered twice to every socket in those rooms.
-    const adapterKey = `socket.io:${this.port}`;
+    const adapterKey = `${redisPrefix}socket.io:${this.port}`;
     this.io.adapter(
       createAdapter(this.redisClient, {
         onlyPlaintext: true,
         streamName: adapterKey,
         channelPrefix: adapterKey,
-        sessionKeyPrefix: `sio:session:${this.port}:`,
+        sessionKeyPrefix: `${redisPrefix}sio:session:${this.port}:`,
       }),
     );
     this.httpServer.listen(this.port);
@@ -547,6 +550,11 @@ export class SocketController extends ConduitRouter {
     super.shutDown();
     this.io.close();
     this.httpServer.close();
-    this.redisClient.quit();
+    const client = this.redisClient;
+    // graceful quit, bounded: quit() never settles while Redis is down
+    const timeout = new Promise(resolve => setTimeout(resolve, 1000).unref());
+    Promise.race([client.quit(), timeout])
+      .catch(() => {})
+      .finally(() => client.disconnect());
   }
 }

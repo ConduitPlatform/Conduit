@@ -19,6 +19,7 @@ import {
   EventBus,
   getJsonEnv,
   RedisManager,
+  withRedisKeyPrefix,
   sleep,
   StateManager,
   UserCache,
@@ -602,6 +603,11 @@ class ConduitGrpcSdk {
     }
     return promise
       .then(() => {
+        // Stored in the details Core serves, so modules inherit the prefix.
+        this._redisDetails = withRedisKeyPrefix(
+          this._redisDetails!,
+          process.env.REDIS_KEY_PREFIX,
+        );
         if (this._redisDetails!.hasOwnProperty('nodes')) {
           this._redisManager = new RedisManager(this._redisDetails);
         } else {

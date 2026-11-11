@@ -15,7 +15,7 @@ export class QueueController {
   private emailCleanupQueue: Queue;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.redisConnection = this.grpcSdk.redisManager.getClient();
+    this.redisConnection = this.grpcSdk.redisManager.getUnprefixedClient();
     this.initializeQueues();
   }
 
@@ -37,7 +37,7 @@ export class QueueController {
 
   private createQueue(name: string): Queue {
     return new Queue(name, {
-      connection: this.redisConnection,
+      ...this.grpcSdk.redisManager.bullMQOptions(this.redisConnection),
     });
   }
 
@@ -46,7 +46,7 @@ export class QueueController {
       concurrency: 5,
       removeOnComplete: { age: 3600, count: 1000 },
       removeOnFail: { age: 24 * 3600 },
-      connection: this.redisConnection,
+      ...this.grpcSdk.redisManager.bullMQOptions(this.redisConnection),
     });
     this.setupWorkerEventHandlers(worker);
     return worker;
