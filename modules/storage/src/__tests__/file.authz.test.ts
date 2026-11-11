@@ -5,6 +5,7 @@ import {
   ConduitGrpcSdk,
   GrpcError,
   ParsedRouterRequest,
+  getConduitCode,
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { _StorageContainer, File } from '../models/index.js';
@@ -117,7 +118,7 @@ describe('client container create', () => {
       (error: unknown) =>
         error instanceof GrpcError &&
         error.code === status.NOT_FOUND &&
-        error.message === 'Container does not exist',
+        getConduitCode(error) === 'CONTAINER_NOT_FOUND',
     );
   });
 });
@@ -271,7 +272,7 @@ describe('scope and team', () => {
       (error: unknown) =>
         error instanceof GrpcError &&
         error.code === status.PERMISSION_DENIED &&
-        error.message === 'You are not allowed to create files in this scope',
+        getConduitCode(error) === 'SCOPE_CREATE_FILE_DENIED',
     );
   });
 });
@@ -353,7 +354,7 @@ describe('container create access', () => {
       (error: unknown) =>
         error instanceof GrpcError &&
         error.code === status.PERMISSION_DENIED &&
-        error.message === 'You are not allowed to create files in this container',
+        getConduitCode(error) === 'CONTAINER_CREATE_FILE_DENIED',
     );
   });
 });

@@ -13,7 +13,6 @@ import { FileHandlers } from './handlers/file.js';
 import { StorageRoutes } from './routes/index.js';
 import * as models from './models/index.js';
 import path from 'path';
-import { status } from '@grpc/grpc-js';
 import { isEmpty, isNil } from 'lodash-es';
 import { runMigrations } from './migrations/index.js';
 import { migratePublicContainers } from './migrations/publicContainerMigration.js';
@@ -43,12 +42,14 @@ import { getAwsAccountId } from './utils/index.js';
 import {
   ConfigController,
   createParsedRouterRequest,
+  grpcCallbackError,
   ManagedModule,
   sanitizeDocumentsForExport,
   type ExportableResource,
   type ExportResult,
   type ImportResult,
 } from '@conduitplatform/module-tools';
+import { errors } from './errors.js';
 import { StorageParamAdapter } from './adapter/StorageParamAdapter.js';
 import { ContainerResource, FileResource, FolderResource } from './authz/index.js';
 import { ensureDefaultContainer } from './authz/bootstrap.js';
@@ -338,10 +339,7 @@ export default class Storage extends ManagedModule<Config> {
   // gRPC Service
   async getFile(call: GrpcRequest<GetFileRequest>, callback: GrpcCallback<FileResponse>) {
     if (!this._adminFileHandlers)
-      return callback({
-        code: status.INTERNAL,
-        message: 'File handlers not initiated',
-      });
+      return callback(grpcCallbackError(errors.STORAGE_HANDLERS_NOT_INITIALIZED));
     const request = createParsedRouterRequest(
       call.request,
       undefined,
@@ -366,10 +364,7 @@ export default class Storage extends ManagedModule<Config> {
     callback: GrpcCallback<GetFileDataResponse>,
   ) {
     if (!this._adminFileHandlers)
-      return callback({
-        code: status.INTERNAL,
-        message: 'File handlers not initiated',
-      });
+      return callback(grpcCallbackError(errors.STORAGE_HANDLERS_NOT_INITIALIZED));
     const request = createParsedRouterRequest(
       call.request,
       undefined,
@@ -393,10 +388,7 @@ export default class Storage extends ManagedModule<Config> {
     callback: GrpcCallback<GetFileUrlResponse>,
   ) {
     if (!this._adminFileHandlers)
-      return callback({
-        code: status.INTERNAL,
-        message: 'File handlers not initiated',
-      });
+      return callback(grpcCallbackError(errors.STORAGE_HANDLERS_NOT_INITIALIZED));
     const request = createParsedRouterRequest(
       call.request,
       undefined,
@@ -420,10 +412,7 @@ export default class Storage extends ManagedModule<Config> {
     callback: GrpcCallback<FileResponse>,
   ) {
     if (!this._adminFileHandlers)
-      return callback({
-        code: status.INTERNAL,
-        message: 'File handlers not initiated',
-      });
+      return callback(grpcCallbackError(errors.STORAGE_HANDLERS_NOT_INITIALIZED));
     const request = createParsedRouterRequest(
       call.request,
       undefined,
@@ -448,10 +437,7 @@ export default class Storage extends ManagedModule<Config> {
     callback: GrpcCallback<FileResponse>,
   ) {
     if (!this._adminFileHandlers)
-      return callback({
-        code: status.INTERNAL,
-        message: 'File handlers not initiated',
-      });
+      return callback(grpcCallbackError(errors.STORAGE_HANDLERS_NOT_INITIALIZED));
     const request = createParsedRouterRequest(
       call.request,
       undefined,
@@ -476,10 +462,7 @@ export default class Storage extends ManagedModule<Config> {
     callback: GrpcResponse<DeleteFileResponse>,
   ) {
     if (!this._adminFileHandlers)
-      return callback({
-        code: status.INTERNAL,
-        message: 'File handlers not initiated',
-      });
+      return callback(grpcCallbackError(errors.STORAGE_HANDLERS_NOT_INITIALIZED));
     const request = createParsedRouterRequest(
       call.request,
       undefined,
@@ -503,10 +486,7 @@ export default class Storage extends ManagedModule<Config> {
     callback: GrpcResponse<FileByUrlResponse>,
   ) {
     if (!this._adminFileHandlers)
-      return callback({
-        code: status.INTERNAL,
-        message: 'File handlers not initiated',
-      });
+      return callback(grpcCallbackError(errors.STORAGE_HANDLERS_NOT_INITIALIZED));
     const request = createParsedRouterRequest(
       call.request,
       undefined,
@@ -531,10 +511,7 @@ export default class Storage extends ManagedModule<Config> {
     callback: GrpcResponse<FileByUrlResponse>,
   ) {
     if (!this._adminFileHandlers)
-      return callback({
-        code: status.INTERNAL,
-        message: 'File handlers not initiated',
-      });
+      return callback(grpcCallbackError(errors.STORAGE_HANDLERS_NOT_INITIALIZED));
     const request = createParsedRouterRequest(
       call.request,
       undefined,

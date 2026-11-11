@@ -1,13 +1,14 @@
 import { afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { status } from '@grpc/grpc-js';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { GrpcError, getConduitCode } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import {
   actorSubject,
   escapeRegex,
   folderPrefixRegex,
   isAuthzEnabled,
+  isMissingRelationError,
   isDefaultContainer,
   isUsableSubject,
   parsePersonalFolderOwner,
@@ -136,8 +137,42 @@ describe('authz helpers', () => {
     assert.throws(
       () => rethrowGrpcOrInternal(new Error('boom')),
       (error: unknown) => {
-        return error instanceof GrpcError && error.code === status.INTERNAL;
+        return (
+          error instanceof GrpcError &&
+          error.code === status.INTERNAL &&
+          getConduitCode(error) === 'STORAGE_OPERATION_FAILED' &&
+          !String(error.message).includes('boom')
+        );
       },
     );
+  });
+
+  it('keeps status and conduitCode of errors returned by other modules', () => {
+    const upstream = Object.assign(new Error('relation gone'), {
+      code: status.NOT_FOUND,
+      details: JSON.stringify({
+        message: 'No relations found',
+        conduitCode: 'RELATION_NOT_FOUND',
+      }),
+    });
+    assert.throws(
+      () => rethrowGrpcOrInternal(upstream),
+      (error: unknown) => error === upstream,
+    );
+  });
+
+  it('detects missing relations by conduitCode or legacy text', () => {
+    assert.equal(
+      isMissingRelationError(
+        Object.assign(new Error('x'), {
+          code: status.NOT_FOUND,
+          details: JSON.stringify({ message: 'x', conduitCode: 'RELATION_NOT_FOUND' }),
+        }),
+      ),
+      true,
+    );
+    assert.equal(isMissingRelationError(new Error('No relations found')), true);
+    assert.equal(isMissingRelationError(new Error('Relation does not exist')), true);
+    assert.equal(isMissingRelationError(new Error('other')), false);
   });
 });

@@ -8,10 +8,10 @@ import {
 import { isNil } from 'lodash-es';
 import path from 'path';
 import { File, _StorageContainer } from '../models/index.js';
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { randomUUID } from 'node:crypto';
-import { ConfigController } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
+import { ConfigController, ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 export async function streamToBuffer(readableStream: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -125,7 +125,7 @@ export async function resolveFileReferences(
     .container(params.container)
     .getPublicUrl(fileName, true);
   if (publicUrlResult instanceof Error) {
-    throw publicUrlResult;
+    throw new ModuleError(errors.STORAGE_OPERATION_FAILED, publicUrlResult.message);
   }
 
   return {
@@ -155,7 +155,7 @@ export async function resolvePublicFileAccessUrl(
       fileName: file.alias ?? file.name,
     });
   if (rawUrl instanceof Error) {
-    throw rawUrl;
+    throw new ModuleError(errors.STORAGE_OPERATION_FAILED, rawUrl.message);
   }
   return applyCdnHost(rawUrl, file.container) ?? rawUrl;
 }
@@ -371,7 +371,7 @@ export async function validateName(
   if (count === 0) {
     return name;
   } else if (!config.suffixOnNameConflict) {
-    throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
+    throw new ModuleError(errors.FILE_ALREADY_EXISTS);
   } else {
     if (extension !== '') {
       return `${baseName} (${count})${extension}`;
@@ -470,10 +470,7 @@ export async function validateFilePrivacy(
     .getInstance()
     .findOne({ name: containerName }, { readPreference: 'primary' });
   if (container?.isPublic && !isFilePublic) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Files in public containers must be public',
-    );
+    throw new ModuleError(errors.PRIVATE_FILE_IN_PUBLIC_CONTAINER);
   }
 }
 
