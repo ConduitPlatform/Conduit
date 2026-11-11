@@ -31,7 +31,7 @@ export type SearchGateReason = (typeof SEARCH_GATE_REASONS)[number];
 /** Single place mapping a search gate reason to its catalog entry. */
 export const SEARCH_GATE_DEFINITIONS: Record<SearchGateReason, ModuleErrorDefinition> = {
   module_disabled: errors.EMBEDDINGS_MODULE_DISABLED,
-  vector_unsupported: errors.VECTOR_UNSUPPORTED,
+  vector_unsupported: errors.VECTOR_SEARCH_UNSUPPORTED,
   vector_search_unavailable: errors.VECTOR_UNAVAILABLE,
   config_not_found: errors.ENABLED_EMBEDDING_CONFIG_NOT_FOUND,
   config_disabled: errors.EMBEDDING_CONFIG_UNUSABLE,

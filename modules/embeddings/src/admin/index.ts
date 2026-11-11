@@ -196,7 +196,7 @@ export class AdminHandlers {
           errors.EMBEDDING_FIELD_COLLISION,
           errors.EMBEDDING_DIMENSION_CHANGE_NOT_ALLOWED,
           errors.EMBEDDINGS_MODULE_DISABLED,
-          errors.VECTOR_UNSUPPORTED,
+          errors.VECTOR_SEARCH_UNSUPPORTED,
           errors.VECTOR_UNAVAILABLE,
           errors.ENABLED_EMBEDDING_CONFIG_NOT_FOUND,
           errors.EMBEDDING_CONFIG_UNUSABLE,

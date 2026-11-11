@@ -28,7 +28,7 @@ export const BACKFILL_GATE_DEFINITIONS: Record<
   ModuleErrorDefinition
 > = {
   module_disabled: errors.EMBEDDINGS_MODULE_DISABLED,
-  vector_unsupported: errors.VECTOR_UNSUPPORTED,
+  vector_unsupported: errors.VECTOR_SEARCH_UNSUPPORTED,
   vector_storage_unavailable: errors.VECTOR_UNAVAILABLE,
   config_not_found: errors.ENABLED_EMBEDDING_CONFIG_NOT_FOUND,
   config_disabled: errors.EMBEDDING_CONFIG_UNUSABLE,

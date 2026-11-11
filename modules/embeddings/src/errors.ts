@@ -175,7 +175,7 @@ export const errors = defineErrors({
     message: 'Embeddings module is disabled',
     description: 'Enable the embeddings module before running this operation.',
   },
-  VECTOR_UNSUPPORTED: {
+  VECTOR_SEARCH_UNSUPPORTED: {
     grpcCode: status.FAILED_PRECONDITION,
     message: 'Database does not support Conduit vector search',
     description:

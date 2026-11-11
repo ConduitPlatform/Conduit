@@ -66,7 +66,7 @@ describe('backfill execution gates', () => {
       (err: unknown) =>
         err instanceof BackfillGateError &&
         err.reason === 'vector_unsupported' &&
-        getConduitCode(err) === 'VECTOR_UNSUPPORTED' &&
+        getConduitCode(err) === 'VECTOR_SEARCH_UNSUPPORTED' &&
         /mysql/.test(parseErrorPayload(err).message),
     );
     assert.throws(
