@@ -1,0 +1,1135 @@
+import { afterEach, beforeEach, describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import convict from 'convict';
+import { ConfigController } from '@conduitplatform/module-tools';
+import {
+  ConduitError,
+  ConduitGrpcSdk,
+  ParsedRouterRequest,
+  PlatformTypesEnum,
+} from '@conduitplatform/grpc-sdk';
+import { ConduitRequest } from '@conduitplatform/hermes';
+import { Response } from 'express';
+import routerConfig from '../config/config.js';
+import { Client } from '../models/index.js';
+import { SecurityAdmin } from '../admin/security.js';
+import {
+  ClientValidator,
+  resetClientRejectionWarnings,
+} from './handlers/client-validation/index.js';
+import {
+  blankUnstoredRedactedKey,
+  buildSignedPayload,
+  CLIENT_SIGNATURE_WINDOW_MS,
+  clientSecretKeyBytes,
+  clientSecretKeyError,
+  clientSecretKeyPatchError,
+  clientValidationKeyWarning,
+  decryptClientSecret,
+  domainAllowsHost,
+  encryptClientSecret,
+  hmacSha256Hex,
+  hostFromHeader,
+  hostnameFromOrigin,
+  isAcceptableClientDomain,
+  requestHostname,
+  resolveClientSecretEncryptionKey,
+  sha256Hex,
+  signatureReplayTtlMs,
+  signaturesMatch,
+  timestampWithinWindow,
+} from './clientValidation.logic.js';
+
+const KEY = Buffer.alloc(32, 7).toString('base64');
+const EMPTY_BODY_SHA256 =
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+
+type FindCall = { query: Record<string, unknown>; options?: unknown };
+
+let findOneResult: unknown = null;
+let created: Record<string, unknown> | undefined;
+const findOneCalls: FindCall[] = [];
+const redis = new Map<string, string>();
+const redisExpiresAt = new Map<string, number>();
+const cacheWrites: { key: string; value: string; expiry?: number }[] = [];
+const cleared: string[] = [];
+const setIfAbsentCalls: { key: string; value: string; expiry?: number }[] = [];
+let getKeyError: Error | null = null;
+let setIfAbsentError: Error | null = null;
+let previousEncryptionKey: string | undefined;
+
+function forgetExpired(key: string) {
+  const expiresAt = redisExpiresAt.get(key);
+  if (expiresAt !== undefined && Date.now() >= expiresAt) {
+    redis.delete(key);
+    redisExpiresAt.delete(key);
+  }
+}
+
+function rememberKey(key: string, value: string, expiry?: number) {
+  redis.set(key, value);
+  if (typeof expiry === 'number') redisExpiresAt.set(key, Date.now() + expiry);
+  else redisExpiresAt.delete(key);
+}
+
+const state = {
+  getKey(key: string) {
+    if (getKeyError) return Promise.reject(getKeyError);
+    forgetExpired(key);
+    return Promise.resolve(redis.has(key) ? redis.get(key) : null);
+  },
+  setKey(key: string, value: string, expiry?: number) {
+    rememberKey(key, value, expiry);
+    cacheWrites.push({ key, value, expiry });
+    return Promise.resolve('OK');
+  },
+  setIfAbsent(key: string, value: string, expiry?: number) {
+    setIfAbsentCalls.push({ key, value, expiry });
+    if (setIfAbsentError) return Promise.reject(setIfAbsentError);
+    forgetExpired(key);
+    if (redis.has(key)) return Promise.resolve(false);
+    rememberKey(key, value, expiry);
+    return Promise.resolve(true);
+  },
+  clearKey(key: string) {
+    redis.delete(key);
+    redisExpiresAt.delete(key);
+    cleared.push(key);
+    return Promise.resolve(1);
+  },
+};
+
+function installModel() {
+  Client.getInstance = (() => ({
+    findOne: async (query: Record<string, unknown>, options?: unknown) => {
+      findOneCalls.push({ query, options });
+      return findOneResult;
+    },
+    create: async (doc: Record<string, unknown>) => {
+      created = doc;
+      return { ...doc, _id: 'created-id' };
+    },
+    deleteOne: async () => ({ deletedCount: 1 }),
+    findMany: async () => [],
+    findByIdAndUpdate: async () => ({}),
+  })) as unknown as typeof Client.getInstance;
+}
+
+function useConfig(clientValidation = true, prefix = '') {
+  ConfigController.getInstance().config = {
+    env: 'development',
+    security: {
+      clientValidation,
+      clientSecretEncryptionKey: KEY,
+      clientSignaturePathPrefix: prefix,
+    },
+  };
+}
+
+function requestOf(init: {
+  headers?: Record<string, string | undefined>;
+  method?: string;
+  originalUrl?: string;
+  hostname?: string;
+  rawBody?: Buffer;
+  url?: string;
+  path?: string;
+  omitOriginalUrl?: boolean;
+}): ConduitRequest {
+  const headers: Record<string, string | undefined> = { ...(init.headers ?? {}) };
+  const originalUrl = init.omitOriginalUrl
+    ? undefined
+    : (init.originalUrl ?? '/database/orders?limit=1');
+  const req: Record<string, unknown> = {
+    headers,
+    method: init.method ?? 'POST',
+    path: init.path ?? originalUrl?.split('?')[0] ?? '/',
+    url: init.url ?? originalUrl ?? '/',
+    hostname: init.hostname ?? 'router.internal',
+    rawBody: init.rawBody,
+    conduit: {},
+    get(name: string) {
+      if (name.toLowerCase() === 'origin') return headers.origin;
+      return undefined;
+    },
+  };
+  if (!init.omitOriginalUrl) req.originalUrl = originalUrl;
+  return req as unknown as ConduitRequest;
+}
+
+function signedRequest(input: {
+  secret: string;
+  timestamp?: string;
+  method?: string;
+  pathAndQuery?: string;
+  rawBody?: Buffer;
+  signature?: string;
+  extraHeaders?: Record<string, string | undefined>;
+}) {
+  const timestamp = input.timestamp ?? String(Date.now());
+  const method = input.method ?? 'POST';
+  const pathAndQuery = input.pathAndQuery ?? '/database/orders?limit=1';
+  const rawBody = input.rawBody ?? Buffer.from('{"a":1}');
+  const payload = buildSignedPayload({
+    timestamp,
+    method,
+    pathAndQuery,
+    rawBody,
+  });
+  return requestOf({
+    method,
+    originalUrl: pathAndQuery,
+    rawBody,
+    headers: {
+      clientid: 'cid-1',
+      'x-conduit-timestamp': timestamp,
+      'x-conduit-signature': input.signature ?? hmacSha256Hex(input.secret, payload),
+      ...input.extraHeaders,
+    },
+  });
+}
+
+function handshakeRequest(signedPath: string, secret: string) {
+  const timestamp = String(Date.now());
+  const payload = buildSignedPayload({
+    timestamp,
+    method: 'GET',
+    pathAndQuery: signedPath,
+    rawBody: undefined,
+  });
+  return requestOf({
+    method: 'GET',
+    path: '/realtime/',
+    url: '/realtime/?EIO=4&transport=polling',
+    omitOriginalUrl: true,
+    headers: {
+      clientid: 'cid-1',
+      'x-conduit-timestamp': timestamp,
+      'x-conduit-signature': hmacSha256Hex(secret, payload),
+    },
+  });
+}
+
+function errorShape(error: unknown) {
+  const err = error as { name?: string; status?: number; message?: string };
+  return { name: err.name, status: err.status, message: err.message };
+}
+
+async function runMiddleware(req: ConduitRequest) {
+  const validator = new ClientValidator({
+    state,
+    database: {},
+  } as unknown as ConduitGrpcSdk);
+  let error: unknown;
+  let nextCalls = 0;
+  await validator.middleware(req, {} as Response, (err?: unknown) => {
+    nextCalls += 1;
+    error = err;
+  });
+  assert.equal(nextCalls, 1);
+  return error;
+}
+
+async function withWarnings(run: () => Promise<void>): Promise<string[]> {
+  const warnings: string[] = [];
+  const original = console.warn;
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args.map(part => String(part)).join(' '));
+  };
+  try {
+    await run();
+    return warnings;
+  } finally {
+    console.warn = original;
+  }
+}
+
+function assertNoSecrets(warnings: string[], signature?: string) {
+  for (const line of warnings) {
+    assert.equal(line.includes(plaintextSecret), false);
+    assert.equal(line.includes(KEY), false);
+    assert.equal(line.includes('client-sig:'), false);
+    if (signature) assert.equal(line.includes(signature), false);
+  }
+}
+
+const plaintextSecret = 'plain-client-secret';
+const unauthorized = {
+  name: 'UNAUTHORIZED',
+  status: 401,
+  message: 'Unauthorized',
+};
+
+describe('client validation rules', () => {
+  it('compares the hostname with and without a scheme or port', () => {
+    assert.equal(hostnameFromOrigin('https://app.example.com'), 'app.example.com');
+    assert.equal(hostnameFromOrigin('app.example.com'), 'app.example.com');
+    assert.equal(hostnameFromOrigin('https://app.example.com:8443'), 'app.example.com');
+    assert.equal(hostnameFromOrigin('http://localhost:3000'), 'localhost');
+    assert.equal(requestHostname(undefined, 'App.Example.com'), 'app.example.com');
+    assert.equal(hostFromHeader('app.example.com:3000'), 'app.example.com');
+    assert.equal(hostFromHeader('App.Example.com'), 'app.example.com');
+    assert.equal(hostFromHeader('[::1]:3000'), '::1');
+    assert.equal(hostFromHeader(undefined), '');
+    assert.equal(domainAllowsHost('app.example.com', 'app.example.com'), true);
+    assert.equal(
+      domainAllowsHost('app.example.com', 'app.example.com'.toUpperCase()),
+      true,
+    );
+  });
+
+  it('accepts only a leading wildcard and requires the dot', () => {
+    assert.equal(domainAllowsHost('*.example.com', 'a.example.com'), true);
+    assert.equal(domainAllowsHost('*.example.com', 'A.Example.COM'), true);
+    assert.equal(domainAllowsHost('*.example.com', 'example.com'), false);
+    assert.equal(domainAllowsHost('*.example.com', 'evilexample.com'), false);
+    assert.equal(isAcceptableClientDomain('*.example.com'), true);
+    assert.equal(isAcceptableClientDomain('*example.com'), false);
+    assert.equal(isAcceptableClientDomain('foo.*.example.com'), false);
+    assert.equal(isAcceptableClientDomain('*.*.example.com'), false);
+    assert.equal(isAcceptableClientDomain('*'), true);
+  });
+
+  it('accepts localhost, IP addresses, and an optional port', () => {
+    assert.equal(isAcceptableClientDomain('localhost'), true);
+    assert.equal(isAcceptableClientDomain('localhost:3000'), true);
+    assert.equal(isAcceptableClientDomain('127.0.0.1'), true);
+    assert.equal(isAcceptableClientDomain('127.0.0.1:8080'), true);
+    assert.equal(isAcceptableClientDomain('[::1]'), true);
+    assert.equal(isAcceptableClientDomain('[::1]:3000'), true);
+    assert.equal(isAcceptableClientDomain('::1'), true);
+    assert.equal(isAcceptableClientDomain(''), false);
+    assert.equal(isAcceptableClientDomain('http://localhost'), false);
+  });
+
+  it('builds the HMAC string and the empty-body hash', () => {
+    const body = Buffer.from('{"a":1}');
+    const payload = buildSignedPayload({
+      timestamp: '1000',
+      method: 'post',
+      pathAndQuery: '/database/orders?limit=1',
+      rawBody: body,
+    });
+    assert.equal(payload, `1000\nPOST\n/database/orders?limit=1\n${sha256Hex(body)}`);
+    assert.equal(payload.includes('\r'), false);
+    assert.equal(sha256Hex(undefined), EMPTY_BODY_SHA256);
+    assert.equal(sha256Hex(Buffer.alloc(0)), EMPTY_BODY_SHA256);
+  });
+
+  it('rejects a timestamp outside three minutes in either direction', () => {
+    const now = 1_700_000_000_000;
+    assert.equal(timestampWithinWindow(now, now), true);
+    assert.equal(timestampWithinWindow(now - CLIENT_SIGNATURE_WINDOW_MS, now), true);
+    assert.equal(timestampWithinWindow(now + CLIENT_SIGNATURE_WINDOW_MS, now), true);
+    assert.equal(timestampWithinWindow(now - CLIENT_SIGNATURE_WINDOW_MS - 1, now), false);
+    assert.equal(timestampWithinWindow(now + CLIENT_SIGNATURE_WINDOW_MS + 1, now), false);
+    assert.equal(
+      signatureReplayTtlMs(now + 170_000, now),
+      170_000 + CLIENT_SIGNATURE_WINDOW_MS,
+    );
+    assert.equal(signatureReplayTtlMs(now - CLIENT_SIGNATURE_WINDOW_MS, now), 1);
+    assert.equal(signatureReplayTtlMs(now - CLIENT_SIGNATURE_WINDOW_MS - 50_000, now), 1);
+  });
+
+  it('breaks the signature when the body, path, or method changes', () => {
+    const secret = 'signing-secret';
+    const base = {
+      timestamp: '1000',
+      method: 'POST',
+      pathAndQuery: '/database/orders?limit=1',
+      rawBody: Buffer.from('{"a":1}'),
+    };
+    const signature = hmacSha256Hex(secret, buildSignedPayload(base));
+    const changedBody = hmacSha256Hex(
+      secret,
+      buildSignedPayload({ ...base, rawBody: Buffer.from('{"a":2}') }),
+    );
+    const changedPath = hmacSha256Hex(
+      secret,
+      buildSignedPayload({ ...base, pathAndQuery: '/database/orders?limit=2' }),
+    );
+    const changedMethod = hmacSha256Hex(
+      secret,
+      buildSignedPayload({ ...base, method: 'PUT' }),
+    );
+    assert.equal(signaturesMatch(signature, signature), true);
+    assert.equal(signaturesMatch(changedBody, signature), false);
+    assert.equal(signaturesMatch(changedPath, signature), false);
+    assert.equal(signaturesMatch(changedMethod, signature), false);
+  });
+
+  it('rejects a signature that is not 64 hex characters without throwing', () => {
+    const expected = 'a'.repeat(64);
+    assert.equal(signaturesMatch('abcd', expected), false);
+    assert.equal(signaturesMatch('g'.repeat(64), expected), false);
+    assert.equal(signaturesMatch('a'.repeat(63), expected), false);
+    assert.equal(signaturesMatch('a'.repeat(65), expected), false);
+    assert.equal(signaturesMatch(expected, expected), true);
+  });
+
+  it('returns the original secret after encrypting and decrypting', () => {
+    const key = clientSecretKeyBytes(KEY);
+    const secret = 'one-time-client-secret';
+    const blob = encryptClientSecret(secret, key);
+    assert.equal(decryptClientSecret(blob, key), secret);
+    assert.notEqual(blob, secret);
+    const other = clientSecretKeyBytes(Buffer.alloc(32, 9).toString('base64'));
+    assert.throws(() => decryptClientSecret(blob, other));
+  });
+
+  it('reads the encryption key from the environment without storing it', () => {
+    const stored = 'stored-key-value';
+    const previous = process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+    try {
+      process.env.CLIENT_SECRET_ENCRYPTION_KEY = 'env-key-value';
+      assert.equal(resolveClientSecretEncryptionKey(stored), 'env-key-value');
+      assert.equal(stored, 'stored-key-value');
+      process.env.CLIENT_SECRET_ENCRYPTION_KEY = '';
+      assert.equal(resolveClientSecretEncryptionKey(stored), stored);
+      delete process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+      assert.equal(resolveClientSecretEncryptionKey(stored), stored);
+    } finally {
+      if (previous === undefined) delete process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+      else process.env.CLIENT_SECRET_ENCRYPTION_KEY = previous;
+    }
+  });
+
+  it('blanks an unstored redacted encryption key and leaves any other value', () => {
+    assert.equal(blankUnstoredRedactedKey('[REDACTED]', ''), '');
+    assert.equal(blankUnstoredRedactedKey('[REDACTED]', '[REDACTED]'), '');
+    assert.equal(blankUnstoredRedactedKey('[REDACTED]', KEY), '[REDACTED]');
+    assert.equal(blankUnstoredRedactedKey(KEY, ''), KEY);
+  });
+
+  it('does not throw when validation is on and the encryption key is empty', () => {
+    const previous = process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+    delete process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+    try {
+      assert.equal(
+        clientValidationKeyWarning(true, ''),
+        'Client validation is on but the encryption key is not set. Non-web clients will be rejected.',
+      );
+      assert.equal(
+        clientValidationKeyWarning(true, 'short-key'),
+        'Client validation is on but the encryption key is not 32-byte base64. Non-web clients will be rejected.',
+      );
+      assert.equal(clientValidationKeyWarning(true, KEY), null);
+      assert.equal(clientValidationKeyWarning(false, ''), null);
+      const emptyWarning = clientValidationKeyWarning(true, '') ?? '';
+      assert.equal(emptyWarning.includes(KEY), false);
+    } finally {
+      if (previous === undefined) delete process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+      else process.env.CLIENT_SECRET_ENCRYPTION_KEY = previous;
+    }
+  });
+
+  it('reports a bad encryption key and allows an empty one while validation is on or off', () => {
+    const message =
+      'security.clientSecretEncryptionKey must be base64 for exactly 32 bytes';
+    assert.equal(clientSecretKeyError(''), null);
+    assert.equal(clientSecretKeyError('short-key'), message);
+    assert.equal(clientSecretKeyError('0123456789abcdef0123456789abcdef'), message);
+    assert.equal(clientSecretKeyError(Buffer.alloc(16, 7).toString('base64')), message);
+    assert.equal(clientSecretKeyError('[REDACTED]'), message);
+    assert.equal(clientSecretKeyError(KEY), null);
+    assert.equal(clientSecretKeyPatchError(''), null);
+    assert.equal(clientSecretKeyPatchError('[REDACTED]'), null);
+    assert.equal(clientSecretKeyPatchError('short-key'), message);
+  });
+});
+
+describe('security client handlers', () => {
+  const plaintext = 'plain-client-secret';
+  let ciphertext = '';
+
+  beforeEach(() => {
+    previousEncryptionKey = process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+    delete process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+    findOneResult = null;
+    created = undefined;
+    findOneCalls.length = 0;
+    redis.clear();
+    redisExpiresAt.clear();
+    cacheWrites.length = 0;
+    resetClientRejectionWarnings();
+    cleared.length = 0;
+    setIfAbsentCalls.length = 0;
+    getKeyError = null;
+    setIfAbsentError = null;
+    ciphertext = encryptClientSecret(plaintext, clientSecretKeyBytes(KEY));
+    installModel();
+    useConfig(true);
+  });
+
+  afterEach(() => {
+    if (previousEncryptionKey === undefined) {
+      delete process.env.CLIENT_SECRET_ENCRYPTION_KEY;
+    } else {
+      process.env.CLIENT_SECRET_ENCRYPTION_KEY = previousEncryptionKey;
+    }
+  });
+
+  it('loads the Mongo secret with +clientSecret', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+      domain: '',
+    };
+    const error = await runMiddleware(signedRequest({ secret: plaintext }));
+    assert.equal(error, undefined);
+    assert.deepEqual(findOneCalls[0]?.options, {
+      select: '+clientSecret platform domain',
+      readPreference: 'primary',
+    });
+  });
+
+  it('accepts a valid signature and caches ciphertext, not the secret', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+      domain: '',
+    };
+    const req = signedRequest({ secret: plaintext });
+    const error = await runMiddleware(req);
+    assert.equal(error, undefined);
+    assert.equal(req.conduit?.clientId, 'cid-1');
+    assert.equal(req.headers['x-conduit-signature'], undefined);
+    assert.equal(req.headers.clientsecret, undefined);
+    assert.equal(cacheWrites.length, 1);
+    assert.equal(cacheWrites[0]?.expiry, 100000);
+    const cached = JSON.parse(cacheWrites[0]!.value) as {
+      c: string;
+      p: string;
+      d: string;
+    };
+    assert.equal(cached.c, ciphertext);
+    assert.equal(cached.p, PlatformTypesEnum.ANDROID);
+    assert.equal(cached.d, '');
+    assert.equal(cacheWrites[0]!.value.includes(plaintext), false);
+  });
+
+  it('accepts a replay inside three minutes and rejects an older one', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const recent = String(Date.now() - 60_000);
+    const firstRequest = signedRequest({ secret: plaintext, timestamp: recent });
+    const signature = String(firstRequest.headers['x-conduit-signature']);
+    const first = await runMiddleware(firstRequest);
+    const second = await runMiddleware(
+      signedRequest({ secret: plaintext, timestamp: recent }),
+    );
+    assert.equal(first, undefined);
+    assert.deepEqual(errorShape(second), unauthorized);
+    assert.equal(setIfAbsentCalls.length, 2);
+    assert.equal(setIfAbsentCalls[0]?.key, `client-sig:cid-1:${signature}`);
+    assert.equal(setIfAbsentCalls[0]?.value, '1');
+    const replayTtl = signatureReplayTtlMs(Number(recent), Number(recent) + 60_000);
+    const storedTtl = setIfAbsentCalls[0]?.expiry ?? 0;
+    assert.equal(storedTtl <= replayTtl, true);
+    assert.equal(storedTtl >= replayTtl - 5_000, true);
+    assert.equal(setIfAbsentCalls[1]?.key, `client-sig:cid-1:${signature}`);
+
+    const callsAfterReplay = setIfAbsentCalls.length;
+    const stale = String(Date.now() - CLIENT_SIGNATURE_WINDOW_MS - 1);
+    const staleError = await runMiddleware(
+      signedRequest({ secret: plaintext, timestamp: stale }),
+    );
+    assert.deepEqual(errorShape(staleError), unauthorized);
+    assert.equal(setIfAbsentCalls.length, callsAfterReplay);
+  });
+
+  it('keeps a signature rejected until its timestamp leaves the window', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const start = 1_700_000_000_000;
+    let now = start;
+    const originalNow = Date.now;
+    Date.now = () => now;
+    try {
+      const timestamp = String(start + 2 * 60 * 1000 + 50 * 1000);
+      assert.equal(
+        await runMiddleware(signedRequest({ secret: plaintext, timestamp })),
+        undefined,
+      );
+      assert.equal(
+        setIfAbsentCalls[0]?.expiry,
+        2 * 60 * 1000 + 50 * 1000 + CLIENT_SIGNATURE_WINDOW_MS,
+      );
+      assert.deepEqual(
+        errorShape(await runMiddleware(signedRequest({ secret: plaintext, timestamp }))),
+        unauthorized,
+      );
+      now += 3 * 60 * 1000 + 1000;
+      assert.deepEqual(
+        errorShape(await runMiddleware(signedRequest({ secret: plaintext, timestamp }))),
+        unauthorized,
+      );
+    } finally {
+      Date.now = originalNow;
+    }
+  });
+
+  it('does not store a timestamp that is already three minutes and one second old', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const past = String(Date.now() - CLIENT_SIGNATURE_WINDOW_MS - 1000);
+    const storedBefore = setIfAbsentCalls.length;
+    assert.deepEqual(
+      errorShape(
+        await runMiddleware(signedRequest({ secret: plaintext, timestamp: past })),
+      ),
+      unauthorized,
+    );
+    assert.equal(setIfAbsentCalls.length, storedBefore);
+    assert.equal(
+      [...redis.keys()].some(key => key.startsWith('client-sig:')),
+      false,
+    );
+  });
+
+  it('rejects a future timestamp, a wrong signature, and a short signature', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const future = String(Date.now() + CLIENT_SIGNATURE_WINDOW_MS + 10_000);
+    const futureError = await runMiddleware(
+      signedRequest({ secret: plaintext, timestamp: future }),
+    );
+    const wrong = signedRequest({ secret: plaintext });
+    wrong.headers['x-conduit-signature'] = 'b'.repeat(64);
+    const wrongError = await runMiddleware(wrong);
+    const shortError = await runMiddleware(
+      signedRequest({ secret: plaintext, signature: 'abcd' }),
+    );
+    const unauthorized = {
+      name: 'UNAUTHORIZED',
+      status: 401,
+      message: 'Unauthorized',
+    };
+    assert.deepEqual(errorShape(futureError), unauthorized);
+    assert.deepEqual(errorShape(wrongError), unauthorized);
+    assert.deepEqual(errorShape(shortError), unauthorized);
+  });
+
+  it('rejects a clientSecret header and uses that same unauthorized error for an unknown client', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const withSecret = signedRequest({
+      secret: plaintext,
+      extraHeaders: { clientsecret: plaintext },
+    });
+    const secretError = await runMiddleware(withSecret);
+    assert.equal(findOneCalls.length, 1);
+    assert.equal(setIfAbsentCalls.length, 0);
+    assert.equal(withSecret.headers.clientsecret, undefined);
+    assert.equal(withSecret.headers['x-conduit-signature'], undefined);
+    assert.deepEqual(errorShape(secretError), unauthorized);
+    assert.equal(secretError instanceof ConduitError, true);
+
+    findOneCalls.length = 0;
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.WEB,
+      domain: 'app.example.com',
+    };
+    const web = requestOf({
+      headers: {
+        clientid: 'cid-1',
+        origin: 'https://app.example.com',
+        clientsecret: plaintext,
+      },
+      method: 'GET',
+      originalUrl: '/database/orders',
+    });
+    assert.equal(await runMiddleware(web), undefined);
+    assert.equal(findOneCalls.length, 1);
+    assert.equal(web.headers.clientsecret, undefined);
+
+    findOneResult = null;
+    const unknownError = await runMiddleware(signedRequest({ secret: plaintext }));
+    assert.deepEqual(errorShape(secretError), errorShape(unknownError));
+    assert.deepEqual(errorShape(unknownError), unauthorized);
+  });
+
+  it('falls through to the database when the cache value does not parse', async () => {
+    redis.set('cid-1', 'secret,ANDROID,');
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const error = await runMiddleware(signedRequest({ secret: plaintext }));
+    assert.equal(error, undefined);
+    assert.equal(findOneCalls.length, 1);
+  });
+
+  it('accepts a cached client and still removes the signature header', async () => {
+    redis.set(
+      'cid-1',
+      JSON.stringify({ c: ciphertext, p: PlatformTypesEnum.ANDROID, d: '' }),
+    );
+    const req = signedRequest({ secret: plaintext });
+    const error = await runMiddleware(req);
+    assert.equal(error, undefined);
+    assert.equal(findOneCalls.length, 0);
+    assert.equal(req.headers['x-conduit-signature'], undefined);
+    assert.equal(req.conduit?.clientId, 'cid-1');
+  });
+
+  it('matches a web origin by hostname and allows localhost', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.WEB,
+      domain: 'app.example.com',
+    };
+    const fromOrigin = requestOf({
+      headers: { clientid: 'cid-1', origin: 'https://app.example.com' },
+      method: 'GET',
+      originalUrl: '/database/orders',
+    });
+    assert.equal(await runMiddleware(fromOrigin), undefined);
+
+    redis.clear();
+    redisExpiresAt.clear();
+    findOneCalls.length = 0;
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.WEB,
+      domain: 'app.example.com',
+    };
+    const bareHost = requestOf({
+      headers: { clientid: 'cid-1', origin: 'app.example.com:443' },
+      hostname: 'other.example',
+      originalUrl: '/database/orders',
+    });
+    assert.equal(await runMiddleware(bareHost), undefined);
+
+    redis.clear();
+    redisExpiresAt.clear();
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.WEB,
+      domain: 'localhost',
+    };
+    const local = requestOf({
+      headers: { clientid: 'cid-1', host: 'localhost' },
+      originalUrl: '/database/orders',
+    });
+    assert.equal(await runMiddleware(local), undefined);
+  });
+
+  it('matches a web handshake from raw origin and host headers', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.WEB,
+      domain: 'app.example.com',
+    };
+    const handshake = {
+      headers: {
+        clientid: 'cid-1',
+        origin: 'https://app.example.com',
+        host: 'app.example.com:3000',
+      },
+      method: 'GET',
+      path: '/realtime/',
+      url: '/realtime/?EIO=4&transport=polling',
+      conduit: {},
+    };
+    assert.equal('get' in handshake, false);
+    assert.equal('hostname' in handshake, false);
+    assert.equal(await runMiddleware(handshake as unknown as ConduitRequest), undefined);
+
+    const rejected = {
+      headers: {
+        clientid: 'cid-1',
+        origin: 'https://other.example.com',
+        host: 'app.example.com:3000',
+      },
+      method: 'GET',
+      path: '/realtime/',
+      url: '/realtime/?EIO=4&transport=polling',
+      conduit: {},
+    };
+    assert.equal('get' in rejected, false);
+    assert.deepEqual(
+      errorShape(await runMiddleware(rejected as unknown as ConduitRequest)),
+      unauthorized,
+    );
+  });
+
+  it('rejects a cached bad signature without reading the database', async () => {
+    redis.set(
+      'cid-1',
+      JSON.stringify({ c: ciphertext, p: PlatformTypesEnum.ANDROID, d: '' }),
+    );
+    const req = signedRequest({ secret: plaintext, signature: 'b'.repeat(64) });
+    const warnings = await withWarnings(async () => {
+      assert.deepEqual(errorShape(await runMiddleware(req)), unauthorized);
+    });
+    assert.equal(findOneCalls.length, 0);
+    assert.equal(warnings.filter(line => line.includes('bad signature')).length, 1);
+    assertNoSecrets(warnings, 'b'.repeat(64));
+  });
+
+  it('logs one rejection warning per client id inside one minute', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const rejected = (clientId: string) =>
+      signedRequest({
+        secret: plaintext,
+        signature: 'c'.repeat(64),
+        extraHeaders: { clientid: clientId },
+      });
+    const first = await withWarnings(async () => {
+      assert.deepEqual(errorShape(await runMiddleware(rejected('cid-1'))), unauthorized);
+    });
+    const second = await withWarnings(async () => {
+      assert.deepEqual(errorShape(await runMiddleware(rejected('cid-1'))), unauthorized);
+    });
+    const other = await withWarnings(async () => {
+      assert.deepEqual(errorShape(await runMiddleware(rejected('cid-2'))), unauthorized);
+    });
+    assert.equal(first.filter(line => line.includes('bad signature')).length, 1);
+    assert.equal(second.length, 0);
+    assert.equal(other.filter(line => line.includes('bad signature')).length, 1);
+    assertNoSecrets(first, 'c'.repeat(64));
+    assertNoSecrets(other, 'c'.repeat(64));
+  });
+
+  it('stores a 43 character secret encrypted and returns the plaintext once', async () => {
+    const admin = new SecurityAdmin({ state } as unknown as ConduitGrpcSdk);
+    const createdClient = (await admin.createSecurityClient({
+      request: { params: { platform: PlatformTypesEnum.ANDROID } },
+    } as unknown as ParsedRouterRequest)) as { clientSecret: string };
+    const returned = createdClient.clientSecret;
+    const stored = created!.clientSecret as string;
+    assert.equal(returned.length, 43);
+    assert.match(returned, /^[A-Za-z0-9_-]{43}$/);
+    assert.notEqual(stored, returned);
+    assert.equal(decryptClientSecret(stored, clientSecretKeyBytes(KEY)), returned);
+  });
+
+  it('accepts localhost and a leading wildcard, and rejects any other star', () => {
+    const admin = new SecurityAdmin({ state } as unknown as ConduitGrpcSdk);
+    assert.doesNotThrow(() => admin.validateDomain('localhost'));
+    assert.doesNotThrow(() => admin.validateDomain('127.0.0.1:8080'));
+    assert.doesNotThrow(() => admin.validateDomain('[::1]'));
+    assert.doesNotThrow(() => admin.validateDomain('*.example.com'));
+    assert.throws(() => admin.validateDomain('evilexample.*.com'), {
+      message: 'Invalid domain argument',
+    });
+    assert.throws(() => admin.validateDomain(''), {
+      message: 'Platform WEB requires domain name',
+    });
+  });
+
+  it('clears the redis key on update', async () => {
+    findOneResult = {
+      _id: 'mongo-id',
+      clientId: 'cid-1',
+      platform: PlatformTypesEnum.ANDROID,
+      alias: 'alias-1',
+    };
+    const admin = new SecurityAdmin({ state } as unknown as ConduitGrpcSdk);
+    await admin.updateSecurityClient({
+      request: { params: { id: 'mongo-id', alias: 'alias-1' } },
+    } as unknown as ParsedRouterRequest);
+    assert.deepEqual(cleared, ['cid-1']);
+  });
+
+  it('clears the redis key on delete', async () => {
+    findOneResult = { _id: 'mongo-id', clientId: 'cid-1' };
+    const admin = new SecurityAdmin({ state } as unknown as ConduitGrpcSdk);
+    const result = await admin.deleteSecurityClient({
+      request: { params: { id: 'mongo-id' } },
+    } as unknown as ParsedRouterRequest);
+    assert.deepEqual(result, { message: 'Client deleted' });
+    assert.deepEqual(cleared, ['cid-1']);
+  });
+
+  it('rejects a signed request when validation is on and the key is empty', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    ConfigController.getInstance().config.security.clientSecretEncryptionKey = '';
+    const req = signedRequest({ secret: plaintext });
+    const warnings = await withWarnings(async () => {
+      const error = await runMiddleware(req);
+      assert.deepEqual(errorShape(error), unauthorized);
+    });
+    assert.equal(
+      warnings.some(line => line.includes('decrypt failure / wrong key')),
+      true,
+    );
+    assertNoSecrets(warnings, String(req.headers['x-conduit-signature']));
+  });
+
+  it('checks only the socket handshake and signs req.path', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const accepted = handshakeRequest('/realtime/', plaintext);
+    assert.equal(await runMiddleware(accepted), undefined);
+
+    findOneCalls.length = 0;
+    redis.clear();
+    setIfAbsentCalls.length = 0;
+    const rejected = handshakeRequest('/realtime/?EIO=4&transport=polling', plaintext);
+    assert.deepEqual(errorShape(await runMiddleware(rejected)), unauthorized);
+
+    findOneCalls.length = 0;
+    setIfAbsentCalls.length = 0;
+    const followUp = requestOf({
+      method: 'GET',
+      path: '/realtime/',
+      url: '/realtime/?EIO=4&transport=polling&sid=expired',
+      omitOriginalUrl: true,
+      headers: {},
+    });
+    assert.equal(await runMiddleware(followUp), undefined);
+    assert.equal(findOneCalls.length, 0);
+    assert.equal(setIfAbsentCalls.length, 0);
+
+    const http = signedRequest({
+      secret: plaintext,
+      pathAndQuery: '/database/orders?sid=copied',
+      signature: 'b'.repeat(64),
+    });
+    assert.deepEqual(errorShape(await runMiddleware(http)), unauthorized);
+  });
+
+  it('prepends clientSignaturePathPrefix to the signed HTTP path', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    useConfig(true, '/api');
+    const timestamp = String(Date.now());
+    const rawBody = Buffer.from('{"a":1}');
+    const headersFor = (pathAndQuery: string) => {
+      const payload = buildSignedPayload({
+        timestamp,
+        method: 'POST',
+        pathAndQuery,
+        rawBody,
+      });
+      return {
+        clientid: 'cid-1',
+        'x-conduit-timestamp': timestamp,
+        'x-conduit-signature': hmacSha256Hex(plaintext, payload),
+      };
+    };
+    const accepted = requestOf({
+      method: 'POST',
+      originalUrl: '/users?limit=1',
+      rawBody,
+      headers: headersFor('/api/users?limit=1'),
+    });
+    assert.equal(await runMiddleware(accepted), undefined);
+
+    redis.clear();
+    const rejected = requestOf({
+      method: 'POST',
+      originalUrl: '/users?limit=1',
+      rawBody,
+      headers: headersFor('/users?limit=1'),
+    });
+    assert.deepEqual(errorShape(await runMiddleware(rejected)), unauthorized);
+  });
+
+  it('returns 401 when redis getKey or setIfAbsent fails', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const signed = signedRequest({ secret: plaintext });
+    const signature = String(signed.headers['x-conduit-signature']);
+    getKeyError = new Error('redis down');
+    const getWarnings = await withWarnings(async () => {
+      assert.deepEqual(errorShape(await runMiddleware(signed)), unauthorized);
+    });
+    assert.equal(findOneCalls.length, 0);
+    assert.equal(
+      getWarnings.some(line => line.includes('Redis is unavailable')),
+      true,
+    );
+    assertNoSecrets(getWarnings, signature);
+
+    getKeyError = null;
+    findOneCalls.length = 0;
+    resetClientRejectionWarnings();
+    setIfAbsentError = new Error('redis down');
+    const setWarnings = await withWarnings(async () => {
+      const again = signedRequest({ secret: plaintext });
+      assert.deepEqual(errorShape(await runMiddleware(again)), unauthorized);
+    });
+    assert.equal(findOneCalls.length, 1);
+    assert.equal(
+      setWarnings.some(line => line.includes('Redis is unavailable')),
+      true,
+    );
+    assertNoSecrets(setWarnings, signature);
+  });
+
+  it('logs the failure reason without the secret, the key, or the signature', async () => {
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    const wrong = signedRequest({ secret: plaintext });
+    wrong.headers['x-conduit-signature'] = 'b'.repeat(64);
+    resetClientRejectionWarnings();
+    const badSignature = await withWarnings(async () => {
+      assert.deepEqual(errorShape(await runMiddleware(wrong)), unauthorized);
+    });
+    assert.equal(
+      badSignature.some(line => line.includes('bad signature')),
+      true,
+    );
+    assertNoSecrets(badSignature, 'b'.repeat(64));
+
+    const future = String(Date.now() + CLIENT_SIGNATURE_WINDOW_MS + 10_000);
+    resetClientRejectionWarnings();
+    const drift = await withWarnings(async () => {
+      assert.deepEqual(
+        errorShape(
+          await runMiddleware(signedRequest({ secret: plaintext, timestamp: future })),
+        ),
+        unauthorized,
+      );
+    });
+    assert.equal(
+      drift.some(line => line.includes('clock drift')),
+      true,
+    );
+    assert.equal(
+      drift.some(line => line.includes('cid-1')),
+      true,
+    );
+    assertNoSecrets(drift);
+
+    findOneResult = {
+      clientSecret: '$2b$10$not-a-real-bcrypt-hash-value',
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    resetClientRejectionWarnings();
+    const bcryptWarnings = await withWarnings(async () => {
+      assert.deepEqual(
+        errorShape(await runMiddleware(signedRequest({ secret: plaintext }))),
+        unauthorized,
+      );
+    });
+    assert.equal(
+      bcryptWarnings.some(line => line.includes('old bcrypt secret')),
+      true,
+    );
+    assert.equal(
+      bcryptWarnings.some(line => line.includes('$2b$10$not-a-real-bcrypt-hash-value')),
+      false,
+    );
+    assertNoSecrets(bcryptWarnings);
+
+    ConfigController.getInstance().config.security.clientSecretEncryptionKey =
+      Buffer.alloc(32, 9).toString('base64');
+    findOneResult = {
+      clientSecret: ciphertext,
+      platform: PlatformTypesEnum.ANDROID,
+    };
+    resetClientRejectionWarnings();
+    const wrongKey = await withWarnings(async () => {
+      assert.deepEqual(
+        errorShape(await runMiddleware(signedRequest({ secret: plaintext }))),
+        unauthorized,
+      );
+    });
+    assert.equal(
+      wrongKey.some(line => line.includes('decrypt failure / wrong key')),
+      true,
+    );
+    assertNoSecrets(wrongKey);
+
+    findOneResult = null;
+    resetClientRejectionWarnings();
+    const unknown = await withWarnings(async () => {
+      assert.deepEqual(
+        errorShape(await runMiddleware(signedRequest({ secret: plaintext }))),
+        unauthorized,
+      );
+    });
+    assert.equal(
+      unknown.some(line => line.includes('unknown client cid-1')),
+      true,
+    );
+    assertNoSecrets(unknown);
+  });
+
+  it('accepts an empty encryption key in router config and keeps the field sensitive', () => {
+    const missing = convict(routerConfig);
+    assert.doesNotThrow(() => missing.validate({ allowed: 'warn' }));
+    assert.equal(missing.get('security.clientSecretEncryptionKey'), '');
+    assert.equal(missing.get('security.clientValidation'), false);
+
+    const shortKey = convict(routerConfig);
+    shortKey.set('security.clientSecretEncryptionKey', 'short-key');
+    shortKey.set('security.clientValidation', false);
+    assert.doesNotThrow(() => shortKey.validate({ allowed: 'warn' }));
+
+    const present = convict(routerConfig);
+    present.set('security.clientSecretEncryptionKey', KEY);
+    present.set('security.clientValidation', true);
+    assert.doesNotThrow(() => present.validate({ allowed: 'warn' }));
+    assert.equal(routerConfig.security.clientSecretEncryptionKey.sensitive, true);
+    assert.equal(
+      (routerConfig.security.clientSignaturePathPrefix as { sensitive?: boolean })
+        .sensitive,
+      undefined,
+    );
+    assert.equal(missing.get('security.clientSignaturePathPrefix'), '');
+  });
+
+  it('rejects create when the encryption key is empty or not 32 bytes', async () => {
+    const admin = new SecurityAdmin({ state } as unknown as ConduitGrpcSdk);
+    ConfigController.getInstance().config.security.clientSecretEncryptionKey = '';
+    await assert.rejects(
+      () =>
+        admin.createSecurityClient({
+          request: { params: { platform: PlatformTypesEnum.ANDROID } },
+        } as unknown as ParsedRouterRequest),
+      (err: unknown) => {
+        const error = err as { status?: number; message?: string };
+        assert.equal(error.status, 400);
+        assert.match(error.message ?? '', /clientSecretEncryptionKey/);
+        return true;
+      },
+    );
+    assert.equal(created, undefined);
+
+    ConfigController.getInstance().config.security.clientSecretEncryptionKey =
+      'short-key';
+    await assert.rejects(
+      () =>
+        admin.createSecurityClient({
+          request: { params: { platform: PlatformTypesEnum.ANDROID } },
+        } as unknown as ParsedRouterRequest),
+      (err: unknown) => {
+        const error = err as { status?: number; message?: string };
+        assert.equal(error.status, 400);
+        assert.match(error.message ?? '', /clientSecretEncryptionKey/);
+        return true;
+      },
+    );
+    assert.equal(created, undefined);
+  });
+});

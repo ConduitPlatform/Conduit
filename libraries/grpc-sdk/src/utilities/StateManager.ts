@@ -151,6 +151,12 @@ export class StateManager {
     }
   }
 
+  setIfAbsent(keyName: string, value: string, expiryMs: number): Promise<boolean> {
+    return this.redisClient
+      .set(keyName, value, 'PX', expiryMs, 'NX')
+      .then(result => result === 'OK');
+  }
+
   clearKey(keyName: string) {
     return this.redisClient.del(keyName);
   }
