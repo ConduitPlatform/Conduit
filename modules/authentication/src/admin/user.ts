@@ -192,6 +192,18 @@ export class UserAdmin {
     }
   }
 
+  async getUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
+    // `GET /users/capabilities` shares this pattern: answer it here as well in case the
+    // router matches `/users/:id` first
+    if (id === 'capabilities') return this.getUserCapabilities();
+    const user: User | null = await User.getInstance().findOne({ _id: id });
+    if (isNil(user)) {
+      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+    }
+    return user;
+  }
+
   async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { sort, realm } = call.request.params;
     const { skip } = call.request.params ?? 0;

@@ -61,6 +61,18 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
+        path: '/users/:id',
+        action: ConduitRouteActions.GET,
+        description: `Returns a user by id, whatever the id format.`,
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('GetUser', User.name),
+      this.userAdmin.getUser.bind(this.userAdmin),
+    );
+    this.routingManager.route(
+      {
         path: '/users',
         action: ConduitRouteActions.GET,
         description: `Returns queried users and their total count. Filters: search, isActive, isAnonymous (false matches users with no flag), isVerified, hasTwoFA, provider (local, phone, metamask, username or an OAuth provider) and homeRealm. sort is a field or -field and cannot target secrets.`,

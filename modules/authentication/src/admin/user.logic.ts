@@ -326,7 +326,7 @@ export function buildUserAdminCapabilities(input: {
   emailAvailable: boolean;
   teamsEnabled: boolean;
 }): UserAdminCapabilities {
-  const actions = ['setPassword'];
+  const actions = ['getUserById', 'setPassword'];
   if (input.emailAvailable) actions.push('sendPasswordReset');
   actions.push('resetTwoFa', 'clearPhone', 'bulkDeleteFull', 'bulkToggleFixed');
   if (input.teamsEnabled) actions.push('userTeams');

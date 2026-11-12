@@ -572,6 +572,23 @@ describe('getUserTeams', () => {
   });
 });
 
+describe('getUser', () => {
+  it('returns a user by any id format, 404s a missing one and answers capabilities', async () => {
+    const uuid = '3f2c1d4e-8a7b-4c6d-9e0f-1a2b3c4d5e6f';
+    userRow({ _id: uuid, email: 'ada@example.com' });
+    const found: any = await users.getUser(call({ id: uuid }));
+    assert.equal(found._id, uuid);
+    assert.equal(found.email, 'ada@example.com');
+    await assert.rejects(
+      users.getUser(call({ id: 'missing' })),
+      error => codeOf(error) === status.NOT_FOUND,
+    );
+    const capabilities: any = await users.getUser(call({ id: 'capabilities' }));
+    assert.equal(capabilities.version, 1);
+    assert.equal(capabilities.actions.includes('getUserById'), true);
+  });
+});
+
 describe('getUserCapabilities', () => {
   it('follows the email module and teams', async () => {
     flags.email = false;

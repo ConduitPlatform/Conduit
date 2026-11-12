@@ -314,6 +314,7 @@ describe('buildUserAdminCapabilities', () => {
     assert.deepEqual(
       buildUserAdminCapabilities({ emailAvailable: true, teamsEnabled: true }).actions,
       [
+        'getUserById',
         'setPassword',
         'sendPasswordReset',
         'resetTwoFa',
