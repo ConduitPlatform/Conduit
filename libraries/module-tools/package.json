@@ -33,7 +33,7 @@
     "@grpc/proto-loader": "^0.8.1",
     "abort-controller-x": "^0.5.0",
     "convict": "^6.2.5",
-    "fast-jwt": "^6.2.4",
+    "fast-jwt": "^6.3.4",
     "lodash": "^4.18.1",
     "lodash-es": "^4.18.1",
     "nice-grpc-common": "^2.0.4",
