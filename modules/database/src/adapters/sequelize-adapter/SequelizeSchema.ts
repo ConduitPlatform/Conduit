@@ -23,6 +23,7 @@ import {
   sqlTypesProcess,
 } from './utils/index.js';
 import { SequelizeAdapter } from './index.js';
+import { DatabaseTransaction } from '../../transactions/DatabaseTransaction.js';
 import { ConduitGrpcSdk, Indexable } from '@conduitplatform/grpc-sdk';
 import { parseQuery, parseCreateRelations } from './parser/index.js';
 import { isNil } from 'lodash-es';
@@ -130,6 +131,12 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     );
   }
 
+  private nativeTransaction(options?: {
+    transaction?: DatabaseTransaction;
+  }): Transaction | undefined {
+    return options?.transaction?.native as Transaction | undefined;
+  }
+
   async findByIdAndUpdate(
     id: string,
     query: SingleDocQuery,
@@ -137,12 +144,12 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       userId?: string;
       scope?: string;
       populate?: string[];
-      transaction?: Transaction;
+      transaction?: DatabaseTransaction;
     },
     predicate?: WhereOptions,
   ): Promise<Indexable> {
     const { t, parsedQuery, transactionProvided } = await getTransactionAndParsedQuery(
-      options?.transaction,
+      this.nativeTransaction(options),
       query,
       this.sequelize,
     );
@@ -154,6 +161,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         false,
         options?.userId,
         options?.scope,
+        options?.transaction,
       ).then(r => {
         if (!r) {
           throw new ModuleError(DOCUMENT_NOT_MODIFIABLE);
@@ -277,7 +285,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     options?: {
       scope?: string;
       userId?: string;
-      transaction?: Transaction;
+      transaction?: DatabaseTransaction;
     },
   ) {
     await this.createPermissionCheck(options?.userId, options?.scope);
@@ -285,7 +293,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     incrementDbQueries();
     processCreateQuery(parsedQuery, this.objectPaths);
     const relationObjects = extractRelationsModification(this, parsedQuery);
-    let t: Transaction | undefined = options?.transaction;
+    let t: Transaction | undefined = this.nativeTransaction(options);
     const transactionProvided = t !== undefined;
     if (!transactionProvided) {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
@@ -295,18 +303,19 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         transaction: t,
       })
       .then(doc => createWithPopulation(this, doc, relationObjects, t))
-      .then(doc => {
+      .then(async doc => {
+        // Awaited, so the caller can read its own write on another connection.
         if (!transactionProvided) {
-          t!.commit();
+          await t!.commit();
         }
         return doc;
       })
       .then(doc =>
         doc ? parseCreateRelations(doc.toJSON(), this.extractedRelations) : doc,
       )
-      .catch(err => {
-        if (!transactionProvided) {
-          t!.rollback();
+      .catch(async err => {
+        if (!transactionProvided && !(t as any).finished) {
+          await t!.rollback();
         }
         throw err;
       });
@@ -318,21 +327,25 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   async createMany(
     query: MultiDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       scope?: string;
       userId?: string;
     },
   ) {
     await this.createPermissionCheck(options?.userId, options?.scope);
     const parsedQuery: ParsedQuery[] = this.parseStringToQuery(query) as ParsedQuery[];
-    const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
+    const provided = this.nativeTransaction(options);
+    const t =
+      provided ??
+      (await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE }));
     for (let i = 0; i < parsedQuery.length; i++) {
       processCreateQuery(parsedQuery[i], this.objectPaths);
       extractRelationsModification(this, parsedQuery[i]);
     }
     const docs = await this.model
       .bulkCreate(parsedQuery, { transaction: t })
-      .then(docs => {
-        t.commit();
+      .then(async docs => {
+        if (!provided) await t.commit();
         return docs;
       })
       .then(docs => {
@@ -344,8 +357,8 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         }
         return parsedDocs;
       })
-      .catch(err => {
-        t.rollback();
+      .catch(async err => {
+        if (!provided && !(t as any).finished) await t.rollback();
         throw err;
       });
     await this.addPermissionToData(docs, options);
@@ -355,6 +368,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   async findOne(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       select?: string;
@@ -368,6 +382,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       false,
       options?.userId,
       options?.scope,
+      options?.transaction,
     );
     if (isNil(filter) && !isNil(query)) {
       return null;
@@ -383,6 +398,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     const findOptions: FindOptions = {
       where: parsedFilter!,
       nest: true,
+      transaction: this.nativeTransaction(options),
       attributes: parsingResult.attributes! as FindAttributeOptions,
       include: includeRelations(
         this,
@@ -422,6 +438,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   async findMany(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       skip?: number;
       limit?: number;
       select?: string;
@@ -439,6 +456,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.skip,
       options?.limit,
       options?.sort,
+      options?.transaction,
     );
     if (isNil(filter)) {
       return [];
@@ -454,6 +472,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     const findOptions: FindOptions = {
       where: parsedFilter,
       nest: true,
+      transaction: this.nativeTransaction(options),
       attributes: parsingResult.attributes as FindAttributeOptions,
       include: includeRelations(
         this,
@@ -484,6 +503,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   async deleteMany(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
     },
@@ -498,13 +518,16 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       true,
       options?.userId,
       options?.scope,
+      options?.transaction,
     );
     if (isNil(parsedFilter)) {
       return { deletedCount: 0 };
     }
+    const transaction = this.nativeTransaction(options);
     const docs = await this.model.findAll({
       where: parsedFilter,
       include: includeRelations(this, parsingResult.requiredRelations, []),
+      transaction,
     });
     if (docs.length === 0) {
       return { deletedCount: 0 };
@@ -512,6 +535,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     const pk = this.model.primaryKeyAttribute;
     const deletedCount = await this.model.destroy({
       where: { [pk]: docs.map(doc => doc.get(pk)) },
+      transaction,
     });
     return { deletedCount };
   }
@@ -519,6 +543,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   async deleteOne(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
     },
@@ -533,25 +558,32 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       false,
       options?.userId,
       options?.scope,
+      options?.transaction,
     );
     if (isNil(parsedFilter)) {
       return { deletedCount: 0 };
     }
+    const transaction = this.nativeTransaction(options);
     const doc = await this.model.findOne({
       where: parsedFilter!,
       include: includeRelations(this, parsingResult.requiredRelations, []),
+      transaction,
     });
     if (!doc) {
       return { deletedCount: 0 };
     }
     const pk = this.model.primaryKeyAttribute;
-    const deletedCount = await this.model.destroy({ where: { [pk]: doc.get(pk) } });
+    const deletedCount = await this.model.destroy({
+      where: { [pk]: doc.get(pk) },
+      transaction,
+    });
     return { deletedCount };
   }
 
   async countDocuments(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
     },
@@ -562,6 +594,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         return view.countDocuments(query, {
           userId: undefined,
           scope: undefined,
+          transaction: options?.transaction,
         });
       }
     }
@@ -584,6 +617,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     return this.model.count({
       where: parsingResult.query,
       include: includeRelations(this, parsingResult.requiredRelations, []),
+      transaction: this.nativeTransaction(options),
     });
   }
 
@@ -591,6 +625,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     filterQuery: Query,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       populate?: string[];
       userId?: string;
       scope?: string;
@@ -603,6 +638,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       true,
       options?.userId,
       options?.scope,
+      options?.transaction,
     );
     if (isNil(parsedFilterQuery)) {
       return [];
@@ -617,24 +653,29 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       this.objectDotPathMapping,
     );
     incrementDbQueries();
+    const provided = this.nativeTransaction(options);
     const docs = await this.model.findAll({
       where: parsingResult.query,
       attributes: ['_id'],
+      transaction: provided,
     });
-    const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
+    const t =
+      provided ??
+      (await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE }));
+    const transaction = options?.transaction ?? new DatabaseTransaction(t);
     try {
       const data = await Promise.all(
         docs.map(doc =>
           this.findByIdAndUpdate(doc._id, parsedQuery, {
             populate: options?.populate,
-            transaction: t,
+            transaction,
           }),
         ),
       );
-      await t.commit();
+      if (!provided) await t.commit();
       return data;
     } catch (e) {
-      await t.rollback();
+      if (!provided) await t.rollback();
       throw e;
     }
   }
@@ -669,6 +710,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     id: string,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       populate?: string[];
@@ -703,6 +745,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     filterQuery: Query,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       populate?: string[];
       userId?: string;
       scope?: string;
@@ -723,7 +766,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       userId?: string;
       scope?: string;
       populate?: string[];
-      transaction?: Transaction;
+      transaction?: DatabaseTransaction;
     },
   ): Promise<any> {
     const doc = await this.findOne(filterQuery, options);

@@ -99,6 +99,10 @@ export function createFakeDatabase() {
       tables[name] = table(name).filter(doc => !matches(doc, query));
       return { deletedCount: before - tables[name].length };
     },
+    // no transaction: the work runs against the plain calls, as in the fallback
+    withOptionalTransaction<R>(work: (db: unknown) => Promise<R>): Promise<R> {
+      return work(database);
+    },
   };
   return { tables, table, database: database as unknown as DatabaseProvider };
 }

@@ -264,8 +264,14 @@ export class UserAdmin {
     if (isNil(user)) {
       throw new ModuleError(errors.USER_NOT_FOUND);
     }
-    const res = await User.getInstance().deleteOne({ _id: call.request.params.id });
-    await deleteUserRealmMemberships(String(user._id));
+    const res = await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      const deleted = await User.getInstance().deleteOne(
+        { _id: call.request.params.id },
+        { transaction: db },
+      );
+      await deleteUserRealmMemberships(String(user._id), db);
+      return deleted;
+    });
     await requireAuthorization(this.grpcSdk).deleteAllRelations({
       resource: 'User:' + user._id,
     });
@@ -292,9 +298,15 @@ export class UserAdmin {
       throw new ModuleError(errors.USER_NOT_FOUND);
     }
 
-    const res = await User.getInstance().deleteMany({ _id: { $in: ids } });
     const deletedIds = users.map(u => String(u._id));
-    await deleteUserRealmMemberships(deletedIds);
+    const res = await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      const deleted = await User.getInstance().deleteMany(
+        { _id: { $in: ids } },
+        { transaction: db },
+      );
+      await deleteUserRealmMemberships(deletedIds, db);
+      return deleted;
+    });
     await invalidateTeamClaims(deletedIds);
     // no session may outlive its user
     await TokenProvider.getInstance().deleteUserTokens({ user: { $in: deletedIds } });

@@ -1,4 +1,4 @@
-import { Sequelize } from 'sequelize';
+import { Sequelize, Transaction } from 'sequelize';
 import {
   ConduitGrpcSdk,
   ConduitModel,
@@ -15,6 +15,10 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { SequelizeAuto } from 'sequelize-auto';
 import { DatabaseAdapter } from '../DatabaseAdapter.js';
+import {
+  DatabaseTransaction,
+  TransactionSupport,
+} from '../../transactions/DatabaseTransaction.js';
 import { SequelizeSchema } from './SequelizeSchema.js';
 import {
   checkIfPostgresOptions,
@@ -432,6 +436,32 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
 
   generateId(): string {
     return crypto.randomUUID();
+  }
+
+  async getTransactionSupport(): Promise<TransactionSupport> {
+    return { supported: true };
+  }
+
+  async beginTransaction(): Promise<DatabaseTransaction<Transaction>> {
+    // The type only matters to SQLite, where it takes the write lock up front.
+    const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
+    return new DatabaseTransaction(t);
+  }
+
+  async commitTransaction(transaction: DatabaseTransaction): Promise<Error[]> {
+    try {
+      await (transaction.native as Transaction).commit();
+    } catch (e) {
+      transaction.discardAfterCommit();
+      throw e;
+    }
+    return transaction.runAfterCommit();
+  }
+
+  async rollbackTransaction(transaction: DatabaseTransaction): Promise<void> {
+    transaction.discardAfterCommit();
+    const t = transaction.native as Transaction;
+    if (!(t as unknown as { finished?: string }).finished) await t.rollback();
   }
 
   async createIndexes(

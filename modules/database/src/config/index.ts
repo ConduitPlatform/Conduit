@@ -54,6 +54,13 @@ const AppConfigSchema = {
       default: false,
     },
   },
+  transactions: {
+    maxDurationMs: {
+      doc: 'Maximum lifetime in milliseconds of a transaction opened by a module. A transaction still open after this is rolled back',
+      format: 'Number',
+      default: 60 * 1000,
+    },
+  },
 };
 
 const config = convict(AppConfigSchema);

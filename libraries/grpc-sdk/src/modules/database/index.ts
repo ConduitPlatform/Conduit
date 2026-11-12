@@ -22,14 +22,37 @@ import type {
 } from '../../interfaces/Model.js';
 import { defaultVectorIndexMethod } from '../../interfaces/Model.js';
 
-export type CountDocumentsOptions = AuthzOptions & { readPreference?: string };
+import {
+  CountDocumentsOptions,
+  findManyRequest,
+  findOneRequest,
+  processQuery,
+  queryRequest,
+  updateManyRequest,
+  updateRequest,
+} from './requests.js';
+import {
+  DatabaseOperations,
+  DatabaseTransaction,
+  isRetryableTransactionError,
+  TransactionOptions,
+  TransactionUnavailableError,
+} from './transaction.js';
+import { getLogger } from '../../utilities/GrpcSdkContext.js';
+export type { CountDocumentsOptions } from './requests.js';
+export { DatabaseTransaction, TransactionUnavailableError } from './transaction.js';
+export type { DatabaseOperations, TransactionOptions } from './transaction.js';
 
-function toPopulateArray(populate?: string | string[]): string[] {
-  if (!populate) return [];
-  return Array.isArray(populate) ? populate : [populate];
-}
+/** How long a refused transaction is remembered before Database is asked again. */
+const TRANSACTION_SUPPORT_RECHECK_MS = 60_000;
 
-export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
+export class DatabaseProvider
+  extends ConduitModule<typeof DatabaseProviderDefinition>
+  implements DatabaseOperations
+{
+  private transactionsUnavailableUntil = 0;
+  private transactionFallbackLogged = false;
+
   constructor(
     private readonly moduleName: string,
     url: string,
@@ -123,19 +146,13 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   }
 
   processQuery<T>(query: Query<T> | Query<T>[]) {
-    return JSON.stringify(query);
+    return processQuery(query);
   }
 
   findOne<T>(schemaName: string, query: Query<T>, options?: FindOneOptions): Promise<T> {
-    const o = options ?? {};
-    const populateArray = toPopulateArray(o.populate);
-    return this.client!.findOne({
-      schemaName,
-      query: this.processQuery(query),
-      ...o,
-      select: o.select === null ? undefined : o.select,
-      populate: populateArray,
-    }).then(res => JSON.parse(res.result));
+    return this.client!.findOne(findOneRequest(schemaName, query, options)).then(res =>
+      JSON.parse(res.result),
+    );
   }
 
   findMany<T>(
@@ -143,29 +160,15 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     query: Query<T>,
     options?: FindManyOptions,
   ): Promise<T[]> {
-    const o: FindManyOptions = { ...(options ?? {}) };
-    if (typeof o.sort === 'string') o.sort = [o.sort];
-    const sortObj = Array.isArray(o.sort) ? this.constructSortObj(o.sort) : o.sort;
-    const populateArray = toPopulateArray(o.populate);
-
-    return this.client!.findMany({
-      schemaName,
-      query: this.processQuery(query),
-      ...o,
-      select: o.select === null ? undefined : o.select,
-      sort: sortObj,
-      populate: populateArray,
-    }).then(res => JSON.parse(res.result));
+    return this.client!.findMany(findManyRequest(schemaName, query, options)).then(res =>
+      JSON.parse(res.result),
+    );
   }
 
   create<T>(schemaName: string, query: Query<T>, options?: AuthzOptions): Promise<T> {
-    return this.client!.create({
-      schemaName,
-      query: this.processQuery(query),
-      ...(options ?? {}),
-    }).then(res => {
-      return JSON.parse(res.result);
-    });
+    return this.client!.create(queryRequest(schemaName, query, options)).then(res =>
+      JSON.parse(res.result),
+    );
   }
 
   createMany<T>(
@@ -173,13 +176,9 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     query: Query<T>[],
     options?: AuthzOptions,
   ): Promise<T[] | UntypedArray> {
-    return this.client!.createMany({
-      schemaName,
-      query: this.processQuery(query),
-      ...(options ?? {}),
-    }).then(res => {
-      return JSON.parse(res.result);
-    });
+    return this.client!.createMany(queryRequest(schemaName, query, options)).then(res =>
+      JSON.parse(res.result),
+    );
   }
 
   findByIdAndUpdate<T>(
@@ -188,20 +187,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     document: Query<T>,
     options?: PopulateAuthzOptions,
   ): Promise<T | any> {
-    const o = options ?? {};
-    const populateArray = toPopulateArray(o.populate);
     return this.client!.findByIdAndUpdate({
-      schemaName,
-      id,
-      query: this.processQuery(document),
-      userId: o.userId,
-      scope: o.scope,
-      populate: populateArray,
-      suppressEvent: o.suppressEvent,
-      embeddingsJob: o.embeddingsJob,
-    }).then(res => {
-      return JSON.parse(res.result);
-    });
+      ...updateRequest(schemaName, id, document, options),
+      embeddingsJob: options?.embeddingsJob,
+    }).then(res => JSON.parse(res.result));
   }
 
   findByIdAndReplace<T>(
@@ -210,19 +199,9 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     document: Query<T>,
     options?: PopulateAuthzOptions,
   ): Promise<T | any> {
-    const o = options ?? {};
-    const populateArray = toPopulateArray(o.populate);
-    return this.client!.findByIdAndReplace({
-      schemaName,
-      id,
-      query: this.processQuery(document),
-      userId: o.userId,
-      scope: o.scope,
-      populate: populateArray,
-      suppressEvent: o.suppressEvent,
-    }).then(res => {
-      return JSON.parse(res.result);
-    });
+    return this.client!.findByIdAndReplace(
+      updateRequest(schemaName, id, document, options),
+    ).then(res => JSON.parse(res.result));
   }
 
   updateMany<T>(
@@ -231,19 +210,9 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     query: Query<T>,
     options?: PopulateAuthzOptions,
   ) {
-    const o = options ?? {};
-    const populateArray = toPopulateArray(o.populate);
-    return this.client!.updateMany({
-      schemaName,
-      filterQuery: this.processQuery(filterQuery),
-      query: this.processQuery(query),
-      userId: o.userId,
-      scope: o.scope,
-      populate: populateArray,
-      suppressEvent: o.suppressEvent,
-    }).then(res => {
-      return JSON.parse(res.result);
-    });
+    return this.client!.updateMany(
+      updateManyRequest(schemaName, filterQuery, query, options),
+    ).then(res => JSON.parse(res.result));
   }
 
   updateOne<T>(
@@ -252,19 +221,9 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     query: Query<T>,
     options?: PopulateAuthzOptions,
   ) {
-    const o = options ?? {};
-    const populateArray = toPopulateArray(o.populate);
-    return this.client!.updateOne({
-      schemaName,
-      filterQuery: this.processQuery(filterQuery),
-      query: this.processQuery(query),
-      userId: o.userId,
-      scope: o.scope,
-      populate: populateArray,
-      suppressEvent: o.suppressEvent,
-    }).then(res => {
-      return JSON.parse(res.result);
-    });
+    return this.client!.updateOne(
+      updateManyRequest(schemaName, filterQuery, query, options),
+    ).then(res => JSON.parse(res.result));
   }
 
   replaceOne<T>(
@@ -273,39 +232,21 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     query: Query<T>,
     options?: PopulateAuthzOptions,
   ) {
-    const o = options ?? {};
-    const populateArray = toPopulateArray(o.populate);
-    return this.client!.replaceOne({
-      schemaName,
-      filterQuery: this.processQuery(filterQuery),
-      query: this.processQuery(query),
-      userId: o.userId,
-      scope: o.scope,
-      populate: populateArray,
-      suppressEvent: o.suppressEvent,
-    }).then(res => {
-      return JSON.parse(res.result);
-    });
+    return this.client!.replaceOne(
+      updateManyRequest(schemaName, filterQuery, query, options),
+    ).then(res => JSON.parse(res.result));
   }
 
   deleteOne<T>(schemaName: string, query: Query<T>, options?: AuthzOptions) {
-    return this.client!.deleteOne({
-      schemaName,
-      query: this.processQuery(query),
-      ...(options ?? {}),
-    }).then(res => {
-      return JSON.parse(res.result);
-    });
+    return this.client!.deleteOne(queryRequest(schemaName, query, options)).then(res =>
+      JSON.parse(res.result),
+    );
   }
 
   deleteMany<T>(schemaName: string, query: Query<T>, options?: AuthzOptions) {
-    return this.client!.deleteMany({
-      schemaName,
-      query: this.processQuery(query),
-      ...(options ?? {}),
-    }).then(res => {
-      return JSON.parse(res.result);
-    });
+    return this.client!.deleteMany(queryRequest(schemaName, query, options)).then(res =>
+      JSON.parse(res.result),
+    );
   }
 
   countDocuments<T>(
@@ -313,13 +254,90 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     query: Query<T>,
     options?: CountDocumentsOptions,
   ): Promise<number> {
-    return this.client!.countDocuments({
-      schemaName,
-      query: this.processQuery(query),
-      ...(options ?? {}),
-    }).then(res => {
-      return JSON.parse(res.result);
-    });
+    return this.client!.countDocuments(queryRequest(schemaName, query, options)).then(
+      res => JSON.parse(res.result),
+    );
+  }
+
+  /** Whether the connected database can run transactions (SQL, or MongoDB with a replica set). */
+  getTransactionSupport(): Promise<{ supported: boolean; message?: string }> {
+    return this.client!.getTransactionSupport({});
+  }
+
+  /**
+   * Runs `work` inside a database transaction: everything it writes through `tx`
+   * is committed together when it resolves, and rolled back when it throws.
+   *
+   * Requires SQL, or MongoDB running as a replica set or sharded cluster.
+   * Mutation events and ownership relations of documents created in the
+   * transaction are emitted on commit. Calls made on `tx` run one at a time.
+   *
+   * @example
+   * await database.withTransaction(async tx => {
+   *   const order = await tx.create('Order', { total });
+   *   await tx.updateOne('Stock', { item }, { $inc: { quantity: -1 } });
+   * });
+   */
+  async withTransaction<R>(
+    work: (tx: DatabaseTransaction) => Promise<R>,
+    options?: TransactionOptions,
+  ): Promise<R> {
+    const retries = Math.max(0, options?.retries ?? 0);
+    for (let attempt = 0; ; attempt++) {
+      const tx = new DatabaseTransaction(requests => this.client!.transaction(requests));
+      try {
+        await tx.begin(options?.timeoutMs);
+        const result = await work(tx);
+        await tx.commit();
+        return result;
+      } catch (e) {
+        await tx.rollback().catch(() => {});
+        if (attempt < retries && isRetryableTransactionError(e)) continue;
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * Runs `work` inside a transaction when the database supports one, and without
+   * one when it does not (standalone MongoDB, or a Database that predates
+   * transactions). The fallback is logged and is not atomic: there is no rollback,
+   * so a failure part-way leaves the earlier writes in place.
+   *
+   * `work` receives the transaction, or this provider in the fallback, and has to
+   * be correct with either. That rules out, inside `work`:
+   * - catching a failed call and carrying on: in a transaction that failure has
+   *   already rolled everything back
+   * - reading back, with `userId` or `scope`, a document it has just created: in a
+   *   transaction the ownership relation is only written on commit
+   * - effects outside the database (emails, bus events, calls to other modules):
+   *   they are never rolled back, so do them after `work` returns
+   *
+   * @example
+   * await database.withOptionalTransaction(async db => {
+   *   await Order.getInstance().create(order, { transaction: db });
+   *   await Stock.getInstance().updateOne(filter, update, { transaction: db });
+   * });
+   */
+  async withOptionalTransaction<R>(
+    work: (db: DatabaseOperations) => Promise<R>,
+    options?: TransactionOptions,
+  ): Promise<R> {
+    if (Date.now() < this.transactionsUnavailableUntil) return work(this);
+    try {
+      return await this.withTransaction(work, options);
+    } catch (e) {
+      // Thrown by begin only, so `work` has not run yet.
+      if (!(e instanceof TransactionUnavailableError)) throw e;
+      this.transactionsUnavailableUntil = Date.now() + TRANSACTION_SUPPORT_RECHECK_MS;
+      if (!this.transactionFallbackLogged) {
+        this.transactionFallbackLogged = true;
+        getLogger().warn(
+          `Database transactions are unavailable (${e.message}); module "${this.moduleName}" runs its multi-step writes without atomicity.`,
+        );
+      }
+      return work(this);
+    }
   }
 
   rawQuery(schemaName: string, query: RawQuery) {
@@ -439,18 +457,5 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
 
   generateId(): Promise<string> {
     return this.client!.generateId({}).then(res => res.result);
-  }
-
-  private constructSortObj(sort: string[]) {
-    const sortObj: { [field: string]: -1 | 1 } = {};
-    sort.forEach((sortVal: string) => {
-      sortVal = sortVal.trim();
-      if (sortVal.indexOf('-') !== -1) {
-        sortObj[sortVal.substring(1)] = -1;
-      } else {
-        sortObj[sortVal] = 1;
-      }
-    });
-    return sortObj;
   }
 }

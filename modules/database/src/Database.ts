@@ -29,6 +29,7 @@ import {
   GetDatabaseTypeResponse,
   GetSchemaRequest,
   GetSchemasRequest,
+  TransactionSupportResponse,
   MigrateRequest,
   QueryRequest,
   QueryResponse,
@@ -99,6 +100,15 @@ import { fileURLToPath } from 'node:url';
 import { RealtimeService } from './realtime/index.js';
 import { errors } from './errors.js';
 import { toDatabaseError } from './utils/databaseErrors.js';
+import {
+  DatabaseTransaction,
+  transactionOf,
+} from './transactions/DatabaseTransaction.js';
+import {
+  TransactionCall,
+  TransactionOperation,
+  TransactionStream,
+} from './transactions/TransactionStream.js';
 
 function importErrorText(e: unknown): string {
   const { message, conduitCode } = parseErrorPayload(e);
@@ -138,6 +148,8 @@ export default class DatabaseModule extends ManagedModule<Config> {
       migrate: this.migrate.bind(this),
       getDatabaseType: this.getDatabaseType.bind(this),
       generateId: this.generateId.bind(this),
+      getTransactionSupport: this.getTransactionSupport.bind(this),
+      transaction: this.transaction.bind(this),
       getVectorCapabilities: this.getVectorCapabilities.bind(this),
       createVectorIndex: this.createVectorIndex.bind(this),
       getVectorIndexes: this.getVectorIndexes.bind(this),
@@ -542,10 +554,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
         populate: call.request.populate,
         userId: call.request.userId,
         scope: call.request.scope,
+        transaction: transactionOf(call),
         readPreference: call.request.readPreference,
       });
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
+      transactionOf(call)?.recordFailure(err);
       callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
@@ -578,10 +592,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
         populate,
         userId: call.request.userId,
         scope: call.request.scope,
+        transaction: transactionOf(call),
         readPreference: call.request.readPreference,
       });
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
+      transactionOf(call)?.recordFailure(err);
       callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
@@ -603,16 +619,19 @@ export default class DatabaseModule extends ManagedModule<Config> {
       const doc = await schemaAdapter.model.create(call.request.query, {
         userId: call.request.userId,
         scope: call.request.scope,
+        transaction: transactionOf(call),
       });
       const docString = JSON.stringify(doc);
 
-      this.grpcSdk.bus?.publish(
+      this.publishMutation(
+        call,
         mutationEventChannel(this.name, 'create', schemaName),
         docString,
       );
 
       callback(null, { result: docString });
     } catch (err) {
+      transactionOf(call)?.recordFailure(err);
       callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
@@ -637,16 +656,19 @@ export default class DatabaseModule extends ManagedModule<Config> {
       const docs = await schemaAdapter.model.createMany(call.request.query, {
         userId: call.request.userId,
         scope: call.request.scope,
+        transaction: transactionOf(call),
       });
       const docsString = JSON.stringify(docs);
 
-      this.grpcSdk.bus?.publish(
+      this.publishMutation(
+        call,
         mutationEventChannel(this.name, 'createMany', schemaName),
         docsString,
       );
 
       callback(null, { result: docsString });
     } catch (err) {
+      transactionOf(call)?.recordFailure(err);
       callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
@@ -687,12 +709,14 @@ export default class DatabaseModule extends ManagedModule<Config> {
           populate: call.request.populate,
           userId: call.request.userId,
           scope: call.request.scope,
+          transaction: transactionOf(call),
         },
       );
       const resultString = JSON.stringify(result);
 
       if (shouldPublishMutationEvent(call.request.suppressEvent)) {
-        this.grpcSdk.bus?.publish(
+        this.publishMutation(
+          call,
           mutationEventChannel(this.name, 'update', schemaName),
           resultString,
         );
@@ -700,6 +724,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
+      transactionOf(call)?.recordFailure(err);
       callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
@@ -728,12 +753,14 @@ export default class DatabaseModule extends ManagedModule<Config> {
           populate: call.request.populate,
           userId: call.request.userId,
           scope: call.request.scope,
+          transaction: transactionOf(call),
         },
       );
       const resultString = JSON.stringify(result);
 
       if (shouldPublishMutationEvent(call.request.suppressEvent)) {
-        this.grpcSdk.bus?.publish(
+        this.publishMutation(
+          call,
           mutationEventChannel(this.name, 'update', schemaName),
           resultString,
         );
@@ -741,6 +768,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
+      transactionOf(call)?.recordFailure(err);
       callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
@@ -769,12 +797,14 @@ export default class DatabaseModule extends ManagedModule<Config> {
           populate: call.request.populate,
           userId: call.request.userId,
           scope: call.request.scope,
+          transaction: transactionOf(call),
         },
       );
       const resultString = JSON.stringify(result);
 
       if (shouldPublishMutationEvent(call.request.suppressEvent)) {
-        this.grpcSdk.bus?.publish(
+        this.publishMutation(
+          call,
           mutationEventChannel(this.name, 'update', schemaName),
           resultString,
         );
@@ -782,6 +812,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
+      transactionOf(call)?.recordFailure(err);
       callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
@@ -816,12 +847,14 @@ export default class DatabaseModule extends ManagedModule<Config> {
           populate: call.request.populate,
           userId: call.request.userId,
           scope: call.request.scope,
+          transaction: transactionOf(call),
         },
       );
       const resultString = JSON.stringify(result);
 
       if (shouldPublishMutationEvent(call.request.suppressEvent)) {
-        this.grpcSdk.bus?.publish(
+        this.publishMutation(
+          call,
           mutationEventChannel(this.name, 'update', schemaName),
           resultString,
         );
@@ -829,6 +862,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
+      transactionOf(call)?.recordFailure(err);
       callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
@@ -860,6 +894,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
         ? await this.collectMutationIds(schemaAdapter.model, call.request.filterQuery, {
             userId: call.request.userId,
             scope: call.request.scope,
+            transaction: transactionOf(call),
           })
         : [];
       const result = await schemaAdapter.model.updateMany(
@@ -869,13 +904,15 @@ export default class DatabaseModule extends ManagedModule<Config> {
           populate: call.request.populate,
           userId: call.request.userId,
           scope: call.request.scope,
+          transaction: transactionOf(call),
         },
       );
       const resultString = JSON.stringify(result);
 
       if (shouldPublishMutationEvent(call.request.suppressEvent)) {
         for (const payload of buildMutationEventChunks(ids)) {
-          this.grpcSdk.bus?.publish(
+          this.publishMutation(
+            call,
             mutationEventChannel(this.name, 'updateMany', schemaName),
             payload,
           );
@@ -884,6 +921,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
 
       callback(null, { result: resultString });
     } catch (err) {
+      transactionOf(call)?.recordFailure(err);
       callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
@@ -908,16 +946,19 @@ export default class DatabaseModule extends ManagedModule<Config> {
       const result = await schemaAdapter.model.deleteOne(query, {
         userId: call.request.userId,
         scope: call.request.scope,
+        transaction: transactionOf(call),
       });
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(
+      this.publishMutation(
+        call,
         mutationEventChannel(this.name, 'delete', schemaName),
         resultString,
       );
 
       callback(null, { result: resultString });
     } catch (err) {
+      transactionOf(call)?.recordFailure(err);
       callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
@@ -942,16 +983,19 @@ export default class DatabaseModule extends ManagedModule<Config> {
       const result = await schemaAdapter.model.deleteMany(query, {
         userId: call.request.userId,
         scope: call.request.scope,
+        transaction: transactionOf(call),
       });
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(
+      this.publishMutation(
+        call,
         mutationEventChannel(this.name, 'delete', schemaName),
         resultString,
       );
 
       callback(null, { result: resultString });
     } catch (err) {
+      transactionOf(call)?.recordFailure(err);
       callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
@@ -965,10 +1009,12 @@ export default class DatabaseModule extends ManagedModule<Config> {
       const result = await schemaAdapter.model.countDocuments(call.request.query, {
         userId: call.request.userId,
         scope: call.request.scope,
+        transaction: transactionOf(call),
         readPreference: call.request.readPreference,
       });
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
+      transactionOf(call)?.recordFailure(err);
       callback(grpcCallbackError(toDatabaseError(err)));
     }
   }
@@ -1217,6 +1263,67 @@ export default class DatabaseModule extends ManagedModule<Config> {
     callback(null, { result });
   }
 
+  async getTransactionSupport(
+    _call: GrpcRequest<Empty>,
+    callback: GrpcResponse<TransactionSupportResponse>,
+  ) {
+    try {
+      callback(null, await this._activeAdapter.getTransactionSupport());
+    } catch (err) {
+      callback(grpcCallbackError(toDatabaseError(err)));
+    }
+  }
+
+  /**
+   * An interactive transaction: the caller streams one operation at a time and
+   * everything it wrote is committed or rolled back together.
+   */
+  transaction(call: GrpcRequest<unknown>) {
+    const maxDurationMs =
+      ConfigController.getInstance().config?.transactions?.maxDurationMs ?? 60_000;
+    // Registered like every other handler, but gRPC hands a duplex stream to it.
+    new TransactionStream(call as unknown as TransactionCall, {
+      adapter: this._activeAdapter,
+      maxDurationMs,
+      execute: (operation, request, transaction) =>
+        this.executeInTransaction(operation, request, call.metadata, transaction),
+      onAfterCommitErrors: errors => {
+        for (const error of errors) {
+          ConduitGrpcSdk.Logger.error(
+            `Transaction committed but a follow-up action failed: ${error.message}`,
+          );
+        }
+      },
+      onRollbackError: error => {
+        ConduitGrpcSdk.Logger.error(
+          `Failed to roll back transaction: ${(error as Error)?.message ?? error}`,
+        );
+      },
+    }).start();
+  }
+
+  /** Runs a query handler with the transaction attached to its call. */
+  private executeInTransaction(
+    operation: TransactionOperation,
+    request: unknown,
+    metadata: GrpcRequest<unknown>['metadata'],
+    transaction: DatabaseTransaction,
+  ): Promise<string> {
+    const handler = this[operation] as (
+      call: GrpcRequest<unknown>,
+      callback: GrpcResponse<QueryResponse>,
+    ) => Promise<void>;
+    return new Promise<string>((resolve, reject) => {
+      const call = { request, metadata, transaction };
+      handler
+        .call(this, call, (error, response) => {
+          if (error) return reject(error);
+          resolve(response?.result ?? '');
+        })
+        .catch(reject);
+    });
+  }
+
   async generateId(
     call: GrpcRequest<Empty>,
     callback: GrpcResponse<GetDatabaseTypeResponse>,
@@ -1341,7 +1448,7 @@ export default class DatabaseModule extends ManagedModule<Config> {
   private async collectMutationIds(
     model: MongooseSchema | SequelizeSchema,
     filterQuery: string,
-    options: { userId?: string; scope?: string },
+    options: { userId?: string; scope?: string; transaction?: DatabaseTransaction },
   ): Promise<string[]> {
     return collectBoundedMutationIds({
       findPage: (skip, limit) =>
@@ -1352,7 +1459,18 @@ export default class DatabaseModule extends ManagedModule<Config> {
           sort: { _id: 1 },
           userId: options.userId,
           scope: options.scope,
+          transaction: options.transaction,
         }),
     });
+  }
+
+  /** Publishes a mutation event, or holds it until the caller's transaction commits. */
+  private publishMutation(call: GrpcRequest<unknown>, channel: string, payload: string) {
+    const transaction = transactionOf(call);
+    if (transaction) {
+      transaction.afterCommit(() => this.grpcSdk.bus?.publish(channel, payload));
+      return;
+    }
+    this.grpcSdk.bus?.publish(channel, payload);
   }
 }

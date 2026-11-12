@@ -154,11 +154,16 @@ export class RelationsController {
       computedTuple: computeRelationTuple(subject, relation, object),
     });
     if (!relationResource) throw new ModuleError(errors.RELATION_NOT_FOUND);
-    await Relationship.getInstance().deleteOne({
-      computedTuple: computeRelationTuple(subject, relation, object),
-    });
+    await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      await Relationship.getInstance().deleteOne(
+        {
+          computedTuple: computeRelationTuple(subject, relation, object),
+        },
+        { transaction: db },
+      );
 
-    await IndexController.getInstance().removeRelation(subject, relation, object);
+      await IndexController.getInstance().removeRelation(subject, relation, object, db);
+    });
     await RuleCache.invalidateSubject(this.grpcSdk, subject);
 
     return;
@@ -186,12 +191,15 @@ export class RelationsController {
   async deleteRelationById(id: string) {
     const relationResource = await Relationship.getInstance().findOne({ _id: id });
     if (!relationResource) throw new ModuleError(errors.RELATION_NOT_FOUND);
-    await Relationship.getInstance().deleteOne({ _id: id });
-    await IndexController.getInstance().removeRelation(
-      relationResource.subject,
-      relationResource.relation,
-      relationResource.resource,
-    );
+    await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      await Relationship.getInstance().deleteOne({ _id: id }, { transaction: db });
+      await IndexController.getInstance().removeRelation(
+        relationResource.subject,
+        relationResource.relation,
+        relationResource.resource,
+        db,
+      );
+    });
     await RuleCache.invalidateSubject(this.grpcSdk, relationResource.subject);
     return;
   }

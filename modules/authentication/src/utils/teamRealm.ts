@@ -394,24 +394,30 @@ export async function deleteTeamAndDetachChildren(
   const memberIds = needsGuestCheck ? allMemberIds : [];
   const children = await Team.getInstance().findMany({ parentTeam: teamId });
 
-  await Team.getInstance().deleteOne({ _id: teamId });
+  // the team goes and its children move up together: a child never points at a team
+  // that is gone
+  await grpcSdk.database!.withOptionalTransaction(async db => {
+    await Team.getInstance().deleteOne({ _id: teamId }, { transaction: db });
+    if (children.length > 0) {
+      // null (not undefined, which an update drops) puts them on the top level
+      await Team.getInstance().updateMany(
+        { parentTeam: teamId },
+        { parentTeam: parentId } as Indexable,
+        { transaction: db },
+      );
+    }
+  });
   await requireAuthorization(grpcSdk).deleteAllRelations({ resource: 'Team:' + teamId });
   await requireAuthorization(grpcSdk).deleteAllRelations({ subject: 'Team:' + teamId });
   await invalidateTeamClaims(allMemberIds);
-  if (children.length > 0) {
-    // null (not undefined, which an update drops) puts them on the top level
-    await Team.getInstance().updateMany({ parentTeam: teamId }, {
-      parentTeam: parentId,
-    } as Indexable);
-    if (parentId) {
-      // the owner relation of the deleted parent went with it
-      for (const child of children) {
-        await requireAuthorization(grpcSdk).createRelation({
-          subject: 'Team:' + parentId,
-          relation: 'owner',
-          resource: 'Team:' + String(child._id),
-        });
-      }
+  if (parentId) {
+    // the owner relation of the deleted parent went with it
+    for (const child of children) {
+      await requireAuthorization(grpcSdk).createRelation({
+        subject: 'Team:' + parentId,
+        relation: 'owner',
+        resource: 'Team:' + String(child._id),
+      });
     }
   }
   // the parent is still inside the same realm (a top-level team has no realm guests)

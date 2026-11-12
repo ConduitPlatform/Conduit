@@ -104,32 +104,43 @@ export class AdminHandlers {
     ]);
     const roomCreator =
       creator && participants.includes(creator) ? creator : participants[0];
-    const chatRoom = await ChatRoom.getInstance()
-      .create({
-        name,
-        participants,
-        creator: roomCreator,
-      })
-      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
-    const participantsLog = await ChatParticipantsLog.getInstance().createMany([
-      {
-        user: roomCreator,
-        action: 'create',
-        chatRoom: chatRoom._id,
-      },
-      ...participants
-        .filter(userId => userId !== roomCreator)
-        .map(userId => ({
-          user: userId,
-          action: 'join',
-          chatRoom: chatRoom._id,
-        })),
-    ]);
-    await ChatRoom.getInstance()
-      .findByIdAndUpdate(chatRoom._id, {
-        participantsLog: participantsLog.map(log => log._id),
-      })
-      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
+    const chatRoom = await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      const createdRoom = await ChatRoom.getInstance()
+        .create(
+          {
+            name,
+            participants,
+            creator: roomCreator,
+          },
+          { transaction: db },
+        )
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
+      const participantsLog = await ChatParticipantsLog.getInstance().createMany(
+        [
+          {
+            user: roomCreator,
+            action: 'create',
+            chatRoom: createdRoom._id,
+          },
+          ...participants
+            .filter(userId => userId !== roomCreator)
+            .map(userId => ({
+              user: userId,
+              action: 'join',
+              chatRoom: createdRoom._id,
+            })),
+        ],
+        { transaction: db },
+      );
+      await ChatRoom.getInstance()
+        .findByIdAndUpdate(
+          createdRoom._id,
+          { participantsLog: participantsLog.map(log => log._id) },
+          { transaction: db },
+        )
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
+      return createdRoom;
+    });
     this.grpcSdk.router?.socketPush({
       event: 'join-room',
       receivers: participants,
@@ -174,26 +185,35 @@ export class AdminHandlers {
         const participantIds = room.participants.map(p =>
           typeof p === 'string' ? p : p._id,
         );
-        const participantsLog = await ChatParticipantsLog.getInstance()
-          .createMany(
-            participantIds.map(userId => ({
-              user: userId,
-              action: 'remove' as const,
-              chatRoom: room._id,
-            })),
-          )
-          .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
-        await ChatRoom.getInstance()
-          .findByIdAndUpdate(room._id, {
-            participantsLog: [
-              ...room.participantsLog.map(log =>
-                typeof log === 'string' ? log : log._id,
-              ),
-              ...participantsLog.map(log => log._id),
-            ],
-            deleted: true,
-          })
-          .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
+        // One transaction per room: the number of rooms is not bounded.
+        await this.grpcSdk.database!.withOptionalTransaction(async db => {
+          const participantsLog = await ChatParticipantsLog.getInstance()
+            .createMany(
+              participantIds.map(userId => ({
+                user: userId,
+                action: 'remove' as const,
+                chatRoom: room._id,
+              })),
+              { transaction: db },
+            )
+            .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
+          await ChatRoom.getInstance()
+            .findByIdAndUpdate(
+              room._id,
+              {
+                participantsLog: [
+                  ...room.participantsLog.map(log =>
+                    typeof log === 'string' ? log : log._id,
+                  ),
+                  ...participantsLog.map(log => log._id),
+                ],
+                deleted: true,
+              },
+              { transaction: db },
+            )
+            .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
+        });
+        // A room's history can be large, so it is marked outside the transaction.
         await ChatMessage.getInstance()
           .updateMany({ room: room._id }, { deleted: true })
           .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
@@ -258,22 +278,31 @@ export class AdminHandlers {
       }
     }
 
-    const participantsLog = await ChatParticipantsLog.getInstance().createMany(
-      usersToAdd.map(userId => ({
-        user: userId,
-        action: 'add',
-        chatRoom: room._id,
-      })),
-    );
-    const updatedRoom = await ChatRoom.getInstance()
-      .findByIdAndUpdate(room._id, {
-        participants: Array.from(new Set([...participantIds, ...usersToAdd])),
-        participantsLog: [
-          ...room.participantsLog.map(log => (typeof log === 'string' ? log : log._id)),
-          ...participantsLog.map(log => log._id),
-        ],
-      })
-      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
+    const updatedRoom = await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      const participantsLog = await ChatParticipantsLog.getInstance().createMany(
+        usersToAdd.map(userId => ({
+          user: userId,
+          action: 'add',
+          chatRoom: room._id,
+        })),
+        { transaction: db },
+      );
+      return ChatRoom.getInstance()
+        .findByIdAndUpdate(
+          room._id,
+          {
+            participants: Array.from(new Set([...participantIds, ...usersToAdd])),
+            participantsLog: [
+              ...room.participantsLog.map(log =>
+                typeof log === 'string' ? log : log._id,
+              ),
+              ...participantsLog.map(log => log._id),
+            ],
+          },
+          { transaction: db },
+        )
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
+    });
 
     await this.invalidateMembershipCache(room._id);
     this.grpcSdk.router?.socketPush({
@@ -316,48 +345,62 @@ export class AdminHandlers {
     );
     const removedUsers: string[] = [];
 
-    for (const userId of usersToRemove) {
-      const index = participantIds.indexOf(userId);
-      if (index === -1) {
-        continue;
+    // One log entry per removed participant, so the loop is bounded by the room's size.
+    const roomDeleted = await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      for (const userId of usersToRemove) {
+        const index = participantIds.indexOf(userId);
+        if (index === -1) {
+          continue;
+        }
+        participantIds.splice(index, 1);
+        const participantsLog = await ChatParticipantsLog.getInstance().create(
+          {
+            user: userId,
+            action: 'remove',
+            chatRoom: room._id,
+          },
+          { transaction: db },
+        );
+        logIds.push(participantsLog._id);
+        removedUsers.push(userId);
       }
-      participantIds.splice(index, 1);
-      const participantsLog = await ChatParticipantsLog.getInstance().create({
-        user: userId,
-        action: 'remove',
-        chatRoom: room._id,
-      });
-      logIds.push(participantsLog._id);
-      removedUsers.push(userId);
-    }
 
-    if (removedUsers.length === 0) {
-      throw new ModuleError(errors.USERS_NOT_IN_ROOM);
-    }
+      if (removedUsers.length === 0) {
+        throw new ModuleError(errors.USERS_NOT_IN_ROOM);
+      }
 
-    room.participants = participantIds;
-    room.participantsLog = logIds;
+      room.participants = participantIds;
+      room.participantsLog = logIds;
 
-    if (
-      (room.participants.length === 1 &&
-        ConfigController.getInstance().config.deleteEmptyRooms) ||
-      room.participants.length === 0
-    ) {
+      if (
+        (room.participants.length === 1 &&
+          ConfigController.getInstance().config.deleteEmptyRooms) ||
+        room.participants.length === 0
+      ) {
+        if (ConfigController.getInstance().config.auditMode) {
+          await ChatRoom.getInstance().findByIdAndUpdate(
+            room._id,
+            { ...room, deleted: true },
+            { transaction: db },
+          );
+        } else {
+          await ChatRoom.getInstance().deleteOne({ _id: room._id }, { transaction: db });
+        }
+        return true;
+      }
+      await ChatRoom.getInstance()
+        .findByIdAndUpdate(room._id, room, { transaction: db })
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
+      return false;
+    });
+    if (roomDeleted) {
+      // A room's history can be large, so it is cleared outside the transaction.
       if (ConfigController.getInstance().config.auditMode) {
-        await ChatRoom.getInstance().findByIdAndUpdate(room._id, {
-          ...room,
-          deleted: true,
-        });
         await ChatMessage.getInstance().updateMany({ room: room._id }, { deleted: true });
       } else {
-        await ChatRoom.getInstance().deleteOne({ _id: room._id });
         await ChatMessage.getInstance().deleteMany({ room: room._id });
       }
       this.grpcSdk.bus?.publish('chat:deleteRoom:ChatRoom', JSON.stringify({ roomId }));
-    } else {
-      await ChatRoom.getInstance()
-        .findByIdAndUpdate(room._id, room)
-        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     }
 
     await this.invalidateMembershipCache(room._id);

@@ -865,17 +865,27 @@ export class RealmsAdmin {
           )
         : null;
       if (targetId) await this.makeHomeMember(userId, targetId);
-      await User.getInstance().findByIdAndUpdate(userId, { homeRealm: targetId });
+      if (oldId && oldPlan === 'guest') {
+        await this.grpcSdk.database!.withOptionalTransaction(async db => {
+          await User.getInstance().findByIdAndUpdate(
+            userId,
+            { homeRealm: targetId },
+            { transaction: db },
+          );
+          // the old realm keeps the user as a guest
+          await RealmMembership.getInstance().updateMany(
+            { user: userId, realm: oldId },
+            { membershipType: 'guest' },
+            { transaction: db },
+          );
+        });
+      } else {
+        await User.getInstance().findByIdAndUpdate(userId, { homeRealm: targetId });
+      }
       if (!oldId) {
         // a global user gets a home realm: their global sessions end
         await revokeRealmlessTokens([userId]);
-      } else if (oldPlan === 'guest') {
-        // the old realm keeps the user as a guest
-        await RealmMembership.getInstance().updateMany(
-          { user: userId, realm: oldId },
-          { membershipType: 'guest' },
-        );
-      } else {
+      } else if (oldPlan !== 'guest') {
         await revokeRealmMembership(this.grpcSdk, {
           userId,
           realmTeamId: oldId,

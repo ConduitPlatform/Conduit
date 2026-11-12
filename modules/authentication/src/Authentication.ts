@@ -1079,9 +1079,11 @@ export default class Authentication extends ManagedModule<Config> {
   ) {
     const { userId } = call.request;
     try {
-      await models.User.getInstance().deleteOne({ _id: userId });
       // no membership row or session may outlive its user
-      await deleteUserRealmMemberships(userId);
+      await this.database.withOptionalTransaction(async db => {
+        await models.User.getInstance().deleteOne({ _id: userId }, { transaction: db });
+        await deleteUserRealmMemberships(userId, db);
+      });
       await deleteSessionTokens({ user: userId }, 'user deleted');
       await invalidateTeamClaims([userId]);
       return callback(null, {

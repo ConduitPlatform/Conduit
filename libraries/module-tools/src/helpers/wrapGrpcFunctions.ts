@@ -27,6 +27,7 @@ export function wrapGrpcFunctions(
             callback,
             'No gRPC protection token provided',
             status.PERMISSION_DENIED,
+            call,
           );
         }
         try {
@@ -37,6 +38,7 @@ export function wrapGrpcFunctions(
             callback,
             'Failed to verify gRPC protection token. GRPC_KEY value differs',
             status.PERMISSION_DENIED,
+            call,
           );
         }
       }
@@ -46,13 +48,13 @@ export function wrapGrpcFunctions(
       } catch (error) {
         const { code, message, log } = toGrpcStatus(error);
         if (hasDebugInfo(error)) ConduitGrpcSdk.Logger.error(log);
-        return throwError(callback, message, code);
+        return throwError(callback, message, code, call);
       }
       if (typeof invoked?.then === 'function') {
         invoked.then().catch((error: Error) => {
           const { code, message, log } = toGrpcStatus(error);
           if (hasDebugInfo(error)) ConduitGrpcSdk.Logger.error(log);
-          return throwError(callback, message, code);
+          return throwError(callback, message, code, call);
         });
       }
     };
@@ -64,9 +66,12 @@ function throwError(
   callback: GrpcCallback<any> | undefined,
   message: string,
   code: status = status.INTERNAL,
+  call?: { emit?: (event: 'error', error: object) => unknown },
 ) {
-  // Aborting server streams is not yet implemented!
   if (callback) {
     callback({ code, message });
+    return;
   }
+  // Streaming handlers get no callback: the status travels as an error on the stream.
+  call?.emit?.('error', { code, message, details: message });
 }

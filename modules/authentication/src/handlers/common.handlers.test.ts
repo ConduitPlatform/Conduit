@@ -17,7 +17,7 @@ AccessToken.getInstance(database);
 RefreshToken.getInstance(database);
 User.getInstance(database);
 
-const grpcSdk = {} as ConduitGrpcSdk;
+const grpcSdk = { database } as unknown as ConduitGrpcSdk;
 TokenProvider.getInstance(grpcSdk);
 const handlers = new CommonHandlers(grpcSdk);
 

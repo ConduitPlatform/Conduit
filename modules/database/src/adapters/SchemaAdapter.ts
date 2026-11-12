@@ -7,6 +7,7 @@ import { createHash } from 'crypto';
 import { Op } from 'sequelize';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
+import type { DatabaseTransaction } from '../transactions/DatabaseTransaction.js';
 
 export type SingleDocQuery = string | Indexable;
 export type MultiDocQuery = string | Indexable[];
@@ -187,6 +188,7 @@ export abstract class SchemaAdapter<T> {
     many: boolean = false,
     userId?: string,
     scope?: string,
+    transaction?: DatabaseTransaction,
   ) {
     if (!this.authzEnabled || (isNil(userId) && isNil(scope))) {
       if (this.authzEnabled && isNil(userId) && isNil(scope)) {
@@ -202,6 +204,7 @@ export abstract class SchemaAdapter<T> {
           select: '_id',
           userId: undefined,
           scope: undefined,
+          transaction,
         }),
       );
       if (isEmpty(docs)) {
@@ -217,6 +220,7 @@ export abstract class SchemaAdapter<T> {
         v.findOne(query, {
           userId: undefined,
           scope: undefined,
+          transaction,
         }),
       );
       if (isNil(doc)) {
@@ -260,6 +264,7 @@ export abstract class SchemaAdapter<T> {
     skip?: number,
     limit?: number,
     sort?: Indexable,
+    transaction?: DatabaseTransaction,
   ) {
     if (!this.authzEnabled || (isNil(userId) && isNil(scope))) {
       if (this.authzEnabled && isNil(userId) && isNil(scope)) {
@@ -277,6 +282,7 @@ export abstract class SchemaAdapter<T> {
         sort,
         userId: undefined,
         scope: undefined,
+        transaction,
       }),
     );
     if (!docs?.length) {
@@ -288,9 +294,14 @@ export abstract class SchemaAdapter<T> {
     };
   }
 
+  /**
+   * Makes the caller the owner of the documents it just created. Inside a
+   * transaction the relations are written once it commits, so a rollback leaves
+   * no orphans; until then the new documents are not visible to scoped reads.
+   */
   async addPermissionToData(
     data: Indexable | Indexable[],
-    options?: { userId?: string; scope?: string },
+    options?: { userId?: string; scope?: string; transaction?: DatabaseTransaction },
   ) {
     if (!this.authzEnabled) return;
     if (!options || (!options?.userId && !options?.scope)) {
@@ -298,16 +309,23 @@ export abstract class SchemaAdapter<T> {
     }
     const subject = options.scope ?? `User:${options.userId}`;
     const relation = 'owner';
-    if (Array.isArray(data)) {
-      const resources = data.map(d => `${this.originalSchema.name}:${d._id}`);
-      await this.grpcSdk.authorization?.createRelations(subject, relation, resources);
-    } else {
-      await this.grpcSdk.authorization?.createRelation({
-        subject,
-        relation,
-        resource: `${this.originalSchema.name}:${data._id}`,
-      });
+    const write = async () => {
+      if (Array.isArray(data)) {
+        const resources = data.map(d => `${this.originalSchema.name}:${d._id}`);
+        await this.grpcSdk.authorization?.createRelations(subject, relation, resources);
+      } else {
+        await this.grpcSdk.authorization?.createRelation({
+          subject,
+          relation,
+          resource: `${this.originalSchema.name}:${data._id}`,
+        });
+      }
+    };
+    if (options.transaction) {
+      options.transaction.afterCommit(write);
+      return;
     }
+    await write();
   }
 
   async canUpdate(assetId: string, userId?: string, scope?: string) {
@@ -341,6 +359,7 @@ export abstract class SchemaAdapter<T> {
   abstract findOne(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       select?: string;
@@ -357,6 +376,7 @@ export abstract class SchemaAdapter<T> {
   abstract findMany(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       skip?: number;
       limit?: number;
       select?: string;
@@ -376,6 +396,7 @@ export abstract class SchemaAdapter<T> {
   abstract create(
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
     },
@@ -384,6 +405,7 @@ export abstract class SchemaAdapter<T> {
   abstract createMany(
     query: MultiDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
     },
@@ -392,6 +414,7 @@ export abstract class SchemaAdapter<T> {
   abstract deleteOne(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
     },
@@ -400,6 +423,7 @@ export abstract class SchemaAdapter<T> {
   abstract deleteMany(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
     },
@@ -409,6 +433,7 @@ export abstract class SchemaAdapter<T> {
     id: string,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       populate?: string[];
@@ -419,6 +444,7 @@ export abstract class SchemaAdapter<T> {
     id: string,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       populate?: string[];
@@ -429,6 +455,7 @@ export abstract class SchemaAdapter<T> {
     filterQuery: Query,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       populate?: string[];
       userId?: string;
       scope?: string;
@@ -439,6 +466,7 @@ export abstract class SchemaAdapter<T> {
     filterQuery: Query,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       populate?: string[];
@@ -449,6 +477,7 @@ export abstract class SchemaAdapter<T> {
     filterQuery: Query,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       populate?: string[];
       userId?: string;
       scope?: string;
@@ -458,6 +487,7 @@ export abstract class SchemaAdapter<T> {
   abstract countDocuments(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       readPreference?: string;

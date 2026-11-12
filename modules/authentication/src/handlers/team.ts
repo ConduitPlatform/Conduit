@@ -2,6 +2,7 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+  DatabaseOperations,
   Indexable,
   ParsedRouterRequest,
   Query,
@@ -206,24 +207,30 @@ export class TeamsHandler implements IAuthenticationStrategy {
     await invalidateTeamClaims([String(user._id)]);
   }
 
-  createUserInvitation(invite: {
-    teamId: string;
-    role?: string;
-    email?: string;
-    inviter: User;
-    userData?: Indexable;
-  }) {
-    return Token.getInstance().create({
-      tokenType: TokenType.TEAM_INVITE_TOKEN,
-      token: uuid(),
-      data: {
-        teamId: invite.teamId,
-        role: invite.role || 'member',
-        email: invite.email,
-        userData: invite.userData,
+  createUserInvitation(
+    invite: {
+      teamId: string;
+      role?: string;
+      email?: string;
+      inviter: User;
+      userData?: Indexable;
+    },
+    db?: DatabaseOperations,
+  ) {
+    return Token.getInstance().create(
+      {
+        tokenType: TokenType.TEAM_INVITE_TOKEN,
+        token: uuid(),
+        data: {
+          teamId: invite.teamId,
+          role: invite.role || 'member',
+          email: invite.email,
+          userData: invite.userData,
+        },
+        user: invite.inviter._id,
       },
-      user: invite.inviter._id,
-    });
+      db ? { transaction: db } : undefined,
+    );
   }
 
   async acceptInvite(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -561,19 +568,27 @@ export class TeamsHandler implements IAuthenticationStrategy {
       await assertInviteeAllowed(teamId, email);
     }
 
-    // Delete any existing invite for the same email and team
-    await Token.getInstance().deleteOne({
-      tokenType: TokenType.TEAM_INVITE_TOKEN,
-      'data.teamId': teamId,
-      'data.email': email,
-    } as Query<Token>);
+    const invitation = await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      // Delete any existing invite for the same email and team
+      await Token.getInstance().deleteOne(
+        {
+          tokenType: TokenType.TEAM_INVITE_TOKEN,
+          'data.teamId': teamId,
+          'data.email': email,
+        } as Query<Token>,
+        { transaction: db },
+      );
 
-    const invitation = await this.createUserInvitation({
-      teamId,
-      email,
-      role,
-      inviter: user,
-      userData,
+      return this.createUserInvitation(
+        {
+          teamId,
+          email,
+          role,
+          inviter: user,
+          userData,
+        },
+        db,
+      );
     });
     if (email && config.teams.invites.sendEmail && this.grpcSdk.isAvailable('email')) {
       let link = !isEmpty(redirectUri)

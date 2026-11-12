@@ -165,6 +165,52 @@ message GetDatabaseTypeResponse {
   string result = 1;
 }
 
+message TransactionSupportResponse {
+  bool supported = 1;
+  // Why transactions are unavailable (e.g. standalone MongoDB).
+  optional string message = 2;
+}
+
+message TransactionBegin {
+  // Maximum lifetime of the transaction. Capped by the Database module's limit.
+  optional int32 timeoutMs = 1;
+}
+
+message TransactionCommit {
+}
+
+message TransactionRollback {
+}
+
+// One message per step of an interactive transaction. The first message must be
+// `begin`; the stream then carries one operation at a time and ends with `commit`
+// or `rollback`. Closing the stream without a commit rolls the transaction back.
+message TransactionRequest {
+  oneof operation {
+    TransactionBegin begin = 1;
+    TransactionCommit commit = 2;
+    TransactionRollback rollback = 3;
+    FindOneRequest findOne = 4;
+    FindRequest findMany = 5;
+    QueryRequest create = 6;
+    QueryRequest createMany = 7;
+    QueryRequest deleteOne = 8;
+    QueryRequest deleteMany = 9;
+    UpdateRequest findByIdAndUpdate = 10;
+    UpdateRequest findByIdAndReplace = 11;
+    UpdateManyRequest updateMany = 12;
+    UpdateManyRequest updateOne = 13;
+    UpdateManyRequest replaceOne = 14;
+    QueryRequest countDocuments = 15;
+  }
+}
+
+// One response per request, in order. A failed operation rolls the transaction
+// back and ends the stream with the operation's gRPC status.
+message TransactionResponse {
+  string result = 1;
+}
+
 message VectorCapabilitiesRequest {
   optional string schemaName = 1;
 }
@@ -232,6 +278,8 @@ service DatabaseProvider {
   rpc Migrate(MigrateRequest) returns (google.protobuf.Empty);
   rpc GetDatabaseType(google.protobuf.Empty) returns (GetDatabaseTypeResponse);
   rpc GenerateId(google.protobuf.Empty) returns (GetDatabaseTypeResponse);
+  rpc GetTransactionSupport(google.protobuf.Empty) returns (TransactionSupportResponse);
+  rpc Transaction(stream TransactionRequest) returns (stream TransactionResponse);
   // Database queries
   rpc findOne(FindOneRequest) returns (QueryResponse);
   rpc findMany(FindRequest) returns (QueryResponse);

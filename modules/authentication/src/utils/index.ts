@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import {
   ConduitGrpcSdk,
   Cookies,
+  DatabaseOperations,
   Headers,
   Indexable,
   SMS,
@@ -17,6 +18,7 @@ import { FetchMembersParams } from '../interfaces/index.js';
 import { authErrors, ConfigController, ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
 import { assertEmailAllowed } from './emailRestrictions.js';
+import { getConfiguredSdk } from './sessionServices.js';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
@@ -105,21 +107,30 @@ export namespace AuthUtils {
     dbUserId: string,
     data: Indexable,
     tokenType: string,
+    db?: DatabaseOperations,
   ) {
-    await Token.getInstance()
-      .deleteMany({
-        user: dbUserId,
-        tokenType: tokenType,
-      })
-      .catch(e => {
-        throw e;
-      });
-    return Token.getInstance().create({
-      user: dbUserId,
-      tokenType: tokenType,
-      token: uuid(),
-      data: data,
-    });
+    // the old tokens are replaced by the new one, or kept when it cannot be created
+    const replace = async (ops: DatabaseOperations) => {
+      await Token.getInstance().deleteMany(
+        {
+          user: dbUserId,
+          tokenType: tokenType,
+        },
+        { transaction: ops },
+      );
+      return Token.getInstance().create(
+        {
+          user: dbUserId,
+          tokenType: tokenType,
+          token: uuid(),
+          data: data,
+        },
+        { transaction: ops },
+      );
+    };
+    return db
+      ? replace(db)
+      : getConfiguredSdk().database!.withOptionalTransaction(replace);
   }
 
   export function verify(token: string, secret: string): string | object | null {

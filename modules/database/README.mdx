@@ -42,6 +42,7 @@ since the latter need to go through parsers that are otherwise unnecessary for M
 |    `GRPC_KEY`    | Specifying a secret enables gRPC signed request protection (**use across modules**)             |  False   |                `someRandomSecret`                |              -              |
 |  `DB_CONN_URI`   | DB Connection URI                                                                               |  False   | `postgres://conduit:pass@localhost:5432/conduit` | `mongodb://localhost:27017` |
 |    `DB_TYPE`     | DB Engine Type                                                                                  |  False   |                    `postgres`                    |          `mongodb`          |
+|  `SQL_POOL_MAX`  | Maximum connections in the SQL connection pool. Each open transaction holds one                 |  False   |                       `20`                       |            `10`             |
 
 ## Replica Set Configuration
 
@@ -110,6 +111,72 @@ const doc = await MySchema.getInstance().findOne(
 
 All defaults match the MongoDB driver defaults.<br />
 Standalone deployments (without replicas) work identically regardless of these settings — `secondaryPreferred` gracefully falls back to `primary` when no secondaries are available.
+
+## Transactions
+
+Modules can group several writes so that they are committed together or not at all:
+
+```ts
+await grpcSdk.database!.withTransaction(async tx => {
+  const order = await tx.create('Order', { total });
+  await tx.updateOne('Stock', { item }, { $inc: { quantity: -1 } });
+});
+```
+
+`tx` offers the same query methods as `grpcSdk.database`. With active schemas, pass it
+along instead: `Order.getInstance().create(doc, { transaction: tx })`. The transaction
+commits when the callback resolves and rolls back when it throws.
+
+Transactions need a database that supports them: any SQL database, or MongoDB running
+as a replica set or sharded cluster. On a standalone MongoDB `withTransaction` fails
+without running the callback; `grpcSdk.database.getTransactionSupport()` tells you up
+front.
+
+Things to know:
+
+- A failed call rolls the whole transaction back, even if the callback catches the
+  error. Later calls and the commit fail too.
+- Calls on `tx` run one at a time, and reads see the transaction's own writes.
+- Mutation events are published, and ownership relations of created documents are
+  written, when the transaction commits. Until then documents created in the
+  transaction are not visible to reads scoped by `userId` or `scope`.
+  The commit has already happened by then, so a relation that cannot be written (for
+  example while Authorization is unavailable) is logged by Database as an error and
+  does not fail the transaction.
+- A transaction left open is rolled back after `transactions.maxDurationMs` (default
+  60 seconds). Pass `{ timeoutMs }` for a shorter limit.
+- When the database rejects a transaction for a passing reason (write conflict,
+  deadlock, serialization failure) the error carries gRPC status `ABORTED`. Pass
+  `{ retries: n }` to run the callback again in that case; it then has to be safe to
+  run more than once.
+- SQLite has a single writer, so an open transaction holds back every other write.
+- On PostgreSQL, MySQL and MariaDB an open transaction keeps one pooled connection
+  until it ends. Size the pool with `SQL_POOL_MAX` (default 10) for the number of
+  transactions you expect to run at once, plus the regular traffic.
+
+### Best-effort transactions
+
+Code that should be atomic where possible, but has to keep working on a standalone
+MongoDB, uses `withOptionalTransaction`:
+
+```ts
+await grpcSdk.database!.withOptionalTransaction(async db => {
+  await Order.getInstance().create(order, { transaction: db });
+  await Stock.getInstance().updateOne(filter, update, { transaction: db });
+});
+```
+
+When the database supports transactions this is `withTransaction`. When it does not,
+the callback runs against plain calls: nothing is rolled back, so a failure part-way
+leaves the earlier writes in place. The module logs a warning the first time that
+happens, and Database is asked again a minute later in case the deployment changed.
+
+The callback has to be correct either way, so inside it:
+
+- make every database call through `db`, reads included
+- do not catch a failed call and carry on
+- do not read back with `userId` or `scope` a document it has just created
+- do not call other modules or external services; do that after it returns
 
 ## Supported Operators
 

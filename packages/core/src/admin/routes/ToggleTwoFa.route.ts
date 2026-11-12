@@ -1,4 +1,5 @@
 import {
+  ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
@@ -14,7 +15,7 @@ import { Admin, AdminTwoFactorSecret } from '../../models/index.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
 import { generateSecret } from '../utils/auth.js';
 
-export function toggleTwoFaRoute() {
+export function toggleTwoFaRoute(grpcSdk: ConduitGrpcSdk) {
   return new ConduitRoute(
     {
       path: '/toggle-twofa',
@@ -46,23 +47,40 @@ export function toggleTwoFaRoute() {
           account: admin.username,
         });
 
-        await AdminTwoFactorSecret.getInstance().deleteMany({
-          adminId: admin._id,
-        });
+        await grpcSdk.database!.withOptionalTransaction(async db => {
+          await AdminTwoFactorSecret.getInstance().deleteMany(
+            {
+              adminId: admin._id,
+            },
+            { transaction: db },
+          );
 
-        await AdminTwoFactorSecret.getInstance().create({
-          adminId: admin._id,
-          secret: secret.secret,
-          uri: secret.uri,
-          qr: secret.qr,
+          await AdminTwoFactorSecret.getInstance().create(
+            {
+              adminId: admin._id,
+              secret: secret.secret,
+              uri: secret.uri,
+              qr: secret.qr,
+            },
+            { transaction: db },
+          );
         });
 
         return secret.qr.toString();
       } else {
-        await Admin.getInstance().findByIdAndUpdate(admin._id, {
-          hasTwoFA: false,
+        await grpcSdk.database!.withOptionalTransaction(async db => {
+          await Admin.getInstance().findByIdAndUpdate(
+            admin._id,
+            {
+              hasTwoFA: false,
+            },
+            { transaction: db },
+          );
+          await AdminTwoFactorSecret.getInstance().deleteOne(
+            { adminId: admin._id },
+            { transaction: db },
+          );
         });
-        await AdminTwoFactorSecret.getInstance().deleteOne({ adminId: admin._id });
 
         return { message: 'OK' };
       }

@@ -28,6 +28,10 @@ import {
   keepDeclaredIndexExtras,
   persistDeclaredSchemaIndexes,
 } from './utils/indexes.js';
+import type {
+  DatabaseTransaction,
+  TransactionSupport,
+} from '../transactions/DatabaseTransaction.js';
 import { isEqual, isNil } from 'lodash-es';
 import ObjectHash from 'object-hash';
 import { DATABASE_SYSTEM_SCHEMA_NAME_SET } from '../models/systemSchemas.js';
@@ -209,6 +213,21 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract getDatabaseType(): string;
 
   abstract generateId(): string;
+
+  /** Whether the connected deployment can run multi-document transactions. */
+  abstract getTransactionSupport(): Promise<TransactionSupport>;
+
+  /**
+   * Opens a transaction. Pass it to schema adapter calls through their
+   * `transaction` option, then settle it with `commitTransaction` or
+   * `rollbackTransaction`.
+   */
+  abstract beginTransaction(): Promise<DatabaseTransaction>;
+
+  /** Commits, then runs the transaction's after-commit hooks. */
+  abstract commitTransaction(transaction: DatabaseTransaction): Promise<Error[]>;
+
+  abstract rollbackTransaction(transaction: DatabaseTransaction): Promise<void>;
 
   abstract createIndexes(
     schemaName: string,
