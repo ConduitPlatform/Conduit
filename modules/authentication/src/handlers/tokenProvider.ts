@@ -221,16 +221,27 @@ export class TokenProvider {
           { select: '_id', readPreference: 'primary' },
         );
         if (linked) sessionIds.add(String(linked._id));
-        await AccessToken.getInstance().deleteOne({ token: authToken });
-        await RefreshToken.getInstance().deleteOne({ accessToken: accessToken._id });
-        // sudo (and renewed) tokens carry the session they belong to
-        if (accessToken.session) {
-          sessionIds.add(String(accessToken.session));
-          await RefreshToken.getInstance().deleteOne({
-            _id: String(accessToken.session),
-            user: userId,
-          });
-        }
+        await grpcSdk.database!.withOptionalTransaction(async db => {
+          await AccessToken.getInstance().deleteOne(
+            { token: authToken },
+            { transaction: db },
+          );
+          await RefreshToken.getInstance().deleteOne(
+            { accessToken: accessToken._id },
+            { transaction: db },
+          );
+          // sudo (and renewed) tokens carry the session they belong to
+          if (accessToken.session) {
+            await RefreshToken.getInstance().deleteOne(
+              {
+                _id: String(accessToken.session),
+                user: userId,
+              },
+              { transaction: db },
+            );
+          }
+        });
+        if (accessToken.session) sessionIds.add(String(accessToken.session));
         await revokeSessions(Array.from(sessionIds), 'logout');
       }
     }

@@ -19,6 +19,8 @@
     "src/utilities/FakeRedis.testutil.ts",
     "src/utilities/redisHelpers.ts",
     "src/modules/authentication/index.ts",
-    "src/modules/authentication/getUser.test.ts"
+    "src/modules/authentication/getUser.test.ts",
+    "src/modules/database/index.ts",
+    "src/modules/database/transaction.test.ts"
   ]
 }

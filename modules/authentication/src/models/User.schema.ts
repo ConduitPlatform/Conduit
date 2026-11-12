@@ -2,7 +2,9 @@ import {
   CompatibleIndexType,
   ConduitGrpcSdk,
   ConduitModel,
+  DatabaseOperations,
   DatabaseProvider,
+  type DatabaseTransaction,
   AuthzOptions,
   Indexable,
   PopulateAuthzOptions,
@@ -23,6 +25,9 @@ interface MetamaskBase {
   ethPublicAddress: string;
   nonce: string;
 }
+
+// what database.withOptionalTransaction hands to its callback (see ConduitActiveSchema)
+type InTransaction<O> = O & { transaction?: DatabaseOperations };
 
 const authProviderSchema: ConduitModel = {
   id: {
@@ -193,9 +198,24 @@ export class User extends ConduitActiveSchema<User> {
    *  - a filter on `_id` (a string or `$in`) names the ids directly;
    *  - any other filter reads the ids first (the filter may stop matching after the
    *    write); when that read fails the write goes ahead and invalidates nothing.
+   * With `{ transaction }` the pre-read runs in that transaction, and the entry is
+   * dropped a second time once the transaction has committed: until then a concurrent
+   * read still sees, and may cache, the old document.
    */
 
-  private async affectedIds(filter: Query<User>): Promise<string[]> {
+  private async invalidate(ids: string[], transaction?: DatabaseOperations) {
+    await invalidateUsers(ids);
+    // by shape rather than instanceof, which fails across two copies of the sdk
+    const onCommit = (transaction as Partial<DatabaseTransaction> | undefined)?.onCommit;
+    if (typeof onCommit === 'function') {
+      onCommit.call(transaction, () => invalidateUsers(ids));
+    }
+  }
+
+  private async affectedIds(
+    filter: Query<User>,
+    transaction?: DatabaseOperations,
+  ): Promise<string[]> {
     if (!getUserCache()) return [];
     const byId = (filter as { _id?: unknown })._id;
     if (typeof byId === 'string') return [byId];
@@ -205,6 +225,7 @@ export class User extends ConduitActiveSchema<User> {
       const rows = await this.findMany(filter, {
         select: '_id',
         readPreference: 'primary',
+        ...(transaction && { transaction }),
       });
       return rows.map(row => String(row._id));
     } catch (e) {
@@ -218,67 +239,67 @@ export class User extends ConduitActiveSchema<User> {
   async findByIdAndUpdate(
     id: string,
     document: Query<User>,
-    options?: PopulateAuthzOptions,
+    options?: InTransaction<PopulateAuthzOptions>,
   ) {
     const result = await super.findByIdAndUpdate(id, document, options);
-    await invalidateUsers([id]);
+    await this.invalidate([id], options?.transaction);
     return result;
   }
 
   async findByIdAndReplace(
     id: string,
     document: Query<User>,
-    options?: PopulateAuthzOptions,
+    options?: InTransaction<PopulateAuthzOptions>,
   ) {
     const result = await super.findByIdAndReplace(id, document, options);
-    await invalidateUsers([id]);
+    await this.invalidate([id], options?.transaction);
     return result;
   }
 
   async replaceOne(
     filter: Query<User>,
     query: Query<User>,
-    options?: PopulateAuthzOptions,
+    options?: InTransaction<PopulateAuthzOptions>,
   ) {
-    const ids = await this.affectedIds(filter);
+    const ids = await this.affectedIds(filter, options?.transaction);
     const result = await super.replaceOne(filter, query, options);
-    await invalidateUsers(ids);
+    await this.invalidate(ids, options?.transaction);
     return result;
   }
 
   async updateOne(
     filter: Query<User>,
     query: Query<User>,
-    options?: PopulateAuthzOptions,
+    options?: InTransaction<PopulateAuthzOptions>,
   ) {
-    const ids = await this.affectedIds(filter);
+    const ids = await this.affectedIds(filter, options?.transaction);
     const result = await super.updateOne(filter, query, options);
-    await invalidateUsers(ids);
+    await this.invalidate(ids, options?.transaction);
     return result;
   }
 
   async updateMany(
     filter: Query<User>,
     query: Query<User>,
-    options?: PopulateAuthzOptions,
+    options?: InTransaction<PopulateAuthzOptions>,
   ) {
-    const ids = await this.affectedIds(filter);
+    const ids = await this.affectedIds(filter, options?.transaction);
     const result = await super.updateMany(filter, query, options);
-    await invalidateUsers(ids);
+    await this.invalidate(ids, options?.transaction);
     return result;
   }
 
-  async deleteOne(query: Query<User>, options?: AuthzOptions) {
-    const ids = await this.affectedIds(query);
+  async deleteOne(query: Query<User>, options?: InTransaction<AuthzOptions>) {
+    const ids = await this.affectedIds(query, options?.transaction);
     const result = await super.deleteOne(query, options);
-    await invalidateUsers(ids);
+    await this.invalidate(ids, options?.transaction);
     return result;
   }
 
-  async deleteMany(query: Query<User>, options?: AuthzOptions) {
-    const ids = await this.affectedIds(query);
+  async deleteMany(query: Query<User>, options?: InTransaction<AuthzOptions>) {
+    const ids = await this.affectedIds(query, options?.transaction);
     const result = await super.deleteMany(query, options);
-    await invalidateUsers(ids);
+    await this.invalidate(ids, options?.transaction);
     return result;
   }
 

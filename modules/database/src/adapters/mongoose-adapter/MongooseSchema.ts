@@ -1,4 +1,6 @@
 import type { ReadConcernLevel, ReadPreferenceMode } from 'mongodb';
+import type { ClientSession } from 'mongoose';
+import type { DatabaseTransaction } from '../../transactions/DatabaseTransaction.js';
 import {
   Model,
   Mongoose,
@@ -79,6 +81,19 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     return typeof query === 'string' ? JSON.parse(query) : query;
   }
 
+  private sessionOf(options?: {
+    transaction?: DatabaseTransaction;
+  }): ClientSession | undefined {
+    return options?.transaction?.native as ClientSession | undefined;
+  }
+
+  /** Write options for a single operation. The concern of a transaction is set when it starts. */
+  private writeOptions(session?: ClientSession) {
+    if (session) return { session };
+    const wc = this.effectiveWriteConcern;
+    return wc ? { writeConcern: wc } : undefined;
+  }
+
   private get effectiveWriteConcern(): { w: 'majority' } | { w: number } | undefined {
     const wc = this.adapter.getQueryDefaults().writeConcern;
     if (!wc || wc === '1') return undefined;
@@ -89,7 +104,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   private applyReplicaReadRouting(
     q: MongooseQuery<any, any, {}, any>,
     readPreference?: string,
+    session?: ClientSession,
   ) {
+    // Reads in a transaction go to the primary with the transaction's read concern.
+    if (session) return q.session(session);
     const d = this.adapter.getQueryDefaults();
     const effectiveReadPref =
       readPreference ?? this.schemaLevelReadPreference ?? d.readPreference;
@@ -107,6 +125,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   async create(
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       scope?: string;
       userId?: string;
     },
@@ -114,9 +133,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     await this.createPermissionCheck(options?.userId, options?.scope);
     const parsedQuery = this.parseStringToQuery(query);
 
-    const wc = this.effectiveWriteConcern;
-    const created = wc
-      ? await this.model.create([parsedQuery] as object[], { writeConcern: wc })
+    const writeOptions = this.writeOptions(this.sessionOf(options));
+    const created = writeOptions
+      ? await this.model.create([parsedQuery] as object[], writeOptions)
       : await this.model.create(parsedQuery as object);
     const obj = (Array.isArray(created) ? created[0] : created).toObject();
     await this.addPermissionToData(obj, options);
@@ -126,6 +145,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   async createMany(
     query: MultiDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       scope?: string;
       userId?: string;
     },
@@ -133,9 +153,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     await this.createPermissionCheck(options?.userId, options?.scope);
     const parsed = this.parseStringToQuery(query);
     const docs = Array.isArray(parsed) ? parsed : [parsed];
-    const wc = this.effectiveWriteConcern;
-    const addedDocs = wc
-      ? await this.model.insertMany(docs, { writeConcern: wc } as any)
+    const writeOptions = this.writeOptions(this.sessionOf(options));
+    const addedDocs = writeOptions
+      ? await this.model.insertMany(docs, writeOptions as any)
       : await this.model.insertMany(docs);
     await this.addPermissionToData(addedDocs, options);
     return addedDocs;
@@ -145,6 +165,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     id: string,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       populate?: string[];
@@ -157,6 +178,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     id: string,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       populate?: string[];
@@ -169,6 +191,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     filterQuery: Query,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       populate?: string[];
@@ -181,6 +204,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       false,
       options?.userId,
       options?.scope,
+      options?.transaction,
     );
     if (isNil(parsedFilter)) {
       throw new ModuleError(DOCUMENT_NOT_MODIFIABLE);
@@ -189,10 +213,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    const wc = this.effectiveWriteConcern;
     let finalQuery = this.model.findOneAndReplace(parsedFilter!, parsedQuery, {
       returnDocument: 'after',
-      ...(wc && { writeConcern: wc }),
+      ...this.writeOptions(this.sessionOf(options)),
     });
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
@@ -204,6 +227,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     filterQuery: Query,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       populate?: string[];
@@ -216,6 +240,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       false,
       options?.userId,
       options?.scope,
+      options?.transaction,
     );
     if (isNil(parsedFilter)) {
       throw new ModuleError(DOCUMENT_NOT_MODIFIABLE);
@@ -224,10 +249,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    const wc = this.effectiveWriteConcern;
     let finalQuery = this.model.findOneAndUpdate(parsedFilter!, parsedQuery, {
       returnDocument: 'after',
-      ...(wc && { writeConcern: wc }),
+      ...this.writeOptions(this.sessionOf(options)),
     });
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
@@ -239,6 +263,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     filterQuery: Query,
     query: SingleDocQuery,
     options?: {
+      transaction?: DatabaseTransaction;
       populate?: string[];
       userId?: string;
       scope?: string;
@@ -251,6 +276,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       true,
       options?.userId,
       options?.scope,
+      options?.transaction,
     );
     if (isNil(parsedFilter)) {
       return [];
@@ -259,15 +285,15 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    const wc = this.effectiveWriteConcern;
     return this.model
-      .updateMany(parsedFilter, parsedQuery, wc ? { writeConcern: wc } : undefined)
+      .updateMany(parsedFilter, parsedQuery, this.writeOptions(this.sessionOf(options)))
       .exec();
   }
 
   async deleteOne(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
     },
@@ -279,13 +305,13 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       false,
       options?.userId,
       options?.scope,
+      options?.transaction,
     );
     if (isNil(parsedQuery)) {
       return { deletedCount: 0 };
     }
-    const wc = this.effectiveWriteConcern;
     return this.model
-      .deleteOne(parsedQuery!, wc ? { writeConcern: wc } : undefined)
+      .deleteOne(parsedQuery!, this.writeOptions(this.sessionOf(options)))
       .exec()
       .then(r => ({ deletedCount: r.deletedCount }));
   }
@@ -293,6 +319,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   async deleteMany(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
     },
@@ -304,13 +331,13 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       true,
       options?.userId,
       options?.scope,
+      options?.transaction,
     );
     if (isNil(parsedQuery)) {
       return { deletedCount: 0 };
     }
-    const wc = this.effectiveWriteConcern;
     return this.model
-      .deleteMany(parsedQuery, wc ? { writeConcern: wc } : undefined)
+      .deleteMany(parsedQuery, this.writeOptions(this.sessionOf(options)))
       .exec()
       .then(r => ({ deletedCount: r.deletedCount }));
   }
@@ -318,6 +345,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   async findMany(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       skip?: number;
       limit?: number;
       select?: string;
@@ -336,6 +364,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.skip,
       options?.limit,
       options?.sort,
+      options?.transaction,
     );
     if (isNil(filter)) {
       return [];
@@ -353,13 +382,18 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (!isNil(options?.sort)) {
       finalQuery = finalQuery.sort(this.parseSort(options!.sort));
     }
-    finalQuery = this.applyReplicaReadRouting(finalQuery, options?.readPreference);
+    finalQuery = this.applyReplicaReadRouting(
+      finalQuery,
+      options?.readPreference,
+      this.sessionOf(options),
+    );
     return finalQuery.lean().exec();
   }
 
   async findOne(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       select?: string;
@@ -374,6 +408,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       false,
       options?.userId,
       options?.scope,
+      options?.transaction,
     );
     if (isNil(filter) && !isNil(parsedQuery)) {
       return null;
@@ -382,13 +417,18 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
     }
-    finalQuery = this.applyReplicaReadRouting(finalQuery, options?.readPreference);
+    finalQuery = this.applyReplicaReadRouting(
+      finalQuery,
+      options?.readPreference,
+      this.sessionOf(options),
+    );
     return finalQuery.lean().exec();
   }
 
   async countDocuments(
     query: Query,
     options?: {
+      transaction?: DatabaseTransaction;
       userId?: string;
       scope?: string;
       readPreference?: string;
@@ -401,6 +441,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
           userId: undefined,
           scope: undefined,
           readPreference: options?.readPreference,
+          transaction: options?.transaction,
         });
       }
     }
@@ -408,6 +449,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     let query_ = this.applyReplicaReadRouting(
       this.model.find(parsedQuery),
       options?.readPreference,
+      this.sessionOf(options),
     );
     return query_.countDocuments().exec();
   }

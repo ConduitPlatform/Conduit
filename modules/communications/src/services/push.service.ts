@@ -116,22 +116,30 @@ export class PushService implements IChannel {
   }
 
   async setNotificationToken(token: string, platform: string, userId: string) {
-    await NotificationToken.getInstance()
-      .findOne({ userId, platform })
-      .then(oldToken => {
-        if (!isNil(oldToken)) return NotificationToken.getInstance().deleteOne(oldToken);
-      })
-      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
+    return this.grpcSdk.database!.withOptionalTransaction(async db => {
+      await NotificationToken.getInstance()
+        .findOne({ userId, platform }, { transaction: db })
+        .then(oldToken => {
+          if (!isNil(oldToken))
+            return NotificationToken.getInstance().deleteOne(oldToken, {
+              transaction: db,
+            });
+        })
+        .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
-    const newTokenDocument = await NotificationToken.getInstance()
-      .create({
-        userId,
-        token,
-        platform,
-      })
-      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
+      const newTokenDocument = await NotificationToken.getInstance()
+        .create(
+          {
+            userId,
+            token,
+            platform,
+          },
+          { transaction: db },
+        )
+        .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
-    return newTokenDocument;
+      return newTokenDocument;
+    });
   }
 
   async getNotificationTokens(userId: string) {

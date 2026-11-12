@@ -108,6 +108,7 @@ async function resolveTrustedSlugs(
 
 /** Overwrites the settings of a team that is already a realm (the file wins). */
 async function updateExistingRealm(
+  grpcSdk: ConduitGrpcSdk,
   team: Team,
   slug: string,
   stored: Indexable | null,
@@ -149,24 +150,37 @@ async function updateExistingRealm(
   };
 
   try {
-    if (stored) {
-      // the file is the source of truth: every leaf is written (see toFullLeafStrategies),
-      // an unset credential as an explicit null, so SQL drops the stored value as well
-      await RealmSettings.getInstance().findByIdAndUpdate(stored._id, {
-        ...write.settings,
-        strategies: toFullLeafStrategies(write.settings.strategies),
-        oauthSecrets: write.oauthSecrets,
-      } as Indexable);
-    } else {
-      await RealmSettings.getInstance().create({
-        team: teamId,
-        ...write.settings,
-        oauthSecrets: write.oauthSecrets,
-      } as Indexable);
-    }
-    await Team.getInstance().findByIdAndUpdate(teamId, {
-      realm: { enabled: true, slug },
+    await grpcSdk.database!.withOptionalTransaction(async db => {
+      if (stored) {
+        // the file is the source of truth: every leaf is written (see
+        // toFullLeafStrategies), an unset credential as an explicit null, so SQL drops
+        // the stored value as well
+        await RealmSettings.getInstance().findByIdAndUpdate(
+          stored._id,
+          {
+            ...write.settings,
+            strategies: toFullLeafStrategies(write.settings.strategies),
+            oauthSecrets: write.oauthSecrets,
+          } as Indexable,
+          { transaction: db },
+        );
+      } else {
+        await RealmSettings.getInstance().create(
+          {
+            team: teamId,
+            ...write.settings,
+            oauthSecrets: write.oauthSecrets,
+          } as Indexable,
+          { transaction: db },
+        );
+      }
+      await Team.getInstance().findByIdAndUpdate(
+        teamId,
+        { realm: { enabled: true, slug } },
+        { transaction: db },
+      );
     });
+    // after the commit: a concurrent writer of the same slug must be visible to the check
     await assertSlugUniqueAfterWrite(slug, teamId);
   } catch (e) {
     await restore();
@@ -254,7 +268,7 @@ async function writeImportedRealm(
   const settings = applyTrustedHomeRealms(built.settings, decision);
 
   if (isRealm) {
-    await updateExistingRealm(team, parsed.slug, stored, {
+    await updateExistingRealm(grpcSdk, team, parsed.slug, stored, {
       settings,
       oauthSecrets: built.oauthSecrets,
     });

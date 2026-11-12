@@ -98,7 +98,7 @@ export default class AdminModule {
       adminRoutes.changePasswordRoute(),
       adminRoutes.getReadyRoute(this._readinessService),
       adminRoutes.getLiveRoute(),
-      adminRoutes.toggleTwoFaRoute(),
+      adminRoutes.toggleTwoFaRoute(this.grpcSdk),
       adminRoutes.verifyQrCodeRoute(),
       adminRoutes.verifyTwoFaRoute(),
       adminRoutes.changeUsersPasswordRoute(),
@@ -643,28 +643,38 @@ export default class AdminModule {
       middlewares: middlewares,
     });
     await this.updateStateForMiddlewarePatch(middlewares, path, action);
-    const storedMiddlewares = await AdminMiddleware.getInstance().findMany({
-      path,
-      action,
-    });
-    for (const m of storedMiddlewares) {
-      if (removed.includes(m.middleware)) {
-        await AdminMiddleware.getInstance().deleteOne({ _id: m._id });
-      } else {
-        await AdminMiddleware.getInstance().findByIdAndUpdate(m._id, {
-          position: middlewares.indexOf(m.middleware),
-        });
+    await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      const storedMiddlewares = await AdminMiddleware.getInstance().findMany(
+        { path, action },
+        { transaction: db },
+      );
+      for (const m of storedMiddlewares) {
+        if (removed.includes(m.middleware)) {
+          await AdminMiddleware.getInstance().deleteOne(
+            { _id: m._id },
+            { transaction: db },
+          );
+        } else {
+          await AdminMiddleware.getInstance().findByIdAndUpdate(
+            m._id,
+            { position: middlewares.indexOf(m.middleware) },
+            { transaction: db },
+          );
+        }
       }
-    }
-    for (const m of injected) {
-      await AdminMiddleware.getInstance().create({
-        path: path,
-        action: action,
-        middleware: m,
-        position: middlewares.indexOf(m),
-        owner: moduleUrl,
-      });
-    }
+      for (const m of injected) {
+        await AdminMiddleware.getInstance().create(
+          {
+            path: path,
+            action: action,
+            middleware: m,
+            position: middlewares.indexOf(m),
+            owner: moduleUrl,
+          },
+          { transaction: db },
+        );
+      }
+    });
   }
 
   scheduleMiddlewareApply() {

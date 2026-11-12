@@ -24,6 +24,7 @@ const relationsByUser: Record<string, { relation: string; resource: string }[]> 
 const findRelationCalls: any[] = [];
 let authorizationUp = true;
 const grpcSdk = {
+  database,
   isAvailable: () => authorizationUp,
   authorization: {
     findRelation: async (request: any) => {

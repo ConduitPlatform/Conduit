@@ -1,4 +1,4 @@
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, DatabaseOperations } from '@conduitplatform/grpc-sdk';
 import {
   ActorIndex,
   ObjectIndex,
@@ -213,26 +213,43 @@ export class IndexController {
     );
   }
 
-  async removeRelation(subject: string, relation: string, object: string) {
+  async removeRelation(
+    subject: string,
+    relation: string,
+    object: string,
+    db?: DatabaseOperations,
+  ) {
     // delete applicable actor indexes
-    await ActorIndex.getInstance().deleteMany({
-      subject: subject,
-      entity: `${object}#${relation}`,
-    });
-    // delete object indexes that were created due to this relation
-    await ObjectIndex.getInstance().deleteMany({
-      inheritanceTree: `${subject}#${relation}@${object}`,
-    });
-    // When no edges of this type remain on the object, drop base ObjectIndex rows for this entity
-    const remaining = await Relationship.getInstance().countDocuments({
-      resource: object,
-      relation,
-    });
-    if (remaining === 0) {
-      await ObjectIndex.getInstance().deleteMany({
+    await ActorIndex.getInstance().deleteMany(
+      {
+        subject: subject,
         entity: `${object}#${relation}`,
-        $or: [{ inheritanceTree: [] }, { inheritanceTree: { $exists: false } }],
-      });
+      },
+      { transaction: db },
+    );
+    // delete object indexes that were created due to this relation
+    await ObjectIndex.getInstance().deleteMany(
+      {
+        inheritanceTree: `${subject}#${relation}@${object}`,
+      },
+      { transaction: db },
+    );
+    // When no edges of this type remain on the object, drop base ObjectIndex rows for this entity
+    const remaining = await Relationship.getInstance().countDocuments(
+      {
+        resource: object,
+        relation,
+      },
+      { transaction: db },
+    );
+    if (remaining === 0) {
+      await ObjectIndex.getInstance().deleteMany(
+        {
+          entity: `${object}#${relation}`,
+          $or: [{ inheritanceTree: [] }, { inheritanceTree: { $exists: false } }],
+        },
+        { transaction: db },
+      );
     }
   }
 

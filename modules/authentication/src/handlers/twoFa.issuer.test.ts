@@ -26,12 +26,15 @@ const database = {
     userUpdates.push({ name, id, ...doc });
     return { _id: id, ...doc };
   },
+  withOptionalTransaction<R>(work: (db: unknown) => Promise<R>): Promise<R> {
+    return work(database);
+  },
 } as unknown as DatabaseProvider;
 TwoFactorSecret.getInstance(database);
 User.getInstance(database);
 
 function enable(issuer?: string) {
-  const handlers = new TwoFa({} as ConduitGrpcSdk);
+  const handlers = new TwoFa({ database } as unknown as ConduitGrpcSdk);
   return handlers.enableTwoFa({
     request: {
       params: { method: 'authenticator', ...(issuer !== undefined ? { issuer } : {}) },

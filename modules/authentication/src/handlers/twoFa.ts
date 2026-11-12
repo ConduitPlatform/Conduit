@@ -487,17 +487,26 @@ export class TwoFa implements IAuthenticationStrategy {
         'Phone number already exists',
       );
     }
-    const consumed = await Token.getInstance().deleteOne({
-      _id: verificationRecord._id,
-      user: user._id,
-      tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-    });
-    if (consumed.deletedCount === 0) {
-      throw new ModuleError(errors.CODE_VERIFICATION_FAILED);
-    }
-    await User.getInstance().findByIdAndUpdate(user._id, {
-      phoneNumber: verificationRecord.data.phoneNumber,
-      hasTwoFA: true,
+    await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      const consumed = await Token.getInstance().deleteOne(
+        {
+          _id: verificationRecord._id,
+          user: user._id,
+          tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+        },
+        { transaction: db },
+      );
+      if (consumed.deletedCount === 0) {
+        throw new ModuleError(errors.CODE_VERIFICATION_FAILED);
+      }
+      await User.getInstance().findByIdAndUpdate(
+        user._id,
+        {
+          phoneNumber: verificationRecord.data.phoneNumber,
+          hasTwoFA: true,
+        },
+        { transaction: db },
+      );
     });
     this.grpcSdk.bus?.publish(
       'authentication:enableTwofa:user',
@@ -594,18 +603,27 @@ export class TwoFa implements IAuthenticationStrategy {
       throw new ModuleError(errors.VERIFICATION_CODE_SEND_FAILED);
     }
 
-    await Token.getInstance().create({
-      tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-      user: user._id,
-      data: {
-        clientId: context.clientId,
-        phone: phoneNumber,
-        verification: verificationSid,
-      },
-      token: uuid(),
-    });
-    await User.getInstance().findByIdAndUpdate(user._id, {
-      twoFaMethod: 'sms',
+    await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      await Token.getInstance().create(
+        {
+          tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+          user: user._id,
+          data: {
+            clientId: context.clientId,
+            phone: phoneNumber,
+            verification: verificationSid,
+          },
+          token: uuid(),
+        },
+        { transaction: db },
+      );
+      await User.getInstance().findByIdAndUpdate(
+        user._id,
+        {
+          twoFaMethod: 'sms',
+        },
+        { transaction: db },
+      );
     });
     return 'Verification code sent';
   }
@@ -620,17 +638,29 @@ export class TwoFa implements IAuthenticationStrategy {
       // add another string when mail is not available
       account: user.email ?? `conduit-${user._id}`,
     });
-    await TwoFactorSecret.getInstance().deleteMany({
-      user: user._id,
-    });
-    await TwoFactorSecret.getInstance().create({
-      user: user._id,
-      secret: secret.secret,
-      uri: secret.uri,
-      qr: secret.qr,
-    });
-    await User.getInstance().findByIdAndUpdate(user._id, {
-      twoFaMethod: 'authenticator',
+    await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      await TwoFactorSecret.getInstance().deleteMany(
+        {
+          user: user._id,
+        },
+        { transaction: db },
+      );
+      await TwoFactorSecret.getInstance().create(
+        {
+          user: user._id,
+          secret: secret.secret,
+          uri: secret.uri,
+          qr: secret.qr,
+        },
+        { transaction: db },
+      );
+      await User.getInstance().findByIdAndUpdate(
+        user._id,
+        {
+          twoFaMethod: 'authenticator',
+        },
+        { transaction: db },
+      );
     });
     return secret.qr.toString();
   }

@@ -651,8 +651,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
-    await User.getInstance().findByIdAndUpdate(user._id, { hashedPassword });
-    await Token.getInstance().deleteOne(passwordResetTokenDoc);
+    await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      await User.getInstance().findByIdAndUpdate(
+        user._id,
+        { hashedPassword },
+        { transaction: db },
+      );
+      await Token.getInstance().deleteOne(passwordResetTokenDoc, { transaction: db });
+    });
 
     await TokenProvider.getInstance().deleteUserTokens({
       user: user._id,
@@ -751,18 +757,24 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const redirectUri = AuthUtils.validateRedirectUri(
       verificationTokenDoc.data ? verificationTokenDoc.data.customRedirectUri : undefined,
     );
-    const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
-      user._id,
-      { isVerified: true },
+    // started before the state call and awaited after it, as the two writes always were
+    const writes = this.grpcSdk.database!.withOptionalTransaction(db =>
+      Promise.all([
+        User.getInstance().findByIdAndUpdate(
+          user._id,
+          { isVerified: true },
+          { transaction: db },
+        ),
+        Token.getInstance().deleteOne(verificationTokenDoc, { transaction: db }),
+      ]),
     );
-    const tokenPromise = Token.getInstance().deleteOne(verificationTokenDoc);
     await this.grpcSdk.state!.setKey(
       'verifiedToken_' + verificationTokenDoc.token,
       JSON.stringify(redirectUri ? { customRedirectUri: redirectUri } : {}),
       10 * 60 * 60 * 1000,
     );
 
-    await Promise.all([userPromise, tokenPromise]);
+    await writes;
 
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
 
@@ -876,8 +888,17 @@ export class LocalHandlers implements IAuthenticationStrategy {
       email,
       code,
     );
-    await User.getInstance().findByIdAndUpdate(foundUser._id, { isVerified: true });
-    await Token.getInstance().deleteOne({ _id: verificationTokenDoc._id });
+    await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      await User.getInstance().findByIdAndUpdate(
+        foundUser._id,
+        { isVerified: true },
+        { transaction: db },
+      );
+      await Token.getInstance().deleteOne(
+        { _id: verificationTokenDoc._id },
+        { transaction: db },
+      );
+    });
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(foundUser));
 
     return 'OK';

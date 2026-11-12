@@ -5,11 +5,26 @@ import {
   ConduitSchemaOptions,
   CountDocumentsOptions,
   DatabaseProvider,
+  DatabaseOperations,
   FindManyOptions,
   FindOneOptions,
   PopulateAuthzOptions,
   Query,
 } from '@conduitplatform/grpc-sdk';
+
+/**
+ * Pass what `database.withTransaction` or `database.withOptionalTransaction` hands
+ * to its callback, to run a call as part of that unit of work.
+ */
+type InTransaction<O> = O & { transaction?: DatabaseOperations };
+
+function splitTransaction<O>(
+  options?: InTransaction<O>,
+): [DatabaseOperations | undefined, O | undefined] {
+  if (!options?.transaction) return [undefined, options];
+  const { transaction, ...rest } = options;
+  return [transaction, rest as O];
+}
 
 export class ConduitActiveSchema<T> extends ConduitSchema {
   private readonly dbInstance: DatabaseProvider;
@@ -25,59 +40,111 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     this.dbInstance = dbInstance;
   }
 
-  findOne(query: Query<T>, options?: FindOneOptions): Promise<T | null> {
-    return this.dbInstance.findOne<T>(this.name, query, options);
+  findOne(query: Query<T>, options?: InTransaction<FindOneOptions>): Promise<T | null> {
+    const [transaction, rest] = splitTransaction(options);
+    return (transaction ?? this.dbInstance).findOne<T>(this.name, query, rest);
   }
 
-  findMany(query: Query<T>, options?: FindManyOptions): Promise<T[]> {
-    return this.dbInstance.findMany<T>(this.name, query, options);
+  findMany(query: Query<T>, options?: InTransaction<FindManyOptions>): Promise<T[]> {
+    const [transaction, rest] = splitTransaction(options);
+    return (transaction ?? this.dbInstance).findMany<T>(this.name, query, rest);
   }
 
-  create(query: Query<T>, options?: AuthzOptions): Promise<T> {
-    return this.dbInstance.create<T>(this.name, query, options);
+  create(query: Query<T>, options?: InTransaction<AuthzOptions>): Promise<T> {
+    const [transaction, rest] = splitTransaction(options);
+    return (transaction ?? this.dbInstance).create<T>(this.name, query, rest);
   }
 
-  createMany(query: Query<T>[], options?: AuthzOptions): Promise<T[]> {
-    return this.dbInstance.createMany<T>(this.name, query, options);
+  createMany(query: Query<T>[], options?: InTransaction<AuthzOptions>): Promise<T[]> {
+    const [transaction, rest] = splitTransaction(options);
+    return (transaction ?? this.dbInstance).createMany<T>(this.name, query, rest);
   }
 
   findByIdAndUpdate(
     id: string,
     document: Query<T>,
-    options?: PopulateAuthzOptions,
+    options?: InTransaction<PopulateAuthzOptions>,
   ): Promise<T | null> {
-    return this.dbInstance.findByIdAndUpdate<T>(this.name, id, document, options);
+    const [transaction, rest] = splitTransaction(options);
+    return (transaction ?? this.dbInstance).findByIdAndUpdate<T>(
+      this.name,
+      id,
+      document,
+      rest,
+    );
   }
 
   findByIdAndReplace(
     id: string,
     document: Query<T>,
-    options?: PopulateAuthzOptions,
+    options?: InTransaction<PopulateAuthzOptions>,
   ): Promise<T | null> {
-    return this.dbInstance.findByIdAndReplace<T>(this.name, id, document, options);
+    const [transaction, rest] = splitTransaction(options);
+    return (transaction ?? this.dbInstance).findByIdAndReplace<T>(
+      this.name,
+      id,
+      document,
+      rest,
+    );
   }
 
-  replaceOne(filterQuery: Query<T>, query: Query<T>, options?: PopulateAuthzOptions) {
-    return this.dbInstance.replaceOne(this.name, filterQuery, query, options);
+  replaceOne(
+    filterQuery: Query<T>,
+    query: Query<T>,
+    options?: InTransaction<PopulateAuthzOptions>,
+  ) {
+    const [transaction, rest] = splitTransaction(options);
+    return (transaction ?? this.dbInstance).replaceOne(
+      this.name,
+      filterQuery,
+      query,
+      rest,
+    );
   }
 
-  updateOne(filterQuery: Query<T>, query: Query<T>, options?: PopulateAuthzOptions) {
-    return this.dbInstance.updateOne(this.name, filterQuery, query, options);
+  updateOne(
+    filterQuery: Query<T>,
+    query: Query<T>,
+    options?: InTransaction<PopulateAuthzOptions>,
+  ) {
+    const [transaction, rest] = splitTransaction(options);
+    return (transaction ?? this.dbInstance).updateOne(
+      this.name,
+      filterQuery,
+      query,
+      rest,
+    );
   }
 
-  updateMany(filterQuery: Query<T>, query: Query<T>, options?: PopulateAuthzOptions) {
-    return this.dbInstance.updateMany(this.name, filterQuery, query, options);
+  updateMany(
+    filterQuery: Query<T>,
+    query: Query<T>,
+    options?: InTransaction<PopulateAuthzOptions>,
+  ) {
+    const [transaction, rest] = splitTransaction(options);
+    return (transaction ?? this.dbInstance).updateMany(
+      this.name,
+      filterQuery,
+      query,
+      rest,
+    );
   }
 
-  deleteOne(query: Query<T>, options?: AuthzOptions) {
-    return this.dbInstance.deleteOne(this.name, query, options);
+  deleteOne(query: Query<T>, options?: InTransaction<AuthzOptions>) {
+    const [transaction, rest] = splitTransaction(options);
+    return (transaction ?? this.dbInstance).deleteOne(this.name, query, rest);
   }
 
-  deleteMany(query: Query<T>, options?: AuthzOptions) {
-    return this.dbInstance.deleteMany(this.name, query, options);
+  deleteMany(query: Query<T>, options?: InTransaction<AuthzOptions>) {
+    const [transaction, rest] = splitTransaction(options);
+    return (transaction ?? this.dbInstance).deleteMany(this.name, query, rest);
   }
 
-  countDocuments(query: Query<T>, options?: CountDocumentsOptions): Promise<number> {
-    return this.dbInstance.countDocuments(this.name, query, options);
+  countDocuments(
+    query: Query<T>,
+    options?: InTransaction<CountDocumentsOptions>,
+  ): Promise<number> {
+    const [transaction, rest] = splitTransaction(options);
+    return (transaction ?? this.dbInstance).countDocuments(this.name, query, rest);
   }
 }

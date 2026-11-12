@@ -373,8 +373,10 @@ export class CommonHandlers implements IAuthenticationStrategy {
     if (!jwtPayload.sudo) {
       throw new ModuleError(errors.SUDO_REQUIRED);
     }
-    await User.getInstance().deleteOne({ _id: user._id });
-    await deleteUserRealmMemberships(String(user._id));
+    await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      await User.getInstance().deleteOne({ _id: user._id }, { transaction: db });
+      await deleteUserRealmMemberships(String(user._id), db);
+    });
     await this.grpcSdk.authorization!.deleteAllRelations({
       resource: 'User:' + user._id,
     });

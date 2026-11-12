@@ -88,7 +88,26 @@ export function configureSqlite(
   return sequelize;
 }
 
+export const DEFAULT_SQL_POOL_MAX = 10;
+
+/**
+ * The connection pool size from `SQL_POOL_MAX`. An open transaction keeps one
+ * connection for as long as it lives, so the pool bounds how many can run at once
+ * and has to leave room for everything else. Sequelize's own default is 5.
+ */
+export function sqlPoolMax(value: string | undefined = process.env.SQL_POOL_MAX) {
+  const parsed = parseInt(value ?? '', 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_SQL_POOL_MAX;
+}
+
 /** Constructs Sequelize from a connection uri, with SQLite tuned for concurrent writers. */
 export function createSequelize(connectionUri: string, options: Options = {}) {
-  return configureSqlite(new Sequelize(connectionUri, { logging: false, ...options }));
+  return configureSqlite(
+    new Sequelize(connectionUri, {
+      logging: false,
+      // SQLite keeps its own connections (one per transaction) and ignores the pool.
+      pool: { max: sqlPoolMax() },
+      ...options,
+    }),
+  );
 }

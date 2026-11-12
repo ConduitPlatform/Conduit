@@ -1,6 +1,6 @@
 import handlebars from 'handlebars';
 import { isEmpty, isNil } from 'lodash-es';
-import { ConduitGrpcSdk, Query } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, DatabaseOperations, Query } from '@conduitplatform/grpc-sdk';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../errors.js';
 import { CommunicationTemplate, EmailTemplate } from '../models/index.js';
@@ -345,22 +345,31 @@ export class CommunicationTemplateService {
     const created = [];
     for (const item of planned) {
       if (item.skipped) continue;
-      const doc = await this.createMigratedTemplate(item.target);
-      created.push(doc);
-      if (deleteSource) {
-        await EmailTemplate.getInstance()
-          .deleteOne({ _id: item.sourceId })
-          .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
-        ConduitGrpcSdk.Metrics?.decrement('email_templates_total');
+      if (!deleteSource) {
+        created.push(await this.createMigratedTemplate(item.target));
+        continue;
       }
+      // One transaction per template, so the loop never holds one open across items.
+      const doc = await this.grpcSdk.database!.withOptionalTransaction(async db => {
+        const migrated = await this.createMigratedTemplate(item.target, db);
+        await EmailTemplate.getInstance()
+          .deleteOne({ _id: item.sourceId }, { transaction: db })
+          .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
+        return migrated;
+      });
+      created.push(doc);
+      ConduitGrpcSdk.Metrics?.decrement('email_templates_total');
     }
 
     return { dryRun: false, planned, created, count: created.length };
   }
 
-  private async createMigratedTemplate(params: ICreateCommunicationTemplateParams) {
+  private async createMigratedTemplate(
+    params: ICreateCommunicationTemplateParams,
+    db?: DatabaseOperations,
+  ) {
     const validated = this.validateTemplatePayload(params);
-    await this.assertUnifiedNameAvailable(validated.name);
+    await this.assertUnifiedNameAvailable(validated.name, undefined, db);
 
     const variables =
       params.variables && params.variables.length > 0
@@ -368,11 +377,13 @@ export class CommunicationTemplateService {
         : this.extractVariables(validated);
 
     const doc = await CommunicationTemplate.getInstance()
-      .create({
-        ...validated,
-        variables,
-      })
-
+      .create(
+        {
+          ...validated,
+          variables,
+        },
+        { transaction: db },
+      )
       .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     ConduitGrpcSdk.Metrics?.increment('communication_templates_total');
@@ -524,9 +535,13 @@ export class CommunicationTemplateService {
     return [...vars];
   }
 
-  private async assertUnifiedNameAvailable(name: string, excludeId?: string) {
+  private async assertUnifiedNameAvailable(
+    name: string,
+    excludeId?: string,
+    db?: DatabaseOperations,
+  ) {
     const unified = await CommunicationTemplate.getInstance()
-      .findOne({ name })
+      .findOne({ name }, { transaction: db })
       .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     if (unified && unified._id !== excludeId) {

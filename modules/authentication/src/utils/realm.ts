@@ -1,5 +1,6 @@
 import {
   ConduitGrpcSdk,
+  DatabaseOperations,
   Indexable,
   ModuleErrorDefinition,
 } from '@conduitplatform/grpc-sdk';
@@ -616,15 +617,17 @@ export async function revokeRealmMembership(
 /**
  * Removes every realm membership (home and guest) of the given user(s). Called when
  * users are deleted, so no membership row outlives its user. DB only: relations and
- * tokens are the caller's business.
+ * tokens are the caller's business. Pass `db` to run it inside the caller's transaction.
  */
 export async function deleteUserRealmMemberships(
   userIds: string | string[],
+  db?: DatabaseOperations,
 ): Promise<void> {
   const ids = (Array.isArray(userIds) ? userIds : [userIds]).map(String);
   if (ids.length === 0) return;
   await RealmMembership.getInstance().deleteMany(
     ids.length === 1 ? { user: ids[0] } : { user: { $in: ids } },
+    db && { transaction: db },
   );
 }
 

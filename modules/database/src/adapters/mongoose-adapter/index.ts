@@ -1,4 +1,4 @@
-import { ConnectOptions, Mongoose, Types } from 'mongoose';
+import { ClientSession, ConnectOptions, mongo, Mongoose, Types } from 'mongoose';
 import type { IndexSpecification } from 'mongodb';
 import { MongooseSchema } from './MongooseSchema.js';
 import { schemaConverter } from './SchemaConverter.js';
@@ -14,6 +14,11 @@ import {
   VectorSearchResult,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter.js';
+import {
+  DatabaseTransaction,
+  TransactionSupport,
+} from '../../transactions/DatabaseTransaction.js';
+import { topologyFromHello } from '../../realtime/topology.js';
 import {
   validateFieldChanges,
   validateFieldConstraints,
@@ -78,6 +83,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     serverSelectionTimeoutMS: this.maxConnTimeoutMs,
   };
   private pendingViewCreations = new Map<string, Promise<void>>();
+  private transactionsSupported = false;
 
   constructor(connectionString: string) {
     super();
@@ -664,6 +670,78 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   generateId(): string {
     return new Types.ObjectId().toHexString();
+  }
+
+  async getTransactionSupport(): Promise<TransactionSupport> {
+    // A deployment does not stop being a replica set, so only a positive answer is cached.
+    if (this.transactionsSupported) return { supported: true };
+    const hello = await this.mongoose.connection.db
+      ?.admin()
+      .command({ hello: 1 })
+      .catch(() => null);
+    if (!hello) {
+      return { supported: false, message: 'Unable to determine MongoDB topology' };
+    }
+    if (!topologyFromHello(hello).supported) {
+      return {
+        supported: false,
+        message: 'Transactions require a replica set or sharded MongoDB deployment',
+      };
+    }
+    this.transactionsSupported = true;
+    return { supported: true };
+  }
+
+  async beginTransaction(): Promise<DatabaseTransaction<ClientSession>> {
+    const session = await this.mongoose.startSession();
+    try {
+      session.startTransaction(this.transactionOptions());
+    } catch (e) {
+      await session.endSession().catch(() => {});
+      throw e;
+    }
+    return new DatabaseTransaction(session);
+  }
+
+  async commitTransaction(transaction: DatabaseTransaction): Promise<Error[]> {
+    const session = transaction.native as ClientSession;
+    try {
+      await session.commitTransaction();
+    } catch (e) {
+      transaction.discardAfterCommit();
+      throw e;
+    } finally {
+      await session.endSession().catch(() => {});
+    }
+    return transaction.runAfterCommit();
+  }
+
+  async rollbackTransaction(transaction: DatabaseTransaction): Promise<void> {
+    const session = transaction.native as ClientSession;
+    transaction.discardAfterCommit();
+    try {
+      if (session.inTransaction()) await session.abortTransaction();
+    } finally {
+      await session.endSession().catch(() => {});
+    }
+  }
+
+  /**
+   * Read and write concerns are fixed for the whole transaction, and its reads
+   * always go to the primary, so the per-query defaults are applied here instead.
+   */
+  private transactionOptions(): mongo.TransactionOptions {
+    const { writeConcern, readConcern } = this.getQueryDefaults();
+    const options: mongo.TransactionOptions = { readPreference: 'primary' };
+    if (writeConcern === 'majority') {
+      options.writeConcern = { w: 'majority' };
+    } else if (writeConcern && writeConcern !== '1') {
+      options.writeConcern = { w: parseInt(writeConcern, 10) };
+    }
+    if (['local', 'majority', 'snapshot'].includes(readConcern)) {
+      options.readConcern = { level: readConcern as mongo.ReadConcernLevel };
+    }
+    return options;
   }
 
   async createIndexes(

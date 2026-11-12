@@ -533,28 +533,38 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       middlewares: middlewares,
     });
     await this.updateStateForMiddlewarePatch(middlewares, path, action);
-    const storedMiddlewares = await AppMiddleware.getInstance().findMany({
-      path,
-      action,
-    });
-    for (const m of storedMiddlewares) {
-      if (removed.includes(m.middleware)) {
-        await AppMiddleware.getInstance().deleteOne({ _id: m._id });
-      } else {
-        await AppMiddleware.getInstance().findByIdAndUpdate(m._id, {
-          position: middlewares.indexOf(m.middleware),
-        });
+    await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      const storedMiddlewares = await AppMiddleware.getInstance().findMany(
+        { path, action },
+        { transaction: db },
+      );
+      for (const m of storedMiddlewares) {
+        if (removed.includes(m.middleware)) {
+          await AppMiddleware.getInstance().deleteOne(
+            { _id: m._id },
+            { transaction: db },
+          );
+        } else {
+          await AppMiddleware.getInstance().findByIdAndUpdate(
+            m._id,
+            { position: middlewares.indexOf(m.middleware) },
+            { transaction: db },
+          );
+        }
       }
-    }
-    for (const m of injected) {
-      await AppMiddleware.getInstance().create({
-        path: path,
-        action: action,
-        middleware: m,
-        position: middlewares.indexOf(m),
-        owner: moduleUrl,
-      });
-    }
+      for (const m of injected) {
+        await AppMiddleware.getInstance().create(
+          {
+            path: path,
+            action: action,
+            middleware: m,
+            position: middlewares.indexOf(m),
+            owner: moduleUrl,
+          },
+          { transaction: db },
+        );
+      }
+    });
   }
 
   scheduleMiddlewareApply() {

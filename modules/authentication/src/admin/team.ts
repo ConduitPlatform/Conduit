@@ -429,13 +429,23 @@ export class TeamsAdmin {
         throw new ModuleError(errors.TEAM_EXISTS);
       }
     }
-    if (!found.isDefault && isDefault) {
-      await Team.getInstance().updateOne({ isDefault: true }, { isDefault: false });
-    }
+    const updatedTeam = await this.grpcSdk.database!.withOptionalTransaction(async db => {
+      if (!found.isDefault && isDefault) {
+        await Team.getInstance().updateOne(
+          { isDefault: true },
+          { isDefault: false },
+          { transaction: db },
+        );
+      }
 
-    const updatedTeam = await Team.getInstance().findByIdAndUpdate(teamId, {
-      name,
-      isDefault: isNil(isDefault) ? false : isDefault,
+      return Team.getInstance().findByIdAndUpdate(
+        teamId,
+        {
+          name,
+          isDefault: isNil(isDefault) ? false : isDefault,
+        },
+        { transaction: db },
+      );
     });
 
     return updatedTeam!;

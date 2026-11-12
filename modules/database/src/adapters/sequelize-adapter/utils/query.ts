@@ -130,7 +130,7 @@ export function constructRelationInclusion(
   return inclusionArray;
 }
 
-export function createWithPopulation(
+export async function createWithPopulation(
   sequelizeSchema: SequelizeSchema,
   doc: Model,
   relationObjects: Indexable,
@@ -142,17 +142,19 @@ export function createWithPopulation(
     if (!relationObjects.hasOwnProperty(relation)) continue;
     const relationTarget = sequelizeSchema.extractedRelations[relation];
     hasOne = true;
+    // The setters write (join rows, or the foreign key), so they run in the same
+    // transaction as the document and are awaited: a rollback takes them with it.
     if (Array.isArray(relationTarget)) {
       let modelName = relation.charAt(0).toUpperCase() + relation.slice(1);
       if (!modelName.endsWith('s')) {
         modelName = modelName + 's';
       }
       // @ts-ignore
-      doc[`set${modelName}`](relationObjects[relation]);
+      await doc[`set${modelName}`](relationObjects[relation], { transaction });
     } else {
       const actualRel = relation.charAt(0).toUpperCase() + relation.slice(1);
       // @ts-ignore
-      doc[`set${actualRel}`](relationObjects[relation]);
+      await doc[`set${actualRel}`](relationObjects[relation], { transaction });
     }
   }
   return hasOne ? doc.save({ transaction }) : doc;
