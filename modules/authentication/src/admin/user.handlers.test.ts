@@ -41,20 +41,30 @@ const emails: { template: string; params: { email?: string; variables?: Doc } }[
 let relationPage: { relations: Doc[]; count: number } = { relations: [], count: 0 };
 const findRelationArgs: Doc[] = [];
 
+const authorization = {
+  deleteAllRelations: async (query: { resource?: string; subject?: string }) => {
+    relationsDeleted.push(query);
+  },
+  findRelation: async (query: Doc) => {
+    findRelationArgs.push(query);
+    const skip = query.skip ?? 0;
+    const relations = relationPage.relations.slice(
+      skip,
+      skip + (query.limit ?? relationPage.relations.length),
+    );
+    return { relations, count: relationPage.count };
+  },
+};
+
 const grpcSdk = {
   bus: {
     publish: (topic: string, payload: string) => {
       published.push({ topic, payload });
     },
   },
-  authorization: {
-    deleteAllRelations: async (query: { resource?: string; subject?: string }) => {
-      relationsDeleted.push(query);
-    },
-    findRelation: async (query: Doc) => {
-      findRelationArgs.push(query);
-      return relationPage;
-    },
+  // like the sdk: no client when the deployment has no authorization module
+  get authorization() {
+    return flags.authorization ? authorization : null;
   },
   isAvailable: (name: string) =>
     name === 'email'
@@ -354,7 +364,7 @@ describe('getUsers filters', () => {
 });
 
 describe('toggleUsers', () => {
-  it('blocks by setting active false and revokes only the users that changed', async () => {
+  it('blocks by setting active false and revokes every blocked user', async () => {
     userRow({ _id: ID, active: true });
     userRow({ _id: OTHER, active: false });
     table('AccessToken').push({ _id: 'at-a', user: ID }, { _id: 'at-b', user: OTHER });
@@ -365,15 +375,15 @@ describe('toggleUsers', () => {
     );
     assert.equal(table('User').find(row => row._id === ID)!.active, false);
     assert.equal(table('User').find(row => row._id === OTHER)!.active, false);
-    assert.deepEqual(
-      table('AccessToken').map(row => row._id),
-      ['at-b'],
-    );
-    assert.deepEqual(
-      table('RefreshToken').map(row => row._id),
-      ['rt-b'],
-    );
+    // OTHER was already inactive: its leftover sessions are revoked too
+    assert.deepEqual(table('AccessToken'), []);
+    assert.deepEqual(table('RefreshToken'), []);
     assert.equal(published[0].topic, 'authentication:block:user');
+    // the event lists only the users whose status changed
+    assert.deepEqual(
+      JSON.parse(published[0].payload).map((row: Doc) => row._id),
+      [ID],
+    );
   });
 
   it('unblocks without touching tokens', async () => {
@@ -414,27 +424,50 @@ describe('deleteUsers', () => {
   });
 });
 
+describe('deleteUsers without authorization', () => {
+  it('deletes users and revokes sessions when there is no authorization module', async () => {
+    flags.authorization = false;
+    userRow({ _id: ID });
+    userRow({ _id: OTHER });
+    table('AccessToken').push({ _id: 'at', user: ID });
+    table('RefreshToken').push({ _id: 'rt', user: OTHER });
+    assert.equal(
+      await users.deleteUsers(call({ ids: [ID, OTHER] })),
+      'Users were deleted',
+    );
+    assert.equal(table('User').length, 0);
+    assert.deepEqual(table('AccessToken'), []);
+    assert.deepEqual(table('RefreshToken'), []);
+    assert.deepEqual(relationsDeleted, []);
+    userRow({ _id: ID });
+    assert.equal(await users.deleteUser(call({ id: ID })), 'User was deleted');
+    assert.equal(table('User').length, 0);
+  });
+});
+
 describe('getUserTeams', () => {
-  it('groups roles, pages and 404s an unknown user', async () => {
+  it('groups roles, pages and counts teams and 404s an unknown user', async () => {
     userRow({ _id: ID });
     table('Team').push(
       { _id: 'team-1', name: 'Alpha', isDefault: false, parentTeam: 'parent' },
       { _id: 'team-2', name: 'Beta', isDefault: true },
+      { _id: 'team-3', name: 'Gamma', isDefault: false },
     );
     relationPage = {
-      count: 3,
+      count: 4,
       relations: [
         { resource: 'Team:team-1', relation: 'member' },
         { resource: 'Team:team-1', relation: 'owner' },
         { resource: 'Team:team-2', relation: 'readAll' },
+        { resource: 'Team:team-3', relation: 'member' },
       ],
     };
-    const result: any = await teams.getUserTeams(call({ id: ID, skip: 1, limit: 2 }));
-    assert.equal(findRelationArgs[0].skip, 1);
-    assert.equal(findRelationArgs[0].limit, 2);
+    const first: any = await teams.getUserTeams(call({ id: ID, limit: 2 }));
     assert.equal(findRelationArgs[0].subject, 'User:' + ID);
-    assert.equal(result.count, 3);
-    assert.deepEqual(result.teams, [
+    assert.equal(findRelationArgs[0].resourceType, 'Team');
+    // the count is teams, not relations
+    assert.equal(first.count, 3);
+    assert.deepEqual(first.teams, [
       {
         _id: 'team-1',
         name: 'Alpha',
@@ -444,6 +477,17 @@ describe('getUserTeams', () => {
       },
       { _id: 'team-2', name: 'Beta', isDefault: true, roles: ['readAll'] },
     ]);
+    const second: any = await teams.getUserTeams(call({ id: ID, skip: 2, limit: 2 }));
+    assert.equal(second.count, 3);
+    assert.deepEqual(
+      second.teams.map((team: Doc) => team._id),
+      ['team-3'],
+    );
+
+    // search filters before paging and the count follows it
+    const searched: any = await teams.getUserTeams(call({ id: ID, search: 'gam' }));
+    assert.equal(searched.count, 1);
+    assert.equal(searched.teams[0]._id, 'team-3');
 
     relationPage = { relations: [], count: 0 };
     const empty: any = await teams.getUserTeams(call({ id: ID }));
@@ -451,6 +495,26 @@ describe('getUserTeams', () => {
     await assert.rejects(
       teams.getUserTeams(call({ id: 'missing' })),
       error => codeOf(error) === status.NOT_FOUND,
+    );
+  });
+
+  it('reads relations past the first authorization page', async () => {
+    userRow({ _id: ID });
+    const relations = Array.from({ length: 501 }, (_, index) => ({
+      resource: `Team:team-${index}`,
+      relation: 'member',
+    }));
+    table('Team').push(
+      ...relations.map((_, index) => ({ _id: `team-${index}`, name: `T${index}` })),
+    );
+    relationPage = { relations, count: relations.length };
+    const result: any = await teams.getUserTeams(call({ id: ID, skip: 500 }));
+    assert.equal(findRelationArgs.length, 2);
+    assert.equal(findRelationArgs[1].skip, 500);
+    assert.equal(result.count, 501);
+    assert.deepEqual(
+      result.teams.map((team: Doc) => team._id),
+      ['team-500'],
     );
   });
 
@@ -494,8 +558,14 @@ describe('getUserCapabilities', () => {
       teams: { enabled: true },
     };
     flags.authorization = true;
+    // email came up after the admin routes were registered: no route, not advertised
+    users.passwordResetRouteRegistered = false;
+    const pending = (await users.getUserCapabilities()) as { actions: string[] };
+    assert.equal(pending.actions.includes('sendPasswordReset'), false);
+    users.passwordResetRouteRegistered = true;
     const full = (await users.getUserCapabilities()) as { actions: string[] };
     assert.equal(full.actions.includes('sendPasswordReset'), true);
     assert.equal(full.actions.includes('userTeams'), true);
+    users.passwordResetRouteRegistered = false;
   });
 });

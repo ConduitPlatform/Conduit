@@ -8,7 +8,7 @@ import {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { errors } from '../errors.js';
-import { Team, Token, User } from '../models/index.js';
+import { RealmMembership, Team, Token, User } from '../models/index.js';
 import { isNil } from 'lodash-es';
 import escapeStringRegexp from 'escape-string-regexp';
 import { AuthUtils } from '../utils/index.js';
@@ -23,6 +23,7 @@ import {
   requireAuthorization,
   revokeOrphanedGuests,
 } from '../utils/teamRealm.js';
+import { realmsEnabled, resolveTeamRealm } from '../utils/realm.js';
 import { TokenType } from '../constants/index.js';
 import { groupUserTeamRelations } from './user.logic.js';
 import { v4 as uuid } from 'uuid';
@@ -75,27 +76,77 @@ function userTeamEntry(
   return entry;
 }
 
-async function teamsForUser(
+// relations fetched per authorization call while listing a user's teams
+const USER_TEAM_RELATION_PAGE = 500;
+// upper bound on the team relations loaded for one user
+const MAX_USER_TEAM_RELATIONS = 10_000;
+
+/** Every team relation the user holds, read page by page. */
+async function loadUserTeamRelations(
+  grpcSdk: ConduitGrpcSdk,
   userId: string,
+): Promise<{ resource?: string; relation?: string }[]> {
+  const relations: { resource?: string; relation?: string }[] = [];
+  while (relations.length < MAX_USER_TEAM_RELATIONS) {
+    const page = await grpcSdk.authorization!.findRelation({
+      subject: 'User:' + userId,
+      resourceType: 'Team',
+      skip: relations.length,
+      limit: USER_TEAM_RELATION_PAGE,
+    });
+    const rows = page?.relations ?? [];
+    relations.push(...rows);
+    if (rows.length < USER_TEAM_RELATION_PAGE || relations.length >= (page?.count ?? 0)) {
+      return relations;
+    }
+  }
+  ConduitGrpcSdk.Logger.warn(
+    `User ${userId} holds more than ${MAX_USER_TEAM_RELATIONS} team relations; the list is truncated`,
+  );
+  return relations;
+}
+
+/** The user's teams that exist and match `search`, in relation order. */
+async function teamsForUser(
   grouped: { teamId: string; roles: string[] }[],
   search: unknown,
-): Promise<UserTeamEntry[]> {
+): Promise<{ team: Team; roles: string[] }[]> {
   const found = await Team.getInstance().findMany({
     _id: { $in: grouped.map(group => group.teamId) },
   });
   const byId = new Map(found.map(team => [String(team._id), team]));
-  const entries = grouped.flatMap(group => {
+  return grouped.flatMap(group => {
     const team = byId.get(group.teamId);
-    return team ? [{ team, roles: group.roles }] : [];
+    return team && teamMatchesSearch(team, search) ? [{ team, roles: group.roles }] : [];
   });
-  const teams: UserTeamEntry[] = [];
-  for (const entry of entries) {
-    if (!teamMatchesSearch(entry.team, search)) continue;
-    const probe: { _id: string; membershipType?: string }[] = [{ _id: userId }];
-    await decorateMembershipType(probe, String(entry.team._id));
-    teams.push(userTeamEntry(entry.team, entry.roles, probe[0].membershipType));
+}
+
+/** The user's membership type in the realm of each team (one membership query). */
+async function membershipTypesFor(
+  userId: string,
+  teams: Team[],
+): Promise<Map<string, string>> {
+  const types = new Map<string, string>();
+  if (!realmsEnabled() || teams.length === 0) return types;
+  const realms = await Promise.all(teams.map(team => resolveTeamRealm(String(team._id))));
+  const realmByTeam = new Map<string, string>();
+  teams.forEach((team, index) => {
+    const realm = realms[index];
+    if (realm) realmByTeam.set(String(team._id), String(realm._id));
+  });
+  if (realmByTeam.size === 0) return types;
+  const memberships = await RealmMembership.getInstance().findMany({
+    user: userId,
+    realm: { $in: [...new Set(realmByTeam.values())] },
+  });
+  const byRealm = new Map(
+    memberships.map(membership => [String(membership.realm), membership.membershipType]),
+  );
+  for (const [teamId, realmId] of realmByTeam) {
+    const type = byRealm.get(realmId);
+    if (type) types.set(teamId, type);
   }
-  return teams;
+  return types;
 }
 
 export class TeamsAdmin {
@@ -116,7 +167,7 @@ export class TeamsAdmin {
         },
         name: 'GetUserTeams',
         description:
-          'Returns the teams a user belongs to, with every role the user holds on each team. Realm teams include the user membership type.',
+          'Returns the teams a user belongs to, with every role the user holds on each team. skip, limit, search and count apply to teams. Realm teams include the user membership type.',
       },
       new ConduitRouteReturnDefinition('GetUserTeams', {
         teams: [
@@ -631,22 +682,31 @@ export class TeamsAdmin {
 
   async getUserTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, search } = call.request.params;
+    const skip: number = call.request.params.skip ?? 0;
+    const limit: number = call.request.params.limit ?? 25;
     const user = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
       throw new ModuleError(errors.USER_NOT_FOUND);
     }
-    const relations = await this.grpcSdk.authorization!.findRelation({
-      subject: 'User:' + id,
-      resourceType: 'Team',
-      skip: call.request.params.skip ?? 0,
-      limit: call.request.params.limit ?? 25,
-    });
-    const grouped = groupUserTeamRelations(relations?.relations ?? []);
+    const userId = String(user._id);
+    // skip, limit, search and count apply to teams, so every relation is read first:
+    // a team's roles may be several relations
+    const grouped = groupUserTeamRelations(
+      await loadUserTeamRelations(this.grpcSdk, userId),
+    );
     if (grouped.length === 0) {
-      return { teams: [], count: relations?.count ?? 0 };
+      return { teams: [], count: 0 };
     }
-    const teams = await teamsForUser(String(user._id), grouped, search);
-    return { teams, count: relations?.count ?? teams.length };
+    const matching = await teamsForUser(grouped, search);
+    const page = matching.slice(skip, skip + limit);
+    const types = await membershipTypesFor(
+      userId,
+      page.map(entry => entry.team),
+    );
+    const teams = page.map(entry =>
+      userTeamEntry(entry.team, entry.roles, types.get(String(entry.team._id))),
+    );
+    return { teams, count: matching.length };
   }
 
   async getTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

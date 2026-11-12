@@ -5,6 +5,7 @@ export type Doc = Record<string, any>;
 export function matches(doc: Doc, query: Doc): boolean {
   return Object.entries(query).every(([key, condition]) => {
     if (key === '$or') return (condition as Doc[]).some(q => matches(doc, q));
+    if (key === '$and') return (condition as Doc[]).every(q => matches(doc, q));
     const value = doc[key];
     if (condition === null) return value === null || value === undefined;
     if (condition && typeof condition === 'object' && !(condition instanceof Date)) {

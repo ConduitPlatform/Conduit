@@ -758,7 +758,9 @@ export default class Authentication extends ManagedModule<Config> {
       return;
     }
     if (!serving) return;
-    if (moduleName === 'authorization') {
+    // admin routes that depend on a peer (teams, password-reset email) are added once
+    // it is up
+    if (moduleName === 'authorization' || moduleName === 'email') {
       this.refreshAppRoutes();
       this.adminRouter?.registerAdminRoutes();
       return;

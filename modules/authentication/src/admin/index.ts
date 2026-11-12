@@ -110,7 +110,7 @@ export class AdminHandlers {
       {
         path: '/users/:id',
         action: ConduitRouteActions.PATCH,
-        description: `Updates a user's email, verification, phone number or two-factor flags. email is optional. phoneNumber "" clears the number. hasTwoFA false clears the method. Changing the email deletes outstanding verification and reset tokens and leaves isVerified as sent.`,
+        description: `Updates a user's email, verification, phone number or two-factor flags. email is optional. phoneNumber "" clears the number. hasTwoFA false clears the method. twoFaMethod is sms or authenticator (authenticator needs an existing secret). Changing the email deletes outstanding verification and reset tokens and leaves isVerified as sent.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
@@ -136,7 +136,7 @@ export class AdminHandlers {
       {
         path: '/users',
         action: ConduitRouteActions.DELETE,
-        description: `Deletes queried users, their sessions, realm memberships and authorization relations.`,
+        description: `Deletes queried users, their sessions, realm memberships and (when the authorization module is present) authorization relations.`,
         queryParams: {
           ids: { type: [TYPE.String], required: true }, // handler array check is still required
         },
@@ -200,7 +200,9 @@ export class AdminHandlers {
       new ConduitRouteReturnDefinition('SetUserPassword', 'String'),
       this.userAdmin.setPassword.bind(this.userAdmin),
     );
-    if (this.grpcSdk.isAvailable('email')) {
+    const emailAvailable = this.grpcSdk.isAvailable('email');
+    this.userAdmin.passwordResetRouteRegistered = emailAvailable;
+    if (emailAvailable) {
       this.routingManager.route(
         {
           path: '/users/:id/password-reset',
@@ -266,7 +268,7 @@ export class AdminHandlers {
       {
         path: '/users/toggle',
         action: ConduitRouteActions.POST,
-        description: `Blocks or unblocks queried users. block true sets active to false and signs out the users whose status changed. block false sets active to true and leaves sessions in place.`,
+        description: `Blocks or unblocks queried users. block true sets active to false and signs out every listed user. block false sets active to true and leaves sessions in place.`,
         bodyParams: {
           ids: { type: [TYPE.String], required: true }, // handler array check is still required
           block: ConduitBoolean.Required,

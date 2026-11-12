@@ -24,7 +24,6 @@ import { TokenProvider } from '../handlers/tokenProvider.js';
 import { issuePasswordReset } from '../handlers/local.logic.js';
 import { TokenType } from '../constants/index.js';
 import { invalidateTeamClaims } from '../utils/teamClaims.js';
-import { requireAuthorization } from '../utils/teamRealm.js';
 import {
   assertSortAllowed,
   buildUserAdminCapabilities,
@@ -68,6 +67,9 @@ const EMAIL_CHANGE_TOKEN_TYPES = [
   TokenType.CHANGE_EMAIL_TOKEN,
   TokenType.PASSWORD_RESET_TOKEN,
 ];
+
+// users whose authorization relations are deleted in parallel
+const RELATION_DELETE_CONCURRENCY = 20;
 
 const TWO_FA_RESET_TOKEN_TYPES = [
   TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
@@ -141,15 +143,41 @@ export class UserAdmin {
     return { home, guests };
   }
 
+  /**
+   * Set by the admin router when it registers `/users/:id/password-reset`, so the
+   * capabilities never advertise a route that is not there.
+   */
+  passwordResetRouteRegistered = false;
+
   async getUserCapabilities(): Promise<UnparsedRouterResponse> {
     const config = ConfigController.getInstance().config;
     const teamsEnabled = Boolean(
       config.teams?.enabled && this.grpcSdk.isAvailable('authorization'),
     );
     return buildUserAdminCapabilities({
-      emailAvailable: this.grpcSdk.isAvailable('email'),
+      emailAvailable:
+        this.passwordResetRouteRegistered && this.grpcSdk.isAvailable('email'),
       teamsEnabled,
     });
+  }
+
+  /**
+   * Deletes the authorization relations held by or on the users. Skipped when the
+   * deployment has no authorization module (no relations can exist without it); a
+   * registered but failing module still surfaces its error.
+   */
+  private async deleteUserRelations(userIds: string[]): Promise<void> {
+    const authorization = this.grpcSdk.authorization;
+    if (!authorization) return;
+    for (let i = 0; i < userIds.length; i += RELATION_DELETE_CONCURRENCY) {
+      const chunk = userIds.slice(i, i + RELATION_DELETE_CONCURRENCY);
+      await Promise.all(
+        chunk.flatMap(id => [
+          authorization.deleteAllRelations({ resource: 'User:' + id }),
+          authorization.deleteAllRelations({ subject: 'User:' + id }),
+        ]),
+      );
+    }
   }
 
   async getUsers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -374,16 +402,11 @@ export class UserAdmin {
       await deleteUserRealmMemberships(String(user._id), db);
       return deleted;
     });
-    await requireAuthorization(this.grpcSdk).deleteAllRelations({
-      resource: 'User:' + user._id,
-    });
-    await requireAuthorization(this.grpcSdk).deleteAllRelations({
-      subject: 'User:' + user._id,
-    });
-    await invalidateTeamClaims([String(user._id)]);
-    // no session may outlive its user
+    // no session may outlive its user: revoke before anything else can fail
     await TokenProvider.getInstance().deleteUserTokens({ user: String(user._id) });
     TokenProvider.getInstance().trackLoggedOutUserMetric(String(user._id));
+    await this.deleteUserRelations([String(user._id)]);
+    await invalidateTeamClaims([String(user._id)]);
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
     return 'User was deleted';
   }
@@ -408,18 +431,11 @@ export class UserAdmin {
       await User.getInstance().deleteMany({ _id: { $in: ids } }, { transaction: db });
       await deleteUserRealmMemberships(deletedIds, db);
     });
-    for (const id of deletedIds) {
-      await requireAuthorization(this.grpcSdk).deleteAllRelations({
-        resource: 'User:' + id,
-      });
-      await requireAuthorization(this.grpcSdk).deleteAllRelations({
-        subject: 'User:' + id,
-      });
-    }
-    await invalidateTeamClaims(deletedIds);
-    // no session may outlive its user
+    // no session may outlive its user: revoke before anything else can fail
     await TokenProvider.getInstance().deleteUserTokens({ user: { $in: deletedIds } });
     deletedIds.forEach(id => TokenProvider.getInstance().trackLoggedOutUserMetric(id));
+    await this.deleteUserRelations(deletedIds);
+    await invalidateTeamClaims(deletedIds);
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(users));
     return 'Users were deleted';
   }
@@ -476,14 +492,13 @@ export class UserAdmin {
       await User.getInstance().updateMany({ _id: { $in: changedIds } }, { active });
     }
     if (block) {
-      if (changedIds.length > 0) {
-        await TokenProvider.getInstance().deleteUserTokens({
-          user: { $in: changedIds },
-        });
-        changedIds.forEach(id =>
-          TokenProvider.getInstance().trackLoggedOutUserMetric(id),
-        );
-      }
+      // every blocked user is signed out, including one already inactive whose
+      // sessions survived an earlier path
+      const blockedIds = users.map(user => String(user._id));
+      await TokenProvider.getInstance().deleteUserTokens({
+        user: { $in: blockedIds },
+      });
+      blockedIds.forEach(id => TokenProvider.getInstance().trackLoggedOutUserMetric(id));
       this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(changed));
       return 'Users were blocked';
     }

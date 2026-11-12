@@ -97,8 +97,10 @@ function providerFilter(provider: string): Indexable {
   if (provider === 'local') return { hashedPassword: exists };
   // Phone-login users have a number and no password. SMS 2FA accounts that also
   // have a local password do not match.
+  // `hashedPassword: null` matches a missing or null value on both adapters, so this
+  // is the exact complement of `local`.
   if (provider === 'phone') {
-    return { phoneNumber: exists, hashedPassword: { $exists: false } };
+    return { phoneNumber: exists, hashedPassword: null };
   }
   if (provider === 'username') return { username: exists };
   return { [provider]: exists };
@@ -110,7 +112,22 @@ export function userFilterQuery(params: Indexable): Indexable {
     params;
   const query: Indexable = {};
   if (!isNil(isActive)) query.active = isActive;
-  if (!isNil(isAnonymous)) query.isAnonymous = isAnonymous ? true : { $ne: true };
+  if (!isNil(isAnonymous)) {
+    if (isAnonymous) {
+      query.isAnonymous = true;
+    } else {
+      // `$ne: true` drops NULL rows on SQL, so spell out false, null and missing
+      query.$and = [
+        {
+          $or: [
+            { isAnonymous: false },
+            { isAnonymous: null },
+            { isAnonymous: { $exists: false } },
+          ],
+        },
+      ];
+    }
+  }
   if (!isNil(isVerified)) query.isVerified = isVerified;
   if (!isNil(hasTwoFA)) query.hasTwoFA = hasTwoFA;
   if (!isNil(provider)) Object.assign(query, providerFilter(String(provider)));
@@ -168,24 +185,32 @@ function emailPatch(
   return { email, emailChanged: true };
 }
 
+/** Two-factor methods an admin may set. */
+export const TWO_FA_METHODS = ['sms', 'authenticator'] as const;
+
 function twoFaMethodPatch(
   user: UserPatchSource,
   params: UserPatchInput,
   authenticatorSecret: boolean,
 ): { method: string | null | undefined; update: Indexable } {
-  const setAuthenticator =
-    params.hasTwoFA !== false && params.twoFaMethod === 'authenticator';
-  if (setAuthenticator && !authenticatorSecret) {
+  const requested = params.twoFaMethod;
+  if (!isNil(requested) && !(TWO_FA_METHODS as readonly string[]).includes(requested)) {
     throw new GrpcError(
       status.INVALID_ARGUMENT,
-      'Authenticator 2FA requires an existing secret',
+      `twoFaMethod must be one of: ${TWO_FA_METHODS.join(', ')}`,
     );
   }
   if (params.hasTwoFA === false) {
     return { method: null, update: { twoFaMethod: null } };
   }
-  if (setAuthenticator) {
-    return { method: 'authenticator', update: { twoFaMethod: 'authenticator' } };
+  if (requested === 'authenticator' && !authenticatorSecret) {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      'Authenticator 2FA requires an existing secret',
+    );
+  }
+  if (!isNil(requested)) {
+    return { method: requested, update: { twoFaMethod: requested } };
   }
   if (params.hasTwoFA === true) {
     const method = user.twoFaMethod || 'sms';
@@ -245,7 +270,18 @@ export function buildUserPatch(
   const twoFa = twoFaMethodPatch(user, params, Boolean(options.authenticatorSecret));
   const phone = phonePatch(user, params);
   const enabled = !isNil(params.hasTwoFA) ? params.hasTwoFA : Boolean(user.hasTwoFA);
-  assertSmsPhoneAvailable(twoFa.method, enabled, phone.phone, params.phoneNumber === '');
+  // only a patch that touches 2FA or the phone is checked, so an unrelated edit
+  // (email, isVerified) of an already inconsistent user still goes through
+  const touchesTwoFa =
+    !isNil(params.hasTwoFA) || !isNil(params.twoFaMethod) || !isNil(params.phoneNumber);
+  if (touchesTwoFa) {
+    assertSmsPhoneAvailable(
+      twoFa.method,
+      enabled,
+      phone.phone,
+      params.phoneNumber === '',
+    );
+  }
 
   const update: Indexable = { ...twoFa.update, ...phone.update };
   if (email.emailChanged) update.email = email.email;

@@ -46,10 +46,26 @@ describe('userFilterQuery', () => {
 
   it('matches a missing isAnonymous field when the filter is false', () => {
     const query = userFilterQuery({ isAnonymous: false });
-    assert.deepEqual(query.isAnonymous, { $ne: true });
+    // no `$ne: true`: on SQL it would drop NULL rows
+    assert.equal('isAnonymous' in query, false);
+    assert.deepEqual(query.$and, [
+      {
+        $or: [
+          { isAnonymous: false },
+          { isAnonymous: null },
+          { isAnonymous: { $exists: false } },
+        ],
+      },
+    ]);
     assert.equal(matches({ email: 'ada@example.com' }, query), true);
+    assert.equal(matches({ isAnonymous: null }, query), true);
     assert.equal(matches({ isAnonymous: false }, query), true);
     assert.equal(matches({ isAnonymous: true }, query), false);
+    // the homeRealm scope is appended to the same $and
+    const scoped = userFilterQuery({ isAnonymous: false, homeRealm: 'global' });
+    assert.equal(scoped.$and.length, 2);
+    assert.equal(matches({ isAnonymous: null, homeRealm: null }, scoped), true);
+    assert.equal(matches({ isAnonymous: true, homeRealm: null }, scoped), false);
     assert.equal(userFilterQuery({ isAnonymous: true }).isAnonymous, true);
   });
 
@@ -60,8 +76,12 @@ describe('userFilterQuery', () => {
     });
     assert.deepEqual(userFilterQuery({ provider: 'phone' }), {
       phoneNumber: { $exists: true, $ne: null },
-      hashedPassword: { $exists: false },
+      hashedPassword: null,
     });
+    const phone = userFilterQuery({ provider: 'phone' });
+    assert.equal(matches({ phoneNumber: '+30691', hashedPassword: null }, phone), true);
+    assert.equal(matches({ phoneNumber: '+30691' }, phone), true);
+    assert.equal(matches({ phoneNumber: '+30691', hashedPassword: 'h' }, phone), false);
     assert.deepEqual(userFilterQuery({ provider: 'username' }).username, {
       $exists: true,
       $ne: null,
@@ -213,6 +233,49 @@ describe('buildUserPatch', () => {
       { authenticatorSecret: true },
     );
     assert.equal(ok.update.twoFaMethod, 'authenticator');
+  });
+
+  it('switches to sms and rejects an unknown method', () => {
+    const sms = buildUserPatch(
+      { ...baseUser, hasTwoFA: true, twoFaMethod: 'authenticator' },
+      { hasTwoFA: true, twoFaMethod: 'sms' },
+    );
+    assert.equal(sms.update.twoFaMethod, 'sms');
+    assert.throws(
+      () =>
+        buildUserPatch(
+          {
+            ...baseUser,
+            hasTwoFA: true,
+            twoFaMethod: 'authenticator',
+            phoneNumber: null,
+          },
+          { twoFaMethod: 'sms' },
+        ),
+      error => codeOf(error) === status.INVALID_ARGUMENT,
+    );
+    assert.throws(
+      () => buildUserPatch(baseUser, { twoFaMethod: 'authenticatr' }),
+      error => codeOf(error) === status.INVALID_ARGUMENT,
+    );
+    // turning 2FA off wins over a method sent next to it
+    const off = buildUserPatch(baseUser, {
+      hasTwoFA: false,
+      twoFaMethod: 'authenticator',
+    });
+    assert.equal(off.update.twoFaMethod, null);
+  });
+
+  it('lets an unrelated edit through for a user with SMS 2FA and no phone', () => {
+    const legacy = { ...baseUser, hasTwoFA: true, twoFaMethod: 'sms', phoneNumber: null };
+    const verified = buildUserPatch(legacy, { isVerified: true });
+    assert.deepEqual(verified.update, { isVerified: true });
+    const emailed = buildUserPatch(legacy, { email: 'new@example.com' });
+    assert.equal(emailed.update.email, 'new@example.com');
+    assert.throws(
+      () => buildUserPatch(legacy, { hasTwoFA: true }),
+      error => codeOf(error) === status.INVALID_ARGUMENT,
+    );
   });
 
   it('marks a changed email', () => {
