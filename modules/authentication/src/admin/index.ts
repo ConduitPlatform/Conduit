@@ -67,6 +67,7 @@ export class AdminHandlers {
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
+        errors: [errors.USER_NOT_FOUND],
       },
       new ConduitRouteReturnDefinition('GetUser', User.name),
       this.userAdmin.getUser.bind(this.userAdmin),
@@ -89,6 +90,11 @@ export class AdminHandlers {
           homeRealm: ConduitString.Optional,
           realm: ConduitString.Optional,
         },
+        errors: [
+          errors.USER_PROVIDER_INVALID,
+          errors.USER_SORT_INVALID,
+          errors.USER_SORT_FORBIDDEN,
+        ],
       },
       new ConduitRouteReturnDefinition('GetUsers', {
         users: [User.name],
@@ -136,10 +142,16 @@ export class AdminHandlers {
         },
         errors: [
           errors.USER_NOT_FOUND,
-          errors.PHONE_NUMBER_REQUIRED_FOR_2FA,
+          errors.USER_EMAIL_INVALID,
           errors.USER_EMAIL_TAKEN,
           errors.EMAIL_NOT_ALLOWED,
+          errors.PHONE_NUMBER_INVALID,
           errors.PHONE_NUMBER_TAKEN,
+          errors.PHONE_NUMBER_REQUIRED_FOR_2FA,
+          errors.PHONE_NUMBER_IN_USE_BY_2FA,
+          errors.TWO_FA_METHOD_INVALID,
+          errors.TWO_FA_METHOD_REQUIRES_TWO_FA,
+          errors.TWO_FA_AUTHENTICATOR_SECRET_REQUIRED,
         ],
       },
       new ConduitRouteReturnDefinition('PatchUser', User.name),
@@ -166,7 +178,7 @@ export class AdminHandlers {
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
-        errors: [errors.USER_NOT_FOUND, errors.AUTHORIZATION_UNAVAILABLE],
+        errors: [errors.USER_NOT_FOUND],
       },
       new ConduitRouteReturnDefinition('DeleteUser', 'String'),
       this.userAdmin.deleteUser.bind(this.userAdmin),
@@ -209,6 +221,12 @@ export class AdminHandlers {
           password: ConduitString.RequiredWith({ minLength: 8 }),
           revokeSessions: ConduitBoolean.Optional,
         },
+        errors: [
+          errors.ADMIN_PASSWORD_TOO_SHORT,
+          errors.USER_NOT_FOUND,
+          errors.ANONYMOUS_USER_NOT_ELIGIBLE,
+          errors.PASSWORD_AUTH_NOT_AVAILABLE,
+        ],
       },
       new ConduitRouteReturnDefinition('SetUserPassword', 'String'),
       this.userAdmin.setPassword.bind(this.userAdmin),
@@ -230,6 +248,14 @@ export class AdminHandlers {
           bodyParams: {
             redirectUri: ConduitString.Optional,
           },
+          errors: [
+            errors.USER_NOT_FOUND,
+            errors.ANONYMOUS_USER_NOT_ELIGIBLE,
+            errors.PASSWORD_AUTH_NOT_AVAILABLE,
+            errors.USER_EMAIL_MISSING,
+            errors.REDIRECT_URI_NOT_ALLOWED,
+            errors.AUTH_EMAIL_DELIVERY_FAILED,
+          ],
         },
         new ConduitRouteReturnDefinition('SendUserPasswordReset', 'String'),
         this.userAdmin.sendPasswordReset.bind(this.userAdmin),
@@ -246,6 +272,7 @@ export class AdminHandlers {
         bodyParams: {
           revokeSessions: ConduitBoolean.Optional,
         },
+        errors: [errors.USER_NOT_FOUND],
       },
       new ConduitRouteReturnDefinition('ResetUserTwoFa', 'String'),
       this.userAdmin.resetTwoFa.bind(this.userAdmin),

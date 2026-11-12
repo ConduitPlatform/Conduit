@@ -1,12 +1,10 @@
 import {
   ConduitGrpcSdk,
-  GrpcError,
   Indexable,
   ParsedRouterRequest,
   Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils/index.js';
 import { isNil } from 'lodash-es';
 import {
@@ -199,7 +197,7 @@ export class UserAdmin {
     if (id === 'capabilities') return this.getUserCapabilities();
     const user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     }
     return user;
   }
@@ -326,26 +324,20 @@ export class UserAdmin {
   async setPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, password, revokeSessions } = call.request.params;
     if (typeof password !== 'string' || password.length < 8) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Password must be at least 8 characters',
-      );
+      throw new ModuleError(errors.ADMIN_PASSWORD_TOO_SHORT);
     }
     const user: User | null = await User.getInstance().findOne(
       { _id: id },
       { select: '+hashedPassword' },
     );
     if (isNil(user)) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     }
     if (user.isAnonymous) {
-      throw new GrpcError(status.FAILED_PRECONDITION, 'Anonymous user');
+      throw new ModuleError(errors.ANONYMOUS_USER_NOT_ELIGIBLE);
     }
     if (isNil(user.hashedPassword)) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'User does not use password authentication',
-      );
+      throw new ModuleError(errors.PASSWORD_AUTH_NOT_AVAILABLE);
     }
     const hashedPassword = await AuthUtils.hashPassword(password);
     const updated: User | null = await User.getInstance().findByIdAndUpdate(user._id, {
@@ -374,7 +366,7 @@ export class UserAdmin {
       { select: '+hashedPassword' },
     );
     if (isNil(user)) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     }
     const redirectUri =
       AuthUtils.validateRedirectUri(call.request.params.redirectUri) ??
@@ -388,7 +380,7 @@ export class UserAdmin {
     const { id, revokeSessions } = call.request.params;
     const user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     }
     await User.getInstance().findByIdAndUpdate(user._id, {
       hasTwoFA: false,

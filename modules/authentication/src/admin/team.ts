@@ -176,6 +176,7 @@ export class TeamsAdmin {
           limit: ConduitNumber.Optional,
           search: ConduitString.Optional,
         },
+        errors: [errors.USER_NOT_FOUND],
         name: 'GetUserTeams',
         description:
           'Returns the teams a user belongs to, with every role the user holds on each team. skip, limit, search and count apply to teams. Realm teams include the user membership type.',

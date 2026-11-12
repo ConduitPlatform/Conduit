@@ -1,10 +1,11 @@
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ConduitGrpcSdk, parseErrorPayload } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
 import { isNil } from 'lodash-es';
 import { v4 as uuid } from 'uuid';
 import { TokenType } from '../constants/index.js';
 import { Token, User } from '../models/index.js';
 import { AuthUtils } from '../utils/index.js';
+import { errors } from '../errors.js';
 
 /**
  * Creates a password-reset token and emails the link. Shared by the client
@@ -16,16 +17,13 @@ export async function issuePasswordReset(
   redirectUri: string,
 ): Promise<void> {
   if (user.isAnonymous) {
-    throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
+    throw new ModuleError(errors.ANONYMOUS_USER_NOT_ELIGIBLE);
   }
   if (isNil(user.hashedPassword)) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'User does not use password authentication',
-    );
+    throw new ModuleError(errors.PASSWORD_AUTH_NOT_AVAILABLE);
   }
   if (isNil(user.email) || user.email.trim() === '') {
-    throw new GrpcError(status.FAILED_PRECONDITION, 'User has no email address');
+    throw new ModuleError(errors.USER_EMAIL_MISSING);
   }
 
   const oldToken: Token | null = await Token.getInstance().findOne(
@@ -48,10 +46,7 @@ export async function issuePasswordReset(
   delete safeUser.hashedPassword;
   const link = `${redirectUri}?reset_token=${passwordResetTokenDoc.token}`;
   if (!grpcSdk.isAvailable('email') || !grpcSdk.emailProvider) {
-    throw new GrpcError(
-      status.INTERNAL,
-      'There was an error sending the email. Please try again later.',
-    );
+    throw new ModuleError(errors.AUTH_EMAIL_DELIVERY_FAILED, 'email module unavailable');
   }
   await grpcSdk.emailProvider
     .sendEmail('ForgotPassword', {
@@ -61,10 +56,10 @@ export async function issuePasswordReset(
         user: safeUser,
       },
     })
-    .catch(() => {
-      throw new GrpcError(
-        status.INTERNAL,
-        'There was an error sending the email. Please try again later.',
+    .catch((e: unknown) => {
+      throw new ModuleError(
+        errors.AUTH_EMAIL_DELIVERY_FAILED,
+        parseErrorPayload(e).message,
       );
     });
 }

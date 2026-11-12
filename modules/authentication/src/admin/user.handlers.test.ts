@@ -2,6 +2,7 @@ import { beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ConduitGrpcSdk,
+  getConduitCode,
   GrpcError,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
@@ -57,6 +58,7 @@ const authorization = {
 };
 
 const grpcSdk = {
+  database,
   bus: {
     publish: (topic: string, payload: string) => {
       published.push({ topic, payload });
@@ -92,6 +94,10 @@ function call(params: Doc = {}): ParsedRouterRequest {
 
 function codeOf(error: unknown) {
   return error instanceof GrpcError ? error.code : undefined;
+}
+
+function conduitCodeOf(error: unknown) {
+  return error instanceof GrpcError ? getConduitCode(error) : undefined;
 }
 
 function userRow(row: Doc) {
@@ -170,18 +176,16 @@ describe('setPassword', () => {
     userRow({ _id: OTHER, hashedPassword: 'old', isAnonymous: true });
     await assert.rejects(
       users.setPassword(call({ id: OTHER, password: 'correct-horse' })),
-      error => codeOf(error) === status.FAILED_PRECONDITION,
+      error => conduitCodeOf(error) === 'ANONYMOUS_USER_NOT_ELIGIBLE',
     );
     await assert.rejects(
       users.setPassword(call({ id: 'missing', password: 'correct-horse' })),
-      error => codeOf(error) === status.NOT_FOUND,
+      error => conduitCodeOf(error) === 'USER_NOT_FOUND',
     );
     userRow({ _id: 'c'.repeat(24), email: 'oauth@example.com' });
     await assert.rejects(
       users.setPassword(call({ id: 'c'.repeat(24), password: 'correct-horse' })),
-      error =>
-        codeOf(error) === status.FAILED_PRECONDITION &&
-        (error as GrpcError).message === 'User does not use password authentication',
+      error => conduitCodeOf(error) === 'PASSWORD_AUTH_NOT_AVAILABLE',
     );
   });
 });
@@ -305,11 +309,11 @@ describe('patchUser', () => {
     );
     await assert.rejects(
       users.patchUser(call({ id: ID, email: 'nope' })),
-      error => codeOf(error) === status.INVALID_ARGUMENT,
+      error => conduitCodeOf(error) === 'USER_EMAIL_INVALID',
     );
     await assert.rejects(
       users.patchUser(call({ id: ID, email: 'other@example.com' })),
-      error => codeOf(error) === status.INVALID_ARGUMENT,
+      error => conduitCodeOf(error) === 'USER_EMAIL_TAKEN',
     );
     assert.equal(table('User')[0].email, 'ada@example.com');
     assert.equal(table('Token').length, 4);

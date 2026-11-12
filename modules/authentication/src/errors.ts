@@ -889,4 +889,63 @@ export const errors = {
     message: 'Authentication operation failed',
     description: 'The operation could not be completed; try again later',
   },
+  // User administration
+
+  USER_PROVIDER_INVALID: {
+    conduitCode: 'USER_PROVIDER_INVALID',
+    grpcCode: status.INVALID_ARGUMENT,
+    message: 'Invalid provider',
+    description:
+      'provider must be local, phone, metamask, username or a supported OAuth provider',
+  },
+  USER_SORT_INVALID: {
+    conduitCode: 'USER_SORT_INVALID',
+    grpcCode: status.INVALID_ARGUMENT,
+    message: 'Invalid sort field',
+    description: 'sort must be a field name, optionally prefixed with - for descending',
+  },
+  USER_SORT_FORBIDDEN: {
+    conduitCode: 'USER_SORT_FORBIDDEN',
+    grpcCode: status.INVALID_ARGUMENT,
+    message: 'Cannot sort users by a secret field',
+    description: 'Users cannot be sorted by a password hash, OAuth token or nonce',
+  },
+  USER_EMAIL_MISSING: {
+    conduitCode: 'USER_EMAIL_MISSING',
+    grpcCode: status.FAILED_PRECONDITION,
+    message: 'User has no email address',
+    description: 'The operation emails the user, who has no email address',
+  },
+  PHONE_NUMBER_INVALID: {
+    conduitCode: 'PHONE_NUMBER_INVALID',
+    grpcCode: status.INVALID_ARGUMENT,
+    message: 'Phone number must be in E.164 format',
+    description: 'A new phone number must be in E.164 format, e.g. +306912345678',
+  },
+  PHONE_NUMBER_IN_USE_BY_2FA: {
+    conduitCode: 'PHONE_NUMBER_IN_USE_BY_2FA',
+    grpcCode: status.FAILED_PRECONDITION,
+    message:
+      'Cannot clear the phone number while SMS two-factor authentication is enabled',
+    description:
+      'Turn off SMS two-factor authentication before clearing the phone number',
+  },
+  TWO_FA_METHOD_REQUIRES_TWO_FA: {
+    conduitCode: 'TWO_FA_METHOD_REQUIRES_TWO_FA',
+    grpcCode: status.FAILED_PRECONDITION,
+    message: 'twoFaMethod can only be set while two-factor authentication is enabled',
+    description: 'Send hasTwoFA: true with twoFaMethod, or enable 2FA first',
+  },
+  TWO_FA_AUTHENTICATOR_SECRET_REQUIRED: {
+    conduitCode: 'TWO_FA_AUTHENTICATOR_SECRET_REQUIRED',
+    grpcCode: status.INVALID_ARGUMENT,
+    message: 'Authenticator 2FA requires an existing secret',
+    description: 'The user must have enrolled an authenticator app before it can be used',
+  },
+  ADMIN_PASSWORD_TOO_SHORT: {
+    conduitCode: 'ADMIN_PASSWORD_TOO_SHORT',
+    grpcCode: status.INVALID_ARGUMENT,
+    message: 'Password must be at least 8 characters',
+    description: 'A password set by an administrator must have at least 8 characters',
+  },
 } as const satisfies Record<string, ModuleErrorDefinition>;

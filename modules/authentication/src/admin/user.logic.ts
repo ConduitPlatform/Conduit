@@ -1,9 +1,10 @@
-import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { Indexable } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
 import { isNil } from 'lodash-es';
 import escapeStringRegexp from 'escape-string-regexp';
 import { AuthUtils } from '../utils/index.js';
 import { withHomeScope } from '../utils/realm.logic.js';
+import { errors } from '../errors.js';
 
 /*
  * Pure rules of the user admin routes (no database or grpc access). IO lives in
@@ -92,7 +93,7 @@ const exists = { $exists: true, $ne: null };
 
 function providerFilter(provider: string): Indexable {
   if (!(USER_PROVIDER_FILTERS as readonly string[]).includes(provider)) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid provider');
+    throw new ModuleError(errors.USER_PROVIDER_INVALID, `provider ${provider}`);
   }
   if (provider === 'local') return { hashedPassword: exists };
   // Phone-login users have a number and no password. SMS 2FA accounts that also
@@ -152,7 +153,7 @@ export function userFilterQuery(params: Indexable): Indexable {
 export function assertSortAllowed(sort: unknown): void {
   if (isNil(sort) || sort === '') return;
   if (typeof sort !== 'string' || !SORT_FIELD.test(sort)) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid sort field');
+    throw new ModuleError(errors.USER_SORT_INVALID);
   }
   const field = sort.startsWith('-') ? sort.slice(1) : sort;
   if (
@@ -160,7 +161,7 @@ export function assertSortAllowed(sort: unknown): void {
     field === 'metamask.nonce' ||
     PROVIDER_TOKEN_SORT_FIELDS.has(field)
   ) {
-    throw new GrpcError(status.INVALID_ARGUMENT, `Cannot sort by ${field}`);
+    throw new ModuleError(errors.USER_SORT_FORBIDDEN, `sort ${field}`);
   }
 }
 
@@ -196,8 +197,8 @@ function requestedTwoFaMethod(value: string | undefined): string | undefined {
   if (isNil(value) || value === '') return undefined;
   if (value === 'phone') return 'sms';
   if (!(TWO_FA_METHODS as readonly string[]).includes(value)) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
+    throw new ModuleError(
+      errors.TWO_FA_METHOD_INVALID,
       `twoFaMethod must be one of: ${TWO_FA_METHODS.join(', ')}`,
     );
   }
@@ -221,16 +222,10 @@ function twoFaMethodPatch(
   }
   const requested = requestedTwoFaMethod(params.twoFaMethod);
   if (!isNil(requested) && !enabled) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      'twoFaMethod can only be set while two-factor authentication is enabled',
-    );
+    throw new ModuleError(errors.TWO_FA_METHOD_REQUIRES_TWO_FA);
   }
   if (requested === 'authenticator' && !authenticatorSecret) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Authenticator 2FA requires an existing secret',
-    );
+    throw new ModuleError(errors.TWO_FA_AUTHENTICATOR_SECRET_REQUIRED);
   }
   if (!isNil(requested)) {
     return { method: requested, update: { twoFaMethod: requested } };
@@ -255,7 +250,7 @@ function phonePatch(
     return { phone: null, update: { phoneNumber: null } };
   }
   if (!PHONE_E164.test(params.phoneNumber)) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'Phone number must be in E.164 format');
+    throw new ModuleError(errors.PHONE_NUMBER_INVALID);
   }
   return { phone: params.phoneNumber, update: { phoneNumber: params.phoneNumber } };
 }
@@ -269,15 +264,9 @@ function assertSmsPhoneAvailable(
   const missing = phone == null || phone === '';
   if (!smsTwoFa(method, enabled) || !missing) return;
   if (clearing) {
-    throw new GrpcError(
-      status.FAILED_PRECONDITION,
-      'Cannot clear the phone number while SMS two-factor authentication is enabled',
-    );
+    throw new ModuleError(errors.PHONE_NUMBER_IN_USE_BY_2FA);
   }
-  throw new GrpcError(
-    status.INVALID_ARGUMENT,
-    'Can not enable 2fa without a phone number',
-  );
+  throw new ModuleError(errors.PHONE_NUMBER_REQUIRED_FOR_2FA);
 }
 
 /**
