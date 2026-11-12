@@ -255,7 +255,9 @@ export class RelationsController {
       query['resourceType'] = searchQuery.resourceType;
     }
     return Promise.all([
-      Relationship.getInstance().findMany(query, { skip, limit }),
+      // a stable order, so callers that page with skip/limit neither miss nor repeat rows
+      // (SQL gives no order without ORDER BY)
+      Relationship.getInstance().findMany(query, { skip, limit, sort: { _id: 1 } }),
       Relationship.getInstance().countDocuments(query),
     ]);
   }
