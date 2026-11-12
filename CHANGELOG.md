@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [Unreleased]
+
+### Features
+
+* **authentication:** admin user management. `POST /users/:id/password` sets a local password (min 8 characters), clears outstanding reset tokens and signs the user out unless `revokeSessions` is false. `POST /users/:id/password-reset` (registered when the email module is available, including when it comes up after authentication) sends the existing forgot-password email. `POST /users/:id/two-fa/reset` clears the 2FA flag, method, secret, backup codes and pending 2FA tokens. `GET /users/:id/teams` (only when teams are enabled) lists a user's teams and roles, ordered by name; `skip`, `limit`, `search` and `count` apply to teams. `GET /users/:id` returns one user by id, whatever the id format (advertised as the `getUserById` action). `GET /users/capabilities` reports the filters, sorts and actions this server supports. `GET /users` accepts `isVerified` and `hasTwoFA`, a `phone` provider and a `username` provider, and rejects unknown providers and secret sort fields. `PATCH /users/:id` no longer requires `email`, validates a changed email and a changed E.164 phone, clears the phone with `""`, accepts `twoFaMethod` `sms` or `authenticator` while 2FA is on (`''` is ignored, the legacy `phone` means `sms`, anything else is rejected), and checks 2FA/phone consistency only when the patch changes 2FA or the phone.
+* **authentication:** the user admin routes use the typed error catalog. New codes: `USER_PROVIDER_INVALID`, `USER_SORT_INVALID`, `USER_SORT_FORBIDDEN`, `USER_EMAIL_MISSING`, `PHONE_NUMBER_INVALID`, `PHONE_NUMBER_IN_USE_BY_2FA`, `TWO_FA_METHOD_REQUIRES_TWO_FA`, `TWO_FA_AUTHENTICATOR_SECRET_REQUIRED` and `ADMIN_PASSWORD_TOO_SHORT`; existing codes are reused where they fit (`USER_NOT_FOUND`, `ANONYMOUS_USER_NOT_ELIGIBLE`, `PASSWORD_AUTH_NOT_AVAILABLE`, `TWO_FA_METHOD_INVALID`, `AUTH_EMAIL_DELIVERY_FAILED`).
+
+### Bug Fixes
+
+* **authentication:** `isAnonymous=false` now matches users whose `isAnonymous` is false, null or missing, on both MongoDB and SQL. Previously it matched only an explicit `false`, so hiding anonymous users returned almost nobody.
+* **authentication:** searching users by id keeps the other list filters. `GET /users?search=<id>&isActive=false` no longer returns that user when they are active.
+* **authentication:** `POST /users/toggle` with `block: true` now sets `active` to false and signs out every listed user (the block event lists only the users whose status changed). `block: false` sets `active` to true and leaves sessions in place. The previous handler wrote `active: block`, so a bulk block reactivated users and revoked their sessions.
+* **authentication:** `provider=phone` matches users whose `hashedPassword` is null as well as missing, the exact complement of `provider=local`.
+* **authentication:** `DELETE /users` now deletes each user's authorization relations (resource and subject), matching single-user delete, and publishes the deleted users. The user rows and realm memberships are deleted in one transaction, sessions are revoked next, and relation cleanup is best effort: a missing or failing authorization module is logged and the delete still completes (`DELETE /users/:id` no longer returns `AUTHORIZATION_UNAVAILABLE`).
+
 ## [0.17.0-alpha.10](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.9...v0.17.0-alpha.10) (2026-11-10)
 
 

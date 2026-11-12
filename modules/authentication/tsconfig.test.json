@@ -81,6 +81,9 @@
     "src/utils/userResolver.logic.test.ts",
     "src/utils/sessionRevocation.test.ts",
     "src/utils/sessionServices.test.ts",
+    "src/admin/user.logic.test.ts",
+    "src/admin/user.handlers.test.ts",
+    "src/handlers/local.logic.test.ts",
     "src/constants/index.ts",
     "src/errors.ts",
     "src/data/disposable-email-domains.json"

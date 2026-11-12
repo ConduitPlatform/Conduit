@@ -42,6 +42,7 @@ import {
   REALM_RESOLUTION_ERRORS,
   SESSION_AUTH_ERRORS,
 } from './utils.js';
+import { issuePasswordReset } from './local.logic.js';
 import {
   consumeEmailVerificationCode,
   EMAIL_CODE_TTL_MS,
@@ -573,48 +574,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     if (isNil(user))
       return 'If the email address is valid, a password reset link will be sent to it.';
-    if (user.isAnonymous) {
-      throw new ModuleError(errors.ANONYMOUS_USER_NOT_ELIGIBLE);
-    }
-    if (isNil(user.hashedPassword)) {
-      throw new ModuleError(errors.PASSWORD_AUTH_NOT_AVAILABLE);
-    }
-
-    const oldToken: Token | null = await Token.getInstance().findOne(
-      {
-        tokenType: TokenType.PASSWORD_RESET_TOKEN,
-        user: user._id,
-      },
-      { readPreference: 'primary' },
-    );
-    if (!isNil(oldToken) && AuthUtils.checkResendThreshold(oldToken)) {
-      await Token.getInstance().deleteOne(oldToken);
-    }
-
-    const passwordResetTokenDoc = await Token.getInstance().create({
-      tokenType: TokenType.PASSWORD_RESET_TOKEN,
-      user: user._id,
-      token: uuid(),
-    });
-    const safeUser = { ...user };
-    delete safeUser.hashedPassword;
-    const link = `${redirectUri}?reset_token=${passwordResetTokenDoc.token}`;
-    if (this.grpcSdk.isAvailable('email')) {
-      await this.emailModule
-        .sendEmail('ForgotPassword', {
-          email: user.email,
-          variables: {
-            link,
-            user: safeUser,
-          },
-        })
-        .catch(emailDeliveryFailed);
-    } else {
-      throw new ModuleError(
-        errors.AUTH_EMAIL_DELIVERY_FAILED,
-        'email module unavailable',
-      );
-    }
+    await issuePasswordReset(this.grpcSdk, user, redirectUri);
     return 'If the email address is valid, a password reset link will be sent to it.';
   }
 
