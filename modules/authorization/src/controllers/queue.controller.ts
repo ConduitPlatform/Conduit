@@ -1,7 +1,8 @@
 import { Queue, Worker } from 'bullmq';
 import { randomUUID } from 'crypto';
-import { status } from '@grpc/grpc-js';
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { Cluster, Redis } from 'ioredis';
 import {
   createConstructRelationIndexProcessor,
@@ -104,10 +105,7 @@ export class QueueController {
     relations: { subject: string; relation: string; object: string }[],
   ) {
     if (!relations.length) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Missing relations (subject, relation, object)',
-      );
+      throw new ModuleError(errors.RELATIONS_REQUIRED);
     }
     await this.authorizationQueue.addBulk(
       relations.map(r => {

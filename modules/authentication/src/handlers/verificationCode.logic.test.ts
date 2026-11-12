@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { getConduitCode, GrpcError } from '@conduitplatform/grpc-sdk';
+import { errors } from '../errors.js';
 import { status } from '@grpc/grpc-js';
 import {
   consumeEmailVerificationCode,
@@ -39,7 +40,7 @@ describe('consumeEmailVerificationCode', () => {
       (err: unknown) =>
         err instanceof GrpcError &&
         err.code === status.INVALID_ARGUMENT &&
-        err.message === 'Invalid verification code',
+        getConduitCode(err) === errors.VERIFICATION_CODE_INVALID.conduitCode,
     );
   });
 });

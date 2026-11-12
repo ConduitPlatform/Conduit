@@ -1,18 +1,19 @@
 import {
-  GrpcError,
   Indexable,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { constructAssignment, constructQuery } from './utils.js';
 import { constructSortObj } from '../utils.js';
-import { status } from '@grpc/grpc-js';
 import { ICustomEndpoint, PopulatedCustomEndpoint } from '../../interfaces/index.js';
 import { isNil } from 'lodash-es';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
 import { OperationsEnum } from '../../enums/index.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { rethrowDatabaseError } from '../../utils/databaseErrors.js';
+import { errors } from '../../errors.js';
 
 export class CustomEndpointHandler {
   private static routeControllers: Indexable = {};
@@ -31,21 +32,20 @@ export class CustomEndpointHandler {
     //use it to find the right controller
     const path = call.request.path.split('/')[3];
     const endpoint: ICustomEndpoint = CustomEndpointHandler.routeControllers[path];
+    if (!endpoint) {
+      throw new ModuleError(errors.CUSTOM_ENDPOINT_NOT_FOUND, path);
+    }
     const params = call.request.params;
     const scope = call.request.queryParams.scope;
     let searchQuery: Indexable = {};
     let createString = '';
 
     if (endpoint.operation !== OperationsEnum.POST) {
-      try {
-        searchQuery = constructQuery(endpoint.query, {
-          inputs: endpoint.inputs,
-          params: params,
-          context: call.request.context,
-        });
-      } catch (e) {
-        throw new GrpcError(status.INTERNAL, (e as Error).message);
-      }
+      searchQuery = constructQuery(endpoint.query, {
+        inputs: endpoint.inputs,
+        params: params,
+        context: call.request.context,
+      });
     }
 
     if (
@@ -67,10 +67,10 @@ export class CustomEndpointHandler {
               if (res && res.length > 0) {
                 return;
               }
-              throw new GrpcError(
-                status.INTERNAL,
-                `Field ${r.assignmentField.value} is missing from input`,
-              );
+              throw new ModuleError({
+                ...errors.CUSTOM_ENDPOINT_INPUT_MISSING,
+                message: `Field ${r.assignmentField.value} is missing from input`,
+              });
             }
             createString += constructAssignment(
               r.schemaField,
@@ -80,20 +80,20 @@ export class CustomEndpointHandler {
             createString += ',';
           } else if (r.assignmentField.type === 'Context') {
             if (isNil(call.request.context)) {
-              throw new GrpcError(
-                status.INTERNAL,
-                `Field ${r.assignmentField.value} is missing from context`,
-              );
+              throw new ModuleError({
+                ...errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
+                message: `Field ${r.assignmentField.value} is missing from context`,
+              });
             }
             let context = call.request.context;
             for (const key of r.assignmentField.value.split('.')) {
               if (context.hasOwnProperty(key)) {
                 context = context[key];
               } else {
-                throw new GrpcError(
-                  status.INTERNAL,
-                  `Field ${r.assignmentField.value} is missing from context`,
-                );
+                throw new ModuleError({
+                  ...errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
+                  message: `Field ${r.assignmentField.value} is missing from context`,
+                });
               }
             }
             createString += constructAssignment(
@@ -126,10 +126,7 @@ export class CustomEndpointHandler {
     try {
       createObj = JSON.parse(`{${createString}}`) as Indexable;
     } catch {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Invalid document payload built from custom endpoint assignments',
-      );
+      throw new ModuleError(errors.CUSTOM_ENDPOINT_PAYLOAD_INVALID);
     }
     let promise;
     if (endpoint.operation === OperationsEnum.GET) {
@@ -202,8 +199,6 @@ export class CustomEndpointHandler {
         }
         return r;
       })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(rethrowDatabaseError());
   }
 }

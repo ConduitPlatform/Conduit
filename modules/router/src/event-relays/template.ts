@@ -1,6 +1,7 @@
 import { MAX_OUTPUT_BYTES, MAX_TEMPLATE_BYTES, MAX_TEMPLATE_DEPTH } from './constants.js';
 import { lookupOwnPath, parseDotPath } from './path.js';
 import { EventRelayValidationError } from './validationError.js';
+import { errors } from '../errors.js';
 
 const PLACEHOLDER = /\{\{\s*payload\.([A-Za-z_][A-Za-z0-9_.]*)\s*\}\}/g;
 const EXACT_PLACEHOLDER = /^\{\{\s*payload\.([A-Za-z_][A-Za-z0-9_.]*)\s*\}\}$/;
@@ -10,19 +11,27 @@ export function assertTemplateSize(template: unknown): void {
   try {
     serialized = JSON.stringify(template);
   } catch {
-    throw new EventRelayValidationError('Message template must be valid JSON');
+    throw new EventRelayValidationError(
+      errors.EVENT_RELAY_TEMPLATE_INVALID,
+      'Message template must be valid JSON',
+    );
   }
   if (serialized === undefined) {
-    throw new EventRelayValidationError('Message template must be valid JSON');
+    throw new EventRelayValidationError(
+      errors.EVENT_RELAY_TEMPLATE_INVALID,
+      'Message template must be valid JSON',
+    );
   }
   if (Buffer.byteLength(serialized, 'utf8') > MAX_TEMPLATE_BYTES) {
     throw new EventRelayValidationError(
+      errors.EVENT_RELAY_TEMPLATE_INVALID,
       `Message template exceeds ${MAX_TEMPLATE_BYTES} bytes`,
     );
   }
   walkTemplate(template, 0, (value, depth) => {
     if (depth > MAX_TEMPLATE_DEPTH) {
       throw new EventRelayValidationError(
+        errors.EVENT_RELAY_TEMPLATE_INVALID,
         `Message template exceeds ${MAX_TEMPLATE_DEPTH} nested levels`,
       );
     }
@@ -38,6 +47,7 @@ export function renderMessageTemplate(template: unknown, payload: unknown): unkn
   const serialized = JSON.stringify(rendered);
   if (Buffer.byteLength(serialized, 'utf8') > MAX_OUTPUT_BYTES) {
     throw new EventRelayValidationError(
+      errors.EVENT_RELAY_RENDERED_MESSAGE_TOO_LARGE,
       `Rendered message exceeds ${MAX_OUTPUT_BYTES} bytes`,
     );
   }
@@ -47,6 +57,7 @@ export function renderMessageTemplate(template: unknown, payload: unknown): unkn
 function renderValue(value: unknown, payload: unknown, depth: number): unknown {
   if (depth > MAX_TEMPLATE_DEPTH) {
     throw new EventRelayValidationError(
+      errors.EVENT_RELAY_TEMPLATE_INVALID,
       `Message template exceeds ${MAX_TEMPLATE_DEPTH} nested levels`,
     );
   }
@@ -74,6 +85,7 @@ function interpolateString(value: string, payload: unknown): unknown {
     const resolved = lookupOwnPath(payload, exact[1]);
     if (resolved === undefined) {
       throw new EventRelayValidationError(
+        errors.EVENT_RELAY_PAYLOAD_PATH_NOT_FOUND,
         `Placeholder payload.${exact[1]} was not found on the payload`,
       );
     }
@@ -85,6 +97,7 @@ function interpolateString(value: string, payload: unknown): unknown {
     const resolved = lookupOwnPath(payload, path);
     if (resolved === undefined) {
       throw new EventRelayValidationError(
+        errors.EVENT_RELAY_PAYLOAD_PATH_NOT_FOUND,
         `Placeholder payload.${path} was not found on the payload`,
       );
     }

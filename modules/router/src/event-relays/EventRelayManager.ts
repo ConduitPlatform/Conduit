@@ -1,5 +1,7 @@
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { EventRelay } from '../models/index.js';
+import { errors } from '../errors.js';
+import { EventRelayValidationError } from './validationError.js';
 import {
   EVENT_RELAY_REFRESH_CHANNEL,
   EVENT_RELAY_SUBSCRIBER_PREFIX,
@@ -210,9 +212,8 @@ export class EventRelayManager {
     } catch (err) {
       ConduitGrpcSdk.Metrics?.increment('event_relays_failed_total');
       if (
-        err instanceof Error &&
-        err.message.includes('exceeds') &&
-        err.message.includes('bytes')
+        err instanceof EventRelayValidationError &&
+        err.conduitCode === errors.EVENT_RELAY_BUS_PAYLOAD_TOO_LARGE.conduitCode
       ) {
         ConduitGrpcSdk.Metrics?.increment('event_relays_inbound_dropped_total');
       }

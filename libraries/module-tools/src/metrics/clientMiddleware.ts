@@ -28,8 +28,8 @@ function getLabels(method: MethodDescriptor) {
       ? 'bidi_stream'
       : 'client_stream'
     : method.responseStream
-    ? 'server_stream'
-    : 'unary';
+      ? 'server_stream'
+      : 'unary';
   const { path } = method;
   const [serviceName, methodName] = path.split('/').slice(1);
   return {

@@ -5,6 +5,8 @@ import { DatabaseAdapter } from './DatabaseAdapter.js';
 import { isEmpty, isNil } from 'lodash-es';
 import { createHash } from 'crypto';
 import { Op } from 'sequelize';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 export type SingleDocQuery = string | Indexable;
 export type MultiDocQuery = string | Indexable[];
@@ -63,7 +65,7 @@ export abstract class SchemaAdapter<T> {
     }
     const isAvailable = this.grpcSdk.isAvailable('authorization');
     if (!isAvailable) {
-      throw new Error('Authorization service is not available');
+      throw new ModuleError(errors.SCHEMA_AUTHORIZATION_UNAVAILABLE);
     }
     if (scope) {
       // check user permissions only if user is provided
@@ -74,7 +76,10 @@ export abstract class SchemaAdapter<T> {
           resource: scope,
         });
         if (!allowed?.allow) {
-          throw new Error(`User:${userId} is not allowed to ${operation} ${scope}`);
+          throw new ModuleError(
+            errors.RESOURCE_ACCESS_DENIED,
+            `User:${userId} is not allowed to ${operation} ${scope}`,
+          );
         }
       }
       const viewName = this.transformViewName(model, scope, operation);
@@ -138,7 +143,7 @@ export abstract class SchemaAdapter<T> {
 
   async createPermissionCheck(userId?: string, scope?: string): Promise<void> {
     if (this.isView) {
-      throw new Error('Cannot create on view');
+      throw new ModuleError(errors.VIEW_READ_ONLY, 'Cannot create on view');
     }
     if ((!userId && !scope) || !this.authzEnabled) {
       if (this.authzEnabled && !userId && !scope) {
@@ -148,7 +153,7 @@ export abstract class SchemaAdapter<T> {
     }
     const isAvailable = this.grpcSdk.isAvailable('authorization');
     if (!isAvailable) {
-      throw new Error('Authorization service is not available');
+      throw new ModuleError(errors.SCHEMA_AUTHORIZATION_UNAVAILABLE);
     }
     if (scope) {
       // check user permissions only if user is provided
@@ -159,7 +164,10 @@ export abstract class SchemaAdapter<T> {
           resource: scope,
         });
         if (!allowed?.allow) {
-          throw new Error(`User:${userId} is not allowed to edit ${scope}`);
+          throw new ModuleError(
+            errors.RESOURCE_ACCESS_DENIED,
+            `User:${userId} is not allowed to edit ${scope}`,
+          );
         }
       }
     }
@@ -304,7 +312,7 @@ export abstract class SchemaAdapter<T> {
 
   async canUpdate(assetId: string, userId?: string, scope?: string) {
     if (this.isView) {
-      throw new Error('Cannot update a view');
+      throw new ModuleError(errors.VIEW_READ_ONLY, 'Cannot update a view');
     }
     if (!userId && !scope) {
       if (this.authzEnabled) {
@@ -318,7 +326,7 @@ export abstract class SchemaAdapter<T> {
       resource: `${this.originalSchema.name}:${assetId}`,
     });
     if (!allowed || !allowed.allow) {
-      throw new Error('Not allowed to update');
+      throw new ModuleError(errors.RESOURCE_ACCESS_DENIED, 'Not allowed to update');
     }
     return true;
   }

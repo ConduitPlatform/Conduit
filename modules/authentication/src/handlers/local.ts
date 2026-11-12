@@ -14,14 +14,13 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   Email,
-  GrpcError,
   Indexable,
+  parseErrorPayload,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import * as templates from '../templates/index.js';
 import { Token, User } from '../models/index.js';
-import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import { TeamsHandler } from './team.js';
@@ -33,7 +32,16 @@ import {
   RoutingManager,
   ModuleError,
 } from '@conduitplatform/module-tools';
-import { authenticateChecks, changePassword } from './utils.js';
+import {
+  ANONYMOUS_CONFIG_ERRORS,
+  ANONYMOUS_DENIED_ERRORS,
+  authenticateChecks,
+  CAPTCHA_ERRORS,
+  changePassword,
+  LOGIN_ROUTE_ERRORS,
+  REALM_RESOLUTION_ERRORS,
+  SESSION_AUTH_ERRORS,
+} from './utils.js';
 import {
   consumeEmailVerificationCode,
   EMAIL_CODE_TTL_MS,
@@ -74,6 +82,10 @@ import {
   uniqueIdentifierQuery,
 } from '../utils/realm.js';
 
+function emailDeliveryFailed(e: unknown): never {
+  throw new ModuleError(errors.AUTH_EMAIL_DELIVERY_FAILED, parseErrorPayload(e).message);
+}
+
 type TeamsConfig = { enabled: boolean; allowRegistrationWithoutInvite: boolean };
 
 export class LocalHandlers implements IAuthenticationStrategy {
@@ -112,9 +124,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
           errors.INVITATION_REQUIRED,
           errors.INVALID_INVITATION,
           errors.EMAIL_NOT_ALLOWED,
-          errors.REALM_NOT_FOUND,
-          errors.REALMS_DISABLED,
-          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+          errors.USER_EMAIL_INVALID,
+          errors.USER_DATA_INVALID,
+          errors.REALM_ACCESS_DENIED,
+          ...REALM_RESOLUTION_ERRORS,
+          ...ANONYMOUS_CONFIG_ERRORS,
+          ...SESSION_AUTH_ERRORS,
+          ...(captchaConfig.enabled && captchaConfig.routes.register
+            ? CAPTCHA_ERRORS
+            : []),
         ],
         rateLimit: AUTH_CREDENTIALS,
       },
@@ -131,6 +149,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
             realm: realmParam,
           },
           description: `Creates a new anonymous user.`,
+          errors: [
+            errors.INVITATION_REQUIRED,
+            errors.USER_DATA_INVALID,
+            ...LOGIN_ROUTE_ERRORS,
+          ],
           rateLimit: AUTH_CREDENTIALS,
         },
         new ConduitRouteReturnDefinition('LoginResponse', {
@@ -158,6 +181,16 @@ export class LocalHandlers implements IAuthenticationStrategy {
           captchaConfig.enabled && captchaConfig.routes.login
             ? ['captchaMiddleware']
             : undefined,
+        errors: [
+          errors.INVALID_CREDENTIALS,
+          errors.USER_EMAIL_INVALID,
+          errors.PASSWORD_AUTH_NOT_AVAILABLE,
+          errors.ACCOUNT_NOT_VERIFIED,
+          errors.DISCOVERY_REQUEST_INVALID,
+          errors.AUTHENTICATION_REQUIRED,
+          ...LOGIN_ROUTE_ERRORS,
+          ...(captchaConfig.enabled && captchaConfig.routes.login ? CAPTCHA_ERRORS : []),
+        ],
         rateLimit: AUTH_CREDENTIALS,
       },
       new ConduitRouteReturnDefinition('LoginResponse', {
@@ -179,6 +212,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
             redirectUri: ConduitString.Optional,
             realm: realmParam,
           },
+          errors: [
+            errors.REDIRECT_URI_NOT_ALLOWED,
+            errors.ANONYMOUS_USER_NOT_ELIGIBLE,
+            errors.PASSWORD_AUTH_NOT_AVAILABLE,
+            errors.VERIFICATION_RESEND_THROTTLED,
+            errors.AUTH_EMAIL_DELIVERY_FAILED,
+            ...REALM_RESOLUTION_ERRORS,
+          ],
           rateLimit: EMAIL_SEND_STRICT,
         },
         new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
@@ -195,6 +236,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
           passwordResetToken: ConduitString.Required,
           password: ConduitString.Required,
         },
+        errors: [
+          errors.PASSWORD_RESET_TOKEN_INVALID,
+          errors.USER_NOT_FOUND,
+          errors.PASSWORD_AUTH_NOT_AVAILABLE,
+          errors.PASSWORD_UNCHANGED,
+          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+          errors.REALM_ACCESS_DENIED,
+        ],
         rateLimit: PASSWORD_RESET_SUBMIT,
       },
       new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
@@ -210,6 +259,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
             email: ConduitString.Required,
             realm: realmParam,
           },
+          errors: [
+            errors.USER_EMAIL_INVALID,
+            errors.USER_NOT_FOUND,
+            errors.USER_ALREADY_VERIFIED,
+            errors.ANONYMOUS_USER_NOT_ELIGIBLE,
+            errors.VERIFICATION_RESEND_THROTTLED,
+            errors.AUTH_EMAIL_DELIVERY_FAILED,
+            ...REALM_RESOLUTION_ERRORS,
+          ],
           rateLimit: EMAIL_SEND_STRICT,
         },
         new ConduitRouteReturnDefinition('ResendVerificationEmailResponse', 'String'),
@@ -225,6 +283,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
         bodyParams: {
           newPassword: ConduitString.Required,
         },
+        errors: [
+          errors.SUDO_REQUIRED,
+          ...ANONYMOUS_DENIED_ERRORS,
+          ...SESSION_AUTH_ERRORS,
+        ],
         middlewares: ['authMiddleware', 'denyAnonymousMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
@@ -241,7 +304,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
           redirectUri: ConduitString.Optional,
         },
         middlewares: ['authMiddleware', 'denyAnonymousMiddleware'],
-        errors: [errors.EMAIL_NOT_ALLOWED],
+        errors: [
+          errors.SUDO_REQUIRED,
+          errors.REDIRECT_URI_NOT_ALLOWED,
+          errors.VERIFICATION_UNAVAILABLE,
+          errors.USER_EMAIL_UNCHANGED,
+          errors.USER_EMAIL_INVALID,
+          errors.EMAIL_NOT_ALLOWED,
+          errors.USER_EMAIL_TAKEN,
+          errors.AUTH_OPERATION_FAILED,
+          errors.AUTH_EMAIL_DELIVERY_FAILED,
+          ...ANONYMOUS_DENIED_ERRORS,
+          ...SESSION_AUTH_ERRORS,
+        ],
       },
       new ConduitRouteReturnDefinition('ChangeEmailResponse', 'String'),
       this.changeEmail.bind(this),
@@ -258,6 +333,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
             code: ConduitString.Required,
             realm: realmParam,
           },
+          errors: [
+            errors.USER_NOT_FOUND,
+            errors.USER_ALREADY_VERIFIED,
+            errors.ANONYMOUS_USER_NOT_ELIGIBLE,
+            errors.VERIFICATION_TOKEN_NOT_FOUND,
+            errors.VERIFICATION_CODE_INVALID,
+            ...REALM_RESOLUTION_ERRORS,
+          ],
           rateLimit: EMAIL_CODE_VERIFY,
         },
         new ConduitRouteReturnDefinition('VerifyEmailWithCode', 'String'),
@@ -273,6 +356,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         urlParams: {
           verificationToken: ConduitString.Required,
         },
+        errors: [errors.VERIFICATION_TOKEN_NOT_FOUND, errors.USER_NOT_FOUND],
         rateLimit: EMAIL_VERIFY_HOOK,
       },
       new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
@@ -287,6 +371,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
         urlParams: {
           verificationToken: ConduitString.Required,
         },
+        errors: [
+          errors.VERIFICATION_TOKEN_NOT_FOUND,
+          errors.USER_NOT_FOUND,
+          errors.CHANGE_EMAIL_TOKEN_MALFORMED,
+          errors.USER_EMAIL_TAKEN,
+        ],
         rateLimit: EMAIL_VERIFY_HOOK,
       },
       new ConduitRouteReturnDefinition('VerifyChangeEmailResponse', 'String'),
@@ -337,7 +427,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
     const { isVerified, userInvitationExtensionData } =
       await this.acceptRegistrationInvite(realmCtx, invitationToken, email, teams);
-    AuthUtils.assertValidEmail(email, 'module');
+    AuthUtils.assertValidEmail(email);
     await this.assertEmailAvailable(email, realmCtx);
     if (userData) {
       AuthUtils.checkUserData(userData);
@@ -421,13 +511,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const email = call.request.params.email.toLowerCase();
     const password = call.request.params.password;
     const context = call.request.context;
-    if (isNil(context))
-      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
+    if (isNil(context)) throw new ModuleError(errors.AUTHENTICATION_REQUIRED);
 
     const clientId = context.clientId;
     const invalidAddress = AuthUtils.invalidEmailAddress(email);
     if (invalidAddress) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
+      throw new ModuleError(errors.USER_EMAIL_INVALID);
     }
 
     // discovery: no realm, no session, the answer lists the realms that accepted the password
@@ -451,8 +540,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const principal = await resolveSignInPrincipal(realmCtx, { email }, 'local', {
       select: '+hashedPassword',
     });
-    if (isNil(principal))
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
+    if (isNil(principal)) throw new ModuleError(errors.INVALID_CREDENTIALS);
     await authenticateChecks(
       password,
       config,
@@ -486,13 +574,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(user))
       return 'If the email address is valid, a password reset link will be sent to it.';
     if (user.isAnonymous) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
+      throw new ModuleError(errors.ANONYMOUS_USER_NOT_ELIGIBLE);
     }
-    if (isNil(user.hashedPassword))
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
+    if (isNil(user.hashedPassword)) {
+      throw new ModuleError(errors.PASSWORD_AUTH_NOT_AVAILABLE);
+    }
 
     const oldToken: Token | null = await Token.getInstance().findOne(
       {
@@ -522,16 +608,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
             user: safeUser,
           },
         })
-        .catch(() => {
-          throw new GrpcError(
-            status.INTERNAL,
-            'There was an error sending the email. Please try again later.',
-          );
-        });
+        .catch(emailDeliveryFailed);
     } else {
-      throw new GrpcError(
-        status.INTERNAL,
-        'There was an error sending the email. Please try again later.',
+      throw new ModuleError(
+        errors.AUTH_EMAIL_DELIVERY_FAILED,
+        'email module unavailable',
       );
     }
     return 'If the email address is valid, a password reset link will be sent to it.';
@@ -549,30 +630,24 @@ export class LocalHandlers implements IAuthenticationStrategy {
       { readPreference: 'primary' },
     );
     if (isNil(passwordResetTokenDoc))
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
+      throw new ModuleError(errors.PASSWORD_RESET_TOKEN_INVALID);
 
     const user: User | null = await User.getInstance().findOne(
       { _id: passwordResetTokenDoc.user as string },
       { select: '+hashedPassword' },
     );
-    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    if (isNil(user)) throw new ModuleError(errors.USER_NOT_FOUND);
     // the realm comes from the user the token was issued for
     assertStrategyEnabledForRealm(await resolveHomeRealmContext(user), 'local');
-    if (isNil(user.hashedPassword))
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
+    if (isNil(user.hashedPassword)) {
+      throw new ModuleError(errors.PASSWORD_AUTH_NOT_AVAILABLE);
+    }
 
     const passwordsMatch = await AuthUtils.checkPassword(
       newPassword,
       user.hashedPassword,
     );
-    if (passwordsMatch)
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        "Password can't be the same as the old one",
-      );
+    if (passwordsMatch) throw new ModuleError(errors.PASSWORD_UNCHANGED);
 
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
@@ -590,10 +665,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async changeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!call.request.context.jwtPayload.sudo) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Re-login required to enter sudo mode',
-      );
+      throw new ModuleError(errors.SUDO_REQUIRED);
     }
     const newEmail = call.request.params.newEmail.toLowerCase();
     const { user } = call.request.context;
@@ -604,15 +676,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const validation = await this.validate();
     if (!validation) {
-      throw new GrpcError(status.INTERNAL, 'Cannot use verification at this time');
+      throw new ModuleError(errors.VERIFICATION_UNAVAILABLE);
     }
     if (user.email === newEmail) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'The new email can not be the same as the old email',
-      );
+      throw new ModuleError(errors.USER_EMAIL_UNCHANGED);
     }
-    AuthUtils.assertValidEmail(newEmail, 'module');
+    AuthUtils.assertValidEmail(newEmail);
     await assertIdentifierFreeForUser(
       user,
       identifierQuery('email', newEmail),
@@ -620,19 +689,17 @@ export class LocalHandlers implements IAuthenticationStrategy {
     );
 
     if (config.local.verification.required) {
-      const verificationToken: Token | void = await AuthUtils.createToken(
+      const verificationToken: Token = await AuthUtils.createToken(
         user._id,
         { email: newEmail, customRedirectUri: redirectUri },
         TokenType.CHANGE_EMAIL_TOKEN,
-      ).catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
+      ).catch(ModuleError.rethrow(errors.AUTH_OPERATION_FAILED));
       if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
         const result = { verificationToken, hostUrl: url };
         const link = `${result.hostUrl}/hook/authentication/verify-change-email/${
-          result.verificationToken!.token
+          result.verificationToken.token
         }`;
         const safeUser = { ...user };
         delete safeUser.hashedPassword;
@@ -675,12 +742,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
         );
         return { redirect: redirectUri ?? config.local.verification.redirect_uri };
       } else {
-        throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
+        throw new ModuleError(errors.VERIFICATION_TOKEN_NOT_FOUND);
       }
     }
 
     const user: User = verificationTokenDoc.user as User;
-    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    if (isNil(user)) throw new ModuleError(errors.USER_NOT_FOUND);
     const redirectUri = AuthUtils.validateRedirectUri(
       verificationTokenDoc.data ? verificationTokenDoc.data.customRedirectUri : undefined,
     );
@@ -713,14 +780,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
       { populate: ['user'], readPreference: 'primary' },
     );
     if (isNil(token)) {
-      throw new GrpcError(status.NOT_FOUND, 'Change email token does not exist');
+      throw new ModuleError(errors.VERIFICATION_TOKEN_NOT_FOUND);
     }
     const user: User = token.user as User;
-    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    if (isNil(user)) throw new ModuleError(errors.USER_NOT_FOUND);
     // the address may have been taken since the change was requested
     const newEmail = token.data?.email;
     if (typeof newEmail !== 'string' || newEmail === '') {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Change email token is malformed');
+      throw new ModuleError(errors.CHANGE_EMAIL_TOKEN_MALFORMED);
     }
     await assertIdentifierFreeForUser(
       user,
@@ -746,7 +813,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const email = call.request.params.email.toLowerCase();
     const invalidAddress = AuthUtils.invalidEmailAddress(email);
     if (invalidAddress) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
+      throw new ModuleError(errors.USER_EMAIL_INVALID);
     }
     const realmCtx = await resolveRealmFromCall(call);
     if (!realmCtx) assertGlobalStrategyAvailable('local');
@@ -754,10 +821,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const user: User | null = await User.getInstance().findOne(
       scopedUserQuery({ email }, realmCtx),
     );
-    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
-    if (user.isVerified)
-      throw new GrpcError(status.FAILED_PRECONDITION, 'User already verified');
-    if (user.isAnonymous) throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
+    if (isNil(user)) throw new ModuleError(errors.USER_NOT_FOUND);
+    if (user.isVerified) throw new ModuleError(errors.USER_ALREADY_VERIFIED);
+    if (user.isAnonymous) throw new ModuleError(errors.ANONYMOUS_USER_NOT_ELIGIBLE);
 
     const verificationToken: Token | null = await Token.getInstance().findOne(
       {
@@ -772,7 +838,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         tokenType: TokenType.VERIFICATION_TOKEN,
       });
     }
-    await this.handleEmailVerification(user);
+    await this.handleEmailVerification(user).catch(emailDeliveryFailed);
     return 'Verification code sent';
   }
 
@@ -787,13 +853,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
       { readPreference: 'primary' },
     );
     if (!foundUser) {
-      throw new GrpcError(status.NOT_FOUND, 'User not found');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     }
     if (foundUser.isVerified) {
-      throw new GrpcError(status.FAILED_PRECONDITION, 'User already verified');
+      throw new ModuleError(errors.USER_ALREADY_VERIFIED);
     }
     if (foundUser.isAnonymous) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Anonymous user');
+      throw new ModuleError(errors.ANONYMOUS_USER_NOT_ELIGIBLE);
     }
     const verificationTokenDoc: Token | null = await Token.getInstance().findOne(
       {
@@ -803,7 +869,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       { readPreference: 'primary' },
     );
     if (isNil(verificationTokenDoc)) {
-      throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
+      throw new ModuleError(errors.VERIFICATION_TOKEN_NOT_FOUND);
     }
     await consumeEmailVerificationCode(
       (...args) => this.grpcSdk.state!.consumeKeyIfMatches(...args),

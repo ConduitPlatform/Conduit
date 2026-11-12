@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { hasConduitCode } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { OpenAICompatibleEmbeddingProvider } from './index.js';
 
@@ -18,7 +19,9 @@ describe('openai-compatible provider security', () => {
         provider.embed('hello', {
           endpoint: 'https://api.openai.com/v1/embeddings',
         }),
-      err => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+      err =>
+        hasConduitCode(err, 'EMBEDDING_PROVIDER_REDIRECT_BLOCKED') &&
+        (err as ModuleError).code === status.PERMISSION_DENIED,
     );
     await assert.rejects(
       () =>
@@ -26,14 +29,18 @@ describe('openai-compatible provider security', () => {
           endpoint: 'https://api.openai.com/v1/embeddings',
           maxInputBytes: 8,
         }),
-      err => err instanceof GrpcError && err.code === status.INVALID_ARGUMENT,
+      err =>
+        hasConduitCode(err, 'EMBEDDING_INPUT_TOO_LARGE') &&
+        (err as ModuleError).code === status.INVALID_ARGUMENT,
     );
     await assert.rejects(
       () =>
         provider.embed('hello', {
           endpoint: 'https://127.0.0.1/v1/embeddings',
         }),
-      err => err instanceof GrpcError && err.code === status.PERMISSION_DENIED,
+      err =>
+        hasConduitCode(err, 'EMBEDDING_ENDPOINT_ADDRESS_BLOCKED') &&
+        (err as ModuleError).code === status.PERMISSION_DENIED,
     );
   });
 
@@ -76,10 +83,12 @@ describe('openai-compatible provider security', () => {
           model: 'text-embedding-3-small',
         }),
       err =>
-        err instanceof GrpcError &&
+        err instanceof ModuleError &&
         err.code === status.UNAVAILABLE &&
-        /HTTP 401/.test(err.message) &&
-        !err.message.includes('sk-test'),
+        err.conduitCode === 'EMBEDDING_PROVIDER_UNAVAILABLE' &&
+        /HTTP 401/.test(err.debugLogInfo ?? '') &&
+        !err.message.includes('sk-test') &&
+        !err.message.includes('HTTP 401'),
     );
   });
 });

@@ -19,6 +19,7 @@ import { RealmsAdmin } from './realm.js';
 import { SigningKeysAdmin, SigningKeysAdminDeps } from './signingKeys.js';
 import { User } from '../models/index.js';
 import { Config } from '../config/index.js';
+import { errors } from '../errors.js';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
@@ -77,6 +78,14 @@ export class AdminHandlers {
           password: ConduitString.RequiredWith({ minLength: 8 }),
           homeRealm: ConduitString.Optional,
         },
+        errors: [
+          errors.USER_IDENTIFIER_INVALID,
+          errors.USER_EMAIL_INVALID,
+          errors.EMAIL_NOT_ALLOWED,
+          errors.REALMS_DISABLED,
+          errors.REALM_NOT_FOUND,
+          errors.USER_EXISTS,
+        ],
       },
       new ConduitRouteReturnDefinition(User.name),
       this.userAdmin.createUser.bind(this.userAdmin),
@@ -96,6 +105,13 @@ export class AdminHandlers {
           phoneNumber: ConduitString.Optional,
           twoFaMethod: ConduitString.Optional,
         },
+        errors: [
+          errors.USER_NOT_FOUND,
+          errors.PHONE_NUMBER_REQUIRED_FOR_2FA,
+          errors.USER_EMAIL_TAKEN,
+          errors.EMAIL_NOT_ALLOWED,
+          errors.PHONE_NUMBER_TAKEN,
+        ],
       },
       new ConduitRouteReturnDefinition('PatchUser', User.name),
       this.userAdmin.patchUser.bind(this.userAdmin),
@@ -108,6 +124,7 @@ export class AdminHandlers {
         queryParams: {
           ids: { type: [TYPE.String], required: true }, // handler array check is still required
         },
+        errors: [errors.USER_IDS_REQUIRED, errors.USER_NOT_FOUND],
       },
       new ConduitRouteReturnDefinition('DeleteUsers', 'String'),
       this.userAdmin.deleteUsers.bind(this.userAdmin),
@@ -120,6 +137,7 @@ export class AdminHandlers {
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
+        errors: [errors.USER_NOT_FOUND, errors.AUTHORIZATION_UNAVAILABLE],
       },
       new ConduitRouteReturnDefinition('DeleteUser', 'String'),
       this.userAdmin.deleteUser.bind(this.userAdmin),
@@ -132,6 +150,7 @@ export class AdminHandlers {
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
+        errors: [errors.USER_NOT_FOUND, errors.USER_ALREADY_BLOCKED],
       },
       new ConduitRouteReturnDefinition('BlockUser', 'String'),
       this.userAdmin.blockUser.bind(this.userAdmin),
@@ -144,6 +163,7 @@ export class AdminHandlers {
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
+        errors: [errors.USER_NOT_FOUND, errors.USER_ALREADY_ACTIVE],
       },
       new ConduitRouteReturnDefinition('UnblockUser', 'String'),
       this.userAdmin.unblockUser.bind(this.userAdmin),
@@ -156,6 +176,7 @@ export class AdminHandlers {
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
+        errors: [errors.USER_NOT_FOUND],
       },
       new ConduitRouteReturnDefinition('UserAdminRealms', {
         home: {
@@ -186,6 +207,7 @@ export class AdminHandlers {
           ids: { type: [TYPE.String], required: true }, // handler array check is still required
           block: ConduitBoolean.Required,
         },
+        errors: [errors.USER_IDS_REQUIRED, errors.USER_NOT_FOUND],
       },
       new ConduitRouteReturnDefinition('ToggleUsers', 'String'),
       this.userAdmin.toggleUsers.bind(this.userAdmin),

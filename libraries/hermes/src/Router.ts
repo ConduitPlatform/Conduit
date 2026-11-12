@@ -13,6 +13,7 @@ import { status } from '@grpc/grpc-js';
 import { ConduitMiddleware, MiddlewarePatch } from './interfaces/index.js';
 import { ConduitRoute } from './classes/index.js';
 import ObjectHash from 'object-hash';
+import { HermesErrorCodes } from './utils/errors.js';
 
 export type LocalMiddlewareHandler = (
   params: ConduitRouteParameters,
@@ -134,7 +135,14 @@ export abstract class ConduitRouter {
             }),
         );
       } else if (!this._middlewares?.hasOwnProperty(middleware)) {
-        primaryPromise = Promise.reject('Middleware does not exist');
+        primaryPromise = Promise.reject(
+          new ConduitError(
+            'INTERNAL_SERVER_ERROR',
+            500,
+            'Middleware does not exist',
+            HermesErrorCodes.INTERNAL_ERROR,
+          ),
+        );
       } else {
         primaryPromise = primaryPromise.then(() => {
           return this._middlewares![middleware].executeRequest.bind(
@@ -178,10 +186,20 @@ export abstract class ConduitRouter {
           `Per-route rate limit: Redis unavailable, rejecting request: ${(err as Error).message}`,
         ),
       );
-      throw new ConduitError('RATE_LIMIT', 429, 'Rate limit check unavailable');
+      throw new ConduitError(
+        'RATE_LIMIT',
+        429,
+        'Rate limit check unavailable',
+        HermesErrorCodes.RATE_LIMIT_UNAVAILABLE,
+      );
     }
     if (requests > maxRequests) {
-      throw new ConduitError('RATE_LIMIT', 429, 'Too Many Requests');
+      throw new ConduitError(
+        'RATE_LIMIT',
+        429,
+        'Too Many Requests',
+        HermesErrorCodes.RATE_LIMIT_EXCEEDED,
+      );
     }
   }
 

@@ -2,12 +2,12 @@ import { createHash } from 'crypto';
 import {
   CompatibleIndexType,
   ConduitModelField,
-  GrpcError,
   ModelOptionsIndexes,
   MongoIndexType,
   PostgresIndexType,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 import { ConduitDatabaseSchema } from '../../interfaces/index.js';
 
 export const ADMIN_INDEX_CALLER = 'database';
@@ -328,7 +328,10 @@ export function mapCompatibleToMongo(type: unknown): MongoIndexType {
     return MongoIndexType.Ascending;
   }
   if (isMongoIndexType(type)) return type;
-  throw new GrpcError(status.INVALID_ARGUMENT, `Invalid index type for MongoDB: ${type}`);
+  throw new ModuleError({
+    ...errors.INDEX_DEFINITION_INVALID,
+    message: `Invalid index type for MongoDB: ${type}`,
+  });
 }
 
 export function mapCompatibleToSqlOrder(type: unknown): 'ASC' | 'DESC' {
@@ -409,10 +412,10 @@ export function validateIndexFields(
   index: ModelOptionsIndexes,
 ) {
   if (!index.fields || index.fields.length === 0) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'Index fields must be a non-empty array',
-    );
+    throw new ModuleError({
+      ...errors.INDEX_DEFINITION_INVALID,
+      message: 'Index fields must be a non-empty array',
+    });
   }
   const available = new Set([
     ...Object.keys(schema.compiledFields ?? {}),
@@ -420,10 +423,10 @@ export function validateIndexFields(
   ]);
   const missing = index.fields.filter(field => !available.has(field));
   if (missing.length > 0) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      `Invalid fields for index creation: ${missing.join(', ')}`,
-    );
+    throw new ModuleError({
+      ...errors.INDEX_DEFINITION_INVALID,
+      message: `Invalid fields for index creation: ${missing.join(', ')}`,
+    });
   }
 }
 
@@ -435,7 +438,7 @@ export function assertUniqueIndexPrivilege(args: {
 }) {
   if (!args.unique) return;
   if (args.privileged || args.schemaOwner === args.callerModule) return;
-  throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to create unique index');
+  throw new ModuleError(errors.INDEX_UNIQUE_NOT_ALLOWED);
 }
 
 type ErrorPart = { code?: number | string; message?: string; name?: string };

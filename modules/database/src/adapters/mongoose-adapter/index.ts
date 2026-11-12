@@ -5,7 +5,6 @@ import { schemaConverter } from './SchemaConverter.js';
 import {
   ConduitGrpcSdk,
   ConduitSchema,
-  GrpcError,
   ModelOptionsIndexes,
   MongoIndexType,
   RawMongoQuery,
@@ -51,7 +50,6 @@ import {
 } from '../utils/indexes.js';
 import pluralize from '../../utils/pluralize.js';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils.js';
-import { status } from '@grpc/grpc-js';
 import { checkIfMongoOptions } from './utils.js';
 import {
   ConduitDatabaseSchema,
@@ -59,6 +57,8 @@ import {
 } from '../../interfaces/index.js';
 import { isArray, isEqual } from 'lodash-es';
 import { parseSchema } from 'mongodb-schema';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 const VIEW_LOCK_TTL_MS = 60_000;
 const VIEW_READINESS_TIMEOUT_MS = 5_000;
@@ -152,8 +152,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   ): Promise<void> {
     const state = this.grpcSdk.state;
     if (!state) {
-      throw new GrpcError(
-        status.INTERNAL,
+      throw new ModuleError(
+        errors.VIEW_OPERATION_FAILED,
         'State manager not initialized; cannot create view safely',
       );
     }
@@ -218,8 +218,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       await sleep(VIEW_READINESS_POLL_MS);
     }
 
-    throw new GrpcError(
-      status.INTERNAL,
+    throw new ModuleError(
+      errors.VIEW_OPERATION_FAILED,
       `Timed out waiting to create view ${viewName} after ${VIEW_LOCK_TTL_MS}ms`,
     );
   }
@@ -232,7 +232,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     timeoutMs: number = VIEW_READINESS_TIMEOUT_MS,
   ): Promise<boolean> {
     if (!this.models[modelName]) {
-      throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
+      throw new ModuleError({
+        ...errors.SCHEMA_NOT_FOUND,
+        message: `Model ${modelName} not found`,
+      });
     }
 
     const deadline = Date.now() + timeoutMs;
@@ -258,7 +261,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     query: any,
   ): Promise<ViewReadinessStatus> {
     if (!this.models[modelName]) {
-      throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
+      throw new ModuleError({
+        ...errors.SCHEMA_NOT_FOUND,
+        message: `Model ${modelName} not found`,
+      });
     }
 
     if (this.views[viewName] && isEqual(this.views[viewName]?.viewQuery, query)) {
@@ -389,10 +395,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       if (namespaceExists) {
         const definition = await this.readMongoViewDefinition(viewName);
         if (!definition) {
-          throw new GrpcError(
-            status.INTERNAL,
-            `Collection ${viewName} exists but is not a MongoDB view`,
-          );
+          throw new ModuleError({
+            ...errors.VIEW_CONFLICT,
+            message: `Collection ${viewName} exists but is not a MongoDB view`,
+          });
         }
         await this.mongoose.connection.db!.dropCollection(viewName).catch((e: Error) => {
           if (!e.message.includes('ns not found')) throw e;
@@ -462,7 +468,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     query: any,
   ): Promise<void> {
     if (!this.models[modelName]) {
-      throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
+      throw new ModuleError({
+        ...errors.SCHEMA_NOT_FOUND,
+        message: `Model ${modelName} not found`,
+      });
     }
 
     const existingView = this.views[viewName];
@@ -491,10 +500,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (namespaceExists) {
       const definition = await this.readMongoViewDefinition(viewName);
       if (!definition) {
-        throw new GrpcError(
-          status.INTERNAL,
-          `Collection ${viewName} exists but is not a MongoDB view`,
-        );
+        throw new ModuleError({
+          ...errors.VIEW_CONFLICT,
+          message: `Collection ${viewName} exists but is not a MongoDB view`,
+        });
       }
       if (this.viewDefinitionMatches(definition, viewOn, pipeline)) {
         this.buildViewModel(modelName, viewName, query);
@@ -514,7 +523,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       name: viewName,
     });
     if (!view) {
-      throw new Error('View not found');
+      throw new ModuleError(errors.VIEW_NOT_FOUND);
     }
     await this.createView(view.originalSchema, view.name, view.joinedSchemas, view.query);
     return this.views[viewName];
@@ -599,7 +608,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     } else if (this.views && this.views[schemaName]) {
       return { model: this.views[schemaName] };
     }
-    throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
+    throw new ModuleError({
+      ...errors.SCHEMA_NOT_FOUND,
+      message: `Schema ${schemaName} not defined yet`,
+    });
   }
 
   async deleteSchema(
@@ -608,19 +620,18 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     callerModule: string = 'database',
     instanceSync = false,
   ): Promise<string> {
-    if (!this.models?.[schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!this.models?.[schemaName]) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     if (instanceSync) {
       delete this.models[schemaName];
       this.mongoose.connection.deleteModel(schemaName);
       return 'Instance synchronized!';
     }
     if (this.models[schemaName].originalSchema.ownerModule !== callerModule) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
+      throw new ModuleError(errors.SCHEMA_NOT_OWNED);
     }
     if (deleteData) {
       await this.models[schemaName].model.collection.drop().catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
+        throw new ModuleError(errors.SCHEMA_OPERATION_FAILED, e.message);
       });
     }
     this.models['_DeclaredSchema']
@@ -630,7 +641,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
           this.models['_DeclaredSchema']
             .deleteOne(JSON.stringify({ name: schemaName }))
             .catch((e: Error) => {
-              throw new GrpcError(status.INTERNAL, e.message);
+              throw new ModuleError(errors.SCHEMA_OPERATION_FAILED, e.message);
             });
           if (!instanceSync) {
             ConduitGrpcSdk.Metrics?.decrement('registered_schemas_total', 1, {
@@ -661,8 +672,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     callerModule: string,
     options?: { privileged?: boolean },
   ): Promise<string> {
-    if (!this.models[schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!this.models[schemaName]) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     const collectionName = indexNameCollection(this.models[schemaName].originalSchema);
     const live = await this.listLiveIndexes(schemaName);
     const prepared = bindDeclaredIndexesToLive(
@@ -722,7 +732,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       });
     }
     if (failure) {
-      throw new GrpcError(status.INTERNAL, (failure as Error).message);
+      throw new ModuleError({
+        ...errors.INDEX_OPERATION_FAILED,
+        message: `Index operation failed: ${(failure as Error).message}`,
+      });
     }
     return 'Indexes created!';
   }
@@ -739,7 +752,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   private async createMongooseFieldIndexes(schemaName: string): Promise<void> {
     const model = this.models[schemaName];
-    if (!model) throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!model) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     if (model.isView) return;
 
     const declaredIndexes = model.model.schema.indexes();
@@ -766,7 +779,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         await collection.createIndex(indexKeys, options);
       } catch (e) {
         if (isIndexAlreadyExistsError(e) || isIndexKeySpecsConflictError(e)) continue;
-        throw new GrpcError(status.INTERNAL, (e as Error).message);
+        throw new ModuleError({
+          ...errors.INDEX_OPERATION_FAILED,
+          message: `Index operation failed: ${(e as Error).message}`,
+        });
       }
     }
   }
@@ -787,8 +803,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]> {
-    if (!this.models[schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!this.models[schemaName]) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     const collection = this.mongoose.model(schemaName).collection;
     let result: Awaited<ReturnType<typeof collection.indexes>>;
     try {
@@ -824,8 +839,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async deleteIndexes(schemaName: string, indexNames: string[]): Promise<string> {
-    if (!this.models[schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!this.models[schemaName]) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     const collection = this.mongoose.model(schemaName).collection;
     const dropped: string[] = [];
     let failure: unknown;
@@ -850,7 +864,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       });
     }
     if (failure) {
-      throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
+      throw new ModuleError(errors.INDEX_OPERATION_FAILED);
     }
     return 'Indexes deleted';
   }
@@ -883,8 +897,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     schemaName: string,
     index: VectorIndexDefinition,
   ): Promise<string> {
-    if (!this.models[schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!this.models[schemaName]) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     const schema = this.models[schemaName].originalSchema;
     const field = schema.compiledFields?.[index.field] ?? schema.fields?.[index.field];
     const bound = bindVectorIndexToField({
@@ -894,10 +907,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     });
     const collection: any = this.mongoose.model(schemaName).collection;
     if (typeof collection.createSearchIndex !== 'function') {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'MongoDB Vector Search index commands are not available for this deployment',
-      );
+      throw new ModuleError(errors.VECTOR_INDEX_COMMANDS_UNAVAILABLE);
     }
     const existing = await this.getVectorIndexes(schemaName);
     const plan = planMongoVectorIndexCreate({ requested: bound, existing });
@@ -911,8 +921,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async getVectorIndexes(schemaName: string): Promise<VectorIndexDefinition[]> {
-    if (!this.models[schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!this.models[schemaName]) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     const collection: any = this.mongoose.model(schemaName).collection;
     if (typeof collection.listSearchIndexes !== 'function') return [];
     const indexes = await collection.listSearchIndexes().toArray();
@@ -922,17 +931,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async deleteVectorIndex(schemaName: string, indexName: string): Promise<string> {
-    if (!this.models[schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!this.models[schemaName]) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     const collection: any = this.mongoose.model(schemaName).collection;
     if (
       typeof collection.dropSearchIndex !== 'function' ||
       typeof collection.listSearchIndexes !== 'function'
     ) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'MongoDB Vector Search index commands are not available for this deployment',
-      );
+      throw new ModuleError(errors.VECTOR_INDEX_COMMANDS_UNAVAILABLE);
     }
     const indexes = await collection.listSearchIndexes().toArray();
     const existing = (indexes as Array<{ name?: string; type?: string }>).find(
@@ -944,20 +949,22 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async vectorSearch(request: VectorSearchInput): Promise<VectorSearchResult[]> {
-    if (!this.models[request.schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!this.models[request.schemaName]) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     const model = this.models[request.schemaName];
     const schemaField =
       model.originalSchema.compiledFields?.[request.field] ??
       model.originalSchema.fields?.[request.field];
     if (schemaField?.type !== 'Vector') {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Requested field is not a vector');
+      throw new ModuleError({
+        ...errors.VECTOR_FIELD_INVALID,
+        message: 'Requested field is not a vector',
+      });
     }
     if (request.vector.length !== schemaField.dimensions) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        `Vector dimensions mismatch: expected ${schemaField.dimensions}`,
-      );
+      throw new ModuleError({
+        ...errors.VECTOR_DIMENSIONS_INVALID,
+        message: `Vector dimensions mismatch: expected ${schemaField.dimensions}`,
+      });
     }
 
     assertVectorSearchAccess({
@@ -1017,7 +1024,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         result = await result.toArray();
       }
     } catch (e) {
-      throw new GrpcError(status.INTERNAL, (e as Error).message);
+      throw ModuleError.from(e, errors.DATABASE_OPERATION_FAILED);
     }
     return result;
   }
@@ -1150,10 +1157,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       const types = index.types;
       if (options) {
         if (!checkIfMongoOptions(options)) {
-          throw new GrpcError(
-            status.INVALID_ARGUMENT,
-            'Invalid index options for mongoDB',
-          );
+          throw new ModuleError({
+            ...errors.INDEX_DEFINITION_INVALID,
+            message: 'Invalid index options for mongoDB',
+          });
         }
         assertUniqueIndexPrivilege({
           unique: options.unique === true,
@@ -1165,14 +1172,17 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       if (types) {
         const typeList = normalizeIndexTypes(types, index.fields.length) ?? [];
         if (Array.isArray(types) && typeList.length !== index.fields.length) {
-          throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid index types format');
+          throw new ModuleError({
+            ...errors.INDEX_DEFINITION_INVALID,
+            message: 'Invalid index types format',
+          });
         }
         for (const type of typeList) {
           if (!mongoAllowsIndexType(type)) {
-            throw new GrpcError(
-              status.INVALID_ARGUMENT,
-              'Invalid index type for mongoDB',
-            );
+            throw new ModuleError({
+              ...errors.INDEX_DEFINITION_INVALID,
+              message: 'Invalid index type for mongoDB',
+            });
           }
         }
         index.types = typeList.map(mapCompatibleToMongo);

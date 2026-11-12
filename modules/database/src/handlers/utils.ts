@@ -1,6 +1,7 @@
 import { Schema } from '../interfaces/index.js';
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 export function constructSortObj(sort: string[]) {
   const sortObj: { [field: string]: -1 | 1 } = {};
@@ -35,7 +36,7 @@ export async function documentPermissionCheck(
   }
   const authzOnline = grpcSdk.isAvailable('authorization');
   if (!authzOnline) {
-    throw new GrpcError(status.INTERNAL, 'Authorization service is not available');
+    throw new ModuleError(errors.SCHEMA_AUTHORIZATION_UNAVAILABLE);
   }
   const authz = grpcSdk.authorization;
 
@@ -46,7 +47,7 @@ export async function documentPermissionCheck(
       resource: scope,
     })!;
     if (!permission.allow) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Permission denied');
+      throw new ModuleError(errors.RESOURCE_ACCESS_DENIED);
     }
     permission = await authz?.can({
       subject: scope,
@@ -54,7 +55,7 @@ export async function documentPermissionCheck(
       resource: `${model.originalSchema.name}:${documentId}`,
     })!;
     if (!permission.allow) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Permission denied');
+      throw new ModuleError(errors.RESOURCE_ACCESS_DENIED);
     }
   } else {
     const permission = await authz?.can({
@@ -63,7 +64,7 @@ export async function documentPermissionCheck(
       resource: `${model.originalSchema.name}:${documentId}`,
     })!;
     if (!permission.allow) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Permission denied');
+      throw new ModuleError(errors.RESOURCE_ACCESS_DENIED);
     }
   }
 }
@@ -80,7 +81,7 @@ export async function documentPermissionAddition(
   }
   const authzOnline = grpcSdk.isAvailable('authorization');
   if (!authzOnline) {
-    throw new GrpcError(status.INTERNAL, 'Authorization service is not available');
+    throw new ModuleError(errors.SCHEMA_AUTHORIZATION_UNAVAILABLE);
   }
   const authz = grpcSdk.authorization;
 
@@ -112,7 +113,7 @@ export async function collectionPermissionCheck(
   }
   const authzOnline = grpcSdk.isAvailable('authorization');
   if (!authzOnline) {
-    throw new GrpcError(status.INTERNAL, 'Authorization service is not available');
+    throw new ModuleError(errors.SCHEMA_AUTHORIZATION_UNAVAILABLE);
   }
   const authz = grpcSdk.authorization;
 
@@ -123,7 +124,7 @@ export async function collectionPermissionCheck(
       resource: scope,
     })!;
     if (!permission.allow) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Permission denied');
+      throw new ModuleError(errors.RESOURCE_ACCESS_DENIED);
     }
     return authz!.getAllowedResources({
       subject: scope,

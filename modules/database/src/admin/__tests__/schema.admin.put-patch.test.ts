@@ -101,7 +101,10 @@ describe('SchemaAdmin PUT/PATCH split', () => {
         admin.putSchema(
           makeCall({ id: 'schema-1', fields: { bad: { type: 'NotARealType' } } }),
         ),
-      ).rejects.toMatchObject({ code: status.INTERNAL });
+      ).rejects.toMatchObject({
+        code: status.INVALID_ARGUMENT,
+        conduitCode: 'SCHEMA_FIELDS_INVALID',
+      });
     });
 
     it('wipes existing documents when enabling authorization', async () => {

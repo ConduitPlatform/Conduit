@@ -1,5 +1,5 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import type {
   EmbeddingProviderModel,
   EmbeddingProviderSettings,
@@ -9,8 +9,21 @@ export type { EmbeddingProviderModel, EmbeddingProviderSettings };
 
 type CatalogueOptions = { strict?: boolean };
 
-function invalidProviderConfig(message: string): GrpcError {
-  return new GrpcError(status.INVALID_ARGUMENT, message);
+/**
+ * Module configuration (catalogue) problem, raised while validating the module config at
+ * startup / config update. Not a request error, so it stays a plain Error.
+ */
+function invalidProviderConfig(message: string): Error {
+  return new Error(message);
+}
+
+/** A request referencing a provider or model the module config does not offer. */
+function invalidProviderRequest(
+  definition:
+    typeof errors.EMBEDDING_PROVIDER_INVALID | typeof errors.EMBEDDING_CONFIG_INVALID,
+  message: string,
+): ModuleError {
+  return new ModuleError({ ...definition, message });
 }
 
 function isStrict(options?: CatalogueOptions): boolean {
@@ -203,11 +216,15 @@ export function assertConfiguredProvider(
 ): { name: string; settings: EmbeddingProviderSettings } {
   const name = trimName(requested);
   if (!name) {
-    throw invalidProviderConfig('Embedding provider is required');
+    throw invalidProviderRequest(
+      errors.EMBEDDING_PROVIDER_INVALID,
+      'Embedding provider is required',
+    );
   }
   const settings = providers?.[name];
   if (!settings) {
-    throw invalidProviderConfig(
+    throw invalidProviderRequest(
+      errors.EMBEDDING_PROVIDER_INVALID,
       `Embedding provider '${name}' is not a configured provider`,
     );
   }
@@ -221,7 +238,8 @@ export function resolveCatalogueModel(
   const name = resolveProviderModelName(provider, requested);
   const model = findProviderModel(provider, name);
   if (!model) {
-    throw invalidProviderConfig(
+    throw invalidProviderRequest(
+      errors.EMBEDDING_CONFIG_INVALID,
       name
         ? `Model '${name}' is not in the catalogue for this provider`
         : 'Provider model catalogue has no selectable model',
@@ -238,10 +256,14 @@ export function resolveCatalogueDimensions(
     return model.dimensions;
   }
   if (!Number.isInteger(requested) || requested <= 0) {
-    throw invalidProviderConfig('dimensions must be a positive integer');
+    throw invalidProviderRequest(
+      errors.EMBEDDING_CONFIG_INVALID,
+      'dimensions must be a positive integer',
+    );
   }
   if (requested !== model.dimensions) {
-    throw invalidProviderConfig(
+    throw invalidProviderRequest(
+      errors.EMBEDDING_CONFIG_INVALID,
       `Requested dimensions ${requested} do not match catalogue dimensions ${model.dimensions} for model '${model.name}'`,
     );
   }

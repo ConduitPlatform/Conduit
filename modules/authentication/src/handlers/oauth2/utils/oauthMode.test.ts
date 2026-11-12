@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { getConduitCode, GrpcError, parseErrorPayload } from '@conduitplatform/grpc-sdk';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { errors } from '../../../errors.js';
@@ -33,7 +33,8 @@ describe('resolveOAuthMode', () => {
       (err: unknown) =>
         err instanceof GrpcError &&
         err.code === status.INVALID_ARGUMENT &&
-        err.message.includes('mode must be "signIn" or "both"'),
+        getConduitCode(err) === errors.OAUTH_MODE_INVALID.conduitCode &&
+        parseErrorPayload(err).message.includes('mode must be "signIn" or "both"'),
     );
   });
 });
@@ -137,6 +138,7 @@ describe('realm errors on the OAuth redirect', () => {
     'GUESTS_NOT_ALLOWED',
     'TWO_FA_REQUIRED_FOR_REALM',
     'INVALID_INVITATION',
+    'INVITATION_REQUIRED',
   ] as const) {
     it(`appends conduitCode for ${key}`, () => {
       const err = new ModuleError(errors[key]);

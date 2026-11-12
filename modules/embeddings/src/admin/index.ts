@@ -14,6 +14,8 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
+import { BACKFILL_GATE_ERRORS, SEARCH_ERRORS } from '../routeErrors.js';
 import { EmbeddingsApi } from '../api/embeddingsApi.js';
 import {
   BACKFILL_BODY,
@@ -168,6 +170,11 @@ export class AdminHandlers {
           schemaName: ConduitString.Optional,
           id: ConduitString.Optional,
         },
+        errors: [
+          errors.EMBEDDING_CONFIG_NOT_FOUND,
+          errors.EMBEDDING_SCHEMA_DENIED,
+          errors.EMBEDDINGS_OPERATION_FAILED,
+        ],
       },
       new ConduitRouteReturnDefinition('GetEmbeddingConfigs', {
         configs: [ConduitJson.Required],
@@ -180,6 +187,21 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: descriptions.get(`${ConduitRouteActions.POST}:/configs`),
         bodyParams: CONFIG_BODY as never,
+        errors: [
+          errors.EMBEDDING_SCHEMA_DENIED,
+          errors.EMBEDDING_SCHEMA_NOT_ELIGIBLE,
+          errors.EMBEDDING_CONFIG_INVALID,
+          errors.EMBEDDING_PROVIDER_INVALID,
+          errors.SOURCE_FIELD_INVALID,
+          errors.EMBEDDING_FIELD_COLLISION,
+          errors.EMBEDDING_DIMENSION_CHANGE_NOT_ALLOWED,
+          errors.EMBEDDINGS_MODULE_DISABLED,
+          errors.VECTOR_SEARCH_UNSUPPORTED,
+          errors.VECTOR_UNAVAILABLE,
+          errors.ENABLED_EMBEDDING_CONFIG_NOT_FOUND,
+          errors.EMBEDDING_CONFIG_UNUSABLE,
+          errors.EMBEDDINGS_OPERATION_FAILED,
+        ],
       },
       new ConduitRouteReturnDefinition('UpsertEmbeddingConfig', {
         config: ConduitJson.Required,
@@ -193,6 +215,11 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: descriptions.get(`${ConduitRouteActions.GET}:/configs/:id`),
         urlParams: { id: ConduitString.Required },
+        errors: [
+          errors.EMBEDDING_CONFIG_NOT_FOUND,
+          errors.EMBEDDING_SCHEMA_DENIED,
+          errors.EMBEDDINGS_OPERATION_FAILED,
+        ],
       },
       new ConduitRouteReturnDefinition('GetEmbeddingConfig', TYPE.JSON),
       this.getConfig.bind(this),
@@ -203,6 +230,11 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: descriptions.get(`${ConduitRouteActions.DELETE}:/configs/:id`),
         urlParams: { id: ConduitString.Required },
+        errors: [
+          errors.EMBEDDING_CONFIG_NOT_FOUND,
+          errors.EMBEDDING_SCHEMA_DENIED,
+          errors.EMBEDDINGS_OPERATION_FAILED,
+        ],
       },
       new ConduitRouteReturnDefinition('DeleteEmbeddingConfig', {
         config: ConduitJson.Required,
@@ -215,6 +247,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: descriptions.get(`${ConduitRouteActions.GET}:/capabilities`),
         queryParams: { schemaName: ConduitString.Optional },
+        errors: [errors.EMBEDDINGS_OPERATION_FAILED],
       },
       new ConduitRouteReturnDefinition('GetEmbeddingCapabilities', {
         capabilities: ConduitJson.Required,
@@ -228,6 +261,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: descriptions.get(`${ConduitRouteActions.GET}:/status`),
         queryParams: { schemaName: ConduitString.Optional },
+        errors: [errors.EMBEDDINGS_OPERATION_FAILED],
       },
       new ConduitRouteReturnDefinition('GetEmbeddingStatus', {
         enabled: ConduitBoolean.Required,
@@ -251,6 +285,7 @@ export class AdminHandlers {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
         },
+        errors: [errors.EMBEDDING_SCHEMA_DENIED, errors.EMBEDDINGS_OPERATION_FAILED],
       },
       new ConduitRouteReturnDefinition('ListEmbeddingBackfills', {
         runs: [ConduitJson.Required],
@@ -264,6 +299,13 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: descriptions.get(`${ConduitRouteActions.POST}:/backfills`),
         bodyParams: BACKFILL_BODY,
+        errors: [
+          errors.EMBEDDING_SCHEMA_DENIED,
+          errors.FILTER_INVALID,
+          errors.BACKFILL_REQUEST_INVALID,
+          ...BACKFILL_GATE_ERRORS,
+          errors.EMBEDDINGS_OPERATION_FAILED,
+        ],
       },
       new ConduitRouteReturnDefinition('StartEmbeddingBackfill', {
         queued: ConduitNumber.Required,
@@ -278,6 +320,12 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: descriptions.get(`${ConduitRouteActions.GET}:/backfills/:id`),
         urlParams: { id: ConduitString.Required },
+        errors: [
+          errors.BACKFILL_REQUEST_INVALID,
+          errors.BACKFILL_NOT_FOUND,
+          errors.EMBEDDING_SCHEMA_DENIED,
+          errors.EMBEDDINGS_OPERATION_FAILED,
+        ],
       },
       new ConduitRouteReturnDefinition('GetEmbeddingBackfill', TYPE.JSON),
       this.getBackfill.bind(this),
@@ -290,6 +338,13 @@ export class AdminHandlers {
           `${ConduitRouteActions.POST}:/backfills/:id/cancel`,
         ),
         urlParams: { id: ConduitString.Required },
+        errors: [
+          errors.BACKFILL_REQUEST_INVALID,
+          errors.BACKFILL_NOT_FOUND,
+          errors.EMBEDDING_SCHEMA_DENIED,
+          errors.BACKFILL_STATE_CONFLICT,
+          errors.EMBEDDINGS_OPERATION_FAILED,
+        ],
       },
       new ConduitRouteReturnDefinition('CancelEmbeddingBackfill', {
         run: ConduitJson.Required,
@@ -304,6 +359,14 @@ export class AdminHandlers {
           `${ConduitRouteActions.POST}:/backfills/:id/resume`,
         ),
         urlParams: { id: ConduitString.Required },
+        errors: [
+          errors.BACKFILL_REQUEST_INVALID,
+          errors.BACKFILL_NOT_FOUND,
+          errors.EMBEDDING_SCHEMA_DENIED,
+          ...BACKFILL_GATE_ERRORS,
+          errors.BACKFILL_STATE_CONFLICT,
+          errors.EMBEDDINGS_OPERATION_FAILED,
+        ],
       },
       new ConduitRouteReturnDefinition('ResumeEmbeddingBackfill', {
         run: ConduitJson.Required,
@@ -316,6 +379,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: descriptions.get(`${ConduitRouteActions.POST}:/search`),
         bodyParams: SEARCH_BODY,
+        errors: [...SEARCH_ERRORS, errors.EMBEDDINGS_OPERATION_FAILED],
       },
       new ConduitRouteReturnDefinition('AdminSemanticSearch', {
         hits: [ConduitJson.Required],

@@ -1,12 +1,15 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { GrpcError, VectorIndexStatus } from '@conduitplatform/grpc-sdk';
+import {
+  getConduitCode,
+  parseErrorPayload,
+  VectorIndexStatus,
+} from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
   assertConfigActivation,
   assertSearchExecutable,
   capabilityWarnings,
-  grpcErrorFromSearchGate,
   isEmbeddingsReady,
   providerReadinessWarnings,
   SearchGateError,
@@ -87,10 +90,12 @@ describe('embeddings operational warnings and search gates', () => {
       (err: unknown) =>
         err instanceof SearchGateError && err.reason === 'module_disabled',
     );
-    const mapped = grpcErrorFromSearchGate(
-      new SearchGateError('module_disabled', 'Embeddings module is disabled'),
+    const mapped = new SearchGateError(
+      'module_disabled',
+      'Embeddings module is disabled',
     );
     assert.equal(mapped.code, status.FAILED_PRECONDITION);
+    assert.equal(mapped.conduitCode, 'EMBEDDINGS_MODULE_DISABLED');
   });
 
   it('blocks semantic search when the vector index is not queryable', () => {
@@ -123,10 +128,9 @@ describe('embeddings operational warnings and search gates', () => {
       (err: unknown) =>
         err instanceof SearchGateError && err.reason === 'index_not_queryable',
     );
-    const mapped = grpcErrorFromSearchGate(
-      new SearchGateError('index_not_queryable', 'index pending', 'pending'),
-    );
+    const mapped = new SearchGateError('index_not_queryable', 'index pending', 'pending');
     assert.equal(mapped.code, status.FAILED_PRECONDITION);
+    assert.equal(mapped.conduitCode, 'VECTOR_INDEX_NOT_QUERYABLE');
   });
 
   it('allows search when the live index method is empty or omitted', () => {
@@ -232,9 +236,9 @@ describe('embeddings operational warnings and search gates', () => {
           indexes: [mismatched],
         }),
       (err: unknown) =>
-        err instanceof GrpcError &&
-        err.code === status.FAILED_PRECONDITION &&
-        /not queryable/.test(err.message),
+        (err as { code?: number }).code === status.FAILED_PRECONDITION &&
+        getConduitCode(err) === 'VECTOR_INDEX_NOT_QUERYABLE' &&
+        /not queryable/.test(parseErrorPayload(err).message),
     );
   });
 });

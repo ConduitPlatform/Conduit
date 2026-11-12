@@ -8,7 +8,9 @@ import {
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { IModuleConfig } from '../interfaces/IModuleConfig.js';
-import { ServerWritableStream, status } from '@grpc/grpc-js';
+import { ServerWritableStream } from '@grpc/grpc-js';
+import { grpcCallbackError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { EventEmitter } from 'events';
 import { ServiceRegistry } from './ServiceRegistry.js';
 import { ServiceMonitor } from './ServiceMonitor.js';
@@ -97,10 +99,7 @@ export class ServiceDiscovery {
       call.request.status < HealthCheckStatus.UNKNOWN ||
       call.request.status > HealthCheckStatus.NOT_SERVING
     ) {
-      callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Invalid module health status code value',
-      });
+      callback(grpcCallbackError(errors.INVALID_MODULE_HEALTH_STATUS));
       return;
     }
     ConduitGrpcSdk.Logger.log(
@@ -202,10 +201,7 @@ export class ServiceDiscovery {
       call.request.status < HealthCheckStatus.UNKNOWN ||
       call.request.status > HealthCheckStatus.NOT_SERVING
     ) {
-      callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Invalid module health status code value',
-      });
+      callback(grpcCallbackError(errors.INVALID_MODULE_HEALTH_STATUS));
       return;
     }
     await this._registerModule(
@@ -231,10 +227,7 @@ export class ServiceDiscovery {
     if (module) {
       callback(null, { url: module.address });
     } else {
-      callback({
-        code: status.NOT_FOUND,
-        message: 'Module is missing',
-      });
+      callback(grpcCallbackError(errors.MODULE_NOT_FOUND));
     }
   }
 

@@ -1,5 +1,5 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 export const VECTOR_SEARCH_DEFAULT_LIMIT = 10;
 export const VECTOR_SEARCH_MAX_LIMIT = 1000;
@@ -14,7 +14,10 @@ function parsePositiveInt(value: unknown, field: string): number | undefined {
   if (value === undefined || value === null || value === '') return undefined;
   const numeric = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(numeric) || !Number.isInteger(numeric) || numeric < 1) {
-    throw new GrpcError(status.INVALID_ARGUMENT, `${field} must be a positive integer`);
+    throw new ModuleError({
+      ...errors.VECTOR_SEARCH_LIMITS_INVALID,
+      message: `${field} must be a positive integer`,
+    });
   }
   return numeric;
 }
@@ -35,10 +38,10 @@ export function clampVectorSearchLimits(input: {
     VECTOR_SEARCH_MAX_CANDIDATES,
   );
   if (numCandidates < limit) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      `numCandidates must be at least the requested limit (${limit})`,
-    );
+    throw new ModuleError({
+      ...errors.VECTOR_SEARCH_LIMITS_INVALID,
+      message: `numCandidates must be at least the requested limit (${limit})`,
+    });
   }
   return { limit, numCandidates };
 }

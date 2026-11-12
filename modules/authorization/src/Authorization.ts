@@ -5,6 +5,7 @@ import {
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
+  parseErrorPayload,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import AppConfigSchema, { Config } from './config/index.js';
@@ -37,7 +38,7 @@ import {
   ResourceController,
 } from './controllers/index.js';
 import { AdminHandlers } from './admin/index.js';
-import { status } from '@grpc/grpc-js';
+import { errors } from './errors.js';
 import {
   ConfigController,
   ManagedModule,
@@ -45,6 +46,7 @@ import {
   type ExportableResource,
   type ExportResult,
   type ImportResult,
+  grpcCallbackError,
 } from '@conduitplatform/module-tools';
 import { Empty } from './protoTypes/google/protobuf/empty.js';
 import { AuthorizationRouter } from './router/index.js';
@@ -261,7 +263,7 @@ export default class Authorization extends ManagedModule<Config> {
     try {
       await this.relationsController.deleteAllRelations({ subject, resource });
     } catch (e) {
-      ConduitGrpcSdk.Logger.warn((e as Error).message);
+      ConduitGrpcSdk.Logger.warn(parseErrorPayload(e).message);
     } finally {
       callback(null, {});
     }
@@ -274,10 +276,7 @@ export default class Authorization extends ManagedModule<Config> {
     const { relation, resource, subject, resourceType, subjectType, skip, limit } =
       call.request;
     if (!subject && !relation && !resource && !subjectType && !resourceType) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'At least one search filter must be provided',
-      });
+      return callback(grpcCallbackError(errors.SEARCH_FILTER_REQUIRED));
     }
     const [relations, count] = await this.relationsController.findRelations(
       {

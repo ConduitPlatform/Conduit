@@ -1,4 +1,9 @@
-import { ConduitGrpcSdk, Indexable, isLockContention } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitGrpcSdk,
+  hasConduitCode,
+  Indexable,
+  isLockContention,
+} from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { File, _StorageCdnHostState } from '../models/index.js';
 import { replaceUrlHost } from '../utils/index.js';
@@ -297,6 +302,7 @@ export async function reconcileCdnConfiguration(
 }
 
 function isMissingDocument(error: unknown): boolean {
+  if (hasConduitCode(error, 'DOCUMENT_NOT_FOUND')) return true;
   return (
     error instanceof Error &&
     (error.message.includes('Document not found') ||

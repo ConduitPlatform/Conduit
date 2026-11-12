@@ -1,9 +1,4 @@
-import {
-  ConduitGrpcSdk,
-  ConduitSchema,
-  GrpcError,
-  Indexable,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { DatabaseRoutes } from '../../routes/index.js';
 import { sortAndConstructRoutes } from './utils.js';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
@@ -11,8 +6,9 @@ import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.j
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
 import { CmsHandlers } from '../../handlers/cms/crud.handler.js';
 import { ParsedQuery } from '../../interfaces/index.js';
-import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash-es';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 export class SchemaController {
   private router: DatabaseRoutes;
@@ -80,10 +76,7 @@ export class SchemaController {
     imported: boolean = false,
   ): Promise<ConduitSchema> {
     if (this.database.schemaInSystemSchemas(schema.name)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Cannot modify database-owned system schema.',
-      );
+      throw new ModuleError(errors.SCHEMA_SYSTEM_PROTECTED);
     }
     schema.ownerModule = 'database';
     const createdSchema = await this.database

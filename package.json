@@ -12,6 +12,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint .",
     "build": "turbo run build",
+    "check:errors": "node scripts/check-error-codes.mjs",
     "prepare": "husky",
     "release": "standard-version"
   },

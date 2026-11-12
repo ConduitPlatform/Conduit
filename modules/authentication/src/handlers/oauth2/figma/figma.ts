@@ -1,6 +1,7 @@
 import { isNil } from 'lodash-es';
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../../errors.js';
 import axios, { AxiosRequestConfig } from 'axios';
 import { OAuth2 } from '../OAuth2.js';
 import { FigmaUser } from './figma.user.js';
@@ -19,8 +20,7 @@ export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
   }
 
   async connectWithProvider(details: ConnectionParams): Promise<Payload<FigmaUser>> {
-    if (!this.initialized)
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
+    if (!this.initialized) throw new ModuleError(errors.STRATEGY_DISABLED);
     const figmaOptions: AxiosRequestConfig = {
       method: 'GET',
       url: 'https://api.figma.com/v1/me',
@@ -32,7 +32,10 @@ export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
 
     const figmaResponse: { data: FigmaUser } = await axios(figmaOptions);
     if (isNil(figmaResponse.data.email) || isNil(figmaResponse.data.id)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with figma failed');
+      throw new ModuleError({
+        ...errors.OAUTH_PROVIDER_AUTH_FAILED,
+        message: 'Authentication with figma failed',
+      });
     }
 
     return {

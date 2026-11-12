@@ -1,5 +1,6 @@
-import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { Indexable } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 /*
  * Pure decisions of the discovery login (no database or grpc access). A discovery login
@@ -67,7 +68,7 @@ export function discoveryRequestError(params: {
   return null;
 }
 
-/** Throws INVALID_ARGUMENT for a discovery request that the rules above refuse. */
+/** Throws DISCOVERY_REQUEST_INVALID for a discovery request that the rules above refuse. */
 export function assertDiscoveryRequestAllowed(params: {
   discover: boolean;
   enabled: boolean;
@@ -75,7 +76,7 @@ export function assertDiscoveryRequestAllowed(params: {
   invitationToken?: unknown;
 }): void {
   const message = discoveryRequestError(params);
-  if (message) throw new GrpcError(status.INVALID_ARGUMENT, message);
+  if (message) throw new ModuleError({ ...errors.DISCOVERY_REQUEST_INVALID, message });
 }
 
 /**

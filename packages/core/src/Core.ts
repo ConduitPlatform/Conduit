@@ -1,4 +1,5 @@
-import { ConduitError } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from './errors.js';
 import { GrpcServer } from './GrpcServer.js';
 import { isNil } from 'lodash-es';
 import AppConfigSchema, { Config as ConfigSchema } from './config/index.js';
@@ -47,7 +48,10 @@ export class Core {
     } catch (e) {
       (this.config as unknown) = convict(AppConfigSchema);
       this.config.load(previousConfig);
-      throw new ConduitError('INVALID_ARGUMENT', 400, (e as Error).message);
+      throw new ModuleError({
+        ...errors.CONFIG_VALIDATION_FAILED,
+        message: (e as Error).message,
+      });
     }
     this.grpcServer.sdk.bus!.publish('core:config:update', JSON.stringify(config));
     return config;

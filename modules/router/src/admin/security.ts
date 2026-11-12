@@ -1,10 +1,11 @@
 import {
   ConduitGrpcSdk,
-  ConduitError,
   ParsedRouterRequest,
   PlatformTypesEnum,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { randomBytes } from 'crypto';
 import bcrypt from 'bcrypt';
 import { Client } from '../models/index.js';
@@ -17,23 +18,15 @@ export class SecurityAdmin {
     const { platform, domain, notes } = call.request.params!;
     let { alias } = call.request.params!;
     if (!Object.values(PlatformTypesEnum).includes(platform)) {
-      throw new ConduitError('INVALID_ARGUMENTS', 400, 'Platform not supported');
+      throw new ModuleError(errors.PLATFORM_NOT_SUPPORTED);
     }
     if (alias === '') {
-      throw new ConduitError(
-        'INVALID_ARGUMENTS',
-        400,
-        'Non-null alias field should not be an empty string',
-      );
+      throw new ModuleError(errors.INVALID_CLIENT_ALIAS);
     }
     if (alias) {
       const existingClient = await Client.getInstance().findOne({ alias });
       if (existingClient) {
-        throw new ConduitError(
-          'ALREADY_EXISTS',
-          409,
-          `A security client with an alias of '${alias}' already exists`,
-        );
+        throw new ModuleError(errors.CLIENT_ALIAS_TAKEN, `alias '${alias}'`);
       }
     }
     const clientId = randomBytes(15).toString('hex');
@@ -80,23 +73,15 @@ export class SecurityAdmin {
       _id: call.request.params!.id,
     });
     if (isNil(client)) {
-      throw new ConduitError('INVALID_PARAMS', 400, 'Security client not found');
+      throw new ModuleError(errors.SECURITY_CLIENT_NOT_FOUND);
     }
     if (alias === '') {
-      throw new ConduitError(
-        'INVALID_ARGUMENTS',
-        400,
-        'Non-null alias field should not be an empty string',
-      );
+      throw new ModuleError(errors.INVALID_CLIENT_ALIAS);
     }
     if (alias && alias !== client.alias) {
       const existingClient = await Client.getInstance().findOne({ alias });
       if (existingClient) {
-        throw new ConduitError(
-          'ALREADY_EXISTS',
-          409,
-          `A security client with an alias of '${alias}' already exists`,
-        );
+        throw new ModuleError(errors.CLIENT_ALIAS_TAKEN, `alias '${alias}'`);
       }
     }
     if (client.platform === PlatformTypesEnum.WEB) {
@@ -112,18 +97,12 @@ export class SecurityAdmin {
   }
 
   validateDomain(domain: string) {
-    if (!domain || domain === '')
-      throw new ConduitError(
-        'INVALID_ARGUMENTS',
-        400,
-        'Platform WEB requires domain name',
-      );
+    if (!domain || domain === '') throw new ModuleError(errors.CLIENT_DOMAIN_REQUIRED);
     if (domain.replace(/[^*]/g, '').length > 1) {
-      throw new ConduitError(
-        'INVALID_ARGUMENTS',
-        400,
-        `Domain must not contain more than one '*' character`,
-      );
+      throw new ModuleError({
+        ...errors.INVALID_CLIENT_DOMAIN,
+        message: `Domain must not contain more than one '*' character`,
+      });
     }
     const domainPattern = new RegExp(
       '^(?!-)[A-Za-z0-9-]+([\\-\\.]{1}[a-z0-9]+)*\\.[A-Za-z]{2,6}$',
@@ -133,6 +112,6 @@ export class SecurityAdmin {
       comparedDomain = comparedDomain.split('*.')[1];
     }
     if (!domainPattern.test(comparedDomain) && domain !== '*')
-      throw new ConduitError('INVALID_ARGUMENTS', 400, 'Invalid domain argument');
+      throw new ModuleError(errors.INVALID_CLIENT_DOMAIN);
   }
 }

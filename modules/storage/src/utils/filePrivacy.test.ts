@@ -1,7 +1,7 @@
 import { afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { status } from '@grpc/grpc-js';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { GrpcError, getConduitCode } from '@conduitplatform/grpc-sdk';
 import { _StorageContainer } from '../models/index.js';
 import {
   sanitizeFilesForResponse,
@@ -35,7 +35,7 @@ describe('validateFilePrivacy', () => {
       (error: unknown) =>
         error instanceof GrpcError &&
         error.code === status.INVALID_ARGUMENT &&
-        error.message === 'Files in public containers must be public',
+        getConduitCode(error) === 'PRIVATE_FILE_IN_PUBLIC_CONTAINER',
     );
     await assert.rejects(
       () => validateFilePrivacy('public-bucket'),

@@ -6,14 +6,12 @@ import {
   TYPE,
   UnparsedSocketResponse,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
-import { RoutingManager } from '@conduitplatform/module-tools';
+import { RoutingManager, ModuleError } from '@conduitplatform/module-tools';
 import {
   assertSchemaAvailable,
   canReadDocument,
   optionalDocumentId,
   parseSubscribeRequest,
-  RealtimeSubscriptionError,
   requireSchemaName,
   type AuthorizationSdk,
   type SchemaLookup,
@@ -28,6 +26,7 @@ import {
   removeAuthorizedSubFromContext,
   restoreAuthorizedSubscriptions,
 } from './recovery.js';
+import { errors } from '../errors.js';
 
 type SocketMode = 'client' | 'admin';
 
@@ -115,10 +114,7 @@ async function resolveSubscription(
   action: 'join' | 'leave',
 ): Promise<string[]> {
   if (!options.isGloballyEnabled()) {
-    throw new RealtimeSubscriptionError(
-      status.FAILED_PRECONDITION,
-      'Live updates are disabled',
-    );
+    throw new ModuleError(errors.LIVE_UPDATES_DISABLED);
   }
   const payload = parseSubscribeRequest(call.request.params ?? []);
   const schemaName = requireSchemaName(payload.schema);
@@ -136,18 +132,12 @@ async function resolveSubscription(
 
   const userId = call.request.context?.user?._id;
   if (!userId) {
-    throw new RealtimeSubscriptionError(
-      status.UNAUTHENTICATED,
-      'Authentication required',
-    );
+    throw new ModuleError(errors.AUTHENTICATION_REQUIRED);
   }
 
   if (meta.authorizationEnabled) {
     if (!documentId) {
-      throw new RealtimeSubscriptionError(
-        status.PERMISSION_DENIED,
-        'Document ID is required for authorized schemas',
-      );
+      throw new ModuleError(errors.SUBSCRIPTION_DOCUMENT_ID_REQUIRED);
     }
     const allowed = await canReadDocument(
       options.grpcSdk as unknown as AuthorizationSdk,
@@ -156,10 +146,7 @@ async function resolveSubscription(
       userId,
     );
     if (!allowed) {
-      throw new RealtimeSubscriptionError(
-        status.PERMISSION_DENIED,
-        'Read permission denied',
-      );
+      throw new ModuleError(errors.SUBSCRIPTION_DENIED);
     }
     if (action === 'join') {
       await options.subscriptions.addAuthorizedDocument(

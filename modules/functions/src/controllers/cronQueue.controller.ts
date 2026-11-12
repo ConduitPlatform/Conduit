@@ -1,5 +1,5 @@
 import { Job, Queue, Worker, type RepeatableJob } from 'bullmq';
-import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, parseErrorPayload } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { Cluster, Redis } from 'ioredis';
 import { Functions } from '../models/index.js';
@@ -307,8 +307,8 @@ export class CronQueueController {
     worker.on('failed', (job: Job | undefined, error: Error) => {
       ConduitGrpcSdk.Logger.error(
         job
-          ? `Cron job failed: ${job.id}, ${error.message}`
-          : `Cron job error: ${error.message}`,
+          ? `Cron job failed: ${job.id}, ${parseErrorPayload(error).message}`
+          : `Cron job error: ${parseErrorPayload(error).message}`,
       );
     });
   }

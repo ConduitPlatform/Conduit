@@ -1,4 +1,6 @@
 import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { status } from '@grpc/grpc-js';
 import { _StorageContainer, _StorageFolder, File } from '../models/index.js';
 import {
@@ -105,7 +107,7 @@ export async function resolveStructuralOwner(
       .getInstance()
       .findOne({ name: file.container });
     if (!containerDoc) {
-      throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
+      throw new ModuleError(errors.CONTAINER_NOT_FOUND);
     }
     return `Container:${containerDoc._id}`;
   }
@@ -113,7 +115,7 @@ export async function resolveStructuralOwner(
     .getInstance()
     .findOne({ name: file.folder, container: file.container });
   if (!folderDoc) {
-    throw new GrpcError(status.NOT_FOUND, 'Folder does not exist');
+    throw new ModuleError(errors.FOLDER_NOT_FOUND);
   }
   return `Folder:${folderDoc._id}`;
 }
@@ -189,7 +191,7 @@ export async function createFolderOwnerRelations(
     return;
   }
   if (!options.parentFolderId) {
-    throw new GrpcError(status.INTERNAL, 'Parent folder is required for nested folders');
+    throw new ModuleError(errors.FOLDER_PARENT_REQUIRED);
   }
   await createOwnerRelation(grpcSdk, `Folder:${options.parentFolderId}`, resource);
 }

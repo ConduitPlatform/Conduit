@@ -1,6 +1,5 @@
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
 import { ConfigController, ModuleError } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
 import { errors } from '../errors.js';
 // Vendored from https://github.com/disposable-email-domains/disposable-email-domains (blocklist) and ivolo wildcard.json
 import disposableEmailDomains from '../data/disposable-email-domains.json' with { type: 'json' };
@@ -109,10 +108,7 @@ export function evaluateEmailRestrictions(
   return { allowed: true };
 }
 
-export function assertEmailAllowed(
-  email: string,
-  errorType: 'grpc' | 'module' = 'grpc',
-): void {
+export function assertEmailAllowed(email: string): void {
   const result = evaluateEmailRestrictions(
     email,
     ConfigController.getInstance().config.emailRestrictions,
@@ -120,8 +116,5 @@ export function assertEmailAllowed(
   );
   if (result.allowed) return;
   ConduitGrpcSdk.Logger.warn(`Email address not allowed: ${result.reason}`);
-  if (errorType === 'module') {
-    throw new ModuleError(errors.EMAIL_NOT_ALLOWED, result.reason);
-  }
-  throw new GrpcError(status.INVALID_ARGUMENT, errors.EMAIL_NOT_ALLOWED.message);
+  throw new ModuleError(errors.EMAIL_NOT_ALLOWED, result.reason);
 }

@@ -2,13 +2,11 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
   Query,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import { errors } from '../errors.js';
 import { Team, Token, User } from '../models/index.js';
 import { isNil } from 'lodash-es';
@@ -22,6 +20,7 @@ import {
   assertUsersCanJoinTeam,
   decorateMembershipType,
   deleteTeamAndDetachChildren,
+  requireAuthorization,
   revokeOrphanedGuests,
 } from '../utils/teamRealm.js';
 import { TokenType } from '../constants/index.js';
@@ -32,6 +31,7 @@ import {
   ConduitNumber,
   ConduitObjectId,
   ConduitString,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 
@@ -72,6 +72,11 @@ export class TeamsAdmin {
         },
         name: 'CreateTeam',
         description: 'Creates a new team',
+        errors: [
+          errors.DEFAULT_TEAM_EXISTS,
+          errors.TEAM_EXISTS,
+          errors.AUTHORIZATION_UNAVAILABLE,
+        ],
       },
       new ConduitRouteReturnDefinition('Team', Team.name),
       this.createTeam.bind(this),
@@ -107,6 +112,7 @@ export class TeamsAdmin {
         },
         name: 'GetTeamMembers',
         description: 'Gets members of a team',
+        errors: [errors.AUTHORIZATION_UNAVAILABLE],
       },
       new ConduitRouteReturnDefinition('GetTeamMembers', {
         members: [User.name],
@@ -127,7 +133,14 @@ export class TeamsAdmin {
             required: true,
           },
         },
-        errors: [errors.GUESTS_NOT_ALLOWED],
+        errors: [
+          errors.TEAM_NOT_FOUND,
+          errors.USER_IDS_INVALID,
+          errors.USER_NOT_FOUND,
+          errors.GUESTS_NOT_ALLOWED,
+          errors.LINK_CONFLICT,
+          errors.AUTHORIZATION_UNAVAILABLE,
+        ],
         name: 'AddTeamMembers',
         description: 'Add members to a team',
       },
@@ -147,7 +160,14 @@ export class TeamsAdmin {
             required: true,
           },
         },
-        errors: [errors.HOME_USER_REMOVAL],
+        errors: [
+          errors.USER_IDS_REQUIRED,
+          errors.USER_IDS_INVALID,
+          errors.TEAM_NOT_FOUND,
+          errors.USER_NOT_FOUND,
+          errors.HOME_USER_REMOVAL,
+          errors.AUTHORIZATION_UNAVAILABLE,
+        ],
         name: 'RemoveTeamMembers',
         description: 'Remove members from a team',
       },
@@ -170,6 +190,12 @@ export class TeamsAdmin {
         },
         name: 'ModifyMembersRoles',
         description: 'Modifies the roles of members in a team',
+        errors: [
+          errors.TEAM_NOT_FOUND,
+          errors.USER_IDS_REQUIRED,
+          errors.USER_IDS_INVALID,
+          errors.AUTHORIZATION_UNAVAILABLE,
+        ],
       },
       new ConduitRouteReturnDefinition('ModifyMembersRoles', 'String'),
       this.modifyMembersRoles.bind(this),
@@ -187,6 +213,12 @@ export class TeamsAdmin {
         },
         name: 'UpdateTeam',
         description: 'Updates a team',
+        errors: [
+          errors.TEAM_NOT_FOUND,
+          errors.DEFAULT_TEAM_REALM_CONFLICT,
+          errors.DEFAULT_TEAM_EXISTS,
+          errors.TEAM_EXISTS,
+        ],
       },
       new ConduitRouteReturnDefinition('Team', Team.name),
       this.updateTeam.bind(this),
@@ -200,6 +232,12 @@ export class TeamsAdmin {
         },
         name: 'DeleteTeam',
         description: 'Deletes a team',
+        errors: [
+          errors.TEAM_NOT_FOUND,
+          errors.DEFAULT_TEAM_NOT_DELETABLE,
+          errors.REALM_TEAM_NOT_DELETABLE,
+          errors.AUTHORIZATION_UNAVAILABLE,
+        ],
       },
       new ConduitRouteReturnDefinition('DeleteTeam', 'String'),
       this.deleteTeam.bind(this),
@@ -217,6 +255,7 @@ export class TeamsAdmin {
         },
         name: 'GetTeamInvites',
         description: 'Gets invite tokens for a team',
+        errors: [errors.TEAM_NOT_FOUND],
       },
       new ConduitRouteReturnDefinition('GetTeamInvites', {
         invites: [Token.name],
@@ -237,6 +276,7 @@ export class TeamsAdmin {
         },
         name: 'CreatePersistentInvite',
         description: 'Creates a persistent invitation token for a team',
+        errors: [errors.TEAM_NOT_FOUND],
       },
       new ConduitRouteReturnDefinition('PersistentInvitationToken', 'String'),
       this.createPersistentInvite.bind(this),
@@ -253,6 +293,7 @@ export class TeamsAdmin {
         },
         name: 'DeletePersistentInvite',
         description: 'Deletes a persistent invitation token',
+        errors: [errors.TEAM_NOT_FOUND, errors.TEAM_INVITE_NOT_FOUND],
       },
       new ConduitRouteReturnDefinition('DeletePersistentInvitationToken', 'String'),
       this.deletePersistentInvite.bind(this),
@@ -308,12 +349,12 @@ export class TeamsAdmin {
     if (isDefault) {
       const found = await Team.getInstance().findOne({ isDefault: true });
       if (found) {
-        throw new GrpcError(status.ALREADY_EXISTS, 'There already is a default team');
+        throw new ModuleError(errors.DEFAULT_TEAM_EXISTS);
       }
     }
     const found = await Team.getInstance().findOne({ name, parentTeam });
     if (found) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'Team already exists');
+      throw new ModuleError(errors.TEAM_EXISTS);
     }
 
     const team = await Team.getInstance().create({
@@ -322,7 +363,7 @@ export class TeamsAdmin {
       isDefault: isNil(isDefault) ? false : isDefault,
     });
     if (parentTeam) {
-      await this.grpcSdk.authorization!.createRelation({
+      await requireAuthorization(this.grpcSdk).createRelation({
         subject: 'Team:' + parentTeam,
         resource: 'Team:' + team._id,
         relation: 'owner',
@@ -335,23 +376,23 @@ export class TeamsAdmin {
     const { members, teamId, role } = call.request.params;
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
-      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+      throw new ModuleError(errors.TEAM_NOT_FOUND);
     }
     await AuthUtils.validateMembers(members);
     try {
       for (const member of members) {
-        const relation = await this.grpcSdk.authorization!.findRelation({
+        const relation = await requireAuthorization(this.grpcSdk).findRelation({
           subject: 'User:' + member,
           resource: 'Team:' + team._id,
         });
         if (!relation || relation.relations.length === 0) {
           continue;
         }
-        await this.grpcSdk.authorization!.deleteAllRelations({
+        await requireAuthorization(this.grpcSdk).deleteAllRelations({
           subject: 'User:' + member,
           resource: 'Team:' + team._id,
         });
-        await this.grpcSdk.authorization!.createRelation({
+        await requireAuthorization(this.grpcSdk).createRelation({
           subject: 'User:' + member,
           resource: 'Team:' + team._id,
           relation: role,
@@ -368,19 +409,15 @@ export class TeamsAdmin {
     const { teamId, name, isDefault } = call.request.params;
     const found = await Team.getInstance().findOne({ _id: teamId });
     if (!found) {
-      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+      throw new ModuleError(errors.TEAM_NOT_FOUND);
     }
     if (isDefault === true && found.realm?.enabled === true) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        'A realm cannot be the default team: new users would be added to the realm. ' +
-          'Demote the realm first.',
-      );
+      throw new ModuleError(errors.DEFAULT_TEAM_REALM_CONFLICT);
     }
     if (isDefault) {
       const defaultTeam = await Team.getInstance().findOne({ isDefault: true });
       if (defaultTeam && defaultTeam._id !== teamId) {
-        throw new GrpcError(status.ALREADY_EXISTS, 'There already is a default team');
+        throw new ModuleError(errors.DEFAULT_TEAM_EXISTS);
       }
     }
     if (found.name !== name) {
@@ -389,7 +426,7 @@ export class TeamsAdmin {
         parentTeam: found.parentTeam,
       });
       if (duplicateName) {
-        throw new GrpcError(status.ALREADY_EXISTS, 'Team with that name already exists');
+        throw new ModuleError(errors.TEAM_EXISTS);
       }
     }
     if (!found.isDefault && isDefault) {
@@ -408,10 +445,10 @@ export class TeamsAdmin {
     const { teamId } = call.request.params;
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
-      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+      throw new ModuleError(errors.TEAM_NOT_FOUND);
     }
     if (team.isDefault) {
-      throw new GrpcError(status.FAILED_PRECONDITION, 'Default team cannot be deleted');
+      throw new ModuleError(errors.DEFAULT_TEAM_NOT_DELETABLE);
     }
     assertTeamDeletable(team);
     await deleteTeamAndDetachChildren(this.grpcSdk, team);
@@ -422,20 +459,17 @@ export class TeamsAdmin {
     const { members, teamId } = call.request.params;
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
-      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+      throw new ModuleError(errors.TEAM_NOT_FOUND);
     }
     const existingUsers = await User.getInstance().findMany({
       _id: { $in: members },
     });
     if (existingUsers.length !== members.length) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'members array contains invalid user ids',
-      );
+      throw new ModuleError(errors.USER_IDS_INVALID);
     }
     const users = await User.getInstance().findMany({ _id: { $in: members } });
     if (!users || users.length === 0) {
-      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     }
     // a team inside a realm: refuse unwanted guests before anything is written
     await assertUsersCanJoinTeam(String(team._id), users, 'admin');
@@ -455,11 +489,11 @@ export class TeamsAdmin {
     await AuthUtils.validateMembers(members);
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
-      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+      throw new ModuleError(errors.TEAM_NOT_FOUND);
     }
     const users = await User.getInstance().findMany({ _id: { $in: members } });
     if (!users || users.length === 0) {
-      throw new GrpcError(status.NOT_FOUND, 'Users does not exist');
+      throw new ModuleError(errors.USER_NOT_FOUND);
     }
     await assertTeamMembersRemovable(
       team,
@@ -467,7 +501,7 @@ export class TeamsAdmin {
     );
     try {
       for (const user of users) {
-        await this.grpcSdk.authorization!.deleteAllRelations({
+        await requireAuthorization(this.grpcSdk).deleteAllRelations({
           subject: 'User:' + user._id,
           resource: 'Team:' + teamId,
         });
@@ -489,7 +523,7 @@ export class TeamsAdmin {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
-    const relations = await this.grpcSdk.authorization!.findRelation({
+    const relations = await requireAuthorization(this.grpcSdk).findRelation({
       resource: 'Team:' + teamId,
       subjectType: 'User',
     });
@@ -515,7 +549,7 @@ export class TeamsAdmin {
     const limit = call.request.params.limit ?? 25;
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
-      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+      throw new ModuleError(errors.TEAM_NOT_FOUND);
     }
     const query = {
       tokenType: TokenType.TEAM_INVITE_TOKEN,
@@ -536,7 +570,7 @@ export class TeamsAdmin {
     const { teamId, role, userData } = call.request.params;
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
-      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+      throw new ModuleError(errors.TEAM_NOT_FOUND);
     }
     const invitation = await Token.getInstance().create({
       tokenType: TokenType.TEAM_INVITE_TOKEN,
@@ -556,7 +590,7 @@ export class TeamsAdmin {
     const { teamId, invitationToken } = call.request.params;
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
-      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+      throw new ModuleError(errors.TEAM_NOT_FOUND);
     }
     const foundToken = await Token.getInstance().findOne(
       {
@@ -566,7 +600,7 @@ export class TeamsAdmin {
       { readPreference: 'primary' },
     );
     if (!foundToken) {
-      throw new GrpcError(status.NOT_FOUND, 'Token not found');
+      throw new ModuleError(errors.TEAM_INVITE_NOT_FOUND);
     }
     await Token.getInstance().deleteOne({ _id: foundToken._id });
     return 'Invitation token deleted';

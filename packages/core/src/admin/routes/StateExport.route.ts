@@ -42,8 +42,7 @@ export function getStateExportRoute(admin: AdminModule) {
 
       for (const moduleName of registered) {
         const client = grpcSdk.getModuleClient(moduleName) as unknown as
-          | ModuleExportClient
-          | undefined;
+          ModuleExportClient | undefined;
         if (!client?.getExportableResources || !client?.exportResources) continue;
 
         try {

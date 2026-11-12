@@ -1,10 +1,9 @@
 import {
   ConduitGrpcSdk,
-  GrpcError,
+  hasConduitCode,
   Indexable,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import {
   ConfigController,
   ConduitString,
@@ -12,7 +11,6 @@ import {
 } from '@conduitplatform/module-tools';
 import { TokenType } from '../constants/index.js';
 import { errors } from '../errors.js';
-import { hasConduitCode } from '../utils/common.logic.js';
 import { RealmMembership, Token, User } from '../models/index.js';
 import {
   assertValidSlug,
@@ -77,14 +75,14 @@ export function assertStrategyEnabledForRealm(
 }
 
 /**
- * For a call without a realm: throws NOT_FOUND 'Requested resource not found' when the
+ * For a call without a realm: throws STRATEGY_DISABLED (NOT_FOUND) when the
  * strategy is disabled in the global config. The route can exist only because a realm
  * enables the strategy, and realm-less calls must not reach it (same answer as the
  * OAuth handlers). Call it right after `resolveRealmFromCall` returned null.
  */
 export function assertGlobalStrategyAvailable(strategyKey: string): void {
   if (!isGlobalStrategyEnabled(ConfigController.getInstance().config, strategyKey)) {
-    throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
+    throw new ModuleError(errors.STRATEGY_DISABLED);
   }
 }
 

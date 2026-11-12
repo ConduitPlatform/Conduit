@@ -1,6 +1,7 @@
 import { beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, getConduitCode, GrpcError } from '@conduitplatform/grpc-sdk';
+import { errors } from '../errors.js';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { CommonHandlers } from './common.js';
@@ -122,7 +123,9 @@ describe('renewAuth', () => {
     seedSession();
     await assert.rejects(
       handlers.renewAuth(call({ refreshToken: 'nope' })),
-      (e: any) => e.code === status.UNAUTHENTICATED,
+      (e: any) =>
+        e.code === status.UNAUTHENTICATED &&
+        getConduitCode(e) === errors.REFRESH_TOKEN_INVALID.conduitCode,
     );
     await assert.rejects(
       handlers.renewAuth(call({ clientId: 'other' })),
@@ -131,7 +134,9 @@ describe('renewAuth', () => {
     table('RefreshToken')[0].expiresOn = new Date(Date.now() - 1000);
     await assert.rejects(
       handlers.renewAuth(call()),
-      (e: any) => e.code === status.UNAUTHENTICATED,
+      (e: any) =>
+        e.code === status.UNAUTHENTICATED &&
+        getConduitCode(e) === errors.REFRESH_TOKEN_INVALID.conduitCode,
     );
   });
   it('finds a legacy plaintext row and migrates it on the spot', async () => {
@@ -181,7 +186,9 @@ describe('extendRefresh', () => {
     seedSession({ extendable: false });
     await assert.rejects(
       handlers.extendRefresh(call()),
-      (e: any) => e.code === status.FAILED_PRECONDITION,
+      (e: any) =>
+        e.code === status.FAILED_PRECONDITION &&
+        getConduitCode(e) === errors.REFRESH_TOKEN_NOT_EXTENDABLE.conduitCode,
     );
   });
   it('honors a policy tightened after mint', async () => {
@@ -198,7 +205,9 @@ describe('extendRefresh', () => {
     });
     await assert.rejects(
       handlers.extendRefresh(call()),
-      (e: any) => e.code === status.FAILED_PRECONDITION,
+      (e: any) =>
+        e.code === status.FAILED_PRECONDITION &&
+        getConduitCode(e) === errors.REFRESH_TOKEN_NOT_EXTENDABLE.conduitCode,
     );
     // a shorter global maxLifetime caps the extension at issuedAt + maxLifetime
     setConfig({

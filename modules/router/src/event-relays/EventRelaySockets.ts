@@ -1,5 +1,6 @@
-import { status } from '@grpc/grpc-js';
-import { ConduitGrpcSdk, GrpcError, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, TYPE } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { ConduitSocket, ConduitSocketEvent } from '@conduitplatform/hermes';
 import { EVENTS_NAMESPACE, MAX_SUBSCRIBE_PER_MINUTE } from './constants.js';
 import { contextUserId } from './userId.js';
@@ -49,10 +50,15 @@ export function createEventsSocket(
       assertSubscribeRateLimit(request.socketId);
       const userId = contextUserId(request.context);
       if (!userId) {
-        throw new GrpcError(status.UNAUTHENTICATED, 'Authentication required');
+        throw new ModuleError(errors.EVENT_RELAY_AUTH_REQUIRED);
       }
       const [relayId, resourceId] = request.params ?? [];
-      const validatedResourceId = validateResourceId(resourceId);
+      let validatedResourceId: string;
+      try {
+        validatedResourceId = validateResourceId(resourceId);
+      } catch (err) {
+        throw toModuleError(err);
+      }
       const room = await authorizeOrThrow(grpcSdk, manager, userId, relayId, resourceId);
       try {
         trackSubscription(request.socketId, userId, String(relayId), validatedResourceId);
@@ -62,10 +68,7 @@ export function createEventsSocket(
           validatedResourceId,
         );
       } catch (err) {
-        throw new GrpcError(
-          status.RESOURCE_EXHAUSTED,
-          err instanceof Error ? err.message : 'Subscription limit exceeded',
-        );
+        throw ModuleError.from(err, errors.RELAY_SUBSCRIPTION_LIMIT_EXCEEDED);
       }
       return { event: 'join-room', rooms: [room] };
     },
@@ -78,7 +81,7 @@ export function createEventsSocket(
       const userId = contextUserId(request.context);
       const [relayId, resourceId] = request.params ?? [];
       if (typeof relayId !== 'string' || relayId.trim() === '') {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'Relay ID is required');
+        throw new ModuleError(errors.RELAY_ID_REQUIRED);
       }
       try {
         const validatedResourceId = validateResourceId(resourceId);
@@ -89,7 +92,7 @@ export function createEventsSocket(
           rooms: [eventRelayRoom(relayId, validatedResourceId)],
         };
       } catch (err) {
-        throw toGrpcError(err);
+        throw toModuleError(err);
       }
     },
   });
@@ -114,7 +117,7 @@ function assertSubscribeRateLimit(socketId: string): void {
     t => t >= windowStart,
   );
   if (timestamps.length >= MAX_SUBSCRIBE_PER_MINUTE) {
-    throw new GrpcError(status.RESOURCE_EXHAUSTED, 'Subscribe rate limit exceeded');
+    throw new ModuleError(errors.SUBSCRIBE_RATE_LIMIT_EXCEEDED);
   }
   timestamps.push(now);
   subscribeTimestamps.set(socketId, timestamps);
@@ -139,13 +142,12 @@ async function authorizeOrThrow(
       },
     );
   } catch (err) {
-    throw toGrpcError(err);
+    throw toModuleError(err);
   }
 }
 
-function toGrpcError(err: unknown): GrpcError {
-  const mapped = toSubscriptionError(err);
-  return new GrpcError(mapped.code, mapped.message);
+function toModuleError(err: unknown): ModuleError {
+  return toSubscriptionError(err).toModuleError();
 }
 
 export { authorizeRelaySubscription } from './authorize.js';

@@ -68,12 +68,6 @@ export class AwsSnsProvider implements ISmsProvider {
 
   async verify(phoneNumberHash: string, otp: string): Promise<boolean> {
     const otpCode: string | null = await this.grpcSdk.state!.getKey(phoneNumberHash);
-    if (otpCode === null) {
-      return Promise.reject(false);
-    }
-    if (otpCode === otp) {
-      return Promise.resolve(true);
-    }
-    return Promise.reject(false);
+    return otpCode !== null && otpCode === otp;
   }
 }

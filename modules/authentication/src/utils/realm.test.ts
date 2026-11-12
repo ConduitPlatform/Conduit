@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { getConduitCode } from '@conduitplatform/grpc-sdk';
 import {
   applyOAuthSecretsUpdate,
   evaluateLinkEligibility,
@@ -266,7 +267,7 @@ describe('realm ids', () => {
       assert.equal(isRealmId(id), false, String(id));
       assert.throws(
         () => assertRealmId(id),
-        (e: any) => e.code === 3 && e.message === 'realm must be a realm team id',
+        (e: any) => e.code === 3 && getConduitCode(e) === 'REALM_ID_INVALID',
       );
     }
   });

@@ -1,6 +1,9 @@
 import { isNil } from 'lodash-es';
 import { NotificationToken } from '../models/index.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
+import { channelFailure } from '../utils/channelFailure.js';
 import {
   ChannelResult,
   ChannelStatus,
@@ -65,7 +68,7 @@ export class PushService implements IChannel {
 
   async send(params: IChannelSendParams): Promise<ChannelResult> {
     try {
-      if (!this.isAvailable()) throw Error('Push not initialized');
+      if (!this.isAvailable()) throw new ModuleError(errors.PUSH_NOT_CONFIGURED);
       const { recipient, subject, body, data, platform, doNotStore, isSilent } = params;
 
       const notificationParams: ISendNotification = {
@@ -87,7 +90,7 @@ export class PushService implements IChannel {
     } catch (error) {
       return {
         success: false,
-        error: (error as Error).message,
+        ...channelFailure(error, errors.PUSH_PROVIDER_ERROR),
         channel: 'push',
       };
     }
@@ -117,47 +120,58 @@ export class PushService implements IChannel {
       .findOne({ userId, platform })
       .then(oldToken => {
         if (!isNil(oldToken)) return NotificationToken.getInstance().deleteOne(oldToken);
-      });
+      })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
-    const newTokenDocument = await NotificationToken.getInstance().create({
-      userId,
-      token,
-      platform,
-    });
+    const newTokenDocument = await NotificationToken.getInstance()
+      .create({
+        userId,
+        token,
+        platform,
+      })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     return newTokenDocument;
   }
 
   async getNotificationTokens(userId: string) {
-    const tokenDocuments = await NotificationToken.getInstance().findMany({ userId });
+    const tokenDocuments = await NotificationToken.getInstance()
+      .findMany({ userId })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
     return tokenDocuments || [];
   }
 
   async sendNotification(params: ISendNotification): Promise<void> {
     if (!this.isAvailable()) {
-      throw new Error('Provider not initialized');
+      throw new ModuleError(errors.PUSH_NOT_CONFIGURED);
     }
-    await this.provider!.sendToDevice(params);
+    await this.provider!.sendToDevice(params).catch(
+      ModuleError.rethrow(errors.PUSH_PROVIDER_ERROR),
+    );
   }
 
   async sendToManyDevices(
     params: ISendNotificationToManyDevices,
   ): Promise<IPushSendAggregateResult> {
     if (!this.isAvailable()) {
-      throw new Error('Provider not initialized');
+      throw new ModuleError(errors.PUSH_NOT_CONFIGURED);
     }
-    return this.provider!.sendToManyDevices(params);
+    return this.provider!.sendToManyDevices(params).catch(
+      ModuleError.rethrow(errors.PUSH_PROVIDER_ERROR),
+    );
   }
 
   async sendManyNotifications(
     notifications: ISendNotification[],
   ): Promise<IPushSendAggregateResult> {
     if (!this.isAvailable()) {
-      throw new Error('Provider not initialized');
+      throw new ModuleError(errors.PUSH_NOT_CONFIGURED);
     }
     if (notifications.length === 0) {
-      throw new Error('notifications is required and must be a non-empty array');
+      throw new ModuleError(errors.PUSH_NOTIFICATIONS_REQUIRED);
     }
-    return this.provider!.sendMany(notifications);
+    return this.provider!.sendMany(notifications).catch(
+      ModuleError.rethrow(errors.PUSH_PROVIDER_ERROR),
+    );
   }
 }

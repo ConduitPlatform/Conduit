@@ -4,13 +4,20 @@ import {
   ConduitGrpcSdk,
   ConduitError,
   DatabaseProvider,
+  type ModuleErrorDefinition,
   type FindOneOptions,
 } from '@conduitplatform/grpc-sdk';
-import { ConfigController } from '@conduitplatform/module-tools';
+import { authErrors, ConfigController } from '@conduitplatform/module-tools';
+import { errors } from '../../../errors.js';
 import { Client } from '../../../models/index.js';
 import { validateClient } from '../../utils/index.js';
 import { ValidationInterface } from '../../interfaces/ValidationInterface.js';
 import { ConduitRequest } from '@conduitplatform/hermes';
+
+/** 401 "Unauthorized" for every client validation failure, tagged with its conduitCode. */
+function unauthorized(definition: ModuleErrorDefinition) {
+  return new ConduitError('UNAUTHORIZED', 401, 'Unauthorized', definition.conduitCode);
+}
 
 export class ClientValidator {
   database: DatabaseProvider;
@@ -47,7 +54,7 @@ export class ClientValidator {
     ) {
       // disabled swagger and gql explorer access on production
       const isProd = await this.isProd();
-      if (isProd) return next(ConduitError.unauthorized());
+      if (isProd) return next(unauthorized(errors.EXPLORER_DISABLED_IN_PRODUCTION));
       return next();
     }
 
@@ -60,7 +67,7 @@ export class ClientValidator {
     }
 
     if (isNil(clientid)) {
-      return next(ConduitError.unauthorized());
+      return next(unauthorized(authErrors.CLIENT_ID_MISSING));
     }
 
     const key = await this.grpcSdk.state!.getKey(clientid as string);
@@ -100,7 +107,7 @@ export class ClientValidator {
       })
       .then((valid: ValidationInterface) => {
         if (!valid.validated) {
-          throw ConduitError.unauthorized();
+          throw unauthorized(errors.CLIENT_CREDENTIALS_INVALID);
         }
         delete req.headers.clientsecret;
         req.conduit!.clientId = clientid;
@@ -113,7 +120,7 @@ export class ClientValidator {
         next();
       })
       .catch(() => {
-        next(ConduitError.unauthorized());
+        next(unauthorized(errors.CLIENT_CREDENTIALS_INVALID));
       });
   }
 }

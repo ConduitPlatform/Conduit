@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   Indexable,
   ParsedRouterRequest,
   SMS,
@@ -12,9 +11,9 @@ import {
   ConduitString,
   ConfigController,
   RoutingManager,
+  ModuleError,
 } from '@conduitplatform/module-tools';
 import { isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
 import { Token, TwoFactorBackUpCodes, TwoFactorSecret, User } from '../models/index.js';
 import { AuthUtils } from '../utils/index.js';
 import { sessionRealmId } from './realmRequest.js';
@@ -27,6 +26,12 @@ import { resolveTotpIssuer } from './totpIssuer.js';
 import { Config } from '../config/index.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { randomInt } from 'crypto';
+import { errors } from '../errors.js';
+import {
+  ANONYMOUS_DENIED_ERRORS,
+  AUTHENTICATED_TOKEN_ERRORS,
+  SESSION_AUTH_ERRORS,
+} from './utils.js';
 
 function normalizeTwoFaMethod(method?: string): string | undefined {
   if (method === 'phone') {
@@ -70,6 +75,11 @@ export class TwoFa implements IAuthenticationStrategy {
                       or returns a message to check authenticator app.
                       User's 2FA mechanism has to be enabled.`,
         middlewares: ['authMiddleware'],
+        errors: [
+          errors.TWO_FA_METHOD_UNAVAILABLE,
+          errors.VERIFICATION_CODE_SEND_FAILED,
+          ...SESSION_AUTH_ERRORS,
+        ],
         rateLimit: TWO_FA_CHALLENGE,
       },
       new ConduitRouteReturnDefinition('BeginTwoFaResponse', {
@@ -89,6 +99,14 @@ export class TwoFa implements IAuthenticationStrategy {
         bodyParams: {
           code: ConduitString.Required,
         },
+        errors: [
+          errors.CODE_VERIFICATION_FAILED,
+          errors.VERIFICATION_CODE_INVALID,
+          errors.TOTP_SECRET_NOT_FOUND,
+          errors.TWO_FA_METHOD_UNAVAILABLE,
+          ...SESSION_AUTH_ERRORS,
+          ...AUTHENTICATED_TOKEN_ERRORS,
+        ],
         rateLimit: TWO_FA_CHALLENGE,
       },
       new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
@@ -107,6 +125,14 @@ export class TwoFa implements IAuthenticationStrategy {
         bodyParams: {
           code: ConduitString.Required,
         },
+        errors: [
+          errors.CODE_VERIFICATION_FAILED,
+          errors.VERIFICATION_CODE_INVALID,
+          errors.TOTP_SECRET_NOT_FOUND,
+          errors.PHONE_VERIFICATION_NOT_FOUND,
+          errors.PHONE_NUMBER_TAKEN,
+          ...SESSION_AUTH_ERRORS,
+        ],
         rateLimit: TWO_FA_CHALLENGE,
       },
       new ConduitRouteReturnDefinition('VerifyAuthenticatorResponse', 'String'),
@@ -125,6 +151,15 @@ export class TwoFa implements IAuthenticationStrategy {
           phoneNumber: ConduitString.Optional,
           issuer: ConduitString.Optional,
         },
+        errors: [
+          errors.SUDO_REQUIRED,
+          errors.TWO_FA_METHOD_INVALID,
+          errors.TOTP_ISSUER_NOT_ALLOWED,
+          errors.VERIFICATION_RESEND_THROTTLED,
+          errors.VERIFICATION_CODE_SEND_FAILED,
+          ...ANONYMOUS_DENIED_ERRORS,
+          ...SESSION_AUTH_ERRORS,
+        ],
       },
       new ConduitRouteReturnDefinition('EnableTwoFaResponse', 'String'),
       this.enableTwoFa.bind(this),
@@ -136,6 +171,12 @@ export class TwoFa implements IAuthenticationStrategy {
         action: ConduitRouteActions.UPDATE,
         description: `Disables the user's 2FA mechanism.`,
         middlewares: authRouteMiddlewares,
+        errors: [
+          errors.SUDO_REQUIRED,
+          errors.AUTHENTICATION_REQUIRED,
+          ...ANONYMOUS_DENIED_ERRORS,
+          ...SESSION_AUTH_ERRORS,
+        ],
       },
       new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
       this.disableTwoFa.bind(this),
@@ -148,6 +189,12 @@ export class TwoFa implements IAuthenticationStrategy {
           action: ConduitRouteActions.GET,
           description: `Generates a new set of back up codes for 2FA.`,
           middlewares: authRouteMiddlewares,
+          errors: [
+            errors.SUDO_REQUIRED,
+            errors.AUTHENTICATION_REQUIRED,
+            ...ANONYMOUS_DENIED_ERRORS,
+            ...SESSION_AUTH_ERRORS,
+          ],
         },
         new ConduitRouteReturnDefinition('GenerateTwoFaBackUpCodesResponse', {
           codes: [ConduitString.Required],
@@ -164,6 +211,14 @@ export class TwoFa implements IAuthenticationStrategy {
           bodyParams: {
             code: ConduitString.Required,
           },
+          errors: [
+            errors.BACKUP_CODE_FORMAT_INVALID,
+            errors.BACKUP_CODES_NOT_FOUND,
+            errors.BACKUP_CODE_INVALID,
+            ...ANONYMOUS_DENIED_ERRORS,
+            ...SESSION_AUTH_ERRORS,
+            ...AUTHENTICATED_TOKEN_ERRORS,
+          ],
           rateLimit: TWO_FA_CHALLENGE,
         },
         new ConduitRouteReturnDefinition('RecoverTwoFaAccessResponse', {
@@ -188,7 +243,7 @@ export class TwoFa implements IAuthenticationStrategy {
         user.phoneNumber!,
       );
       if (verificationSid === '') {
-        throw new GrpcError(status.INTERNAL, 'Could not send verification code');
+        throw new ModuleError(errors.VERIFICATION_CODE_SEND_FAILED);
       }
       // hide user phone number digits besides the first two and last two digits
       const phoneNumber = user.phoneNumber!.replace(/(\d{2})\d*(\d{2})/, '$1****$2');
@@ -202,16 +257,13 @@ export class TwoFa implements IAuthenticationStrategy {
         message: `Use your authenticator app to get the code`,
       };
     } else {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid method');
+      throw new ModuleError(errors.TWO_FA_METHOD_UNAVAILABLE);
     }
   }
 
   async enableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!call.request.context.jwtPayload.sudo) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Re-login required to enter sudo mode',
-      );
+      throw new ModuleError(errors.SUDO_REQUIRED);
     }
     const { method, phoneNumber, issuer } = call.request.params;
     const context = call.request.context;
@@ -227,7 +279,7 @@ export class TwoFa implements IAuthenticationStrategy {
     ) {
       return this.enableAuthenticator2Fa(user, issuer);
     } else {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Method not valid');
+      throw new ModuleError(errors.TWO_FA_METHOD_INVALID);
     }
   }
 
@@ -256,14 +308,11 @@ export class TwoFa implements IAuthenticationStrategy {
 
   async disableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!call.request.context.jwtPayload.sudo) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Re-login required to enter sudo mode',
-      );
+      throw new ModuleError(errors.SUDO_REQUIRED);
     }
     const context = call.request.context;
     if (isNil(context) || isNil(context.user)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
+      throw new ModuleError(errors.AUTHENTICATION_REQUIRED);
     }
     const user = context.user;
     await User.getInstance().findByIdAndUpdate(user._id, {
@@ -289,7 +338,7 @@ export class TwoFa implements IAuthenticationStrategy {
         user.phoneNumber!,
       );
       if (verificationSid === '') {
-        throw new GrpcError(status.INTERNAL, 'Could not send verification code');
+        throw new ModuleError(errors.VERIFICATION_CODE_SEND_FAILED);
       }
       await Token.getInstance()
         .deleteMany({
@@ -314,8 +363,7 @@ export class TwoFa implements IAuthenticationStrategy {
         },
         { readPreference: 'primary' },
       );
-      if (isNil(secret))
-        throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
+      if (isNil(secret)) throw new ModuleError(errors.TOTP_SECRET_NOT_FOUND);
       await Token.getInstance()
         .deleteMany({
           user: user._id,
@@ -334,7 +382,7 @@ export class TwoFa implements IAuthenticationStrategy {
         accessToken: qrVerificationToken.token,
       };
     } else {
-      throw new GrpcError(status.FAILED_PRECONDITION, 'Method not valid');
+      throw new ModuleError(errors.TWO_FA_METHOD_UNAVAILABLE);
     }
   }
 
@@ -354,12 +402,12 @@ export class TwoFa implements IAuthenticationStrategy {
         { readPreference: 'primary' },
       );
       if (!token) {
-        throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
+        throw new ModuleError(errors.CODE_VERIFICATION_FAILED);
       }
       const verificationSid = token.data?.verification ?? token.token;
       const verified = await this.grpcSdk.sms!.verify(verificationSid, code);
       if (!verified.verified) {
-        throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
+        throw new ModuleError(errors.CODE_VERIFICATION_FAILED);
       }
       const consumed = await Token.getInstance().deleteOne({
         _id: token._id,
@@ -367,7 +415,7 @@ export class TwoFa implements IAuthenticationStrategy {
         tokenType: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
       });
       if (consumed.deletedCount === 0) {
-        throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
+        throw new ModuleError(errors.CODE_VERIFICATION_FAILED);
       }
       const config = ConfigController.getInstance().config;
       return TokenProvider.getInstance().provideUserTokens({
@@ -380,7 +428,7 @@ export class TwoFa implements IAuthenticationStrategy {
     } else if (user.twoFaMethod == 'authenticator') {
       return this.verifyAuthenticatorCodeForLogin(clientId, user, code, realm);
     } else {
-      throw new GrpcError(status.FAILED_PRECONDITION, 'Method not valid');
+      throw new ModuleError(errors.TWO_FA_METHOD_UNAVAILABLE);
     }
   }
 
@@ -395,10 +443,10 @@ export class TwoFa implements IAuthenticationStrategy {
       },
       { readPreference: 'primary' },
     );
-    if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
+    if (isNil(secret)) throw new ModuleError(errors.TOTP_SECRET_NOT_FOUND);
     const verification = node2fa.verifyToken(secret.secret, code, 1);
     if (isNil(verification) || verification.delta !== 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Code is not correct');
+      throw new ModuleError(errors.VERIFICATION_CODE_INVALID);
     }
     await User.getInstance().findByIdAndUpdate(user._id, {
       hasTwoFA: true,
@@ -423,15 +471,12 @@ export class TwoFa implements IAuthenticationStrategy {
       { readPreference: 'primary' },
     );
     if (isNil(verificationRecord))
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'No verification record for this user',
-      );
+      throw new ModuleError(errors.PHONE_VERIFICATION_NOT_FOUND);
     const verificationSid =
       verificationRecord.data?.verification ?? verificationRecord.token;
     const verified = await this.grpcSdk.sms!.verify(verificationSid, code);
     if (!verified.verified) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
+      throw new ModuleError(errors.CODE_VERIFICATION_FAILED);
     }
     const phoneNumber = verificationRecord.data?.phoneNumber;
     if (typeof phoneNumber === 'string' && phoneNumber !== '') {
@@ -448,7 +493,7 @@ export class TwoFa implements IAuthenticationStrategy {
       tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
     });
     if (consumed.deletedCount === 0) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
+      throw new ModuleError(errors.CODE_VERIFICATION_FAILED);
     }
     await User.getInstance().findByIdAndUpdate(user._id, {
       phoneNumber: verificationRecord.data.phoneNumber,
@@ -466,14 +511,11 @@ export class TwoFa implements IAuthenticationStrategy {
 
   async generateBackUpCodes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!call.request.context.jwtPayload.sudo) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Re-login required to enter sudo mode',
-      );
+      throw new ModuleError(errors.SUDO_REQUIRED);
     }
     const context = call.request.context;
     if (isNil(context) || isNil(context.user)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
+      throw new ModuleError(errors.AUTHENTICATION_REQUIRED);
     }
     return this.codeGenerator(context.user);
   }
@@ -484,14 +526,14 @@ export class TwoFa implements IAuthenticationStrategy {
     const realm = sessionRealmId(call.request.context);
     const reg = /^\d{8}$/;
     if (!reg.test(code)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Incorrect code format');
+      throw new ModuleError(errors.BACKUP_CODE_FORMAT_INVALID);
     }
     const codeSet = await TwoFactorBackUpCodes.getInstance().findOne(
       { user: user._id },
       { readPreference: 'primary' },
     );
     if (isNil(codeSet)) {
-      throw new GrpcError(status.NOT_FOUND, 'User has no back up codes');
+      throw new ModuleError(errors.BACKUP_CODES_NOT_FOUND);
     }
     let codeMatch;
     for (const hashedCode of codeSet.codes) {
@@ -503,7 +545,7 @@ export class TwoFa implements IAuthenticationStrategy {
       }
     }
     if (!codeMatch) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid code');
+      throw new ModuleError(errors.BACKUP_CODE_INVALID);
     }
     if (codeSet.codes.length === 0) {
       await TwoFactorBackUpCodes.getInstance().deleteOne({ _id: codeSet._id });
@@ -549,7 +591,7 @@ export class TwoFa implements IAuthenticationStrategy {
       phoneNumber,
     );
     if (verificationSid === '') {
-      throw new GrpcError(status.INTERNAL, 'Could not send verification code');
+      throw new ModuleError(errors.VERIFICATION_CODE_SEND_FAILED);
     }
 
     await Token.getInstance().create({
@@ -605,11 +647,11 @@ export class TwoFa implements IAuthenticationStrategy {
       },
       { readPreference: 'primary' },
     );
-    if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
+    if (isNil(secret)) throw new ModuleError(errors.TOTP_SECRET_NOT_FOUND);
 
     const verification = node2fa.verifyToken(secret.secret, code);
     if (isNil(verification) || verification.delta !== 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Code is not correct');
+      throw new ModuleError(errors.VERIFICATION_CODE_INVALID);
     }
     const config = ConfigController.getInstance().config;
     return TokenProvider.getInstance().provideUserTokens({

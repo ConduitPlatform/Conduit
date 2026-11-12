@@ -34,13 +34,13 @@ describe('cron.utils', () => {
 
     it('rejects an invalid pattern', () => {
       assert.throws(() => validateCronPattern('not-a-cron', 'UTC'), {
-        message: /Invalid cron pattern/,
+        conduitCode: 'CRON_PATTERN_INVALID',
       });
     });
 
     it('rejects an invalid timezone', () => {
       assert.throws(() => validateCronPattern('0 2 * * *', 'Not/AZone'), {
-        message: /Invalid timezone/,
+        conduitCode: 'CRON_TIMEZONE_INVALID',
       });
     });
   });

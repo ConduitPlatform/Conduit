@@ -17,6 +17,8 @@ import {
 } from '@conduitplatform/grpc-sdk';
 
 import * as deepdash from 'deepdash-es/standalone';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 type CrudOperationConfig = { enabled?: boolean; authenticated?: boolean };
 
@@ -62,9 +64,15 @@ export function validateSchemaInput(
   modelOptions: ConduitSchemaOptions,
 ) {
   if (!isNil(name) && !isString(name))
-    throw new Error("Field 'name' must be of type String");
+    throw new ModuleError({
+      ...errors.SCHEMA_NAME_INVALID,
+      message: "Field 'name' must be of type String",
+    });
   if (name.indexOf('-') >= 0 || name.indexOf(' ') >= 0) {
-    throw new Error('Names cannot include spaces and - characters');
+    throw new ModuleError({
+      ...errors.SCHEMA_NAME_INVALID,
+      message: 'Names cannot include spaces and - characters',
+    });
   }
 
   if (!isNil(modelOptions)) {
@@ -73,9 +81,16 @@ export function validateSchemaInput(
 
   if (isNil(fields)) return null;
   if (!isPlainObject(fields)) {
-    return "'fields' must be an object";
+    throw new ModuleError({
+      ...errors.SCHEMA_FIELDS_INVALID,
+      message: "'fields' must be an object",
+    });
   }
-  if (isEmpty(fields)) throw new Error("'fields' can't be an empty object");
+  if (isEmpty(fields))
+    throw new ModuleError({
+      ...errors.SCHEMA_FIELDS_INVALID,
+      message: "'fields' can't be an empty object",
+    });
 
   let fieldsErrorFlag = false;
   deepdash.eachDeep(
@@ -132,7 +147,11 @@ export function validateSchemaInput(
       }
     },
   );
-  if (fieldsErrorFlag) throw new Error('Invalid schema fields configuration');
+  if (fieldsErrorFlag)
+    throw new ModuleError({
+      ...errors.SCHEMA_FIELDS_INVALID,
+      message: 'Invalid schema fields configuration',
+    });
 }
 
 export function populateArray(pop: any) {
@@ -156,29 +175,51 @@ const ALLOWED_CONDUIT_READ_PREFERENCES = [
 ] as const;
 
 function validateModelOptions(modelOptions: ConduitSchemaOptions) {
-  if (!isPlainObject(modelOptions)) throw new Error('Model options must be an object');
+  if (!isPlainObject(modelOptions))
+    throw new ModuleError({
+      ...errors.SCHEMA_OPTIONS_INVALID,
+      message: 'Model options must be an object',
+    });
   Object.keys(modelOptions).forEach(key => {
     if (key !== 'conduit' && key !== 'timestamps' && key !== 'indexes')
-      throw new Error("Only 'conduit', 'timestamps', and 'indexes' options allowed");
+      throw new ModuleError({
+        ...errors.SCHEMA_OPTIONS_INVALID,
+        message: "Only 'conduit', 'timestamps', and 'indexes' options allowed",
+      });
     else if (key === 'timestamps' && !isBoolean(modelOptions.timestamps))
-      throw new Error("Option 'timestamps' must be of type Boolean");
+      throw new ModuleError({
+        ...errors.SCHEMA_OPTIONS_INVALID,
+        message: "Option 'timestamps' must be of type Boolean",
+      });
     else if (key === 'indexes' && !isArray(modelOptions.indexes))
-      throw new Error("Option 'indexes' must be of type Array");
+      throw new ModuleError({
+        ...errors.SCHEMA_OPTIONS_INVALID,
+        message: "Option 'indexes' must be of type Array",
+      });
     else if (key === 'conduit') {
       if (!isObject(modelOptions.conduit))
-        throw new Error("Option 'conduit' must be of type Object");
+        throw new ModuleError({
+          ...errors.SCHEMA_OPTIONS_INVALID,
+          message: "Option 'conduit' must be of type Object",
+        });
       Object.keys(modelOptions.conduit).forEach((conduitKey: string) => {
         if (conduitKey === 'readPreference') {
           const rp = modelOptions.conduit!.readPreference;
           if (rp !== undefined && rp !== null && rp !== '') {
             if (typeof rp !== 'string')
-              throw new Error("Conduit field 'readPreference' must be of type string");
+              throw new ModuleError({
+                ...errors.SCHEMA_OPTIONS_INVALID,
+                message: "Conduit field 'readPreference' must be of type string",
+              });
             if (
               !ALLOWED_CONDUIT_READ_PREFERENCES.includes(
                 rp as (typeof ALLOWED_CONDUIT_READ_PREFERENCES)[number],
               )
             ) {
-              throw new Error(`Invalid conduit.readPreference: ${rp}`);
+              throw new ModuleError({
+                ...errors.SCHEMA_OPTIONS_INVALID,
+                message: `Invalid conduit.readPreference: ${rp}`,
+              });
             }
           }
           return;
@@ -190,20 +231,31 @@ function validateModelOptions(modelOptions: ConduitSchemaOptions) {
           conduitKey !== 'imported' &&
           conduitKey !== 'realtime'
         )
-          throw new Error(
-            "Only 'cms', 'permissions', 'authorization', 'imported', 'readPreference', and 'realtime' fields allowed inside 'conduit' field",
-          );
+          throw new ModuleError({
+            ...errors.SCHEMA_OPTIONS_INVALID,
+            message:
+              "Only 'cms', 'permissions', 'authorization', 'imported', 'readPreference', and 'realtime' fields allowed inside 'conduit' field",
+          });
         if (conduitKey === 'imported') {
           if (!isBoolean(modelOptions.conduit!.imported))
-            throw new Error(`Conduit field option 'imported' must be of type Boolean`);
+            throw new ModuleError({
+              ...errors.SCHEMA_OPTIONS_INVALID,
+              message: `Conduit field option 'imported' must be of type Boolean`,
+            });
         } else {
           if (!isObject(modelOptions.conduit![conduitKey]))
-            throw new Error(`Conduit field option ${conduitKey} must be of type Object`);
+            throw new ModuleError({
+              ...errors.SCHEMA_OPTIONS_INVALID,
+              message: `Conduit field option ${conduitKey} must be of type Object`,
+            });
         }
       });
       if (modelOptions.conduit!.cms?.enabled) {
         if (!isBoolean(modelOptions.conduit.cms.enabled))
-          return "CMS field 'enabled' must be of type Boolean";
+          throw new ModuleError({
+            ...errors.SCHEMA_OPTIONS_INVALID,
+            message: "CMS field 'enabled' must be of type Boolean",
+          });
       }
       if (modelOptions.conduit!.cms?.crudOperations) {
         validateCrudOperations(modelOptions.conduit.cms.crudOperations);
@@ -224,32 +276,43 @@ function validateCrudOperations(crudOperations: CrudOperations) {
   ];
 
   if (!isObject(crudOperations))
-    throw new Error(`CMS field 'crudOperations' must be of type Object`);
+    throw new ModuleError({
+      ...errors.SCHEMA_OPTIONS_INVALID,
+      message: `CMS field 'crudOperations' must be of type Object`,
+    });
 
   (Object.keys(crudOperations) as Array<keyof CrudOperations>).forEach(op => {
     if (!allowedCrudOperations.includes(op)) {
-      throw new Error(`Unrecognized CRUD operation '${op}' provided`);
+      throw new ModuleError({
+        ...errors.SCHEMA_OPTIONS_INVALID,
+        message: `Unrecognized CRUD operation '${op}' provided`,
+      });
     }
 
     const operationConfig = crudOperations[op];
 
     if (!isObject(operationConfig)) {
-      throw new Error(`Crud operation field '${op}' must be of type Object`);
+      throw new ModuleError({
+        ...errors.SCHEMA_OPTIONS_INVALID,
+        message: `Crud operation field '${op}' must be of type Object`,
+      });
     }
 
     const config = operationConfig as CrudOperationConfig;
 
     Object.keys(config).forEach(opField => {
       if (opField !== 'enabled' && opField !== 'authenticated') {
-        throw new Error(
-          `Unrecognized crud operation field '${opField}' for operation '${op}' provided`,
-        );
+        throw new ModuleError({
+          ...errors.SCHEMA_OPTIONS_INVALID,
+          message: `Unrecognized crud operation field '${opField}' for operation '${op}' provided`,
+        });
       }
 
       if (!isBoolean(config[opField])) {
-        throw new Error(
-          `Crud operation field '${opField}' for operation '${op}' must be of type Boolean`,
-        );
+        throw new ModuleError({
+          ...errors.SCHEMA_OPTIONS_INVALID,
+          message: `Crud operation field '${opField}' for operation '${op}' must be of type Boolean`,
+        });
       }
     });
   });
@@ -260,21 +323,28 @@ export function validatePermissions(permissions: Permissions) {
     const key = perm as keyof Permissions;
     if (permissions[key] === undefined) return;
     if (!['extendable', 'canCreate', 'canModify', 'canDelete'].includes(key)) {
-      throw new Error(`Unrecognized permission '${key}' provided`);
+      throw new ModuleError({
+        ...errors.SCHEMA_OPTIONS_INVALID,
+        message: `Unrecognized permission '${key}' provided`,
+      });
     }
     if (key !== 'canModify') {
       if (!isBoolean(permissions[key]))
-        throw new Error(`Permission field '${key}' must be of type Boolean`);
+        throw new ModuleError({
+          ...errors.SCHEMA_OPTIONS_INVALID,
+          message: `Permission field '${key}' must be of type Boolean`,
+        });
     } else if (
       !isString(permissions[key]) ||
       !ValidModifyPermValues.includes(
         permissions.canModify as 'Everything' | 'Nothing' | 'ExtensionOnly',
       )
     )
-      throw new Error(
-        `Permission field 'canModify' must be one of: ${ValidModifyPermValues.join(
+      throw new ModuleError({
+        ...errors.SCHEMA_OPTIONS_INVALID,
+        message: `Permission field 'canModify' must be one of: ${ValidModifyPermValues.join(
           ', ',
         )}`,
-      );
+      });
   });
 }

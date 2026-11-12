@@ -90,7 +90,11 @@ describe('AccessTokenVerifier', () => {
   it('fails closed on NaN tokenVersion', () => {
     const v = AccessTokenVerifier.getInstance(fakeSdk().sdk);
     v.applyConfig(cfg({ tokenVersion: 'abc' }));
-    assert.throws(() => v.verify(token(k1.privateKey, 'a')), /version mismatch/);
+    assert.throws(
+      () => v.verify(token(k1.privateKey, 'a')),
+      (e: any) =>
+        e.conduitCode === 'TOKEN_REVOKED' && e.debugLogInfo === 'version mismatch',
+    );
   });
 
   it('start loads config and applies bus updates', async () => {
@@ -98,7 +102,10 @@ describe('AccessTokenVerifier', () => {
     const v = AccessTokenVerifier.getInstance(f.sdk);
     await v.start();
     assert.equal(v.ready, true);
-    assert.throws(() => v.verify(token(k2.privateKey, 'b')), /unknown kid/);
+    assert.throws(
+      () => v.verify(token(k2.privateKey, 'b')),
+      (e: any) => e.conduitCode === 'TOKEN_INVALID' && e.debugLogInfo === 'unknown kid',
+    );
     f.emit(
       cfg(
         {},

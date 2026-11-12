@@ -16,6 +16,8 @@ export type GrpcResponse<T> = (
 export class GrpcError extends Error {
   code: status;
   message: string;
+  /** Marks gRPC status errors so they can be told apart from driver errors with a numeric `code`. */
+  readonly isGrpcError = true;
 
   constructor(code: status, message: string) {
     super(message);

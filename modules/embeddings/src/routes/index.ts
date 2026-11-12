@@ -13,6 +13,8 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
+import { SEARCH_ERRORS } from '../routeErrors.js';
 import { EmbeddingsApi } from '../api/embeddingsApi.js';
 import { EMBEDDINGS_CLIENT_FORBIDDEN_PATHS } from '../admin/routes.js';
 import {
@@ -76,6 +78,11 @@ export const CLIENT_SEMANTIC_SEARCH_ROUTE: ConduitRouteOptions = {
     scope: ConduitString.Optional,
   },
   middlewares: ['authMiddleware'],
+  errors: [
+    errors.SEMANTIC_SEARCH_SUBJECT_REQUIRED,
+    ...SEARCH_ERRORS,
+    errors.EMBEDDINGS_OPERATION_FAILED,
+  ],
 };
 
 export class EmbeddingsRoutes {

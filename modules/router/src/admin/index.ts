@@ -15,6 +15,7 @@ import {
 import { RouterAdmin } from './router.js';
 import { SecurityAdmin } from './security.js';
 import { EventRelayAdmin } from './event-relays.js';
+import { errors } from '../errors.js';
 import ConduitDefaultRouter from '../Router.js';
 import { Client, EventRelay } from '../models/index.js';
 import { EventRelayManager } from '../event-relays/EventRelayManager.js';
@@ -59,6 +60,7 @@ export class AdminHandlers {
       {
         path: '/router/route-middlewares',
         action: ConduitRouteActions.GET,
+        errors: [errors.INVALID_ROUTE_ACTION, errors.GRPC_ROUTE_NOT_FOUND],
         description: `Returns the middleware of an app route.`,
         queryParams: {
           path: ConduitString.Required,
@@ -74,6 +76,11 @@ export class AdminHandlers {
       {
         path: '/router/patch-middleware',
         action: ConduitRouteActions.PATCH,
+        errors: [
+          errors.INVALID_ROUTE_ACTION,
+          errors.GRPC_ROUTE_NOT_FOUND,
+          errors.MIDDLEWARE_PATCH_FAILED,
+        ],
         description: `Patches the middleware of an app route.`,
         queryParams: {
           path: ConduitString.Required,
@@ -102,6 +109,13 @@ export class AdminHandlers {
       {
         path: '/security/client',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.PLATFORM_NOT_SUPPORTED,
+          errors.INVALID_CLIENT_ALIAS,
+          errors.CLIENT_ALIAS_TAKEN,
+          errors.CLIENT_DOMAIN_REQUIRED,
+          errors.INVALID_CLIENT_DOMAIN,
+        ],
         description: `Creates a security client.`,
         bodyParams: {
           platform: ConduitString.Required,
@@ -145,6 +159,13 @@ export class AdminHandlers {
           id: ConduitString.Required,
         },
         action: ConduitRouteActions.UPDATE,
+        errors: [
+          errors.SECURITY_CLIENT_NOT_FOUND,
+          errors.INVALID_CLIENT_ALIAS,
+          errors.CLIENT_ALIAS_TAKEN,
+          errors.CLIENT_DOMAIN_REQUIRED,
+          errors.INVALID_CLIENT_DOMAIN,
+        ],
         description: `Updates a security client.`,
         bodyParams: {
           domain: ConduitString.Optional,
@@ -177,6 +198,7 @@ export class AdminHandlers {
       {
         path: '/event-relays/:id',
         action: ConduitRouteActions.GET,
+        errors: [errors.EVENT_RELAY_NOT_FOUND],
         description: `Returns a single event-to-socket relay.`,
         urlParams: {
           id: ConduitString.Required,
@@ -189,6 +211,18 @@ export class AdminHandlers {
       {
         path: '/event-relays',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.EVENT_RELAY_NAME_TAKEN,
+          errors.EVENT_RELAY_FIELD_REQUIRED,
+          errors.EVENT_RELAY_NAME_INVALID,
+          errors.EVENT_RELAY_NOTES_INVALID,
+          errors.EVENT_RELAY_BUS_EVENT_INVALID,
+          errors.EVENT_RELAY_SOCKET_EVENT_INVALID,
+          errors.EVENT_RELAY_RESOURCE_TYPE_INVALID,
+          errors.EVENT_RELAY_PATH_INVALID,
+          errors.EVENT_RELAY_PERMISSION_INVALID,
+          errors.EVENT_RELAY_TEMPLATE_INVALID,
+        ],
         description: `Creates an event-to-socket relay. Clients subscribe on /events/ after a ReBAC check.`,
         bodyParams: {
           name: ConduitString.Required,
@@ -209,6 +243,19 @@ export class AdminHandlers {
       {
         path: '/event-relays/:id',
         action: ConduitRouteActions.PATCH,
+        errors: [
+          errors.EVENT_RELAY_NOT_FOUND,
+          errors.EVENT_RELAY_NAME_TAKEN,
+          errors.EVENT_RELAY_FIELD_REQUIRED,
+          errors.EVENT_RELAY_NAME_INVALID,
+          errors.EVENT_RELAY_NOTES_INVALID,
+          errors.EVENT_RELAY_BUS_EVENT_INVALID,
+          errors.EVENT_RELAY_SOCKET_EVENT_INVALID,
+          errors.EVENT_RELAY_RESOURCE_TYPE_INVALID,
+          errors.EVENT_RELAY_PATH_INVALID,
+          errors.EVENT_RELAY_PERMISSION_INVALID,
+          errors.EVENT_RELAY_TEMPLATE_INVALID,
+        ],
         description: `Updates an event-to-socket relay.`,
         urlParams: {
           id: ConduitString.Required,
@@ -232,6 +279,7 @@ export class AdminHandlers {
       {
         path: '/event-relays/:id',
         action: ConduitRouteActions.DELETE,
+        errors: [errors.EVENT_RELAY_NOT_FOUND],
         description: `Deletes an event-to-socket relay.`,
         urlParams: {
           id: ConduitString.Required,
@@ -246,6 +294,13 @@ export class AdminHandlers {
       {
         path: '/event-relays/preview',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.EVENT_RELAY_SAMPLE_PAYLOAD_INVALID,
+          errors.EVENT_RELAY_TEMPLATE_INVALID,
+          errors.EVENT_RELAY_PAYLOAD_PATH_NOT_FOUND,
+          errors.EVENT_RELAY_RENDERED_MESSAGE_TOO_LARGE,
+          errors.EVENT_RELAY_PATH_INVALID,
+        ],
         description: `Renders a relay message template against sample bus JSON (same engine as runtime).`,
         bodyParams: {
           messageTemplate: ConduitJson.Required,

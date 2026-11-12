@@ -1,6 +1,9 @@
-import { ConduitGrpcSdk, GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitGrpcSdk,
+  Indexable,
+  ModuleErrorDefinition,
+} from '@conduitplatform/grpc-sdk';
 import { ConfigController, ModuleError } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
 import { errors } from '../errors.js';
 import { RealmMembership, RealmSettings, Team, User } from '../models/index.js';
 import {
@@ -38,6 +41,13 @@ import {
 } from './realm.logic.js';
 import { invalidateOAuthSettingsCache } from '../handlers/oauth2/utils/oauthSettings.logic.js';
 import { deleteSessionTokens } from './sessionRevocation.js';
+
+/** The authorization client; a missing module is a typed error, not a TypeError. */
+export function requireAuthorization(grpcSdk: ConduitGrpcSdk) {
+  const authorization = grpcSdk.authorization;
+  if (!authorization) throw new ModuleError(errors.AUTHORIZATION_UNAVAILABLE);
+  return authorization;
+}
 import { invalidateUsers } from './sessionServices.js';
 import { invalidateTeamClaims } from './teamClaims.js';
 
@@ -223,14 +233,30 @@ export async function identifierTakenForUser(
   return false;
 }
 
-/** Refuses an identifier that identifierTakenForUser finds taken (ALREADY_EXISTS). */
+// legacy text arguments of assertIdentifierFreeForUser, kept so callers can move to
+// passing the definition at their own pace
+const TAKEN_MESSAGE_CODES: Record<string, ModuleErrorDefinition> = {
+  'Phone number already exists': errors.PHONE_NUMBER_TAKEN,
+  'Email address already taken': errors.USER_EMAIL_TAKEN,
+  'This provider account is already linked to another account':
+    errors.OAUTH_ACCOUNT_ALREADY_LINKED,
+};
+
+/**
+ * Refuses an identifier that identifierTakenForUser finds taken (ALREADY_EXISTS).
+ * `taken` is the error to throw (PHONE_NUMBER_TAKEN, USER_EMAIL_TAKEN,
+ * OAUTH_ACCOUNT_ALREADY_LINKED); a text still maps to the matching code.
+ */
 export async function assertIdentifierFreeForUser(
   user: { _id: unknown; homeRealm?: unknown },
   identifier: IdentifierQuery,
-  takenMessage: string,
+  taken: ModuleErrorDefinition | string,
 ): Promise<void> {
   if (await identifierTakenForUser(user, identifier)) {
-    throw new GrpcError(status.ALREADY_EXISTS, takenMessage);
+    if (typeof taken !== 'string') throw new ModuleError(taken);
+    const definition = TAKEN_MESSAGE_CODES[taken];
+    if (definition) throw new ModuleError(definition);
+    throw new ModuleError(errors.USER_EXISTS, taken);
   }
 }
 
@@ -468,7 +494,7 @@ export async function assertNoNestedRealm(
   options: { promote?: boolean } = {},
 ): Promise<void> {
   const team = await Team.getInstance().findOne({ _id: teamId });
-  if (!team) throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+  if (!team) throw new ModuleError(errors.TEAM_NOT_FOUND);
   const violation = await hasNestedRealmViolation({
     team,
     parentTeamId,
@@ -511,7 +537,7 @@ export async function grantRealmMembership(
       const settings = await RealmSettings.getInstance().findOne({ team: realmTeamId });
       if (settings) {
         const user = await User.getInstance().findOne({ _id: userId });
-        if (!user) throw new GrpcError(status.NOT_FOUND, 'User does not exist');
+        if (!user) throw new ModuleError(errors.USER_NOT_FOUND);
         assertGuestAllowed(
           settings.policies,
           user.homeRealm ? String(user.homeRealm) : null,
@@ -534,7 +560,7 @@ export async function grantRealmMembership(
     }
   }
   if (role) {
-    await grpcSdk.authorization!.createRelation({
+    await requireAuthorization(grpcSdk).createRelation({
       subject: 'User:' + userId,
       relation: role,
       resource: 'Team:' + realmTeamId,
@@ -575,12 +601,12 @@ export async function revokeRealmMembership(
   );
   if (params.removeRelations) {
     try {
-      await grpcSdk.authorization!.deleteAllRelations({
+      await requireAuthorization(grpcSdk).deleteAllRelations({
         subject: 'User:' + userId,
         resource: 'Team:' + realmTeamId,
       });
     } catch {
-      // authorization throws when no relation exists
+      // authorization throws when no relation exists (or is not available): best effort
     }
     await invalidateTeamClaims([userId]);
   }

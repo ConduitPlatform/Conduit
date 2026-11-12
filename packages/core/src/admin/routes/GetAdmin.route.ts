@@ -1,12 +1,12 @@
 import {
-  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString } from '@conduitplatform/module-tools';
+import { ConduitString, ModuleError } from '@conduitplatform/module-tools';
 import { Admin } from '../../models/index.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
+import { errors } from '../../errors.js';
 
 export function getAdminRoute() {
   return new ConduitRoute(
@@ -17,6 +17,7 @@ export function getAdminRoute() {
       urlParams: {
         id: ConduitString.Required,
       },
+      errors: [errors.ADMIN_NOT_FOUND],
     },
     new ConduitRouteReturnDefinition('GetAdmin', Admin.name),
     async (req: ConduitRouteParameters) => {
@@ -26,7 +27,7 @@ export function getAdminRoute() {
           ? req.context!.admin
           : await Admin.getInstance().findOne({ _id: adminId });
       if (!admin) {
-        throw ConduitError.notFound('Admin does not exist');
+        throw new ModuleError(errors.ADMIN_NOT_FOUND);
       }
       return admin;
     },

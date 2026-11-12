@@ -1,6 +1,6 @@
-import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
-import { ConfigController } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
+import { hasConduitCode, Indexable, isGrpcStatusError } from '@conduitplatform/grpc-sdk';
+import { ConfigController, ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { normalizeFolderPath } from '../utils/index.js';
 
 export const RELATION_PAGE_SIZE = 100;
@@ -74,13 +74,17 @@ export function rethrowGrpcOrInternal(
   error: unknown,
   fallback = 'Something went wrong',
 ): never {
-  if (error instanceof GrpcError) {
+  if (isGrpcStatusError(error)) {
     throw error;
   }
-  throw new GrpcError(status.INTERNAL, (error as Error).message ?? fallback);
+  const raw = error instanceof Error ? error.message : undefined;
+  throw new ModuleError(errors.STORAGE_OPERATION_FAILED, raw ?? fallback);
 }
 
 export function isMissingRelationError(error: unknown): boolean {
+  if (hasConduitCode(error, 'RELATION_NOT_FOUND')) {
+    return true;
+  }
   const message = error instanceof Error ? error.message : String(error);
   return (
     message.includes('No relations found') || message.includes('Relation does not exist')

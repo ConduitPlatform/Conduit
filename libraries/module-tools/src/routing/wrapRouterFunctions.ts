@@ -1,6 +1,7 @@
 import {
   ConduitGrpcSdk,
   ConduitRouteReturnDefinition,
+  INTERNAL_ERROR_CODE,
   ConduitSocketParamTypes,
   Indexable,
   ParsedRouterRequest,
@@ -11,6 +12,7 @@ import {
 import { status } from '@grpc/grpc-js';
 import { hydrateContextUser, shouldHydrateUser, UserHydrator } from './hydrateUser.js';
 import { Status } from '@grpc/grpc-js/build/src/constants.js';
+import { toGrpcStatus } from '../helpers/toGrpcStatus.js';
 
 export type RouterRequestHandler = (
   call: ParsedRouterRequest,
@@ -54,13 +56,17 @@ const mapGrpcStatusToHttp = (code?: number): string => {
     case status.UNAUTHENTICATED:
       return `401 (Unauthenticated)`;
     case status.OUT_OF_RANGE:
-      return `416 (Out of Range)`;
+      return `400 (Out of Range)`;
+    case status.RESOURCE_EXHAUSTED:
+      return `429 (Resource Exhausted)`;
+    case status.UNIMPLEMENTED:
+      return `501 (Unimplemented)`;
     case status.FAILED_PRECONDITION:
       return `412 (Failed Precondition)`;
     case status.ABORTED:
       return `409 (Aborted)`;
     case status.INTERNAL:
-      return `416 (Internal)`;
+      return `500 (Internal)`;
     case status.UNAVAILABLE:
       return `503 (Service Unavailable)`;
     case status.DATA_LOSS:
@@ -125,7 +131,8 @@ function parseResponseData(
   if (responded.did) return;
   responded.did = true;
   if (!r) {
-    callback({
+    generateLog(routerType, routerRequest, requestReceive, call, status.INTERNAL);
+    return callback({
       code: status.INTERNAL,
       message: 'Handler did not return a response',
     });
@@ -166,7 +173,13 @@ export function wrapRouterGrpcFunction(
   fun: RequestHandlers | SocketRequestHandlers,
   routerType: string,
   hydration?: { options: Indexable; hydrator: UserHydrator },
+  declaredErrors?: ReadonlySet<string>,
 ): (call: Indexable, callback: any) => void {
+  // Admin routes are operator-facing and keep the cause of failures (of unexpected ones,
+  // and the debug text of typed ones); client routes never expose it.
+  const maskUnknown = routerType !== 'admin';
+  const exposeDebug = routerType === 'admin';
+  const reportedUndeclared = new Set<string>();
   return (call: any, callback: any) => {
     const requestReceive = Date.now();
     let routerRequest = true;
@@ -238,20 +251,26 @@ export function wrapRouterGrpcFunction(
       )
       .catch(error => {
         ConduitGrpcSdk.Metrics?.increment(`${routerType}_grpc_errors_total`);
-        generateLog(
-          routerType,
-          routerRequest,
-          requestReceive,
-          call,
-          error.code ?? status.INTERNAL,
-        );
-        ConduitGrpcSdk.Logger.error(
-          error.debugLogInfo ?? error.message ?? 'Something went wrong',
-        );
-        callback({
-          code: error.code ?? status.INTERNAL,
-          message: error.details ?? error.message ?? 'Something went wrong',
+        const { code, message, conduitCode, log } = toGrpcStatus(error, {
+          maskUnknown,
+          exposeDebug,
         });
+        generateLog(routerType, routerRequest, requestReceive, call, code);
+        ConduitGrpcSdk.Logger.error(log);
+        if (
+          declaredErrors &&
+          conduitCode &&
+          conduitCode !== INTERNAL_ERROR_CODE &&
+          !declaredErrors.has(conduitCode) &&
+          !reportedUndeclared.has(conduitCode)
+        ) {
+          // Keeps the published error list of a route honest: once per route and code.
+          reportedUndeclared.add(conduitCode);
+          ConduitGrpcSdk.Logger.warn(
+            `Route ${call.request.path ?? ''} returned ${conduitCode}, which is missing from its "errors" option`,
+          );
+        }
+        callback({ code, message });
       });
   };
 }

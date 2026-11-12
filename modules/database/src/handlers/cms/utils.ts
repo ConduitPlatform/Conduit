@@ -1,9 +1,9 @@
-import { GrpcError, Indexable, ParsedRouterRequest } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { Indexable, ParsedRouterRequest } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
 import { Doc, Schema } from '../../interfaces/index.js';
+import { rethrowDatabaseError } from '../../utils/databaseErrors.js';
 
 export function findSchema(
   call: ParsedRouterRequest,
@@ -31,18 +31,14 @@ export async function getUpdatedDocument(
         userId: options.userId,
         scope: options.scope,
       })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(rethrowDatabaseError());
   } else {
     updatedDocument = await model
       .findByIdAndUpdate(id, data, {
         userId: options.userId,
         scope: options.scope,
       })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(rethrowDatabaseError());
   }
   updatedDocument = await model
     .findOne(
@@ -54,9 +50,7 @@ export async function getUpdatedDocument(
         readPreference: 'primary',
       },
     )
-    .catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
+    .catch(rethrowDatabaseError());
 
   return updatedDocument;
 }

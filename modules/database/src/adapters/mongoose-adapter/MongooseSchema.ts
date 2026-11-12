@@ -25,6 +25,8 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isNil } from 'lodash-es';
 import { parseQuery } from './parser/index.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { DOCUMENT_NOT_MODIFIABLE, errors } from '../../errors.js';
 
 export class MongooseSchema extends SchemaAdapter<Model<any>> {
   model: Model<any>;
@@ -181,7 +183,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.scope,
     );
     if (isNil(parsedFilter)) {
-      throw new Error("Document doesn't exist or can't be modified by user.");
+      throw new ModuleError(DOCUMENT_NOT_MODIFIABLE);
     }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
@@ -216,7 +218,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.scope,
     );
     if (isNil(parsedFilter)) {
-      throw new Error("Document doesn't exist or can't be modified by user.");
+      throw new ModuleError(DOCUMENT_NOT_MODIFIABLE);
     }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
@@ -441,7 +443,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
             processing.length === 0 ||
             processing === ''
           ) {
-            throw new Error("Failed populating '" + final + "'");
+            throw new ModuleError({
+              ...errors.POPULATE_INVALID,
+              message: "Failed populating '" + final + "'",
+            });
           } else {
             const split = processing.split('.');
             split.splice(split.length - 1, 1);
@@ -454,11 +459,12 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
           validPath.options.ref === undefined &&
           validPath.options.type[0].ref === undefined
         ) {
-          throw new Error(
-            `Failed populating '${final}', path exists for ${processing} but missing ${
+          throw new ModuleError({
+            ...errors.POPULATE_INVALID,
+            message: `Failed populating '${final}', path exists for ${processing} but missing ${
               final.split(processing)[1]
             }`,
-          );
+          });
         } else {
           const ref = validPath.options.ref || validPath.options.type[0].ref;
           const childPopulates = this.adapter.models[ref].calculatePopulates([

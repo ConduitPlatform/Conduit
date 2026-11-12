@@ -156,6 +156,17 @@ describe('isConfigMissingError', () => {
     );
   });
 
+  it('recognizes the typed MODULE_CONFIG_NOT_SET error returned by core', () => {
+    const typed = Object.assign(new Error('5 NOT_FOUND: typed'), {
+      code: 5,
+      details: JSON.stringify({
+        message: 'Module configuration is not set',
+        conduitCode: 'MODULE_CONFIG_NOT_SET',
+      }),
+    });
+    assert.equal(isConfigMissingError(typed), true);
+  });
+
   it('does not treat a timeout as missing config', () => {
     assert.equal(
       isConfigMissingError(new Error('14 UNAVAILABLE: deadline exceeded')),

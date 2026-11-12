@@ -34,6 +34,8 @@ import {
   includeRelations,
   parseQueryFilter,
 } from './utils/query.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { DOCUMENT_NOT_MODIFIABLE, errors } from '../../errors.js';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
@@ -154,7 +156,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         options?.scope,
       ).then(r => {
         if (!r) {
-          throw new Error("Document doesn't exist or can't be modified by user.");
+          throw new ModuleError(DOCUMENT_NOT_MODIFIABLE);
         }
         return r._id;
       });
@@ -166,7 +168,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
           transaction: t,
           lock: this.sequelize.getDialect() === 'sqlite' ? undefined : t.LOCK.UPDATE,
         });
-        if (!matching) throw new Error('Document not found');
+        if (!matching) throw new ModuleError(errors.DOCUMENT_NOT_FOUND);
       }
       const parentDoc = await this.model.findByPk(parsedId, {
         nest: true,
@@ -177,7 +179,10 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         for (const key in inc) {
           if (!inc.hasOwnProperty(key)) continue;
           if (this.extractedRelations[key]) {
-            throw new Error(`Cannot increment relation: ${key}`);
+            throw new ModuleError({
+              ...errors.DOCUMENT_UPDATE_INVALID,
+              message: `Cannot increment relation: ${key}`,
+            });
           }
           if (inc[key] > 0) {
             parsedQuery[key] = Sequelize.literal(`${key} + ${inc[key]}`);
@@ -196,10 +201,17 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         for (const key in push) {
           if (this.extractedRelations[key]) {
             if (!Array.isArray(this.extractedRelations[key])) {
-              throw new Error(`Cannot push in non-array field: ${key}`);
+              throw new ModuleError({
+                ...errors.DOCUMENT_UPDATE_INVALID,
+                message: `Cannot push in non-array field: ${key}`,
+              });
             }
             const association = this.model.associations[key] as any;
-            if (!association) throw new Error(`Cannot push in field: ${key}`);
+            if (!association)
+              throw new ModuleError({
+                ...errors.DOCUMENT_UPDATE_INVALID,
+                message: `Cannot push in field: ${key}`,
+              });
             await parentDoc[association.accessors.add](push[key]['$each'] ?? push[key], {
               transaction: t,
             });
@@ -238,7 +250,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
           affected === 0 &&
           !['mysql', 'mariadb'].includes(this.sequelize.getDialect())
         ) {
-          throw new Error('Document not found');
+          throw new ModuleError(errors.DOCUMENT_NOT_FOUND);
         }
         incrementDbQueries();
         const doc = await this.model.findByPk(parsedId, { nest: true, transaction: t });
@@ -698,7 +710,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   ): Promise<any> {
     return this.findOne(filterQuery, options).then(doc => {
       if (!doc) {
-        throw new Error('Document not found');
+        throw new ModuleError(errors.DOCUMENT_NOT_FOUND);
       }
       return this.findByIdAndReplace(doc._id, query, options);
     });
@@ -716,7 +728,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   ): Promise<any> {
     const doc = await this.findOne(filterQuery, options);
     if (!doc) {
-      throw new Error('Document not found');
+      throw new ModuleError(errors.DOCUMENT_NOT_FOUND);
     }
     // Keep the filter in the UPDATE so a conditional write is atomic. Authorization
     // is already enforced by the read above and by the edit check on the update.

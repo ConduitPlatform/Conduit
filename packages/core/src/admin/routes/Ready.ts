@@ -1,5 +1,4 @@
 import {
-  ConduitError,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
@@ -8,7 +7,9 @@ import {
   ConduitBoolean,
   ConduitNumber,
   ConduitString,
+  ModuleError,
 } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 import type { ReadinessService } from '../../health/ReadinessService.js';
 
 export function getReadyRoute(readinessService: ReadinessService) {
@@ -20,6 +21,7 @@ export function getReadyRoute(readinessService: ReadinessService) {
       queryParams: {
         legacy: ConduitBoolean.Optional,
       },
+      errors: [errors.CORE_NOT_READY],
     },
     new ConduitRouteReturnDefinition('Ready', {
       status: ConduitString.Required,
@@ -37,7 +39,7 @@ export function getReadyRoute(readinessService: ReadinessService) {
     async () => {
       const report = await readinessService.evaluate();
       if (report.status === 'not_ready') {
-        throw new ConduitError('SERVICE_UNAVAILABLE', 503, report.message);
+        throw new ModuleError(errors.CORE_NOT_READY, report.message);
       }
       return report;
     },

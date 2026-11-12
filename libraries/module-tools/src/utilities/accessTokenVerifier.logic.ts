@@ -1,6 +1,7 @@
 import { createDecoder, createVerifier } from 'fast-jwt';
-import { status } from '@grpc/grpc-js';
 import { AccessTokenClaims, GrpcError } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '../classes/ModuleError.js';
+import { authErrors } from './authErrors.js';
 
 export interface AccessTokenSigningKeys {
   kid: string;
@@ -31,8 +32,21 @@ export const DEFAULT_LEEWAY_SECONDS = 5;
 const verifiers = new Map<string, ReturnType<typeof createVerifier>>();
 const decode = createDecoder({ complete: true });
 
-function fail(reason: string): never {
-  throw new GrpcError(status.UNAUTHENTICATED, reason);
+const FAILURES = {
+  'malformed token': authErrors.TOKEN_MALFORMED,
+  'unsupported algorithm': authErrors.TOKEN_MALFORMED,
+  'unknown kid': authErrors.TOKEN_INVALID,
+  'bad signature': authErrors.TOKEN_INVALID,
+  expired: authErrors.TOKEN_EXPIRED,
+  'version mismatch': authErrors.TOKEN_REVOKED,
+  'client mismatch': authErrors.TOKEN_CLIENT_MISMATCH,
+} as const;
+
+export type AccessTokenFailure = keyof typeof FAILURES;
+
+/** The short reason goes to the log (`debugLogInfo`); clients get the typed error. */
+function fail(reason: AccessTokenFailure): never {
+  throw new ModuleError(FAILURES[reason], reason);
 }
 
 function getVerifier(publicKey: string) {
@@ -71,7 +85,7 @@ export function selectVerificationKey(
 }
 
 /**
- * Verifies an Ed25519 access token. Throws GrpcError(UNAUTHENTICATED) with a short,
+ * Verifies an Ed25519 access token. Throws a typed ModuleError (UNAUTHENTICATED) with a short,
  * key-material-free reason on any failure.
  */
 export function verifyAccessToken(

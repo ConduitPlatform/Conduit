@@ -1,5 +1,5 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import {
   decideSharedJwtSecret,
   ensureAccessTokenJwtSecret,
@@ -36,7 +36,7 @@ function cloneConfig<T extends JwtSecretConfig>(config: T): T {
 }
 
 function throwUnavailable(): never {
-  throw new GrpcError(status.UNAVAILABLE, JWT_SECRET_UNAVAILABLE);
+  throw new ModuleError(errors.SIGNING_KEYS_UNAVAILABLE, JWT_SECRET_UNAVAILABLE);
 }
 
 export async function reconcileSharedAccessTokenJwtSecret<T extends JwtSecretConfig>(

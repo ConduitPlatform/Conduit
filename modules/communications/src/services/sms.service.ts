@@ -1,5 +1,8 @@
 import { SmsRecord } from '../models/index.js';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
+import { channelFailure } from '../utils/channelFailure.js';
 import {
   ChannelResult,
   ChannelStatus,
@@ -70,10 +73,12 @@ export class SmsService implements IChannel {
       const { recipient, body } = params;
 
       if (!this.provider) {
-        throw new Error('No SMS provider available');
+        throw new ModuleError(errors.SMS_NOT_CONFIGURED);
       }
 
-      const result = await this.provider.sendSms(recipient, body || '');
+      const result = await this.provider
+        .sendSms(recipient, body || '')
+        .catch(ModuleError.rethrow(errors.SMS_PROVIDER_ERROR));
 
       // Store SMS record if needed
       const smsRecord = await SmsRecord.getInstance().create({
@@ -92,7 +97,7 @@ export class SmsService implements IChannel {
     } catch (error) {
       return {
         success: false,
-        error: (error as Error).message,
+        ...channelFailure(error, errors.SMS_PROVIDER_ERROR),
         channel: 'sms',
       };
     }
@@ -119,7 +124,8 @@ export class SmsService implements IChannel {
         return {
           status: 'failed' as const,
           messageId,
-          error: 'SMS record not found',
+          error: errors.SMS_RECORD_NOT_FOUND.message,
+          conduitCode: errors.SMS_RECORD_NOT_FOUND.conduitCode,
           timestamp: new Date(),
         };
       }
@@ -135,7 +141,7 @@ export class SmsService implements IChannel {
       return {
         status: 'failed' as const,
         messageId,
-        error: (error as Error).message,
+        ...channelFailure(error, errors.COMMUNICATIONS_DATABASE_ERROR),
         timestamp: new Date(),
       };
     }
@@ -143,38 +149,46 @@ export class SmsService implements IChannel {
 
   async sendSms(to: string, message: string) {
     if (!this.provider) {
-      throw new Error('No SMS provider available');
+      throw new ModuleError(errors.SMS_NOT_CONFIGURED);
     }
 
-    const result = await this.provider.sendSms(to, message);
+    const result = await this.provider
+      .sendSms(to, message)
+      .catch(ModuleError.rethrow(errors.SMS_PROVIDER_ERROR));
 
     // Store SMS record
-    const smsRecord = await SmsRecord.getInstance().create({
-      recipient: to,
-      message,
-      provider: this.providerName ?? 'unknown',
-      status: 'sent',
-      providerResponse: result,
-    });
+    const smsRecord = await SmsRecord.getInstance()
+      .create({
+        recipient: to,
+        message,
+        provider: this.providerName ?? 'unknown',
+        status: 'sent',
+        providerResponse: result,
+      })
+      .catch(ModuleError.rethrow(errors.COMMUNICATIONS_DATABASE_ERROR));
 
     return { messageId: smsRecord._id, ...result };
   }
 
   async sendVerificationCode(to: string) {
     if (!this.provider) {
-      throw new Error('No SMS provider available');
+      throw new ModuleError(errors.SMS_NOT_CONFIGURED);
     }
 
-    const verificationSid = await this.provider.sendVerificationCode(to);
+    const verificationSid = await this.provider
+      .sendVerificationCode(to)
+      .catch(ModuleError.rethrow(errors.SMS_PROVIDER_ERROR));
     return { verificationSid };
   }
 
   async verify(verificationSid: string, code: string) {
     if (!this.provider) {
-      throw new Error('No SMS provider available');
+      throw new ModuleError(errors.SMS_NOT_CONFIGURED);
     }
 
-    const verified = await this.provider.verify(verificationSid, code);
+    const verified = await this.provider
+      .verify(verificationSid, code)
+      .catch(ModuleError.rethrow(errors.SMS_PROVIDER_ERROR));
     return { verified };
   }
 }

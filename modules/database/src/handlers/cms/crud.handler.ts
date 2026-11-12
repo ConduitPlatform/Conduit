@@ -1,17 +1,18 @@
 import {
   ConduitGrpcSdk,
-  GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.js';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
 import { Doc } from '../../interfaces/index.js';
 import { findSchema, getUpdatedDocument } from './utils.js';
 import { constructSortObj } from '../utils.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { rethrowDatabaseError } from '../../utils/databaseErrors.js';
+import { errors } from '../../errors.js';
 
 export class CmsHandlers {
   constructor(
@@ -36,21 +37,22 @@ export class CmsHandlers {
     if (sort && sort.length > 0) {
       parsedSort = constructSortObj(sort);
     }
-    const documentsPromise = model.findMany(
-      {},
-      {
-        skip: skipNumber,
-        limit: limitNumber,
-        sort: parsedSort,
-        populate,
-        userId: call.request.context.user?._id,
-        scope,
-      },
-    );
-    const countPromise = model.countDocuments(
-      {},
-      { userId: call.request.context.user?._id, scope },
-    );
+    const documentsPromise = model
+      .findMany(
+        {},
+        {
+          skip: skipNumber,
+          limit: limitNumber,
+          sort: parsedSort,
+          populate,
+          userId: call.request.context.user?._id,
+          scope,
+        },
+      )
+      .catch(rethrowDatabaseError());
+    const countPromise = model
+      .countDocuments({}, { userId: call.request.context.user?._id, scope })
+      .catch(rethrowDatabaseError());
     const [documents, count] = await Promise.all([documentsPromise, countPromise]);
 
     return { documents, count };
@@ -59,16 +61,18 @@ export class CmsHandlers {
   async getDocumentById(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { scope, id, populate } = call.request.params;
     const model = findSchema(call, this.database);
-    const document: Doc | undefined = await model.findOne(
-      { _id: id },
-      {
-        populate,
-        userId: call.request.context.user?._id,
-        scope,
-      },
-    );
+    const document: Doc | undefined = await model
+      .findOne(
+        { _id: id },
+        {
+          populate,
+          userId: call.request.context.user?._id,
+          scope,
+        },
+      )
+      .catch(rethrowDatabaseError());
     if (!document) {
-      throw new GrpcError(status.NOT_FOUND, 'Document does not exist');
+      throw new ModuleError(errors.DOCUMENT_NOT_FOUND);
     }
     return document;
   }
@@ -76,10 +80,12 @@ export class CmsHandlers {
   async createDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { scope } = call.request.queryParams;
     const model = findSchema(call, this.database);
-    return model.create(call.request.bodyParams, {
-      userId: call.request.context.user?._id,
-      scope,
-    });
+    return model
+      .create(call.request.bodyParams, {
+        userId: call.request.context.user?._id,
+        scope,
+      })
+      .catch(rethrowDatabaseError());
   }
 
   async createManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -92,9 +98,7 @@ export class CmsHandlers {
         userId: call.request.context.user?._id,
         scope,
       })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(rethrowDatabaseError());
     return { docs: newDocuments };
   }
 
@@ -122,9 +126,7 @@ export class CmsHandlers {
           userId: call.request.context.user?._id,
           scope,
         })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(rethrowDatabaseError());
       updatedDocuments.push(updatedDocument);
     }
     return { docs: updatedDocuments };
@@ -154,9 +156,7 @@ export class CmsHandlers {
           userId: call.request.context.user?._id,
           scope,
         })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(rethrowDatabaseError());
       updatedDocuments.push(updatedDocument);
     }
     return { docs: updatedDocuments };
@@ -174,9 +174,7 @@ export class CmsHandlers {
           scope,
         },
       )
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(rethrowDatabaseError());
 
     return 'Ok';
   }

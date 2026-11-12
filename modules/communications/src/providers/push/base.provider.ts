@@ -1,3 +1,5 @@
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 import { ConduitGrpcSdk, PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
 import { validateNotification } from './utils/index.js';
 import { groupBy, isNil } from 'lodash-es';
@@ -240,7 +242,7 @@ export class BaseNotificationProvider<T> {
   }
 
   async sendToDevice(params: ISendNotification): Promise<any> {
-    if (!this._initialized) throw new Error('Provider not initialized');
+    if (!this._initialized) throw new ModuleError(errors.PUSH_NOT_CONFIGURED);
     const { sendTo } = params;
     if (isNil(sendTo)) return;
     validateNotification(params);
@@ -256,7 +258,7 @@ export class BaseNotificationProvider<T> {
     if (this.isBaseProvider) return;
     const notificationTokens = await this.fetchTokens(sendTo, params.platform);
     if (notificationTokens.length === 0) {
-      throw new Error('No notification token found');
+      throw new ModuleError(errors.RECIPIENT_TOKENS_NOT_FOUND);
     }
     const results = await this.dispatchSendMessages(
       this.toTokenTargets(notificationTokens),
@@ -298,7 +300,7 @@ export class BaseNotificationProvider<T> {
   }
 
   async sendMany(params: ISendNotification[]): Promise<IPushSendAggregateResult> {
-    if (!this._initialized) throw new Error('Provider not initialized');
+    if (!this._initialized) throw new ModuleError(errors.PUSH_NOT_CONFIGURED);
     const notifications: {
       user: string | User;
       title?: string;
@@ -334,7 +336,7 @@ export class BaseNotificationProvider<T> {
     for (const userBatch of this.chunkItems(uniqueUserIds)) {
       this.mergeTokensIntoCache(tokenCache, await this.fetchTokensForUsers(userBatch));
     }
-    if (tokenCache.size === 0) throw new Error('Could not find tokens');
+    if (tokenCache.size === 0) throw new ModuleError(errors.RECIPIENT_TOKENS_NOT_FOUND);
 
     const outcomes: { success: boolean; skipped: boolean }[] = [];
     for (const paramBatch of this.chunkItems(params)) {
@@ -369,7 +371,7 @@ export class BaseNotificationProvider<T> {
   async sendToManyDevices(
     params: ISendNotificationToManyDevices,
   ): Promise<IPushSendAggregateResult> {
-    if (!this._initialized) throw new Error('Provider not initialized');
+    if (!this._initialized) throw new ModuleError(errors.PUSH_NOT_CONFIGURED);
 
     validateNotification(params);
     if (!params.doNotStore && !params.isSilent) {
@@ -397,7 +399,8 @@ export class BaseNotificationProvider<T> {
       params.sendTo,
       params.platform,
     );
-    if (notificationTokens.length === 0) throw new Error('Could not find tokens');
+    if (notificationTokens.length === 0)
+      throw new ModuleError(errors.RECIPIENT_TOKENS_NOT_FOUND);
 
     const results = await this.dispatchSendMessages(
       this.toTokenTargets(notificationTokens),

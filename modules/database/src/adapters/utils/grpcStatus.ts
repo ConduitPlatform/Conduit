@@ -1,14 +1,12 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { grpcCallbackError } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 
+/**
+ * Status and payload a failed gRPC method answers with. Typed and gRPC errors keep their
+ * status and `{message, conduitCode}` payload; anything else is INTERNAL.
+ */
 export function grpcStatusFromError(err: unknown): { code: status; message: string } {
-  if (err instanceof GrpcError) {
-    return { code: err.code, message: err.message };
-  }
-  return {
-    code: status.INTERNAL,
-    message: err instanceof Error ? err.message : String(err),
-  };
+  return grpcCallbackError(err);
 }
 
 export function callerModuleName(metadata?: {

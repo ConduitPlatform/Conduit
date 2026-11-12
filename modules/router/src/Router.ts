@@ -1,11 +1,9 @@
 import { NextFunction, Response } from 'express';
-import { status } from '@grpc/grpc-js';
 import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   DatabaseProvider,
   GrpcCallback,
-  GrpcError,
   GrpcRequest,
   HealthCheckStatus,
   Indexable,
@@ -41,8 +39,11 @@ import metricsSchema from './metrics/index.js';
 import {
   AccessTokenVerifier,
   ConfigController,
+  grpcCallbackError,
   ManagedModule,
+  ModuleError,
 } from '@conduitplatform/module-tools';
+import { errors } from './errors.js';
 import {
   createAuthModeToggle,
   createSocketRecoveryCheck,
@@ -307,10 +308,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
           call.metadata!.get('module-name')![0] as string,
         );
         if (!result) {
-          return callback({
-            code: status.INTERNAL,
-            message: 'Error when registering routes',
-          });
+          return callback(grpcCallbackError(errors.ROUTE_REGISTRATION_FAILED));
         }
         call.request.routerUrl = result.url;
       }
@@ -325,7 +323,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       this.scheduleMiddlewareApply();
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
-      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
+      return callback(grpcCallbackError(err, errors.ROUTE_REGISTRATION_FAILED));
     }
 
     //todo definitely missing an error handler here
@@ -370,7 +368,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       await this._internalRouter.socketPush(socketData);
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
-      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
+      return callback(grpcCallbackError(err, errors.SOCKET_PUSH_FAILED));
     }
 
     //todo definitely missing an error handler here
@@ -494,23 +492,17 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     callback: GrpcCallback<Record<string, never>>,
   ) {
     const { path, action, middlewares } = call.request;
-    const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
-      call.metadata!.get('module-name')![0] as string,
-    );
-    if (!moduleUrl) {
-      return callback({
-        code: status.INTERNAL,
-        message: 'Something went wrong',
-      });
+    try {
+      const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
+        call.metadata!.get('module-name')![0] as string,
+      );
+      if (!moduleUrl) {
+        return callback(grpcCallbackError(errors.MIDDLEWARE_PATCH_FAILED));
+      }
+      await this._patchRouteMiddlewares(path, action, middlewares, moduleUrl.url);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.MIDDLEWARE_PATCH_FAILED));
     }
-    await this._patchRouteMiddlewares(path, action, middlewares, moduleUrl.url).catch(
-      e => {
-        return callback({
-          code: status.INTERNAL,
-          message: (e as Error).message,
-        });
-      },
-    );
     callback(null, {});
   }
 
@@ -654,10 +646,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       })
       .catch(e => {
         console.error(e);
-        throw new GrpcError(
-          status.INTERNAL,
-          'Failed to update state for patched middleware',
-        );
+        throw new ModuleError(errors.MIDDLEWARE_PATCH_FAILED, (e as Error)?.message);
       });
   }
 
@@ -670,7 +659,10 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         }
       }
     }
-    throw new GrpcError(status.NOT_FOUND, `Grpc route ${action} ${path} not found`);
+    throw new ModuleError(
+      errors.GRPC_ROUTE_NOT_FOUND,
+      `Grpc route ${action} ${path} not found`,
+    );
   }
 
   getGrpcRoute(url: string, routeIndex: number) {

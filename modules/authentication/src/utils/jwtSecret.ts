@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { hasConduitCode } from '@conduitplatform/grpc-sdk';
 
 export function isJwtSecretEmpty(secret?: string | null): boolean {
   return !secret?.trim();
@@ -16,6 +17,8 @@ export function ensureAccessTokenJwtSecret(config: {
 export type PersistedConfigRead<T> = { ok: true; config: T | null } | { ok: false };
 
 export function isConfigMissingError(error: unknown): boolean {
+  // core answers NOT_FOUND with the typed code; older cores sent the bare text
+  if (hasConduitCode(error, 'MODULE_CONFIG_NOT_SET')) return true;
   const message = error instanceof Error ? error.message : String(error);
   return message.includes('Config for module not set');
 }

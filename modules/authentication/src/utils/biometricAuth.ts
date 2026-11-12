@@ -1,10 +1,10 @@
 import crypto from 'crypto';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 
 export const BIOMETRIC_CHALLENGE_TTL_MS = 2 * 60 * 1000;
 export const BIOMETRIC_CHALLENGE_LOCK_TTL_MS = 10_000;
-export const BIOMETRIC_CHALLENGE_UNAVAILABLE = 'Unable to issue biometric challenge';
 
 export type BiometricChallengeToken = {
   createdAt: Date | string;
@@ -58,7 +58,7 @@ export interface BiometricChallengeIssuanceDeps<T extends BiometricChallengeToke
 
 function throwIfLockLost(signal: AbortSignal) {
   if (signal.aborted) {
-    throw new GrpcError(status.UNAVAILABLE, BIOMETRIC_CHALLENGE_UNAVAILABLE);
+    throw new ModuleError(errors.BIOMETRIC_CHALLENGE_UNAVAILABLE, 'issuance lock lost');
   }
 }
 
@@ -66,7 +66,7 @@ function wrapIssuanceError(error: unknown): never {
   if (error instanceof GrpcError) {
     throw error;
   }
-  throw new GrpcError(status.UNAVAILABLE, BIOMETRIC_CHALLENGE_UNAVAILABLE);
+  throw ModuleError.from(error, errors.BIOMETRIC_CHALLENGE_UNAVAILABLE);
 }
 
 export async function issueOrReuseBiometricLoginChallenge<
@@ -95,7 +95,10 @@ export async function issueOrReuseBiometricLoginChallenge<
         throwIfLockLost(signal);
         const stored = created.data?.challenge?.trim();
         if (!stored) {
-          throw new GrpcError(status.UNAVAILABLE, BIOMETRIC_CHALLENGE_UNAVAILABLE);
+          throw new ModuleError(
+            errors.BIOMETRIC_CHALLENGE_UNAVAILABLE,
+            'stored challenge is empty',
+          );
         }
         return stored;
       },
@@ -118,14 +121,11 @@ export async function consumeBiometricChallenge<
 ): Promise<string> {
   const storedClientId = token.data?.clientId;
   if (!storedClientId || storedClientId !== requestClientId) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      "Responding client doesn't match requesting!",
-    );
+    throw new ModuleError(errors.BIOMETRIC_CLIENT_MISMATCH);
   }
   const consumed = await deleteOne(token._id);
   if (consumed.deletedCount === 0) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
+    throw new ModuleError(errors.BIOMETRIC_SIGNATURE_INVALID);
   }
   return storedClientId;
 }
@@ -135,13 +135,18 @@ export function verifyBiometricSignature(
   challenge: string,
   signatureBase64: string,
 ): boolean {
-  const verifier = crypto.createVerify('sha256WithRSAEncryption');
-  verifier.update(new Uint8Array(Buffer.from(challenge)));
-  const cryptoKey = crypto.createPublicKey({
-    key: publicKeyDerBase64,
-    format: 'der',
-    type: 'spki',
-    encoding: 'base64',
-  });
-  return verifier.verify(cryptoKey, signatureBase64, 'base64');
+  try {
+    const verifier = crypto.createVerify('sha256WithRSAEncryption');
+    verifier.update(new Uint8Array(Buffer.from(challenge)));
+    const cryptoKey = crypto.createPublicKey({
+      key: publicKeyDerBase64,
+      format: 'der',
+      type: 'spki',
+      encoding: 'base64',
+    });
+    return verifier.verify(cryptoKey, signatureBase64, 'base64');
+  } catch {
+    // a malformed stored key or signature is a failed verification, not a server error
+    return false;
+  }
 }

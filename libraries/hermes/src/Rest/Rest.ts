@@ -7,7 +7,8 @@ import {
   Router,
 } from 'express';
 import { SwaggerGenerator } from './Swagger.js';
-import { extractRequestData, mapGrpcErrorToHttp, validateParams } from './util.js';
+import { extractRequestData, validateParams } from './util.js';
+import { toErrorResponse } from '../utils/errors.js';
 import { extractClientIp } from '../utils/extractClientIp.js';
 import { createHashKey, extractCaching } from '../cache.utils.js';
 import { ConduitRouter } from '../Router.js';
@@ -149,28 +150,38 @@ export class RestController extends ConduitRouter {
         route,
         req.headers['cache-control'],
       );
-      const unknownKeys: 'strict' | 'strip' | 'passthrough' =
-        route.input.strictParams === true
-          ? 'strict'
-          : route.input.strictParams === false
-            ? 'passthrough'
-            : 'strip';
-      if (route.input.bodyParams)
-        context.bodyParams = validateParams(context.bodyParams, route.input.bodyParams, {
-          unknownKeys,
-          coerce: false,
-        });
-      if (route.input.queryParams)
-        context.queryParams = validateParams(
-          context.queryParams,
-          route.input.queryParams,
-          { unknownKeys, coerce: true },
-        );
-      if (route.input.urlParams)
-        context.urlParams = validateParams(context.urlParams, route.input.urlParams, {
-          unknownKeys,
-          coerce: true,
-        });
+      // Validation runs synchronously: without this the error would escape to Express'
+      // default handler instead of the JSON error response.
+      try {
+        const unknownKeys: 'strict' | 'strip' | 'passthrough' =
+          route.input.strictParams === true
+            ? 'strict'
+            : route.input.strictParams === false
+              ? 'passthrough'
+              : 'strip';
+        if (route.input.bodyParams)
+          context.bodyParams = validateParams(
+            context.bodyParams,
+            route.input.bodyParams,
+            {
+              unknownKeys,
+              coerce: false,
+            },
+          );
+        if (route.input.queryParams)
+          context.queryParams = validateParams(
+            context.queryParams,
+            route.input.queryParams,
+            { unknownKeys, coerce: true },
+          );
+        if (route.input.urlParams)
+          context.urlParams = validateParams(context.urlParams, route.input.urlParams, {
+            unknownKeys,
+            coerce: true,
+          });
+      } catch (err) {
+        return self.handleError(res)(err as Error);
+      }
       context.params = {
         ...context.bodyParams,
         ...context.queryParams,
@@ -259,46 +270,18 @@ export class RestController extends ConduitRouter {
 
   handleError(res: Response): (err: Error | ConduitError) => void {
     return (err: Error | ConduitError | any) => {
-      if (err.hasOwnProperty('status')) {
+      const response = toErrorResponse(err);
+      // Typed errors of a module are already logged there, with their cause. Those
+      // raised in-process (core and router routes) only reach the log here.
+      const debug = (err as { debugLogInfo?: unknown } | null)?.debugLogInfo;
+      if (response.conduitCode && (response.status < 500 || debug)) {
+        ConduitGrpcSdk.Logger.error(
+          `[${response.conduitCode}] ${response.message}${debug ? `: ${debug}` : ''}`,
+        );
+      } else {
         ConduitGrpcSdk.Logger.error(err);
-        return res.status((err as ConduitError).status).json({
-          name: err.name,
-          status: (err as ConduitError).status,
-          message: err.message,
-        });
       }
-      if (err.hasOwnProperty('code')) {
-        const { status, name } = mapGrpcErrorToHttp(err.code);
-        let parsed: { message: string; conduitCode: string } | null = null;
-        try {
-          parsed = JSON.parse(err.details);
-        } catch (e) {
-          // The below line is commented out to avoid cluttering the logs since most errors will not have a parsable details field.
-          // console.warn('Error parsing details:', e);
-        }
-        if (parsed && typeof parsed === 'object') {
-          ConduitGrpcSdk.Logger.error(parsed.message);
-          return res.status(status).json({
-            name,
-            status,
-            message: parsed.message,
-            conduitCode: parsed.conduitCode,
-          });
-        } else {
-          ConduitGrpcSdk.Logger.error(err);
-          return res.status(status).json({
-            name,
-            status,
-            message: err.details,
-          });
-        }
-      }
-      ConduitGrpcSdk.Logger.error(err);
-      res.status(500).json({
-        name: 'INTERNAL_SERVER_ERROR',
-        status: 500,
-        message: 'Something went wrong',
-      });
+      res.status(response.status).json(response);
     };
   }
 

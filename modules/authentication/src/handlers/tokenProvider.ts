@@ -1,10 +1,11 @@
-import { ConduitGrpcSdk, GrpcError, Indexable, Query } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, Indexable, Query } from '@conduitplatform/grpc-sdk';
+import { authErrors, ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { AccessToken, RealmMembership, RefreshToken, User } from '../models/index.js';
 import moment from 'moment';
 import { AuthUtils } from '../utils/index.js';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { createSigner } from 'fast-jwt';
-import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
 import { Config } from '../config/index.js';
 import { isNil } from 'lodash-es';
@@ -327,7 +328,7 @@ export class TokenProvider {
     realmChecked = false,
   ): Promise<[MintedAccessToken, IssuedRefreshToken?]> {
     if (!tokenOptions.user.active) {
-      throw new Error('User is blocked or deleted');
+      throw new ModuleError(authErrors.USER_BLOCKED);
     }
     // guard for direct callers that did not run the check up front
     if (!realmChecked) await this.assertRealmAccessForTokens(tokenOptions);
@@ -424,7 +425,10 @@ export class TokenProvider {
         isJwtAccessMode(tokenOptions.config) &&
         tokenOptions.config.accessTokens.strictRevocation
       ) {
-        throw new GrpcError(status.UNAVAILABLE, 'Session registry unavailable');
+        throw new ModuleError(
+          authErrors.SESSION_REGISTRY_UNAVAILABLE,
+          (e as Error)?.message ?? String(e),
+        );
       }
       ConduitGrpcSdk.Logger.warn(
         `Session registry registration failed: ${(e as Error)?.message ?? e}`,
@@ -514,10 +518,7 @@ export class TokenProvider {
     const { accessTokens } = tokenOptions.config;
     const { kid, privateKey } = accessTokens.signing;
     if (!kid || !privateKey) {
-      throw new GrpcError(
-        status.UNAVAILABLE,
-        'Access token signing keys are not available',
-      );
+      throw new ModuleError(errors.SIGNING_KEYS_UNAVAILABLE);
     }
     const userId = String(tokenOptions.user._id);
     const [teams, hasGuestMembership] = await Promise.all([
@@ -526,7 +527,7 @@ export class TokenProvider {
         ? loadTeamClaims(userId, {
             findRelations: async request => {
               if (!this.grpcSdk.isAvailable('authorization')) {
-                throw new Error('authorization module is not available');
+                throw new ModuleError(errors.AUTHORIZATION_UNAVAILABLE);
               }
               return this.grpcSdk.authorization!.findRelation(request);
             },
@@ -610,7 +611,7 @@ export class TokenProvider {
     const options: TokenOptions = { ...tokenOptions, isRefresh: true, twoFaPass: true };
     await this.assertRealmAccessForTokens(options);
     if (!options.user.active) {
-      throw new Error('User is blocked or deleted');
+      throw new ModuleError(authErrors.USER_BLOCKED);
     }
     let accessToken: MintedAccessToken;
     if (isJwtAccessMode(options.config)) {
@@ -633,7 +634,7 @@ export class TokenProvider {
       );
       if (!stillThere) {
         await revokeSessions([String(refreshToken._id)], 'renew raced a sweep');
-        throw new GrpcError(status.UNAUTHENTICATED, 'Token expired');
+        throw new ModuleError(errors.REFRESH_TOKEN_INVALID, 'renew raced a sweep');
       }
     } else {
       let sessionRealm: string | undefined;
@@ -697,7 +698,7 @@ export class TokenProvider {
       isRefresh: false,
     };
     if (!tokenOptions.user.active) {
-      throw new Error('User is blocked or deleted');
+      throw new ModuleError(authErrors.USER_BLOCKED);
     }
     await this.assertRealmAccessForTokens(tokenOptions);
     if (isJwtAccessMode(tokenOptions.config)) {

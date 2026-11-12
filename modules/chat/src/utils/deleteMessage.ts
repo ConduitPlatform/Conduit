@@ -1,29 +1,24 @@
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
-import { ConfigController } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ConfigController, ModuleError } from '@conduitplatform/module-tools';
 import { isNil } from 'lodash-es';
 import { ChatMessage } from '../models/index.js';
+import { errors } from '../errors.js';
 
 export async function deleteChatMessage(
   grpcSdk: ConduitGrpcSdk,
   params: { messageId: string; userId: string },
 ): Promise<void> {
   if (!ConfigController.getInstance().config.allowMessageDelete) {
-    throw new GrpcError(status.FAILED_PRECONDITION, 'Message deletion is disabled');
+    throw new ModuleError(errors.MESSAGE_DELETE_DISABLED);
   }
 
   const { messageId, userId } = params;
 
   const message = await grpcSdk
     .database!.findOne<ChatMessage>(ChatMessage.name, { _id: messageId, deleted: false })
-    .catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
+    .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
   if (isNil(message) || message.senderUser !== userId) {
-    throw new GrpcError(
-      status.NOT_FOUND,
-      "Message does not exist or you don't have access",
-    );
+    throw new ModuleError(errors.MESSAGE_NOT_FOUND);
   }
 
   if (ConfigController.getInstance().config.auditMode) {
@@ -31,15 +26,11 @@ export async function deleteChatMessage(
       .database!.findByIdAndUpdate<ChatMessage>(ChatMessage.name, message._id, {
         deleted: true,
       })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
   } else {
     await grpcSdk
       .database!.deleteOne<ChatMessage>(ChatMessage.name, { _id: messageId })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
   }
 
   grpcSdk.router?.socketPush({

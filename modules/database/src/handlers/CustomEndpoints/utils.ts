@@ -1,6 +1,8 @@
 import { isNil } from 'lodash-es';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { CustomEndpointsQuery } from '../../interfaces/index.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 interface Inputs {
   name: string;
@@ -31,7 +33,7 @@ export function constructQuery(
     resTopLevel = '$or';
     endpointTopLevel = 'OR';
   } else {
-    throw new Error('Invalid fields');
+    throw new ModuleError(errors.CUSTOM_ENDPOINT_DEFINITION_CORRUPT, 'Invalid fields');
   }
 
   res[resTopLevel] = [];
@@ -47,7 +49,7 @@ export function constructQuery(
         res[resTopLevel].push(r);
       }
     } else {
-      throw new Error('Invalid fields');
+      throw new ModuleError(errors.CUSTOM_ENDPOINT_DEFINITION_CORRUPT, 'Invalid fields');
     }
   });
 
@@ -79,7 +81,10 @@ function _constructQuery(
         return;
       }
 
-      throw new Error(`Field ${query.comparisonField.value} is missing from input`);
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INPUT_MISSING,
+        message: `Field ${query.comparisonField.value} is missing from input`,
+      });
     }
 
     return _translateQuery(
@@ -91,13 +96,19 @@ function _constructQuery(
     );
   } else if (query.comparisonField.type === 'Context') {
     if (isNil(context)) {
-      throw new Error(`Field ${query.comparisonField.value} is missing from context`);
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
+        message: `Field ${query.comparisonField.value} is missing from context`,
+      });
     }
     for (const key of query.comparisonField.value.split('.')) {
       if (context.hasOwnProperty(key)) {
         context = context[key];
       } else {
-        throw new Error(`Field ${query.comparisonField.value} is missing from context`);
+        throw new ModuleError({
+          ...errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
+          message: `Field ${query.comparisonField.value} is missing from context`,
+        });
       }
     }
     return _translateQuery(

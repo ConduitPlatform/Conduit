@@ -2,12 +2,15 @@ export class ConduitError extends Error {
   message: string;
   name: string;
   status: number;
+  /** Stable machine-readable code, sent to clients next to `name` and `message`. */
+  conduitCode?: string;
 
-  constructor(name: string, status: number, message: string) {
+  constructor(name: string, status: number, message: string, conduitCode?: string) {
     super(message);
     this.name = name;
     this.message = message;
     this.status = status;
+    if (conduitCode) this.conduitCode = conduitCode;
   }
 
   static unauthorized(message: string = 'Unauthorized') {

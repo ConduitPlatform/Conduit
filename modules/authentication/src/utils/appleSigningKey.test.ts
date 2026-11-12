@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import jwksRsa from 'jwks-rsa';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { getConduitCode, GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { errors } from '../errors.js';
 import { mapJwksSigningKeyError, resolveAppleSigningKey } from './appleSigningKey.js';
 
 function appleToken(kid?: string) {
@@ -28,15 +29,19 @@ function appleToken(kid?: string) {
   );
 }
 
-function isGrpc(err: unknown, code: status, message: string) {
-  return err instanceof GrpcError && err.code === code && err.message === message;
+function isGrpc(err: unknown, code: status, definition: { conduitCode: string }) {
+  return (
+    err instanceof GrpcError &&
+    err.code === code &&
+    getConduitCode(err) === definition.conduitCode
+  );
 }
 
 describe('mapJwksSigningKeyError', () => {
   it('maps SigningKeyNotFoundError to Invalid token', () => {
     const err = mapJwksSigningKeyError(new jwksRsa.SigningKeyNotFoundError('missing'));
     assert.equal(err.code, status.INVALID_ARGUMENT);
-    assert.equal(err.message, 'Invalid token');
+    assert.equal(getConduitCode(err), errors.APPLE_TOKEN_INVALID.conduitCode);
   });
 
   it('maps a name-only SigningKeyNotFoundError to Invalid token', () => {
@@ -44,25 +49,25 @@ describe('mapJwksSigningKeyError', () => {
       Object.assign(new Error('missing'), { name: 'SigningKeyNotFoundError' }),
     );
     assert.equal(err.code, status.INVALID_ARGUMENT);
-    assert.equal(err.message, 'Invalid token');
+    assert.equal(getConduitCode(err), errors.APPLE_TOKEN_INVALID.conduitCode);
   });
 
   it('maps JwksError to UNAVAILABLE', () => {
     const err = mapJwksSigningKeyError(new jwksRsa.JwksError('fetch failed'));
     assert.equal(err.code, status.UNAVAILABLE);
-    assert.equal(err.message, 'Unable to verify identity token');
+    assert.equal(getConduitCode(err), errors.APPLE_KEYS_UNAVAILABLE.conduitCode);
   });
 
   it('maps JwksRateLimitError to UNAVAILABLE', () => {
     const err = mapJwksSigningKeyError(new jwksRsa.JwksRateLimitError('slow down'));
     assert.equal(err.code, status.UNAVAILABLE);
-    assert.equal(err.message, 'Unable to verify identity token');
+    assert.equal(getConduitCode(err), errors.APPLE_KEYS_UNAVAILABLE.conduitCode);
   });
 
   it('maps generic network errors to UNAVAILABLE', () => {
     const err = mapJwksSigningKeyError(new Error('ECONNREFUSED'));
     assert.equal(err.code, status.UNAVAILABLE);
-    assert.equal(err.message, 'Unable to verify identity token');
+    assert.equal(getConduitCode(err), errors.APPLE_KEYS_UNAVAILABLE.conduitCode);
   });
 });
 
@@ -71,14 +76,14 @@ describe('resolveAppleSigningKey', () => {
     await assert.rejects(
       () =>
         resolveAppleSigningKey(appleToken(), async () => ({ getPublicKey: () => '' })),
-      (err: unknown) => isGrpc(err, status.INVALID_ARGUMENT, 'Invalid token'),
+      (err: unknown) => isGrpc(err, status.INVALID_ARGUMENT, errors.APPLE_TOKEN_INVALID),
     );
   });
 
   it('rejects a malformed token', async () => {
     await assert.rejects(
       () => resolveAppleSigningKey('not.a.jwt', async () => ({ getPublicKey: () => '' })),
-      (err: unknown) => isGrpc(err, status.INVALID_ARGUMENT, 'Invalid token'),
+      (err: unknown) => isGrpc(err, status.INVALID_ARGUMENT, errors.APPLE_TOKEN_INVALID),
     );
   });
 
@@ -88,7 +93,7 @@ describe('resolveAppleSigningKey', () => {
         resolveAppleSigningKey(appleToken('unknown'), async () => {
           throw new jwksRsa.SigningKeyNotFoundError('no match');
         }),
-      (err: unknown) => isGrpc(err, status.INVALID_ARGUMENT, 'Invalid token'),
+      (err: unknown) => isGrpc(err, status.INVALID_ARGUMENT, errors.APPLE_TOKEN_INVALID),
     );
   });
 
@@ -98,8 +103,7 @@ describe('resolveAppleSigningKey', () => {
         resolveAppleSigningKey(appleToken('known'), async () => {
           throw new jwksRsa.JwksError('503');
         }),
-      (err: unknown) =>
-        isGrpc(err, status.UNAVAILABLE, 'Unable to verify identity token'),
+      (err: unknown) => isGrpc(err, status.UNAVAILABLE, errors.APPLE_KEYS_UNAVAILABLE),
     );
   });
 

@@ -1,7 +1,9 @@
-import { ConduitError, ConduitModel, ConduitModelField } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, ConduitModelField } from '@conduitplatform/grpc-sdk';
 import { ConduitDatabaseSchema } from '../../interfaces/index.js';
 import { isObject } from 'lodash-es';
 import { assertVectorFieldIfPresent } from './vectorField.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 /*
  * Validates schema field constraints.
@@ -12,7 +14,7 @@ export function validateFieldConstraints(schema: ConduitDatabaseSchema, db: stri
 }
 
 function invalidField(message: string): never {
-  throw new ConduitError('INVALID_ARGUMENTS', 400, message);
+  throw new ModuleError({ ...errors.SCHEMA_FIELDS_INVALID, message });
 }
 
 function usesSqlRelationBlock(item: unknown): boolean {

@@ -4,10 +4,12 @@ import {
   GrpcCallback,
   GrpcRequest,
   HealthCheckStatus,
+  parseErrorPayload,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
+import { errors } from './errors.js';
+import { parseJsonField } from './utils/parseJsonField.js';
 import { fileURLToPath } from 'node:url';
 
 import AppConfigSchema, { Config } from './config/index.js';
@@ -32,6 +34,7 @@ import { runMigrations } from './migrations/index.js';
 import metricsSchema from './metrics/index.js';
 import {
   ConfigController,
+  grpcCallbackError,
   ManagedModule,
   sanitizeDocumentsForExport,
   type ExportableResource,
@@ -326,7 +329,9 @@ export default class Communications extends ManagedModule<Config> {
         }
       } catch (e) {
         result.emailTemplates.failed += 1;
-        result.emailTemplates.errors.push(`${String(name)}: ${(e as Error).message}`);
+        result.emailTemplates.errors.push(
+          `${String(name)}: ${parseErrorPayload(e).message}`,
+        );
       }
     }
     for (const rec of data.communicationTemplates ?? []) {
@@ -360,7 +365,7 @@ export default class Communications extends ManagedModule<Config> {
       } catch (e) {
         result.communicationTemplates.failed += 1;
         result.communicationTemplates.errors.push(
-          `${String(name)}: ${(e as Error).message}`,
+          `${String(name)}: ${parseErrorPayload(e).message}`,
         );
       }
     }
@@ -384,12 +389,12 @@ export default class Communications extends ManagedModule<Config> {
       sender: call.request.sender,
       jsonTemplate: call.request.jsonTemplate,
     };
-    let errorMessage: string | null = null;
-    const template = await this.emailService
-      .registerTemplate(params)
-      .catch(e => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    let template;
+    try {
+      template = await this.emailService.registerTemplate(params);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.COMMUNICATIONS_DATABASE_ERROR));
+    }
     return callback(null, { template: JSON.stringify(template) });
   }
 
@@ -404,12 +409,13 @@ export default class Communications extends ManagedModule<Config> {
       variables: call.request.variables,
       sender: call.request.sender,
     };
-    let errorMessage: string | null = null;
-    const { template } = await this.emailService
-      .updateTemplate(call.request.id, params)
-      .catch(e => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    let updated;
+    try {
+      updated = await this.emailService.updateTemplate(call.request.id, params);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.COMMUNICATIONS_DATABASE_ERROR));
+    }
+    const { template } = updated;
     return callback(null, { template: JSON.stringify(template) });
   }
 
@@ -424,29 +430,34 @@ export default class Communications extends ManagedModule<Config> {
     } catch {
       variables = undefined;
     }
-    const params = {
-      email: call.request.params!.email,
-      body: call.request.params!.body,
-      subject: call.request.params!.subject,
-      variables: variables,
-      sender: call.request.params!.sender ?? '',
-      cc: call.request.params!.cc,
-      replyTo: call.request.params!.replyTo,
-      attachments: call.request.params!.attachments.map(attachment => ({
-        ...attachment,
-        content: attachment.content ? Buffer.from(attachment.content) : undefined,
-        httpHeaders: attachment.httpHeaders
-          ? JSON.parse(attachment.httpHeaders)
-          : undefined,
-      })),
-    };
+    let params;
+    try {
+      params = {
+        email: call.request.params!.email,
+        body: call.request.params!.body,
+        subject: call.request.params!.subject,
+        variables: variables,
+        sender: call.request.params!.sender ?? '',
+        cc: call.request.params!.cc,
+        replyTo: call.request.params!.replyTo,
+        attachments: call.request.params!.attachments.map(attachment => ({
+          ...attachment,
+          content: attachment.content ? Buffer.from(attachment.content) : undefined,
+          httpHeaders: attachment.httpHeaders
+            ? parseJsonField(attachment.httpHeaders)
+            : undefined,
+        })),
+      };
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.INVALID_JSON_PAYLOAD));
+    }
 
-    let errorMessage: string | null = null;
-    const sentMessageInfo = await this.emailService
-      .sendEmail(template, params)
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    let sentMessageInfo;
+    try {
+      sentMessageInfo = await this.emailService.sendEmail(template, params);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.EMAIL_PROVIDER_ERROR));
+    }
     return callback(null, { sentMessageInfo });
   }
 
@@ -454,12 +465,12 @@ export default class Communications extends ManagedModule<Config> {
     call: GrpcRequest<ResendEmailRequest>,
     callback: GrpcCallback<ResendEmailResponse>,
   ) {
-    let errorMessage: string | null = null;
-    const sentMessageInfo = await this.emailService
-      .resendEmail(call.request.emailRecordId)
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    let sentMessageInfo;
+    try {
+      sentMessageInfo = await this.emailService.resendEmail(call.request.emailRecordId);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.EMAIL_PROVIDER_ERROR));
+    }
     return callback(null, { sentMessageInfo });
   }
 
@@ -467,12 +478,12 @@ export default class Communications extends ManagedModule<Config> {
     call: GrpcRequest<GetEmailStatusRequest>,
     callback: GrpcCallback<GetEmailStatusResponse>,
   ) {
-    let errorMessage: string | null = null;
-    const statusInfo = await this.emailService
-      .getEmailStatus(call.request.messageId)
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    let statusInfo;
+    try {
+      statusInfo = await this.emailService.getEmailStatus(call.request.messageId);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.EMAIL_PROVIDER_ERROR));
+    }
     return callback(null, { statusInfo: JSON.stringify(statusInfo) });
   }
 
@@ -482,12 +493,16 @@ export default class Communications extends ManagedModule<Config> {
     callback: GrpcCallback<SetNotificationTokenResponse>,
   ) {
     const { token, platform, userId } = call.request;
-    let errorMessage: string | null = null;
-    const newTokenDocument = await this.pushService
-      .setNotificationToken(token, platform, userId)
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    let newTokenDocument;
+    try {
+      newTokenDocument = await this.pushService.setNotificationToken(
+        token,
+        platform,
+        userId,
+      );
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.COMMUNICATIONS_DATABASE_ERROR));
+    }
     return callback(null, { newTokenDocument: JSON.stringify(newTokenDocument) });
   }
 
@@ -496,12 +511,12 @@ export default class Communications extends ManagedModule<Config> {
     callback: GrpcCallback<GetNotificationTokensResponse>,
   ) {
     const userId = call.request.userId;
-    let errorMessage: string | null = null;
-    const tokenDocuments = await this.pushService
-      .getNotificationTokens(userId)
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    let tokenDocuments;
+    try {
+      tokenDocuments = await this.pushService.getNotificationTokens(userId);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.COMMUNICATIONS_DATABASE_ERROR));
+    }
     const tokenDocs: string[] = [];
     for (const tokenDocument of tokenDocuments || []) {
       const tokenDocumentString = JSON.stringify(tokenDocument);
@@ -519,14 +534,14 @@ export default class Communications extends ManagedModule<Config> {
         sendTo: call.request.sendTo,
         title: call.request.title,
         body: call.request.body,
-        data: call.request.data ? JSON.parse(call.request.data) : {},
+        data: call.request.data ? parseJsonField(call.request.data) : {},
         platform: call.request.platform,
         doNotStore: call.request.doNotStore,
         isSilent: call.request.isSilent,
       });
       ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1);
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(grpcCallbackError(e, errors.PUSH_PROVIDER_ERROR));
     }
     return callback(null, { message: 'Ok' });
   }
@@ -536,17 +551,14 @@ export default class Communications extends ManagedModule<Config> {
     callback: GrpcCallback<SendNotificationResponse>,
   ) {
     if (call.request.sendTo.length === 0) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'sendTo is required and must be a non-empty array',
-      });
+      return callback(grpcCallbackError(errors.PUSH_RECIPIENTS_REQUIRED));
     }
     try {
       const result = await this.pushService.sendToManyDevices({
         sendTo: call.request.sendTo,
         title: call.request.title,
         body: call.request.body,
-        data: call.request.data ? JSON.parse(call.request.data) : {},
+        data: call.request.data ? parseJsonField(call.request.data) : {},
         platform: call.request.platform,
         doNotStore: call.request.doNotStore,
         isSilent: call.request.isSilent,
@@ -556,7 +568,7 @@ export default class Communications extends ManagedModule<Config> {
         result.successCount,
       );
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(grpcCallbackError(e, errors.PUSH_PROVIDER_ERROR));
     }
     return callback(null, { message: 'Ok' });
   }
@@ -566,17 +578,14 @@ export default class Communications extends ManagedModule<Config> {
     callback: GrpcCallback<SendNotificationResponse>,
   ) {
     if (call.request.notifications.length === 0) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'notifications is required and must be a non-empty array',
-      });
+      return callback(grpcCallbackError(errors.PUSH_NOTIFICATIONS_REQUIRED));
     }
     try {
       const notifications = call.request.notifications.map(notification => ({
         sendTo: notification.sendTo,
         title: notification.title,
         body: notification.body,
-        data: notification.data ? JSON.parse(notification.data) : {},
+        data: notification.data ? parseJsonField(notification.data) : {},
         platform: notification.platform,
         doNotStore: notification.doNotStore,
         isSilent: notification.isSilent,
@@ -587,7 +596,7 @@ export default class Communications extends ManagedModule<Config> {
         result.successCount,
       );
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(grpcCallbackError(e, errors.PUSH_PROVIDER_ERROR));
     }
     return callback(null, { message: 'Ok' });
   }
@@ -600,16 +609,14 @@ export default class Communications extends ManagedModule<Config> {
     const to = call.request.to;
     const message = call.request.message;
     if (isNil(this.smsService)) {
-      return callback({ code: status.INTERNAL, message: 'No SMS service' });
+      return callback(grpcCallbackError(errors.SMS_NOT_CONFIGURED));
     }
 
-    let errorMessage: string | null = null;
-    await this.smsService.sendSms(to, message).catch(e => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
+    try {
+      await this.smsService.sendSms(to, message);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.SMS_PROVIDER_ERROR));
+    }
 
     return callback(null, { message: 'SMS sent' });
   }
@@ -620,24 +627,18 @@ export default class Communications extends ManagedModule<Config> {
   ) {
     const to = call.request.to;
     if (isNil(this.smsService)) {
-      return callback({ code: status.INTERNAL, message: 'No SMS service' });
+      return callback(grpcCallbackError(errors.SMS_NOT_CONFIGURED));
     }
-    if (isNil(to)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'No SMS recipient',
-      });
+    if (isNil(to) || to === '') {
+      return callback(grpcCallbackError(errors.SMS_RECIPIENT_REQUIRED));
     }
 
-    let errorMessage: string | null = null;
-    const result = await this.smsService
-      .sendVerificationCode(to)
-      .catch(e => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
+    let result;
+    try {
+      result = await this.smsService.sendVerificationCode(to);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.SMS_PROVIDER_ERROR));
+    }
 
     return callback(null, { verificationSid: result.verificationSid });
   }
@@ -645,24 +646,18 @@ export default class Communications extends ManagedModule<Config> {
   async verify(call: GrpcRequest<VerifyRequest>, callback: GrpcCallback<VerifyResponse>) {
     const { verificationSid, code } = call.request;
     if (isNil(this.smsService)) {
-      return callback({ code: status.INTERNAL, message: 'No SMS service' });
+      return callback(grpcCallbackError(errors.SMS_NOT_CONFIGURED));
     }
-    if (isNil(verificationSid) || isNil(code)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'No verification id or code provided',
-      });
+    if (isNil(verificationSid) || isNil(code) || verificationSid === '' || code === '') {
+      return callback(grpcCallbackError(errors.VERIFICATION_PARAMS_REQUIRED));
     }
 
-    let errorMessage: string | null = null;
-    const result = await this.smsService
-      .verify(verificationSid, code)
-      .catch(e => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({
-        code: status.INTERNAL,
-        message: errorMessage,
-      });
+    let result;
+    try {
+      result = await this.smsService.verify(verificationSid, code);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.SMS_PROVIDER_ERROR));
+    }
 
     return callback(null, { verified: result.verified });
   }
@@ -680,31 +675,35 @@ export default class Communications extends ManagedModule<Config> {
       variables = undefined;
     }
 
-    const sendParams = {
-      recipient: params!.recipient,
-      subject: params!.subject,
-      body: params!.body,
-      variables: variables,
-      sender: params!.sender,
-      cc: params!.cc,
-      replyTo: params!.replyTo,
-      attachments: params!.attachments,
-      data: params!.data ? JSON.parse(params!.data) : undefined,
-      platform: params!.platform,
-      doNotStore: params!.doNotStore,
-      isSilent: params!.isSilent,
-      templateName: templateName || undefined,
-    };
+    let sendParams;
+    try {
+      sendParams = {
+        recipient: params!.recipient,
+        subject: params!.subject,
+        body: params!.body,
+        variables: variables,
+        sender: params!.sender,
+        cc: params!.cc,
+        replyTo: params!.replyTo,
+        attachments: params!.attachments,
+        data: params!.data ? parseJsonField(params!.data) : undefined,
+        platform: params!.platform,
+        doNotStore: params!.doNotStore,
+        isSilent: params!.isSilent,
+        templateName: templateName || undefined,
+      };
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.INVALID_JSON_PAYLOAD));
+    }
 
-    let errorMessage: string | null = null;
-    const result = await this.orchestratorService
-      .sendToChannel(channel as 'email' | 'push' | 'sms', sendParams)
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    if (typeof result === 'string') {
-      return callback({ code: status.INTERNAL, message: result });
+    let result;
+    try {
+      result = await this.orchestratorService.sendToChannel(
+        channel as 'email' | 'push' | 'sms',
+        sendParams,
+      );
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.CHANNEL_SEND_FAILED));
     }
 
     return callback(null, {
@@ -725,33 +724,34 @@ export default class Communications extends ManagedModule<Config> {
       variables = undefined;
     }
 
-    const sendParams = {
-      channels: channels as ('email' | 'push' | 'sms')[],
-      strategy: strategy as 'BEST_EFFORT' | 'ALL_OR_NOTHING',
-      recipient: params!.recipient,
-      subject: params!.subject,
-      body: params!.body,
-      variables: variables,
-      sender: params!.sender,
-      cc: params!.cc,
-      replyTo: params!.replyTo,
-      attachments: params!.attachments,
-      data: params!.data ? JSON.parse(params!.data) : undefined,
-      platform: params!.platform,
-      doNotStore: params!.doNotStore,
-      isSilent: params!.isSilent,
-      templateName: templateName || undefined,
-    };
+    let sendParams;
+    try {
+      sendParams = {
+        channels: channels as ('email' | 'push' | 'sms')[],
+        strategy: strategy as 'BEST_EFFORT' | 'ALL_OR_NOTHING',
+        recipient: params!.recipient,
+        subject: params!.subject,
+        body: params!.body,
+        variables: variables,
+        sender: params!.sender,
+        cc: params!.cc,
+        replyTo: params!.replyTo,
+        attachments: params!.attachments,
+        data: params!.data ? parseJsonField(params!.data) : undefined,
+        platform: params!.platform,
+        doNotStore: params!.doNotStore,
+        isSilent: params!.isSilent,
+        templateName: templateName || undefined,
+      };
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.INVALID_JSON_PAYLOAD));
+    }
 
-    let errorMessage: string | null = null;
-    const result = await this.orchestratorService
-      .sendToMultipleChannels(sendParams)
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    if (typeof result === 'string') {
-      return callback({ code: status.INTERNAL, message: result });
+    let result;
+    try {
+      result = await this.orchestratorService.sendToMultipleChannels(sendParams);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.CHANNEL_SEND_FAILED));
     }
 
     return callback(null, {
@@ -776,35 +776,36 @@ export default class Communications extends ManagedModule<Config> {
       variables = undefined;
     }
 
-    const sendParams = {
-      fallbackChain: fallbackChain.map(step => ({
-        channel: step.channel as 'email' | 'push' | 'sms',
-        timeout: step.timeout,
-      })),
-      recipient: params!.recipient,
-      subject: params!.subject,
-      body: params!.body,
-      variables: variables,
-      sender: params!.sender,
-      cc: params!.cc,
-      replyTo: params!.replyTo,
-      attachments: params!.attachments,
-      data: params!.data ? JSON.parse(params!.data) : undefined,
-      platform: params!.platform,
-      doNotStore: params!.doNotStore,
-      isSilent: params!.isSilent,
-      templateName: templateName || undefined,
-    };
+    let sendParams;
+    try {
+      sendParams = {
+        fallbackChain: fallbackChain.map(step => ({
+          channel: step.channel as 'email' | 'push' | 'sms',
+          timeout: step.timeout,
+        })),
+        recipient: params!.recipient,
+        subject: params!.subject,
+        body: params!.body,
+        variables: variables,
+        sender: params!.sender,
+        cc: params!.cc,
+        replyTo: params!.replyTo,
+        attachments: params!.attachments,
+        data: params!.data ? parseJsonField(params!.data) : undefined,
+        platform: params!.platform,
+        doNotStore: params!.doNotStore,
+        isSilent: params!.isSilent,
+        templateName: templateName || undefined,
+      };
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.INVALID_JSON_PAYLOAD));
+    }
 
-    let errorMessage: string | null = null;
-    const result = await this.orchestratorService
-      .sendWithFallback(sendParams)
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
-
-    if (typeof result === 'string') {
-      return callback({ code: status.INTERNAL, message: result });
+    let result;
+    try {
+      result = await this.orchestratorService.sendWithFallback(sendParams);
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.ALL_CHANNELS_FAILED));
     }
 
     return callback(null, {
@@ -829,11 +830,7 @@ export default class Communications extends ManagedModule<Config> {
       );
       return callback(null, { template: JSON.stringify(template) });
     } catch (e) {
-      const message = (e as Error).message;
-      const code = message.includes('already exists')
-        ? status.ALREADY_EXISTS
-        : status.INTERNAL;
-      return callback({ code, message });
+      return callback(grpcCallbackError(e, errors.COMMUNICATIONS_DATABASE_ERROR));
     }
   }
 
@@ -848,13 +845,7 @@ export default class Communications extends ManagedModule<Config> {
       );
       return callback(null, { template: JSON.stringify(template) });
     } catch (e) {
-      const message = (e as Error).message;
-      const code = message.includes('not found')
-        ? status.NOT_FOUND
-        : message.includes('already exists')
-          ? status.ALREADY_EXISTS
-          : status.INTERNAL;
-      return callback({ code, message });
+      return callback(grpcCallbackError(e, errors.COMMUNICATIONS_DATABASE_ERROR));
     }
   }
 
@@ -866,9 +857,7 @@ export default class Communications extends ManagedModule<Config> {
       const result = await this.templateService.delete(call.request.id);
       return callback(null, { deleted: result.deleted });
     } catch (e) {
-      const message = (e as Error).message;
-      const code = message.includes('not found') ? status.NOT_FOUND : status.INTERNAL;
-      return callback({ code, message });
+      return callback(grpcCallbackError(e, errors.COMMUNICATIONS_DATABASE_ERROR));
     }
   }
 
@@ -883,19 +872,14 @@ export default class Communications extends ManagedModule<Config> {
       } else if (call.request.name) {
         template = await this.templateService.getByName(call.request.name);
         if (!template) {
-          return callback({ code: status.NOT_FOUND, message: 'Template does not exist' });
+          return callback(grpcCallbackError(errors.TEMPLATE_NOT_FOUND));
         }
       } else {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Either id or name must be provided',
-        });
+        return callback(grpcCallbackError(errors.TEMPLATE_ID_OR_NAME_REQUIRED));
       }
       return callback(null, { template: JSON.stringify(template) });
     } catch (e) {
-      const message = (e as Error).message;
-      const code = message.includes('not found') ? status.NOT_FOUND : status.INTERNAL;
-      return callback({ code, message });
+      return callback(grpcCallbackError(e, errors.COMMUNICATIONS_DATABASE_ERROR));
     }
   }
 
@@ -923,7 +907,7 @@ export default class Communications extends ManagedModule<Config> {
         count,
       });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: (e as Error).message });
+      return callback(grpcCallbackError(e, errors.COMMUNICATIONS_DATABASE_ERROR));
     }
   }
 
@@ -990,12 +974,15 @@ export default class Communications extends ManagedModule<Config> {
     callback: GrpcCallback<GetMessageStatusResponse>,
   ) {
     const { messageId, channel } = call.request;
-    let errorMessage: string | null = null;
-    const statusInfo = await this.orchestratorService
-      .getChannelStatus(channel as 'email' | 'push' | 'sms', messageId)
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    let statusInfo;
+    try {
+      statusInfo = await this.orchestratorService.getChannelStatus(
+        channel as 'email' | 'push' | 'sms',
+        messageId,
+      );
+    } catch (e) {
+      return callback(grpcCallbackError(e, errors.EMAIL_PROVIDER_ERROR));
+    }
     return callback(null, { statusInfo: JSON.stringify(statusInfo) });
   }
 

@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { getConduitCode, GrpcError } from '@conduitplatform/grpc-sdk';
+import { authErrors } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { performSudo, SudoDeps, SudoUserRecord } from './sudo.service.js';
 
@@ -152,7 +153,9 @@ describe('performSudo', () => {
     const b = harness({ active: false });
     await assert.rejects(
       performSudo(b.deps, { password: 'good' }),
-      e => code(e) === status.PERMISSION_DENIED,
+      e =>
+        code(e) === status.PERMISSION_DENIED &&
+        getConduitCode(e) === authErrors.USER_BLOCKED.conduitCode,
     );
   });
 });

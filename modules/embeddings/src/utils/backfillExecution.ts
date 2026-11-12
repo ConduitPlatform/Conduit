@@ -1,4 +1,6 @@
 import type { VectorCapabilities } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import {
   applyBackfillPage,
   backfillCountIncrementPatch,
@@ -18,7 +20,6 @@ import {
 } from './backfillRun.js';
 import {
   assertBackfillExecutable,
-  BackfillGateError,
   type BackfillConfigGate,
   type VectorIndexGate,
 } from './backfillGates.js';
@@ -230,10 +231,10 @@ export async function queueBackfillRuns(
       maxBatchSize: input.maxBatchSize,
     });
     if (!created.ok) {
-      throw new BackfillGateError(
-        'config_not_found',
-        `Invalid backfill request: ${created.reason}`,
-      );
+      throw new ModuleError({
+        ...errors.BACKFILL_REQUEST_INVALID,
+        message: `Invalid backfill request: ${created.reason}`,
+      });
     }
     if (config._id) {
       const active = (await deps.findActiveRuns(config._id)).filter(run =>
@@ -296,7 +297,7 @@ async function enqueueOrFailRun(
     if (failed.ok) {
       await saveRun(id, failed.run);
     }
-    throw err;
+    throw ModuleError.from(err, errors.EMBEDDINGS_OPERATION_FAILED);
   }
 }
 
@@ -318,7 +319,7 @@ export async function resumeBackfillExecution(args: {
     if (failed.ok) {
       await args.saveRun(args.run._id, failed.run);
     }
-    throw err;
+    throw ModuleError.from(err, errors.EMBEDDINGS_OPERATION_FAILED);
   }
   return resumed;
 }
@@ -436,10 +437,10 @@ async function scanBackfillPage(
 
   try {
     if (!run.configId) {
-      throw new BackfillGateError(
-        'config_not_found',
-        'Backfill run is missing a config id',
-      );
+      throw new ModuleError({
+        ...errors.BACKFILL_RUN_INVALID,
+        message: 'Backfill run is missing a config id',
+      });
     }
     const config = await deps.getConfig(run.configId);
     assertBackfillExecutable({
@@ -450,10 +451,10 @@ async function scanBackfillPage(
     });
     const pageQuery = buildBackfillPageQuery(run, config?.targetField);
     if (!pageQuery.ok) {
-      throw new BackfillGateError(
-        'config_not_found',
-        `Invalid backfill page: ${pageQuery.reason}`,
-      );
+      throw new ModuleError({
+        ...errors.BACKFILL_RUN_INVALID,
+        message: `Invalid backfill page: ${pageQuery.reason}`,
+      });
     }
     const docs = boundBackfillPage(
       await deps.findPage(run.schemaName, pageQuery.page),

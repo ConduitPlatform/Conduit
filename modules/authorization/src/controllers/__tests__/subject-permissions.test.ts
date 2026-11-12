@@ -251,7 +251,7 @@ describe('subject permission inventory', () => {
       controller.getSubjectPermissions('User:1', 'Team:admin'),
     ).rejects.toMatchObject({
       code: status.NOT_FOUND,
-      message: 'Resource definition not found',
+      conduitCode: 'RESOURCE_DEFINITION_NOT_FOUND',
     });
     await expect(
       controller.getSubjectPermissions('User:1', 'Team:admin'),

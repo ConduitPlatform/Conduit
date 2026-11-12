@@ -1,5 +1,5 @@
 import {
-  GrpcError,
+  hasConduitCode,
   TYPE,
   VectorCapabilities,
   VectorIndexMethod,
@@ -8,7 +8,8 @@ import {
   type ConduitModel,
   type VectorIndexDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { grpcCallbackError, ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { Config } from '../config/index.js';
 import { QueueJobCounts } from '../controllers/queue.controller.js';
 import {
@@ -24,7 +25,6 @@ import {
   BackfillGateError,
   embeddingIndexContractFromConfig,
   findTargetVectorIndex,
-  grpcErrorFromBackfillGate,
   isEmbeddingVectorIndexQueryable,
   type VectorIndexGate,
 } from '../utils/backfillGates.js';
@@ -64,8 +64,6 @@ import {
   indexReadinessWarnings,
   isEmbeddingsReady,
   providerReadinessWarnings,
-  SearchGateError,
-  grpcErrorFromSearchGate,
 } from '../utils/operationalStatus.js';
 import {
   mapBackfillRun,
@@ -233,10 +231,10 @@ export class EmbeddingsApi {
     });
     const changed = existing ? diffMaterialEmbeddingConfig(existing, persisted) : [];
     if (existing && isInPlaceDimensionChange(existing, persisted)) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        `Changing vector field '${existing.targetField}' dimensions from ${existing.dimensions} to ${persisted.dimensions} is not allowed. Create a new targetField and run an explicit backfill.`,
-      );
+      throw new ModuleError({
+        ...errors.EMBEDDING_DIMENSION_CHANGE_NOT_ALLOWED,
+        message: `Changing vector field '${existing.targetField}' dimensions from ${existing.dimensions} to ${persisted.dimensions} is not allowed. Create a new targetField and run an explicit backfill.`,
+      });
     }
     if (capabilities.storage) {
       await this.extendEmbeddingSchema(persisted, declared);
@@ -410,7 +408,10 @@ export class EmbeddingsApi {
       queued.runs.map(async item => {
         const persisted = await this.deps.backfills.findOne({ _id: item.id });
         if (!persisted) {
-          throw new GrpcError(status.INTERNAL, 'Failed to load queued backfill run');
+          throw new ModuleError(
+            errors.EMBEDDINGS_OPERATION_FAILED,
+            'Failed to load queued backfill run',
+          );
         }
         return mapBackfillRun(persisted);
       }),
@@ -475,8 +476,11 @@ export class EmbeddingsApi {
       },
     });
     if (!result.ok) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
+      throw new ModuleError(
+        {
+          ...errors.BACKFILL_STATE_CONFLICT,
+          message: 'Backfill run cannot be canceled from its current state',
+        },
         `Backfill run '${id}' cannot be canceled from state '${existing.state}'`,
       );
     }
@@ -513,8 +517,11 @@ export class EmbeddingsApi {
       enqueueController: job => this.deps.enqueueBackfill(job),
     });
     if (!result.ok) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
+      throw new ModuleError(
+        {
+          ...errors.BACKFILL_STATE_CONFLICT,
+          message: 'Backfill run cannot be resumed from its current state',
+        },
         `Backfill run '${id}' cannot be resumed from state '${existing.state}'`,
       );
     }
@@ -535,7 +542,10 @@ export class EmbeddingsApi {
     caller: EmbeddingsApiCaller,
   ): Promise<{ hits: ReturnType<typeof mapSearchHits> }> {
     if (typeof request.text !== 'string' || request.text.trim().length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Search text is required');
+      throw new ModuleError({
+        ...errors.SEARCH_REQUEST_INVALID,
+        message: 'Search text is required',
+      });
     }
     const moduleEnabled = this.deps.currentConfig().enabled;
     if (!moduleEnabled) {
@@ -576,8 +586,8 @@ export class EmbeddingsApi {
     });
     const vector = await this.deps.embed(request.text, config.provider, config.modelName);
     if (vector.length !== config.dimensions) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
+      throw new ModuleError(
+        errors.EMBEDDING_PROVIDER_DIMENSIONS_MISMATCH,
         `Embedding provider returned ${vector.length} dimensions; expected ${config.dimensions}`,
       );
     }
@@ -594,19 +604,13 @@ export class EmbeddingsApi {
     return { hits: mapSearchHits(results) };
   }
 
+  /**
+   * The `{ code, message }` a gRPC method answers its callback with. Typed errors (gate
+   * errors included) keep their catalog code; anything else becomes
+   * EMBEDDINGS_OPERATION_FAILED with the cause only logged.
+   */
   mapGrpcError(err: unknown): { code: number; message: string } {
-    if (err instanceof BackfillGateError) {
-      const mapped = grpcErrorFromBackfillGate(err);
-      return { code: mapped.code, message: sanitizeErrorMessage(mapped) };
-    }
-    if (err instanceof SearchGateError) {
-      const mapped = grpcErrorFromSearchGate(err);
-      return { code: mapped.code, message: sanitizeErrorMessage(mapped) };
-    }
-    if (err instanceof GrpcError) {
-      return { code: err.code, message: sanitizeErrorMessage(err) };
-    }
-    return { code: status.INTERNAL, message: sanitizeErrorMessage(err) };
+    return grpcCallbackError(err, errors.EMBEDDINGS_OPERATION_FAILED);
   }
 
   private clampSemanticSearchLimit(
@@ -621,7 +625,7 @@ export class EmbeddingsApi {
     try {
       return parseJsonObject(filter, 'filter');
     } catch {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'filter must be a JSON object');
+      throw new ModuleError(errors.FILTER_INVALID);
     }
   }
 
@@ -645,10 +649,11 @@ export class EmbeddingsApi {
   private assertOperatorListAccess(caller: EmbeddingsApiCaller) {
     if (caller.platformAdmin) return;
     if (canManageEmbeddingConfig({ callerModule: caller.callerModule })) return;
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'Listing embedding resources requires the schema owner or a platform operator',
-    );
+    throw new ModuleError({
+      ...errors.EMBEDDING_ACCESS_DENIED,
+      message:
+        'Listing embedding resources requires the schema owner or a platform operator',
+    });
   }
 
   private async requireConfig(request: {
@@ -662,25 +667,28 @@ export class EmbeddingsApi {
       query.schemaName = request.schemaName;
       query.targetField = request.targetField;
     } else {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'id or schemaName and targetField are required',
-      );
+      throw new ModuleError({
+        ...errors.EMBEDDING_CONFIG_INVALID,
+        message: 'id or schemaName and targetField are required',
+      });
     }
     const existing = await this.deps.configs.findOne(query);
     if (!existing) {
-      throw new GrpcError(status.NOT_FOUND, 'Embedding config not found');
+      throw new ModuleError(errors.EMBEDDING_CONFIG_NOT_FOUND);
     }
     return existing;
   }
 
   private async requireBackfill(id: string): Promise<BackfillRunRecord> {
     if (!id) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Backfill id is required');
+      throw new ModuleError({
+        ...errors.BACKFILL_REQUEST_INVALID,
+        message: 'Backfill id is required',
+      });
     }
     const run = await this.deps.backfills.findOne({ _id: id });
     if (!run) {
-      throw new GrpcError(status.NOT_FOUND, 'Backfill run not found');
+      throw new ModuleError(errors.BACKFILL_NOT_FOUND);
     }
     return run;
   }
@@ -690,10 +698,10 @@ export class EmbeddingsApi {
     if (targetField) query.targetField = targetField;
     const config = await this.deps.configs.findOne(query);
     if (!config) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        'No embedding config found for semantic search',
-      );
+      throw new ModuleError({
+        ...errors.EMBEDDING_CONFIG_NOT_FOUND,
+        message: 'No embedding config found for semantic search',
+      });
     }
     return config;
   }
@@ -891,11 +899,7 @@ export class EmbeddingsApi {
       });
       return { persistEnabled: true, warnings: [] };
     } catch (err) {
-      const indexPending =
-        (err instanceof BackfillGateError && err.reason === 'index_not_queryable') ||
-        (err instanceof GrpcError &&
-          err.code === status.FAILED_PRECONDITION &&
-          /not queryable/.test(err.message));
+      const indexPending = hasConduitCode(err, errors.VECTOR_INDEX_NOT_QUERYABLE);
       if (!indexPending) throw err;
       return {
         persistEnabled: false,
@@ -930,7 +934,10 @@ export class EmbeddingsApi {
           enabled: args.persistEnabled,
         });
     if (!saved) {
-      throw new GrpcError(status.INTERNAL, 'Failed to persist embedding config');
+      throw new ModuleError(
+        errors.EMBEDDINGS_OPERATION_FAILED,
+        'Failed to persist embedding config',
+      );
     }
     if (args.existing && args.changed.length) {
       await this.deps.invalidateHashes(
@@ -988,10 +995,10 @@ export class EmbeddingsApi {
         method: VectorIndexMethod.HNSW,
       });
     } catch (err) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        `Failed to provision vector index for '${next.targetField}': ${sanitizeErrorMessage(err)}`,
-      );
+      throw new ModuleError({
+        ...errors.VECTOR_INDEX_OPERATION_FAILED,
+        message: `Failed to provision vector index for '${next.targetField}': ${sanitizeErrorMessage(err)}`,
+      });
     }
     return true;
   }
@@ -1015,10 +1022,10 @@ export class EmbeddingsApi {
         method: VectorIndexMethod.HNSW,
       });
     } catch (err) {
-      throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        `Failed to provision replacement vector index for '${next.targetField}': ${sanitizeErrorMessage(err)}`,
-      );
+      throw new ModuleError({
+        ...errors.VECTOR_INDEX_OPERATION_FAILED,
+        message: `Failed to provision replacement vector index for '${next.targetField}': ${sanitizeErrorMessage(err)}`,
+      });
     }
     return replacementName;
   }
@@ -1059,10 +1066,10 @@ export class EmbeddingsApi {
       try {
         await this.deps.deleteVectorIndex(args.schemaName, name);
       } catch (err) {
-        throw new GrpcError(
-          status.FAILED_PRECONDITION,
-          `Failed to retire superseded vector index '${name}': ${sanitizeErrorMessage(err)}`,
-        );
+        throw new ModuleError({
+          ...errors.VECTOR_INDEX_OPERATION_FAILED,
+          message: `Failed to retire superseded vector index '${name}': ${sanitizeErrorMessage(err)}`,
+        });
       }
     }
     return this.deps.getVectorIndexes(args.schemaName);
@@ -1112,7 +1119,10 @@ export class EmbeddingsApi {
       );
       return queued.queued > 0;
     } catch (err) {
-      if (err instanceof BackfillGateError) {
+      if (
+        err instanceof BackfillGateError ||
+        hasConduitCode(err, errors.BACKFILL_REQUEST_INVALID)
+      ) {
         return false;
       }
       throw err;

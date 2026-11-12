@@ -24,8 +24,9 @@
  *    alone: demoting is destructive and stays an explicit admin action;
  *  - secrets are never imported; the ones stored for providers that remain are kept.
  */
-import { GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { Indexable } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { isRecord } from './common.logic.js';
 import { buildRealmSettingsWrite, pickSettingsFields } from '../admin/realm.logic.js';
 import type { ImportResultEntry } from '@conduitplatform/module-tools';
@@ -41,7 +42,7 @@ import {
 export const UNRESOLVED_REALM_PREFIX = 'unresolved:';
 
 function invalid(message: string): never {
-  throw new GrpcError(status.INVALID_ARGUMENT, message);
+  throw new ModuleError({ ...errors.REALM_SETTINGS_INVALID, message });
 }
 
 const SECRET_AND_FLAG_FIELDS = [

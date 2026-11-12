@@ -1,5 +1,6 @@
-import { AccessTokenClaims, ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { AccessTokenClaims, ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '../classes/ModuleError.js';
+import { authErrors } from './authErrors.js';
 import { createPublicKey } from 'node:crypto';
 import {
   AccessTokenSigningKeys,
@@ -307,13 +308,14 @@ export class AccessTokenVerifier {
   }
 
   /**
-   * Verifies an access token, throwing GrpcError(UNAUTHENTICATED) with a short reason on failure.
+   * Verifies an access token, throwing a typed ModuleError on failure (the short reason is its
+   * `debugLogInfo`).
    * `options.now` is epoch milliseconds. An `unknown kid` triggers a throttled (at most once
    * per 10 s) background refetch of the config, to pick up a rotation sooner.
    */
   verify(token: string, options?: AccessTokenVerifyOptions): AccessTokenClaims {
     if (!this._signing) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'verifier not ready');
+      throw new ModuleError(authErrors.AUTH_VERIFIER_NOT_READY);
     }
     try {
       return verifyAccessToken(
@@ -322,7 +324,7 @@ export class AccessTokenVerifier {
         options,
       );
     } catch (e) {
-      if ((e as Error).message === 'unknown kid') void this.refetch();
+      if ((e as ModuleError).debugLogInfo === 'unknown kid') void this.refetch();
       throw e;
     }
   }

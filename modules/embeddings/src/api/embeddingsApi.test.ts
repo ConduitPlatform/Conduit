@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   GrpcError,
+  hasConduitCode,
   TYPE,
   VectorCapabilities,
   VectorIndexStatus,
@@ -781,7 +782,9 @@ describe('typed embeddings API handlers', () => {
           { callerModule: 'database' },
         ),
       (err: unknown) =>
-        err instanceof GrpcError && err.code === status.FAILED_PRECONDITION,
+        err instanceof GrpcError &&
+        err.code === status.FAILED_PRECONDITION &&
+        hasConduitCode(err, 'EMBEDDING_PROVIDER_DIMENSIONS_MISMATCH'),
     );
     const started = await createApi({ configs: [enabledConfig] }).api.startBackfill(
       { schemaName: 'Article' },
@@ -807,7 +810,9 @@ describe('typed embeddings API handlers', () => {
     await assert.rejects(
       () => resumeApi.resumeBackfill(started.runs[0].id, { callerModule: 'database' }),
       (err: unknown) =>
-        err instanceof GrpcError && err.code === status.FAILED_PRECONDITION,
+        err instanceof GrpcError &&
+        err.code === status.FAILED_PRECONDITION &&
+        hasConduitCode(err, 'BACKFILL_STATE_CONFLICT'),
     );
   });
 
@@ -1056,6 +1061,7 @@ describe('typed embeddings API handlers', () => {
       (err: unknown) =>
         err instanceof GrpcError &&
         err.code === status.NOT_FOUND &&
+        hasConduitCode(err, 'EMBEDDING_CONFIG_NOT_FOUND') &&
         /No embedding config found/.test(err.message),
     );
   });

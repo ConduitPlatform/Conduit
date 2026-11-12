@@ -2,12 +2,11 @@ import {
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
-  GrpcError,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute } from '@conduitplatform/hermes';
-import { ConduitString } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
+import { ConduitString, ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 import AdminModule from '../AdminModule.js';
 
 export function getRouteMiddlewares(admin: AdminModule) {
@@ -20,6 +19,7 @@ export function getRouteMiddlewares(admin: AdminModule) {
         path: ConduitString.Required,
         action: ConduitString.Required,
       },
+      errors: [errors.INVALID_ADMIN_ROUTE_ACTION, errors.ADMIN_ROUTE_NOT_FOUND],
     },
     new ConduitRouteReturnDefinition('GetAdminRouteMiddleware', {
       middlewares: [TYPE.String],
@@ -27,12 +27,12 @@ export function getRouteMiddlewares(admin: AdminModule) {
     async (req: ConduitRouteParameters) => {
       const { path, action } = req.params!;
       if (!(action in ConduitRouteActions)) {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
+        throw new ModuleError(errors.INVALID_ADMIN_ROUTE_ACTION);
       }
       const { url, routeIndex } = admin.findGrpcRoute(path, action);
       const route = admin.getGrpcRoute(url, routeIndex);
       if (!route) {
-        throw new GrpcError(status.NOT_FOUND, 'Route not found');
+        throw new ModuleError(errors.ADMIN_ROUTE_NOT_FOUND);
       }
       return { middlewares: route.options!.middlewares };
     },

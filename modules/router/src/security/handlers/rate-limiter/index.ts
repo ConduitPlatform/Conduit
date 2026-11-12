@@ -1,6 +1,6 @@
 import { Cluster, Redis } from 'ioredis';
 import { ConduitGrpcSdk, ConduitError } from '@conduitplatform/grpc-sdk';
-import { extractClientIp } from '@conduitplatform/hermes';
+import { extractClientIp, HermesErrorCodes } from '@conduitplatform/hermes';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { isNil } from 'lodash-es';
 
@@ -17,7 +17,7 @@ export class RateLimiter {
       const config = ConfigController.getInstance().config.rateLimit;
       const prefix = 'limiter';
       const ip = extractClientIp(req.headers, req.ip);
-      if (req.method === 'OPTIONS') next();
+      if (req.method === 'OPTIONS') return next();
       self.redisClient.incr(`${prefix}:${ip}`, (err, requests) => {
         if (err || isNil(requests) || !requests) {
           ConduitGrpcSdk.Logger.error(
@@ -31,7 +31,14 @@ export class RateLimiter {
           ConduitGrpcSdk.Logger.info(
             `RATE_LIMIT: ${ip} exceeded rate limit, ${requests} consumed.`,
           );
-          return next(new ConduitError('RATE_LIMIT', 429, 'Too Many Requests'));
+          return next(
+            new ConduitError(
+              'RATE_LIMIT',
+              429,
+              'Too Many Requests',
+              HermesErrorCodes.RATE_LIMIT_EXCEEDED,
+            ),
+          );
         }
         next();
       });

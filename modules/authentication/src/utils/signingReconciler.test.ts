@@ -1,10 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { getConduitCode, GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
+import { errors } from '../errors.js';
 import {
   reconcileSharedSigningKeys,
-  SIGNING_KEYS_UNAVAILABLE,
   type SigningKeysConfig,
 } from './signingReconciler.js';
 import {
@@ -119,7 +119,7 @@ describe('reconcileSharedSigningKeys', () => {
       (e: unknown) =>
         e instanceof GrpcError &&
         e.code === status.UNAVAILABLE &&
-        e.message === SIGNING_KEYS_UNAVAILABLE,
+        getConduitCode(e) === errors.SIGNING_KEYS_UNAVAILABLE.conduitCode,
     );
   });
 

@@ -4,6 +4,8 @@ import { isNil } from 'lodash-es';
 import { isDev } from '../utils/middleware.js';
 import { ConduitRequest, isSocketHandshake } from '@conduitplatform/hermes';
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { errors } from '../../errors.js';
+import { sendError } from '../utils/errorResponse.js';
 
 export function getAdminMiddleware(configManager: any) {
   return async function adminMiddleware(
@@ -49,7 +51,7 @@ export function getAdminMiddleware(configManager: any) {
     }
     const master = process.env.MASTER_KEY ?? 'M4ST3RK3Y';
     if (isNil(masterKey) || masterKey !== master)
-      return res.status(401).json({ error: 'Unauthorized' });
+      return sendError(res, errors.ADMIN_MASTER_KEY_INVALID);
     next();
   };
 }

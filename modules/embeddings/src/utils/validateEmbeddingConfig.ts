@@ -1,5 +1,6 @@
-import { GrpcError, VectorSimilarity } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { VectorSimilarity } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import type { EmbeddingProviderSettings } from '../config/index.js';
 import {
   assertConfiguredProvider,
@@ -43,16 +44,22 @@ export function validateEmbeddingConfigInput(
   schemaFields?: Record<string, unknown>,
 ): ValidatedEmbeddingConfig {
   if (!request.schemaName || !request.targetField || !request.sourceFields?.length) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      'schemaName, targetField, and sourceFields are required',
-    );
+    throw new ModuleError({
+      ...errors.EMBEDDING_CONFIG_INVALID,
+      message: 'schemaName, targetField, and sourceFields are required',
+    });
   }
   if (!/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(request.schemaName)) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'schemaName is invalid');
+    throw new ModuleError({
+      ...errors.EMBEDDING_CONFIG_INVALID,
+      message: 'schemaName is invalid',
+    });
   }
   if (!/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(request.targetField)) {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'targetField is invalid');
+    throw new ModuleError({
+      ...errors.EMBEDDING_CONFIG_INVALID,
+      message: 'targetField is invalid',
+    });
   }
   const { name: provider, settings: providerSettings } = assertConfiguredProvider(
     defaults.providers,
@@ -62,10 +69,10 @@ export function validateEmbeddingConfigInput(
   const dimensions = resolveCatalogueDimensions(model, request.dimensions);
   const similarity = request.similarity || VectorSimilarity.Cosine;
   if (!SUPPORTED_SIMILARITY.includes(similarity as VectorSimilarity)) {
-    throw new GrpcError(
-      status.INVALID_ARGUMENT,
-      `Unsupported similarity '${similarity}'. Supported values: ${SUPPORTED_SIMILARITY.join(', ')}`,
-    );
+    throw new ModuleError({
+      ...errors.EMBEDDING_CONFIG_INVALID,
+      message: `Unsupported similarity '${similarity}'. Supported values: ${SUPPORTED_SIMILARITY.join(', ')}`,
+    });
   }
   const sourceFieldAllowlist = (request.sourceFieldAllowlist ?? []).filter(
     field => typeof field === 'string' && field.length > 0,

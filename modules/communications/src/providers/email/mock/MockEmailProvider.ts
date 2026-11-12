@@ -1,3 +1,5 @@
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../../errors.js';
 import { randomUUID } from 'crypto';
 import { createTransport, SentMessageInfo } from 'nodemailer';
 import Mail, { Options } from 'nodemailer/lib/mailer/index.js';
@@ -47,12 +49,20 @@ export class MockEmailProvider extends EmailProviderClass {
 
   getTemplateInfo(templateName: string): Promise<Template> {
     return Promise.reject(
-      new Error(`${EXTERNAL_TEMPLATES_UNSUPPORTED}: ${templateName}`),
+      new ModuleError(
+        errors.EMAIL_OPERATION_UNSUPPORTED,
+        `${EXTERNAL_TEMPLATES_UNSUPPORTED}: ${templateName}`,
+      ),
     );
   }
 
   createTemplate(data: CreateEmailTemplate): Promise<Template> {
-    return Promise.reject(new Error(`${EXTERNAL_TEMPLATES_UNSUPPORTED}: ${data.name}`));
+    return Promise.reject(
+      new ModuleError(
+        errors.EMAIL_OPERATION_UNSUPPORTED,
+        `${EXTERNAL_TEMPLATES_UNSUPPORTED}: ${data.name}`,
+      ),
+    );
   }
 
   getBuilder(): EmailBuilderClass<Options> {
@@ -60,7 +70,12 @@ export class MockEmailProvider extends EmailProviderClass {
   }
 
   updateTemplate(data: UpdateEmailTemplate): Promise<Template> {
-    return Promise.reject(new Error(`${EXTERNAL_TEMPLATES_UNSUPPORTED}: ${data.id}`));
+    return Promise.reject(
+      new ModuleError(
+        errors.EMAIL_OPERATION_UNSUPPORTED,
+        `${EXTERNAL_TEMPLATES_UNSUPPORTED}: ${data.id}`,
+      ),
+    );
   }
 
   deleteTemplate(id: string): Promise<DeleteEmailTemplate> {

@@ -4,12 +4,10 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import { RefreshToken, Token, TwoFactorSecret, User } from '../models/index.js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { Config } from '../config/index.js';
@@ -19,7 +17,15 @@ import {
   ConduitString,
   ConfigController,
   RoutingManager,
+  authErrors,
+  ModuleError,
 } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
+import {
+  AUTHENTICATED_TOKEN_ERRORS,
+  SESSION_AUTH_ERRORS,
+  TOKEN_ISSUANCE_ERRORS,
+} from './utils.js';
 import * as node2fa from '@conduitplatform/node-2fa';
 import { AuthUtils } from '../utils/index.js';
 import {
@@ -58,7 +64,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
   ): Promise<RefreshToken & { user: User }> {
     const { refreshToken, clientId } = call.request.context;
     if (isNil(refreshToken) || refreshToken === '') {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Refresh token not found');
+      throw new ModuleError(errors.REFRESH_TOKEN_INVALID);
     }
     const presented = String(refreshToken);
     let row: RefreshToken | null = await RefreshToken.getInstance().findOne(
@@ -69,20 +75,20 @@ export class CommonHandlers implements IAuthenticationStrategy {
       row = await this.migrateLegacyRefreshToken(presented, clientId);
     }
     if (isNil(row)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Refresh token not found');
+      throw new ModuleError(errors.REFRESH_TOKEN_INVALID);
     }
     const now = moment.utc();
     if (
       now.isAfter(moment.utc(row.expiresOn)) ||
       (row.maxExpiresOn && now.isAfter(moment.utc(row.maxExpiresOn)))
     ) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Token expired');
+      throw new ModuleError(errors.REFRESH_TOKEN_INVALID, 'expired');
     }
     if (!row.user) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Invalid user');
+      throw new ModuleError(authErrors.USER_BLOCKED, 'refresh token has no user');
     }
     if (!(row.user as User).active) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'User is blocked');
+      throw new ModuleError(authErrors.USER_BLOCKED);
     }
     return row as RefreshToken & { user: User };
   }
@@ -148,7 +154,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
       extendable: row.extendable !== false && policy.extendable,
     });
     if (!decision.ok) {
-      throw new GrpcError(status.FAILED_PRECONDITION, 'Refresh token is not extendable');
+      throw new ModuleError(errors.REFRESH_TOKEN_NOT_EXTENDABLE);
     }
     await RefreshToken.getInstance().findByIdAndUpdate(row._id, {
       expiresOn: decision.expiresOn,
@@ -198,19 +204,13 @@ export class CommonHandlers implements IAuthenticationStrategy {
         // the shared client (getClient() would open a connection per attempt)
         const redis = getRedisKeyValue();
         if (!redis) {
-          throw new GrpcError(
-            status.UNAVAILABLE,
-            'Step-up authentication is unavailable',
-          );
+          throw new ModuleError(errors.STEP_UP_UNAVAILABLE, 'redis client missing');
         }
         let reply: unknown;
         try {
           reply = await redis.set(key, value, 'PX', expiryMs, 'NX');
-        } catch {
-          throw new GrpcError(
-            status.UNAVAILABLE,
-            'Step-up authentication is unavailable',
-          );
+        } catch (e) {
+          throw ModuleError.from(e, errors.STEP_UP_UNAVAILABLE);
         }
         return reply === 'OK';
       },
@@ -228,7 +228,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
     const config: Config = ConfigController.getInstance().config;
     const sms = () => {
       if (!this.grpcSdk.sms) {
-        throw new GrpcError(status.FAILED_PRECONDITION, 'SMS module not available');
+        throw new ModuleError(errors.PHONE_PROVIDER_UNAVAILABLE);
       }
       return this.grpcSdk.sms;
     };
@@ -256,7 +256,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
         sendSmsChallenge: async user => {
           const sid = await AuthUtils.sendVerificationCode(sms(), user.phoneNumber!);
           if (sid === '') {
-            throw new GrpcError(status.INTERNAL, 'Could not send verification code');
+            throw new ModuleError(errors.VERIFICATION_CODE_SEND_FAILED);
           }
           await Token.getInstance()
             .deleteMany({
@@ -371,10 +371,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
   async deleteUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user, jwtPayload } = call.request.context;
     if (!jwtPayload.sudo) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Re-login required to enter sudo mode',
-      );
+      throw new ModuleError(errors.SUDO_REQUIRED);
     }
     await User.getInstance().deleteOne({ _id: user._id });
     await deleteUserRealmMemberships(String(user._id));
@@ -405,6 +402,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
         path: '/user',
         description: `Returns the authenticated user.`,
         action: ConduitRouteActions.GET,
+        errors: [...SESSION_AUTH_ERRORS],
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition(User.name),
@@ -415,6 +413,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
         path: '/user',
         description: 'Deletes the authenticated user.',
         action: ConduitRouteActions.DELETE,
+        errors: [errors.SUDO_REQUIRED, ...SESSION_AUTH_ERRORS],
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
@@ -433,6 +432,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
               'Fields to update that should not overwrite the User schema fields.',
           },
         },
+        errors: [errors.USER_DATA_INVALID, ...SESSION_AUTH_ERRORS],
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition(User.name),
@@ -447,6 +447,12 @@ export class CommonHandlers implements IAuthenticationStrategy {
           description:
             'Issues a new access token. The refresh token is not rotated: `refreshToken` in the response is the presented token, unchanged (clients may ignore it). ' +
             `Requires a valid refresh token provided in Authorization header/cookie. Format 'Bearer TOKEN'`,
+          errors: [
+            errors.REFRESH_TOKEN_INVALID,
+            authErrors.AUTH_TOKEN_MISSING,
+            authErrors.AUTH_HEADER_MALFORMED,
+            ...TOKEN_ISSUANCE_ERRORS,
+          ],
           middlewares: ['refreshAuthMiddleware'],
         },
         new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
@@ -462,6 +468,13 @@ export class CommonHandlers implements IAuthenticationStrategy {
           description:
             'Extends the refresh token expiry, capped by its absolute maximum lifetime. ' +
             `Requires a valid refresh token provided in Authorization header/cookie. Format 'Bearer TOKEN'`,
+          errors: [
+            errors.REFRESH_TOKEN_NOT_EXTENDABLE,
+            errors.REFRESH_TOKEN_INVALID,
+            authErrors.USER_BLOCKED,
+            authErrors.AUTH_TOKEN_MISSING,
+            authErrors.AUTH_HEADER_MALFORMED,
+          ],
           middlewares: ['refreshAuthMiddleware'],
         },
         new ConduitRouteReturnDefinition('ExtendRefreshTokenResponse', {
@@ -481,6 +494,19 @@ export class CommonHandlers implements IAuthenticationStrategy {
           password: ConduitString.Optional,
           code: ConduitString.Optional,
         },
+        errors: [
+          errors.SUDO_LOCKED_OUT,
+          errors.INVALID_CREDENTIALS,
+          errors.SUDO_PASSWORD_REQUIRED,
+          errors.SUDO_CODE_REQUIRED,
+          errors.PASSWORD_AUTH_NOT_AVAILABLE,
+          errors.TWO_FA_METHOD_UNAVAILABLE,
+          errors.PHONE_PROVIDER_UNAVAILABLE,
+          errors.STEP_UP_UNAVAILABLE,
+          errors.VERIFICATION_CODE_SEND_FAILED,
+          ...SESSION_AUTH_ERRORS,
+          ...AUTHENTICATED_TOKEN_ERRORS,
+        ],
         middlewares: ['authMiddleware'],
         rateLimit: AUTH_CREDENTIALS,
       },
@@ -495,6 +521,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
         path: '/logout',
         action: ConduitRouteActions.POST,
         description: 'Logs out authenticated user.',
+        errors: [...SESSION_AUTH_ERRORS],
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('LogoutResponse', 'String'),

@@ -1,4 +1,6 @@
-import { ConduitGrpcSdk, GrpcError, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitGrpcSdk, Indexable, parseErrorPayload } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '../classes/ModuleError.js';
+import { authErrors } from '../utilities/authErrors.js';
 import { status } from '@grpc/grpc-js';
 
 /**
@@ -71,7 +73,7 @@ export function createUserHydrator(
     optional: kind === 'optional',
     getUser: async (userId: string) => {
       const resolver = resolve();
-      if (!resolver) throw new GrpcError(status.UNAVAILABLE, 'User lookup unavailable');
+      if (!resolver) throw new ModuleError(authErrors.USER_LOOKUP_UNAVAILABLE);
       return resolver(userId);
     },
   };
@@ -86,7 +88,7 @@ export function mapHydrationErrorCode(error: unknown): number {
 }
 
 /**
- * Sets context.user when needed. For the mandatory form a failed lookup throws a GrpcError:
+ * Sets context.user when needed. For the mandatory form a failed lookup throws a typed error:
  * NOT_FOUND becomes UNAUTHENTICATED; PERMISSION_DENIED and every other gRPC code
  * (UNAVAILABLE, DEADLINE_EXCEEDED, INTERNAL, ...) pass through. The optional form
  * swallows the failure and leaves the context untouched. Failures are logged at warn level.
@@ -101,13 +103,16 @@ export async function hydrateContextUser(
     context.user = await hydrator.getUser(context.userId);
   } catch (e) {
     ConduitGrpcSdk.Logger.warn(
-      `User hydration failed: ${(e as Error)?.message ?? String(e)}`,
+      `User hydration failed: ${parseErrorPayload(e).message || String(e)}`,
     );
     if (!hydrator.optional) {
       const code = mapHydrationErrorCode(e);
-      throw new GrpcError(
-        code,
-        code === status.UNAUTHENTICATED ? 'Unauthorized' : 'User lookup failed',
+      throw new ModuleError(
+        code === status.UNAUTHENTICATED
+          ? authErrors.AUTH_USER_NOT_FOUND
+          : code === status.UNAVAILABLE
+            ? authErrors.USER_LOOKUP_UNAVAILABLE
+            : { ...authErrors.USER_LOOKUP_FAILED, grpcCode: code },
       );
     }
   }

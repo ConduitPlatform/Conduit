@@ -2,14 +2,18 @@ import { Admin } from '../../models/index.js';
 import { isNil } from 'lodash-es';
 import { hashPassword } from '../utils/auth.js';
 import {
-  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
+import {
+  ConduitString,
+  ConfigController,
+  ModuleError,
+} from '@conduitplatform/module-tools';
 
 import { ConduitRoute } from '@conduitplatform/hermes';
+import { errors } from '../../errors.js';
 
 export function getCreateAdminRoute() {
   return new ConduitRoute(
@@ -22,6 +26,11 @@ export function getCreateAdminRoute() {
         username: ConduitString.Required,
         password: ConduitString.Required,
       },
+      errors: [
+        errors.USERNAME_AND_PASSWORD_REQUIRED,
+        errors.ADMIN_USERNAME_TAKEN,
+        errors.SUPER_ADMIN_REQUIRED,
+      ],
     },
     new ConduitRouteReturnDefinition('Create', {
       message: ConduitString.Required,
@@ -31,24 +40,16 @@ export function getCreateAdminRoute() {
       const loggedInAdmin = req.context!.admin;
 
       if (isNil(username) || isNil(password)) {
-        throw new ConduitError(
-          'INVALID_ARGUMENTS',
-          400,
-          'Both username and password must be provided',
-        );
+        throw new ModuleError(errors.USERNAME_AND_PASSWORD_REQUIRED);
       }
 
       const admin = await Admin.getInstance().findOne({ username });
       if (!isNil(admin)) {
-        throw new ConduitError('INVALID_ARGUMENTS', 400, 'Already exists');
+        throw new ModuleError(errors.ADMIN_USERNAME_TAKEN);
       }
 
       if (!loggedInAdmin.isSuperAdmin) {
-        throw new ConduitError(
-          'INVALID_ARGUMENTS',
-          400,
-          'Only superAdmin can create admin',
-        );
+        throw new ModuleError(errors.SUPER_ADMIN_REQUIRED);
       }
       const adminConfig = ConfigController.getInstance().config;
       const hashRounds = adminConfig.auth.hashRounds;

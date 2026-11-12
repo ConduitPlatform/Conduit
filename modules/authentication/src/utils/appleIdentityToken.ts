@@ -1,5 +1,5 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 
 export function verifyAppleIdentityToken(
@@ -14,6 +14,6 @@ export function verifyAppleIdentityToken(
       audience: expectedAudience,
     }) as JwtPayload;
   } catch {
-    throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
+    throw new ModuleError(errors.APPLE_TOKEN_INVALID);
   }
 }

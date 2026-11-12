@@ -1,3 +1,5 @@
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { eventRelayRoom } from './rooms.js';
 import { MAX_ROOMS_PER_SOCKET } from './constants.js';
 
@@ -48,7 +50,10 @@ export function trackSubscription(
   );
   withoutDup.push(entry);
   if (withoutDup.length > MAX_ROOMS_PER_SOCKET) {
-    throw new Error(`Cannot subscribe to more than ${MAX_ROOMS_PER_SOCKET} relay rooms`);
+    throw new ModuleError(
+      errors.RELAY_SUBSCRIPTION_LIMIT_EXCEEDED,
+      `Cannot subscribe to more than ${MAX_ROOMS_PER_SOCKET} relay rooms`,
+    );
   }
   subscriptionsBySocket.set(socketId, withoutDup);
 
@@ -132,8 +137,7 @@ export function releaseSocketSubscriptions(socketId: string, userId?: string): v
         continue;
       }
       const next = userSubs.filter(
-        entry =>
-          !(entry.relayId === sub.relayId && entry.resourceId === sub.resourceId),
+        entry => !(entry.relayId === sub.relayId && entry.resourceId === sub.resourceId),
       );
       if (next.length === 0) {
         subscriptionsByUser.delete(userId);

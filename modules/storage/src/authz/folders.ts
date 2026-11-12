@@ -1,5 +1,6 @@
-import { ConduitGrpcSdk, GrpcError } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { isNil } from 'lodash-es';
 import { IStorageProvider } from '../interfaces/index.js';
 import { _StorageContainer, _StorageFolder } from '../models/index.js';
@@ -31,19 +32,13 @@ export async function assertNoPersonalFolderSquat(
     .getInstance()
     .findOne({ name: personalRoot, container });
   if (isNil(existing)) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'You are not allowed to create this folder',
-    );
+    throw new ModuleError(errors.PERSONAL_FOLDER_CREATE_DENIED);
   }
   if (!isAuthzEnabled()) {
     return;
   }
   if (!(await hasManagedRelations(grpcSdk, `Folder:${existing._id}`))) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      'You are not allowed to create this folder',
-    );
+    throw new ModuleError(errors.PERSONAL_FOLDER_CREATE_DENIED);
   }
 }
 
@@ -58,10 +53,10 @@ async function assertCanEditFolder(
     resource: `Folder:${folder._id}`,
   });
   if (!allowed || !allowed.allow) {
-    throw new GrpcError(
-      status.PERMISSION_DENIED,
-      `You are not allowed to edit files in folder ${folder.name}`,
-    );
+    throw new ModuleError({
+      ...errors.FOLDER_EDIT_DENIED,
+      message: `You are not allowed to edit files in folder ${folder.name}`,
+    });
   }
 }
 
@@ -110,7 +105,7 @@ export async function findOrCreateFolders(
 ): Promise<_StorageFolder[]> {
   const containerDoc = await _StorageContainer.getInstance().findOne({ name: container });
   if (!containerDoc) {
-    throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
+    throw new ModuleError(errors.CONTAINER_NOT_FOUND);
   }
   await healUnmanagedContainer(grpcSdk, containerDoc, options?.scope);
 

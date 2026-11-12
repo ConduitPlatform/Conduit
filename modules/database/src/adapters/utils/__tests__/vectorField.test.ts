@@ -1,6 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
 import {
-  ConduitError,
   GrpcError,
   TYPE,
   VectorIndexMethod,
@@ -33,7 +32,10 @@ describe('vector field contracts', () => {
     expect(isVectorShorthand('Vector')).toBe(true);
     expect(isVectorShorthand(['Vector'])).toBe(true);
     expect(() => assertVectorFieldIfPresent('Docs', 'embedding', 'Vector')).toThrow(
-      ConduitError,
+      expect.objectContaining({
+        conduitCode: 'VECTOR_FIELD_INVALID',
+        code: status.INVALID_ARGUMENT,
+      }),
     );
     expect(() => fieldsValidator('Docs', { embedding: 'Vector' }, 'mongodb')).toThrow(
       /object form/,
@@ -101,7 +103,12 @@ describe('vector field contracts', () => {
         title: TYPE.String,
       },
     } as unknown as ConduitDatabaseSchema;
-    expect(() => validateFieldChanges(oldSchema, newSchema)).toThrow(ConduitError);
+    expect(() => validateFieldChanges(oldSchema, newSchema)).toThrow(
+      expect.objectContaining({
+        code: status.PERMISSION_DENIED,
+        conduitCode: 'SCHEMA_FIELD_CHANGE_FORBIDDEN',
+      }),
+    );
   });
 
   it('validates provider-specific index methods', () => {

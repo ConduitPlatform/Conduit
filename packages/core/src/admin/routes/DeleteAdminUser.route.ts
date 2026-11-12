@@ -1,14 +1,14 @@
 import {
-  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString } from '@conduitplatform/module-tools';
+import { ConduitString, ModuleError } from '@conduitplatform/module-tools';
 
 import { isNil } from 'lodash-es';
 import { Admin } from '../../models/index.js';
 import { ConduitRoute } from '@conduitplatform/hermes';
+import { errors } from '../../errors.js';
 
 export function deleteAdminUserRoute() {
   return new ConduitRoute(
@@ -20,6 +20,12 @@ export function deleteAdminUserRoute() {
       urlParams: {
         id: ConduitString.Required,
       },
+      errors: [
+        errors.ADMIN_ID_REQUIRED,
+        errors.ADMIN_NOT_FOUND,
+        errors.ADMIN_CANNOT_DELETE_SELF,
+        errors.SUPER_ADMIN_REQUIRED,
+      ],
     },
     new ConduitRouteReturnDefinition('DeleteAdminUser', {
       message: ConduitString.Required,
@@ -28,21 +34,17 @@ export function deleteAdminUserRoute() {
       const { id } = req.params!;
       const loggedInAdmin = req.context!.admin;
       if (isNil(id)) {
-        throw new ConduitError('INVALID_ARGUMENTS', 400, 'Id must be provided');
+        throw new ModuleError(errors.ADMIN_ID_REQUIRED);
       }
       const admin = await Admin.getInstance().findOne({ _id: id });
       if (isNil(admin)) {
-        throw new ConduitError('NOT_FOUND', 404, 'Admin not found');
+        throw new ModuleError(errors.ADMIN_NOT_FOUND);
       }
       if (admin._id === loggedInAdmin._id) {
-        throw new ConduitError('INVALID_ARGUMENTS', 400, 'Admin cannot delete self');
+        throw new ModuleError(errors.ADMIN_CANNOT_DELETE_SELF);
       }
       if (!loggedInAdmin.isSuperAdmin) {
-        throw new ConduitError(
-          'INVALID_ARGUMENTS',
-          400,
-          'Only superAdmin can delete admin',
-        );
+        throw new ModuleError(errors.SUPER_ADMIN_REQUIRED);
       }
       await Admin.getInstance().deleteOne({ _id: id });
       return { message: 'Admin deleted.' };

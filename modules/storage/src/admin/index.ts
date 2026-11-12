@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
   Query,
   TYPE,
@@ -14,12 +13,13 @@ import {
   ConduitString,
   ConfigController,
   GrpcServer,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { status } from '@grpc/grpc-js';
 import { isEmpty, isNil } from 'lodash-es';
 import { _StorageContainer, _StorageFolder, File } from '../models/index.js';
 import { normalizeFolderPath, sanitizeFilesForResponse } from '../utils/index.js';
+import { errors } from '../errors.js';
 import { AdminFileHandlers } from './adminFile.js';
 import { rethrowGrpcOrInternal, resolveScope } from '../authz/helpers.js';
 import { findOrCreateFolders } from '../authz/folders.js';
@@ -105,7 +105,7 @@ export class AdminRoutes {
     const scope = resolveScope(call.request);
     const name = normalizeFolderPath(call.request.params.name);
     if (name === '/') {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Folder name may not be empty');
+      throw new ModuleError(errors.FOLDER_NAME_EMPTY);
     }
     const containerDocument = await _StorageContainer
       .getInstance()
@@ -122,7 +122,7 @@ export class AdminRoutes {
         isPublic,
         scope,
         lastExistsHandler: () => {
-          throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
+          throw new ModuleError(errors.FOLDER_ALREADY_EXISTS);
         },
       },
     );
@@ -136,7 +136,7 @@ export class AdminRoutes {
       _id: id,
     });
     if (isNil(folder)) {
-      throw new GrpcError(status.NOT_FOUND, 'Folder does not exist');
+      throw new ModuleError(errors.FOLDER_NOT_FOUND);
     }
     await deleteFolderTree(this.grpcSdk, this.fileHandlers.storage, folder);
     return 'OK';
@@ -166,7 +166,7 @@ export class AdminRoutes {
         _id: id,
       });
       if (isNil(container)) {
-        throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
+        throw new ModuleError(errors.CONTAINER_NOT_FOUND);
       }
       await deleteContainerTree(this.grpcSdk, this.fileHandlers.storage, container);
       return container;
@@ -181,6 +181,7 @@ export class AdminRoutes {
     this.routingManager.route(
       {
         path: '/files/:id',
+        errors: [errors.FILE_NOT_FOUND],
         action: ConduitRouteActions.GET,
         description: `Returns a file.`,
         urlParams: {
@@ -213,6 +214,16 @@ export class AdminRoutes {
     this.routingManager.route(
       {
         path: '/files',
+        errors: [
+          errors.INVALID_FILE_DATA,
+          errors.CONTAINER_CREATION_NOT_ALLOWED,
+          errors.CONTAINER_NOT_FOUND,
+          errors.FOLDER_NOT_FOUND,
+          errors.FOLDER_PARENT_REQUIRED,
+          errors.FILE_ALREADY_EXISTS,
+          errors.PRIVATE_FILE_IN_PUBLIC_CONTAINER,
+          errors.STORAGE_OPERATION_FAILED,
+        ],
         action: ConduitRouteActions.POST,
         description: `Creates a new file.`,
         bodyParams: {
@@ -247,6 +258,15 @@ export class AdminRoutes {
         },
         action: ConduitRouteActions.POST,
         path: '/files/upload',
+        errors: [
+          errors.CONTAINER_CREATION_NOT_ALLOWED,
+          errors.CONTAINER_NOT_FOUND,
+          errors.FOLDER_NOT_FOUND,
+          errors.FOLDER_PARENT_REQUIRED,
+          errors.FILE_ALREADY_EXISTS,
+          errors.PRIVATE_FILE_IN_PUBLIC_CONTAINER,
+          errors.STORAGE_OPERATION_FAILED,
+        ],
         description: `Creates a new file and provides a URL to upload it to.`,
       },
       new ConduitRouteReturnDefinition('CreateFileByUrl', {
@@ -258,6 +278,16 @@ export class AdminRoutes {
     this.routingManager.route(
       {
         path: '/files/:id',
+        errors: [
+          errors.FILE_NOT_FOUND,
+          errors.CONTAINER_CREATION_NOT_ALLOWED,
+          errors.CONTAINER_NOT_FOUND,
+          errors.FOLDER_NOT_FOUND,
+          errors.FOLDER_PARENT_REQUIRED,
+          errors.FILE_ALREADY_EXISTS,
+          errors.PRIVATE_FILE_IN_PUBLIC_CONTAINER,
+          errors.STORAGE_OPERATION_FAILED,
+        ],
         action: ConduitRouteActions.PATCH,
         description: `Updates a file.`,
         urlParams: {
@@ -296,6 +326,16 @@ export class AdminRoutes {
         },
         action: ConduitRouteActions.PATCH,
         path: '/files/upload/:id',
+        errors: [
+          errors.FILE_NOT_FOUND,
+          errors.CONTAINER_CREATION_NOT_ALLOWED,
+          errors.CONTAINER_NOT_FOUND,
+          errors.FOLDER_NOT_FOUND,
+          errors.FOLDER_PARENT_REQUIRED,
+          errors.FILE_ALREADY_EXISTS,
+          errors.PRIVATE_FILE_IN_PUBLIC_CONTAINER,
+          errors.STORAGE_OPERATION_FAILED,
+        ],
         description: `Updates a file and provides a URL to upload its data to.`,
       },
       new ConduitRouteReturnDefinition('PatchFileByUrl', {
@@ -307,6 +347,12 @@ export class AdminRoutes {
     this.routingManager.route(
       {
         path: '/files/:id',
+        errors: [
+          errors.INVALID_FILE_ID,
+          errors.FILE_NOT_FOUND,
+          errors.FILE_DELETE_FAILED,
+          errors.STORAGE_OPERATION_FAILED,
+        ],
         action: ConduitRouteActions.DELETE,
         description: `Deletes a file.`,
         urlParams: {
@@ -321,6 +367,7 @@ export class AdminRoutes {
     this.routingManager.route(
       {
         path: '/files/:id/url',
+        errors: [errors.FILE_NOT_FOUND, errors.STORAGE_OPERATION_FAILED],
         action: ConduitRouteActions.GET,
         description: `Returns the file's url and optionally redirects to it.`,
         urlParams: {
@@ -340,6 +387,11 @@ export class AdminRoutes {
     this.routingManager.route(
       {
         path: '/files/:id/data',
+        errors: [
+          errors.INVALID_FILE_ID,
+          errors.FILE_NOT_FOUND,
+          errors.STORAGE_OPERATION_FAILED,
+        ],
         action: ConduitRouteActions.GET,
         description: `Returns the data of a file.`,
         urlParams: {
@@ -374,6 +426,14 @@ export class AdminRoutes {
     this.routingManager.route(
       {
         path: '/folders',
+        errors: [
+          errors.FOLDER_NAME_EMPTY,
+          errors.FOLDER_ALREADY_EXISTS,
+          errors.CONTAINER_NOT_FOUND,
+          errors.CONTAINER_ALREADY_EXISTS,
+          errors.FOLDER_PARENT_REQUIRED,
+          errors.STORAGE_OPERATION_FAILED,
+        ],
         action: ConduitRouteActions.POST,
         description: `Creates a new folder.`,
         bodyParams: {
@@ -391,6 +451,7 @@ export class AdminRoutes {
     this.routingManager.route(
       {
         path: '/folders/:id',
+        errors: [errors.FOLDER_NOT_FOUND],
         action: ConduitRouteActions.DELETE,
         description: `Deletes a folder.`,
         urlParams: {
@@ -420,6 +481,7 @@ export class AdminRoutes {
     this.routingManager.route(
       {
         path: '/containers',
+        errors: [errors.CONTAINER_ALREADY_EXISTS, errors.STORAGE_OPERATION_FAILED],
         action: ConduitRouteActions.POST,
         description: `Creates a new container.`,
         bodyParams: {
@@ -436,6 +498,7 @@ export class AdminRoutes {
     this.routingManager.route(
       {
         path: '/containers/:id',
+        errors: [errors.CONTAINER_NOT_FOUND, errors.STORAGE_OPERATION_FAILED],
         action: ConduitRouteActions.DELETE,
         description: `Deletes a container.`,
         urlParams: {
@@ -469,7 +532,7 @@ export class AdminRoutes {
         });
         await createContainerOwnerRelation(this.grpcSdk, container, scope);
       } else {
-        throw new GrpcError(status.ALREADY_EXISTS, 'Container already exists');
+        throw new ModuleError(errors.CONTAINER_ALREADY_EXISTS);
       }
       return container;
     } catch (e) {

@@ -1,4 +1,5 @@
 import { ConduitError, ConduitGrpcSdk, Indexable } from '@conduitplatform/grpc-sdk';
+import { HermesErrorCodes, toErrorResponse } from '../utils/errors.js';
 import type { Socket } from 'socket.io';
 
 export type SocketRecoveryCheck = (context: Indexable) => Promise<boolean>;
@@ -25,7 +26,14 @@ export async function guardRecoveredSocket(
     );
     socket.emit(
       'conduit_error',
-      new ConduitError('UNAUTHENTICATED', 401, 'Unauthenticated'),
+      toErrorResponse(
+        new ConduitError(
+          'UNAUTHENTICATED',
+          401,
+          'Unauthenticated',
+          HermesErrorCodes.SOCKET_UNAUTHENTICATED,
+        ),
+      ),
     );
     socket.disconnect(true);
   }

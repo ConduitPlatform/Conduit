@@ -1,3 +1,5 @@
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { hashedEmbeddingSource, sourceHashField } from './configChange.js';
 
 export { sourceHashField };
@@ -65,7 +67,8 @@ export async function generateEmbeddingsForDocument(args: {
     }
     const vector = await args.embed(input, config);
     if (vector.length !== config.dimensions) {
-      throw new Error(
+      throw new ModuleError(
+        errors.EMBEDDING_PROVIDER_DIMENSIONS_MISMATCH,
         `Embedding provider returned ${vector.length} dimensions; expected ${config.dimensions}`,
       );
     }

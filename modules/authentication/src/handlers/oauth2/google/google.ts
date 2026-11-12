@@ -2,11 +2,14 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
+import {
+  ConduitString,
+  ModuleError,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
+import { errors } from '../../../errors.js';
 import { OAUTH_NATIVE_COMPLETE } from '../../../constants/index.js';
-import { status } from '@grpc/grpc-js';
 import { OAuth2 } from '../OAuth2.js';
 import googleParameters from './google.json' with { type: 'json' };
 import { GoogleUser } from './google.user.js';
@@ -17,7 +20,7 @@ import {
   Payload,
   ProviderConfig,
 } from '../interfaces/index.js';
-import { OAUTH_MODE_PARAM, OAUTH_ROUTE_ERRORS } from '../utils/index.js';
+import { OAUTH_CLIENT_ROUTE_ERRORS, OAUTH_MODE_PARAM } from '../utils/index.js';
 import { realmParam } from '../../realmRequest.js';
 
 // todo migrate to use native method properly
@@ -31,8 +34,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
   }
 
   async connectWithProvider(details: ConnectionParams): Promise<Payload<GoogleUser>> {
-    if (!this.initialized)
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
+    if (!this.initialized) throw new ModuleError(errors.STRATEGY_DISABLED);
 
     const googleUser = await axios
       .get(
@@ -41,7 +43,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
       .then(res => res.data)
       .catch(error => {
         ConduitGrpcSdk.Logger.error(`Failed to fetch user`);
-        throw new Error(error.message);
+        throw new ModuleError(errors.OAUTH_PROVIDER_REQUEST_FAILED, error?.message);
       });
 
     return {
@@ -76,7 +78,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
           realm: realmParam,
         },
         middlewares: ['authMiddleware?', 'checkAnonymousMiddleware'],
-        errors: OAUTH_ROUTE_ERRORS,
+        errors: OAUTH_CLIENT_ROUTE_ERRORS,
         rateLimit: OAUTH_NATIVE_COMPLETE,
       },
       new ConduitRouteReturnDefinition('GoogleResponse', {

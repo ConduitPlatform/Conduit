@@ -1,9 +1,10 @@
 import {
-  GrpcError,
   VectorCapabilities,
   VectorIndexStatus,
+  type ModuleErrorDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import {
   selectEmbeddingVectorIndex,
   type EmbeddingVectorIndexContract,
@@ -21,15 +22,32 @@ export const BACKFILL_GATE_REASONS = [
 
 export type BackfillGateReason = (typeof BACKFILL_GATE_REASONS)[number];
 
-export class BackfillGateError extends Error {
-  readonly code = 'BACKFILL_GATE' as const;
+/** Single place mapping a backfill gate reason to its catalog entry. */
+export const BACKFILL_GATE_DEFINITIONS: Record<
+  BackfillGateReason,
+  ModuleErrorDefinition
+> = {
+  module_disabled: errors.EMBEDDINGS_MODULE_DISABLED,
+  vector_unsupported: errors.VECTOR_SEARCH_UNSUPPORTED,
+  vector_storage_unavailable: errors.VECTOR_UNAVAILABLE,
+  config_not_found: errors.ENABLED_EMBEDDING_CONFIG_NOT_FOUND,
+  config_disabled: errors.EMBEDDING_CONFIG_UNUSABLE,
+  index_not_queryable: errors.VECTOR_INDEX_NOT_QUERYABLE,
+};
 
+/**
+ * A failed backfill precondition. It is a typed `ModuleError` (FAILED_PRECONDITION), so
+ * routes and gRPC answer with its catalog code. `message` (optional) is the
+ * client-visible text replacing the catalog message.
+ */
+export class BackfillGateError extends ModuleError {
   constructor(
     readonly reason: BackfillGateReason,
-    message: string,
+    message?: string,
     readonly indexStatus?: string,
+    definition: ModuleErrorDefinition = BACKFILL_GATE_DEFINITIONS[reason],
   ) {
-    super(message);
+    super(message ? { ...definition, message } : definition);
     this.name = 'BackfillGateError';
   }
 }
@@ -132,7 +150,7 @@ export function assertBackfillExecutable(args: {
   const targetField = args.config.targetField;
   if (typeof targetField !== 'string' || !targetField.length) {
     throw new BackfillGateError(
-      'config_not_found',
+      'config_disabled',
       'Embedding config is missing a target vector field',
     );
   }
@@ -146,20 +164,4 @@ export function assertBackfillExecutable(args: {
       'Wait until the index is ready before running a backfill.',
     indexStatus,
   );
-}
-
-export function grpcErrorFromBackfillGate(err: BackfillGateError): GrpcError {
-  switch (err.reason) {
-    case 'module_disabled':
-    case 'vector_unsupported':
-    case 'vector_storage_unavailable':
-    case 'config_not_found':
-    case 'config_disabled':
-    case 'index_not_queryable':
-      return new GrpcError(status.FAILED_PRECONDITION, err.message);
-    default: {
-      const unexpected: never = err.reason;
-      return new GrpcError(status.INTERNAL, String(unexpected));
-    }
-  }
 }

@@ -1,8 +1,9 @@
-import { ConduitModel, GrpcError, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 import { isNil, isPlainObject, get, has } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
 import { LocationEnum, OperationsEnum } from '../../enums/index.js';
 import { ICustomEndpoint } from '../../interfaces/index.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 /**
  * Query schema:
@@ -352,7 +353,10 @@ export function paginationAndSortingValidation(
   if (operation !== OperationsEnum.POST) {
     const error = queryValidation(query, fields, inputs);
     if (error !== true) {
-      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      throw new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_QUERY_INVALID,
+        message: error as string,
+      });
     }
     if (endpoint !== null) {
       endpoint.query = query;
@@ -386,7 +390,10 @@ export function validateAssignments(
         r.action,
       );
       if (error !== true) {
-        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+        throw new ModuleError({
+          ...errors.CUSTOM_ENDPOINT_ASSIGNMENT_INVALID,
+          message: error as string,
+        });
       }
     },
   );

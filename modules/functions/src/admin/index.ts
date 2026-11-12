@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
   Query,
   TYPE,
@@ -14,10 +13,11 @@ import {
   ConduitNumber,
   ConduitString,
   GrpcServer,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { isEmpty, isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
+import { errors } from '../errors.js';
 import { FunctionExecutions, Functions } from '../models/index.js';
 import { FunctionController } from '../controllers/function.controller.js';
 import { CronQueueController } from '../controllers/cronQueue.controller.js';
@@ -47,12 +47,12 @@ export class AdminHandlers {
       call.request.params;
     const func = await Functions.getInstance().findOne({ name: name });
     if (!isNil(func)) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
+      throw new ModuleError(errors.FUNCTION_ALREADY_EXISTS);
     }
     try {
       compileUserFunctionScript(functionCode);
-    } catch {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid function code');
+    } catch (e) {
+      throw ModuleError.from(e, errors.FUNCTION_CODE_INVALID);
     }
     let normalizedInputs = inputs;
     if (functionType === 'cron') {
@@ -74,11 +74,11 @@ export class AdminHandlers {
   async deleteFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
     if (isEmpty(id) || isNil(id)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid id');
+      throw new ModuleError(errors.FUNCTION_ID_INVALID);
     }
     const func = await Functions.getInstance().findOne({ _id: id });
     if (isNil(func)) {
-      throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
+      throw new ModuleError(errors.FUNCTION_NOT_FOUND);
     }
     await Functions.getInstance().deleteOne({ _id: id });
     this.functionsController.refreshEndpoints();
@@ -88,11 +88,14 @@ export class AdminHandlers {
   async deleteFunctions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;
     if (isEmpty(ids) || isNil(ids)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid ids');
+      throw new ModuleError(errors.FUNCTION_ID_INVALID);
     }
     const func = await Functions.getInstance().findMany({ _id: { $in: ids } });
     if (isNil(func) || isEmpty(func) || func.length !== ids.length) {
-      throw new GrpcError(status.NOT_FOUND, 'One or more functions do not exist');
+      throw new ModuleError(
+        errors.FUNCTION_NOT_FOUND,
+        'One or more functions do not exist',
+      );
     }
     await Functions.getInstance().deleteMany({ _id: { $in: ids } });
     this.functionsController.refreshEndpoints();
@@ -125,7 +128,7 @@ export class AdminHandlers {
     const { id } = call.request.params;
     const func = await Functions.getInstance().findOne({ _id: id });
     if (isNil(func)) {
-      throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
+      throw new ModuleError(errors.FUNCTION_NOT_FOUND);
     }
     return func;
   }
@@ -134,7 +137,7 @@ export class AdminHandlers {
     const { id, name, functionCode, inputs, returns, timeout } = call.request.params;
     const func = await Functions.getInstance().findOne({ _id: id });
     if (isNil(func)) {
-      throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
+      throw new ModuleError(errors.FUNCTION_NOT_FOUND);
     }
     const query = {
       name: name ?? func.name,
@@ -148,8 +151,8 @@ export class AdminHandlers {
     }
     try {
       compileUserFunctionScript(query.functionCode);
-    } catch {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid function code');
+    } catch (e) {
+      throw ModuleError.from(e, errors.FUNCTION_CODE_INVALID);
     }
     await Functions.getInstance().findByIdAndUpdate(func._id, query);
     this.functionsController.refreshEndpoints();
@@ -238,6 +241,13 @@ export class AdminHandlers {
         path: '/upload',
         action: ConduitRouteActions.POST,
         description: 'Upload a function',
+        errors: [
+          errors.FUNCTION_ALREADY_EXISTS,
+          errors.FUNCTION_CODE_INVALID,
+          errors.CRON_PATTERN_REQUIRED,
+          errors.CRON_PATTERN_INVALID,
+          errors.CRON_TIMEZONE_INVALID,
+        ],
         bodyParams: {
           name: ConduitString.Required,
           functionCode: ConduitString.Required,
@@ -255,6 +265,7 @@ export class AdminHandlers {
         path: '/',
         action: ConduitRouteActions.DELETE,
         description: 'Deletes multiple functions',
+        errors: [errors.FUNCTION_ID_INVALID, errors.FUNCTION_NOT_FOUND],
         queryParams: {
           ids: { type: [TYPE.String], required: true },
         },
@@ -267,6 +278,7 @@ export class AdminHandlers {
         path: '/:id',
         action: ConduitRouteActions.DELETE,
         description: 'Delete a function',
+        errors: [errors.FUNCTION_ID_INVALID, errors.FUNCTION_NOT_FOUND],
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
@@ -298,6 +310,7 @@ export class AdminHandlers {
         path: '/:id',
         action: ConduitRouteActions.GET,
         description: 'Get a function',
+        errors: [errors.FUNCTION_NOT_FOUND],
         urlParams: {
           id: { type: TYPE.String, required: true },
         },
@@ -368,6 +381,13 @@ export class AdminHandlers {
         path: '/:id',
         action: ConduitRouteActions.PATCH,
         description: 'Update a function',
+        errors: [
+          errors.FUNCTION_NOT_FOUND,
+          errors.FUNCTION_CODE_INVALID,
+          errors.CRON_PATTERN_REQUIRED,
+          errors.CRON_PATTERN_INVALID,
+          errors.CRON_TIMEZONE_INVALID,
+        ],
         urlParams: {
           id: { type: TYPE.String, required: true },
         },

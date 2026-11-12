@@ -1,6 +1,7 @@
 import { beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { getConduitCode, GrpcError } from '@conduitplatform/grpc-sdk';
+import { errors } from '../errors.js';
 import { status } from '@grpc/grpc-js';
 import {
   createGetUserHandler,
@@ -107,7 +108,10 @@ describe('user resolver', () => {
     const t = setup();
     await assert.rejects(
       t.resolve('missing'),
-      e => e instanceof GrpcError && e.code === status.NOT_FOUND,
+      e =>
+        e instanceof GrpcError &&
+        e.code === status.NOT_FOUND &&
+        getConduitCode(e) === errors.USER_NOT_FOUND.conduitCode,
     );
     assert.equal(t.fake.store.size, 0);
   });
@@ -115,7 +119,10 @@ describe('user resolver', () => {
     const t = setup();
     await assert.rejects(
       t.resolve(''),
-      e => e instanceof GrpcError && e.code === status.INVALID_ARGUMENT,
+      e =>
+        e instanceof GrpcError &&
+        e.code === status.INVALID_ARGUMENT &&
+        getConduitCode(e) === errors.USER_ID_INVALID.conduitCode,
     );
   });
   it('works without a cache', async () => {
@@ -174,6 +181,10 @@ describe('GetUser rpc handler', () => {
       );
     });
     assert.equal(result.error.code, status.INTERNAL);
+    assert.equal(
+      getConduitCode(result.error),
+      errors.USER_DOCUMENT_TOO_LARGE.conduitCode,
+    );
     assert.equal(result.response, undefined);
   });
   it('maps unexpected errors to INTERNAL', async () => {

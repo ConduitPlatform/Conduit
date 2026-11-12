@@ -23,6 +23,7 @@ import { SchemaController } from '../controllers/cms/schema.controller.js';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller.js';
 import { CustomEndpoints, DeclaredSchema, PendingSchemas } from '../models/index.js';
 import { ConduitOptions, SchemaFieldsRequired } from '../interfaces/index.js';
+import { errors } from '../errors.js';
 import type { RealtimeService } from '../realtime/index.js';
 
 export class AdminHandlers {
@@ -74,6 +75,22 @@ export class AdminHandlers {
       {
         path: '/schemas/import',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.SCHEMA_IMPORT_OWNED,
+          errors.EXTENSION_SCHEMA_MISSING,
+          errors.SCHEMA_NOT_FOUND,
+          errors.SCHEMA_NOT_EXTENDABLE,
+          errors.EXTENSION_FIELD_CONSTRAINT_INVALID,
+          errors.EXTENSION_FIELD_DUPLICATE,
+          errors.SCHEMA_SYSTEM_PROTECTED,
+          errors.SCHEMA_NOT_OWNED,
+          errors.SCHEMA_FIELDS_INVALID,
+          errors.SCHEMA_FIELD_CHANGE_FORBIDDEN,
+          errors.VECTOR_FIELD_INVALID,
+          errors.VECTOR_DIMENSIONS_INVALID,
+          errors.VECTOR_SIMILARITY_INVALID,
+          errors.SCHEMA_OPERATION_FAILED,
+        ],
         description: `Imports CMS schemas and extensions. Doesn't drop non-specified extensions.`,
         mcp: false,
         bodyParams: {
@@ -102,6 +119,7 @@ export class AdminHandlers {
       {
         path: '/schemas/extensions',
         action: ConduitRouteActions.GET,
+        errors: [errors.SCHEMA_OPERATION_FAILED],
         description: `Returns queried schema extensions and their total count.`,
         queryParams: {
           skip: ConduitNumber.Optional,
@@ -130,6 +148,7 @@ export class AdminHandlers {
       {
         path: '/schemas/:id',
         action: ConduitRouteActions.GET,
+        errors: [errors.SCHEMA_NOT_FOUND],
         description: `Returns a schema.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -162,6 +181,20 @@ export class AdminHandlers {
       {
         path: '/schemas',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.SCHEMA_NAME_TAKEN,
+          errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+          errors.SCHEMA_NAME_INVALID,
+          errors.SCHEMA_OPTIONS_INVALID,
+          errors.SCHEMA_SYSTEM_PROTECTED,
+          errors.SCHEMA_NOT_OWNED,
+          errors.SCHEMA_FIELDS_INVALID,
+          errors.SCHEMA_FIELD_CHANGE_FORBIDDEN,
+          errors.VECTOR_FIELD_INVALID,
+          errors.VECTOR_DIMENSIONS_INVALID,
+          errors.VECTOR_SIMILARITY_INVALID,
+          errors.SCHEMA_OPERATION_FAILED,
+        ],
         description: `Creates a new schema.`,
         bodyParams: {
           name: ConduitString.Required,
@@ -177,6 +210,20 @@ export class AdminHandlers {
       {
         path: '/schemas/:id',
         action: ConduitRouteActions.UPDATE,
+        errors: [
+          errors.CMS_SCHEMA_NOT_FOUND,
+          errors.SCHEMA_NAME_INVALID,
+          errors.SCHEMA_OPTIONS_INVALID,
+          errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+          errors.SCHEMA_SYSTEM_PROTECTED,
+          errors.SCHEMA_NOT_OWNED,
+          errors.SCHEMA_FIELDS_INVALID,
+          errors.SCHEMA_FIELD_CHANGE_FORBIDDEN,
+          errors.VECTOR_FIELD_INVALID,
+          errors.VECTOR_DIMENSIONS_INVALID,
+          errors.VECTOR_SIMILARITY_INVALID,
+          errors.SCHEMA_OPERATION_FAILED,
+        ],
         description: `Replaces the entire schema fields map. Call GET /database/schemas/:id first and send the complete merged fields object. Optionally update conduitOptions.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -193,6 +240,20 @@ export class AdminHandlers {
       {
         path: '/schemas/:id',
         action: ConduitRouteActions.PATCH,
+        errors: [
+          errors.CMS_SCHEMA_NOT_FOUND,
+          errors.SCHEMA_NAME_INVALID,
+          errors.SCHEMA_OPTIONS_INVALID,
+          errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+          errors.SCHEMA_SYSTEM_PROTECTED,
+          errors.SCHEMA_NOT_OWNED,
+          errors.SCHEMA_FIELDS_INVALID,
+          errors.SCHEMA_FIELD_CHANGE_FORBIDDEN,
+          errors.VECTOR_FIELD_INVALID,
+          errors.VECTOR_DIMENSIONS_INVALID,
+          errors.VECTOR_SIMILARITY_INVALID,
+          errors.SCHEMA_OPERATION_FAILED,
+        ],
         description: `Updates schema settings (conduitOptions) only. Does not modify fields. Use PUT /database/schemas/:id for field updates.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -208,6 +269,14 @@ export class AdminHandlers {
       {
         path: '/schemas',
         action: ConduitRouteActions.DELETE,
+        errors: [
+          errors.SCHEMA_IDS_REQUIRED,
+          errors.SCHEMA_IDS_INVALID,
+          errors.SCHEMA_IN_USE_BY_CUSTOM_ENDPOINT,
+          errors.SCHEMA_NOT_FOUND,
+          errors.SCHEMA_NOT_OWNED,
+          errors.SCHEMA_OPERATION_FAILED,
+        ],
         description: `Deletes queried schemas.`,
         queryParams: {
           ids: { type: [TYPE.String], required: true }, // handler array check is still required
@@ -221,6 +290,13 @@ export class AdminHandlers {
       {
         path: '/schemas/:id',
         action: ConduitRouteActions.DELETE,
+        errors: [
+          errors.CMS_SCHEMA_NOT_FOUND,
+          errors.SCHEMA_IN_USE_BY_CUSTOM_ENDPOINT,
+          errors.SCHEMA_NOT_FOUND,
+          errors.SCHEMA_NOT_OWNED,
+          errors.SCHEMA_OPERATION_FAILED,
+        ],
         description: `Deletes a schema.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -236,6 +312,11 @@ export class AdminHandlers {
       {
         path: '/schemas/toggle',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.SCHEMA_IDS_REQUIRED,
+          errors.SCHEMA_IDS_INVALID,
+          errors.SCHEMA_TOGGLE_FAILED,
+        ],
         description: `Enables/disables queried schemas.`,
         bodyParams: {
           ids: [ConduitString.Required], // handler array check is still required
@@ -252,6 +333,7 @@ export class AdminHandlers {
       {
         path: '/schemas/:id/toggle',
         action: ConduitRouteActions.POST,
+        errors: [errors.CMS_SCHEMA_NOT_FOUND, errors.SCHEMA_TOGGLE_FAILED],
         description: `Enables/disables a schema.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -267,6 +349,13 @@ export class AdminHandlers {
       {
         path: '/schemas/:schemaId/extensions',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.SCHEMA_NOT_FOUND,
+          errors.SCHEMA_NOT_EXTENDABLE,
+          errors.EXTENSION_FIELD_CONSTRAINT_INVALID,
+          errors.EXTENSION_FIELD_DUPLICATE,
+          errors.SCHEMA_OPERATION_FAILED,
+        ],
         description: `Sets a database-owned extension for target schema, expanding it 
                         with additional fields. Passing an empty fields object removes the extension.`,
         urlParams: {
@@ -283,6 +372,11 @@ export class AdminHandlers {
       {
         path: '/schemas/:id/permissions',
         action: ConduitRouteActions.PATCH,
+        errors: [
+          errors.SCHEMA_OPTIONS_INVALID,
+          errors.SCHEMA_NOT_FOUND,
+          errors.SCHEMA_PERMISSIONS_UPDATE_FAILED,
+        ],
         description: `Updates schema permissions.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -329,6 +423,7 @@ export class AdminHandlers {
       {
         path: '/introspection/schemas/:id',
         action: ConduitRouteActions.GET,
+        errors: [errors.PENDING_SCHEMA_NOT_FOUND],
         mcp: false,
         description: `Returns a pending schema.`,
         urlParams: {
@@ -360,6 +455,17 @@ export class AdminHandlers {
       {
         path: '/introspection/schemas/finalize',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.SCHEMA_IDS_REQUIRED,
+          errors.SCHEMA_SYSTEM_PROTECTED,
+          errors.SCHEMA_NOT_OWNED,
+          errors.SCHEMA_FIELDS_INVALID,
+          errors.SCHEMA_FIELD_CHANGE_FORBIDDEN,
+          errors.VECTOR_FIELD_INVALID,
+          errors.VECTOR_DIMENSIONS_INVALID,
+          errors.VECTOR_SIMILARITY_INVALID,
+          errors.SCHEMA_OPERATION_FAILED,
+        ],
         mcp: false,
         description: `Converts a previously imported pending schema to a CMS schema.`,
         bodyParams: {
@@ -374,6 +480,11 @@ export class AdminHandlers {
       {
         path: '/schemas/:schemaName/docs/:id',
         action: ConduitRouteActions.GET,
+        errors: [
+          errors.SCHEMA_NOT_FOUND,
+          errors.DOCUMENT_NOT_FOUND,
+          errors.POPULATE_INVALID,
+        ],
         description: `Returns a document.`,
         urlParams: {
           schemaName: { type: TYPE.String, required: true },
@@ -390,6 +501,7 @@ export class AdminHandlers {
       {
         path: '/schemas/:schemaName/query',
         action: ConduitRouteActions.POST,
+        errors: [errors.SCHEMA_NOT_FOUND, errors.POPULATE_INVALID],
         description: `Returns queried documents.`,
         urlParams: {
           schemaName: { type: TYPE.String, required: true },
@@ -413,6 +525,7 @@ export class AdminHandlers {
       {
         path: '/schemas/:schemaName/docs',
         action: ConduitRouteActions.POST,
+        errors: [errors.SCHEMA_DOCUMENTS_NOT_MODIFIABLE, errors.SCHEMA_NOT_FOUND],
         description: `Creates a new document.`,
         urlParams: {
           schemaName: { type: TYPE.String, required: true },
@@ -428,6 +541,7 @@ export class AdminHandlers {
       {
         path: '/schemas/:schemaName/docs/many',
         action: ConduitRouteActions.POST,
+        errors: [errors.SCHEMA_DOCUMENTS_NOT_MODIFIABLE, errors.SCHEMA_NOT_FOUND],
         description: `Creates multiple documents.`,
         urlParams: {
           schemaName: { type: TYPE.String, required: true },
@@ -445,6 +559,12 @@ export class AdminHandlers {
       {
         path: '/schemas/:schemaName/docs',
         action: ConduitRouteActions.UPDATE,
+        errors: [
+          errors.SCHEMA_DOCUMENTS_NOT_MODIFIABLE,
+          errors.SCHEMA_NOT_FOUND,
+          errors.DOCUMENT_NOT_FOUND,
+          errors.DOCUMENT_UPDATE_INVALID,
+        ],
         description: `Updates multiple documents.`,
         urlParams: {
           schemaName: { type: TYPE.String, required: true },
@@ -462,6 +582,13 @@ export class AdminHandlers {
       {
         path: '/schemas/:schemaName/docs/:id',
         action: ConduitRouteActions.UPDATE,
+        errors: [
+          errors.SCHEMA_DOCUMENTS_NOT_MODIFIABLE,
+          errors.SCHEMA_NOT_FOUND,
+          errors.DOCUMENT_FIELDS_INVALID,
+          errors.DOCUMENT_NOT_FOUND,
+          errors.DOCUMENT_UPDATE_INVALID,
+        ],
         description: `Updates a document.`,
         urlParams: {
           schemaName: { type: TYPE.String, required: true },
@@ -478,6 +605,7 @@ export class AdminHandlers {
       {
         path: '/schemas/:schemaName/docs/:id',
         action: ConduitRouteActions.DELETE,
+        errors: [errors.SCHEMA_DOCUMENTS_NOT_MODIFIABLE, errors.SCHEMA_NOT_FOUND],
         description: `Deletes a document.`,
         urlParams: {
           schemaName: { type: TYPE.String, required: true },
@@ -503,6 +631,15 @@ export class AdminHandlers {
       {
         path: '/customEndpoints/import',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.CMS_SCHEMA_NOT_FOUND,
+          errors.CUSTOM_ENDPOINT_NOT_ALLOWED,
+          errors.CUSTOM_ENDPOINT_INVALID,
+          errors.CUSTOM_ENDPOINT_INPUT_INVALID,
+          errors.CUSTOM_ENDPOINT_QUERY_INVALID,
+          errors.CUSTOM_ENDPOINT_ASSIGNMENT_INVALID,
+          errors.CUSTOM_ENDPOINT_OPERATION_FAILED,
+        ],
         description: `Import custom endpoints.`,
         bodyParams: {
           endpoints: { type: [TYPE.JSON], required: true },
@@ -534,6 +671,7 @@ export class AdminHandlers {
       {
         path: '/customEndpoints/:id',
         action: ConduitRouteActions.GET,
+        errors: [errors.CUSTOM_ENDPOINT_NOT_FOUND],
         description: `Returns a custom endpoint.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -566,6 +704,17 @@ export class AdminHandlers {
       {
         path: '/customEndpoints',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.CUSTOM_ENDPOINT_EXISTS,
+          errors.CMS_SCHEMA_NOT_FOUND,
+          errors.CUSTOM_ENDPOINT_NOT_ALLOWED,
+          errors.CUSTOM_ENDPOINT_AUTH_REQUIRED,
+          errors.CUSTOM_ENDPOINT_INVALID,
+          errors.CUSTOM_ENDPOINT_INPUT_INVALID,
+          errors.CUSTOM_ENDPOINT_QUERY_INVALID,
+          errors.CUSTOM_ENDPOINT_ASSIGNMENT_INVALID,
+          errors.CUSTOM_ENDPOINT_OPERATION_FAILED,
+        ],
         description: `Creates a new custom endpoint.`,
         bodyParams: {
           name: ConduitString.Required,
@@ -587,6 +736,17 @@ export class AdminHandlers {
       {
         path: '/customEndpoints/:id',
         action: ConduitRouteActions.PATCH,
+        errors: [
+          errors.CUSTOM_ENDPOINT_NOT_FOUND,
+          errors.CMS_SCHEMA_NOT_FOUND,
+          errors.CUSTOM_ENDPOINT_NOT_ALLOWED,
+          errors.CUSTOM_ENDPOINT_AUTH_REQUIRED,
+          errors.CUSTOM_ENDPOINT_INVALID,
+          errors.CUSTOM_ENDPOINT_INPUT_INVALID,
+          errors.CUSTOM_ENDPOINT_QUERY_INVALID,
+          errors.CUSTOM_ENDPOINT_ASSIGNMENT_INVALID,
+          errors.CUSTOM_ENDPOINT_OPERATION_FAILED,
+        ],
         description: `Updates a custom endpoint.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -609,6 +769,11 @@ export class AdminHandlers {
       {
         path: '/customEndpoints/:id',
         action: ConduitRouteActions.DELETE,
+        errors: [
+          errors.CUSTOM_ENDPOINT_INVALID,
+          errors.CUSTOM_ENDPOINT_NOT_FOUND,
+          errors.CUSTOM_ENDPOINT_OPERATION_FAILED,
+        ],
         description: `Deletes a custom endpoint.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -621,6 +786,11 @@ export class AdminHandlers {
       {
         path: '/schemas/:schemaId/cms/operation/:operation/details',
         action: ConduitRouteActions.GET,
+        errors: [
+          errors.CUSTOM_ENDPOINT_INVALID,
+          errors.CMS_SCHEMA_NOT_FOUND,
+          errors.CUSTOM_ENDPOINT_NOT_ALLOWED,
+        ],
         description:
           'Returns accessible schema fields for target CMS operation (applicable for custom endpoints)',
         urlParams: {
@@ -655,6 +825,12 @@ export class AdminHandlers {
       {
         path: '/indexes/import',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.INDEX_DEFINITION_INVALID,
+          errors.SCHEMA_NOT_FOUND,
+          errors.INDEX_UNIQUE_NOT_ALLOWED,
+          errors.INDEX_OPERATION_FAILED,
+        ],
         description: `Imports schema indexes. Skips indexes that already exist by name. Unique indexes respect schema owner privilege.`,
         mcp: false,
         bodyParams: {
@@ -668,6 +844,12 @@ export class AdminHandlers {
       {
         path: '/schemas/:id/indexes',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.SCHEMA_NOT_FOUND,
+          errors.INDEX_DEFINITION_INVALID,
+          errors.INDEX_UNIQUE_NOT_ALLOWED,
+          errors.INDEX_OPERATION_FAILED,
+        ],
         description: `Creates indexes for a schema.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -683,6 +865,7 @@ export class AdminHandlers {
       {
         path: '/schemas/:id/indexes',
         action: ConduitRouteActions.GET,
+        errors: [errors.SCHEMA_NOT_FOUND],
         description: `Returns indexes of a schema.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -697,6 +880,11 @@ export class AdminHandlers {
       {
         path: '/schemas/:id/indexes',
         action: ConduitRouteActions.DELETE,
+        errors: [
+          errors.SCHEMA_NOT_FOUND,
+          errors.INDEX_DEFINITION_INVALID,
+          errors.INDEX_OPERATION_FAILED,
+        ],
         description: `Deletes indexes of a schema.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -731,6 +919,16 @@ export class AdminHandlers {
       {
         path: '/schemas/:id/vector-indexes',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.SCHEMA_NOT_FOUND,
+          errors.VECTOR_INDEX_INVALID,
+          errors.VECTOR_FIELD_INVALID,
+          errors.VECTOR_DIMENSIONS_INVALID,
+          errors.VECTOR_SIMILARITY_INVALID,
+          errors.VECTOR_INDEX_CONFLICT,
+          errors.VECTOR_UNSUPPORTED,
+          errors.VECTOR_INDEX_COMMANDS_UNAVAILABLE,
+        ],
         description: `Creates a vector index for a schema.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -746,6 +944,7 @@ export class AdminHandlers {
       {
         path: '/schemas/:id/vector-indexes',
         action: ConduitRouteActions.GET,
+        errors: [errors.SCHEMA_NOT_FOUND, errors.VECTOR_UNSUPPORTED],
         description: `Returns vector indexes of a schema.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -760,6 +959,13 @@ export class AdminHandlers {
       {
         path: '/schemas/:id/vector-indexes/:indexName',
         action: ConduitRouteActions.DELETE,
+        errors: [
+          errors.SCHEMA_NOT_FOUND,
+          errors.VECTOR_INDEX_NOT_FOUND,
+          errors.VECTOR_INDEX_INVALID,
+          errors.VECTOR_UNSUPPORTED,
+          errors.VECTOR_INDEX_COMMANDS_UNAVAILABLE,
+        ],
         description: `Deletes a vector index of a schema.`,
         urlParams: {
           id: { type: TYPE.String, required: true },
@@ -773,6 +979,18 @@ export class AdminHandlers {
       {
         path: '/schemas/:schemaName/vector-search',
         action: ConduitRouteActions.POST,
+        errors: [
+          errors.SCHEMA_NOT_FOUND,
+          errors.VECTOR_UNSUPPORTED,
+          errors.VECTOR_FIELD_INVALID,
+          errors.VECTOR_DIMENSIONS_INVALID,
+          errors.VECTOR_SIMILARITY_INVALID,
+          errors.VECTOR_INDEX_UNAVAILABLE,
+          errors.VECTOR_INDEX_NOT_QUERYABLE,
+          errors.VECTOR_SEARCH_FILTER_INVALID,
+          errors.VECTOR_SEARCH_LIMITS_INVALID,
+          errors.VECTOR_SEARCH_NOT_PERMITTED,
+        ],
         description: `Runs vector search for a schema.`,
         urlParams: {
           schemaName: ConduitString.Required,

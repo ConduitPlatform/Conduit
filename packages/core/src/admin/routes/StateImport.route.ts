@@ -3,6 +3,7 @@ import {
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
   TYPE,
+  parseErrorPayload,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitJson } from '@conduitplatform/module-tools';
 import { ConduitRoute } from '@conduitplatform/hermes';
@@ -64,7 +65,10 @@ export function getStateImportRoute(admin: AdminModule) {
               }
             }
           } catch (e) {
-            configResults[moduleName] = { success: false, error: (e as Error).message };
+            configResults[moduleName] = {
+              success: false,
+              error: parseErrorPayload(e).message,
+            };
           }
         }
       }
@@ -75,8 +79,7 @@ export function getStateImportRoute(admin: AdminModule) {
 
         for (const moduleName of moduleNames) {
           const client = grpcSdk.getModuleClient(moduleName) as unknown as
-            | ModuleImportClient
-            | undefined;
+            ModuleImportClient | undefined;
           if (!client?.getExportableResources || !client?.importResources) {
             moduleResults[moduleName] = { error: 'Module does not support import' };
             continue;
@@ -111,7 +114,7 @@ export function getStateImportRoute(admin: AdminModule) {
             const result = await client.importResources({ data: JSON.stringify(data) });
             moduleResults[moduleName] = JSON.parse(result.result || '{}');
           } catch (e) {
-            moduleResults[moduleName] = { error: (e as Error).message };
+            moduleResults[moduleName] = { error: parseErrorPayload(e).message };
           }
         }
       }

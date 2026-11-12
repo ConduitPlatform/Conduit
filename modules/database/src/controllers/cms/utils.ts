@@ -11,6 +11,7 @@ import {
 import { CmsHandlers } from '../../handlers/cms/crud.handler.js';
 import { ConduitBuiltRoute } from '../../interfaces/index.js';
 import { RouteBuilder } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): number {
   const hasA = [];
@@ -210,6 +211,13 @@ export function getOps(
         documents: [actualSchema.fields],
         count: TYPE.Number,
       })
+      .errors(
+        errors.SCHEMA_NOT_FOUND,
+        errors.RESOURCE_ACCESS_DENIED,
+        errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.POPULATE_INVALID,
+        errors.DATABASE_OPERATION_FAILED,
+      )
       .handler(handlers.getDocuments.bind(handlers));
     if (authenticatedRead) route.middleware('authMiddleware');
     routesArray.push(route.build());
@@ -226,6 +234,14 @@ export function getOps(
       })
       .cacheControl(authenticatedRead ? 'private, max-age=10' : 'public, max-age=10')
       .return(`${schemaName}`, actualSchema.fields)
+      .errors(
+        errors.DOCUMENT_NOT_FOUND,
+        errors.SCHEMA_NOT_FOUND,
+        errors.RESOURCE_ACCESS_DENIED,
+        errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.POPULATE_INVALID,
+        errors.DATABASE_OPERATION_FAILED,
+      )
       .handler(handlers.getDocumentById.bind(handlers));
     if (authenticatedRead) route.middleware('authMiddleware');
     routesArray.push(route.build());
@@ -250,6 +266,15 @@ export function getOps(
         ...(authorizationEnabled ? { scope: TYPE.String } : {}),
       })
       .return(`create${schemaName}`, actualSchema.fields)
+      .errors(
+        errors.VIEW_READ_ONLY,
+        errors.SCHEMA_NOT_FOUND,
+        errors.RESOURCE_ACCESS_DENIED,
+        errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DOCUMENT_UNIQUE_CONFLICT,
+        errors.DOCUMENT_VALIDATION_FAILED,
+        errors.DATABASE_OPERATION_FAILED,
+      )
       .handler(handlers.createDocument.bind(handlers));
 
     if (authenticatedCreate) route.middleware('authMiddleware');
@@ -269,6 +294,15 @@ export function getOps(
       .return(`createMany${schemaName}`, {
         docs: [actualSchema.fields],
       })
+      .errors(
+        errors.VIEW_READ_ONLY,
+        errors.SCHEMA_NOT_FOUND,
+        errors.RESOURCE_ACCESS_DENIED,
+        errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DOCUMENT_UNIQUE_CONFLICT,
+        errors.DOCUMENT_VALIDATION_FAILED,
+        errors.DATABASE_OPERATION_FAILED,
+      )
       .handler(handlers.createManyDocuments.bind(handlers));
     if (authenticatedCreate) route.middleware('authMiddleware');
     routesArray.push(route.build());
@@ -298,6 +332,16 @@ export function getOps(
       .return(`updateMany${schemaName}`, {
         docs: [actualSchema.fields],
       })
+      .errors(
+        errors.DOCUMENT_NOT_FOUND,
+        errors.DOCUMENT_UPDATE_INVALID,
+        errors.SCHEMA_NOT_FOUND,
+        errors.RESOURCE_ACCESS_DENIED,
+        errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DOCUMENT_UNIQUE_CONFLICT,
+        errors.DOCUMENT_VALIDATION_FAILED,
+        errors.DATABASE_OPERATION_FAILED,
+      )
       .handler(handlers.updateManyDocuments.bind(handlers));
 
     if (authenticatedUpdate) route.middleware('authMiddleware');
@@ -323,6 +367,16 @@ export function getOps(
       .return(`patchMany${schemaName}`, {
         docs: [actualSchema.fields],
       })
+      .errors(
+        errors.DOCUMENT_NOT_FOUND,
+        errors.DOCUMENT_UPDATE_INVALID,
+        errors.SCHEMA_NOT_FOUND,
+        errors.RESOURCE_ACCESS_DENIED,
+        errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DOCUMENT_UNIQUE_CONFLICT,
+        errors.DOCUMENT_VALIDATION_FAILED,
+        errors.DATABASE_OPERATION_FAILED,
+      )
       .handler(handlers.patchManyDocuments.bind(handlers));
     if (authenticatedUpdate) route.middleware('authMiddleware');
 
@@ -340,6 +394,17 @@ export function getOps(
       })
       .bodyParams(assignableFields)
       .return(`update${schemaName}`, actualSchema.fields)
+      .errors(
+        errors.DOCUMENT_NOT_FOUND,
+        errors.DOCUMENT_UPDATE_INVALID,
+        errors.POPULATE_INVALID,
+        errors.SCHEMA_NOT_FOUND,
+        errors.RESOURCE_ACCESS_DENIED,
+        errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DOCUMENT_UNIQUE_CONFLICT,
+        errors.DOCUMENT_VALIDATION_FAILED,
+        errors.DATABASE_OPERATION_FAILED,
+      )
       .handler(handlers.updateDocument.bind(handlers));
     if (authenticatedUpdate) route.middleware('authMiddleware');
 
@@ -361,6 +426,17 @@ export function getOps(
         ) as unknown as ConduitModel,
       )
       .return(`patch${schemaName}`, actualSchema.fields)
+      .errors(
+        errors.DOCUMENT_NOT_FOUND,
+        errors.DOCUMENT_UPDATE_INVALID,
+        errors.POPULATE_INVALID,
+        errors.SCHEMA_NOT_FOUND,
+        errors.RESOURCE_ACCESS_DENIED,
+        errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DOCUMENT_UNIQUE_CONFLICT,
+        errors.DOCUMENT_VALIDATION_FAILED,
+        errors.DATABASE_OPERATION_FAILED,
+      )
       .handler(handlers.patchDocument.bind(handlers));
     if (authenticatedUpdate) route.middleware('authMiddleware');
 
@@ -383,6 +459,12 @@ export function getOps(
         id: { type: TYPE.String, required: true },
       })
       .return(`delete${schemaName}`, TYPE.String)
+      .errors(
+        errors.SCHEMA_NOT_FOUND,
+        errors.RESOURCE_ACCESS_DENIED,
+        errors.SCHEMA_AUTHORIZATION_UNAVAILABLE,
+        errors.DATABASE_OPERATION_FAILED,
+      )
       .handler(handlers.deleteDocument.bind(handlers));
     if (authenticatedDelete) route.middleware('authMiddleware');
     routesArray.push(route.build());

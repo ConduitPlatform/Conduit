@@ -4,13 +4,11 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
   Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { RealmMembership, User } from '../models/index.js';
-import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces/index.js';
 import { TokenProvider } from './tokenProvider.js';
 import {
@@ -22,6 +20,7 @@ import {
 import { Config } from '../config/index.js';
 import { ALT_STRATEGY_AUTH } from '../constants/index.js';
 import { errors } from '../errors.js';
+import { LOGIN_ROUTE_ERRORS, REALM_RESOLUTION_ERRORS } from './utils.js';
 import {
   identifierQuery,
   identityMode,
@@ -57,12 +56,7 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
         description:
           'Returns a nonce for the user to sign using their wallet. If no user exists with the provided public address, a new user will be created.',
         bodyParams: { ethPublicAddress: ConduitString.Required, realm: realmParam },
-        errors: [
-          errors.INVITATION_REQUIRED,
-          errors.REALM_NOT_FOUND,
-          errors.REALMS_DISABLED,
-          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
-        ],
+        errors: [errors.INVITATION_REQUIRED, ...REALM_RESOLUTION_ERRORS],
         rateLimit: ALT_STRATEGY_AUTH,
       },
       new ConduitRouteReturnDefinition('MetamaskNonce', {
@@ -82,9 +76,11 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
           realm: realmParam,
         },
         errors: [
-          errors.REALM_NOT_FOUND,
-          errors.REALMS_DISABLED,
-          errors.STRATEGY_NOT_AVAILABLE_FOR_REALM,
+          errors.AUTHENTICATION_REQUIRED,
+          errors.WALLET_ADDRESS_NOT_FOUND,
+          errors.WALLET_SIGNATURE_INVALID,
+          errors.WALLET_SIGNATURE_REJECTED,
+          ...LOGIN_ROUTE_ERRORS,
         ],
         rateLimit: ALT_STRATEGY_AUTH,
       },
@@ -172,7 +168,7 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     const normalizedEthPublicAddress = ethPublicAddress.toLowerCase();
     const context = call.request.context;
     if (isNil(context)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
+      throw new ModuleError(errors.AUTHENTICATION_REQUIRED);
     }
 
     const realmCtx = await resolveRealmFromCall(call);
@@ -187,10 +183,7 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     );
 
     if (isNil(user)) {
-      throw new GrpcError(
-        status.UNAUTHENTICATED,
-        'No user found with the provided ETH public address',
-      );
+      throw new ModuleError(errors.WALLET_ADDRESS_NOT_FOUND);
     }
 
     const message = `I am signing my one-time nonce: ${user.metamask!.nonce}`;
@@ -201,7 +194,7 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
     try {
       signatureParams = fromRPCSig(signature);
     } catch (e) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature format');
+      throw new ModuleError(errors.WALLET_SIGNATURE_INVALID, (e as Error)?.message);
     }
 
     let publicKey;
@@ -213,17 +206,14 @@ export class MetamaskHandlers implements IAuthenticationStrategy {
         signatureParams.s,
       );
     } catch (e) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Signature recovery failed');
+      throw new ModuleError(errors.WALLET_SIGNATURE_REJECTED, (e as Error)?.message);
     }
 
     const addressBuffer = publicToAddress(publicKey);
     const recoveredAddress = bytesToHex(addressBuffer).toLowerCase();
 
     if (recoveredAddress !== normalizedEthPublicAddress) {
-      throw new GrpcError(
-        status.UNAUTHENTICATED,
-        'Signature does not match public address',
-      );
+      throw new ModuleError(errors.WALLET_SIGNATURE_REJECTED);
     }
 
     await User.getInstance().findByIdAndUpdate(user._id, {

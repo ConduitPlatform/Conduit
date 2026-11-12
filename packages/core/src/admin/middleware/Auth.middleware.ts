@@ -8,6 +8,8 @@ import { ConduitRequest } from '@conduitplatform/hermes';
 import { gql } from 'graphql-tag';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { realtimeTicketForbiddenOnHttp } from '../realtime/ticket.js';
+import { errors } from '../../errors.js';
+import { sendError, sendInternalError } from '../utils/errorResponse.js';
 
 const excludedRestRoutes = ['/ready', '/live', '/login', '/config/modules'];
 const excludedGqlOperations = [
@@ -66,14 +68,14 @@ async function handleApiToken(
       if (isMatch) {
         // Check expiration
         if (candidate.expiresAt && new Date(candidate.expiresAt) < new Date()) {
-          res.status(401).json({ error: 'Token has expired' });
+          sendError(res, errors.ADMIN_TOKEN_EXPIRED);
           return;
         }
 
         // Get the admin user
         const admin = await Admin.getInstance().findOne({ _id: candidate.adminId });
         if (isNil(admin)) {
-          res.status(401).json({ error: 'No such user exists' });
+          sendError(res, errors.ADMIN_TOKEN_OWNER_NOT_FOUND);
           return;
         }
 
@@ -88,10 +90,10 @@ async function handleApiToken(
       }
     }
 
-    res.status(401).json({ error: 'Invalid token' });
+    sendError(res, errors.ADMIN_TOKEN_INVALID);
   } catch (error) {
     ConduitGrpcSdk.Logger.error(error as Error);
-    res.status(500).json({ error: 'Something went wrong' });
+    sendInternalError(res);
   }
 }
 
@@ -109,31 +111,31 @@ async function handleJwtToken(
   try {
     decoded = verifyToken(token, adminConfig.auth.tokenSecret);
   } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
+    sendError(res, errors.ADMIN_TOKEN_INVALID);
     return;
   }
 
   const { id } = decoded;
   if (realtimeTicketForbiddenOnHttp(decoded, req)) {
-    res.status(401).json({ error: 'Realtime ticket cannot be used for HTTP requests' });
+    sendError(res, errors.REALTIME_TICKET_NOT_ALLOWED_ON_HTTP);
     return;
   }
   if (decoded.twoFaRequired && req.path !== '/verify-twofa') {
-    res.status(401).json({ error: 'Two FA required' });
+    sendError(res, errors.ADMIN_TWO_FA_REQUIRED);
     return;
   }
 
   try {
     const admin = await Admin.getInstance().findOne({ _id: id });
     if (isNil(admin)) {
-      res.status(401).json({ error: 'No such user exists' });
+      sendError(res, errors.ADMIN_TOKEN_OWNER_NOT_FOUND);
       return;
     }
     req.conduit!.admin = admin;
     next();
   } catch (error) {
     ConduitGrpcSdk.Logger.error(error as Error);
-    res.status(500).json({ error: 'Something went wrong' });
+    sendInternalError(res);
   }
 }
 
@@ -148,19 +150,25 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, configManager: any) {
 
     const tokenHeader = req.headers.authorization;
     if (isNil(tokenHeader)) {
-      return res.status(401).json({ error: 'No token provided' });
+      return sendError(res, errors.ADMIN_TOKEN_MISSING);
     }
 
     const args = tokenHeader.split(' ');
     if (args.length !== 2) {
-      return res.status(401).json({ error: 'Authorization header malformed' });
+      return sendError(
+        res,
+        errors.ADMIN_AUTH_HEADER_MALFORMED,
+        'Expected exactly two parts separated by a space',
+      );
     }
 
     const [prefix, token] = args;
     if (prefix !== 'Bearer') {
-      return res
-        .status(401)
-        .json({ error: "The Authorization header must be prefixed by 'Bearer '" });
+      return sendError(
+        res,
+        errors.ADMIN_AUTH_HEADER_MALFORMED,
+        "The Authorization header must be prefixed by 'Bearer '",
+      );
     }
 
     // Check if this is an API token (starts with cdt_)

@@ -2,7 +2,6 @@ import {
   ConduitGrpcSdk,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ParsedRouterRequest,
   ParsedSocketRequest,
   Query,
@@ -16,11 +15,12 @@ import {
   ConduitObjectId,
   ConfigController,
   GrpcServer,
+  ModuleError,
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { ChatMessage, ChatParticipantsLog, ChatRoom, User } from '../models/index.js';
 import { isArray, isNil } from 'lodash-es';
-import { status } from '@grpc/grpc-js';
+import { errors } from '../errors.js';
 import {
   deleteChatMessage,
   editChatMessage,
@@ -80,16 +80,9 @@ export class ChatRoutes {
     const { user } = call.request.context;
     let usersToBeAdded = [];
     if (isNil(users) || !isArray(users) || users.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'users is required and must be a non-empty array',
-      );
+      throw new ModuleError(errors.USERS_REQUIRED);
     }
-    try {
-      usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
-    } catch (e) {
-      throw new GrpcError(status.INTERNAL, (e as Error).message);
-    }
+    usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
     let room: ChatRoom;
     const query: Query<ChatRoom> = {
       name: roomName,
@@ -100,9 +93,7 @@ export class ChatRoutes {
     if (config.explicit_room_joins.enabled) {
       room = await ChatRoom.getInstance()
         .create(query)
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
       const participantsLog = await ChatParticipantsLog.getInstance().create({
         user: user._id,
         action: 'create',
@@ -120,16 +111,12 @@ export class ChatRoutes {
         this.inviteSendEmail,
         this.inviteSendPush,
         this.grpcSdk,
-      ).catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      ).catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     } else {
       query['participants'] = Array.from(new Set([user._id, ...users]));
       room = await ChatRoom.getInstance()
         .create(query)
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
       const participantsLog = await ChatParticipantsLog.getInstance().createMany([
         {
           user: user._id,
@@ -167,34 +154,21 @@ export class ChatRoutes {
   async addUsersToRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { roomId, users } = call.request.params;
     const { user } = call.request.context;
-    let usersToBeAdded;
     if (isNil(users) || !isArray(users) || users.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'users is required and must be a non-empty array',
-      );
+      throw new ModuleError(errors.USERS_REQUIRED);
     }
 
     const room = await this.fetchAndValidateRoomById(roomId, user._id).catch(
-      (e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      },
+      ModuleError.rethrow(errors.CHAT_DATABASE_ERROR),
     );
     if (room.deleted) {
-      throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
+      throw new ModuleError(errors.ROOM_NOT_FOUND);
     }
-    try {
-      usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
-    } catch (e) {
-      throw new GrpcError(status.INTERNAL, (e as Error).message);
-    }
+    const usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
 
     for (const user of usersToBeAdded) {
       if (room.participants.includes(user._id))
-        throw new GrpcError(
-          status.ALREADY_EXISTS,
-          'users array contains existing member ids',
-        );
+        throw new ModuleError(errors.USERS_ALREADY_IN_ROOM);
     }
 
     const config = await this.grpcSdk.config.get('chat');
@@ -208,9 +182,7 @@ export class ChatRoutes {
         this.inviteSendEmail,
         this.inviteSendPush,
         this.grpcSdk,
-      ).catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      ).catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
       return ret!;
     } else {
       const participantsLog = await ChatParticipantsLog.getInstance().createMany(
@@ -228,9 +200,7 @@ export class ChatRoutes {
             ...participantsLog.map(log => log._id),
           ],
         })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
       await invalidateMembershipCache(this.grpcSdk, room._id);
       this.grpcSdk.router?.socketPush({
         event: 'join-room',
@@ -253,12 +223,10 @@ export class ChatRoutes {
     const { user } = call.request.context;
 
     const room = await this.fetchAndValidateRoomById(roomId, user._id).catch(
-      (e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      },
+      ModuleError.rethrow(errors.CHAT_DATABASE_ERROR),
     );
     if (room.deleted) {
-      throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
+      throw new ModuleError(errors.ROOM_NOT_FOUND);
     }
 
     const index = room.participants.indexOf(user._id);
@@ -293,9 +261,7 @@ export class ChatRoutes {
       } else {
         await ChatRoom.getInstance()
           .findByIdAndUpdate(room._id, room)
-          .catch((e: Error) => {
-            throw new GrpcError(status.INTERNAL, e.message);
-          });
+          .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
       }
       await invalidateMembershipCache(this.grpcSdk, room._id);
       this.grpcSdk.router?.socketPush({
@@ -320,9 +286,7 @@ export class ChatRoutes {
     if (isNil(roomId)) {
       const rooms = await ChatRoom.getInstance()
         .findMany({ participants: user._id, deleted: false })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
       const query = {
         room: { $in: rooms.map((room: ChatRoom) => room._id) },
         deleted: false,
@@ -336,12 +300,10 @@ export class ChatRoutes {
       countPromise = ChatMessage.getInstance().countDocuments(query);
     } else {
       const room = await this.fetchAndValidateRoomById(roomId, user._id).catch(
-        (e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        },
+        ModuleError.rethrow(errors.CHAT_DATABASE_ERROR),
       );
       if (room.deleted) {
-        throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
+        throw new ModuleError(errors.ROOM_NOT_FOUND);
       }
       messagesPromise = ChatMessage.getInstance()
         .findMany(
@@ -356,9 +318,7 @@ export class ChatRoutes {
             populate,
           },
         )
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+        .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
       countPromise = ChatMessage.getInstance().countDocuments({
         room: roomId,
         deleted: false,
@@ -366,9 +326,7 @@ export class ChatRoutes {
     }
 
     const [messages, count] = await Promise.all([messagesPromise, countPromise]).catch(
-      (e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      },
+      ModuleError.rethrow(errors.CHAT_DATABASE_ERROR),
     );
     return { messages, count };
   }
@@ -378,14 +336,9 @@ export class ChatRoutes {
     const { user } = call.request.context;
     const message = await ChatMessage.getInstance()
       .findOne({ _id: messageId, deleted: false }, { populate: ['room'] })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     if (!message || (message.room as ChatRoom).participants.indexOf(user._id) === -1) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Message does not exist or you don't have access",
-      );
+      throw new ModuleError(errors.MESSAGE_NOT_FOUND);
     }
     return message;
   }
@@ -395,14 +348,10 @@ export class ChatRoutes {
     const { user } = call.request.context;
     const rooms = await ChatRoom.getInstance()
       .findMany({ participants: user._id, deleted: false }, { skip, limit, populate })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     const roomsCount = await ChatRoom.getInstance()
       .countDocuments({ participants: user._id, deleted: false })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     return { rooms, count: roomsCount };
   }
 
@@ -411,14 +360,9 @@ export class ChatRoutes {
     const { user } = call.request.context;
     const room = await ChatRoom.getInstance()
       .findOne({ _id: id, participants: user._id, deleted: false }, { populate })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     if (!room) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Room does not exist or you don't have access",
-      );
+      throw new ModuleError(errors.ROOM_NOT_FOUND_OR_NO_ACCESS);
     }
     return room;
   }
@@ -459,10 +403,7 @@ export class ChatRoutes {
       deleted: false,
     });
     if (!rooms || rooms.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        "Room does not exist or you don't have access",
-      );
+      throw new ModuleError(errors.ROOM_NOT_FOUND_OR_NO_ACCESS);
     }
     return { event: 'join-room', rooms: rooms.map((room: ChatRoom) => room._id) };
   }
@@ -471,10 +412,7 @@ export class ChatRoutes {
     const { user } = call.request.context;
     const [roomId, message] = call.request.params;
     if (!(await this.verifyRoomMembership(roomId as string, user._id))) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        "Room does not exist or you don't have access",
-      );
+      throw new ModuleError(errors.ROOM_NOT_FOUND_OR_NO_ACCESS);
     }
     let formattedMessage: {
       contentType: string;
@@ -489,36 +427,24 @@ export class ChatRoutes {
       };
     } else {
       if (!message.hasOwnProperty('contentType')) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Message must contain contentType property',
-        );
+        throw new ModuleError(errors.MESSAGE_CONTENT_TYPE_MISSING);
       }
       if (
         !['text', 'file', 'typing', 'multimedia', 'system'].includes(message.contentType)
       ) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Invalid contentType, must be one of: text, file, typing, multimedia, system',
-        );
+        throw new ModuleError(errors.INVALID_MESSAGE_TYPE);
       }
       if (
         [MessageType.File, MessageType.Multimedia].includes(message.contentType) &&
         !message.files
       ) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          `Files are required for ${message.contentType} messages`,
-        );
+        throw new ModuleError(errors.MESSAGE_FILES_REQUIRED);
       }
       if (
         [MessageType.File, MessageType.Multimedia].includes(message.contentType) &&
         !Array.isArray(message.files)
       ) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          `Files must be an array for ${message.contentType} messages`,
-        );
+        throw new ModuleError(errors.MESSAGE_FILES_INVALID);
       }
       if (
         [MessageType.Text, MessageType.Multimedia, MessageType.System].includes(
@@ -526,18 +452,12 @@ export class ChatRoutes {
         ) &&
         !message.content
       ) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          `${message.contentType} messages need to have content`,
-        );
+        throw new ModuleError(errors.MESSAGE_CONTENT_REQUIRED);
       }
       if (Object.hasOwn(message, 'nonce')) {
         const n = (message as { nonce?: unknown }).nonce;
         if (typeof n !== 'string' || n.length === 0) {
-          throw new GrpcError(
-            status.INVALID_ARGUMENT,
-            'When provided, nonce must be a non-empty string',
-          );
+          throw new ModuleError(errors.INVALID_MESSAGE_NONCE);
         }
         nonce = n;
       }
@@ -606,7 +526,8 @@ export class ChatRoutes {
           data: JSON.stringify({
             _id: messageId,
             room: roomId,
-            error: 'Message could not be saved',
+            error: errors.MESSAGE_NOT_SAVED.message,
+            conduitCode: 'MESSAGE_NOT_SAVED',
           }),
         });
       });
@@ -632,10 +553,7 @@ export class ChatRoutes {
     const user: User = call.request.context.user;
     const [roomId] = call.request.params;
     if (!(await this.verifyRoomMembership(roomId as string, user._id))) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        "Room does not exist or you don't have access",
-      );
+      throw new ModuleError(errors.ROOM_NOT_FOUND_OR_NO_ACCESS);
     }
 
     this.scheduleReadFlush(roomId as string, user._id);
@@ -662,6 +580,13 @@ export class ChatRoutes {
           users: [TYPE.String],
         },
         middlewares: ['authMiddleware'],
+        errors: [
+          errors.USERS_REQUIRED,
+          errors.USERS_NOT_FOUND,
+          errors.USERS_ALREADY_INVITED,
+          errors.INVITATION_DELIVERY_FAILED,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('CreateRoom', {
         roomId: ConduitString.Required,
@@ -681,6 +606,16 @@ export class ChatRoutes {
           users: [TYPE.String],
         },
         middlewares: ['authMiddleware'],
+        errors: [
+          errors.USERS_REQUIRED,
+          errors.ROOM_NOT_FOUND_OR_NO_ACCESS,
+          errors.ROOM_NOT_FOUND,
+          errors.USERS_NOT_FOUND,
+          errors.USERS_ALREADY_IN_ROOM,
+          errors.USERS_ALREADY_INVITED,
+          errors.INVITATION_DELIVERY_FAILED,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('AddUsersToRoomResponse', 'String'),
       this.addUsersToRoom.bind(this),
@@ -695,6 +630,11 @@ export class ChatRoutes {
           roomId: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
+        errors: [
+          errors.ROOM_NOT_FOUND_OR_NO_ACCESS,
+          errors.ROOM_NOT_FOUND,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('LeaveRoom', 'String'),
       this.leaveRoom.bind(this),
@@ -709,6 +649,7 @@ export class ChatRoutes {
           id: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
+        errors: [errors.ROOM_NOT_FOUND_OR_NO_ACCESS, errors.CHAT_DATABASE_ERROR],
       },
       new ConduitRouteReturnDefinition(ChatRoom.name),
       this.getRoom.bind(this),
@@ -723,6 +664,7 @@ export class ChatRoutes {
           limit: ConduitNumber.Optional,
         },
         middlewares: ['authMiddleware'],
+        errors: [errors.CHAT_DATABASE_ERROR],
       },
       new ConduitRouteReturnDefinition('ChatRoomsResponse', {
         rooms: [ChatRoom.name],
@@ -740,6 +682,7 @@ export class ChatRoutes {
           messageId: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
+        errors: [errors.MESSAGE_NOT_FOUND, errors.CHAT_DATABASE_ERROR],
       },
       new ConduitRouteReturnDefinition(ChatMessage.name),
       this.getMessage.bind(this),
@@ -757,6 +700,11 @@ export class ChatRoutes {
           populate: [ConduitString.Optional],
         },
         middlewares: ['authMiddleware'],
+        errors: [
+          errors.ROOM_NOT_FOUND_OR_NO_ACCESS,
+          errors.ROOM_NOT_FOUND,
+          errors.CHAT_DATABASE_ERROR,
+        ],
       },
       new ConduitRouteReturnDefinition('ChatMessagesResponse', {
         messages: [ChatMessage.name],
@@ -776,6 +724,11 @@ export class ChatRoutes {
             messageId: ConduitString.Required,
           },
           middlewares: ['authMiddleware'],
+          errors: [
+            errors.MESSAGE_DELETE_DISABLED,
+            errors.MESSAGE_NOT_FOUND,
+            errors.CHAT_DATABASE_ERROR,
+          ],
         },
         new ConduitRouteReturnDefinition('DeleteMessageResponse', 'String'),
         this.deleteMessage.bind(this),
@@ -795,6 +748,11 @@ export class ChatRoutes {
             newMessage: ConduitString.Required,
           },
           middlewares: ['authMiddleware'],
+          errors: [
+            errors.MESSAGE_EDIT_DISABLED,
+            errors.MESSAGE_NOT_FOUND,
+            errors.CHAT_DATABASE_ERROR,
+          ],
         },
         new ConduitRouteReturnDefinition('PatchMessageResponse', 'String'),
         this.patchMessage.bind(this),
@@ -939,14 +897,9 @@ export class ChatRoutes {
   ): Promise<ChatRoom> {
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      .catch(ModuleError.rethrow(errors.CHAT_DATABASE_ERROR));
     if (isNil(room) || !room.participants.includes(userId)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Room does not exist or you don't have access",
-      );
+      throw new ModuleError(errors.ROOM_NOT_FOUND_OR_NO_ACCESS);
     }
     return room;
   }

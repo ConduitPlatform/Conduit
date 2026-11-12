@@ -3,7 +3,6 @@ import {
   ConduitGrpcSdk,
   ConduitModel,
   ConduitSchema,
-  GrpcError,
   Indexable,
   ModelOptionsIndexes,
   PostgresIndexType,
@@ -14,7 +13,6 @@ import {
   VectorSearchInput,
   VectorSearchResult,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
 import { DatabaseAdapter } from '../DatabaseAdapter.js';
 import { SequelizeSchema } from './SequelizeSchema.js';
@@ -76,6 +74,8 @@ import {
   toMutableIndexes,
   validateIndexFields,
 } from '../utils/indexes.js';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../../errors.js';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -96,7 +96,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     query: any,
   ): Promise<void> {
     if (!this.models[modelName]) {
-      throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
+      throw new ModuleError({
+        ...errors.SCHEMA_NOT_FOUND,
+        message: `Model ${modelName} not found`,
+      });
     }
     const existingView = this.views[viewName];
     const isQueryEqual = isEqual(existingView?.viewQuery, query);
@@ -161,7 +164,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       name: viewName,
     });
     if (!view) {
-      throw new Error('View not found');
+      throw new ModuleError(errors.VIEW_NOT_FOUND);
     }
     await this.createView(view.originalSchema, view.name, view.joinedSchemas, view.query);
     return this.views[viewName];
@@ -375,15 +378,14 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     callerModule: string = 'database',
     instanceSync = false,
   ): Promise<string> {
-    if (!this.models?.[schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!this.models?.[schemaName]) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     if (instanceSync) {
       delete this.models[schemaName];
       delete this.sequelize.models[schemaName];
       return 'Instance synchronized!';
     }
     if (this.models[schemaName].originalSchema.ownerModule !== callerModule) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
+      throw new ModuleError(errors.SCHEMA_NOT_OWNED);
     }
     if (deleteData) {
       await this.models[schemaName].model.drop();
@@ -395,7 +397,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       await this.models['_DeclaredSchema']
         .deleteOne(JSON.stringify({ name: schemaName }))
         .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
+          throw new ModuleError(errors.SCHEMA_OPERATION_FAILED, e.message);
         });
       ConduitGrpcSdk.Metrics?.decrement('registered_schemas_total', 1, {
         imported: String(!!model.modelOptions.conduit?.imported),
@@ -414,7 +416,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     } else if (this.views && this.views[schemaName]) {
       return { model: this.views[schemaName] };
     }
-    throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
+    throw new ModuleError({
+      ...errors.SCHEMA_NOT_FOUND,
+      message: `Schema ${schemaName} not defined yet`,
+    });
   }
 
   getDatabaseType(): string {
@@ -435,8 +440,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     callerModule: string,
     options?: { privileged?: boolean },
   ): Promise<string> {
-    if (!this.models[schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!this.models[schemaName]) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     const collectionName = this.models[schemaName].originalSchema.collectionName;
     const schemaFields = collectSchemaIndexFields(this.models[schemaName].originalSchema);
     const normalizeFields = sqlIndexFieldNormalizer(schemaFields);
@@ -515,7 +519,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       });
     }
     if (failure) {
-      throw new GrpcError(status.INTERNAL, 'Unsuccessful index creation');
+      throw new ModuleError({
+        ...errors.INDEX_OPERATION_FAILED,
+        message: 'Unsuccessful index creation',
+      });
     }
     return 'Indexes created!';
   }
@@ -534,8 +541,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   }
 
   async getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]> {
-    if (!this.models[schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!this.models[schemaName]) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     const collectionName = this.models[schemaName].originalSchema.collectionName;
     const queryInterface = this.sequelize.getQueryInterface();
     const result = (await queryInterface.showIndex(collectionName)) as UntypedArray;
@@ -565,8 +571,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   }
 
   async deleteIndexes(schemaName: string, indexNames: string[]): Promise<string> {
-    if (!this.models[schemaName])
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (!this.models[schemaName]) throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     const collectionName = this.models[schemaName].originalSchema.collectionName;
     const queryInterface = this.sequelize.getQueryInterface();
     const dropped: string[] = [];
@@ -592,7 +597,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       });
     }
     if (failure) {
-      throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
+      throw new ModuleError({
+        ...errors.INDEX_OPERATION_FAILED,
+        message: 'Unsuccessful index creation',
+      });
     }
     return 'Indexes deleted';
   }
@@ -698,13 +706,16 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       schema.originalSchema.fields) as Record<string, unknown>;
     const field = resolveVectorFieldFromSchema(schemaFields, request.field);
     if (!field) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Requested field is not a vector');
+      throw new ModuleError({
+        ...errors.VECTOR_FIELD_INVALID,
+        message: 'Requested field is not a vector',
+      });
     }
     if (request.vector.length !== field.dimensions) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        `Vector dimensions mismatch: expected ${field.dimensions}`,
-      );
+      throw new ModuleError({
+        ...errors.VECTOR_DIMENSIONS_INVALID,
+        message: `Vector dimensions mismatch: expected ${field.dimensions}`,
+      });
     }
     assertVectorSearchAccess({
       authzEnabled: !!schema.authzEnabled,
@@ -747,7 +758,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     return await this.sequelize
       .query(rawQuery.query, rawQuery.options)
       .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
+        throw new ModuleError(errors.DATABASE_OPERATION_FAILED, e.message);
       });
   }
 
@@ -787,13 +798,13 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
 
   private ensurePostgresVectorSupport(schemaName: string) {
     if (this.sequelize.getDialect() !== 'postgres') {
-      throw new GrpcError(
-        status.UNIMPLEMENTED,
-        `${this.sequelize.getDialect()} does not support vector search`,
-      );
+      throw new ModuleError({
+        ...errors.VECTOR_UNSUPPORTED,
+        message: `${this.sequelize.getDialect()} does not support vector search`,
+      });
     }
     if (!this.models[schemaName]) {
-      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+      throw new ModuleError(errors.SCHEMA_NOT_FOUND);
     }
   }
 
@@ -867,15 +878,18 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         { timestamps: schema.modelOptions?.timestamps },
       );
       if (unsupported) {
-        throw new GrpcError(status.INVALID_ARGUMENT, unsupported);
+        throw new ModuleError({
+          ...errors.INDEX_DEFINITION_INVALID,
+          message: unsupported,
+        });
       }
       if (index.types) {
         const types = normalizeIndexTypes(index.types, index.fields.length) ?? [];
         if (types.some(type => !sqlDialectAllowsIndexType(dialect, type))) {
-          throw new GrpcError(
-            status.INVALID_ARGUMENT,
-            `Invalid index type for ${dialect}`,
-          );
+          throw new ModuleError({
+            ...errors.INDEX_DEFINITION_INVALID,
+            message: `Invalid index type for ${dialect}`,
+          });
         }
         const first = types[0];
         const using =
@@ -889,10 +903,10 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       }
       if (index.options) {
         if (!checkIfPostgresOptions(index.options)) {
-          throw new GrpcError(
-            status.INVALID_ARGUMENT,
-            `Invalid index options for ${dialect}`,
-          );
+          throw new ModuleError({
+            ...errors.INDEX_DEFINITION_INVALID,
+            message: `Invalid index options for ${dialect}`,
+          });
         }
         assertUniqueIndexPrivilege({
           unique: index.options.unique === true,

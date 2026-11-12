@@ -12,6 +12,7 @@ import { MCPRouteToToolOptions, MCPSession, MCPToolDefinition } from './types.js
 import { ConduitRoute } from '../classes/index.js';
 import { ConduitRouter } from '../Router.js';
 import { extractClientIp } from '../utils/extractClientIp.js';
+import { toErrorResponse } from '../utils/errors.js';
 import { Cookie } from '../interfaces/index.js';
 import { ZodParser } from '../classes/ZodParser.js';
 import { CORE_MODULE } from './ToolRegistry.js';
@@ -94,15 +95,22 @@ export class RouteToToolConverter {
       return customDescriptions[toolName];
     }
 
-    if (routeInfo.input.description) {
-      return routeInfo.input.description;
-    }
-
-    // Generate default description
     const action = routeInfo.input.action.toUpperCase();
     const path = routeInfo.input.path;
+    const description =
+      routeInfo.input.description || `${action} ${path} - Admin operation`;
+    return description + this.describeErrors(routeInfo);
+  }
 
-    return `${action} ${path} - Admin operation`;
+  /** The errors a route declares, so an agent knows which conduitCodes to expect. */
+  private describeErrors(routeInfo: ConduitRoute): string {
+    const errors = routeInfo.input.errors;
+    if (!Array.isArray(errors) || errors.length === 0) return '';
+    const lines = errors.map(
+      (e: { conduitCode: string; description: string }) =>
+        `- ${e.conduitCode}: ${e.description}`,
+    );
+    return `\n\nPossible errors (error.conduitCode):\n${lines.join('\n')}`;
   }
 
   /**
@@ -308,17 +316,23 @@ export class RouteToToolConverter {
           structuredContent: output,
         };
       } catch (error) {
+        const failure = toErrorResponse(error);
         ConduitGrpcSdk.Logger.error(
-          `Error executing route ${routeInfo.input.path}: ${(error as Error).message}`,
+          `Error executing route ${routeInfo.input.path}: ${
+            failure.conduitCode ? `[${failure.conduitCode}] ` : ''
+          }${failure.message}`,
         );
 
+        // Same shape as the REST error body, so an agent can branch on conduitCode.
+        const output = { success: false, error: failure };
         return {
           content: [
             {
               type: 'text',
-              text: error instanceof Error ? error.message : 'Route execution failed',
+              text: JSON.stringify(output, null, 2),
             },
           ],
+          structuredContent: output,
           isError: true,
         };
       }

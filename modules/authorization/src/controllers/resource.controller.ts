@@ -1,4 +1,6 @@
 import { ConduitGrpcSdk } from '@conduitplatform/grpc-sdk';
+import { ModuleError } from '@conduitplatform/module-tools';
+import { errors } from '../errors.js';
 import { ResourceDefinition } from '../models/index.js';
 import { assertPermissionAction } from '../utils/index.js';
 import { RuleCache } from './cache.controller.js';
@@ -68,9 +70,9 @@ export class ResourceController {
     });
     if (hasWildcard) {
       if (found !== relationResources.length - 1)
-        throw new Error('One or more related resources was not found');
+        throw new ModuleError(errors.RELATED_RESOURCE_NOT_FOUND);
     } else if (found !== relationResources.length)
-      throw new Error('One or more related resources was not found');
+      throw new ModuleError(errors.RELATED_RESOURCE_NOT_FOUND);
   }
 
   excludeWildcard(relations: string[]) {
@@ -91,16 +93,25 @@ export class ResourceController {
         assertPermissionAction(perm);
       }
       if (!Array.isArray(perms[perm])) {
-        throw new Error('Permissions must be an array');
+        throw new ModuleError(errors.RESOURCE_DEFINITION_MALFORMED);
       }
       if (perm.indexOf('->') !== -1) {
+        const relatedTypes = relations?.[perm.split('->')[0]];
+        if (!Array.isArray(relatedTypes)) {
+          throw new ModuleError({
+            ...errors.INHERITED_PERMISSION_NOT_FOUND,
+            message: `Permission ${perm} refers to an undeclared relation`,
+          });
+        }
         const found = await ResourceDefinition.getInstance().findMany({
-          name: { $in: this.excludeWildcard(relations[perm.split('->')[0]]) },
+          name: { $in: this.excludeWildcard(relatedTypes) },
           [`permissions.${perm.split('->')[1]}`]: { $exists: true },
         });
-        if (found.length === this.excludeWildcard(relations[perm.split('->')[0]]).length)
-          continue;
-        throw new Error(`Permission ${perm} not found in related resources`);
+        if (found.length === this.excludeWildcard(relatedTypes).length) continue;
+        throw new ModuleError({
+          ...errors.INHERITED_PERMISSION_NOT_FOUND,
+          message: `Permission ${perm} not found in related resources`,
+        });
       }
     }
   }
@@ -117,7 +128,7 @@ export class ResourceController {
     status: 'processed' | 'acknowledged' | 'ignored';
   }> {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne(query);
-    if (!resourceDefinition) throw new Error('Resource not found');
+    if (!resourceDefinition) throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND);
 
     if (isNil(resource.version) || resource.version < resourceDefinition.version) {
       return { resourceDefinition, status: 'ignored' };
@@ -128,9 +139,7 @@ export class ResourceController {
       delete dbResource.updatedAt;
       delete (dbResource as any).__v;
       if (!isEqual(resource, dbResource)) {
-        throw new Error(
-          'Resource definition update failed. A divergent definition is already registered with the same version!',
-        );
+        throw new ModuleError(errors.RESOURCE_VERSION_CONFLICT);
       }
       return { resourceDefinition, status: 'acknowledged' };
     }
@@ -150,7 +159,7 @@ export class ResourceController {
 
   async deleteResource(name: string) {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
-    if (!resourceDefinition) throw new Error('Resource not found');
+    if (!resourceDefinition) throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND);
     await this.relationsController.removeResource(name);
     await this.indexController.removeResource(name);
     const deleted = await ResourceDefinition.getInstance().deleteOne({ name });
@@ -160,7 +169,7 @@ export class ResourceController {
 
   async findResourceDefinition(name: string) {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
-    if (!resourceDefinition) throw new Error('Resource not found');
+    if (!resourceDefinition) throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND);
     return resourceDefinition;
   }
 
@@ -168,7 +177,7 @@ export class ResourceController {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({
       _id: id,
     });
-    if (!resourceDefinition) throw new Error('Resource not found');
+    if (!resourceDefinition) throw new ModuleError(errors.RESOURCE_DEFINITION_NOT_FOUND);
     return resourceDefinition;
   }
 }

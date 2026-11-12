@@ -12,7 +12,6 @@ import {
   ConduitRouteObject,
   ConduitRouteOptions,
   ConduitGrpcSdk,
-  GrpcError,
   ConduitRouteReturnDefinition,
   ConduitSocketOptions,
   Indexable,
@@ -20,7 +19,8 @@ import {
   Router,
   SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
+import { ModuleError } from '../classes/ModuleError.js';
+import { authErrors } from '../utilities/authErrors.js';
 import { GrpcServer } from '../classes/index.js';
 import { createUserHydrator, UserHydrator, UserResolver } from './hydrateUser.js';
 import { RoutingController } from './RoutingController.js';
@@ -52,7 +52,7 @@ export class RoutingManager {
     return async (userId: string) => {
       const auth = sdk.authentication;
       if (!auth) {
-        throw new GrpcError(status.UNAVAILABLE, 'authentication module unavailable');
+        throw new ModuleError(authErrors.USER_LOOKUP_UNAVAILABLE);
       }
       return auth.getUser(userId);
     };
@@ -181,6 +181,7 @@ export class RoutingManager {
       this._routeHandlers,
       this.isAdmin ? 'admin' : 'client',
       hydrations,
+      this.declaredErrors(),
     );
     if (this.isAdmin) {
       RoutingManager.AdminController.setRoutes(modifiedFunctions);
@@ -189,6 +190,18 @@ export class RoutingManager {
     }
     const paths = Object.values(this._moduleRoutes);
     return this._router.register(paths as unknown as any);
+  }
+
+  /** conduitCodes each HTTP route lists in its `errors` option, keyed by handler name. */
+  private declaredErrors(): { [name: string]: ReadonlySet<string> } {
+    const declared: { [name: string]: ReadonlySet<string> } = {};
+    for (const [name, route] of Object.entries(this._moduleRoutes)) {
+      if ('events' in route) continue;
+      const errors = (route as ConduitRouteObject).options?.errors;
+      if (!Array.isArray(errors)) continue;
+      declared[name] = new Set(errors.map(e => e.conduitCode));
+    }
+    return declared;
   }
 
   private generateGrpcName(options: ConduitRouteOptions) {
