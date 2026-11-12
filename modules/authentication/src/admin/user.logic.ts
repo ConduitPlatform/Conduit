@@ -188,20 +188,43 @@ function emailPatch(
 /** Two-factor methods an admin may set. */
 export const TWO_FA_METHODS = ['sms', 'authenticator'] as const;
 
-function twoFaMethodPatch(
-  user: UserPatchSource,
-  params: UserPatchInput,
-  authenticatorSecret: boolean,
-): { method: string | null | undefined; update: Indexable } {
-  const requested = params.twoFaMethod;
-  if (!isNil(requested) && !(TWO_FA_METHODS as readonly string[]).includes(requested)) {
+/**
+ * The method sent on a patch: `''` counts as not sent and the legacy `'phone'` is
+ * `'sms'`, so a client echoing a stored value is not refused.
+ */
+function requestedTwoFaMethod(value: string | undefined): string | undefined {
+  if (isNil(value) || value === '') return undefined;
+  if (value === 'phone') return 'sms';
+  if (!(TWO_FA_METHODS as readonly string[]).includes(value)) {
     throw new GrpcError(
       status.INVALID_ARGUMENT,
       `twoFaMethod must be one of: ${TWO_FA_METHODS.join(', ')}`,
     );
   }
+  return value;
+}
+
+/** null, '' and 'phone' are stored spellings of SMS 2FA. */
+function canonicalTwoFaMethod(method: string | null | undefined): string {
+  return method === 'authenticator' ? 'authenticator' : 'sms';
+}
+
+function twoFaMethodPatch(
+  user: UserPatchSource,
+  params: UserPatchInput,
+  enabled: boolean,
+  authenticatorSecret: boolean,
+): { method: string | null | undefined; update: Indexable } {
   if (params.hasTwoFA === false) {
+    // turning 2FA off discards whatever method was sent with it
     return { method: null, update: { twoFaMethod: null } };
+  }
+  const requested = requestedTwoFaMethod(params.twoFaMethod);
+  if (!isNil(requested) && !enabled) {
+    throw new GrpcError(
+      status.FAILED_PRECONDITION,
+      'twoFaMethod can only be set while two-factor authentication is enabled',
+    );
   }
   if (requested === 'authenticator' && !authenticatorSecret) {
     throw new GrpcError(
@@ -212,7 +235,8 @@ function twoFaMethodPatch(
   if (!isNil(requested)) {
     return { method: requested, update: { twoFaMethod: requested } };
   }
-  if (params.hasTwoFA === true) {
+  if (params.hasTwoFA === true && !user.hasTwoFA) {
+    // turning 2FA on: keep a stored method, default to SMS
     const method = user.twoFaMethod || 'sms';
     return { method, update: { twoFaMethod: method } };
   }
@@ -267,14 +291,22 @@ export function buildUserPatch(
   options: { authenticatorSecret?: boolean } = {},
 ): UserPatchResult {
   const email = emailPatch(user, params);
-  const twoFa = twoFaMethodPatch(user, params, Boolean(options.authenticatorSecret));
-  const phone = phonePatch(user, params);
   const enabled = !isNil(params.hasTwoFA) ? params.hasTwoFA : Boolean(user.hasTwoFA);
-  // only a patch that touches 2FA or the phone is checked, so an unrelated edit
-  // (email, isVerified) of an already inconsistent user still goes through
-  const touchesTwoFa =
-    !isNil(params.hasTwoFA) || !isNil(params.twoFaMethod) || !isNil(params.phoneNumber);
-  if (touchesTwoFa) {
+  const twoFa = twoFaMethodPatch(
+    user,
+    params,
+    enabled,
+    Boolean(options.authenticatorSecret),
+  );
+  const phone = phonePatch(user, params);
+  // only a patch that changes 2FA or the phone is checked, so an unrelated edit (or a
+  // client resending unchanged values) of an already inconsistent user goes through
+  const changesTwoFa =
+    enabled !== Boolean(user.hasTwoFA) ||
+    (enabled &&
+      canonicalTwoFaMethod(twoFa.method) !== canonicalTwoFaMethod(user.twoFaMethod)) ||
+    Object.keys(phone.update).length > 0;
+  if (changesTwoFa) {
     assertSmsPhoneAvailable(
       twoFa.method,
       enabled,

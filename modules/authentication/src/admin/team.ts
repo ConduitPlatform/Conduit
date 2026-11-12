@@ -106,7 +106,10 @@ async function loadUserTeamRelations(
   return relations;
 }
 
-/** The user's teams that exist and match `search`, in relation order. */
+/**
+ * The user's teams that exist and match `search`, ordered by name then id so pages are
+ * stable (relations come back in no guaranteed order).
+ */
 async function teamsForUser(
   grouped: { teamId: string; roles: string[] }[],
   search: unknown,
@@ -115,10 +118,18 @@ async function teamsForUser(
     _id: { $in: grouped.map(group => group.teamId) },
   });
   const byId = new Map(found.map(team => [String(team._id), team]));
-  return grouped.flatMap(group => {
-    const team = byId.get(group.teamId);
-    return team && teamMatchesSearch(team, search) ? [{ team, roles: group.roles }] : [];
-  });
+  return grouped
+    .flatMap(group => {
+      const team = byId.get(group.teamId);
+      return team && teamMatchesSearch(team, search)
+        ? [{ team, roles: group.roles }]
+        : [];
+    })
+    .sort(
+      (a, b) =>
+        a.team.name.localeCompare(b.team.name) ||
+        String(a.team._id).localeCompare(String(b.team._id)),
+    );
 }
 
 /** The user's membership type in the realm of each team (one membership query). */
@@ -682,8 +693,8 @@ export class TeamsAdmin {
 
   async getUserTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, search } = call.request.params;
-    const skip: number = call.request.params.skip ?? 0;
-    const limit: number = call.request.params.limit ?? 25;
+    const skip = Math.max(0, Number(call.request.params.skip ?? 0) || 0);
+    const limit = Math.max(0, Number(call.request.params.limit ?? 25) || 0);
     const user = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
       throw new ModuleError(errors.USER_NOT_FOUND);

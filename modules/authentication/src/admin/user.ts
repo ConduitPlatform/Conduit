@@ -162,21 +162,33 @@ export class UserAdmin {
   }
 
   /**
-   * Deletes the authorization relations held by or on the users. Skipped when the
-   * deployment has no authorization module (no relations can exist without it); a
-   * registered but failing module still surfaces its error.
+   * Deletes the authorization relations held by or on the users. Best effort: the users
+   * are already gone and cannot be deleted again to retry, so failures are logged and
+   * the remaining cleanup still runs.
    */
   private async deleteUserRelations(userIds: string[]): Promise<void> {
     const authorization = this.grpcSdk.authorization;
-    if (!authorization) return;
+    if (!authorization) {
+      ConduitGrpcSdk.Logger.warn(
+        `Authorization is not available: relations of deleted users ${userIds.join(', ')} were not removed`,
+      );
+      return;
+    }
     for (let i = 0; i < userIds.length; i += RELATION_DELETE_CONCURRENCY) {
       const chunk = userIds.slice(i, i + RELATION_DELETE_CONCURRENCY);
-      await Promise.all(
+      const results = await Promise.allSettled(
         chunk.flatMap(id => [
           authorization.deleteAllRelations({ resource: 'User:' + id }),
           authorization.deleteAllRelations({ subject: 'User:' + id }),
         ]),
       );
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          ConduitGrpcSdk.Logger.error(
+            `Failed to delete authorization relations of user ${chunk[Math.floor(index / 2)]}: ${result.reason}`,
+          );
+        }
+      });
     }
   }
 

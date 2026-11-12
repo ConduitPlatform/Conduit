@@ -23,6 +23,7 @@ import { errors } from '../errors.js';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
+  private registrationGeneration = 0;
   private readonly teamsAdmin: TeamsAdmin;
   private readonly realmsAdmin: RealmsAdmin;
   private readonly signingKeysAdmin: SigningKeysAdmin;
@@ -201,7 +202,10 @@ export class AdminHandlers {
       this.userAdmin.setPassword.bind(this.userAdmin),
     );
     const emailAvailable = this.grpcSdk.isAvailable('email');
-    this.userAdmin.passwordResetRouteRegistered = emailAvailable;
+    // advertised only once the routes are registered (see below); a later registration
+    // (authorization and email can come up close together) wins over an earlier one
+    const generation = ++this.registrationGeneration;
+    this.userAdmin.passwordResetRouteRegistered = false;
     if (emailAvailable) {
       this.routingManager.route(
         {
@@ -289,9 +293,16 @@ export class AdminHandlers {
       this.realmsAdmin.declareRoutes(this.routingManager);
     }
 
-    return this.routingManager.registerRoutes().catch((err: Error) => {
-      ConduitGrpcSdk.Logger.error('Failed to register admin routes for module');
-      ConduitGrpcSdk.Logger.error(err);
-    });
+    return this.routingManager
+      .registerRoutes()
+      .then(() => {
+        if (generation === this.registrationGeneration) {
+          this.userAdmin.passwordResetRouteRegistered = emailAvailable;
+        }
+      })
+      .catch((err: Error) => {
+        ConduitGrpcSdk.Logger.error('Failed to register admin routes for module');
+        ConduitGrpcSdk.Logger.error(err);
+      });
   }
 }

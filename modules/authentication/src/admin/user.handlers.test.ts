@@ -445,6 +445,29 @@ describe('deleteUsers without authorization', () => {
   });
 });
 
+describe('deleteUsers with a failing authorization module', () => {
+  it('still revokes sessions, invalidates claims and publishes', async () => {
+    const original = authorization.deleteAllRelations;
+    authorization.deleteAllRelations = async () => {
+      throw new Error('authorization down');
+    };
+    try {
+      userRow({ _id: ID });
+      userRow({ _id: OTHER });
+      table('AccessToken').push({ _id: 'at', user: ID });
+      assert.equal(
+        await users.deleteUsers(call({ ids: [ID, OTHER] })),
+        'Users were deleted',
+      );
+      assert.equal(table('User').length, 0);
+      assert.deepEqual(table('AccessToken'), []);
+      assert.equal(published[0].topic, 'authentication:delete:user');
+    } finally {
+      authorization.deleteAllRelations = original;
+    }
+  });
+});
+
 describe('getUserTeams', () => {
   it('groups roles, pages and counts teams and 404s an unknown user', async () => {
     userRow({ _id: ID });
@@ -505,7 +528,10 @@ describe('getUserTeams', () => {
       relation: 'member',
     }));
     table('Team').push(
-      ...relations.map((_, index) => ({ _id: `team-${index}`, name: `T${index}` })),
+      ...relations.map((_, index) => ({
+        _id: `team-${index}`,
+        name: `T${String(index).padStart(3, '0')}`,
+      })),
     );
     relationPage = { relations, count: relations.length };
     const result: any = await teams.getUserTeams(call({ id: ID, skip: 500 }));

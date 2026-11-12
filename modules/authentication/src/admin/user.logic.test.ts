@@ -223,8 +223,9 @@ describe('buildUserPatch', () => {
   });
 
   it('rejects authenticator without a secret and accepts it with one', () => {
+    const on = { ...baseUser, hasTwoFA: true };
     assert.throws(
-      () => buildUserPatch(baseUser, { twoFaMethod: 'authenticator' }),
+      () => buildUserPatch(on, { twoFaMethod: 'authenticator' }),
       error => codeOf(error) === status.INVALID_ARGUMENT,
     );
     const ok = buildUserPatch(
@@ -255,25 +256,48 @@ describe('buildUserPatch', () => {
       error => codeOf(error) === status.INVALID_ARGUMENT,
     );
     assert.throws(
-      () => buildUserPatch(baseUser, { twoFaMethod: 'authenticatr' }),
+      () =>
+        buildUserPatch({ ...baseUser, hasTwoFA: true }, { twoFaMethod: 'authenticatr' }),
       error => codeOf(error) === status.INVALID_ARGUMENT,
     );
-    // turning 2FA off wins over a method sent next to it
-    const off = buildUserPatch(baseUser, {
-      hasTwoFA: false,
-      twoFaMethod: 'authenticator',
-    });
-    assert.equal(off.update.twoFaMethod, null);
   });
 
-  it('lets an unrelated edit through for a user with SMS 2FA and no phone', () => {
-    const legacy = { ...baseUser, hasTwoFA: true, twoFaMethod: 'sms', phoneNumber: null };
+  it('accepts stored spellings of the method and ignores it when 2FA is turned off', () => {
+    const on = { ...baseUser, hasTwoFA: true };
+    assert.equal(buildUserPatch(on, { twoFaMethod: 'phone' }).update.twoFaMethod, 'sms');
+    assert.deepEqual(buildUserPatch(on, { twoFaMethod: '' }).update, {});
+    for (const twoFaMethod of ['', 'phone', 'authenticator', 'bogus']) {
+      const off = buildUserPatch(on, { hasTwoFA: false, twoFaMethod });
+      assert.equal(off.update.twoFaMethod, null);
+      assert.equal(off.update.hasTwoFA, false);
+    }
+  });
+
+  it('refuses a method while 2FA stays off', () => {
+    assert.throws(
+      () => buildUserPatch(baseUser, { twoFaMethod: 'sms' }),
+      error => codeOf(error) === status.FAILED_PRECONDITION,
+    );
+  });
+
+  it('lets an unrelated or unchanged edit through for a user with SMS 2FA and no phone', () => {
+    const legacy = { ...baseUser, hasTwoFA: true, twoFaMethod: null, phoneNumber: null };
     const verified = buildUserPatch(legacy, { isVerified: true });
     assert.deepEqual(verified.update, { isVerified: true });
-    const emailed = buildUserPatch(legacy, { email: 'new@example.com' });
-    assert.equal(emailed.update.email, 'new@example.com');
+    // a client resending the unchanged 2FA state with an email edit
+    const resent = buildUserPatch(legacy, {
+      email: 'new@example.com',
+      hasTwoFA: true,
+      twoFaMethod: 'sms',
+    });
+    assert.equal(resent.update.email, 'new@example.com');
+    assert.equal(
+      'twoFaMethod' in buildUserPatch(legacy, { hasTwoFA: true }).update,
+      false,
+    );
+    // a real change is still checked
     assert.throws(
-      () => buildUserPatch(legacy, { hasTwoFA: true }),
+      () => buildUserPatch({ ...legacy, hasTwoFA: false }, { hasTwoFA: true }),
       error => codeOf(error) === status.INVALID_ARGUMENT,
     );
   });
