@@ -2,84 +2,11 @@ import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { ObjectIndex, ResourceDefinition } from '../models/index.js';
 import { constructObjectIndex } from '../utils/index.js';
+import { FakeObjectIndexStore } from '../testing/fakeObjectIndexStore.js';
 import {
   processPossibleConnections,
   ProcessPossibleConnectionsWorkerData,
 } from './possibleConnections.js';
-
-type Row = Partial<ObjectIndex> & { _id: string };
-type Query = Record<string, unknown>;
-
-/** Just enough of the ObjectIndex model for the connection job's queries. */
-class FakeObjectIndexStore {
-  rows: Row[] = [];
-  private nextId = 1;
-  /** Runs after every findMany has read; lets a test pause a job holding a stale result. */
-  afterFind: (query: Query) => Promise<void> = async () => {};
-
-  /** Inserts with the schema defaults, like the real model. */
-  seed(rows: Partial<ObjectIndex>[]) {
-    for (const row of rows) {
-      this.rows.push({
-        entityPermission: '',
-        relation: '',
-        inheritanceTree: [],
-        ...row,
-        // zero-padded so string order is insertion order, like ObjectIds
-        _id: String(this.nextId++).padStart(6, '0'),
-      });
-    }
-  }
-
-  findMany = async (
-    query: Query,
-    _select?: string,
-    _skip?: number,
-    limit?: number,
-    sort?: Record<string, 1 | -1>,
-  ) => {
-    let result = this.rows.filter(row => matches(row, query)).map(row => ({ ...row }));
-    if (sort?._id) {
-      const dir = sort._id;
-      result.sort((a, b) => (a._id < b._id ? -dir : a._id > b._id ? dir : 0));
-    }
-    if (limit) result = result.slice(0, limit);
-    await this.afterFind(query);
-    return result;
-  };
-
-  createMany = async (rows: Partial<ObjectIndex>[]) => {
-    this.seed(rows);
-    return rows;
-  };
-
-  updateMany = async (query: Query, update: Partial<ObjectIndex>) => {
-    for (const row of this.rows) if (matches(row, query)) Object.assign(row, update);
-  };
-
-  deleteMany = async (query: Query) => {
-    this.rows = this.rows.filter(row => !matches(row, query));
-  };
-
-  entitiesOf(subject: string) {
-    return this.rows.filter(row => row.subject === subject);
-  }
-}
-
-function matches(row: Row, query: Query): boolean {
-  return Object.entries(query).every(([field, condition]) => {
-    if (field === '$and') return (condition as Query[]).every(q => matches(row, q));
-    if (field === '$or') return (condition as Query[]).some(q => matches(row, q));
-    const value = (row as Record<string, unknown>)[field];
-    if (condition && typeof condition === 'object') {
-      const c = condition as { $in?: unknown[]; $ne?: unknown; $gt?: string };
-      if (c.$in) return c.$in.includes(value);
-      if ('$ne' in c) return value !== c.$ne;
-      if ('$gt' in c) return typeof value === 'string' && value > c.$gt!;
-    }
-    return value === condition;
-  });
-}
 
 const DEFINITIONS: Record<string, { permissions: Record<string, string[]> }> = {
   Org: { permissions: { read: ['owner'], edit: ['owner'] } },
@@ -153,8 +80,7 @@ describe('processPossibleConnections', () => {
   ];
 
   beforeEach(() => {
-    store.rows = [];
-    store.afterFind = async () => {};
+    store.reset();
     // Base rows constructRelationIndex writes synchronously before queueing each job.
     store.seed([
       constructObjectIndex(ORG, 'read', 'owner', ORG, []),
@@ -286,7 +212,7 @@ describe('processPossibleConnections', () => {
     let releaseAll!: () => void;
     const bothRead = new Promise<void>(resolve => (releaseAll = resolve));
     store.afterFind = async query => {
-      if (!('$or' in query) || arrived >= 2) return;
+      if (!('key' in query) || arrived >= 2) return;
       arrived++;
       if (arrived === 2) releaseAll();
       await bothRead;
@@ -366,7 +292,7 @@ describe('processPossibleConnections', () => {
     let releaseAll!: () => void;
     const bothRead = new Promise<void>(resolve => (releaseAll = resolve));
     store.afterFind = async query => {
-      if (!('$or' in query) || arrived >= 2) return;
+      if (!('key' in query) || arrived >= 2) return;
       arrived++;
       if (arrived === 2) releaseAll();
       await bothRead;
@@ -377,17 +303,17 @@ describe('processPossibleConnections', () => {
     assert.deepStrictEqual(markersOfTeamOwnerOnSchedule(), ['edit', 'read']);
   });
 
-  it('keeps a marker when another job deduplicates the row it read', async () => {
+  it('keeps a marker when another job deletes the unmarked row it read', async () => {
     seedUnmarkedScheduleRow();
     // The edit job reads the unmarked row, then the read job runs to completion
-    // (including its duplicate cleanup) before the edit job writes.
+    // (including deleting the unmarked copy) before the edit job writes.
     let release!: () => void;
     const paused = new Promise<void>(resolve => (release = resolve));
     let reachedRead!: () => void;
     const atRead = new Promise<void>(resolve => (reachedRead = resolve));
     let gated = false;
     store.afterFind = async query => {
-      if (!gated && '$or' in query) {
+      if (!gated && 'key' in query) {
         gated = true;
         reachedRead();
         await paused;

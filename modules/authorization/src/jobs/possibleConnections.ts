@@ -1,5 +1,10 @@
 import { ObjectIndex, ResourceDefinition } from '../models/index.js';
-import { constructObjectIndex, objectIndexKey } from '../utils/index.js';
+import {
+  constructObjectIndex,
+  objectIndexKey,
+  objectIndexRowKey,
+  withObjectIndexKey,
+} from '../utils/index.js';
 import { omit } from 'lodash-es';
 
 export type ProcessPossibleConnectionsWorkerData = {
@@ -257,42 +262,14 @@ function uniqueRows(rows: Partial<ObjectIndex>[]) {
 }
 
 /**
- * Stored rows for the batch's (subject, entity) pairs only. Matching every subject
- * against every entity would also return pairs the batch never asked about, which
- * on a push-down page is up to children × inherited entities rows.
- */
-function findExisting(rows: Partial<ObjectIndex>[]) {
-  const entitiesBySubject = new Map<string, Set<string>>();
-  for (const row of rows) {
-    let entities = entitiesBySubject.get(row.subject!);
-    if (!entities) entitiesBySubject.set(row.subject!, (entities = new Set()));
-    entities.add(row.entity!);
-  }
-  return ObjectIndex.getInstance().findMany({
-    $or: [...entitiesBySubject].map(([subject, entities]) => ({
-      subject,
-      entity: { $in: [...entities] },
-    })),
-  });
-}
-
-function groupByIdentity<T extends Partial<ObjectIndex>>(rows: T[]) {
-  const groups = new Map<string, T[]>();
-  for (const row of rows) {
-    const key = objectIndexKey(row);
-    let group = groups.get(key);
-    if (!group) groups.set(key, (group = []));
-    group.push(row);
-  }
-  return groups;
-}
-
-/**
- * Writes the rows that do not exist yet, in batches. A missing marker is always
- * inserted as a new row, never written onto a stored unmarked row (from before
- * markers were kept): an in-place update can overwrite another job's marker, or hit a
- * row a concurrent `removeDuplicates` just deleted. Inserts cannot be lost that way;
- * `removeDuplicates` then drops the unmarked copy, so a re-index still backfills.
+ * Writes the rows that do not exist yet, in batches. Every row carries its unique
+ * `key` (identity plus marker), so a row two jobs insert at once is stored once: the
+ * second insert is skipped by the unique index instead of creating a copy.
+ *
+ * A missing marker is always inserted as a new row, never written onto a stored
+ * unmarked row (from before markers were kept), so no write can overwrite another
+ * job's marker. The unmarked copy of an identity that is now marked is then deleted,
+ * so a re-index still backfills markers.
  */
 async function createMissingRows(rows: Partial<ObjectIndex>[]) {
   for (let i = 0; i < rows.length; i += PAGE_SIZE) {
@@ -302,54 +279,24 @@ async function createMissingRows(rows: Partial<ObjectIndex>[]) {
 
 async function createMissingBatch(rows: Partial<ObjectIndex>[]) {
   if (!rows.length) return;
-  const existing = groupByIdentity(await findExisting(rows));
-  const toCreate: Partial<ObjectIndex>[] = [];
-  for (const [identity, computed] of groupByIdentity(rows)) {
-    const found = existing.get(identity) ?? [];
-    const storedMarkers = new Set(found.map(i => i.entityPermission ?? ''));
-    for (const row of computed) {
-      const marker = row.entityPermission ?? '';
-      // An unmarked row adds nothing once any copy of the identity is stored.
-      if (marker ? storedMarkers.has(marker) : found.length) continue;
-      toCreate.push(row);
-    }
-  }
+  const keyed = rows.map(withObjectIndexKey);
+  // Exact lookups on the unique index; only skips the writes it can, since the
+  // insert below is idempotent anyway.
+  const stored = new Set(
+    (
+      await ObjectIndex.getInstance().findMany(
+        { key: { $in: keyed.map(row => row.key) } },
+        'key',
+      )
+    ).map(row => row.key),
+  );
+  const toCreate = keyed.filter(row => !stored.has(row.key));
   if (!toCreate.length) return;
-  await ObjectIndex.getInstance().createMany(toCreate);
-  await removeDuplicates(toCreate);
-}
-
-/**
- * Two jobs can both find a row missing and both insert it (there is no unique index
- * over the inheritance tree). After writing, keep the copy with the smallest `_id` per
- * identity and marker, drop unmarked copies of an identity that is now marked, and
- * delete the rest; every racing job converges on the same survivors.
- */
-async function removeDuplicates(rows: Partial<ObjectIndex>[]) {
-  const written = new Set(rows.map(objectIndexKey));
-  const stored = (await findExisting(rows)).filter(i => written.has(objectIndexKey(i)));
-  const extra: string[] = [];
-  for (const group of groupByIdentity(stored).values()) {
-    const hasMarked = group.some(i => i.entityPermission);
-    const keep = new Map<string, ObjectIndex>();
-    for (const index of group) {
-      if (hasMarked && !index.entityPermission) {
-        extra.push(index._id);
-        continue;
-      }
-      const key = markedKey(index);
-      const kept = keep.get(key);
-      if (!kept) {
-        keep.set(key, index);
-      } else if (String(index._id) < String(kept._id)) {
-        extra.push(kept._id);
-        keep.set(key, index);
-      } else {
-        extra.push(index._id);
-      }
-    }
-  }
-  if (extra.length) {
-    await ObjectIndex.getInstance().deleteMany({ _id: { $in: extra } });
+  await ObjectIndex.getInstance().createMany(toCreate, { ignoreDuplicates: true });
+  const unmarkedCopies = toCreate
+    .filter(row => row.entityPermission)
+    .map(row => objectIndexRowKey({ ...row, entityPermission: '' }));
+  if (unmarkedCopies.length) {
+    await ObjectIndex.getInstance().deleteMany({ key: { $in: unmarkedCopies } });
   }
 }

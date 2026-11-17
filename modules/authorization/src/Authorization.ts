@@ -302,8 +302,17 @@ export default class Authorization extends ManagedModule<Config> {
     return resource;
   }
 
-  protected registerSchemas(): Promise<unknown> {
-    const promises = Object.values(models).map(model => {
+  protected async registerSchemas(): Promise<unknown> {
+    const databaseType = await this.database.getDatabaseType().then(r => r.result);
+    models.addObjectIndexKeyIndex(databaseType);
+    const schemas = [
+      models.ActorIndex,
+      models.ObjectIndex,
+      models.Relationship,
+      models.ResourceDefinition,
+      models.Permission,
+    ];
+    const promises = schemas.map(model => {
       const modelInstance = model.getInstance(this.database);
       return this.database
         .createSchemaFromAdapter(modelInstance)

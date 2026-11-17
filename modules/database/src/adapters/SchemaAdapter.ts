@@ -304,11 +304,16 @@ export abstract class SchemaAdapter<T> {
     },
   ): Promise<any>;
 
+  /**
+   * With `ignoreDuplicates`, documents that would violate a unique index are skipped
+   * instead of failing the whole call; the rest are still inserted.
+   */
   abstract createMany(
     query: MultiDocQuery,
     options?: {
       userId?: string;
       scope?: string;
+      ignoreDuplicates?: boolean;
     },
   ): Promise<any>;
 

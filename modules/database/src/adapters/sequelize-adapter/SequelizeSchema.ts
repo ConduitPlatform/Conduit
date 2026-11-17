@@ -300,6 +300,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     options?: {
       scope?: string;
       userId?: string;
+      ignoreDuplicates?: boolean;
     },
   ) {
     await this.createPermissionCheck(options?.userId, options?.scope);
@@ -310,7 +311,11 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       extractRelationsModification(this, parsedQuery[i]);
     }
     const docs = await this.model
-      .bulkCreate(parsedQuery, { transaction: t })
+      // ON CONFLICT DO NOTHING / INSERT IGNORE; skipped rows may still be returned
+      .bulkCreate(parsedQuery, {
+        transaction: t,
+        ignoreDuplicates: options?.ignoreDuplicates,
+      })
       .then(docs => {
         t.commit();
         return docs;

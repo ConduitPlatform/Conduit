@@ -6,6 +6,9 @@
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["src/jobs/possibleConnections.ts", "src/jobs/possibleConnections.test.ts"],
+  "include": [
+    "src/jobs/possibleConnections.test.ts",
+    "src/migrations/objectIndexKey.migration.test.ts"
+  ],
   "exclude": []
 }

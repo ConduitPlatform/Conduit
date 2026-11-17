@@ -12,7 +12,11 @@ import {
 } from '../../interfaces/index.js';
 import { Query } from '../../types/db.js';
 import { FindOneOptions, FindManyOptions } from './types.js';
-import { AuthzOptions, PopulateAuthzOptions } from '../../types/options.js';
+import {
+  AuthzOptions,
+  CreateManyOptions,
+  PopulateAuthzOptions,
+} from '../../types/options.js';
 import { isNil } from 'lodash';
 import {
   normalizeAuthzOptions,
@@ -254,13 +258,13 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   createMany<T>(
     schemaName: string,
     query: Query<T>[],
-    options?: AuthzOptions,
+    options?: CreateManyOptions,
   ): Promise<T[] | UntypedArray>;
 
   createMany<T>(
     schemaName: string,
     query: Query<T>,
-    userIdOrOptions?: string | AuthzOptions,
+    userIdOrOptions?: string | CreateManyOptions,
     scope?: string,
   ): Promise<T[] | UntypedArray> {
     const options = normalizeAuthzOptions(userIdOrOptions, scope);
