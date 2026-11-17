@@ -37,8 +37,8 @@ export function createProcessPossibleConnectionsProcessor(): Processor<ProcessPo
         for (const connection of connections) {
           if (connection.subjectPermission !== action) continue;
           for (const permission of relatedPermissions[action]) {
-            rows.push(
-              constructObjectIndex(
+            rows.push({
+              ...constructObjectIndex(
                 object,
                 permission,
                 connection.entity.split('#')[1],
@@ -48,7 +48,12 @@ export function createProcessPossibleConnectionsProcessor(): Processor<ProcessPo
                   `${subject}#${relation}@${object}`,
                 ],
               ),
-            );
+              // Same entity, granted through the same permission on it: keep the marker
+              // so a parent that later gains entities can push them down this far too.
+              ...(connection.entityPermission
+                ? { entityPermission: connection.entityPermission }
+                : {}),
+            });
           }
         }
       }
@@ -89,9 +94,9 @@ export function createProcessPossibleConnectionsProcessor(): Processor<ProcessPo
       ...rowsFromSubjectDefinition,
     ]);
     await createMissingRows(obj);
-    const seenConnections = new Set(connections.map(connectionKey));
+    const seenConnections = new Set(connections.map(rowKey));
     const lateConnections = (await fetchConnections()).filter(
-      connection => !seenConnections.has(connectionKey(connection)),
+      connection => !seenConnections.has(rowKey(connection)),
     );
     if (lateConnections.length) {
       const known = new Set(obj.map(rowKey));
@@ -105,80 +110,57 @@ export function createProcessPossibleConnectionsProcessor(): Processor<ProcessPo
     const achievedPermissions = [
       ...new Set([...providedAchievedPermissions, ...obj.map(i => i.subjectPermission!)]),
     ];
-    const objectsByPermission: { [key: string]: Partial<ObjectIndex>[] } = {};
-    for (const permission of achievedPermissions) {
-      objectsByPermission[permission] = obj.filter(
-        i => i.subjectPermission === permission,
-      );
-    }
-    for (const objectPermission in objectsByPermission) {
-      const childObj: Partial<ObjectIndex>[] = [];
-      const childIndexes = await ObjectIndex.getInstance().findMany(
-        {
-          subject: { $ne: `${object}#${objectPermission}` },
-          entityId: object.split(':')[1],
-          entityType: object.split(':')[0],
-          entityPermission: objectPermission,
-        },
-        { readPreference: 'primary' },
-      );
-      for (const childIndex of childIndexes) {
-        const copy = omit(childIndex, ['_id', 'createdAt', 'updatedAt', '__v']);
-        for (const childObject of objectsByPermission[objectPermission]) {
-          if (childObject.entityType === copy.entityType) continue;
-          childObj.push({
-            ...copy,
-            entity: childObject.entity,
-            entityId: childObject.entityId,
-            entityType: childObject.entityType,
-            entityPermission: childObject.entityPermission,
-            // the path to `object`, then the child's own path from `object` down
-            inheritanceTree: [
-              ...(childObject.inheritanceTree ?? []),
-              ...(copy.inheritanceTree ?? []),
-            ],
-          });
+    for (const objectPermission of achievedPermissions) {
+      const inherited = obj.filter(i => i.subjectPermission === objectPermission);
+      if (!inherited.length) continue;
+      // Rows on other objects that inherit from `object` via `objectPermission`: push
+      // the entities `object` just gained down to them, one page at a time.
+      let lastId: string | undefined;
+      for (;;) {
+        const childIndexes = await ObjectIndex.getInstance().findMany(
+          {
+            subject: { $ne: `${object}#${objectPermission}` },
+            entityId: object.split(':')[1],
+            entityType: object.split(':')[0],
+            entityPermission: objectPermission,
+            ...(lastId ? { _id: { $gt: lastId } } : {}),
+          },
+          { readPreference: 'primary', sort: { _id: 1 }, limit: PAGE_SIZE },
+        );
+        if (!childIndexes.length) break;
+        lastId = childIndexes[childIndexes.length - 1]._id;
+        const childObj: Partial<ObjectIndex>[] = [];
+        for (const childIndex of childIndexes) {
+          const copy = omit(childIndex, ['_id', 'createdAt', 'updatedAt', '__v']);
+          for (const childObject of inherited) {
+            if (childObject.entityType === copy.entityType) continue;
+            childObj.push({
+              ...copy,
+              entity: childObject.entity,
+              entityId: childObject.entityId,
+              entityType: childObject.entityType,
+              entityPermission: childObject.entityPermission,
+              relation: childObject.relation,
+              // the path to `object`, then the child's own path from `object` down
+              inheritanceTree: [
+                ...(childObject.inheritanceTree ?? []),
+                ...(copy.inheritanceTree ?? []),
+              ],
+            });
+          }
         }
+        await createMissingRows(uniqueRows(childObj));
+        if (childIndexes.length < PAGE_SIZE) break;
       }
-      const childKeys = childObj.map(
-        i => `${i.subject}#${i.entity}${i.inheritanceTree!.join('')}`,
-      );
-      // deduplicate childObj array
-      const childUnique = childObj.filter(
-        (i, index) =>
-          childKeys.indexOf(`${i.subject}#${i.entity}${i.inheritanceTree!.join('')}`) ===
-          index,
-      );
-      const childIndexes2 = await ObjectIndex.getInstance().findMany(
-        {
-          $and: [
-            { subject: { $in: childUnique.map(i => i.subject) } },
-            { entity: { $in: childUnique.map(i => i.entity) } },
-          ],
-        },
-        { readPreference: 'primary' },
-      );
-      const childToCreate = childUnique.filter(
-        i =>
-          !childIndexes2.find(
-            j =>
-              j.subject === i.subject &&
-              j.entity === i.entity &&
-              j.inheritanceTree!.join('') === i.inheritanceTree!.join(''),
-          ),
-      );
-
-      await ObjectIndex.getInstance().createMany(childToCreate);
     }
   };
 }
 
-function rowKey(row: Partial<ObjectIndex>) {
-  return `${row.subject}#${row.entity}${(row.inheritanceTree ?? []).join('')}`;
-}
+const PAGE_SIZE = 200;
 
-function connectionKey(connection: ObjectIndex) {
-  return rowKey(connection);
+/** Same key shape as IndexController's chunked lookups. */
+function rowKey(row: Partial<ObjectIndex>) {
+  return `${row.subject}|${row.entity}|${(row.inheritanceTree ?? []).join(',')}`;
 }
 
 /**
@@ -199,20 +181,87 @@ function uniqueRows(rows: Partial<ObjectIndex>[]) {
   return [...byKey.values()];
 }
 
-async function createMissingRows(rows: Partial<ObjectIndex>[]) {
-  if (!rows.length) return;
-  const indexes = await ObjectIndex.getInstance().findMany(
+function findExisting(rows: Partial<ObjectIndex>[]) {
+  return ObjectIndex.getInstance().findMany(
     {
       $and: [
-        { subject: { $in: rows.map(i => i.subject) } },
-        { entity: { $in: rows.map(i => i.entity) } },
+        { subject: { $in: [...new Set(rows.map(i => i.subject!))] } },
+        { entity: { $in: [...new Set(rows.map(i => i.entity!))] } },
       ],
     },
     { readPreference: 'primary' },
   );
-  const existing = new Set(indexes.map(rowKey));
-  const toCreate = rows.filter(row => !existing.has(rowKey(row)));
-  if (toCreate.length) {
-    await ObjectIndex.getInstance().createMany(toCreate);
+}
+
+/**
+ * Writes the rows that do not exist yet, in batches. Existing rows that lack the
+ * `entityPermission` marker the computed row carries are upgraded in place, so a
+ * re-index backfills rows written before the marker was kept.
+ */
+async function createMissingRows(rows: Partial<ObjectIndex>[]) {
+  for (let i = 0; i < rows.length; i += PAGE_SIZE) {
+    await createMissingBatch(rows.slice(i, i + PAGE_SIZE));
+  }
+}
+
+async function createMissingBatch(rows: Partial<ObjectIndex>[]) {
+  if (!rows.length) return;
+  const existing = new Map<string, ObjectIndex[]>();
+  for (const index of await findExisting(rows)) {
+    const key = rowKey(index);
+    existing.set(key, [...(existing.get(key) ?? []), index]);
+  }
+  const toCreate: Partial<ObjectIndex>[] = [];
+  const toMark = new Map<string, string[]>();
+  for (const row of rows) {
+    const found = existing.get(rowKey(row));
+    if (!found) {
+      toCreate.push(row);
+      continue;
+    }
+    if (!row.entityPermission) continue;
+    for (const index of found) {
+      if (index.entityPermission) continue;
+      toMark.set(row.entityPermission, [
+        ...(toMark.get(row.entityPermission) ?? []),
+        index._id,
+      ]);
+    }
+  }
+  for (const [entityPermission, ids] of toMark) {
+    await ObjectIndex.getInstance().updateMany(
+      { _id: { $in: ids } },
+      { entityPermission },
+    );
+  }
+  if (!toCreate.length) return;
+  await ObjectIndex.getInstance().createMany(toCreate);
+  await removeDuplicates(toCreate);
+}
+
+/**
+ * Two jobs can both find a row missing and both insert it (there is no unique index
+ * over the inheritance tree). After inserting, keep the copy with the smallest `_id`
+ * per key and delete the rest; every racing job converges on the same survivor.
+ */
+async function removeDuplicates(rows: Partial<ObjectIndex>[]) {
+  const written = new Set(rows.map(rowKey));
+  const keep = new Map<string, ObjectIndex>();
+  const extra: string[] = [];
+  for (const index of await findExisting(rows)) {
+    const key = rowKey(index);
+    if (!written.has(key)) continue;
+    const kept = keep.get(key);
+    if (!kept) {
+      keep.set(key, index);
+    } else if (String(index._id) < String(kept._id)) {
+      extra.push(kept._id);
+      keep.set(key, index);
+    } else {
+      extra.push(index._id);
+    }
+  }
+  if (extra.length) {
+    await ObjectIndex.getInstance().deleteMany({ _id: { $in: extra } });
   }
 }
