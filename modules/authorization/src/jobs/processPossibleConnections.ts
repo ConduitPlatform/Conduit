@@ -94,14 +94,14 @@ export function createProcessPossibleConnectionsProcessor(): Processor<ProcessPo
       ...rowsFromSubjectDefinition,
     ]);
     await createMissingRows(obj);
-    const seenConnections = new Set(connections.map(rowKey));
+    const seenConnections = new Set(connections.map(markedKey));
     const lateConnections = (await fetchConnections()).filter(
-      connection => !seenConnections.has(rowKey(connection)),
+      connection => !seenConnections.has(markedKey(connection)),
     );
     if (lateConnections.length) {
-      const known = new Set(obj.map(rowKey));
+      const known = new Set(obj.map(markedKey));
       const lateRows = uniqueRows(rowsFromConnections(lateConnections)).filter(
-        row => !known.has(rowKey(row)),
+        row => !known.has(markedKey(row)),
       );
       await createMissingRows(lateRows);
       obj.push(...lateRows);
@@ -133,7 +133,13 @@ export function createProcessPossibleConnectionsProcessor(): Processor<ProcessPo
         for (const childIndex of childIndexes) {
           const copy = omit(childIndex, ['_id', 'createdAt', 'updatedAt', '__v']);
           for (const childObject of inherited) {
-            if (childObject.entityType === copy.entityType) continue;
+            // Only skip self-references (an entity on `object` or on the child that is
+            // that resource itself, possible with cyclic relations). Same-type nesting,
+            // e.g. Folder in Folder, must still propagate.
+            if (isSameResource(childObject, object)) continue;
+            if (isSameResource(childObject, `${copy.subjectType}:${copy.subjectId}`)) {
+              continue;
+            }
             childObj.push({
               ...copy,
               entity: childObject.entity,
@@ -158,27 +164,46 @@ export function createProcessPossibleConnectionsProcessor(): Processor<ProcessPo
 
 const PAGE_SIZE = 200;
 
-/** Same key shape as IndexController's chunked lookups. */
+/** Same key shape as IndexController's chunked lookups: the row's identity. */
 function rowKey(row: Partial<ObjectIndex>) {
   return `${row.subject}|${row.entity}|${(row.inheritanceTree ?? []).join(',')}`;
 }
 
 /**
- * Deduplicates by subject, entity and inheritance tree. When a connection row and a
- * subject-definition row collide, keep the one carrying `entityPermission`: it is the
- * marker the child-propagation query matches on, and dropping it means a parent that
- * gains entities later can never push them down to this object.
+ * Identity plus the `entityPermission` marker. One identity can carry several markers:
+ * with `owner->read` and `owner->edit` both on `X#read`, `X#read ← Team#owner` is stored
+ * once marked `read` and once marked `edit`, so a parent later granted either action
+ * on the team is pushed down to X. Readers dedupe by entity, so the extra row is inert.
+ */
+function markedKey(row: Partial<ObjectIndex>) {
+  return `${rowKey(row)}|${row.entityPermission ?? ''}`;
+}
+
+function isSameResource(row: Partial<ObjectIndex>, resource: string) {
+  const [type, id] = resource.split(':');
+  return row.entityType === type && row.entityId === id;
+}
+
+/**
+ * One row per identity and marker. An unmarked row is dropped when the same identity
+ * also comes marked: the marker is what the child-propagation query matches on, and
+ * the unmarked copy adds nothing.
  */
 function uniqueRows(rows: Partial<ObjectIndex>[]) {
-  const byKey = new Map<string, Partial<ObjectIndex>>();
+  const byIdentity = new Map<string, Map<string, Partial<ObjectIndex>>>();
   for (const row of rows) {
-    const key = rowKey(row);
-    const existing = byKey.get(key);
-    if (!existing || (!existing.entityPermission && row.entityPermission)) {
-      byKey.set(key, row);
+    const markers = byIdentity.get(rowKey(row)) ?? new Map();
+    byIdentity.set(rowKey(row), markers);
+    if (!markers.has(row.entityPermission ?? '')) {
+      markers.set(row.entityPermission ?? '', row);
     }
   }
-  return [...byKey.values()];
+  const result: Partial<ObjectIndex>[] = [];
+  for (const markers of byIdentity.values()) {
+    if (markers.size > 1) markers.delete('');
+    result.push(...markers.values());
+  }
+  return result;
 }
 
 function findExisting(rows: Partial<ObjectIndex>[]) {
@@ -193,10 +218,18 @@ function findExisting(rows: Partial<ObjectIndex>[]) {
   );
 }
 
+function groupByIdentity<T extends Partial<ObjectIndex>>(rows: T[]) {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    groups.set(rowKey(row), [...(groups.get(rowKey(row)) ?? []), row]);
+  }
+  return groups;
+}
+
 /**
- * Writes the rows that do not exist yet, in batches. Existing rows that lack the
- * `entityPermission` marker the computed row carries are upgraded in place, so a
- * re-index backfills rows written before the marker was kept.
+ * Writes the rows that do not exist yet, in batches. A stored row without a marker
+ * (written before markers were kept) is upgraded in place to a missing marker instead
+ * of inserting a copy, so a re-index backfills existing data.
  */
 async function createMissingRows(rows: Partial<ObjectIndex>[]) {
   for (let i = 0; i < rows.length; i += PAGE_SIZE) {
@@ -206,26 +239,30 @@ async function createMissingRows(rows: Partial<ObjectIndex>[]) {
 
 async function createMissingBatch(rows: Partial<ObjectIndex>[]) {
   if (!rows.length) return;
-  const existing = new Map<string, ObjectIndex[]>();
-  for (const index of await findExisting(rows)) {
-    const key = rowKey(index);
-    existing.set(key, [...(existing.get(key) ?? []), index]);
-  }
+  const existing = groupByIdentity(await findExisting(rows));
   const toCreate: Partial<ObjectIndex>[] = [];
   const toMark = new Map<string, string[]>();
-  for (const row of rows) {
-    const found = existing.get(rowKey(row));
-    if (!found) {
-      toCreate.push(row);
-      continue;
-    }
-    if (!row.entityPermission) continue;
-    for (const index of found) {
-      if (index.entityPermission) continue;
-      toMark.set(row.entityPermission, [
-        ...(toMark.get(row.entityPermission) ?? []),
-        index._id,
-      ]);
+  const touched: Partial<ObjectIndex>[] = [];
+  for (const [identity, computed] of groupByIdentity(rows)) {
+    const found = existing.get(identity) ?? [];
+    const storedMarkers = new Set(found.map(i => i.entityPermission ?? ''));
+    const unmarked = found
+      .filter(i => !i.entityPermission)
+      .sort((a, b) => (String(a._id) < String(b._id) ? -1 : 1));
+    for (const row of computed) {
+      const marker = row.entityPermission ?? '';
+      if (!marker) {
+        if (!found.length) toCreate.push(row);
+        continue;
+      }
+      if (storedMarkers.has(marker)) continue;
+      const spare = unmarked.shift();
+      if (spare) {
+        toMark.set(marker, [...(toMark.get(marker) ?? []), spare._id]);
+      } else {
+        toCreate.push(row);
+      }
+      touched.push(row);
     }
   }
   for (const [entityPermission, ids] of toMark) {
@@ -234,31 +271,41 @@ async function createMissingBatch(rows: Partial<ObjectIndex>[]) {
       { entityPermission },
     );
   }
-  if (!toCreate.length) return;
-  await ObjectIndex.getInstance().createMany(toCreate);
-  await removeDuplicates(toCreate);
+  if (toCreate.length) {
+    await ObjectIndex.getInstance().createMany(toCreate);
+  }
+  touched.push(...toCreate.filter(row => !row.entityPermission));
+  if (touched.length) await removeDuplicates(touched);
 }
 
 /**
  * Two jobs can both find a row missing and both insert it (there is no unique index
- * over the inheritance tree). After inserting, keep the copy with the smallest `_id`
- * per key and delete the rest; every racing job converges on the same survivor.
+ * over the inheritance tree). After writing, keep the copy with the smallest `_id` per
+ * identity and marker, drop unmarked copies of an identity that is now marked, and
+ * delete the rest; every racing job converges on the same survivors.
  */
 async function removeDuplicates(rows: Partial<ObjectIndex>[]) {
   const written = new Set(rows.map(rowKey));
-  const keep = new Map<string, ObjectIndex>();
+  const stored = (await findExisting(rows)).filter(i => written.has(rowKey(i)));
   const extra: string[] = [];
-  for (const index of await findExisting(rows)) {
-    const key = rowKey(index);
-    if (!written.has(key)) continue;
-    const kept = keep.get(key);
-    if (!kept) {
-      keep.set(key, index);
-    } else if (String(index._id) < String(kept._id)) {
-      extra.push(kept._id);
-      keep.set(key, index);
-    } else {
-      extra.push(index._id);
+  for (const group of groupByIdentity(stored).values()) {
+    const hasMarked = group.some(i => i.entityPermission);
+    const keep = new Map<string, ObjectIndex>();
+    for (const index of group) {
+      if (hasMarked && !index.entityPermission) {
+        extra.push(index._id);
+        continue;
+      }
+      const key = markedKey(index);
+      const kept = keep.get(key);
+      if (!kept) {
+        keep.set(key, index);
+      } else if (String(index._id) < String(kept._id)) {
+        extra.push(kept._id);
+        keep.set(key, index);
+      } else {
+        extra.push(index._id);
+      }
     }
   }
   if (extra.length) {

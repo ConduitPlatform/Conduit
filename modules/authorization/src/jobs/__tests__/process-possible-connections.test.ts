@@ -78,10 +78,12 @@ function matches(row: Row, query: Query): boolean {
 }
 
 const DEFINITIONS: Record<string, { permissions: Record<string, string[]> }> = {
-  Org: { permissions: { read: ['owner'] } },
-  Team: { permissions: { read: ['owner', 'readAll'] } },
+  Org: { permissions: { read: ['owner'], edit: ['owner'] } },
+  Team: { permissions: { read: ['owner', 'readAll'], edit: ['owner'] } },
   ScheduledSessions: { permissions: { read: ['owner', 'owner->read'] } },
   Session: { permissions: { read: ['owner', 'owner->read'] } },
+  Folder: { permissions: { read: ['owner', 'owner->read'] } },
+  File: { permissions: { read: ['owner', 'owner->read'] } },
 };
 
 const ORG = 'Org:o';
@@ -90,15 +92,14 @@ const SCHEDULE = 'ScheduledSessions:x';
 const SESSION = 'Session:s';
 
 /** Data constructRelationIndex queues for `subject owner object` with these definitions. */
-function ownerJob(subject: string, object: string) {
+function ownerJob(
+  subject: string,
+  object: string,
+  relatedPermissions: Record<string, string[]> = { read: ['read'] },
+  achievedPermissions: string[] = ['read'],
+) {
   return {
-    data: {
-      object,
-      subject,
-      relation: 'owner',
-      relatedPermissions: { read: ['read'] },
-      achievedPermissions: ['read'],
-    },
+    data: { object, subject, relation: 'owner', relatedPermissions, achievedPermissions },
   } as Job<ProcessPossibleConnectionsWorkerData>;
 }
 
@@ -278,5 +279,50 @@ describe('processPossibleConnections', () => {
     const keys = keysOf(store.rows);
     expect(keys.length).toBeGreaterThan(0);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('propagates through same-type nesting (Folder in Folder)', async () => {
+    const OUTER = 'Folder:a';
+    const INNER = 'Folder:b';
+    const FILE = 'File:f';
+    store.seed([
+      constructObjectIndex(OUTER, 'read', 'owner', OUTER, []),
+      constructObjectIndex(INNER, 'read', 'owner', INNER, []),
+      constructObjectIndex(FILE, 'read', 'owner', FILE, []),
+    ]);
+
+    await process(ownerJob(INNER, FILE));
+    await process(ownerJob(OUTER, INNER));
+
+    const outerOnFile = store
+      .entitiesOf(`${FILE}#read`)
+      .filter(row => row.entity === `${OUTER}#owner`)
+      .map(row => ({ relation: row.relation, tree: row.inheritanceTree }));
+    expect(outerOnFile).toEqual([
+      { relation: 'owner', tree: [`${OUTER}#owner@${INNER}`, `${INNER}#owner@${FILE}`] },
+    ]);
+  });
+
+  it('keeps one marker per inheriting action so either action pushes down', async () => {
+    // X#read is reached through both owner->read and owner->edit on its owner team.
+    await process(ownerJob(TEAM, SCHEDULE, { read: ['read'], edit: ['read'] }));
+    const markers = store
+      .entitiesOf(`${SCHEDULE}#read`)
+      .filter(row => row.entity === `${TEAM}#owner`)
+      .map(row => row.entityPermission)
+      .sort();
+    expect(markers).toEqual(['edit', 'read']);
+
+    // The org later gets only edit on the team; it must still reach the schedule.
+    store.seed([constructObjectIndex(ORG, 'edit', 'owner', ORG, [])]);
+    await process(ownerJob(ORG, TEAM, { edit: ['edit'] }, ['edit']));
+
+    const orgOnSchedule = store
+      .entitiesOf(`${SCHEDULE}#read`)
+      .filter(row => row.entity === `${ORG}#owner`)
+      .map(row => ({ marker: row.entityPermission, tree: row.inheritanceTree }));
+    expect(orgOnSchedule).toEqual([
+      { marker: 'edit', tree: [`${ORG}#owner@${TEAM}`, `${TEAM}#owner@${SCHEDULE}`] },
+    ]);
   });
 });
