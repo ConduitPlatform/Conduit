@@ -516,6 +516,26 @@ describe('index helpers', () => {
     ).toBeUndefined();
   });
 
+  it('treats _id as the SQL primary key column unless the schema declares its own', () => {
+    const fields = { entityType: { type: TYPE.String }, entityId: { type: TYPE.String } };
+    for (const dialect of ['postgres', 'mysql', 'mariadb', 'sqlite']) {
+      expect(
+        sqlIndexUnsupportedReason(
+          dialect,
+          { fields: ['entityType', 'entityId', '_id'] },
+          fields,
+        ),
+      ).toBeUndefined();
+    }
+    expect(
+      sqlIndexUnsupportedReason(
+        'postgres',
+        { fields: ['code', '_id'] },
+        { code: { type: TYPE.String, primaryKey: true } },
+      ),
+    ).toMatch(/Field '_id'/);
+  });
+
   it('maps declared scalar relations to engine *Id and never Authz String *Id fields', () => {
     const fields = collectSchemaIndexFields({
       fields: {

@@ -336,6 +336,49 @@ describe('SQL index converters', () => {
     expect(index.name).toBe('cnd_idx_Permission_resource_asc');
     expect(index.fields[0]).toEqual({ name: 'resource', order: 'ASC' });
   });
+
+  it('keeps a compound index ending in _id through the full SQL schema converters', () => {
+    // Shaped like authorization's ObjectIndex: the converters drop `_id` from the
+    // fields before converting indexes, which must not skip an index that uses it.
+    (ConduitGrpcSdk.Logger.warn as jest.Mock).mockClear();
+    const objectIndex = () =>
+      new ConduitSchema(
+        'ObjectIndex',
+        {
+          _id: TYPE.ObjectId,
+          entityType: { type: TYPE.String },
+          entityId: { type: TYPE.String },
+          entityPermission: { type: TYPE.String },
+        },
+        {
+          timestamps: true,
+          indexes: [
+            {
+              fields: ['entityType', 'entityId', 'entityPermission', '_id'],
+              types: [
+                CompatibleIndexType.Ascending,
+                CompatibleIndexType.Ascending,
+                CompatibleIndexType.Ascending,
+                CompatibleIndexType.Ascending,
+              ],
+            },
+          ],
+        },
+      );
+    const names = (schema: ConduitSchema) =>
+      (schema.modelOptions.indexes ?? []).map(index =>
+        (index as ConvertedSqlIndex).fields.map(f =>
+          typeof f === 'string' ? f : f.name,
+        ),
+      );
+    const expected = [['entityType', 'entityId', 'entityPermission', '_id']];
+
+    expect(names(pgSchemaConverter(objectIndex())[0])).toEqual(expected);
+    for (const dialect of ['mysql', 'mariadb', 'sqlite'] as const) {
+      expect(names(sqlSchemaConverter(objectIndex(), dialect)[0])).toEqual(expected);
+    }
+    expect(ConduitGrpcSdk.Logger.warn).not.toHaveBeenCalled();
+  });
 });
 
 describe('mongoose SchemaConverter indexes', () => {
