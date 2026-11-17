@@ -46,6 +46,10 @@ Once logged-in, you may check out your APIs' generated route documentation throu
 - Docker [Instructions](deploy/docker)
 - Kubernetes [Instructions](deploy/k8s)
 
+# One-Click Deploy 🚀
+
+[![Deploy on RepoCloud](https://d16t0pc4846x52.cloudfront.net/deploylobe.svg)](https://repocloud.io/details/Conduit/)
+
 # Documentation 📖
 
 If you're only just starting out with Conduit, make sure you familiarize yourself with the project by checking out [our docs](https://getconduit.dev/docs/overview/intro).
