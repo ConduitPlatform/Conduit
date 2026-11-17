@@ -2,20 +2,102 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [Unreleased]
+## [0.17.0-alpha.11](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.10...v0.17.0-alpha.11) (2026-11-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* ALREADY_EXISTS, FAILED_PRECONDITION, RESOURCE_EXHAUSTED,
+UNIMPLEMENTED, UNAVAILABLE and DEADLINE_EXCEEDED are no longer served as
+HTTP 500. Socket conduit_error payloads and MCP tool errors now carry the
+REST error shape. Unexpected failures on client routes return a static
+message with conduitCode INTERNAL_ERROR instead of the raw exception text.
+
+* feat(module-tools): add RouteBuilder.errors and grpcCallbackError helpers
+
+* feat(module-tools): typed errors for token verification and user hydration
+
+Shared authErrors catalog so JWT-mode (router) and session-mode
+(authentication) requests fail with the same conduitCodes.
+
+* feat(storage): typed errors with conduitCodes on every route
+
+* feat(chat): typed errors with conduitCodes on every route
+
+* feat(functions): typed errors with conduitCodes on every route
+
+* feat(communications): typed errors with conduitCodes on every route
+
+* feat(authorization): typed errors with conduitCodes on every route
+
+* feat(router): typed errors with conduitCodes on every route
+
+* feat(embeddings): typed errors with conduitCodes on every route
+
+* feat(core): typed errors with conduitCodes on every route
+
+* docs(module-tools): document typed errors and add catalog consistency check
+
+* feat(database): typed errors with conduitCodes on every route
+
+* fix(storage,embeddings): key cross-module checks on conduitCode
+
+Storage's CDN migration recognizes a missing document by DOCUMENT_NOT_FOUND,
+and embeddings' unsupported-vector code no longer shares a name with the
+database module's.
+
+* feat(authentication): typed errors with conduitCodes on every route
+
+Session-mode auth middleware shares the authErrors catalog with the
+router's JWT mode, so clients see the same codes in both.
+
+* style(chat): use const for validated users
+
+* chore(authentication): restore disposable email list formatting
+
+* feat(authentication): type Apple OAuth client config validation errors
+
+* fix(hermes,module-tools,grpc-sdk): review fixes for typed error plumbing
+
+- Only real gRPC errors are read as such by the response normalizer, so a
+  driver error with a numeric code raised in-process stays an opaque 500.
+- Admin routes append the cause of a typed error to its message.
+- The cause of typed errors is logged on gRPC service methods and on
+  in-process routes.
+- Rate limit backend outage answers 429 again.
+
+* fix: review fixes for the typed error conversion
+
+- authentication: session-mode expired tokens answer TOKEN_EXPIRED, not
+  TOKEN_INVALID; userCreate accepts the same userData as before; oversized
+  user documents stay INTERNAL.
+- database: unique-index and validation failures are typed
+  (DOCUMENT_UNIQUE_CONFLICT, DOCUMENT_VALIDATION_FAILED) instead of a generic
+  failure; schema, field and index names are client-visible again.
+- communications: push tokens can be stored before the provider initializes;
+  ALL_OR_NOTHING failures name the failed channels.
+- chat: a failed invitation delivery is always INVITATION_DELIVERY_FAILED;
+  missing user ids are listed again.
+- core: admin auth middleware answers an opaque 500 on unexpected failures;
+  import reports show the message, not JSON.
+- authorization, router, functions: specific messages and readable logs.
+
+* refactor: address code quality findings on the typed error changes
+
+Remove unused imports, constants and a dead parameter, and split
+toGrpcStatus into one helper per error family.
 
 ### Features
 
-* **authentication:** admin user management. `POST /users/:id/password` sets a local password (min 8 characters), clears outstanding reset tokens and signs the user out unless `revokeSessions` is false. `POST /users/:id/password-reset` (registered when the email module is available, including when it comes up after authentication) sends the existing forgot-password email. `POST /users/:id/two-fa/reset` clears the 2FA flag, method, secret, backup codes and pending 2FA tokens. `GET /users/:id/teams` (only when teams are enabled) lists a user's teams and roles, ordered by name; `skip`, `limit`, `search` and `count` apply to teams. `GET /users/:id` returns one user by id, whatever the id format (advertised as the `getUserById` action). `GET /users/capabilities` reports the filters, sorts and actions this server supports. `GET /users` accepts `isVerified` and `hasTwoFA`, a `phone` provider and a `username` provider, and rejects unknown providers and secret sort fields. `PATCH /users/:id` no longer requires `email`, validates a changed email and a changed E.164 phone, clears the phone with `""`, accepts `twoFaMethod` `sms` or `authenticator` while 2FA is on (`''` is ignored, the legacy `phone` means `sms`, anything else is rejected), and checks 2FA/phone consistency only when the patch changes 2FA or the phone.
-* **authentication:** the user admin routes use the typed error catalog. New codes: `USER_PROVIDER_INVALID`, `USER_SORT_INVALID`, `USER_SORT_FORBIDDEN`, `USER_EMAIL_MISSING`, `PHONE_NUMBER_INVALID`, `PHONE_NUMBER_IN_USE_BY_2FA`, `TWO_FA_METHOD_REQUIRES_TWO_FA`, `TWO_FA_AUTHENTICATOR_SECRET_REQUIRED` and `ADMIN_PASSWORD_TOO_SHORT`; existing codes are reused where they fit (`USER_NOT_FOUND`, `ANONYMOUS_USER_NOT_ELIGIBLE`, `PASSWORD_AUTH_NOT_AVAILABLE`, `TWO_FA_METHOD_INVALID`, `AUTH_EMAIL_DELIVERY_FAILED`).
+* **authentication:** add admin user management ([#1679](https://github.com/ConduitPlatform/Conduit/issues/1679)) ([eb6b47f](https://github.com/ConduitPlatform/Conduit/commit/eb6b47f5eb9c26c8c37dad3f3a6df1954e3a64ba))
+* **database:** transactions for modules, with best-effort adoption ([#1682](https://github.com/ConduitPlatform/Conduit/issues/1682)) ([13cff10](https://github.com/ConduitPlatform/Conduit/commit/13cff10f22fd9111377ede8c327ed035232bb6f6))
+* typed errors with conduitCodes across all modules and transports ([#1681](https://github.com/ConduitPlatform/Conduit/issues/1681)) ([eadb072](https://github.com/ConduitPlatform/Conduit/commit/eadb0723265ec8a0ee228ee187b3c4a36debfb9b))
+
 
 ### Bug Fixes
 
-* **authentication:** `isAnonymous=false` now matches users whose `isAnonymous` is false, null or missing, on both MongoDB and SQL. Previously it matched only an explicit `false`, so hiding anonymous users returned almost nobody.
-* **authentication:** searching users by id keeps the other list filters. `GET /users?search=<id>&isActive=false` no longer returns that user when they are active.
-* **authentication:** `POST /users/toggle` with `block: true` now sets `active` to false and signs out every listed user (the block event lists only the users whose status changed). `block: false` sets `active` to true and leaves sessions in place. The previous handler wrote `active: block`, so a bulk block reactivated users and revoked their sessions.
-* **authentication:** `provider=phone` matches users whose `hashedPassword` is null as well as missing, the exact complement of `provider=local`.
-* **authentication:** `DELETE /users` now deletes each user's authorization relations (resource and subject), matching single-user delete, and publishes the deleted users. The user rows and realm memberships are deleted in one transaction, sessions are revoked next, and relation cleanup is best effort: a missing or failing authorization module is logged and the delete still completes (`DELETE /users/:id` no longer returns `AUTHORIZATION_UNAVAILABLE`).
+* **authorization:** page findRelation in a stable order ([#1683](https://github.com/ConduitPlatform/Conduit/issues/1683)) ([3296431](https://github.com/ConduitPlatform/Conduit/commit/3296431c9f59045500665e7033150b9e4ad441f2))
+* **authorization:** propagate inherited entities to existing children ([#1684](https://github.com/ConduitPlatform/Conduit/issues/1684)) ([4b24ec8](https://github.com/ConduitPlatform/Conduit/commit/4b24ec8a3578c79903e55eb2064667c78bed9774))
 
 ## [0.17.0-alpha.10](https://github.com/ConduitPlatform/Conduit/compare/v0.17.0-alpha.9...v0.17.0-alpha.10) (2026-11-10)
 
