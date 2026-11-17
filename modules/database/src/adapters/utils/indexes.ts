@@ -748,6 +748,16 @@ export function sqlIndexUnsupportedReason(
   options?: { timestamps?: boolean },
 ): string | undefined {
   const present = new Set(Object.keys(fields));
+  // The SQL converters drop `_id` from the fields before indexes are converted, but
+  // sequelize always creates it as the UUID primary key column, unless the schema
+  // declares its own primary key (then `_id` is only a virtual getter).
+  const customPrimaryKey = Object.values(fields).some(
+    field =>
+      typeof field === 'object' &&
+      field !== null &&
+      (field as { primaryKey?: unknown }).primaryKey === true,
+  );
+  if (!customPrimaryKey) present.add('_id');
   if (options?.timestamps) {
     present.add('createdAt');
     present.add('updatedAt');
