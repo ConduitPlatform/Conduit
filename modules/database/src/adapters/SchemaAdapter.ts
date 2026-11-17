@@ -306,7 +306,8 @@ export abstract class SchemaAdapter<T> {
 
   /**
    * With `ignoreDuplicates`, documents that would violate a unique index are skipped
-   * instead of failing the whole call; the rest are still inserted.
+   * instead of failing the whole call; the rest are still inserted. On MySQL/MariaDB
+   * (`INSERT IGNORE`) other row errors are skipped silently too.
    */
   abstract createMany(
     query: MultiDocQuery,

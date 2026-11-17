@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { ObjectIndex, ResourceDefinition } from '../models/index.js';
-import { constructObjectIndex } from '../utils/index.js';
+import { constructObjectIndex, withObjectIndexKey } from '../utils/index.js';
 import { FakeObjectIndexStore } from '../testing/fakeObjectIndexStore.js';
+import { insertObjectIndexRows } from '../utils/objectIndexWrites.js';
 import {
   processPossibleConnections,
   ProcessPossibleConnectionsWorkerData,
@@ -373,4 +374,42 @@ describe('processPossibleConnections', () => {
       .map(row => ({ entity: row.entity, entityId: row.entityId }));
     assert.deepStrictEqual(fromPublic, [{ entity: '*', entityId: '*' }]);
   });
+  it('stores rows once against a database module without ignoreDuplicates', async () => {
+    store.ignoreDuplicatesSupported = false;
+    // Both jobs find the rows missing, so the second insert hits the unique index.
+    let arrived = 0;
+    let releaseAll!: () => void;
+    const bothRead = new Promise<void>(resolve => (releaseAll = resolve));
+    store.afterFind = async query => {
+      if (!('key' in query) || arrived >= 2) return;
+      arrived++;
+      if (arrived === 2) releaseAll();
+      await bothRead;
+    };
+
+    await Promise.all([scheduleOwnsSession(), scheduleOwnsSession()]);
+
+    const keys = store.rows.map(row => row.key);
+    assert.equal(new Set(keys).size, keys.length);
+    assert.deepStrictEqual(markersOn(`${SESSION}#read`, `${SCHEDULE}#owner`), ['read']);
+  });
+
+  it('still fails an insert for a reason other than a duplicate', async () => {
+    store.ignoreDuplicatesSupported = false;
+    const row = withObjectIndexKey(
+      constructObjectIndex(SESSION, 'read', 'owner', TEAM, [`${TEAM}#owner@${SESSION}`]),
+    );
+    mock.method(store, 'createMany', async () => {
+      throw new Error('connection reset');
+    });
+
+    await assert.rejects(insertObjectIndexRows([row]), /connection reset/);
+  });
+
+  const markersOn = (subject: string, entity: string) =>
+    store
+      .entitiesOf(subject)
+      .filter(row => row.entity === entity)
+      .map(row => row.entityPermission)
+      .sort();
 });

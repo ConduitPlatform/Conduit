@@ -10,6 +10,7 @@ import path from 'path';
 import AppConfigSchema, { Config } from './config/index.js';
 import * as models from './models/index.js';
 import { runMigrations } from './migrations/index.js';
+import { backfillObjectIndexKeys } from './migrations/objectIndexKey.migration.js';
 import metricsSchema from './metrics/index.js';
 import {
   AllowedResourcesRequest,
@@ -74,6 +75,7 @@ export default class Authorization extends ManagedModule<Config> {
   private resourceController: ResourceController;
   private database: DatabaseProvider;
   private queueController: QueueController;
+  private objectIndexKeyBackfill?: Promise<unknown>;
 
   constructor() {
     super('authorization');
@@ -102,7 +104,26 @@ export default class Authorization extends ManagedModule<Config> {
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       this.clientRouter = new AuthorizationRouter(this.grpcServer, this.grpcSdk);
       this.updateHealth(HealthCheckStatus.SERVING);
+      this.startObjectIndexKeyBackfill();
     }
+  }
+
+  /**
+   * Once per process, after the module is serving: on a large ObjectIndex the
+   * backfill takes a while, and nothing needs it to finish first. `onConfig` runs
+   * again on every config change, which must not start another scan.
+   */
+  private startObjectIndexKeyBackfill() {
+    if (this.objectIndexKeyBackfill) return;
+    this.objectIndexKeyBackfill = backfillObjectIndexKeys()
+      .then(() => ConduitGrpcSdk.Logger.info('ObjectIndex key backfill finished'))
+      .catch(e =>
+        ConduitGrpcSdk.Logger.error(
+          `ObjectIndex key backfill failed, retrying on next start: ${
+            (e as Error).message
+          }`,
+        ),
+      );
   }
 
   async defineResource(

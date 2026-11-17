@@ -11,6 +11,7 @@ import {
   objectIndexKey,
   withObjectIndexKey,
 } from '../utils/index.js';
+import { insertObjectIndexRows } from '../utils/objectIndexWrites.js';
 import { QueueController } from './queue.controller.js';
 import { RuleCache } from './cache.controller.js';
 
@@ -131,21 +132,18 @@ export class IndexController {
     const index = await ObjectIndex.getInstance().findOne({ subject, entity });
     if (!index) {
       // A concurrent grant may insert the same row first; the unique key skips it.
-      await ObjectIndex.getInstance().createMany(
-        [
-          withObjectIndexKey({
-            subject,
-            subjectType: subject.split(':')[0],
-            subjectId: subject.split(':')[1].split('#')[0],
-            subjectPermission: subject.split('#')[1],
-            entity,
-            entityId: entity === '*' ? '*' : entity.split(':')[1].split('#')[0],
-            entityType: entity === '*' ? '*' : entity.split(':')[0],
-            relation: entity === '*' ? '*' : entity.split('#')[1],
-          }),
-        ],
-        { ignoreDuplicates: true },
-      );
+      await insertObjectIndexRows([
+        withObjectIndexKey({
+          subject,
+          subjectType: subject.split(':')[0],
+          subjectId: subject.split(':')[1].split('#')[0],
+          subjectPermission: subject.split('#')[1],
+          entity,
+          entityId: entity === '*' ? '*' : entity.split(':')[1].split('#')[0],
+          entityType: entity === '*' ? '*' : entity.split(':')[0],
+          relation: entity === '*' ? '*' : entity.split('#')[1],
+        }),
+      ]);
     }
   }
 
@@ -203,9 +201,7 @@ export class IndexController {
       i => !indexes.find(j => j.subject === i.subject && j.entity === i.entity),
     );
     if (toCreate.length) {
-      await ObjectIndex.getInstance().createMany(toCreate.map(withObjectIndexKey), {
-        ignoreDuplicates: true,
-      });
+      await insertObjectIndexRows(toCreate.map(withObjectIndexKey));
     }
     const achievedPermissions = [...new Set(obj.map(i => i.subjectPermission!))];
     await QueueController.getInstance().addPossibleConnectionJob(

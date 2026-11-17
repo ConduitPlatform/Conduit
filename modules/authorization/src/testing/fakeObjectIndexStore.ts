@@ -14,10 +14,13 @@ export class FakeObjectIndexStore {
   private nextId = 1;
   /** Runs after every findMany has read; lets a test pause a job holding a stale result. */
   afterFind: (query: Query) => Promise<void> = async () => {};
+  /** false acts like an older database module, which ignores `ignoreDuplicates`. */
+  ignoreDuplicatesSupported = true;
 
   reset() {
     this.rows = [];
     this.afterFind = async () => {};
+    this.ignoreDuplicatesSupported = true;
   }
 
   /** Rows as the current writers store them: schema defaults plus `key`. */
@@ -67,16 +70,20 @@ export class FakeObjectIndexStore {
     rows: Partial<ObjectIndex>[],
     options?: { ignoreDuplicates?: boolean },
   ) => {
+    const ignore = options?.ignoreDuplicates && this.ignoreDuplicatesSupported;
     const inserted: Partial<ObjectIndex>[] = [];
+    const batchKeys = new Set<string>();
+    // Checked before inserting anything: a failed call stores nothing, like SQL.
     for (const row of rows.map(withDefaults)) {
       if (!row.key) throw new Error('ObjectIndex row written without a key');
-      if (this.keyTaken(row.key)) {
-        if (options?.ignoreDuplicates) continue;
+      if (this.keyTaken(row.key) || batchKeys.has(row.key)) {
+        if (ignore) continue;
         throw new Error('E11000 duplicate key error');
       }
-      this.insert([row]);
+      batchKeys.add(row.key);
       inserted.push(row);
     }
+    this.insert(inserted);
     return inserted;
   };
 

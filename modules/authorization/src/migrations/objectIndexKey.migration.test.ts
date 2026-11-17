@@ -84,6 +84,26 @@ describe('backfillObjectIndexKeys', () => {
     assertAllKeyedAndUnique();
   });
 
+  it('reads each legacy row once while paging', async () => {
+    store.seedLegacy(
+      Array.from({ length: 1201 }, (_, i) =>
+        constructObjectIndex(`Doc:${i}`, 'read', 'owner', `Doc:${i}`, []),
+      ),
+    );
+    const findMany = store.findMany;
+    let scanned = 0;
+    mock.method(store, 'findMany', async (...args: Parameters<typeof findMany>) => {
+      const rows = await findMany(...args);
+      if ('$exists' in ((args[0].key as object) ?? {})) scanned += rows.length;
+      return rows;
+    });
+
+    await backfillObjectIndexKeys();
+
+    assert.equal(scanned, 1201);
+    assertAllKeyedAndUnique();
+  });
+
   it('pages through more rows than one batch', async () => {
     store.seedLegacy(
       Array.from({ length: 1201 }, (_, i) =>

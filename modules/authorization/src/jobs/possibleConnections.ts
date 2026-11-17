@@ -5,6 +5,7 @@ import {
   objectIndexRowKey,
   withObjectIndexKey,
 } from '../utils/index.js';
+import { insertObjectIndexRows } from '../utils/objectIndexWrites.js';
 import { omit } from 'lodash-es';
 
 export type ProcessPossibleConnectionsWorkerData = {
@@ -292,7 +293,7 @@ async function createMissingBatch(rows: Partial<ObjectIndex>[]) {
   );
   const toCreate = keyed.filter(row => !stored.has(row.key));
   if (!toCreate.length) return;
-  await ObjectIndex.getInstance().createMany(toCreate, { ignoreDuplicates: true });
+  await insertObjectIndexRows(toCreate);
   const unmarkedCopies = toCreate
     .filter(row => row.entityPermission)
     .map(row => objectIndexRowKey({ ...row, entityPermission: '' }));

@@ -311,7 +311,10 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       extractRelationsModification(this, parsedQuery[i]);
     }
     const docs = await this.model
-      // ON CONFLICT DO NOTHING / INSERT IGNORE; skipped rows may still be returned
+      // Postgres: ON CONFLICT DO NOTHING; SQLite: INSERT OR IGNORE (unique conflicts
+      // only). MySQL/MariaDB: INSERT IGNORE, which also drops rows failing for other
+      // reasons (NOT NULL, truncation, bad values) with only a warning. Skipped rows
+      // may still be returned.
       .bulkCreate(parsedQuery, {
         transaction: t,
         ignoreDuplicates: options?.ignoreDuplicates,
