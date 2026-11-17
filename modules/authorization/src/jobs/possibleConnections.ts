@@ -37,6 +37,22 @@ export async function processPossibleConnections(
       for (const connection of connections) {
         if (connection.subjectPermission !== action) continue;
         for (const permission of relatedPermissions[action]) {
+          if (isHookRow(connection)) {
+            // Its entity is not `resource#relation`; carry the hook down a level.
+            rows.push(
+              hookRow(
+                object,
+                permission,
+                `${connection.entityType}:${connection.entityId}`,
+                connection.entityPermission,
+                [
+                  ...(connection.inheritanceTree ?? []),
+                  `${subject}#${relation}@${object}`,
+                ],
+              ),
+            );
+            continue;
+          }
           rows.push({
             ...constructObjectIndex(
               object,
@@ -61,7 +77,20 @@ export async function processPossibleConnections(
     const subjectPermissions = Object.keys(subjectDefinition.permissions);
     for (const action in relatedPermissions) {
       if (!subjectPermissions.includes(action)) continue;
-      for (const role of subjectDefinition.permissions[action]) {
+      const roles = subjectDefinition.permissions[action];
+      if (roles.length && roles.every(role => role.indexOf('->') !== -1)) {
+        // `subject#action` is only inherited, so it may have no rows yet and nothing
+        // here would carry its id. Leave a hook so a parent that later gives
+        // `subject` entities for `action` finds `object` in its push-down.
+        for (const permission of relatedPermissions[action]) {
+          rowsFromSubjectDefinition.push(
+            hookRow(object, permission, subject, action, [
+              `${subject}#${relation}@${object}`,
+            ]),
+          );
+        }
+      }
+      for (const role of roles) {
         if (role.indexOf('->') !== -1) continue;
         for (const permission of relatedPermissions[action]) {
           rowsFromSubjectDefinition.push({
@@ -178,6 +207,39 @@ function markedKey(row: Partial<ObjectIndex>) {
   return `${rowKey(row)}|${row.entityPermission ?? ''}`;
 }
 
+/**
+ * A row on `object#permission` that grants nothing and only records that the
+ * permission inherits from `resource#action`. Readers match `entity` against
+ * ActorIndex entities, which are always `resource#relation`; a hook's entity has no
+ * `#`, so it never matches. Its `entityId`/`entityPermission` are what the push-down
+ * query looks for, so the parent's entities still reach `object`.
+ */
+function hookRow(
+  object: string,
+  permission: string,
+  resource: string,
+  action: string,
+  inheritanceTree: string[],
+): Partial<ObjectIndex> {
+  return {
+    subject: `${object}#${permission}`,
+    subjectId: object.split(':')[1],
+    subjectType: object.split(':')[0],
+    subjectPermission: permission,
+    inheritanceTree,
+    entity: `${resource}->${action}`,
+    entityId: resource.split(':')[1],
+    entityType: resource.split(':')[0],
+    entityPermission: action,
+    relation: `->${action}`,
+  };
+}
+
+/** Role names never start with `->` (that is how inherited roles are parsed). */
+function isHookRow(row: Partial<ObjectIndex>) {
+  return !!row.relation?.startsWith('->');
+}
+
 function isSameResource(row: Partial<ObjectIndex>, resource: string) {
   const [type, id] = resource.split(':');
   return row.entityType === type && row.entityId === id;
@@ -223,9 +285,11 @@ function groupByIdentity<T extends Partial<ObjectIndex>>(rows: T[]) {
 }
 
 /**
- * Writes the rows that do not exist yet, in batches. A stored row without a marker
- * (written before markers were kept) is upgraded in place to a missing marker instead
- * of inserting a copy, so a re-index backfills existing data.
+ * Writes the rows that do not exist yet, in batches. A missing marker is always
+ * inserted as a new row, never written onto a stored unmarked row (from before
+ * markers were kept): an in-place update can overwrite another job's marker, or hit a
+ * row a concurrent `removeDuplicates` just deleted. Inserts cannot be lost that way;
+ * `removeDuplicates` then drops the unmarked copy, so a re-index still backfills.
  */
 async function createMissingRows(rows: Partial<ObjectIndex>[]) {
   for (let i = 0; i < rows.length; i += PAGE_SIZE) {
@@ -237,41 +301,19 @@ async function createMissingBatch(rows: Partial<ObjectIndex>[]) {
   if (!rows.length) return;
   const existing = groupByIdentity(await findExisting(rows));
   const toCreate: Partial<ObjectIndex>[] = [];
-  const toMark = new Map<string, string[]>();
-  const touched: Partial<ObjectIndex>[] = [];
   for (const [identity, computed] of groupByIdentity(rows)) {
     const found = existing.get(identity) ?? [];
     const storedMarkers = new Set(found.map(i => i.entityPermission ?? ''));
-    const unmarked = found
-      .filter(i => !i.entityPermission)
-      .sort((a, b) => (String(a._id) < String(b._id) ? -1 : 1));
     for (const row of computed) {
       const marker = row.entityPermission ?? '';
-      if (!marker) {
-        if (!found.length) toCreate.push(row);
-        continue;
-      }
-      if (storedMarkers.has(marker)) continue;
-      const spare = unmarked.shift();
-      if (spare) {
-        toMark.set(marker, [...(toMark.get(marker) ?? []), spare._id]);
-      } else {
-        toCreate.push(row);
-      }
-      touched.push(row);
+      // An unmarked row adds nothing once any copy of the identity is stored.
+      if (marker ? storedMarkers.has(marker) : found.length) continue;
+      toCreate.push(row);
     }
   }
-  for (const [entityPermission, ids] of toMark) {
-    await ObjectIndex.getInstance().updateMany(
-      { _id: { $in: ids } },
-      { entityPermission },
-    );
-  }
-  if (toCreate.length) {
-    await ObjectIndex.getInstance().createMany(toCreate);
-  }
-  touched.push(...toCreate.filter(row => !row.entityPermission));
-  if (touched.length) await removeDuplicates(touched);
+  if (!toCreate.length) return;
+  await ObjectIndex.getInstance().createMany(toCreate);
+  await removeDuplicates(toCreate);
 }
 
 /**

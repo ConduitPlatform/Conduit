@@ -87,6 +87,8 @@ const DEFINITIONS: Record<string, { permissions: Record<string, string[]> }> = {
   Session: { permissions: { read: ['owner', 'owner->read'] } },
   Folder: { permissions: { read: ['owner', 'owner->read'] } },
   File: { permissions: { read: ['owner', 'owner->read'] } },
+  // read is only inherited: no direct role, so a fresh group has no read rows
+  Group: { permissions: { read: ['owner->read'] } },
 };
 
 const ORG = 'Org:o';
@@ -253,7 +255,7 @@ describe('processPossibleConnections', () => {
     ]);
   });
 
-  it('upgrades a pre-existing unmarked session row so later parents reach it', async () => {
+  it('backfills the marker on a pre-existing unmarked session row so later parents reach it', async () => {
     // As written before the marker was kept.
     store.seed([
       {
@@ -337,5 +339,96 @@ describe('processPossibleConnections', () => {
     assert.deepStrictEqual(orgOnSchedule, [
       { marker: 'edit', tree: [`${ORG}#owner@${TEAM}`, `${TEAM}#owner@${SCHEDULE}`] },
     ]);
+  });
+  /** Seeds an unmarked `Schedule#read ← Team#owner` row, as written before markers. */
+  const seedUnmarkedScheduleRow = () =>
+    store.seed([
+      constructObjectIndex(SCHEDULE, 'read', 'owner', TEAM, [
+        `${TEAM}#owner@${SCHEDULE}`,
+      ]),
+    ]);
+  const markersOfTeamOwnerOnSchedule = () =>
+    store
+      .entitiesOf(`${SCHEDULE}#read`)
+      .filter(row => row.entity === `${TEAM}#owner`)
+      .map(row => row.entityPermission)
+      .sort();
+  const readJob = () => process(ownerJob(TEAM, SCHEDULE, { read: ['read'] }));
+  const editJob = () => process(ownerJob(TEAM, SCHEDULE, { edit: ['read'] }, ['read']));
+
+  it('keeps both markers when two jobs mark the same unmarked row at once', async () => {
+    seedUnmarkedScheduleRow();
+    // Both jobs read the unmarked row before either writes.
+    let arrived = 0;
+    let releaseAll!: () => void;
+    const bothRead = new Promise<void>(resolve => (releaseAll = resolve));
+    store.afterFind = async query => {
+      if (!('$and' in query) || arrived >= 2) return;
+      arrived++;
+      if (arrived === 2) releaseAll();
+      await bothRead;
+    };
+
+    await Promise.all([readJob(), editJob()]);
+
+    assert.deepStrictEqual(markersOfTeamOwnerOnSchedule(), ['edit', 'read']);
+  });
+
+  it('keeps a marker when another job deduplicates the row it read', async () => {
+    seedUnmarkedScheduleRow();
+    // The edit job reads the unmarked row, then the read job runs to completion
+    // (including its duplicate cleanup) before the edit job writes.
+    let release!: () => void;
+    const paused = new Promise<void>(resolve => (release = resolve));
+    let reachedRead!: () => void;
+    const atRead = new Promise<void>(resolve => (reachedRead = resolve));
+    let gated = false;
+    store.afterFind = async query => {
+      if (!gated && '$and' in query) {
+        gated = true;
+        reachedRead();
+        await paused;
+      }
+    };
+
+    const edit = editJob();
+    await atRead;
+    await readJob();
+    release();
+    await edit;
+
+    assert.deepStrictEqual(markersOfTeamOwnerOnSchedule(), ['edit', 'read']);
+  });
+
+  it('reaches a child linked through a purely inherited permission before its parent', async () => {
+    const GROUP = 'Group:g';
+    const FILE = 'File:f';
+    const SUBFILE = 'File:sub';
+    store.seed([
+      constructObjectIndex(FILE, 'read', 'owner', FILE, []),
+      constructObjectIndex(SUBFILE, 'read', 'owner', SUBFILE, []),
+    ]);
+
+    // The group has no read rows yet when the file is linked to it.
+    await process(ownerJob(FILE, SUBFILE));
+    await process(ownerJob(GROUP, FILE));
+    // The group gains its read entities last.
+    await process(ownerJob(ORG, GROUP));
+
+    const orgOn = (resource: string) =>
+      store
+        .entitiesOf(`${resource}#read`)
+        .filter(row => row.entity === `${ORG}#owner`)
+        .map(row => row.inheritanceTree);
+    assert.deepStrictEqual(orgOn(FILE), [
+      [`${ORG}#owner@${GROUP}`, `${GROUP}#owner@${FILE}`],
+    ]);
+    assert.deepStrictEqual(orgOn(SUBFILE), [
+      [`${ORG}#owner@${GROUP}`, `${GROUP}#owner@${FILE}`, `${FILE}#owner@${SUBFILE}`],
+    ]);
+    // Hook rows must never match an ActorIndex entity (always `resource#relation`).
+    for (const row of store.rows.filter(r => r.relation?.startsWith('->'))) {
+      assert.ok(!row.entity!.includes('#'), row.entity);
+    }
   });
 });
