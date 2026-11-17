@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist-test",
+    "rootDir": "./src",
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": [
+    "src/jobs/possibleConnections.test.ts",
+    "src/migrations/objectIndexKey.migration.test.ts"
+  ],
+  "exclude": []
+}

@@ -78,6 +78,11 @@ const schema: ConduitModel = {
       type: MongoIndexType.Ascending,
     },
   },
+  // objectIndexRowKey(row); unique. No default: rows written before it existed stay
+  // unset (excluded from the unique index) until the startup migration fills them.
+  key: {
+    type: TYPE.String,
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -91,7 +96,9 @@ const schemaOptions: ConduitSchemaOptions = {
       fields: ['entity', 'subjectType', 'subjectPermission'],
     },
     {
-      fields: ['entityType', 'entityId', 'entityPermission'],
+      // `_id` last: the connection job pages children by `_id` within one
+      // (entityType, entityId, entityPermission), so the scan is index-ordered.
+      fields: ['entityType', 'entityId', 'entityPermission', '_id'],
     },
   ],
   conduit: {
@@ -104,6 +111,23 @@ const schemaOptions: ConduitSchemaOptions = {
   },
 };
 const collectionName = undefined;
+
+/**
+ * Adds the unique index on `key`. The options differ per database: Mongo indexes a
+ * missing field as null, so it needs `sparse` to skip rows not yet backfilled; SQL
+ * unique indexes already treat NULLs as distinct (and reject Mongo-only options).
+ * Call before registering the schema.
+ */
+export function addObjectIndexKeyIndex(databaseType: string) {
+  schemaOptions.indexes = (schemaOptions.indexes ?? []).filter(
+    index => !(index.fields.length === 1 && index.fields[0] === 'key'),
+  );
+  schemaOptions.indexes.push({
+    fields: ['key'],
+    options:
+      databaseType === 'MongoDB' ? { unique: true, sparse: true } : { unique: true },
+  });
+}
 
 export class ObjectIndex extends ConduitActiveSchema<ObjectIndex> {
   private static _instance: ObjectIndex;
@@ -118,6 +142,7 @@ export class ObjectIndex extends ConduitActiveSchema<ObjectIndex> {
   entityPermission: string;
   inheritanceTree: string[];
   relation: string;
+  key: string;
   createdAt: Date;
   updatedAt: Date;
 

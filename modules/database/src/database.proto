@@ -67,6 +67,8 @@ message QueryRequest {
   string query = 2;
   optional string userId = 3;
   optional string scope = 4;
+  // createMany only: skip documents that violate a unique index instead of failing
+  optional bool ignoreDuplicates = 5;
 }
 
 message RawQueryRequest {

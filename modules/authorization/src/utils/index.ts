@@ -1,4 +1,5 @@
 //can be used both for relation checks and permission checks
+import { createHash } from 'node:crypto';
 import { ObjectIndex } from '../models/index.js';
 
 export const checkRelation = (subject: string, relation: string, object: string) => {
@@ -50,6 +51,35 @@ export const computePermissionTuple = (
 ) => {
   return `${subject}#${relation}@${object}`;
 };
+
+/**
+ * An ObjectIndex row's identity: the same grant reached along the same path. Shared
+ * by every reader and writer that deduplicates rows, so they cannot drift apart.
+ */
+export const objectIndexKey = (row: Partial<ObjectIndex>) =>
+  `${row.subject}|${row.entity}|${(row.inheritanceTree ?? []).join(',')}`;
+
+/**
+ * The stored, unique `key` of an ObjectIndex row: its identity plus the
+ * `entityPermission` marker. A unique index on it makes inserts idempotent, so
+ * concurrent writers cannot store the same row twice.
+ */
+export const objectIndexRowKey = (row: Partial<ObjectIndex>) =>
+  createHash('sha256')
+    .update(
+      JSON.stringify([
+        row.subject,
+        row.entity,
+        row.inheritanceTree ?? [],
+        row.entityPermission ?? '',
+      ]),
+    )
+    .digest('hex');
+
+export const withObjectIndexKey = <T extends Partial<ObjectIndex>>(row: T) => ({
+  ...row,
+  key: objectIndexRowKey(row),
+});
 
 export const constructObjectIndex = (
   subject: string,

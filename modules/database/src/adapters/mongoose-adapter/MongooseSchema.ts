@@ -82,13 +82,39 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     options?: {
       scope?: string;
       userId?: string;
+      ignoreDuplicates?: boolean;
     },
   ) {
     await this.createPermissionCheck(options?.userId, options?.scope);
     const docs = this.parseStringToQuery(query);
-    const addedDocs = await this.model.insertMany(docs);
+    const addedDocs = options?.ignoreDuplicates
+      ? await this.insertManyIgnoringDuplicates(docs)
+      : await this.model.insertMany(docs);
     await this.addPermissionToData(addedDocs, options);
     return addedDocs;
+  }
+
+  /**
+   * Unordered insert, so one duplicate does not stop the rest. Duplicate-key errors
+   * (E11000) are dropped; any other write error still fails the call.
+   */
+  private async insertManyIgnoringDuplicates(docs: unknown) {
+    try {
+      return await this.model.insertMany(docs as Indexable[], { ordered: false });
+    } catch (e) {
+      type WriteError = { code?: number; err?: { code?: number } };
+      const err = e as WriteError & {
+        writeErrors?: WriteError[];
+        insertedDocs?: Indexable[];
+      };
+      const writeErrors: WriteError[] =
+        err.writeErrors ?? (err.code !== undefined ? [err] : []);
+      const onlyDuplicates =
+        writeErrors.length > 0 &&
+        writeErrors.every(w => (w.code ?? w.err?.code) === 11000);
+      if (!onlyDuplicates) throw e;
+      return err.insertedDocs ?? [];
+    }
   }
 
   async findByIdAndUpdate(

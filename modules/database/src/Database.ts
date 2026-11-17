@@ -435,6 +435,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const docs = await schemaAdapter.model.createMany(call.request.query, {
         userId: call.request.userId,
         scope: call.request.scope,
+        ignoreDuplicates: call.request.ignoreDuplicates,
       });
       const docsString = JSON.stringify(docs);
 

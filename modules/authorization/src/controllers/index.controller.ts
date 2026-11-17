@@ -5,7 +5,13 @@ import {
   Relationship,
   ResourceDefinition,
 } from '../models/index.js';
-import { constructObjectIndex, escapeRegex } from '../utils/index.js';
+import {
+  constructObjectIndex,
+  escapeRegex,
+  objectIndexKey,
+  withObjectIndexKey,
+} from '../utils/index.js';
+import { insertObjectIndexRows } from '../utils/objectIndexWrites.js';
 import { QueueController } from './queue.controller.js';
 import { RuleCache } from './cache.controller.js';
 
@@ -65,9 +71,7 @@ export class IndexController {
         entity: { $in: chunk },
       });
       for (const result of chunkResults) {
-        const key = `${result.subject}|${result.entity}|${(
-          result.inheritanceTree ?? []
-        ).join(',')}`;
+        const key = objectIndexKey(result);
         if (seen.has(key)) continue;
         seen.add(key);
         merged.push(result);
@@ -127,16 +131,19 @@ export class IndexController {
   async createOrUpdateObject(subject: string, entity: string) {
     const index = await ObjectIndex.getInstance().findOne({ subject, entity });
     if (!index) {
-      await ObjectIndex.getInstance().create({
-        subject,
-        subjectType: subject.split(':')[0],
-        subjectId: subject.split(':')[1].split('#')[0],
-        subjectPermission: subject.split('#')[1],
-        entity,
-        entityId: entity === '*' ? '*' : entity.split(':')[1].split('#')[0],
-        entityType: entity === '*' ? '*' : entity.split(':')[0],
-        relation: entity === '*' ? '*' : entity.split('#')[1],
-      });
+      // A concurrent grant may insert the same row first; the unique key skips it.
+      await insertObjectIndexRows([
+        withObjectIndexKey({
+          subject,
+          subjectType: subject.split(':')[0],
+          subjectId: subject.split(':')[1].split('#')[0],
+          subjectPermission: subject.split('#')[1],
+          entity,
+          entityId: entity === '*' ? '*' : entity.split(':')[1].split('#')[0],
+          entityType: entity === '*' ? '*' : entity.split(':')[0],
+          relation: entity === '*' ? '*' : entity.split('#')[1],
+        }),
+      ]);
     }
   }
 
@@ -193,7 +200,9 @@ export class IndexController {
     const toCreate = obj.filter(
       i => !indexes.find(j => j.subject === i.subject && j.entity === i.entity),
     );
-    await ObjectIndex.getInstance().createMany(toCreate);
+    if (toCreate.length) {
+      await insertObjectIndexRows(toCreate.map(withObjectIndexKey));
+    }
     const achievedPermissions = [...new Set(obj.map(i => i.subjectPermission!))];
     await QueueController.getInstance().addPossibleConnectionJob(
       object,

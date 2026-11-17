@@ -2,6 +2,7 @@ import {
   ConduitModel,
   ConduitSchema,
   ConduitSchemaOptions,
+  CreateManyOptions,
   DatabaseProvider,
   Query,
 } from '@conduitplatform/grpc-sdk';
@@ -57,8 +58,19 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     return this.dbInstance.create<T>(this.name, query, userId, scope);
   }
 
-  createMany(query: Query<T>[], userId?: string, scope?: string): Promise<T[]> {
-    return this.dbInstance.createMany<T>(this.name, query, userId, scope);
+  createMany(query: Query<T>[], userId?: string, scope?: string): Promise<T[]>;
+  createMany(query: Query<T>[], options?: CreateManyOptions): Promise<T[]>;
+  createMany(
+    query: Query<T>[],
+    userIdOrOptions?: string | CreateManyOptions,
+    scope?: string,
+  ): Promise<T[]> {
+    if (typeof userIdOrOptions === 'object') {
+      return this.dbInstance.createMany<T>(this.name, query, userIdOrOptions) as Promise<
+        T[]
+      >;
+    }
+    return this.dbInstance.createMany<T>(this.name, query, userIdOrOptions, scope);
   }
 
   findByIdAndUpdate(

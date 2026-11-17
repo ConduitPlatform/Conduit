@@ -15,7 +15,8 @@
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "build:docker": "docker build -t ghcr.io/conduitplatform/authorization:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/authorization:latest",
-    "generateTypes": "sh build.sh"
+    "generateTypes": "sh build.sh",
+    "test": "rimraf dist-test && tsc -p tsconfig.test.json && node --test dist-test/jobs/possibleConnections.test.js dist-test/migrations/objectIndexKey.migration.test.js"
   },
   "license": "ISC",
   "directories": {
