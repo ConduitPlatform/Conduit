@@ -101,8 +101,11 @@ const schemaOptions: ConduitSchemaOptions = {
       ],
     },
     {
-      fields: ['entityType', 'entityId', 'entityPermission'],
+      // `_id` last: the connection job pages children by `_id` within one
+      // (entityType, entityId, entityPermission), so the scan is index-ordered.
+      fields: ['entityType', 'entityId', 'entityPermission', '_id'],
       types: [
+        CompatibleIndexType.Ascending,
         CompatibleIndexType.Ascending,
         CompatibleIndexType.Ascending,
         CompatibleIndexType.Ascending,
