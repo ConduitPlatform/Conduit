@@ -69,6 +69,7 @@ class FakeObjectIndexStore {
 function matches(row: Row, query: Query): boolean {
   return Object.entries(query).every(([field, condition]) => {
     if (field === '$and') return (condition as Query[]).every(q => matches(row, q));
+    if (field === '$or') return (condition as Query[]).some(q => matches(row, q));
     const value = (row as Record<string, unknown>)[field];
     if (condition && typeof condition === 'object') {
       const c = condition as { $in?: unknown[]; $ne?: unknown; $gt?: string };
@@ -89,6 +90,8 @@ const DEFINITIONS: Record<string, { permissions: Record<string, string[]> }> = {
   File: { permissions: { read: ['owner', 'owner->read'] } },
   // read is only inherited: no direct role, so a fresh group has no read rows
   Group: { permissions: { read: ['owner->read'] } },
+  // everyone can read
+  Public: { permissions: { read: ['*'] } },
 };
 
 const ORG = 'Org:o';
@@ -283,7 +286,7 @@ describe('processPossibleConnections', () => {
     let releaseAll!: () => void;
     const bothRead = new Promise<void>(resolve => (releaseAll = resolve));
     store.afterFind = async query => {
-      if (!('$and' in query) || arrived >= 2) return;
+      if (!('$or' in query) || arrived >= 2) return;
       arrived++;
       if (arrived === 2) releaseAll();
       await bothRead;
@@ -363,7 +366,7 @@ describe('processPossibleConnections', () => {
     let releaseAll!: () => void;
     const bothRead = new Promise<void>(resolve => (releaseAll = resolve));
     store.afterFind = async query => {
-      if (!('$and' in query) || arrived >= 2) return;
+      if (!('$or' in query) || arrived >= 2) return;
       arrived++;
       if (arrived === 2) releaseAll();
       await bothRead;
@@ -384,7 +387,7 @@ describe('processPossibleConnections', () => {
     const atRead = new Promise<void>(resolve => (reachedRead = resolve));
     let gated = false;
     store.afterFind = async query => {
-      if (!gated && '$and' in query) {
+      if (!gated && '$or' in query) {
         gated = true;
         reachedRead();
         await paused;
@@ -430,5 +433,18 @@ describe('processPossibleConnections', () => {
     for (const row of store.rows.filter(r => r.relation?.startsWith('->'))) {
       assert.ok(!row.entity!.includes('#'), row.entity);
     }
+  });
+  it('passes a wildcard role down as the wildcard entity', async () => {
+    const PUBLIC = 'Public:p';
+    const FILE = 'File:f';
+
+    await process(ownerJob(PUBLIC, FILE));
+
+    // Readers grant everyone on entity '*'; `Public:p#*` would match no one.
+    const fromPublic = store
+      .entitiesOf(`${FILE}#read`)
+      .filter(row => row.inheritanceTree?.length)
+      .map(row => ({ entity: row.entity, entityId: row.entityId }));
+    assert.deepStrictEqual(fromPublic, [{ entity: '*', entityId: '*' }]);
   });
 });

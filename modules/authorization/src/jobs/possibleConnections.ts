@@ -1,5 +1,5 @@
 import { ObjectIndex, ResourceDefinition } from '../models/index.js';
-import { constructObjectIndex } from '../utils/index.js';
+import { constructObjectIndex, objectIndexKey } from '../utils/index.js';
 import { omit } from 'lodash-es';
 
 export type ProcessPossibleConnectionsWorkerData = {
@@ -94,16 +94,10 @@ export async function processPossibleConnections(
         if (role.indexOf('->') !== -1) continue;
         for (const permission of relatedPermissions[action]) {
           rowsFromSubjectDefinition.push({
-            subject: `${object}#${permission}`,
-            subjectId: object.split(':')[1],
-            subjectType: `${object}#${permission}`.split(':')[0],
-            subjectPermission: `${object}#${permission}`.split('#')[1],
-            entity: `${subject}#${role}`,
-            entityId: subject.split(':')[1],
-            entityType: `${subject}#${role}`.split(':')[0],
+            ...constructObjectIndex(object, permission, role, subject, [
+              `${subject}#${relation}@${object}`,
+            ]),
             entityPermission: action,
-            relation: `${subject}#${role}`.split('#')[1],
-            inheritanceTree: [`${subject}#${relation}@${object}`],
           });
         }
       }
@@ -192,11 +186,6 @@ export async function processPossibleConnections(
 
 const PAGE_SIZE = 200;
 
-/** Same key shape as IndexController's chunked lookups: the row's identity. */
-function rowKey(row: Partial<ObjectIndex>) {
-  return `${row.subject}|${row.entity}|${(row.inheritanceTree ?? []).join(',')}`;
-}
-
 /**
  * Identity plus the `entityPermission` marker. One identity can carry several markers:
  * with `owner->read` and `owner->edit` both on `X#read`, `X#read ← Team#owner` is stored
@@ -204,7 +193,7 @@ function rowKey(row: Partial<ObjectIndex>) {
  * on the team is pushed down to X. Readers dedupe by entity, so the extra row is inert.
  */
 function markedKey(row: Partial<ObjectIndex>) {
-  return `${rowKey(row)}|${row.entityPermission ?? ''}`;
+  return `${objectIndexKey(row)}|${row.entityPermission ?? ''}`;
 }
 
 /**
@@ -253,8 +242,8 @@ function isSameResource(row: Partial<ObjectIndex>, resource: string) {
 function uniqueRows(rows: Partial<ObjectIndex>[]) {
   const byIdentity = new Map<string, Map<string, Partial<ObjectIndex>>>();
   for (const row of rows) {
-    const markers = byIdentity.get(rowKey(row)) ?? new Map();
-    byIdentity.set(rowKey(row), markers);
+    const markers = byIdentity.get(objectIndexKey(row)) ?? new Map();
+    byIdentity.set(objectIndexKey(row), markers);
     if (!markers.has(row.entityPermission ?? '')) {
       markers.set(row.entityPermission ?? '', row);
     }
@@ -267,19 +256,33 @@ function uniqueRows(rows: Partial<ObjectIndex>[]) {
   return result;
 }
 
+/**
+ * Stored rows for the batch's (subject, entity) pairs only. Matching every subject
+ * against every entity would also return pairs the batch never asked about, which
+ * on a push-down page is up to children × inherited entities rows.
+ */
 function findExisting(rows: Partial<ObjectIndex>[]) {
+  const entitiesBySubject = new Map<string, Set<string>>();
+  for (const row of rows) {
+    let entities = entitiesBySubject.get(row.subject!);
+    if (!entities) entitiesBySubject.set(row.subject!, (entities = new Set()));
+    entities.add(row.entity!);
+  }
   return ObjectIndex.getInstance().findMany({
-    $and: [
-      { subject: { $in: [...new Set(rows.map(i => i.subject!))] } },
-      { entity: { $in: [...new Set(rows.map(i => i.entity!))] } },
-    ],
+    $or: [...entitiesBySubject].map(([subject, entities]) => ({
+      subject,
+      entity: { $in: [...entities] },
+    })),
   });
 }
 
 function groupByIdentity<T extends Partial<ObjectIndex>>(rows: T[]) {
   const groups = new Map<string, T[]>();
   for (const row of rows) {
-    groups.set(rowKey(row), [...(groups.get(rowKey(row)) ?? []), row]);
+    const key = objectIndexKey(row);
+    let group = groups.get(key);
+    if (!group) groups.set(key, (group = []));
+    group.push(row);
   }
   return groups;
 }
@@ -323,8 +326,8 @@ async function createMissingBatch(rows: Partial<ObjectIndex>[]) {
  * delete the rest; every racing job converges on the same survivors.
  */
 async function removeDuplicates(rows: Partial<ObjectIndex>[]) {
-  const written = new Set(rows.map(rowKey));
-  const stored = (await findExisting(rows)).filter(i => written.has(rowKey(i)));
+  const written = new Set(rows.map(objectIndexKey));
+  const stored = (await findExisting(rows)).filter(i => written.has(objectIndexKey(i)));
   const extra: string[] = [];
   for (const group of groupByIdentity(stored).values()) {
     const hasMarked = group.some(i => i.entityPermission);

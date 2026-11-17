@@ -5,7 +5,7 @@ import {
   Relationship,
   ResourceDefinition,
 } from '../models/index.js';
-import { constructObjectIndex, escapeRegex } from '../utils/index.js';
+import { constructObjectIndex, escapeRegex, objectIndexKey } from '../utils/index.js';
 import { QueueController } from './queue.controller.js';
 import { RuleCache } from './cache.controller.js';
 
@@ -65,9 +65,7 @@ export class IndexController {
         entity: { $in: chunk },
       });
       for (const result of chunkResults) {
-        const key = `${result.subject}|${result.entity}|${(
-          result.inheritanceTree ?? []
-        ).join(',')}`;
+        const key = objectIndexKey(result);
         if (seen.has(key)) continue;
         seen.add(key);
         merged.push(result);

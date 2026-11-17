@@ -51,6 +51,13 @@ export const computePermissionTuple = (
   return `${subject}#${relation}@${object}`;
 };
 
+/**
+ * An ObjectIndex row's identity: the same grant reached along the same path. Shared
+ * by every reader and writer that deduplicates rows, so they cannot drift apart.
+ */
+export const objectIndexKey = (row: Partial<ObjectIndex>) =>
+  `${row.subject}|${row.entity}|${(row.inheritanceTree ?? []).join(',')}`;
+
 export const constructObjectIndex = (
   subject: string,
   permission: string,
