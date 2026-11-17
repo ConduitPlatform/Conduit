@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.34](https://github.com/ConduitPlatform/Conduit/compare/v0.16.33...v0.16.34) (2026-11-17)
+
+
+### Bug Fixes
+
+* **authorization:** backport connection propagation fixes to v0.16.x ([#1687](https://github.com/ConduitPlatform/Conduit/issues/1687)) ([35b72b8](https://github.com/ConduitPlatform/Conduit/commit/35b72b82e3c56157c2d737510bcf3c190b2afc30)), closes [ConduitPlatform/Conduit#1684](https://github.com/ConduitPlatform/Conduit/issues/1684) [ConduitPlatform/Conduit#1686](https://github.com/ConduitPlatform/Conduit/issues/1686) [#1686](https://github.com/ConduitPlatform/Conduit/issues/1686)
+* **storage:** skip unchanged CDN file URL writes ([#1675](https://github.com/ConduitPlatform/Conduit/issues/1675)) ([b238764](https://github.com/ConduitPlatform/Conduit/commit/b2387640cd4639226ed4f78d045ebb0a0903781e))
+
 ### [0.16.33](https://github.com/ConduitPlatform/Conduit/compare/v0.16.32...v0.16.33) (2026-11-04)
 
 
