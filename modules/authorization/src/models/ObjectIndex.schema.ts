@@ -122,11 +122,17 @@ export function addObjectIndexKeyIndex(databaseType: string) {
   schemaOptions.indexes = (schemaOptions.indexes ?? []).filter(
     index => !(index.fields.length === 1 && index.fields[0] === 'key'),
   );
-  schemaOptions.indexes.push({
-    fields: ['key'],
-    options:
-      databaseType === 'MongoDB' ? { unique: true, sparse: true } : { unique: true },
-  });
+  schemaOptions.indexes.push(
+    databaseType === 'MongoDB'
+      ? {
+          fields: ['key'],
+          // `types` is required here: older database modules crash converting a
+          // single-field Mongo index that has options but no types.
+          types: [MongoIndexType.Ascending],
+          options: { unique: true, sparse: true },
+        }
+      : { fields: ['key'], options: { unique: true } },
+  );
 }
 
 export class ObjectIndex extends ConduitActiveSchema<ObjectIndex> {

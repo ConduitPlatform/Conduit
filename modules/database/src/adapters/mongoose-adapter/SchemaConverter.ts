@@ -119,13 +119,14 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
 }
 
 function convertModelOptionsIndexes(copy: ConduitSchema) {
-  for (const index of copy.modelOptions.indexes!) {
+  // Iterate over a copy: single-field indexes are spliced out below.
+  for (const index of [...copy.modelOptions.indexes!]) {
     // compound indexes are maintained in modelOptions in order to be created after schema creation
     // single field index => add it to specified schema field
     if (index.fields.length !== 1) continue;
     const modelField = copy.fields[index.fields[0]] as ConduitModelField;
     if (!modelField) {
-      throw new Error(`Field ${modelField} in index definition doesn't exist`);
+      throw new Error(`Field ${index.fields[0]} in index definition doesn't exist`);
     }
     if (index.types) {
       if (
@@ -144,8 +145,10 @@ function convertModelOptionsIndexes(copy: ConduitSchema) {
       if (!checkIfMongoOptions(index.options)) {
         throw new Error('Incorrect index options for MongoDB');
       }
+      // An index with options but no types has no field index object yet.
+      modelField.index ??= {};
       for (const [option, optionValue] of Object.entries(index.options)) {
-        modelField.index![option as keyof SchemaFieldIndex] = optionValue;
+        modelField.index[option as keyof SchemaFieldIndex] = optionValue;
       }
     }
     copy.modelOptions.indexes!.splice(copy.modelOptions.indexes!.indexOf(index), 1);

@@ -468,10 +468,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
           compiledSchema,
         );
       }
+    }
+    // Convert before dropping the registered model: if conversion throws, the
+    // previously registered model must stay usable.
+    const newSchema = schemaConverter(compiledSchema);
+    if (this.registeredSchemas.has(compiledSchema.name)) {
       this.mongoose.connection.deleteModel(compiledSchema.name);
     }
-
-    const newSchema = schemaConverter(compiledSchema);
     const indexes = newSchema.modelOptions.indexes;
     delete newSchema.modelOptions.indexes;
     this.registeredSchemas.set(
