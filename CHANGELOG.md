@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.16.35](https://github.com/ConduitPlatform/Conduit/compare/v0.16.34...v0.16.35) (2026-11-18)
+
+
+### Bug Fixes
+
+* **authorization:** keep the ObjectIndex model registered with the key index ([#1689](https://github.com/ConduitPlatform/Conduit/issues/1689)) ([f3afb6a](https://github.com/ConduitPlatform/Conduit/commit/f3afb6a633764fdca5090f99b720b3a2f45688a5))
+
 ### [0.16.34](https://github.com/ConduitPlatform/Conduit/compare/v0.16.33...v0.16.34) (2026-11-17)
 
 
