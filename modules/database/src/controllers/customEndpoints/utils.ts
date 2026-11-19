@@ -78,6 +78,7 @@ export function createCustomEndpointRoute(
     .method(getOperation(endpoint.operation))
     .errors(
       errors.CUSTOM_ENDPOINT_INPUT_MISSING,
+      errors.CUSTOM_ENDPOINT_INPUT_INVALID,
       errors.CUSTOM_ENDPOINT_PAYLOAD_INVALID,
       errors.CUSTOM_ENDPOINT_CONTEXT_MISSING,
       errors.CUSTOM_ENDPOINT_DEFINITION_CORRUPT,

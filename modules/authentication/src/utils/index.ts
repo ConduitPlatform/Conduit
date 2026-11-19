@@ -314,11 +314,22 @@ export namespace AuthUtils {
     return Math.floor(1000 + Math.random() * 9000).toString();
   }
 
+  // true if any key, at any depth, starts with '$' or contains '.'
+  export function hasOperatorKeys(value: unknown): boolean {
+    if (value === null || typeof value !== 'object') return false;
+    if (Array.isArray(value)) return value.some(hasOperatorKeys);
+    return Object.entries(value).some(
+      ([key, nested]) =>
+        key.startsWith('$') || key.includes('.') || hasOperatorKeys(nested),
+    );
+  }
+
   export function checkUserData(userData: Indexable) {
     const userKeys = Object.keys(User.getInstance().fields);
     const userDataKeys = Object.keys(userData);
     const overwrite = userDataKeys.some(key => userKeys.includes(key));
-    if (overwrite) {
+    // reject operator keys in user-supplied data
+    if (overwrite || hasOperatorKeys(userData)) {
       throw new ModuleError(errors.USER_DATA_INVALID);
     }
   }

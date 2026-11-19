@@ -1,5 +1,5 @@
 import { isNil } from 'lodash-es';
-import { Indexable } from '@conduitplatform/grpc-sdk';
+import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 import { CustomEndpointsQuery } from '../../interfaces/index.js';
 import { ModuleError } from '@conduitplatform/module-tools';
 import { errors } from '../../errors.js';
@@ -16,6 +16,50 @@ interface constructQueryParams {
   inputs: Inputs[];
   params: Indexable;
   context: Indexable;
+}
+
+const SCALAR_TYPES: string[] = [
+  TYPE.String,
+  TYPE.Number,
+  TYPE.Boolean,
+  TYPE.Date,
+  TYPE.ObjectId,
+];
+
+// true if any key, at any depth, starts with '$'
+export function hasOperatorKeys(value: unknown): boolean {
+  if (value === null || typeof value !== 'object' || value instanceof Date) return false;
+  if (Array.isArray(value)) return value.some(hasOperatorKeys);
+  return Object.entries(value).some(
+    ([key, nested]) => key.startsWith('$') || hasOperatorKeys(nested),
+  );
+}
+
+function isPlainScalar(value: unknown) {
+  return value === null || typeof value !== 'object' || value instanceof Date;
+}
+
+// reject object values for scalar inputs and operator keys in user-supplied input
+export function validateInputs(inputs: Inputs[], params: Indexable) {
+  for (const input of inputs) {
+    const value = params[input.name];
+    if (isNil(value)) continue;
+    const invalid = (reason: string) =>
+      new ModuleError({
+        ...errors.CUSTOM_ENDPOINT_INPUT_INVALID,
+        message: `Input ${input.name} ${reason}`,
+      });
+    if (SCALAR_TYPES.includes(input.type)) {
+      const valid = input.array
+        ? Array.isArray(value) && value.every(isPlainScalar)
+        : isPlainScalar(value);
+      if (!valid) {
+        throw invalid(`must be of type ${input.type}${input.array ? ' array' : ''}`);
+      }
+    } else if (hasOperatorKeys(value)) {
+      throw invalid('contains invalid keys');
+    }
+  }
 }
 
 export function constructQuery(
