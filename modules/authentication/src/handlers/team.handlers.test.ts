@@ -117,7 +117,7 @@ describe('persistentInvite', () => {
   });
 
   it('creates an invitation for an owner', async () => {
-    const authz = setAuthorization(grpcSdk, []);
+    const authz = setAuthorization(grpcSdk, ['deleteOwners']);
     authz.relations.push({ subject: 'User:owner', resource, relation: 'owner' });
     const token = await handler.persistentInvite(
       request('owner', { teamId: TEAM, role: 'member' }),
@@ -127,12 +127,22 @@ describe('persistentInvite', () => {
   });
 
   it('rejects a role that is not a team relation', async () => {
-    const authz = setAuthorization(grpcSdk, []);
+    const authz = setAuthorization(grpcSdk, ['deleteOwners']);
     authz.relations.push({ subject: 'User:owner', resource, relation: 'owner' });
     await assert.rejects(
       handler.persistentInvite(request('owner', { teamId: TEAM, role: 'superuser' })),
       { conduitCode: 'REQUEST_INVALID' },
     );
+  });
+});
+
+describe('persistentInvite inherited ownership', () => {
+  it('creates an invitation for an owner through a parent team', async () => {
+    setAuthorization(grpcSdk, ['deleteOwners']);
+    const token = await handler.persistentInvite(
+      request('owner', { teamId: TEAM, role: 'member' }),
+    );
+    assert.equal(typeof token, 'string');
   });
 });
 
@@ -151,7 +161,7 @@ describe('deletePersistentInvitation', () => {
   });
 
   it('deletes the invitation for an owner', async () => {
-    const authz = setAuthorization(grpcSdk, []);
+    const authz = setAuthorization(grpcSdk, ['deleteOwners']);
     authz.relations.push({ subject: 'User:owner', resource, relation: 'owner' });
     table('Token').push(invitation('tok'));
     const result = await handler.deletePersistentInvitation(
@@ -172,14 +182,24 @@ describe('userInvite role checks', () => {
     assert.equal(table('Token').length, 0);
   });
 
-  it('lets a direct owner grant the owner role', async () => {
-    const authz = setAuthorization(grpcSdk, ['invite']);
+  it('lets an owner grant the owner role', async () => {
+    const authz = setAuthorization(grpcSdk, ['invite', 'deleteOwners']);
     authz.relations.push({ subject: 'User:owner', resource, relation: 'owner' });
     const token = await handler.userInvite(
       request('owner', { teamId: TEAM, role: 'owner' }),
     );
     assert.equal(typeof token, 'string');
     assert.equal(table('Token')[0].data.role, 'owner');
+  });
+
+  it('lets an owner through a parent team grant the owner role', async () => {
+    // no direct relation on the team; ownership is inherited via the parent team
+    setAuthorization(grpcSdk, ['invite', 'deleteOwners']);
+    const token = await handler.userInvite(
+      request('owner', { teamId: TEAM, role: 'owner' }),
+    );
+    assert.equal(table('Token')[0].data.role, 'owner');
+    assert.equal(typeof token, 'string');
   });
 
   it('lets an invite-permitted non-owner invite with a non-owner role', async () => {
@@ -246,7 +266,7 @@ describe('modifyMembersRoles', () => {
   });
 
   it('lets an owner grant a member the owner role', async () => {
-    const authz = setAuthorization(grpcSdk, ['edit']);
+    const authz = setAuthorization(grpcSdk, ['edit', 'deleteOwners']);
     authz.relations.push({ subject: 'User:owner', resource, relation: 'owner' });
     authz.relations.push({ subject: 'User:target', resource, relation: 'member' });
     await handler.modifyMembersRoles(

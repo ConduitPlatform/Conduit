@@ -53,7 +53,20 @@ function assertTeamRole(role: string | undefined) {
   }
 }
 
-// only a direct owner of the team can grant the owner role
+// owners of the team, directly or through an owning parent team; deleteOwners
+// resolves to exactly that set ('owner', 'owner->deleteOwners')
+async function assertTeamOwner(grpcSdk: ConduitGrpcSdk, subject: string, teamId: string) {
+  const allowed = await requireAuthorization(grpcSdk).can({
+    subject,
+    actions: ['deleteOwners'],
+    resource: 'Team:' + teamId,
+  });
+  if (!allowed.allow) {
+    throw new ModuleError(errors.TEAM_PERMISSION_DENIED);
+  }
+}
+
+// only owners of the team can grant the owner role
 async function assertCanGrantOwnerRole(
   grpcSdk: ConduitGrpcSdk,
   subject: string,
@@ -61,14 +74,7 @@ async function assertCanGrantOwnerRole(
   role: string | undefined,
 ) {
   if (role !== 'owner') return;
-  const isOwner = await requireAuthorization(grpcSdk).findRelation({
-    subject,
-    resource: 'Team:' + teamId,
-    relation: 'owner',
-  });
-  if (isOwner.relations.length === 0) {
-    throw new ModuleError(errors.TEAM_PERMISSION_DENIED);
-  }
+  await assertTeamOwner(grpcSdk, subject, teamId);
 }
 
 export class TeamsHandler implements IAuthenticationStrategy {
@@ -723,14 +729,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!team) {
       throw new ModuleError(errors.TEAM_NOT_FOUND);
     }
-    const isOwner = await requireAuthorization(this.grpcSdk).findRelation({
-      subject: 'User:' + user._id,
-      resource: 'Team:' + teamId,
-      relation: 'owner',
-    });
-    if (isOwner.relations.length === 0) {
-      throw new ModuleError(errors.TEAM_PERMISSION_DENIED);
-    }
+    await assertTeamOwner(this.grpcSdk, 'User:' + user._id, teamId);
     assertTeamRole(role);
     const invitation = await this.createUserInvitation({
       teamId,
@@ -754,14 +753,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!team) {
       throw new ModuleError(errors.TEAM_NOT_FOUND);
     }
-    const isOwner = await requireAuthorization(this.grpcSdk).findRelation({
-      subject: 'User:' + user._id,
-      resource: 'Team:' + teamId,
-      relation: 'owner',
-    });
-    if (isOwner.relations.length === 0) {
-      throw new ModuleError(errors.TEAM_PERMISSION_DENIED);
-    }
+    await assertTeamOwner(this.grpcSdk, 'User:' + user._id, teamId);
     const foundToken = await Token.getInstance().findOne(
       {
         token: invitationToken,
