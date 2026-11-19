@@ -16,7 +16,7 @@ export class QueueController {
   private connectionQueue: Queue;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.redisConnection = this.grpcSdk.redisManager.getClient();
+    this.redisConnection = this.grpcSdk.redisManager.getUnprefixedClient();
     this.authorizationQueue = this.initializeRelationIndexQueue();
     this.connectionQueue = this.initializeConnectionQueue();
   }
@@ -31,13 +31,13 @@ export class QueueController {
 
   initializeRelationIndexQueue() {
     return new Queue('authorization-index-queue', {
-      connection: this.redisConnection,
+      ...this.grpcSdk.redisManager.bullMQOptions(this.redisConnection),
     });
   }
 
   initializeConnectionQueue() {
     return new Queue('authorization-connection-queue', {
-      connection: this.redisConnection,
+      ...this.grpcSdk.redisManager.bullMQOptions(this.redisConnection),
     });
   }
 
@@ -47,7 +47,7 @@ export class QueueController {
       createConstructRelationIndexProcessor(this.grpcSdk),
       {
         concurrency: 5,
-        connection: this.redisConnection,
+        ...this.grpcSdk.redisManager.bullMQOptions(this.redisConnection),
         // autorun: true,
       },
     );
@@ -74,7 +74,7 @@ export class QueueController {
       createProcessPossibleConnectionsProcessor(),
       {
         concurrency: 5,
-        connection: this.redisConnection,
+        ...this.grpcSdk.redisManager.bullMQOptions(this.redisConnection),
         removeOnComplete: {
           age: 3600,
           count: 1000,

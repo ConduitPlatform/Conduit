@@ -75,11 +75,17 @@ type WorkerLike = {
 
 export interface QueueControllerDependencies {
   createConnection?: () => RedisConnection;
-  Queue?: new (name: string, opts: { connection: RedisConnection }) => QueueLike;
+  Queue?: new (
+    name: string,
+    opts: { connection: RedisConnection; prefix: string },
+  ) => QueueLike;
   Worker?: new (
     name: string,
     processor: (job: WorkerJob) => Promise<void>,
-    opts: { connection: RedisConnection; concurrency: number } & Record<string, unknown>,
+    opts: { connection: RedisConnection; prefix: string; concurrency: number } & Record<
+      string,
+      unknown
+    >,
   ) => WorkerLike;
 }
 
@@ -109,7 +115,7 @@ export class QueueController {
     deps: QueueControllerDependencies = {},
   ) {
     this.createConnection =
-      deps.createConnection ?? (() => this.grpcSdk.redisManager.getClient());
+      deps.createConnection ?? (() => this.grpcSdk.redisManager.getUnprefixedClient());
     this.QueueImpl =
       deps.Queue ??
       (Queue as unknown as NonNullable<QueueControllerDependencies['Queue']>);
@@ -118,10 +124,10 @@ export class QueueController {
       (Worker as unknown as NonNullable<QueueControllerDependencies['Worker']>);
     this.queueConnection = this.createConnection();
     this.embeddingQueue = new this.QueueImpl('embeddings-generation-queue', {
-      connection: this.queueConnection,
+      ...this.grpcSdk.redisManager.bullMQOptions(this.queueConnection),
     });
     this.backfillQueue = new this.QueueImpl('embeddings-backfill-queue', {
-      connection: this.queueConnection,
+      ...this.grpcSdk.redisManager.bullMQOptions(this.queueConnection),
     });
   }
 
@@ -178,7 +184,7 @@ export class QueueController {
       },
       {
         concurrency,
-        connection: this.workerConnection,
+        ...this.grpcSdk.redisManager.bullMQOptions(this.workerConnection),
         removeOnComplete: { age: 3600, count: 1000 },
         removeOnFail: { age: 24 * 3600 },
       },
@@ -213,7 +219,7 @@ export class QueueController {
       },
       {
         concurrency,
-        connection: this.backfillWorkerConnection,
+        ...this.grpcSdk.redisManager.bullMQOptions(this.backfillWorkerConnection),
         removeOnComplete: { age: 3600, count: 1000 },
         removeOnFail: { age: 24 * 3600 },
       },

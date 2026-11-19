@@ -8,6 +8,8 @@
     "types": ["node"]
   },
   "include": [
+    "src/utilities/RedisManager.ts",
+    "src/utilities/RedisManager.test.ts",
     "src/utilities/EventBus.ts",
     "src/utilities/EventBus.test.ts",
     "src/utilities/StateManager.ts",
