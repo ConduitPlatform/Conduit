@@ -182,8 +182,13 @@ export class RestController extends ConduitRouter {
       } catch (err) {
         return self.handleError(res)(err as Error);
       }
+      // undeclared bodies do not contribute params on GET/DELETE
+      const ignoreBody =
+        !route.input.bodyParams &&
+        (route.input.action === ConduitRouteActions.GET ||
+          route.input.action === ConduitRouteActions.DELETE);
       context.params = {
-        ...context.bodyParams,
+        ...(ignoreBody ? {} : context.bodyParams),
         ...context.queryParams,
         ...context.urlParams,
       };

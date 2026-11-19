@@ -23,6 +23,7 @@ import { OAuth2 } from '../OAuth2.js';
 import { FacebookUser } from './facebook.user.js';
 import { OAUTH_CLIENT_ROUTE_ERRORS, OAUTH_MODE_PARAM } from '../utils/index.js';
 import { realmParam } from '../../realmRequest.js';
+import { assertFacebookTokenAudience } from '../utils/providerTokenAudience.js';
 
 // todo migrate to use native method properly
 export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
@@ -57,6 +58,14 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
   async connectWithProvider(details: ConnectionParams): Promise<Payload<FacebookUser>> {
     if (!this.initialized) throw new ModuleError(errors.STRATEGY_DISABLED);
 
+    if (details.native) {
+      // ensure the token was issued for this app
+      await assertFacebookTokenAudience(
+        details.accessToken,
+        details.providerClientId ?? '',
+        details.providerClientSecret ?? '',
+      );
+    }
     const facebookOptions: AxiosRequestConfig = {
       params: {
         access_token: details.accessToken,

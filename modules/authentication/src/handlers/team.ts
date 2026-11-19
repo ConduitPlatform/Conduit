@@ -44,6 +44,33 @@ import { OAUTH_CALLBACK, TokenType } from '../constants/index.js';
 import { v4 as uuid } from 'uuid';
 import { isEmpty } from 'lodash-es';
 
+// relations defined on the Team resource; the only values accepted as a team role
+const TEAM_ROLES: string[] = TeamAuthz.relations.map(relation => relation.name);
+
+function assertTeamRole(role: string | undefined) {
+  if (role && !TEAM_ROLES.includes(role)) {
+    throw new ModuleError(errors.REQUEST_INVALID, `unknown team role: ${role}`);
+  }
+}
+
+// only a direct owner of the team can grant the owner role
+async function assertCanGrantOwnerRole(
+  grpcSdk: ConduitGrpcSdk,
+  subject: string,
+  teamId: string,
+  role: string | undefined,
+) {
+  if (role !== 'owner') return;
+  const isOwner = await requireAuthorization(grpcSdk).findRelation({
+    subject,
+    resource: 'Team:' + teamId,
+    relation: 'owner',
+  });
+  if (isOwner.relations.length === 0) {
+    throw new ModuleError(errors.TEAM_PERMISSION_DENIED);
+  }
+}
+
 export class TeamsHandler implements IAuthenticationStrategy {
   private static _instance?: TeamsHandler;
   private initialized = false;
@@ -178,6 +205,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!allowed.allow || !config.teams.allowAddWithoutInvite) {
       throw new ModuleError(errors.TEAM_ADD_WITHOUT_INVITE_DENIED);
     }
+    assertTeamRole(role);
+    await assertCanGrantOwnerRole(this.grpcSdk, 'User:' + user._id, teamId, role);
     const userToAdd = await User.getInstance().findOne({ _id: userId });
     if (!userToAdd) {
       throw new ModuleError(errors.USER_NOT_FOUND);
@@ -562,6 +591,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!can.allow) {
       throw new ModuleError(errors.TEAM_PERMISSION_DENIED);
     }
+    assertTeamRole(role);
+    await assertCanGrantOwnerRole(this.grpcSdk, 'User:' + user._id, teamId, role);
     if (email) {
       assertEmailAllowed(email);
       // a realm that refuses guests cannot invite existing users of other realms
@@ -697,9 +728,10 @@ export class TeamsHandler implements IAuthenticationStrategy {
       resource: 'Team:' + teamId,
       relation: 'owner',
     });
-    if (!isOwner) {
+    if (isOwner.relations.length === 0) {
       throw new ModuleError(errors.TEAM_PERMISSION_DENIED);
     }
+    assertTeamRole(role);
     const invitation = await this.createUserInvitation({
       teamId,
       role,
@@ -727,7 +759,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       resource: 'Team:' + teamId,
       relation: 'owner',
     });
-    if (!isOwner) {
+    if (isOwner.relations.length === 0) {
       throw new ModuleError(errors.TEAM_PERMISSION_DENIED);
     }
     const foundToken = await Token.getInstance().findOne(
@@ -752,6 +784,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       throw new ModuleError(errors.TEAM_NOT_FOUND);
     }
     await AuthUtils.validateMembers(members);
+    assertTeamRole(role);
     if (members.indexOf(user._id) !== -1) {
       throw new ModuleError(errors.TEAM_SELF_ROLE_CHANGE);
     }
@@ -763,16 +796,37 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!allowed.allow) {
       throw new ModuleError(errors.TEAM_PERMISSION_DENIED);
     }
+    await assertCanGrantOwnerRole(this.grpcSdk, 'User:' + user._id, teamId, role);
+
+    // current relations are read before any change, so a denied request writes nothing
+    const existing: { member: string; isOwner: boolean }[] = [];
+    for (const member of members) {
+      const relation = await requireAuthorization(this.grpcSdk).findRelation({
+        subject: 'User:' + member,
+        resource: 'Team:' + teamId,
+      });
+      if (relation.relations.length === 0) {
+        continue;
+      }
+      existing.push({
+        member: String(member),
+        isOwner: relation.relations.some(r => r.relation === 'owner'),
+      });
+    }
+    // changing an existing owner requires the permission that removing one does
+    if (existing.some(e => e.isOwner)) {
+      const canDeleteOwners = await requireAuthorization(this.grpcSdk).can({
+        subject: 'User:' + user._id,
+        actions: ['deleteOwners'],
+        resource: 'Team:' + teamId,
+      });
+      if (!canDeleteOwners.allow) {
+        throw new ModuleError(errors.TEAM_PERMISSION_DENIED);
+      }
+    }
 
     try {
-      for (const member of members) {
-        const relation = await requireAuthorization(this.grpcSdk).findRelation({
-          subject: 'User:' + member,
-          resource: 'Team:' + teamId,
-        });
-        if (!relation || relation.relations.length === 0) {
-          continue;
-        }
+      for (const { member } of existing) {
         await requireAuthorization(this.grpcSdk).deleteAllRelations({
           subject: 'User:' + member,
           resource: 'Team:' + teamId,

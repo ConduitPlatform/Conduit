@@ -497,6 +497,9 @@ export abstract class OAuth2<
       clientId: settings.clientId,
       scope: scopes,
       providerClientId: settings.clientId,
+      providerClientSecret: settings.clientSecret,
+      native: true,
+      idToken: call.request.params['id_token'],
     }).catch(err => this.providerRequestFailed(err));
     const user = await this.createOrUpdateUser(
       payload,

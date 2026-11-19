@@ -3,7 +3,7 @@ import {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { constructAssignment, constructQuery } from './utils.js';
+import { constructAssignment, constructQuery, validateInputs } from './utils.js';
 import { constructSortObj } from '../utils.js';
 import { ICustomEndpoint, PopulatedCustomEndpoint } from '../../interfaces/index.js';
 import { isNil } from 'lodash-es';
@@ -39,6 +39,8 @@ export class CustomEndpointHandler {
     const scope = call.request.queryParams.scope;
     let searchQuery: Indexable = {};
     let createString = '';
+
+    validateInputs(endpoint.inputs, params);
 
     if (endpoint.operation !== OperationsEnum.POST) {
       searchQuery = constructQuery(endpoint.query, {

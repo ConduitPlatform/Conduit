@@ -22,9 +22,16 @@ import {
 } from '../interfaces/index.js';
 import { OAUTH_CLIENT_ROUTE_ERRORS, OAUTH_MODE_PARAM } from '../utils/index.js';
 import { realmParam } from '../../realmRequest.js';
+import jwksRsa from 'jwks-rsa';
+import { verifyGoogleIdToken } from '../utils/providerTokenAudience.js';
 
 // todo migrate to use native method properly
 export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
+  private readonly jwksClient = jwksRsa({
+    jwksUri: 'https://www.googleapis.com/oauth2/v3/certs',
+    cache: true,
+  });
+
   constructor(grpcSdk: ConduitGrpcSdk, config: { google: ProviderConfig }) {
     super(grpcSdk, 'google', new OAuth2Settings(config.google, googleParameters));
     this.defaultScopes = [
@@ -35,6 +42,27 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
 
   async connectWithProvider(details: ConnectionParams): Promise<Payload<GoogleUser>> {
     if (!this.initialized) throw new ModuleError(errors.STRATEGY_DISABLED);
+
+    if (details.native) {
+      // identity comes from the id_token issued for this client
+      const claims = await verifyGoogleIdToken(
+        details.idToken,
+        details.providerClientId ?? '',
+        kid => this.jwksClient.getSigningKey(kid),
+      );
+      return {
+        id: claims.sub as string,
+        email: claims.email_verified === true ? (claims.email as string) : undefined,
+        data: {
+          name: claims.name,
+          given_name: claims.given_name,
+          locale: claims.locale,
+          verified_email: claims.email_verified === true,
+          picture: claims.picture,
+          family_name: claims.family_name,
+        },
+      };
+    }
 
     const googleUser = await axios
       .get(
