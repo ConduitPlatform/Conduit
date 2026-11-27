@@ -6,6 +6,8 @@ import {
   GrpcResponse,
   HealthCheckStatus,
   Indexable,
+  SetConfigRequest,
+  SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config/index.js';
 import { AdminRoutes } from './admin/index.js';
@@ -50,6 +52,7 @@ import {
   type ImportResult,
 } from '@conduitplatform/module-tools';
 import { errors } from './errors.js';
+import { storageRateLimitConfigError } from './constants/routeRateLimits.js';
 import { StorageParamAdapter } from './adapter/StorageParamAdapter.js';
 import { ContainerResource, FileResource, FolderResource } from './authz/index.js';
 import { ensureDefaultContainer } from './authz/bootstrap.js';
@@ -206,6 +209,26 @@ export default class Storage extends ManagedModule<Config> {
       }
     }
     return result;
+  }
+
+  /** Rejects invalid rate limit values before the base implementation merges the update. */
+  async setConfig(
+    call: GrpcRequest<SetConfigRequest>,
+    callback: GrpcResponse<SetConfigResponse>,
+  ) {
+    let incoming: Partial<Config> | undefined;
+    try {
+      incoming = JSON.parse(call.request.newConfig);
+    } catch {
+      // malformed JSON is reported by the base implementation
+    }
+    const configError = storageRateLimitConfigError(incoming?.rateLimits);
+    if (configError) {
+      return callback(
+        grpcCallbackError({ ...errors.STORAGE_CONFIG_INVALID, message: configError }),
+      );
+    }
+    return super.setConfig(call, callback);
   }
 
   async preConfig(config: Config) {

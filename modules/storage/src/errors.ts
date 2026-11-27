@@ -53,6 +53,11 @@ export const errors = defineErrors({
     message: 'Folder name may not be empty',
     description: 'The folder name resolves to the root path. Provide a non-empty name.',
   },
+  STORAGE_CONFIG_INVALID: {
+    grpcCode: status.INVALID_ARGUMENT,
+    message: 'Invalid storage configuration',
+    description: 'The storage configuration failed validation (the message states why).',
+  },
   PRIVATE_FILE_IN_PUBLIC_CONTAINER: {
     grpcCode: status.INVALID_ARGUMENT,
     message: 'Files in public containers must be public',

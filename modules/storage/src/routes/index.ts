@@ -14,7 +14,7 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { File } from '../models/index.js';
-import { STORAGE_WRITE } from '../constants/routeRateLimits.js';
+import { storageWriteRateLimit } from '../constants/routeRateLimits.js';
 
 export class StorageRoutes {
   private _routingManager: RoutingManager;
@@ -29,7 +29,10 @@ export class StorageRoutes {
 
   async registerRoutes(enableAuthRoutes: boolean) {
     this._routingManager.clear();
-    const authzEnabled = ConfigController.getInstance().config.authorization.enabled;
+    const config = ConfigController.getInstance().config;
+    const authzEnabled = config.authorization.enabled;
+    // Read on every registration, so onConfig applies a changed limit without a restart.
+    const writeRateLimit = storageWriteRateLimit(config);
     this._routingManager.route(
       {
         urlParams: {
@@ -109,7 +112,7 @@ export class StorageRoutes {
           ],
           description: `Creates a new file.`,
           middlewares: ['authMiddleware'],
-          rateLimit: STORAGE_WRITE,
+          rateLimit: writeRateLimit,
         },
         new ConduitRouteReturnDefinition('CreateFile', File.name),
         this.fileHandlers.createFile.bind(this.fileHandlers),
@@ -145,7 +148,7 @@ export class StorageRoutes {
           ],
           description: `Creates a new file and provides a URL to upload it to.`,
           middlewares: ['authMiddleware'],
-          rateLimit: STORAGE_WRITE,
+          rateLimit: writeRateLimit,
         },
         new ConduitRouteReturnDefinition('CreateFileByUrl', {
           file: File.getInstance().fields,
@@ -188,7 +191,7 @@ export class StorageRoutes {
           ],
           description: `Updates a file and provides a URL to upload its data to.`,
           middlewares: ['authMiddleware'],
-          rateLimit: STORAGE_WRITE,
+          rateLimit: writeRateLimit,
         },
         new ConduitRouteReturnDefinition('PatchFileByUrl', {
           file: File.getInstance().fields,
@@ -284,7 +287,7 @@ export class StorageRoutes {
           ],
           description: `Updates a file.`,
           middlewares: ['authMiddleware'],
-          rateLimit: STORAGE_WRITE,
+          rateLimit: writeRateLimit,
         },
         new ConduitRouteReturnDefinition('PatchFile', File.name),
         this.fileHandlers.updateFile.bind(this.fileHandlers),

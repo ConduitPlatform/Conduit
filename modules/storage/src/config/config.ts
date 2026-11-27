@@ -102,6 +102,20 @@ export default {
     doc: 'Defines if a suffix should be appended to the name of a file, upon creation, when name already exists',
     default: false,
   },
+  rateLimits: {
+    write: {
+      maxRequests: {
+        format: 'Number',
+        default: 60,
+        doc: 'Maximum number of file write requests (create, upload, update) a client IP may make per resetInterval. Must be a positive integer.',
+      },
+      resetInterval: {
+        format: 'Number',
+        default: 3600,
+        doc: 'Time window of the file write rate limit, in seconds. Must be a positive integer.',
+      },
+    },
+  },
   /**
    * cdnConfiguration: {
    *   my_container: 'cdn.myhost.com'
