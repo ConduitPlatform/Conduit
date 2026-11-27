@@ -206,7 +206,11 @@ export abstract class ConduitRouter {
     }
   }
 
-  /** Seconds until the counter resets, from the key's TTL; the window length when unknown. */
+  /**
+   * Seconds until the counter resets, from the key's TTL; the window length when unknown.
+   * A counter with no expiry, or with a window longer than `resetInterval` (the limit was
+   * shortened), is clipped to `resetInterval`, so a rejected client waits at most that long.
+   */
   private async rateLimitRetryAfter(
     redis: Redis | Cluster,
     key: string,
@@ -214,9 +218,12 @@ export abstract class ConduitRouter {
   ): Promise<number> {
     try {
       const ttl = await redis.ttl(key);
-      if (ttl > 0) return ttl;
       // -2: the key expired after the increment, so the next request is counted afresh
       if (ttl === -2) return 1;
+      // 0: Redis rounds to whole seconds, so less than a second is left
+      if (ttl >= 0 && ttl <= resetInterval) return Math.max(ttl, 1);
+      // -1: no expiry (the EXPIRE after the first increment failed)
+      await redis.expire(key, resetInterval);
     } catch {
       // the request is rejected either way; only the hint falls back
     }

@@ -18,6 +18,7 @@ import {
 type FakeRedis = {
   counts: Map<string, number>;
   ttls: Map<string, number>;
+  expires: [string, number][];
   incr(key: string): Promise<number>;
   expire(key: string, seconds: number): Promise<number>;
   ttl(key: string): Promise<number>;
@@ -27,12 +28,14 @@ function fakeRedis(overrides: Partial<FakeRedis> = {}): FakeRedis {
   const redis: FakeRedis = {
     counts: new Map(),
     ttls: new Map(),
+    expires: [],
     async incr(key) {
       const next = (redis.counts.get(key) ?? 0) + 1;
       redis.counts.set(key, next);
       return next;
     },
     async expire(key, seconds) {
+      redis.expires.push([key, seconds]);
       redis.ttls.set(key, seconds);
       return 1;
     },
@@ -56,6 +59,8 @@ const route = {
   path: '/limited',
   rateLimit: { maxRequests: 2, resetInterval: 3600 },
 } as unknown as ConduitRouteOptions;
+
+const KEY = 'limiter:route:POST:/limited:1.2.3.4';
 
 function params(): ConduitRouteParameters {
   return { headers: {}, cookies: {}, context: {} } as unknown as ConduitRouteParameters;
@@ -105,6 +110,75 @@ describe('per-route rate limit', () => {
     await router.preHandle(route, params(), '1.2.3.4');
     await router.preHandle(route, params(), '1.2.3.4');
     const err = await rejection(router.preHandle(route, params(), '1.2.3.4'));
+    assert.equal(retryAfterSeconds(err), 3600);
+  });
+
+  it('clips a window longer than the configured one, after the limit was shortened', async () => {
+    const redis = fakeRedis();
+    const router = new TestRouter(redis);
+    await router.preHandle(route, params(), '1.2.3.4');
+    await router.preHandle(route, params(), '1.2.3.4');
+    redis.ttls.set(KEY, 3000);
+    redis.expires.length = 0;
+    const shortened = {
+      ...route,
+      rateLimit: { maxRequests: 2, resetInterval: 60 },
+    } as ConduitRouteOptions;
+    const err = await rejection(router.preHandle(shortened, params(), '1.2.3.4'));
+    assert.deepEqual(redis.expires, [[KEY, 60]]);
+    assert.equal(retryAfterSeconds(err), 60);
+  });
+
+  it('sets the missing expiry of a counter that has none', async () => {
+    const redis = fakeRedis();
+    const router = new TestRouter(redis);
+    redis.counts.set(KEY, 2);
+    const err = await rejection(router.preHandle(route, params(), '1.2.3.4'));
+    assert.deepEqual(redis.expires, [[KEY, 3600]]);
+    assert.equal(retryAfterSeconds(err), 3600);
+  });
+
+  it('does not touch the expiry of a counter within the window', async () => {
+    const redis = fakeRedis();
+    const router = new TestRouter(redis);
+    await router.preHandle(route, params(), '1.2.3.4');
+    await router.preHandle(route, params(), '1.2.3.4');
+    redis.ttls.set(KEY, 3600);
+    redis.expires.length = 0;
+    const err = await rejection(router.preHandle(route, params(), '1.2.3.4'));
+    assert.deepEqual(redis.expires, []);
+    assert.equal(retryAfterSeconds(err), 3600);
+  });
+
+  it('answers 1 second when less than a second is left (TTL 0)', async () => {
+    const redis = fakeRedis();
+    const router = new TestRouter(redis);
+    redis.counts.set(KEY, 2);
+    redis.ttls.set(KEY, 0);
+    const err = await rejection(router.preHandle(route, params(), '1.2.3.4'));
+    assert.deepEqual(redis.expires, []);
+    assert.equal(retryAfterSeconds(err), 1);
+  });
+
+  it('answers 1 second when the counter expired after the increment (TTL -2)', async () => {
+    const redis = fakeRedis();
+    const router = new TestRouter(redis);
+    redis.counts.set(KEY, 2);
+    redis.ttls.set(KEY, -2);
+    const err = await rejection(router.preHandle(route, params(), '1.2.3.4'));
+    assert.deepEqual(redis.expires, []);
+    assert.equal(retryAfterSeconds(err), 1);
+  });
+
+  it('still rejects with the window length when clipping fails', async () => {
+    const redis = fakeRedis();
+    const router = new TestRouter(redis);
+    redis.counts.set(KEY, 2);
+    redis.expire = async () => {
+      throw new Error('expire failed');
+    };
+    const err = await rejection(router.preHandle(route, params(), '1.2.3.4'));
+    assert.ok(err instanceof RouteRateLimitError);
     assert.equal(retryAfterSeconds(err), 3600);
   });
 
