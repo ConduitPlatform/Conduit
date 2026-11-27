@@ -6,25 +6,37 @@ export const STORAGE_WRITE: RateLimitOptions = {
   resetInterval: 3600,
 };
 
-type RateLimitFields = { maxRequests?: unknown; resetInterval?: unknown };
+/** Upper bounds of the configurable write limit: a million requests, a one day window. */
+export const STORAGE_WRITE_MAX: RateLimitOptions = {
+  maxRequests: 1_000_000,
+  resetInterval: 86_400,
+};
 
-function isPositiveInteger(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+type RateLimitFields = { maxRequests?: unknown; resetInterval?: unknown };
+type RateLimitField = keyof RateLimitOptions;
+
+function isValidValue(field: RateLimitField, value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= STORAGE_WRITE_MAX[field]
+  );
 }
 
 /**
  * Returns the limit for the client file write routes from `rateLimits.write` of the
- * storage config. A missing or invalid field falls back to its default.
+ * storage config. A missing, invalid or out of range field falls back to its default.
  */
 export function storageWriteRateLimit(config: {
   rateLimits?: { write?: RateLimitFields };
 }): RateLimitOptions {
   const write = config?.rateLimits?.write;
   return {
-    maxRequests: isPositiveInteger(write?.maxRequests)
+    maxRequests: isValidValue('maxRequests', write?.maxRequests)
       ? write.maxRequests
       : STORAGE_WRITE.maxRequests,
-    resetInterval: isPositiveInteger(write?.resetInterval)
+    resetInterval: isValidValue('resetInterval', write?.resetInterval)
       ? write.resetInterval
       : STORAGE_WRITE.resetInterval,
   };
@@ -50,8 +62,8 @@ export function storageRateLimitConfigError(rateLimits: unknown): string | null 
   }
   for (const field of ['maxRequests', 'resetInterval'] as const) {
     const value = (write as RateLimitFields)[field];
-    if (value !== undefined && !isPositiveInteger(value)) {
-      return `rateLimits.write.${field} must be a positive integer`;
+    if (value !== undefined && !isValidValue(field, value)) {
+      return `rateLimits.write.${field} must be a whole number from 1 to ${STORAGE_WRITE_MAX[field]}`;
     }
   }
   return null;

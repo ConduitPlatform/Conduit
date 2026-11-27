@@ -107,12 +107,12 @@ export default {
       maxRequests: {
         format: 'Number',
         default: 60,
-        doc: 'Maximum number of file write requests (create, upload, update) a client IP may make per resetInterval. Must be a positive integer.',
+        doc: 'Maximum number of file write requests (create, upload, update) a client IP may make per resetInterval. A whole number from 1 to 1000000.',
       },
       resetInterval: {
         format: 'Number',
         default: 3600,
-        doc: 'Time window of the file write rate limit, in seconds. Must be a positive integer.',
+        doc: 'Time window of the file write rate limit, in seconds. A whole number from 1 to 86400 (one day).',
       },
     },
   },

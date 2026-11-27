@@ -4,6 +4,7 @@ import convict from 'convict';
 import AppConfigSchema from '../config/config.js';
 import {
   STORAGE_WRITE,
+  STORAGE_WRITE_MAX,
   storageRateLimitConfigError,
   storageWriteRateLimit,
 } from './routeRateLimits.js';
@@ -39,6 +40,21 @@ describe('storage write rate limit', () => {
       { maxRequests: 10, resetInterval: 3600 },
     );
   });
+
+  it('falls back per field when a value is above its maximum', () => {
+    assert.deepEqual(
+      storageWriteRateLimit({
+        rateLimits: { write: { maxRequests: 1_000_001, resetInterval: 86_400 } },
+      }),
+      { maxRequests: 60, resetInterval: 86_400 },
+    );
+    assert.deepEqual(
+      storageWriteRateLimit({
+        rateLimits: { write: { maxRequests: 1_000_000, resetInterval: 86_401 } },
+      }),
+      { maxRequests: 1_000_000, resetInterval: 3600 },
+    );
+  });
 });
 
 describe('storage rate limit config validation', () => {
@@ -56,13 +72,34 @@ describe('storage rate limit config validation', () => {
     for (const value of [0, -1, 1.5, '60', null, Number.NaN]) {
       assert.equal(
         storageRateLimitConfigError({ write: { maxRequests: value } }),
-        'rateLimits.write.maxRequests must be a positive integer',
+        'rateLimits.write.maxRequests must be a whole number from 1 to 1000000',
       );
       assert.equal(
         storageRateLimitConfigError({ write: { resetInterval: value } }),
-        'rateLimits.write.resetInterval must be a positive integer',
+        'rateLimits.write.resetInterval must be a whole number from 1 to 86400',
       );
     }
+  });
+
+  it('accepts the maximums and rejects values above them', () => {
+    assert.deepEqual(STORAGE_WRITE_MAX, {
+      maxRequests: 1_000_000,
+      resetInterval: 86_400,
+    });
+    assert.equal(
+      storageRateLimitConfigError({
+        write: { maxRequests: 1_000_000, resetInterval: 86_400 },
+      }),
+      null,
+    );
+    assert.equal(
+      storageRateLimitConfigError({ write: { maxRequests: 1_000_001 } }),
+      'rateLimits.write.maxRequests must be a whole number from 1 to 1000000',
+    );
+    assert.equal(
+      storageRateLimitConfigError({ write: { resetInterval: 86_401 } }),
+      'rateLimits.write.resetInterval must be a whole number from 1 to 86400',
+    );
   });
 
   it('rejects a malformed rateLimits object', () => {
