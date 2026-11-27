@@ -8,7 +8,7 @@ import {
 } from 'express';
 import { SwaggerGenerator } from './Swagger.js';
 import { extractRequestData, validateParams } from './util.js';
-import { toErrorResponse } from '../utils/errors.js';
+import { retryAfterSeconds, toErrorResponse } from '../utils/errors.js';
 import { extractClientIp } from '../utils/extractClientIp.js';
 import { createHashKey, extractCaching } from '../cache.utils.js';
 import { ConduitRouter } from '../Router.js';
@@ -281,6 +281,8 @@ export class RestController extends ConduitRouter {
       } else {
         ConduitGrpcSdk.Logger.error(err);
       }
+      const retryAfter = retryAfterSeconds(err);
+      if (retryAfter !== undefined) res.setHeader('Retry-After', String(retryAfter));
       res.status(response.status).json(response);
     };
   }

@@ -14,7 +14,7 @@ import type { Cluster, Redis } from 'ioredis';
 import { ConduitMiddleware, MiddlewarePatch } from './interfaces/index.js';
 import { ConduitRoute } from './classes/index.js';
 import ObjectHash from 'object-hash';
-import { HermesErrorCodes } from './utils/errors.js';
+import { HermesErrorCodes, RouteRateLimitError } from './utils/errors.js';
 
 export type LocalMiddlewareHandler = (
   params: ConduitRouteParameters,
@@ -200,13 +200,27 @@ export abstract class ConduitRouter {
       );
     }
     if (requests > maxRequests) {
-      throw new ConduitError(
-        'RATE_LIMIT',
-        429,
-        'Too Many Requests',
-        HermesErrorCodes.RATE_LIMIT_EXCEEDED,
+      throw new RouteRateLimitError(
+        await this.rateLimitRetryAfter(redis, key, resetInterval),
       );
     }
+  }
+
+  /** Seconds until the counter resets, from the key's TTL; the window length when unknown. */
+  private async rateLimitRetryAfter(
+    redis: Redis | Cluster,
+    key: string,
+    resetInterval: number,
+  ): Promise<number> {
+    try {
+      const ttl = await redis.ttl(key);
+      if (ttl > 0) return ttl;
+      // -2: the key expired after the increment, so the next request is counted afresh
+      if (ttl === -2) return 1;
+    } catch {
+      // the request is rejected either way; only the hint falls back
+    }
+    return resetInterval;
   }
 
   /**

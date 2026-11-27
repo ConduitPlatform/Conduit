@@ -1,4 +1,5 @@
 import {
+  ConduitError,
   grpcStatusToHttp,
   INTERNAL_ERROR_CODE,
   isGrpcStatusError,
@@ -22,6 +23,27 @@ export const HermesErrorCodes = {
   /** An unexpected failure with no typed definition. */
   INTERNAL_ERROR: INTERNAL_ERROR_CODE,
 } as const;
+
+/**
+ * A per-route rate limit rejection. REST sends `retryAfterSeconds` as the Retry-After
+ * header; the response body is the same as for any other error.
+ */
+export class RouteRateLimitError extends ConduitError {
+  readonly retryAfterSeconds: number;
+
+  constructor(retryAfterSeconds: number) {
+    super('RATE_LIMIT', 429, 'Too Many Requests', HermesErrorCodes.RATE_LIMIT_EXCEEDED);
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+/** The Retry-After value of an error in whole seconds, or undefined when it has none. */
+export function retryAfterSeconds(err: unknown): number | undefined {
+  const value = (err as { retryAfterSeconds?: unknown } | null)?.retryAfterSeconds;
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? Math.ceil(value)
+    : undefined;
+}
 
 /** The one error shape every transport (REST, GraphQL, sockets, MCP) answers with. */
 export interface ConduitErrorResponse {
